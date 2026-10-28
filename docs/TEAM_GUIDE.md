@@ -64,7 +64,7 @@
 | `backend/auth.py` | 강경희 (안) | 로그인·사용자 식별. 첫 배포(`/health`)도 강경희 |
 | `extras/mcp_skill/` | 박진형 (안) | FastMCP 서버 |
 | `web/` | 강경희 (안) | 정적 HTML·JS 화면 |
-| `evals/dataset/` | 공동 | 평가셋 v1(30건)·v2(50건) |
+| `evals/dataset_v1.jsonl`·v2, `evals/freeze.py` | 공동 | 평가셋 v1(30건)·v2(50건). 템플릿 자리 그대로 |
 | `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
 | `evals/agent/`, `evals/run_all.py` | 김승욱 (안) | 에이전트 평가, 한 줄 재현 명령 |
 | `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
@@ -141,7 +141,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
 ├─ db/    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
 ├─ data/  (corpus/ 원문 스냅샷, manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
-├─ evals/ (dataset/, PREREGISTER.md, freeze.py, retrieval/, agent/, safety/, results/, run_all.py)
+├─ evals/ (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, retrieval/, agent/, safety/, results/)
 └─ tests/
 ```
 
