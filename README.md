@@ -22,7 +22,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 이름 | GitHub | 역할 |
 |---|---|---|
 | 김승욱 | @seungwook-kim | 팀장 · 테크 리드 · 풀스택 |
-| 박진형 | | |
+| 박진형 | @jinyeong-731 | 검색·데이터 담당 (수집·파싱·청킹·검색·FastMCP) |
 | 강경희 | @kkh-hue | 서비스 담당 (로그인·웹 화면·첫 배포) |
 
 GitHub와 역할 칸은 각자 자기 줄을 채운다(브랜치 → PR → 리뷰 → merge).
@@ -109,6 +109,7 @@ GitHub와 역할 칸은 각자 자기 줄을 채운다(브랜치 → PR → 리�
 | 홍길동(예시) | @octocat | 검색 담당 | ② RAG 품질 | 잘 부탁드립니다 |
 | 김승욱(팀장) | [@seungwook-kim](https://github.com/seungwook-kim) | 테크 리드 · 풀스택 | ③ 에이전트 | |
 | 강경희 | [@kkh-hue](https://github.com/kkh-hue) | 서비스 (로그인·웹 화면·첫 배포) 담당 | 서비스 개발 | 잘 부탁드립니다. |
+| 박진형 | [@jinyeong-731](https://github.com/jinyeong-731) | 검색·데이터 (수집·파싱·청킹·검색·FastMCP) 담당 | ② RAG 품질 | 잘 부탁드립니다. |
 
 ## 일정
 
