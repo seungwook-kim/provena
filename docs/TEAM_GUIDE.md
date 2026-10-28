@@ -1,0 +1,282 @@
+# 팀 작업 지침서 (초안, D0 10/30 확정)
+
+> **한 줄 요약**  
+> 셋이 서로 기다리지 않고, 서로의 코드를 깨지 않고, AI 코딩 도구를 써도 정해진 틀을 벗어나지 않게 하는 규칙이다. 처음 읽을 때는 1~4장만 읽고, 작업을 시작할 때 5~9장을 본다.
+
+---
+
+## 1. 우리가 만드는 것
+
+**Provena(프로베나)**: IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 예전 답을 다시 확인하는 엔지니어링 지식 AI 플랫폼이다. 시연 데이터는 GitLab 공개 핸드북(영어 Markdown, CC BY-SA 4.0)이다. 답에는 반드시 섹션 제목 경로와 판(커밋 날짜)을 붙이고, 근거가 없으면 거절한다.
+
+| 순위 | 기능 | 설명 |
+|---|---|---|
+| 반드시 | F-01 근거 답변 | 핸드북 절·판에 맞는 섹션을 찾아 인용과 함께 한국어로 답한다 |
+| 반드시 | F-04 결정표 | 승인 권한표(2023 권한표)를 결정표로 바꾸고, 관리자가 승인한 뒤에만 실행한다 |
+| 반드시 | F-02 답변 리콜 | 정책이 개정되면 예전 답의 결론이 바뀌었는지 판정해 알린다 |
+| 반드시 | F-03 팀 합동 검토 | 보안·인프라(SRE)·IT 운영·재무 관점 쟁점표 (가이드 G4 Supervisor + 서브에이전트) |
+| 반드시 | 가산 3종 | 자동화, GraphRAG, MCP·Skill (가이드 p.20 인정 기준대로) |
+| 되면 한다 | F-05, F-06 | 확장 기능. D5(11/6) 중간 점검에서 판단 |
+| 반드시 | 공통 | 로그인, 사용자별 대화·기억 분리, 사람 승인, 데모 모드, 배포, 평가 |
+
+자세한 내용은 PRD를 본다.
+
+## 2. 중요한 날짜
+
+| 날짜 | 할 일 |
+|---|---|
+| 10/30 (D0) | 이 지침서·계약(`backend/schemas/`) 확정, 빈 서버 배포. 전원 README 조원 소개 표에 자기 줄 추가(브랜치 → PR → 리뷰 → merge, 템플릿 첫 과제). `docs/worklog.md`·`docs/decisions.md` 빈 파일 생성. GCP 결제 연결, API 활성화, 저장소 권한, 조 저장소 GitHub Actions 동작 확인(가이드 p.5). 역할과 담당 축 확정(가이드 p.28) |
+| 11/4 (D3)까지 | 세로 한 줄 완성: 로그인(임시) → 질문 → 검색 → 인용 답이 배포 주소에서 동작 |
+| 11/6 (D5) | 중간 점검. 확장 기능(F-05, F-06)을 넣을지 뺄지 결정, 로그인 방식 확정 |
+| 11/14~15 | 주말. 자동 실행이나 배포를 새로 두지 않는다. 필요하면 평가 파이프라인만 한 번(가이드 p.5) |
+| 11/16 (D11) 24:00 | 코드 동결. 이후 코드는 고치지 않는다 |
+| 11/17 (D12) 24:00 | 실패 사례 분석 글, 포트폴리오 1장, AI 코딩 도구 사용 기록, 발표 자료 제출(가이드 p.5) |
+| 11/18 | 발표. 전원이 자기 파트를 발표한다(가이드 p.14) |
+
+## 3. 누가 무엇을 하나 (D0에 확정)
+
+> **조원이 고른 안 (2026-10-28)**  
+> 각자 고른 일과 순서·날짜는 업무 분담, 일마다 중요도는 업무 중요도·난이도에 있다. 역할과 담당 축은 D0(10/30)에 이 안으로 확정한다(가이드 p.28). 5장 폴더 주인은 이 안을 옮긴 것이다.
+
+원칙만 먼저 정한다: 다른 사람 일을 멈추게 할 수 있는 일(핵심 경로)은 팀장이 맡는다. 나머지는 정답이 분명하고 결과를 바로 확인할 수 있는 단위로 나눈다. 맡은 일이 끝나면 백로그 보드의 "다음 일" 칸에서 다음 일을 가져간다.
+
+## 4. 꼭 지킬 규칙 8개
+
+1. **자기 폴더만 고친다.** 다른 사람 폴더를 고쳐야 하면 그 사람에게 요청한다(5장).
+2. **`backend/schemas/`는 혼자 고치지 않는다.** 3명이 승인해야 한다.
+3. **`main`에 바로 올리지 않는다.** 브랜치 → 작은 PR → 리뷰 → 머지.
+4. **키·비밀번호를 저장소에 올리지 않는다.** `.env`에만 둔다. 실수로 올렸으면 즉시 팀장에게 알린다(키를 바로 폐기해야 한다).
+5. **숫자는 실측만 쓴다.** 추정이면 "추정"이라고 쓰고 계산식을 붙인다.
+6. **출처는 URL로 남긴다.** 데이터·자료를 구하면 URL을 데이터 출처 URL 형식으로 기록한다.
+7. **30분 이상 막히면 바로 말한다.** 9장 양식으로 팀 채팅에 올린다. 혼자 하루를 쓰는 것이 가장 비싸다.
+8. **폴더 md 파일에 기록한다.** 작업을 하면 그 폴더의 `<폴더명>.md`에 누가 무엇을 했는지 한 줄 남기고, 문제를 찾으면 문제 기록에 올린다. 고친 사람이 근거를 적고 직접 해결로 판정한다(5-1장).
+
+---
+
+## 5. 저장소와 폴더 주인
+
+| 폴더 | 주인 | 내용 |
+|---|---|---|
+| `backend/schemas/` | 공동 (3명 승인) | 파트 사이 데이터 형식 (6장) |
+| `backend/rag/`, `data/` | 박진형 (안) | 수집·파싱·청킹·적재(`backend/rag/ingest/`), 임베딩·검색·리랭킹(`retrieve/`). 수집은 로컬에서 한 번 하고 원문 스냅샷과 `data/manifest.jsonl`을 커밋한다(템플릿 SCAFFOLD) |
+| `backend/graph/`, `backend/memory/`, `backend/prompts/`, `skills/` | 김승욱 (안) | 그래프, 부서 에이전트(security, sre(인프라·SRE), it-ops(IT 운영), finance), 결정표, 리콜, 장기 기억, 런타임 Skill (delegation = 권한표 해석) |
+| `backend/main.py`, `backend/services/`, `Dockerfile`, `docker-compose.yml`, `db/`, `.github/workflows/` | 김승욱 (안) | FastAPI 라우트, LLM 호출(`services/llm.py` 한 곳), compose·seed·CI |
+| `backend/auth.py` | 강경희 (안) | 로그인·사용자 식별. 첫 배포(`/health`)도 강경희 |
+| `extras/mcp_skill/` | 박진형 (안) | FastMCP 서버 |
+| `web/` | 강경희 (안) | 정적 HTML·JS 화면 |
+| `evals/dataset/` | 공동 | 평가셋 v1(30건)·v2(50건) |
+| `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
+| `evals/agent/`, `evals/run_all.py` | 김승욱 (안) | 에이전트 평가, 한 줄 재현 명령 |
+| `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
+| `mock_erp/` | 김승욱 (안) | 업무시스템 목업 (Spring, Python 예제) |
+| `data/LICENSES/` | 팀장 | 핸드북 원문 사용 시 CC BY-SA 4.0 고지와 출처. 원문 텍스트는 코드와 폴더를 나눈다 |
+| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장) |
+| `docs/` | 팀장 (각자 자기 파트 절 작성) | SPEC.md, 리포트, 이 지침서 |
+
+폴더 구조는 강사 템플릿(`docs/SCAFFOLD.md`)을 따른다. 템플릿의 `backend/rag/ingest.py`·`retrieve.py` 자리는 `backend/rag/ingest/`·`retrieve/` 폴더로, `backend/memory.py` 자리는 `backend/memory/` 폴더로 쓴다.
+
+폴더로 나뉘지 않는 일의 담당:
+
+| 일 | 담당 |
+|---|---|
+| Langfuse 연결 | 박진형 (확정) |
+| 골든셋 2인 독립 판정 (v1 D2, v2 D5) | 박진형, 강경희 |
+| README, 시연 영상 3분, Langfuse 스크린샷 (G7) | 미정 |
+| 실패 사례 분석, 발표 자료 (각자 자기 파트) | 전원 |
+
+### 5-1. 폴더 md 파일: 작업 기록과 문제 판정
+
+루트를 뺀 하위 폴더마다 맨 위에 폴더 이름과 같은 md 파일을 하나 둔다(예: `backend/rag/rag.md`, `backend/rag/ingest/ingest.md`, `backend/graph/departments/departments.md`). 그 폴더가 하는 일, 누가 무엇을 했는지, 어떤 문제가 있었고 해결됐는지를 이 파일 하나에서 본다.
+
+- 필수: 루트 바로 아래 폴더와 기능 단위 폴더(예: `backend/graph/decision/`, `backend/rag/ingest/`). 그보다 아래와 `tests/`, 데이터·캐시 폴더는 선택이다.
+- 루트에는 이 파일을 두지 않는다. 루트에는 `README.md`(소개), `AGENTS.md`(AI 도구 규칙)만 둔다.
+- 폴더 목록과 각 md 파일 위치는 SDD 3장 디렉토리 구조를 따른다.
+
+예시 (`backend/rag/ingest/ingest.md`):
+
+```markdown
+# backend/rag/ingest/ : 수집·파싱·청킹
+
+## 이 폴더가 하는 일
+핸드북 git 저장소에서 고른 절을 받아 파싱하고 청크로 나눠 DB에 넣는다. 청크는 제목 단위로 자르고 긴 절은 약 800자로 나누며, 앞 청크 끝 약 120자를 겹치고 청크 앞에 제목 경로를 붙인다. 청크 수(G3)는 겹침 없이 센다(PRD 8장). 입력, 출력, 실행 명령을 3줄로 적는다.
+
+## 작업 기록 (최신이 위)
+| 날짜 | 작업자 | 한 일 | PR |
+|---|---|---|---|
+| 2026-11-02 | 김승욱 (wook) | 권한표 HTML 표 파서 추가, 원문 대조 3건 | #12 |
+
+## 문제 기록 (최신이 위)
+| 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
+|---|---|---|---|---|---|---|---|---|
+| I-003 | 2026-11-03 | 김승욱 | 권한표 CSS grid 칸이 한 칸씩 밀려 들어감 | F-04 결정표 오답 | 미정 | 열림 | | |
+| I-002 | 2026-11-02 | 김승욱 | Hugo 단축코드가 본문에 남음 | 청크 오염 (건수는 D1 실측) | 김승욱 | 보류 | 2026-11-02 | 영향 건수 D1 실측 후 판단, 목록에서 제외 |
+```
+
+예시의 표 내용은 형식을 보이기 위한 가상 예시다. 건수는 D1 실측으로 채운다.
+
+폴더 이름은 `backend/rag/ingest/handbook/`(핸드북 git 수집: 고른 절, 2023 권한표 판 고정)과 `backend/rag/ingest/history/`(git 커밋 이력에서 판 목록을 만들어 리콜 시험 데이터로 씀)를 쓴다. 구조는 SDD 3장을 따른다. 파싱 대상은 Markdown과 HTML 표(권한표의 CSS grid)다. 수집에 인증키는 필요 없다.
+
+**문제 상태와 판정 규칙**
+
+| 상태 | 뜻 |
+|---|---|
+| 열림 | 찾았고 아직 손대지 않음 |
+| 진행 중 | 담당이 고치는 중 (PR 번호를 적는다) |
+| 해결 | 고쳤고 확인까지 끝남 |
+| 보류 | 지금은 고치지 않기로 함. 판정 근거에 이유를 적는다 |
+| 해결 안 함 | 문제가 아니었거나 범위 밖. 판정 근거에 이유를 적는다 |
+
+- **누가 썼는지 반드시 적는다.** 작업자·발견자·담당 칸에는 git id, 이름, 별칭 중 하나 이상을 쓴다. 빈칸이나 "AI", "Claude", "Codex" 같은 도구 이름만 쓰는 것은 안 된다. AI 도구로 작업했으면 그 도구를 돌린 사람을 적고, 필요하면 뒤에 도구를 덧붙인다(예: `wook (Claude Code)`). 같은 사람은 처음 정한 표기를 계속 쓴다.
+- **고친 사람이 직접 "해결"로 바꾼다.** 따로 확인받지 않는다. 대신 판정 근거는 반드시 적는다.
+- 판정 근거에는 확인 방법을 적는다: 테스트 이름, 재현 명령, 원문 대조 결과, PR 번호 중 하나 이상.
+- 번호는 폴더 머리글자 + 일련번호다(ingest = I, rag = R, agents = A, api = P, web = W, deploy = D, evals = E).
+- 자기 줄만 고친다. 새 기록은 표 맨 위에 한 줄 추가하고, 다른 사람이 쓴 줄은 고치지 않는다(상태·판정 칸은 예외).
+
+**공용 파일 규칙**
+
+| 파일 | 규칙 |
+|---|---|
+| `pyproject.toml` | 파트별 `[dependency-groups]`(rag / graph / backend / dev)에서 자기 그룹만 고친다 |
+| `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
+| `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
+| 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
+| `CODEOWNERS` | 위 폴더 주인을 적어 PR 리뷰어가 자동 지정되게 한다 |
+
+**Git**
+
+- **브랜치는 한 사람당 하나, 자기 이름으로만 쓴다.** 예: `seunguk`. 다른 두 사람도 자기 이름 하나로 만든다(예: `jinhyung`, `kyunghee`). 작업 종류별 브랜치(`feat/…`, `fix/…`)는 만들지 않는다. `main`에서 바로 작업하지 않고 자기 브랜치에 커밋·push한 뒤 PR로 합친다(README 협업 규칙과 같다).
+- 자기 브랜치에서 `main`으로 PR을 올리고, 머지된 뒤에도 같은 브랜치를 계속 쓴다. 다음 작업 전에 `git switch seunguk && git pull origin main`으로 `main`을 받는다.
+- PR 머지는 merge commit으로 한다(squash 쓰지 않음). 같은 브랜치를 계속 쓰기 때문에 squash로 합치면 다음 PR에서 이미 들어간 커밋이 다시 충돌한다.
+- 다른 사람 브랜치에는 push하지 않는다.
+- PR은 하루 1개 이상, 한 PR에는 한 가지 일만 담는다. 300줄이 넘으면 나눈다.
+- 머지 전에 `main`을 받아 충돌을 자기 브랜치에서 푼다.
+- **커밋 순서(가이드 p.14):** SPEC·평가셋 커밋이 첫 구현 커밋보다 앞서야 한다. 구현 코드는 SPEC·평가셋을 커밋한 뒤에 올린다.
+
+## 6. 파트 사이 계약 (`backend/schemas/`, D0 확정 전 초안)
+
+```python
+# backend/schemas/chunk.py  (검색 → 에이전트)
+class Chunk(BaseModel):
+    chunk_id: str          # sha256 앞 16자
+    org: str               # 핸드북 절 (예: "security", "finance")
+    rule_seq: int          # 페이지 id (경로 해시 등, D0에 정함)
+    rule_title: str        # 페이지 제목
+    article: str | None    # 제목 경로 (예: "Incident Management > Severities")
+    version_id: str        # 커밋 기반 판 id (SDD 5장 versions, citations와 같은 값)
+    version_date: str      # 이 판(커밋)의 날짜 YYYY-MM-DD
+    fetched_at: str        # 수집일 YYYY-MM-DD
+    kind: Literal["article", "annex", "row", "buchik", "pre"]  # article(섹션), row(권한표 행) 위주. 나머지 값은 남겨 둠
+    text: str
+    source_url: str        # 핸드북 페이지 URL
+
+class SearchQuery(BaseModel):
+    query: str
+    org: str | None = None     # 절
+    as_of: str | None = None   # 이 날짜 기준 핸드북 판(커밋)만
+    k: int = 8
+
+# backend/schemas/events.py  (에이전트 → 화면)
+class AgentEvent(BaseModel):
+    type: Literal["token", "citation", "approval_request", "error", "done"]
+    thread_id: str
+    data: dict
+
+# backend/schemas/approval.py  (에이전트 ↔ 화면)
+class ApprovalItem(BaseModel):
+    approval_id: str
+    kind: Literal["decision_table", "issue_table"]
+    summary: str
+    created_at: str
+
+class Decision(BaseModel):
+    approval_id: str
+    approve: bool
+    comment: str = ""
+
+# backend/schemas/recall.py  (수집 → 에이전트 → 화면)
+class ChangedArticle(BaseModel):   # 바뀐 섹션 (같은 페이지의 두 커밋 비교)
+    rule_seq: int
+    article: str
+    old_version_date: str
+    new_version_date: str
+
+class RecallNotice(BaseModel):
+    answer_id: str
+    user_id: str
+    changed: ChangedArticle
+    conclusion_changed: bool
+    explanation: str
+
+class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "함께 볼 정책" (F-02)
+    candidate_id: str
+    upper_rule: str        # 개정된 정책 페이지 (링크로 연결된 쪽)
+    upper_version_id: str
+    rule_seq: int          # 영향받는 다른 정책 페이지
+    article: str
+    reason: str            # 페이지 링크 그래프에서 찾은 근거
+```
+
+- **IT 전환에서 필드 구조는 바꾸지 않고 뜻만 바꿨다** (SDD 6장). 이름 바꾸기(예: `org` → `section`)는 계약 변경이라 기본값은 그대로 둔다.
+- 필드 추가는 PR 하나로 3명 승인. 이름 변경·삭제는 회의에서만 정한다.
+- 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.
+
+## 7. AI 코딩 도구 쓰는 규칙
+
+Claude Code·Codex·Cursor 등을 써도 된다. 도구에 주는 규칙은 저장소 루트의 [AGENTS.md](../AGENTS.md)에 있다(`CLAUDE.md`는 이 파일을 가리킨다).
+
+**데이터·라이선스 규칙.** 핸드북 본문은 CC BY-SA 4.0이다. 코드와 원문 텍스트는 폴더를 나누고, 원문 폴더(`data/LICENSES/` 포함)에만 라이선스와 출처를 적는다. 답에 원문을 보일 때는 페이지 URL, CC BY-SA 4.0 링크, 수정 여부를 함께 표시한다. README와 발표에는 "GitLab Inc.와 제휴·보증 관계 없음"을 적는다. 자세한 내용은 SDD 8장.
+
+**개발용 Skill·MCP.** 저장소의 `.claude/skills/`와 `.mcp.json`을 `git pull`로 받아 모두 같은 것을 쓴다. 필수·조건부 목록은 MCP·Skill 설계 4장에 있다. 새 외부 Skill은 팀장이 내용을 확인한 뒤 넣는다.
+
+**AI 결과를 그대로 믿지 않는다.** 범용 챗봇 비교에서도 확인했듯이 AI 도구는 없는 섹션이나 정책 이름을 지어낼 수 있다. PR을 올리기 전에 직접 실행해 보고, 데이터·섹션은 핸드북 원문과 대조한다.
+
+## 8. 작업 하나를 끝냈다고 말하는 기준
+
+PR을 올릴 때 아래를 모두 체크한다.
+
+- [ ] 자기 폴더만 고쳤다 (`backend/schemas/`, 공용 파일 변경 없음)
+- [ ] 첫 PR이면: SPEC·평가셋 커밋이 구현 커밋보다 앞서 있다 (가이드 p.14)
+- [ ] 기능 작업이면 `docs/specs/{기능}.md`(Why, Goal, What, How, AC)를 먼저 썼다
+- [ ] 실험이면 `evals/PREREGISTER.md`에 바꿀 것 하나와 기대를 먼저 적었다
+- [ ] `make test` 통과 결과를 붙였다
+- [ ] 새로 구한 데이터·자료는 출처 URL을 남겼다
+- [ ] 숫자는 실행 결과에서 나온 값이고, 실행 명령을 함께 적었다
+- [ ] 파싱·검색 결과는 원문과 3건 이상 대조했다 (해당될 때)
+- [ ] 키·비밀번호가 없다
+- [ ] AI 도구를 썼으면 `docs/deliverables/ai_tools_log.md`에 한 줄 남겼다
+- [ ] 폴더 `<폴더명>.md`에 작업 기록 한 줄을 남겼다. 작업자 칸에 git id, 이름, 별칭 중 하나를 적었다. 고친 문제가 있으면 판정 근거를 적고 "해결"로 바꿨다
+
+**파트별 첫 일** (전체 순서는 업무 분담):
+
+| 사람 | 첫 일 | 언제 |
+|---|---|---|
+| 전원 | README 조원 소개 표에 자기 줄 추가 (첫 PR) | D0 (10/30) |
+| 강경희 | 빈 FastAPI를 Cloud Run에 배포하고 `/health` 주소 공유 | D0 (10/30) |
+| 김승욱 | 평가셋 설계 시작, 폴더 뼈대·CODEOWNERS·`.env.example` | D0 (10/30) |
+| 박진형 | 핸드북 git 수집(고른 절, 고정 커밋), 파싱·청킹, 저녁에 청크 수 공유 | D1 (11/2) |
+
+## 9. 막혔을 때 올리는 양식
+
+```
+[막힘] 무엇을 하려고 했나: 
+어디서 막혔나 (파일·명령): 
+에러 메시지 (마지막 몇 줄): 
+해 본 것: 
+언제까지 필요한가: 
+```
+
+## 10. 기록 규칙
+
+| 무엇 | 어디에 | 형식 |
+|---|---|---|
+| 폴더별 작업·문제 | 각 하위 폴더 `<폴더명>.md` | 5-1장 표. 해결 판정은 고친 사람이 근거와 함께 |
+| 매일 한 일 | `docs/worklog.md` | 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일 |
+| 결정 | `docs/decisions.md` | 무엇을 정했나, 이유, 버린 대안. 이유와 버린 대안이 없으면 결정으로 치지 않는다 |
+| 기능 Spec | `docs/specs/{기능}.md` | Why, Goal, What, How, AC 다섯 칸. 구현 전에 쓴다 (`docs/specs/_example.md`) |
+| 실험 사전 등록 | `evals/PREREGISTER.md` | 바꿀 것 하나와 기대를 먼저 적는다 |
+| 실험 결과 | `evals/` 아래 결과 파일 + 한 줄 재현 명령 | 바꾼 것은 한 번에 하나만 |
+| 평가셋 동결 | `evals/FROZEN.json` (`python evals/freeze.py`) | v1 D2, v2 D5. 동결 뒤 정답을 고치지 않는다 |
+| 개선 전후 지표 | `EVAL_REPORT.md` | 숫자, 원인, 시도한 것. 버린 시도도 적는다 |
+| AI 도구 사용 기록 | `docs/deliverables/ai_tools_log.md` | 쓸 때마다 한 줄. D12 제출물 |
+| 실패 사례 분석, 포트폴리오 | `docs/deliverables/failure_analysis.md`, `portfolio.md` | D12 제출물 |
+| 데이터 출처 | 출처 URL 표 | URL, 받은 날짜, 이용 조건 |
