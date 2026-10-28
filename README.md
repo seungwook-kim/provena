@@ -76,6 +76,19 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 응답 시간 | 전체 p95 10초 이하 | 미측정 |
 | 비용 | 질문 1건 평균 $0.01 이하 | 미측정 |
 
+### 평가셋
+
+| 버전 | 파일 | 동결 | 건수 |
+|---|---|---|---|
+| v1 | `evals/dataset_v1.jsonl` | 11/3(D2) | 30건 (관련 15, 비관련 15) |
+| v2 | `evals/dataset_v2.jsonl` | 11/6(D5) | 50건 이상 (관련 25, 비관련 25), v1 30건은 그대로 |
+
+- 문항 형식은 `evals/dataset_v1.jsonl`의 예시를 따른다. `kind` 칸으로 관련(`relevant`)과 비관련(`irrelevant`)을 나눈다.
+- 정답은 초안 작성자가 아닌 두 사람(박진형, 강경희)이 따로 판정하고, 다른 판정은 팀장이 정한 뒤 동결한다.
+- 동결: `python evals/freeze.py dataset_v1.jsonl` (sha256과 건수를 `evals/FROZEN.json`에 기록). 확인: `python evals/freeze.py --check`. PR마다 CI(`tests/test_frozen_evals.py`)가 동결한 파일이 바뀌었는지 검사한다.
+- 동결한 평가셋은 고치지 않는다. 동결 파일은 글자 그대로 해시하므로 줄 순서나 공백만 바꿔도 바뀐 것으로 잡힌다.
+- 검색이나 그래프를 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적는다. 자세한 규칙은 [evals/README.md](./evals/README.md).
+
 ## 조원 소개: 첫 과제
 
 **조원 각자가 자기 행을 브랜치 → PR → 리뷰 → merge로 직접 추가하세요.** (전원 필수)
@@ -140,7 +153,7 @@ extras/mcp_skill/     FastMCP 서버 (가산)
 web/                  화면
 mock_erp/             업무시스템 목업
 data/                 corpus/ 원문 스냅샷, manifest, LICENSES/            (G3)
-evals/                평가셋 v1, v2, 동결, 사전 등록, 평가 실행기          (G5)
+evals/                평가셋(dataset_v1·v2.jsonl), freeze.py·FROZEN.json, 사전 등록, 평가 실행기 (G5)
 tests/                회귀 테스트 (CI가 PR마다 실행)
 db/                   pgvector 확장, 데모 계정 시드
 docs/                 주제서, 아키텍처, 게이트 점검, 제출물, Spec, 팀 작업 지침서
