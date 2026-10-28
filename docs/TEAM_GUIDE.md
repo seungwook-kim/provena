@@ -84,13 +84,74 @@
 | README, 시연 영상 3분, Langfuse 스크린샷 (G7) | 미정 |
 | 실패 사례 분석, 발표 자료 (각자 자기 파트) | 전원 |
 
+### 5-0. 디렉토리 구조
+
+하위 폴더마다 맨 위에 폴더 이름과 같은 md 파일을 둔다(5-1장). 오른쪽 이름이 그 파일이다.
+
+```
+repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
+├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
+├─ AGENTS.md, CLAUDE.md      # AI 코딩 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
+├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
+├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
+├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
+├─ CODEOWNERS
+├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
+├─ Makefile                  # make test, make eval, make eval-all
+├─ Dockerfile, docker-compose.yml, .env.example
+├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
+│
+├─ docs/   (TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, SDD.md, TEAM_GUIDE.md, specs/, deliverables/)
+│
+├─ backend/
+│  ├─ backend.md
+│  ├─ main.py                     # FastAPI 진입점(/health), 라우트: 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅
+│  ├─ auth.py                     # 로그인, 사용자 식별 (bcrypt + JWT 쿠키)
+│  ├─ app.py                      # 그래프 조립(build_app)
+│  ├─ persistence.py              # 체크포인터·Store (DATABASE_URL이면 Postgres)
+│  ├─ schemas/      schemas.md    # 파트 사이 데이터 형식 (3명 승인): chunk.py events.py approval.py recall.py decision.py
+│  ├─ services/                   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기)
+│  ├─ backend/rag/          rag.md
+│  │  ├─ backend/rag/ingest/    ingest.md     # 템플릿 ingest.py 자리
+│  │  │     handbook.py           # 핸드북 git 수집(고른 절만), 2023 권한표 판 고정
+│  │  │     history.py            # git 커밋 이력에서 판 목록 (리콜 시험 데이터)
+│  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
+│  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
+│  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
+│  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
+│  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지 (가산: 자동화)
+│  │  └─ retrieve/  retrieve.md   # 템플릿 retrieve.py 자리
+│  │        embed.py              # 다국어 로컬 임베딩 (11장)
+│  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
+│  │        rerank.py             # bge-reranker-v2-m3
+│  │        link_graph.py         # 핸드북 페이지 링크 그래프 (가산: GraphRAG)
+│  ├─ graph/        graph.md      # 질문 처리 그래프, 상태, 라우팅, 인용 검사, 답변 저장
+│  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
+│  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
+│  │  └─ recall/    recall.md     # 리콜 판정 (F-02)
+│  ├─ memory/       memory.md     # Store 장기 기억 (팀·역할·담당 서비스). 템플릿 memory.py 자리
+│  └─ prompts/      prompts.md
+│
+├─ skills/          skills.md     # 런타임 Skill (가산: MCP와 Skill). 상세는 MCP·Skill 설계
+│     ├─ delegation/SKILL.md      # 권한표 해석
+│     ├─ security/ finance/ (sre/ it-ops/: 이름은 D0 판단, 11장)
+│     └─ citation-rules/ grounding-check/ glossary/   # 공통 Skill 3개
+├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 3개 search_handbook, get_section, list_changed_sections
+├─ web/   (pages/: login, chat, approvals, recalls, admin)
+├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
+├─ db/    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
+├─ data/  (corpus/ 원문 스냅샷, manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
+├─ evals/ (dataset/, PREREGISTER.md, freeze.py, retrieval/, agent/, safety/, results/, run_all.py)
+└─ tests/
+```
+
 ### 5-1. 폴더 md 파일: 작업 기록과 문제 판정
 
 루트를 뺀 하위 폴더마다 맨 위에 폴더 이름과 같은 md 파일을 하나 둔다(예: `backend/rag/rag.md`, `backend/rag/ingest/ingest.md`, `backend/graph/departments/departments.md`). 그 폴더가 하는 일, 누가 무엇을 했는지, 어떤 문제가 있었고 해결됐는지를 이 파일 하나에서 본다.
 
 - 필수: 루트 바로 아래 폴더와 기능 단위 폴더(예: `backend/graph/decision/`, `backend/rag/ingest/`). 그보다 아래와 `tests/`, 데이터·캐시 폴더는 선택이다.
 - 루트에는 이 파일을 두지 않는다. 루트에는 `README.md`(소개), `AGENTS.md`(AI 도구 규칙)만 둔다.
-- 폴더 목록과 각 md 파일 위치는 SDD 3장 디렉토리 구조를 따른다.
+- 폴더 목록과 각 md 파일 위치는 5-0장 디렉토리 구조를 따른다.
 
 예시 (`backend/rag/ingest/ingest.md`):
 
@@ -114,7 +175,7 @@
 
 예시의 표 내용은 형식을 보이기 위한 가상 예시다. 건수는 D1 실측으로 채운다.
 
-폴더 이름은 `backend/rag/ingest/handbook/`(핸드북 git 수집: 고른 절, 2023 권한표 판 고정)과 `backend/rag/ingest/history/`(git 커밋 이력에서 판 목록을 만들어 리콜 시험 데이터로 씀)를 쓴다. 구조는 SDD 3장을 따른다. 파싱 대상은 Markdown과 HTML 표(권한표의 CSS grid)다. 수집에 인증키는 필요 없다.
+파일은 `backend/rag/ingest/handbook.py`(핸드북 git 수집: 고른 절, 2023 권한표 판 고정)와 `backend/rag/ingest/history.py`(git 커밋 이력에서 판 목록을 만들어 리콜 시험 데이터로 씀)로 둔다. 구조는 5-0장을 따른다. 파싱 대상은 Markdown과 HTML 표(권한표의 CSS grid)다. 수집에 인증키는 필요 없다.
 
 **문제 상태와 판정 규칙**
 

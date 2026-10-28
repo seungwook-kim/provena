@@ -125,24 +125,28 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 ## 폴더 구조
 
 ```
-backend/            FastAPI 서버
-  main.py             진입점 (/health)
-  graph/              LangGraph: 상태, Supervisor, 서브에이전트        (G4)
-  rag/                문서 파싱, 청킹, 인덱싱, 하이브리드 검색, 리랭킹  (G3)
-  auth.py             로그인과 사용자 식별                              (G4)
-  memory.py           사용자별 장기 기억 (Store namespace)              (G4)
-  services/llm.py     LLM 호출은 여기 한 곳. 데모 모드 재생도 여기      (G2, G6)
-data/               corpus/ 원문 스냅샷, manifest                       (G3)
-evals/              평가셋 v1, v2, 동결 스크립트, 사전 등록              (G5)
-tests/              회귀 테스트 (CI가 PR마다 실행)
-db/init.sql         pgvector 확장 생성
-docs/               주제서, 아키텍처, 게이트 점검, 제출물, Spec
-EVAL_REPORT.md      개선 전후 지표 (제출물)
-extras/mcp_skill/   MCP 서버와 Skill (가산 선택)
+backend/              FastAPI 서버
+  main.py, auth.py      진입점(/health)과 라우트, 로그인                    (G4)
+  schemas/              파트 사이 데이터 형식 (3명 승인)
+  graph/                질문 그래프, Supervisor와 팀 에이전트, 결정표, 리콜  (G4)
+  rag/ingest/           수집, 파싱, 청킹, 증분 수집                         (G3)
+  rag/retrieve/         임베딩, 하이브리드 검색, 리랭킹                      (G3)
+  memory/               사용자별 장기 기억 (Store namespace)                (G4)
+  services/llm.py       LLM 호출은 여기 한 곳. 데모 모드 재생도 여기       (G2, G6)
+skills/               런타임 Skill (가산)
+extras/mcp_skill/     FastMCP 서버 (가산)
+web/                  화면
+mock_erp/             업무시스템 목업
+data/                 corpus/ 원문 스냅샷, manifest, LICENSES/            (G3)
+evals/                평가셋 v1, v2, 동결, 사전 등록, 평가 실행기          (G5)
+tests/                회귀 테스트 (CI가 PR마다 실행)
+db/                   pgvector 확장, 데모 계정 시드
+docs/                 주제서, 아키텍처, 게이트 점검, 제출물, Spec, 팀 작업 지침서
+EVAL_REPORT.md        개선 전후 지표 (제출물)
 Dockerfile, docker-compose.yml   `docker compose up` 한 줄 실행
 ```
 
-각 폴더가 무엇이고 무엇을 채우는지는 **[docs/SCAFFOLD.md](./docs/SCAFFOLD.md)**에 있습니다. 쓰지 않는 것은 지워도 됩니다.
+파일 단위 전체 트리와 폴더 주인은 [docs/TEAM_GUIDE.md](./docs/TEAM_GUIDE.md) 5장에 있습니다. 템플릿 자리(`docs/SCAFFOLD.md`)를 따르되, `rag/ingest.py`·`retrieve.py`와 `memory.py`는 폴더로 나눴습니다.
 
 ## 시크릿 규칙 (위반 시 전원에게 노출됩니다)
 
