@@ -2,7 +2,7 @@
 
 State에 둘 것과 Store에 둘 것을 구분하세요.
   - State: 이번 대화(thread) 안에서만 필요한 것 (질의, 검색 결과, 중간 판단)
-  - Store: 대화를 넘어 사용자별로 남기는 것 (backend/memory.py)
+  - Store: 대화를 넘어 사용자별로 남기는 것 (backend/memory/)
 """
 from typing import TypedDict
 
