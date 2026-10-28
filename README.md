@@ -11,6 +11,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 항목 | 내용 |
 |---|---|
 | 프로젝트 | proj3-c |
+| 저장소 | https://github.com/aihuman-7th/proj3-c |
 | 조 | 3조 |
 | 주제와 산업 | IT: 정책 변경을 추적하는 엔지니어링 지식 AI (GitLab 공개 핸드북 기반) |
 | 배포 주소 | (Cloud Run 주소, D0에 확보) |
@@ -83,6 +84,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 이름 | GitHub | 역할 | 맡는 축 | 한마디 |
 |---|---|---|---|---|
 | 홍길동(예시) | @octocat | 검색 담당 | ② RAG 품질 | 잘 부탁드립니다 |
+| 김승욱(팀장) | [@seungwook-kim](https://github.com/seungwook-kim) | 에이전트·평가·배포 | ③ 에이전트 | |
 
 ## 일정
 
