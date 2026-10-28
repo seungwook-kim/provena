@@ -21,7 +21,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 
 | 이름 | GitHub | 역할 |
 |---|---|---|
-| 김승욱 | @seungwook-kim | 팀장 · 에이전트·평가·배포 |
+| 김승욱 | @seungwook-kim | 팀장 · 전 파트 참여. 에이전트 그래프(Supervisor·팀 에이전트, 질의 재작성·재검색, 사람 승인 interrupt), 결정표(F-04), 답변 리콜 판정(F-02), 평가셋·LLM 채점·단일 대 멀티 비교, 인젝션 시험, Spec, Spring 업무시스템 목업 |
 | 박진형 | | |
 | 강경희 | | |
 
@@ -107,7 +107,7 @@ GitHub와 역할 칸은 각자 자기 줄을 채운다(브랜치 → PR → 리�
 | 이름 | GitHub | 역할 | 맡는 축 | 한마디 |
 |---|---|---|---|---|
 | 홍길동(예시) | @octocat | 검색 담당 | ② RAG 품질 | 잘 부탁드립니다 |
-| 김승욱(팀장) | [@seungwook-kim](https://github.com/seungwook-kim) | 에이전트·평가·배포 | ③ 에이전트 | |
+| 김승욱(팀장) | [@seungwook-kim](https://github.com/seungwook-kim) | 전 파트 참여, 에이전트·평가 주도 | ③ 에이전트 | |
 
 ## 일정
 
