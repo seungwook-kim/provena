@@ -14,7 +14,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 저장소 | https://github.com/aihuman-7th/proj3-c |
 | 조 | 3조 |
 | 주제와 산업 | IT: 정책 변경을 추적하는 엔지니어링 지식 AI (GitLab 공개 핸드북 기반) |
-| 배포 주소 | (Cloud Run 주소, D0에 확보) |
+| 배포 주소 | https://provena-api-cttaanqntq-du.a.run.app |
 | 팀 작업 지침서 | [docs/TEAM_GUIDE.md](./docs/TEAM_GUIDE.md) |
 
 ## 팀 (3조)
