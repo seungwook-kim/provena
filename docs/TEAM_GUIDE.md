@@ -95,7 +95,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
 ├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ CODEOWNERS
 ├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
 ├─ Makefile                  # make test, make eval, make eval-all
 ├─ Dockerfile, docker-compose.yml, .env.example
@@ -201,7 +200,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 | `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
 | `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
 | 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
-| `CODEOWNERS` | 위 폴더 주인을 적어 PR 리뷰어가 자동 지정되게 한다 |
 
 **Git**
 
@@ -313,7 +311,7 @@ PR을 올릴 때 아래를 모두 체크한다.
 |---|---|---|
 | 전원 | README 조원 소개 표에 자기 줄 추가 (첫 PR) | D0 (10/30) |
 | 강경희 | 빈 FastAPI를 Cloud Run에 배포하고 `/health` 주소 공유 | D0 (10/30) |
-| 김승욱 | 평가셋 설계 시작, 폴더 뼈대·CODEOWNERS·`.env.example` | D0 (10/30) |
+| 김승욱 | 평가셋 설계 시작, 폴더 뼈대·`.env.example` | D0 (10/30) |
 | 박진형 | 핸드북 git 수집(고른 절, 고정 커밋), 파싱·청킹, 저녁에 청크 수 공유 | D1 (11/2) |
 
 ## 9. 막혔을 때 올리는 양식

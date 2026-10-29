@@ -142,7 +142,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발 도구 Skill (2-4)
 ├─ .mcp.json                 # 개발용 MCP 연결 설정
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ CODEOWNERS
 ├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
 ├─ Makefile                  # make test, make eval, make eval-all
 ├─ Dockerfile, docker-compose.yml, .env.example
