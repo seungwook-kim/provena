@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 권한표 파싱 `parse.py` `parse_authz()`: 2023 권한표 본표·이사회 표·각주, 칸마다 역할 주석과 열 이름 대조(다르면 멈춤), 금액 구간 끊김 보고와 테스트 | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | Markdown → 요소 `parse.py` `parse_page()`: markdown-it-py로 제목·문단·목록·표 행·코드·HTML 표를 요소로(원본 줄 번호·제목 경로 포함), 원본 되찾기 검사 `found_in_source()`와 테스트. 의존성 2줄 `backend/requirements.txt` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 단축코드 전처리 `parse.py` `preprocess()`: Hugo 단축코드를 4가지(감싸기·이름·링크·데이터)로 나눠 정리, 줄 수는 바꾸지 않음, 모르는 단축코드는 지우지 않음과 테스트. Spec `docs/specs/parse.md` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 개정 이력 기간을 "최근 12개월" → 2024-01-01부터로 넓힘(팀 리콜 시험 12건 중 4건이 빠져 있었음). 핸드북 커밋 6,332건, 12건 모두 있음 확인 검사·테스트 추가. 수집 원문은 그대로(corpus_id 같음) | PR 전 |
@@ -25,6 +26,7 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| I-004 | 2026-10-29 | 박진형 | 권한표 원문 'Non Billable Expenses' 금액 구간이 `Up to $5K` → `>$5K` → `>$50K` 로 겹침(>$5K의 끝이 없음) | 결정표가 $5K~$50K 사이를 어느 칸으로 볼지 원문만으론 못 정함 | 김승욱 (결정표) | 열림 | | 원문 그대로임(파서 오류 아님). `parse_report.json` `band_gaps` |
 | I-006 | 2026-10-29 | 박진형 | 리콜 시험 커밋 `6baed99c`(장애 리뷰 기한)가 고른 폴더 밖 `engineering/root-cause-analysis.md` 도 고침 | 리콜 시연 때 바뀐 규칙의 절반만 코퍼스에 있음 | 김승욱 (리콜) | 열림 | | 고른 폴더 안 `infrastructure-platforms/incident-review.md` 변경은 이력에 있음 |
 | I-005 | 2026-10-29 | 박진형 | 개정 이력이 최근 12개월뿐이라 팀 리콜 시험 커밋 12건 중 4건(2024-01-23 2건, 2024-10-18, 2025-09-19) 누락 | 리콜 시험 데이터 부족 | 박진형 | 해결 | 2026-10-29 | 기간 2024-01-01부터, `missing_recall` 검사 + `test_missing_recall_commits_detected`, 실행 결과 12건 모두 있음 |
 | I-003 | 2026-10-29 | 박진형 | 팀 레포 `.gitignore` 의 `build/` 때문에 핸드북 폴더 `engineering/infrastructure-platforms/gitlab-delivery/build/` 13쪽이 git에 안 잡힘 | 커밋하면 1,564쪽 중 13쪽이 조용히 빠짐(평가자 재현 실패) | 김승욱 (PR #8) | 해결 | 2026-10-30 | PR #8: `.gitignore` 에 `!data/corpus/**/build/`, `.gitattributes` 에 `data/corpus/** -text`(1,564쪽 시험, decisions.md 2026-10-30) |
