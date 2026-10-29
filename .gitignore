@@ -28,3 +28,6 @@ build/
 
 # 로그
 *.log
+
+# 원문 스냅샷: 핸드북 안의 build/ 폴더(13쪽)는 위 build/ 규칙의 예외 (I-003)
+!data/corpus/**/build/

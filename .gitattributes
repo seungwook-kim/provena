@@ -1,0 +1,2 @@
+# 원문 스냅샷은 줄바꿈을 바꾸지 않는다. Windows autocrlf로 바뀌면 sha256이 원본과 달라진다 (I-003)
+data/corpus/** -text
