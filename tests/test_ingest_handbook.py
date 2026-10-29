@@ -71,6 +71,34 @@ def test_check_pages_empty_section_raises():
         hb.check_pages(pages, expected=len(pages))
 
 
+# AC-04 · 권한표 응답 검증
+AUTHZ = b'---\nlayout: markdown_page\ntitle: "Authorization Matrix"\n---\n<div>table</div>\n'
+
+
+@pytest.mark.parametrize("status, headers, body", [
+    (404, {}, b""),
+    (200, {"X-Gitlab-Content-Sha256": hb.sha256(b"")}, b""),
+    (200, {"X-Gitlab-Content-Sha256": "0" * 64}, AUTHZ),
+    (200, {"X-Gitlab-Content-Sha256": hb.sha256(b"---\ntitle: Sign in\n---\n")}, b"---\ntitle: Sign in\n---\n"),
+])
+def test_check_authz_rejects(status, headers, body):
+    with pytest.raises(hb.CollectError):
+        hb.check_authz(status, headers, body)
+
+
+def test_check_authz_accepts():
+    hb.check_authz(200, {"x-gitlab-content-sha256": hb.sha256(AUTHZ)}, AUTHZ)
+
+
+def test_skip_authz_keeps_previous_record_only_if_file_matches(tmp_path):
+    manifest, authz_file = tmp_path / "collect_manifest.json", tmp_path / "authz.md"
+    authz_file.write_bytes(AUTHZ)
+    manifest.write_text('{"authz": {"file_sha256": "%s"}}' % hb.sha256(AUTHZ), encoding="utf-8")
+    assert hb.kept_authz(manifest, authz_file) == {"file_sha256": hb.sha256(AUTHZ)}
+    authz_file.write_bytes(AUTHZ + b"changed")
+    assert hb.kept_authz(manifest, authz_file) is None
+
+
 # AC-03 · 원본 그대로: 작업 폴더(CRLF 변환)가 아니라 git 원본에서 읽는다
 def test_read_blobs_returns_git_original(tmp_path):
     def run(*args):
