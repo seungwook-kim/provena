@@ -6,13 +6,15 @@
 
 | 게이트 | 증명하는 곳 | 평가자가 확인하는 방법 | 지금 상태 |
 |---|---|---|---|
-| G1 배포 주소 | README 팀 정보의 배포 주소 | 평가용 계정으로 접속해 핵심 시나리오를 끝까지 본다 | |
-| G2 한 줄 기동 | `docker-compose.yml`, `.env.example`, 데모 모드 | 새 clone에서 `docker compose up`, 10분 안에 뜨는지 실측 | |
-| G3 코퍼스 | `data/manifest.jsonl`, `data/corpus/` | 서로 다른 청크(본문 sha256 기준) 1만 개 이상, 문서 50건 이상, 파싱 1종 이상 | |
-| G4 에이전트 | `backend/graph/`, `backend/auth.py`, `backend/memory.py` | 코드와 시연. 평가용 계정 2개로 대화와 기억이 섞이지 않는지 | |
-| G5 평가 | `evals/`, `EVAL_REPORT.md` 2장, 3장 | 평가셋 50건 이상(동결 시점 기준, 관련과 비관련 각각 절반), 개선 전후 두 번 이상, 차이는 문항 목록과 함께 | |
-| G6 트레이스 | Langfuse 프로젝트, `EVAL_REPORT.md` 7장 | 대시보드에서 트레이스와 평가 점수가 연결되어 있는지 | |
-| G7 제출물 | README, `.env.example`, `docs/deliverables/` | 비밀값 커밋 없음, 3분 이내 시연 영상(정상 경로와 실패 경로) | |
+| G1 배포 주소 | README 팀 정보의 배포 주소 | 평가용 계정으로 접속해 핵심 시나리오를 끝까지 본다 | 진행 중. Cloud Run 주소에서 `/health` 응답 확인([PR #4](https://github.com/aihuman-7th/proj3-c/pull/4)). 로그인과 핵심 시나리오는 아직 |
+| G2 한 줄 기동 | `docker-compose.yml`, `.env.example`, 데모 모드 | 새 clone에서 `docker compose up`, 10분 안에 뜨는지 실측 | 진행 중. 템플릿 compose로 `/health` 확인(`docs/worklog.md` 10/28). 데모 모드 응답 재생, 스냅샷 적재, 데모 계정 시드는 아직 |
+| G3 코퍼스 | `data/manifest.jsonl`, `data/corpus/` | 서로 다른 청크(본문 sha256 기준) 1만 개 이상, 문서 50건 이상, 파싱 1종 이상 | 진행 중. 수집 규칙(고른 17개 폴더, 1,564쪽) 머지([PR #5](https://github.com/aihuman-7th/proj3-c/pull/5)), 페이지 id 10자리([PR #6](https://github.com/aihuman-7th/proj3-c/pull/6)), git 원본 받기·저장([PR #7](https://github.com/aihuman-7th/proj3-c/pull/7)) 머지. 원문 스냅샷, 청킹, `manifest.jsonl`은 아직 |
+| G4 에이전트 | `backend/graph/`, `backend/auth.py`, `backend/memory.py` | 코드와 시연. 평가용 계정 2개로 대화와 기억이 섞이지 않는지 | 미착수. 질문 그래프 Spec 초안(`docs/specs/question-graph.md`). 로그인은 로컬 구현 중(PR 전) |
+| G5 평가 | `evals/`, `EVAL_REPORT.md` 2장, 3장 | 평가셋 50건 이상(동결 시점 기준, 관련과 비관련 각각 절반), 개선 전후 두 번 이상, 차이는 문항 목록과 함께 | 미착수. `evals/dataset_v1.jsonl`은 아직 템플릿 2줄. v1 30건 동결 11/3 |
+| G6 트레이스 | Langfuse 프로젝트, `EVAL_REPORT.md` 7장 | 대시보드에서 트레이스와 평가 점수가 연결되어 있는지 | 미착수 |
+| G7 제출물 | README, `.env.example`, `docs/deliverables/` | 비밀값 커밋 없음, 3분 이내 시연 영상(정상 경로와 실패 경로) | 미착수. 비밀값 검사 워크플로(`secret-scan.yml`)가 지금 실행되지 않음(작업 단계 0개로 실패) |
+
+마지막 갱신: 2026-10-30 김승욱 (첫 갱신용 초안, PR #6·#7 반영)
 
 ## 상태 표기
 

@@ -44,10 +44,10 @@ flowchart LR
 
 | 항목 | 내용 |
 |---|---|
-| 각자 수정할 수 있는 경로 | 예) A: `backend/rag/`, `data/`, B: `backend/graph/`, C: `evals/`, `docs/` |
-| 모듈 사이의 함수와 시그니처 | 예) `retrieve(question, k, ...) -> list[dict]`, `build_graph(retriever=None, checkpointer=None)` |
-| 의존하는 파일과 환경변수 | 코퍼스 경로, 모델 이름, `DEMO_MODE` 등. **코드가 읽는 파일을 빠짐없이** |
-| 오프라인 규칙 | 키 없이 돌 때 어떤 모델과 파일을 쓰는가 |
+| 각자 수정할 수 있는 경로 | 예) A: `backend/rag/`, `data/`, B: `backend/graph/`, C: `evals/`, `docs/`<br>**3조 (안, D0 확정, `docs/TEAM_GUIDE.md` 5장)**<br>김승욱: `backend/graph/`, `backend/memory/`, `backend/prompts/`, `skills/`, `backend/main.py`, `backend/services/`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `db/`, `evals/agent/`, `evals/safety/`, `mock_erp/`<br>박진형: `backend/rag/`, `data/`, `evals/retrieval/`, `extras/mcp_skill/`<br>강경희: `backend/auth.py`, `web/`<br>공동(3명 승인): `backend/schemas/`, 평가셋 |
+| 모듈 사이의 함수와 시그니처 | 예) `retrieve(question, k, ...) -> list[dict]`, `build_graph(retriever=None, checkpointer=None)`<br>**3조 (안, D0 확정)**<br>김승욱 제공: `build_graph(retriever=None, checkpointer=None)`. 그래프는 검색기와 체크포인터를 주입받는다(`docs/specs/question-graph.md`)<br>그래프가 받는 것: 검색 `retriever(SearchQuery) -> list[Chunk]`(박진형, 형식은 `backend/schemas/`), 로그인한 사용자 id를 꺼내는 함수(강경희). 두 줄은 D0에서 채운다 |
+| 의존하는 파일과 환경변수 | 코퍼스 경로, 모델 이름, `DEMO_MODE` 등. **코드가 읽는 파일을 빠짐없이**<br>**3조 (안, D0 확정)**<br>김승욱 파트: `DEMO_MODE`, LLM 키(`.env.example`), `DATABASE_URL`(체크포인터, 답·인용 저장), `LANGFUSE_*`. 파일: `skills/`의 런타임 Skill, 데모 모드 녹화 응답(경로는 D0)<br>박진형 파트(코퍼스·색인 경로, 임베딩·리랭커 모델 이름), 강경희 파트(인증 비밀값, 데모 계정): D0에서 채운다 |
+| 오프라인 규칙 | 키 없이 돌 때 어떤 모델과 파일을 쓰는가<br>**3조 (안, D0 확정)**<br>LLM 키가 없으면 `DEMO_MODE=1`로 기록해 둔 응답을 재생한다. 그래프 시험은 가짜 검색기와 메모리 체크포인터로 키와 DB 없이 돈다. 임베딩·리랭커 모델의 오프라인 실행(`HF_HUB_OFFLINE=1`)은 박진형 파트에서 D0에 채운다 |
 
 ## 결정 기록
 
