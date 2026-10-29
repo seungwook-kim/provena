@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 단축코드 전처리 `parse.py` `preprocess()`: Hugo 단축코드를 4가지(감싸기·이름·링크·데이터)로 나눠 정리, 줄 수는 바꾸지 않음, 모르는 단축코드는 지우지 않음과 테스트. Spec `docs/specs/parse.md` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 개정 이력 기간을 "최근 12개월" → 2024-01-01부터로 넓힘(팀 리콜 시험 12건 중 4건이 빠져 있었음). 핸드북 커밋 6,332건, 12건 모두 있음 확인 검사·테스트 추가. 수집 원문은 그대로(corpus_id 같음) | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | `handbook.py`(고른 17개 폴더 1,564쪽, 고정 커밋 129243bc, 2023 권한표 API 1회)·`history.py`(핸드북 커밋 1,666건, 권한표 커밋 36건)·`tests/test_ingest_handbook.py` 18개. 1,564쪽 전부 git 원본과 바이트 대조 불일치 0, 두 번 실행 corpus_id 같음 | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | git 원본 받기·저장 `handbook.py` `collect()`: 고른 폴더만 받고, 작업 폴더가 아니라 git 원본 바이트로 읽어 blob id 대조, 저장 후 다시 읽어 지문 대조, `pages.jsonl`·`collect_manifest.json` 기록과 테스트 (PR 2/7) | #7 |
