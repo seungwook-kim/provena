@@ -4,6 +4,7 @@ import subprocess
 import pytest
 
 from backend.rag.ingest import handbook as hb
+from backend.rag.ingest.history import RECALL_COMMITS, RS, US, missing_recall, parse_log
 
 PAGE = b"---\ntitle: Incident Management\n---\n\nbody\n"
 
@@ -113,3 +114,21 @@ def test_read_blobs_returns_git_original(tmp_path):
     got = hb.read_blobs(tmp_path, ids)
     assert got[ids[0]] == b"line1\nline2\n"
     assert all(hb.git_blob_id(data) == blob for blob, data in got.items())
+
+
+def test_parse_log():
+    text = (f"{RS}abc{US}2026-06-29{US}Update disclosure: 30 -> 90 days\n\n"
+            f"M\tcontent/handbook/security/a.md\nA\tcontent/handbook/security/b.md\n"
+            f"{RS}def{US}2026-06-01{US}typo\n\nD\tcontent/handbook/support/c.md\n")
+    commits = parse_log(text)
+    assert [c["sha"] for c in commits] == ["abc", "def"]
+    assert commits[0]["files"][1] == {"status": "A", "path": "content/handbook/security/b.md"}
+    assert commits[1]["title"] == "typo"
+
+
+def test_missing_recall_commits_detected():
+    full = [{"sha": s + "0" * 32} for s in RECALL_COMMITS]
+    assert missing_recall(full) == []
+    assert missing_recall(full[1:]) == ["0c787db1"]              # 1년만 받았을 때 빠졌던 2024-01 커밋
+    assert len(RECALL_COMMITS) == 12
+    assert {"0c787db1", "e29aad9a", "1ca85649", "6baed99c"} <= set(RECALL_COMMITS)   # 처음에 빠졌던 4건
