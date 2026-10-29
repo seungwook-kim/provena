@@ -1,6 +1,5 @@
 ---
 type: sdd
-cssclasses: [adr]
 project: Provena
 updated: 2026-10-28
 tags: [project, sdd]
@@ -46,7 +45,7 @@ flowchart LR
 
 | 구성 요소 | 하는 일 | 기술 |
 |---|---|---|
-| `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | 정적 HTML·JS. FastAPI가 직접 내준다 |
+| `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅 | FastAPI, OpenAPI 자동 문서 |
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
 | `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |

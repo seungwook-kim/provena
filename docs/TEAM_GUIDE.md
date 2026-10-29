@@ -71,7 +71,7 @@
 | `backend/main.py`, `backend/services/`, `Dockerfile`, `docker-compose.yml`, `db/`, `.github/workflows/` | 김승욱 (안) | FastAPI 라우트, LLM 호출(`services/llm.py` 한 곳), compose·seed·CI |
 | `backend/auth.py` | 강경희 (안) | 로그인·사용자 식별. 첫 배포(`/health`)도 강경희 |
 | `extras/mcp_skill/` | 박진형 (안) | FastMCP 서버 |
-| `web/` | 강경희 (안) | 정적 HTML·JS 화면 |
+| `web/` | 강경희 (안) | 화면 (Vite + React + Tailwind, 빌드 결과를 FastAPI가 정적 파일로 내준다) |
 | `evals/dataset_v1.jsonl`·v2, `evals/freeze.py` | 공동 | 평가셋 v1(30건)·v2(50건). 템플릿 자리 그대로 |
 | `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
 | `evals/agent/`, `evals/run_all.py` | 김승욱 (안) | 에이전트 평가, 한 줄 재현 명령 |
