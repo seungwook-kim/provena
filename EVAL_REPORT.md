@@ -10,7 +10,7 @@
 |---|---|
 | 산업과 문서 종류 | |
 | 서로 다른 문서 수 / 서로 다른 청크 수 | (문서 50건 이상 / 청크 1만 개 이상. 청크는 본문 sha256 기준) |
-| 문서 파싱 방식 (PDF, 표, 스캔 중) | |
+| 문서 파싱 방식 (PDF, 표, 스캔 중) | 표. 핸드북 Markdown(`markdown-it-py`, 표 켬) + Hugo 단축코드 정리 + HTML 표·2023 권한표 CSS grid(`beautifulsoup4` + `lxml`). 1,561쪽 → 요소 85,388개(원본 줄 되찾기 실패 0), 권한표 363칸(역할 주석 대조 불일치 0). 재현: `python -m backend.rag.ingest.parse` |
 | 청킹 방식과 크기, 겹침 | |
 | 임베딩 모델과 선택 근거 | |
 | 벡터DB와 선택 이유, 한계 | |
@@ -20,7 +20,10 @@
 
 | # | 문서 | 원문에서 본 것 | 파싱 결과 | 틀어진 곳 |
 |---|---|---|---|---|
-| 1 | | | | |
+| 1 | Incident Management (`engineering/infrastructure-platforms/incident-management/_index.md`, 커밋 129243bc) | 단축코드·경고 상자가 많은 쪽, 요소 15개를 같은 판 원본 줄 링크로 봄 | 15개 모두 같은 내용(단축코드·`**`·링크 주소만 지워짐) | 없음 (박진형 판정) |
+| 2 | Test Environments Catalog (`engineering/testing/test-environments-catalog.md`) | Markdown 표가 많은 쪽, 요소 15개 | 15개 모두 같은 내용, 표 행은 머리 이름과 칸이 짝지어짐 | 없음 (박진형 판정) |
+| 3 | 2023 승인 권한표 (`www-gitlab-com` 커밋 0a3de83375) | 글자 있는 칸 71개의 값·업무·금액 구간·역할 | 71칸 모두 일치. 363칸 전부 칸마다 붙은 역할 주석과 열 이름을 코드로 대조해 불일치 0 | 파서 오류 없음. 원문 자체의 'Non Billable Expenses' 금액 구간 겹침은 문제 기록 I-004 (박진형 판정) |
+| 4 | Trust and Safety (`security/security-operations/trustandsafety/_index.md`) | HTML 표 팀원 5명. 원문 HTML이 깨짐(46줄 `</tr>` 자리에 `<tr>`) | `lxml` 엔진: 5명 5행. 처음 쓴 Python 기본 엔진(`html.parser`)은 4명을 한 행으로 뭉쳤음 → PRD 9장대로 `lxml` 로 바꿈 | 바꾼 뒤 없음 (Claude Code 확인, 사람 대조 전. 이 쪽 말고 바뀐 요소 0) |
 
 ## 2. 평가셋 (G5)
 
