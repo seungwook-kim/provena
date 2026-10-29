@@ -1,4 +1,6 @@
 """핸드북 수집 (docs/specs/collect.md AC). 네트워크 없이 돈다."""
+import subprocess
+
 import pytest
 
 from backend.rag.ingest import handbook as hb
@@ -67,3 +69,19 @@ def test_check_pages_empty_section_raises():
     pages = {p: b for p, b in fake_pages(2).items() if "/finance/" not in p}
     with pytest.raises(hb.CollectError, match="0쪽"):
         hb.check_pages(pages, expected=len(pages))
+
+
+# AC-03 · 원본 그대로: 작업 폴더(CRLF 변환)가 아니라 git 원본에서 읽는다
+def test_read_blobs_returns_git_original(tmp_path):
+    def run(*args):
+        return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True).stdout
+    run("init", "-q")
+    run("config", "core.autocrlf", "true")
+    (tmp_path / "a.md").write_bytes(b"line1\nline2\n")
+    (tmp_path / "b.md").write_bytes(PAGE)
+    run("add", ".")
+    blobs = run("ls-files", "-s").decode().split("\n")
+    ids = [line.split()[1] for line in blobs if line]
+    got = hb.read_blobs(tmp_path, ids)
+    assert got[ids[0]] == b"line1\nline2\n"
+    assert all(hb.git_blob_id(data) == blob for blob, data in got.items())
