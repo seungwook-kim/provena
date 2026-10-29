@@ -24,7 +24,7 @@
   - 재검색 최대 2회
 - **Out of Scope**:
   - 결정표 실행과 승인(별도 Spec `decision-approval.md`)
-  - 팀 합동 검토 F-03(별도 Spec)
+  - 팀 합동 검토 F-03(별도 Spec `team-review.md`)
   - 답변 리콜 F-02(별도 Spec `recall.md`)
   - 사용자별 장기 기억 Store(별도 Spec `memory.md`). 이 Spec은 `thread_id`만 쓴다
   - 검색 내부(파싱, 청킹, 하이브리드 검색, 리랭킹은 `backend/rag/`)
