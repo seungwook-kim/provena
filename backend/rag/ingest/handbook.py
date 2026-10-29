@@ -59,7 +59,7 @@ def page_url(path: str) -> str:
 
 def rule_seq(path: str) -> int:
     """페이지 id: 경로 해시라 판이 바뀌어도 같은 페이지는 같은 값(SDD 11-1 3-1 추천안, D0 확정 전 잠정)."""
-    return int(sha256(path.encode())[:15], 16)
+    return int(sha256(path.encode())[:8], 16)
 
 
 def front_matter(text: str) -> dict[str, str]:

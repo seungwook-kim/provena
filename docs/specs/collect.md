@@ -45,7 +45,7 @@
 - 핸드북: `https://gitlab.com/gitlab-com/content-sites/handbook.git`, 고정 커밋 `129243bcffcf6cbc8c2e83f537f1836b99900a61`(2026-10-27). 고른 폴더는 `handbook.py`의 `SECTIONS` (조장 확인 2026-10-28)
 - 받는 법: `git clone --filter=blob:none --no-checkout --shallow-since=2023-12-01` → `git sparse-checkout set --no-cone <폴더>` → `git checkout --detach <커밋>` → `git ls-tree`·`git cat-file --batch`로 원본 읽기
 - 권한표: GitLab API `repository/files/.../raw?ref=0a3de833754144dc4d448814e2edbcaed0883f35`, User-Agent 표시, timeout 30초, 1회
-- 페이지 id(`rule_seq`): 페이지 경로 sha256 앞 15자리 16진수 → 정수 (SDD 11-1 3-1 추천안, D0 확정 전 잠정)
+- 페이지 id(`rule_seq`): 페이지 경로 sha256 앞 8자리 16진수 → 정수, 최대 10자리 (SDD 11-1 3-1 추천안, D0 확정 전 잠정). 15자리(18자리 정수)는 길다는 리뷰(PR #5)로 줄임 — 1,564쪽 실측 충돌 0, 계산상 충돌 확률 0.03%(5,000쪽 0.3%), 겹치면 수집이 멈춘다(`collect()` 중복 검사)
 - 판(`version_id`): 커밋 sha 앞 12자리. 판 날짜: 그 커밋의 날짜
 - 출력: `data/corpus/handbook/**`, `data/corpus/authz/authorization-matrix-2023-05.html.md`, `data/corpus/pages.jsonl`, `data/corpus/collect_manifest.json`, `data/corpus/history/*.jsonl`
 - 개정 이력: `git log --no-merges --no-renames --name-status` (이름 바뀜 탐지는 파일 내용을 받아야 해서 끈다), **2024-01-01부터** 고정 커밋까지. 팀 리콜 시험 커밋 12건(`study`의 참고 URL 2장, 가장 오래된 것 2024-01-23)이 모두 있어야 하고 하나라도 없으면 멈춘다. (처음엔 주제서 초안의 "최근 12개월"이라 4건이 빠졌음, 10/29 수정) 권한표 이력은 API commits(`path`), 요청 간격 1초, 최대 20쪽

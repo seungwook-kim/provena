@@ -27,9 +27,9 @@ def test_page_url(path, url):
 
 def test_rule_seq_stable_and_distinct():
     a = "content/handbook/security/_index.md"
-    assert hb.rule_seq(a) == 405452784290735060          # 실행·PC가 달라도 같은 값(리터럴과 비교, GATES.md)
+    assert hb.rule_seq(a) == 1510429323                  # 실행·PC가 달라도 같은 값(리터럴과 비교, GATES.md)
     assert hb.rule_seq(a) != hb.rule_seq("content/handbook/support/_index.md")
-    assert 0 < hb.rule_seq(a) < 2**63   # Postgres bigint에 들어감
+    assert 0 < hb.rule_seq(a) < 16**8   # 최대 10자리(앞 8자), Postgres bigint에 들어감
 
 
 def test_corpus_id_order_independent():
