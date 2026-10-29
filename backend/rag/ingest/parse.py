@@ -1,13 +1,19 @@
 """파싱: 수집한 원문(data/corpus/)을 요소 단위 중간 표현과 권한표 칸 목록으로 바꾼다.
 
+python -m backend.rag.ingest.parse            (handbook.py 를 먼저 돌려 data/corpus/ 가 있어야 한다)
+
 Spec: docs/specs/parse.md. 원문은 읽기만 하고 결과는 data/parsed/ 에 쓴다(저장소에 커밋하지 않음).
 파서 선택 근거: 표본 20쪽 비교에서 markdown-it-py 제목 F1 0.996·표 19/20·코드 20/20.
 """
 from __future__ import annotations
 
+import argparse
 import collections
+import json
 import re
+import sys
 from html import unescape
+from pathlib import Path
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from markdown_it import MarkdownIt
@@ -416,3 +422,83 @@ def parse_authz(html: str) -> dict:
         raise ParseError("각주 (n) 를 찾지 못함")
     return {"roles": roles, "n_functional": n_func, "cells": cells, "rows_by_category": dict(categories),
             "board": board, "notes": notes, "band_gaps": band_gaps(cells)}
+
+
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    with path.open(encoding="utf-8") as f:                       # 저장 성공 ≠ 재사용 가능
+        back = sum(1 for line in f if json.loads(line))
+    if back != len(rows):
+        raise ParseError(f"다시 읽은 건수 {back} ≠ 쓴 건수 {len(rows)}: {path}")
+
+
+def run(corpus: Path, out: Path) -> dict:
+    pages = [json.loads(line) for line in (corpus / "pages.jsonl").open(encoding="utf-8")]
+    counts, elements, skipped, review_pages, prov_fail = collections.Counter(), [], [], [], []
+    for page in pages:
+        if page["redirect_to"]:
+            skipped.append(page["path"])
+            continue
+        raw = (corpus / "handbook" / page["path"].removeprefix("content/handbook/")).read_text(encoding="utf-8")
+        page_elements = parse_page(page, raw, counts)
+        if any(e["review"] and e["review"].startswith("unknown") for e in page_elements):
+            review_pages.append(page["path"])
+        raw_lines = raw.split("\n")
+        prov_fail += [e["element_id"] for e in page_elements if not found_in_source(e, raw_lines)]
+        elements += page_elements
+
+    authz = parse_authz((corpus / "authz/authorization-matrix-2023-05.html.md").read_text(encoding="utf-8"))
+    out.mkdir(parents=True, exist_ok=True)
+    write_jsonl(out / "document_ir.jsonl", elements)
+    write_jsonl(out / "authz_cells.jsonl", authz["cells"])
+    write_jsonl(out / "authz_board.jsonl", authz["board"])
+    write_jsonl(out / "authz_notes.jsonl", authz["notes"])
+
+    kinds = collections.Counter(e["kind"] for e in elements)
+    report = {
+        "parser": {"markdown-it-py": _version("markdown-it-py"), "beautifulsoup4": _version("beautifulsoup4")},
+        "corpus_id": json.loads((corpus / "collect_manifest.json").read_text(encoding="utf-8"))["corpus_id"],
+        "pages": len(pages), "pages_parsed": len(pages) - len(skipped), "skipped_redirect": skipped,
+        "elements": len(elements), "elements_by_kind": dict(kinds),
+        "review": {"unknown_shortcode_pages": review_pages,
+                   "cell_count_rows": sum(1 for e in elements if e["review"] == "cell_count")},
+        "provenance_failures": len(prov_fail), "provenance_failure_ids": prov_fail[:20],
+        "shortcodes": {k: v for k, v in sorted(counts.items())},
+        "authz": {"roles": authz["roles"], "categories": authz["rows_by_category"],
+                  "cells": len(authz["cells"]), "cells_nonempty": sum(1 for c in authz["cells"] if c["value"]),
+                  "comment_aliases": sum(1 for c in authz["cells"] if c["comment_alias"]),
+                  "band_gaps": authz["band_gaps"], "board_rows": len(authz["board"]),
+                  "board_private_reference": [b["item"] for b in authz["board"] if b["private_reference"]],
+                  "notes": len(authz["notes"])},
+    }
+    (out / "parse_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                                           encoding="utf-8", newline="\n")
+    return report
+
+
+def _version(dist: str) -> str:
+    from importlib.metadata import version
+    return version(dist)
+
+
+def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--corpus", type=Path, default=Path("data/corpus"))
+    ap.add_argument("--out", type=Path, default=Path("data/parsed"))
+    args = ap.parse_args()
+    r = run(args.corpus, args.out)
+    a = r["authz"]
+    print(f"{r['pages_parsed']}쪽 → 요소 {r['elements']}개 {r['elements_by_kind']}")
+    print(f"건너뜀 {len(r['skipped_redirect'])}쪽, 검토 대기 {len(r['review']['unknown_shortcode_pages'])}쪽, "
+          f"표 칸 수 불일치 {r['review']['cell_count_rows']}행, 원문 되찾기 실패 {r['provenance_failures']}개")
+    print(f"권한표 {len(a['categories'])}종 {a['cells']}칸(글자 {a['cells_nonempty']}), 구간 끊김 {len(a['band_gaps'])}, "
+          f"이사회 {a['board_rows']}행, 각주 {a['notes']}개")
+    if r["review"]["unknown_shortcode_pages"] or r["provenance_failures"]:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
