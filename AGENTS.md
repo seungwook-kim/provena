@@ -8,7 +8,7 @@ Provena(프로베나): IT 조직의 정책·런북(GitLab 공개 핸드북, CC B
 
 ## 기술 스택
 
-Python 3.13, FastAPI, LangGraph·LangChain, PostgreSQL + pgvector, 다국어 로컬 임베딩과 bge-reranker-v2-m3, BM25 하이브리드 검색, LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(anthropic 기본, openai)로 고릅니다. 관측은 Langfuse, MCP는 FastMCP입니다. 후보 버전은 docs/SDD.md 9장.
+Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + pgvector, 다국어 로컬 임베딩과 bge-reranker-v2-m3, BM25 하이브리드 검색, LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(anthropic 기본, openai)로 고릅니다. 관측은 Langfuse, MCP는 FastMCP입니다. 후보 버전은 docs/SDD.md 9장.
 
 필수 구성은 Python, FastAPI, LangGraph(멀티에이전트 최소형), RAG, Docker, Langfuse입니다. 폴더 역할은 `docs/SCAFFOLD.md`를 따릅니다.
 
@@ -39,7 +39,7 @@ Python 3.13, FastAPI, LangGraph·LangChain, PostgreSQL + pgvector, 다국어 로
 - 비밀키·비밀번호·토큰을 코드, 로그, 커밋에 넣지 않는다. 설정은 .env 에서 읽는다.
 - 라이브러리 API를 추측하지 않는다. 공식 문서를 확인하고, 확인한 문서 URL을 PR 설명에 적는다.
 - 숫자(정확도, 건수, 시간)를 지어내지 않는다. 실행 결과에서 나온 값만 쓴다.
-- 커밋 전에 `make test` 를 실행하고 통과한 결과를 PR에 붙인다.
+- 커밋 전에 `pytest -q` 를 실행하고 통과한 결과를 PR에 붙인다. 의존성은 `backend/requirements.txt`(시험 도구는 `backend/requirements-dev.txt`)에 있다.
 - 한 번에 한 가지 일만 한다. 요청받지 않은 리팩터링·파일 이동을 하지 않는다.
 - 코드를 바꾸면 docs/SPEC.md도 같은 PR에서 바꾼다(가이드 p.14).
 - 작업을 마치면 그 폴더의 <폴더명>.md(예: backend/rag/ingest/ingest.md)의 작업 기록 표 맨 위에 한 줄 추가한다. 작업자 칸에는 이 도구를 실행한 사람의 git id, 이름, 별칭 중 하나를 쓴다(도구 이름만 쓰지 않는다). 발견한 문제는 문제 기록에 "열림"으로 올린다. 고쳤으면 판정 근거(테스트, 재현 명령, PR 번호)를 적고 "해결"로 바꾼다.

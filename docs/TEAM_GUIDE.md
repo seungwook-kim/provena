@@ -25,7 +25,7 @@
 
 | 날짜 | 할 일 |
 |---|---|
-| 10/30 (D0) | 이 지침서·계약(`backend/schemas/`) 확정, 빈 서버 배포. 전원 README 조원 소개 표에 자기 줄 추가(브랜치 → PR → 리뷰 → merge, 템플릿 첫 과제). `docs/worklog.md`·`docs/decisions.md` 빈 파일 생성. GCP 결제 연결, API 활성화, 저장소 권한, 조 저장소 GitHub Actions 동작 확인(가이드 p.5). 역할과 담당 축 확정(가이드 p.28) |
+| 10/30 (D0) | 이 지침서·계약(`backend/schemas/`) 확정, 빈 서버 배포. 전원 README 조원 소개 표에 자기 줄 추가(브랜치 → PR → 리뷰 → merge, 템플릿 첫 과제). `docs/worklog.md`·`docs/decisions.md` 빈 파일 생성. GCP 결제 연결, API 활성화, 저장소 권한(가이드 p.5). 역할과 담당 축 확정(가이드 p.28) |
 | 11/4 (D3)까지 | 세로 한 줄 완성: 로그인(임시) → 질문 → 검색 → 인용 답이 배포 주소에서 동작 |
 | 11/6 (D5) | 중간 점검. 확장 기능(F-05, F-06)을 넣을지 뺄지 결정, 로그인 방식 확정 |
 | 11/14~15 | 주말. 자동 실행이나 배포를 새로 두지 않는다. 필요하면 평가 파이프라인만 한 번(가이드 p.5) |
@@ -103,8 +103,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
 ├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
-├─ Makefile                  # make test, make eval, make eval-all
+├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). pyproject.toml과 Makefile은 두지 않는다
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
@@ -204,7 +203,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 
 | 파일 | 규칙 |
 |---|---|
-| `pyproject.toml` | 파트별 `[dependency-groups]`(rag / graph / backend / dev)에서 자기 그룹만 고친다 |
+| `backend/requirements.txt` | 파트 구분 없이 한 파일이다(시험 도구 pytest·httpx는 `backend/requirements-dev.txt`). 자기 파트가 쓰는 줄만 더하고 남의 줄과 기존 버전은 바꾸지 않는다. Dockerfile과 CI(Python 3.12)가 이 파일로 설치한다 |
 | `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
 | `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
 | 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
@@ -217,6 +216,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 - 다른 사람 브랜치에는 push하지 않는다.
 - PR은 하루 1개 이상 올린다.
 - 머지 전에 `main`을 받아 충돌을 자기 브랜치에서 푼다.
+- 팀장이 자리를 비웠을 때는 크게 검토받을 일이 아니면 승인한 사람이 바로 머지한다. `backend/schemas/`처럼 3명 승인이 필요한 PR은 기다린다.
 - **커밋 순서(가이드 p.14):** SPEC·평가셋 커밋이 첫 구현 커밋보다 앞서야 한다. 구현 코드는 SPEC·평가셋을 커밋한 뒤에 올린다.
 
 ## 6. 파트 사이 계약 (`backend/schemas/`, D0 확정 전 초안)
@@ -305,7 +305,7 @@ PR을 올릴 때 아래를 모두 체크한다.
 - [ ] 첫 PR이면: SPEC·평가셋 커밋이 구현 커밋보다 앞서 있다 (가이드 p.14)
 - [ ] 기능 작업이면 `docs/specs/{기능}.md`(Why, Goal, What, How, AC)를 먼저 썼다
 - [ ] 실험이면 `evals/PREREGISTER.md`에 바꿀 것 하나와 기대를 먼저 적었다
-- [ ] `make test` 통과 결과를 붙였다
+- [ ] `pytest -q` 통과 결과를 붙였다
 - [ ] 새로 구한 데이터·자료는 출처 URL을 남겼다
 - [ ] 숫자는 실행 결과에서 나온 값이고, 실행 명령을 함께 적었다
 - [ ] 파싱·검색 결과는 원문과 3건 이상 대조했다 (해당될 때)
