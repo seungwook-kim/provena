@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | Markdown → 요소 `parse.py` `parse_page()`: markdown-it-py로 제목·문단·목록·표 행·코드·HTML 표를 요소로(원본 줄 번호·제목 경로 포함), 원본 되찾기 검사 `found_in_source()`와 테스트. 의존성 2줄 `backend/requirements.txt` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 단축코드 전처리 `parse.py` `preprocess()`: Hugo 단축코드를 4가지(감싸기·이름·링크·데이터)로 나눠 정리, 줄 수는 바꾸지 않음, 모르는 단축코드는 지우지 않음과 테스트. Spec `docs/specs/parse.md` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 개정 이력 기간을 "최근 12개월" → 2024-01-01부터로 넓힘(팀 리콜 시험 12건 중 4건이 빠져 있었음). 핸드북 커밋 6,332건, 12건 모두 있음 확인 검사·테스트 추가. 수집 원문은 그대로(corpus_id 같음) | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | `handbook.py`(고른 17개 폴더 1,564쪽, 고정 커밋 129243bc, 2023 권한표 API 1회)·`history.py`(핸드북 커밋 1,666건, 권한표 커밋 36건)·`tests/test_ingest_handbook.py` 18개. 1,564쪽 전부 git 원본과 바이트 대조 불일치 0, 두 번 실행 corpus_id 같음 | PR 전 |

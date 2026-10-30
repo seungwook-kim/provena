@@ -11,3 +11,6 @@ langgraph-checkpoint-postgres>=3.0    # 체크포인트를 DB에 (G4)
 psycopg[binary,pool]>=3.2
 pgvector>=0.3
 rank-bm25>=0.2                        # 하이브리드의 키워드 쪽 (형태소 분석은 조에서 선택)
+markdown-it-py>=4.0                   # 핸드북 Markdown 파싱, 원본 줄 번호(token.map). 표본 20쪽 파서 비교로 선택 (B-2)
+beautifulsoup4>=4.12                  # 권한표 CSS grid·본문 HTML 표 파싱 (B-2)
+lxml>=6.1                             # beautifulsoup4 의 HTML 엔진 (PRD 9장 라이브러리 표)
