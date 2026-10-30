@@ -2,7 +2,6 @@
 
 This module provides primitives and an injectable FastAPI authentication router.
 The caller supplies an AuthStore; PostgreSQL integration remains pending.
-The legacy no-argument current_user_id TODO remains deliberately unresolved.
 """
 
 from __future__ import annotations
@@ -38,6 +37,9 @@ JWT_ALGORITHM = "HS256"
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_BYTES = 72
 MIN_AUTH_SECRET_BYTES = 32
+# Pre-generated bcrypt hash used only to keep the missing-ID path comparable.
+# The plaintext used to create it is intentionally not stored.
+DUMMY_PASSWORD_HASH = "$2b$12$ZYMeUhjatrYhfQ9q1eu/1O7J2e6cMOK79Dh5mAMj3ra4MwL67h1oO"
 
 
 class AuthError(Exception):
@@ -214,8 +216,18 @@ def get_current_user_id(request: Request, *, secret: str | None = None) -> str:
     return payload["user_id"]
 
 
-def current_user_id() -> str:
-    raise NotImplementedError("TODO: 요청에서 로그인한 사용자 id를 꺼냅니다")
+def current_user_id(request: Request) -> str:
+    """FastAPI dependency that returns the authenticated user's canonical ID.
+
+    The ID is derived only from the signed, HttpOnly auth cookie. Invalid,
+    expired, or missing credentials are exposed as the same 401 response so
+    callers cannot distinguish token failure modes.
+    """
+
+    try:
+        return get_current_user_id(request)
+    except (AuthConfigurationError, InvalidTokenError):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.") from None
 
 
 @dataclass(frozen=True)
@@ -251,19 +263,37 @@ class LoginRateLimiter:
     def __init__(self, *, max_attempts: int = 5, window_seconds: int = 60) -> None:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
-        self._failures: dict[str, list[float]] = {}
+        self._failures_by_login_id: dict[str, list[float]] = {}
+        self._failures_by_ip: dict[str, list[float]] = {}
 
-    def is_limited(self, key: str) -> bool:
+    def _is_limited(self, failures: dict[str, list[float]], key: str) -> bool:
         now = time.monotonic()
-        recent = [stamp for stamp in self._failures.get(key, []) if now - stamp < self.window_seconds]
-        self._failures[key] = recent
+        recent = [stamp for stamp in failures.get(key, []) if now - stamp < self.window_seconds]
+        failures[key] = recent
         return len(recent) >= self.max_attempts
 
-    def record_failure(self, key: str) -> None:
-        self._failures.setdefault(key, []).append(time.monotonic())
+    def is_limited(self, login_id: str, client_ip: str) -> bool:
+        """Return whether either the login ID or client IP reached its limit."""
 
-    def reset(self, key: str) -> None:
-        self._failures.pop(key, None)
+        return self._is_limited(self._failures_by_login_id, login_id) or self._is_limited(
+            self._failures_by_ip, client_ip
+        )
+
+    def record_failure(self, login_id: str, client_ip: str) -> None:
+        stamp = time.monotonic()
+        self._failures_by_login_id.setdefault(login_id, []).append(stamp)
+        self._failures_by_ip.setdefault(client_ip, []).append(stamp)
+
+    def reset_login_id(self, login_id: str) -> None:
+        """Clear only the ID bucket; IP failures remain independent."""
+
+        self._failures_by_login_id.pop(login_id, None)
+
+
+def _client_ip(request: Request) -> str:
+    """Return the direct peer address until a trusted proxy policy is defined."""
+
+    return request.client.host if request.client and request.client.host else "unknown"
 
 
 class AuthRoute(APIRoute):
@@ -351,23 +381,24 @@ def create_auth_router(
     @router.post("/auth/login", response_model=UserResponse)
     def login(request: Request, payload: LoginRequest, response: Response) -> UserResponse:
         _csrf_or_reject(request)
-        client_host = request.client.host if request.client else "unknown"
-        rate_key = f"{client_host}:{payload.login_id}"
-        if limiter.is_limited(rate_key):
+        client_ip = _client_ip(request)
+        if limiter.is_limited(payload.login_id, client_ip):
             raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
         try:
             user = store.get_by_login_id(payload.login_id)
         except Exception:
             raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
+        password_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+        password_valid = verify_password(payload.password, password_hash)
         if (user is None or not user.is_active or user.role not in {"user", "admin"}
-                or not verify_password(payload.password, user.password_hash)):
-            limiter.record_failure(rate_key)
+                or not password_valid):
+            limiter.record_failure(payload.login_id, client_ip)
             raise HTTPException(status_code=401, detail="로그인 정보가 올바르지 않습니다.")
         try:
             token = create_access_token(user.user_id, user.role, secret=secret)
         except AuthConfigurationError:
             raise HTTPException(status_code=500, detail="인증 설정을 사용할 수 없습니다.") from None
-        limiter.reset(rate_key)
+        limiter.reset_login_id(payload.login_id)
         set_auth_cookie(response, token, secure=cookie_secure)
         response.headers["Cache-Control"] = "no-store"
         return UserResponse(user_id=str(user.user_id), role=user.role)
