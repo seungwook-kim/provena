@@ -254,3 +254,12 @@ def test_real_postgres_roundtrip():
     finally:
         with store._connect() as conn:
             conn.execute("DELETE FROM users WHERE login_id = %s", (login,))
+
+
+def test_dockerfile_does_not_let_clients_pick_their_ip():
+    # --forwarded-allow-ips=*면 uvicorn이 X-Forwarded-For 맨 앞(위조 가능) 값을 client IP로 쓴다
+    from pathlib import Path
+
+    cmd = [line for line in (Path(__file__).resolve().parents[1] / "Dockerfile").read_text(encoding="utf-8").splitlines() if line.startswith("CMD")]
+    assert cmd and "--no-proxy-headers" in cmd[-1] and "forwarded-allow-ips" not in cmd[-1]
+
