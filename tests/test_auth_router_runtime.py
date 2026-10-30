@@ -6,8 +6,10 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
-from fastapi import FastAPI
+import backend.auth as auth_module
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from backend.auth import (
     AUTH_COOKIE_NAME,
@@ -17,6 +19,7 @@ from backend.auth import (
     LoginRateLimiter,
     create_access_token,
     create_auth_router,
+    current_user_id,
     hash_password,
 )
 
@@ -131,6 +134,30 @@ def test_uniform_auth_failures_and_csrf_rejection(auth_context):
     assert missing_csrf.status_code == mismatched_csrf.status_code == 403
 
 
+def test_missing_login_id_uses_dummy_hash_and_keeps_same_failure_response(auth_context):
+    _client, _store, _secret, password = auth_context
+    issue_csrf(_client)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        original_verify = auth_module.verify_password
+        calls: list[tuple[str, str]] = []
+
+        def recording_verify(candidate: str, password_hash: str) -> bool:
+            calls.append((candidate, password_hash))
+            return original_verify(candidate, password_hash)
+
+        monkeypatch.setattr(auth_module, "verify_password", recording_verify)
+        response = _client.post(
+            "/auth/login",
+            json={"login_id": "missing-user", "password": password},
+            headers=csrf_headers(_client),
+        )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "로그인 정보가 올바르지 않습니다."
+    assert calls == [(password, auth_module.DUMMY_PASSWORD_HASH)]
+
+
 def test_rate_limit_and_validation_do_not_expose_password(auth_context):
     client, _store, secret, password = auth_context
     app = FastAPI()
@@ -166,6 +193,72 @@ def test_rate_limit_and_validation_do_not_expose_password(auth_context):
     assert "sensitive-runtime-value" not in missing_field.text
 
 
+def test_rate_limiter_separates_login_id_and_ip_and_expires(monkeypatch):
+    limiter = LoginRateLimiter(max_attempts=2, window_seconds=60)
+    now = 100.0
+    monkeypatch.setattr(auth_module.time, "monotonic", lambda: now)
+
+    limiter.record_failure("alice", "198.51.100.10")
+    limiter.record_failure("alice", "198.51.100.10")
+    assert limiter.is_limited("alice", "198.51.100.10")
+    assert limiter.is_limited("alice", "198.51.100.11")
+    assert limiter.is_limited("bob", "198.51.100.10")
+    assert not limiter.is_limited("bob", "198.51.100.11")
+
+    now = 160.0
+    assert not limiter.is_limited("alice", "198.51.100.10")
+
+
+def test_rate_limit_success_resets_id_but_not_ip_and_forwarded_for_is_ignored(auth_context):
+    _client, store, secret, password = auth_context
+    limiter = LoginRateLimiter(max_attempts=3, window_seconds=60)
+    app = FastAPI()
+    app.include_router(create_auth_router(store=store, secret=secret, cookie_secure=False, rate_limiter=limiter))
+    client = TestClient(app)
+    issue_csrf(client)
+    headers = {**csrf_headers(client), "X-Forwarded-For": "203.0.113.99"}
+
+    failed = client.post(
+        "/auth/login",
+        json={"login_id": "runtime-user", "password": password + "wrong"},
+        headers=headers,
+    )
+    assert failed.status_code == 401
+    assert login(client, password).status_code == 200
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/auth/login",
+            "headers": [(b"x-forwarded-for", b"203.0.113.99")],
+            "client": ("198.51.100.10", 12345),
+            "scheme": "http",
+        }
+    )
+    assert auth_module._client_ip(request) == "198.51.100.10"
+
+    next_failed = client.post(
+        "/auth/login",
+        json={"login_id": "runtime-user", "password": password + "wrong"},
+        headers=csrf_headers(client),
+    )
+    assert next_failed.status_code == 401
+
+    other_id_failed = client.post(
+        "/auth/login",
+        json={"login_id": "missing-user-a", "password": password},
+        headers=csrf_headers(client),
+    )
+    assert other_id_failed.status_code == 401
+    ip_limited = client.post(
+        "/auth/login",
+        json={"login_id": "missing-user-b", "password": password},
+        headers=csrf_headers(client),
+    )
+    assert ip_limited.status_code == 429
+
+
 def test_expired_tampered_tokens_and_current_user_state(auth_context):
     client, store, secret, _password = auth_context
     issue_csrf(client)
@@ -183,6 +276,53 @@ def test_expired_tampered_tokens_and_current_user_state(auth_context):
     assert client.get("/me").json()["role"] == "admin"
     store.user = replace(store.user, is_active=False)
     assert client.get("/me").status_code == 401
+
+
+def test_current_user_id_dependency_uses_signed_cookie_not_request_body(auth_context, monkeypatch):
+    _client, store, secret, _password = auth_context
+    monkeypatch.setenv("AUTH_SECRET", secret)
+    app = FastAPI()
+
+    @app.post("/graph-entry")
+    def graph_entry(user_id: str = Depends(current_user_id)) -> dict[str, str]:
+        return {"user_id": user_id}
+
+    client = TestClient(app)
+    valid = create_access_token(store.user.user_id, store.user.role, secret=secret)
+    client.cookies.set(AUTH_COOKIE_NAME, valid)
+
+    response = client.post("/graph-entry", json={"user_id": str(uuid4())})
+
+    assert response.status_code == 200
+    assert response.json() == {"user_id": str(store.user.user_id)}
+
+
+def test_current_user_id_dependency_rejects_missing_expired_and_tampered_tokens(
+    auth_context, monkeypatch
+):
+    _client, store, secret, _password = auth_context
+    monkeypatch.setenv("AUTH_SECRET", secret)
+    app = FastAPI()
+
+    @app.get("/graph-entry")
+    def graph_entry(user_id: str = Depends(current_user_id)) -> dict[str, str]:
+        return {"user_id": user_id}
+
+    client = TestClient(app)
+    assert client.get("/graph-entry").status_code == 401
+
+    expired = create_access_token(
+        store.user.user_id,
+        store.user.role,
+        secret=secret,
+        expires_delta=timedelta(seconds=-1),
+    )
+    client.cookies.set(AUTH_COOKIE_NAME, expired)
+    assert client.get("/graph-entry").status_code == 401
+
+    valid = create_access_token(store.user.user_id, store.user.role, secret=secret)
+    client.cookies.set(AUTH_COOKIE_NAME, valid + "tampered")
+    assert client.get("/graph-entry").status_code == 401
 
 
 def test_store_errors_return_503(auth_context):
