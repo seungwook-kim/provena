@@ -22,7 +22,7 @@
 1. `python -m backend.rag.ingest.parse`
 2. 페이지마다: front matter와 단축코드를 **줄 수를 바꾸지 않고** 정리 → markdown-it-py(CommonMark + table)로 토큰화
 3. 블록마다 요소 하나: 제목·문단·목록 항목(최상위)·표 행·코드·HTML 표 행·HTML 문단. 요소에 제목 경로·부모 제목·순서·원본 줄 범위를 붙인다
-4. 권한표: BeautifulSoup으로 본표(`div.grid-auth-matrix`) 363칸, 이사회 표(`div.treasury-auth-matrix`), 각주 (1)~(6)
+4. 권한표: BeautifulSoup으로 본표(`div.grid-auth-matrix`) 363칸, 이사회 표(`div.treasury-auth-matrix`), 각주 (1)~(6). 표 밖 글(계약 승인 절차·각주 목록·Authorization Matrix Policy)은 쪽과 같은 방식으로 요소로 만들고(`authz_ir.jsonl`), 두 표의 줄은 빼서 칸과 겹치지 않게 한다. 정책 본문(Primary Authorized Signatories)이 없거나 예상 밖 HTML이 있으면 `ParseError`
 5. `data/parsed/` 에 쓰고 다시 읽어 건수를 대조, `parse_report.json` 에 집계
 
 **Edge Cases**
@@ -42,7 +42,7 @@
 - 라이브러리: `markdown-it-py`(4.2.0), `beautifulsoup4`(4.15.0). 비교 근거: 표본 20쪽 파서 비교(제목 F1 0.996, 표 19/20, 코드 20/20)
 - 단축코드 분류: 감싸기(alert·details·panel·note·tableau: 표시만 지우고 안 글자 유지, details·panel 제목 글자는 남김) / 이름(member-by-name·member-by-gitlab·member-and-role-by-gitlab·label: 인자 글자로) / 링크(ref: 경로로) / 데이터(나머지 36종: 사이트가 다른 데이터로 채움, 지우고 개수 기록)
 - HTML → 글자 순서(rag1-07): script·style 내용째 제거 → 줄바꿈 태그를 줄바꿈으로 → 나머지 태그를 공백으로 → 엔티티 복원 → 공백 정리
-- 출력 `data/parsed/`(저장소에 커밋하지 않음, 원문에서 다시 만든다): `document_ir.jsonl`, `authz_cells.jsonl`, `authz_board.jsonl`, `authz_notes.jsonl`, `parse_report.json`
+- 출력 `data/parsed/`(저장소에 커밋하지 않음, 원문에서 다시 만든다): `document_ir.jsonl`, `authz_cells.jsonl`, `authz_board.jsonl`, `authz_notes.jsonl`, `authz_ir.jsonl`, `parse_report.json`
 - 요소 필드: `element_id, rule_seq, org, kind, heading_path, parent_id, order, line_start, line_end, text, links, review` (+ 표 행: `table_id, row, header`)
 - 권한표 칸 필드: `category, category_notes, band, band_lo, band_hi, role, approval_type(functional|financial), value, notes, line`
 
