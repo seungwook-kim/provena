@@ -1,4 +1,5 @@
 """핸드북 수집 (docs/specs/collect.md AC). 네트워크 없이 돈다."""
+import os
 import subprocess
 
 import pytest
@@ -114,6 +115,54 @@ def test_read_blobs_returns_git_original(tmp_path):
     got = hb.read_blobs(tmp_path, ids)
     assert got[ids[0]] == b"line1\nline2\n"
     assert all(hb.git_blob_id(data) == blob for blob, data in got.items())
+
+
+# 판 날짜: 페이지마다 마지막으로 고친 커밋, 날짜는 커밋 날짜, SHALLOW_SINCE 뒤로 안 바뀐 페이지는 "이전"
+def _repo_with_history(tmp_path):
+    def run(*args, when=None):
+        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                   GIT_COMMITTER_EMAIL="t@t")
+        if when:
+            env |= {"GIT_AUTHOR_DATE": f"{when[0]}T12:00:00", "GIT_COMMITTER_DATE": f"{when[1]}T12:00:00"}
+        return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True,
+                              env=env).stdout.decode().strip()
+    run("init", "-q")
+    sec = tmp_path / "content/handbook/security"
+    sec.mkdir(parents=True)
+    (sec / "a.md").write_text("a1")
+    (sec / "b.md").write_text("b1")
+    run("add", ".")
+    run("commit", "-qm", "1", when=("2023-01-05", "2023-01-06"))   # SHALLOW_SINCE(2023-12-01) 전
+    (sec / "c.md").write_text("c1")
+    run("add", ".")
+    run("commit", "-qm", "2", when=("2024-02-01", "2024-02-01"))
+    (sec / "b.md").write_text("b2")
+    run("commit", "-qam", "3", when=("2025-03-01", "2025-03-04"))   # 작성일 ≠ 커밋 날짜
+    return run, run("rev-parse", "HEAD"), run("rev-parse", "HEAD~1")
+
+
+PAGES = ["content/handbook/security/a.md", "content/handbook/security/b.md", "content/handbook/security/c.md"]
+
+
+def test_last_changes_per_page_commit_date(tmp_path):
+    _, head, second = _repo_with_history(tmp_path)
+    got = hb.last_changes(tmp_path, head, PAGES)
+    assert got["content/handbook/security/a.md"] == (head, "2023-12-01", True)   # 경계 전부터 안 바뀜 → 고정 커밋 판, "이전"
+    assert got["content/handbook/security/b.md"] == (head, "2025-03-04", False)  # 작성일 03-01이 아니라 커밋 날짜
+    assert got["content/handbook/security/c.md"] == (second, "2024-02-01", False)
+
+
+def test_last_changes_skips_shallow_edge(tmp_path):
+    """이력을 잘라 받은 캐시: 경계 커밋은 모든 파일을 추가한 것처럼 보이지만 마지막 수정으로 치지 않는다."""
+    full = tmp_path / "full"
+    full.mkdir()
+    _, head, _ = _repo_with_history(full)
+    cut = tmp_path / "cut"
+    subprocess.run(["git", "clone", "-q", "--no-checkout", "--shallow-since=2024-06-01", full.as_uri(), str(cut)],
+                   check=True, capture_output=True)
+    got = hb.last_changes(cut, head, PAGES)
+    assert got["content/handbook/security/a.md"] == (head, "2023-12-01", True)   # 경계 커밋(3) 날짜가 아님
+    assert got["content/handbook/security/b.md"] == (head, "2023-12-01", True)   # 경계 커밋 자신의 수정도 모른다
 
 
 def test_parse_log():

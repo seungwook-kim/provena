@@ -22,6 +22,10 @@ from pathlib import Path
 HANDBOOK_REPO = "https://gitlab.com/gitlab-com/content-sites/handbook.git"
 PINNED_COMMIT = "129243bcffcf6cbc8c2e83f537f1836b99900a61"   # 2026-10-27, PRD 8장
 SHALLOW_SINCE = "2023-12-01"   # 개정 이력(history.py)이 2024-01-01부터라 그보다 앞까지 받는다
+# 판 날짜: 페이지마다 마지막으로 고친 커밋의 커밋 날짜(%cs). 그 전부터 안 바뀐 페이지는 이력을 더 받지 않고
+# version_date=SHALLOW_SINCE, version_date_before=True(계약 Chunk.version_date_before, 화면 "2023-12-01 이전").
+# I-001, 조장 결정(10/30). 사이트 "Last modified"는 작성일(%as)이라 53쪽이 1~18일 다르다(study 측정).
+VERSION_DATE_FORMAT = "%cs"
 EXPECTED_PAGES = 1564          # 조장 실측, 경로 조장 확인 2026-10-28
 SITE = "https://handbook.gitlab.com/"
 USER_AGENT = "proj3-c-provena-collector (aihuman-7th class project)"
@@ -109,6 +113,32 @@ def read_blobs(repo: Path, blobs: list[str]) -> dict[str, bytes]:
         result[blob] = out[end + 1:end + 1 + size]
         pos = end + 1 + size + 1
     return result
+
+
+def shallow_edges(repo: Path) -> set[str]:
+    """이력을 자른 경계 커밋. 부모가 없어 모든 파일을 '새로 추가'한 것처럼 보이므로 마지막 수정으로 치지 않는다."""
+    path = Path(git(repo, "rev-parse", "--git-path", "shallow").decode().strip())
+    path = path if path.is_absolute() else repo / path
+    return set(path.read_text().split()) if path.exists() else set()
+
+
+def last_changes(repo: Path, commit: str, paths: list[str]) -> dict[str, tuple[str, str, bool]]:
+    """경로 → (판 커밋 sha, 판 날짜, 날짜가 '이전'인가). git log 한 번으로 새 커밋부터 읽어 처음 나온 것이 마지막 수정.
+
+    SHALLOW_SINCE 뒤로 안 바뀐 페이지는 (commit, SHALLOW_SINCE, True): 마지막 수정 커밋을 모르므로 내용을 읽은
+    고정 커밋을 판으로 둔다(계약상 version_id는 비울 수 없음). 캐시 이력이 전체든 잘렸든 같은 기준으로 읽는다.
+    --no-renames: 이름 바뀜 탐지는 파일 내용을 받아야 해서 끈다(옮긴 커밋이 그 경로의 마지막 수정이 된다, 사이트도 같음).
+    """
+    out = git(repo, "log", f"--since={SHALLOW_SINCE}", f"--format=@%H {VERSION_DATE_FORMAT}", "--name-only",
+              "--no-renames", commit, "--", *all_folders()).decode("utf-8")
+    wanted, found, cur, edges = set(paths), {}, None, shallow_edges(repo)
+    for line in out.splitlines():
+        if line.startswith("@"):
+            sha, day = line[1:].split()
+            cur = None if sha in edges else (sha, day, False)
+        elif cur and line in wanted and line not in found:
+            found[line] = cur
+    return {p: found.get(p, (commit, SHALLOW_SINCE, True)) for p in paths}
 
 
 def git_blob_id(data: bytes) -> str:
@@ -222,6 +252,7 @@ def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
             raise CollectError(f"git 원본과 다른 바이트: {path}")
     by_org = check_pages(pages, EXPECTED_PAGES)
 
+    versions = last_changes(cache, PINNED_COMMIT, list(pages))
     fetched_at = date.today().isoformat()
     rows = []
     for path, data in pages.items():
@@ -230,7 +261,8 @@ def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
         rows.append({
             "rule_seq": rule_seq(path), "org": org_of(path), "path": path,
             "title": fm.get("title"), "source_url": page_url(path),
-            "version_id": PINNED_COMMIT[:12], "version_date": commit_date, "fetched_at": fetched_at,
+            "version_id": versions[path][0][:12], "version_date": versions[path][1],
+            "version_date_before": versions[path][2], "fetched_at": fetched_at,
             "file_sha256": sha256(data), "chars": len(data.decode("utf-8")),
             "redirect_to": fm.get("redirect_to"),
         })
@@ -254,6 +286,10 @@ def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
     manifest = {
         "repo": HANDBOOK_REPO, "commit": PINNED_COMMIT, "commit_date": commit_date,
         "folders": all_folders(), "pages": len(rows), "pages_by_org": by_org,
+        "version_rule": f"페이지별 마지막 수정 커밋(sha 앞 12자리), 날짜 git {VERSION_DATE_FORMAT}, "
+                        f"{SHALLOW_SINCE} 뒤로 안 바뀐 페이지는 version_date {SHALLOW_SINCE}·version_date_before·고정 커밋 판",
+        "versions": len({r["version_id"] for r in rows}),
+        "pages_before_since": sum(1 for r in rows if r["version_date_before"]),
         "bytes": sum(len(d) for d in pages.values()),
         "redirect_pages": sum(1 for r in rows if r["redirect_to"]),
         "corpus_id": corpus_id([r["file_sha256"] for r in rows]),
