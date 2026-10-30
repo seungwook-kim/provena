@@ -28,3 +28,4 @@
 
 (무엇을 시켰고, 어떻게 틀렸고, 어떻게 알아챘는가)
 | 2026-10-30 | Claude Code (김승욱) | 머지된 PR(#9~#15) 기준 세 사람 worklog, GATES 상태 표 첫 갱신, 문서 문구를 실제 설정에 맞춤(TEAM_GUIDE·SDD·PRD·AGENTS), 10/30 결정 정리 | `gh pr list`와 각 PR 파일 목록으로 PR 번호·머지 시각·내용을 대조, 문서가 말하는 파일(`backend/requirements.txt`, `pytest.ini`)이 실제로 있는지 확인, `pytest -q` | 팀장 부재 시 머지 결정의 날짜를 10/31로 적음 → 정한 날(10/30)로 고침. 문서 고치는 스크립트가 빈 입력으로 아무것도 안 바꾸고 성공으로 끝남 → 바꾼 줄 수를 세어 확인하고 다시 돌림 |
+| 2026-10-30 | Claude Code (김승욱) | `backend/schemas/` 계약 모델과 시험, `docs/SPEC.md`, SDD 6장·TEAM_GUIDE 계약 사본 정리 | `tests/test_schemas.py`로 필드 이름·순서와 제한 값을 고정(23 passed), SDD 코드 블록과 모델을 줄마다 대조, SPEC이 말하는 파일·경로가 main에 실제로 있는지 확인 | SPEC에 아직 머지 안 된 로그인 연결(`main.py`, 데모 계정 시드)을 이미 있는 것처럼 적음 → 연결 PR로 미루고 지금 상태만 적음. 평가셋 동결 해시 파일이 이미 있다고 적음 → 동결 때 생긴다고 고침 |

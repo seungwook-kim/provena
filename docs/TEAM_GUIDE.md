@@ -235,6 +235,8 @@ class Chunk(BaseModel):
     kind: Literal["article", "annex", "row", "buchik", "pre"]  # article(섹션), row(권한표 행) 위주. 나머지 값은 남겨 둠
     text: str
     source_url: str        # 핸드북 페이지 URL
+    text_sha256: str | None = None   # 본문 sha256 (SDD 11-1 3-6)
+    version_date_before: bool = False   # True면 판 날짜를 정확히 모르고 version_date 이전이라는 뜻(얕은 이력, I-001). 화면은 "YYYY-MM-DD 이전"으로 보인다
 
 class SearchQuery(BaseModel):
     query: str
@@ -246,19 +248,20 @@ class SearchQuery(BaseModel):
 class AgentEvent(BaseModel):
     type: Literal["token", "citation", "approval_request", "error", "done"]
     thread_id: str
-    data: dict
+    data: dict  # type별 키는 SDD 6장 "AgentEvent.data" 표
 
 # backend/schemas/approval.py  (에이전트 ↔ 화면)
 class ApprovalItem(BaseModel):
     approval_id: str
     kind: Literal["decision_table", "issue_table"]
     summary: str
-    created_at: str
+    created_at: datetime   # JSON에는 ISO 8601 문자열
 
 class Decision(BaseModel):
     approval_id: str
     approve: bool
     comment: str = ""
+    decided_by: str | None = None   # 승인한 관리자, 서버가 로그인 사용자로 채움 (SDD 11-1 3-3)
 
 # backend/schemas/recall.py  (수집 → 에이전트 → 화면)
 class ChangedArticle(BaseModel):   # 바뀐 섹션 (같은 페이지의 두 커밋 비교)
@@ -266,6 +269,7 @@ class ChangedArticle(BaseModel):   # 바뀐 섹션 (같은 페이지의 두 커�
     article: str
     old_version_date: str
     new_version_date: str
+    change_type: Literal["added", "removed", "modified"]   # SDD 11-1 3-5
 
 class RecallNotice(BaseModel):
     answer_id: str
