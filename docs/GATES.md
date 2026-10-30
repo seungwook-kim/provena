@@ -8,13 +8,13 @@
 |---|---|---|---|
 | G1 배포 주소 | README 팀 정보의 배포 주소 | 평가용 계정으로 접속해 핵심 시나리오를 끝까지 본다 | 진행 중. Cloud Run 주소에서 `/health` 응답 확인([PR #4](https://github.com/aihuman-7th/proj3-c/pull/4)). 로그인과 핵심 시나리오는 아직 |
 | G2 한 줄 기동 | `docker-compose.yml`, `.env.example`, 데모 모드 | 새 clone에서 `docker compose up`, 10분 안에 뜨는지 실측 | 진행 중. 템플릿 compose로 `/health` 확인(`docs/worklog.md` 10/28). 데모 모드 응답 재생, 스냅샷 적재, 데모 계정 시드는 아직 |
-| G3 코퍼스 | `data/manifest.jsonl`, `data/corpus/` | 서로 다른 청크(본문 sha256 기준) 1만 개 이상, 문서 50건 이상, 파싱 1종 이상 | 진행 중. 수집 규칙(고른 17개 폴더, 1,564쪽) 머지([PR #5](https://github.com/aihuman-7th/proj3-c/pull/5)), 페이지 id 10자리([PR #6](https://github.com/aihuman-7th/proj3-c/pull/6)), git 원본 받기·저장([PR #7](https://github.com/aihuman-7th/proj3-c/pull/7)) 머지. 원문 스냅샷, 청킹, `manifest.jsonl`은 아직 |
-| G4 에이전트 | `backend/graph/`, `backend/auth.py`, `backend/memory.py` | 코드와 시연. 평가용 계정 2개로 대화와 기억이 섞이지 않는지 | 미착수. 질문 그래프 Spec 초안(`docs/specs/question-graph.md`). 로그인은 로컬 구현 중(PR 전) |
-| G5 평가 | `evals/`, `EVAL_REPORT.md` 2장, 3장 | 평가셋 50건 이상(동결 시점 기준, 관련과 비관련 각각 절반), 개선 전후 두 번 이상, 차이는 문항 목록과 함께 | 미착수. `evals/dataset_v1.jsonl`은 아직 템플릿 2줄. v1 30건 동결 11/3 |
+| G3 코퍼스 | `data/manifest.jsonl`, `data/corpus/` | 서로 다른 청크(본문 sha256 기준) 1만 개 이상, 문서 50건 이상, 파싱 1종 이상 | 진행 중. 수집 규칙(고른 17개 폴더, 1,564쪽) 머지([PR #5](https://github.com/aihuman-7th/proj3-c/pull/5)), 페이지 id 10자리([PR #6](https://github.com/aihuman-7th/proj3-c/pull/6)), git 원본 받기·저장([PR #7](https://github.com/aihuman-7th/proj3-c/pull/7)), 2023 권한표·개정 이력 수집과 단축코드 전처리([PR #11](https://github.com/aihuman-7th/proj3-c/pull/11)), Markdown 파싱 1종(markdown-it-py, [PR #12](https://github.com/aihuman-7th/proj3-c/pull/12)), 1,561쪽을 요소 85,388개로 파싱·권한표 363칸·원문 대조([PR #13](https://github.com/aihuman-7th/proj3-c/pull/13)) 머지. 페이지별 판 날짜(I-001), 청킹, `manifest.jsonl`, 청크 1만 개 실측은 아직 |
+| G4 에이전트 | `backend/graph/`, `backend/auth.py`, `backend/memory/` | 코드와 시연. 평가용 계정 2개로 대화와 기억이 섞이지 않는지 | 진행 중. 질문 그래프 Spec 초안(`docs/specs/question-graph.md`), 그래프와 기억은 미착수. 로그인 API(`backend/auth.py`) [PR #9](https://github.com/aihuman-7th/proj3-c/pull/9), `current_user_id()`·로그인 실패 제한·더미 해시 [PR #14](https://github.com/aihuman-7th/proj3-c/pull/14), ID 5회·IP 30회 제한 분리 [PR #15](https://github.com/aihuman-7th/proj3-c/pull/15) 머지. `backend/main.py` 연결과 users 테이블·데모 계정 시드는 다음 PR |
+| G5 평가 | `evals/`, `EVAL_REPORT.md` 2장, 3장 | 평가셋 50건 이상(동결 시점 기준, 관련과 비관련 각각 절반), 개선 전후 두 번 이상, 차이는 문항 목록과 함께 | 진행 중. `evals/dataset_v1.jsonl`에 v1 질문 30건(관련 15, 비관련 15)을 올렸고 정답 판정 중(박진형·강경희). 11/3 동결 예정 |
 | G6 트레이스 | Langfuse 프로젝트, `EVAL_REPORT.md` 7장 | 대시보드에서 트레이스와 평가 점수가 연결되어 있는지 | 미착수 |
 | G7 제출물 | README, `.env.example`, `docs/deliverables/` | 비밀값 커밋 없음, 3분 이내 시연 영상(정상 경로와 실패 경로) | 미착수 |
 
-마지막 갱신: 2026-10-30 김승욱 (첫 갱신용 초안, PR #6·#7 반영)
+마지막 갱신: 2026-10-30 김승욱 (첫 갱신. PR #4~#15 반영)
 
 ## 상태 표기
 

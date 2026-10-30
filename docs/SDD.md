@@ -121,7 +121,7 @@ flowchart LR
 | `task-brief` | 작업 지시서 양식 (목적, 입출력, 인수 테스트, 건드릴 파일) |
 | `test-first` | 테스트를 먼저 쓰고 구현 |
 | `self-check` | "완료" 전에 테스트·린트를 실제로 실행하고 출력 확인 |
-| `run-eval` | 평가셋 실행과 지표 비교 (`make eval`) |
+| `run-eval` | 평가셋 실행과 지표 비교 (`python evals/run_all.py`, 예정) |
 | `replay` | 데모 모드 녹화 응답 재생 |
 | `data-check` | 핸드북 git 수집기·권한표 파서 점검 |
 | `regression` | 지표가 기준선보다 떨어졌는지 확인 |
@@ -141,8 +141,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발 도구 Skill (2-4)
 ├─ .mcp.json                 # 개발용 MCP 연결 설정
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
-├─ Makefile                  # make test, make eval, make eval-all
+├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
