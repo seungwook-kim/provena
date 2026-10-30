@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Provena 로그인</title>
+    <link rel="stylesheet" href="./login.css" />
+    <script src="./login.js" defer></script>
+  </head>
+  <body>
+    <main class="login-page">
+      <section class="login-card" aria-labelledby="page-title">
+        <header>
+          <p class="brand">Provena</p>
+          <h1 id="page-title">로그인</h1>
+          <p class="description">계속하려면 로그인 정보를 입력해 주세요.</p>
+        </header>
+
+        <div id="login-form" aria-label="로그인">
+          <div class="field">
+            <label for="login-id">로그인 ID</label>
+            <input id="login-id" name="loginId" type="text" autocomplete="username" required />
+            <p id="login-id-error" class="field-error" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <label for="password">비밀번호</label>
+            <div class="password-input">
+              <input id="password" name="password" type="password" autocomplete="current-password" required />
+              <button id="password-toggle" type="button" aria-controls="password" aria-pressed="false">보기</button>
+            </div>
+            <p id="password-error" class="field-error" aria-live="polite"></p>
+          </div>
+
+          <p id="form-message" class="form-message" role="alert" aria-live="polite"></p>
+          <button id="login-button" class="submit-button" type="button">로그인</button>
+          <button id="logout-button" class="logout-button" type="button" hidden>로그아웃</button>
+
+          <div class="divider" aria-hidden="true"><span>또는</span></div>
+          <button id="google-login-button" class="google-login-button" type="button" disabled>Google로 로그인</button>
+          <p class="google-login-status">준비 중</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

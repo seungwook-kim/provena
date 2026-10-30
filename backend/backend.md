@@ -12,6 +12,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`app.py`), 체�
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-30 | 강경희 | bcrypt·JWT·HttpOnly 쿠키·CSRF와 FastAPI 로그인·로그아웃·사용자 조회 라우터를 `AuthStore` 주입 구조로 이식했다. Fake AuthStore 인증 테스트 6개와 팀 전체 pytest 18개를 통과시켰다. PostgreSQL과 팀 `main.py` 통합은 미완료다. | 미정 |
 
 ## 문제 기록 (최신이 위)
 
