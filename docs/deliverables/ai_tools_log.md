@@ -23,6 +23,7 @@
 | 2026-10-30 | Claude Code (김승욱) | 머지된 PR(#9~#15) 기준 세 사람 worklog, GATES 상태 표 첫 갱신, 문서 문구를 실제 설정에 맞춤(TEAM_GUIDE·SDD·PRD·AGENTS), 10/30 결정 정리 | `gh pr list`와 각 PR 파일 목록으로 PR 번호·머지 시각·내용을 대조, 문서가 말하는 파일(`backend/requirements.txt`, `pytest.ini`)이 실제로 있는지 확인, `pytest -q` | 팀장 부재 시 머지 결정의 날짜를 10/31로 적음 → 정한 날(10/30)로 고침. 문서 고치는 스크립트가 빈 입력으로 아무것도 안 바꾸고 성공으로 끝남 → 바꾼 줄 수를 세어 확인하고 다시 돌림 |
 | 2026-10-30 | Claude Code (김승욱) | `backend/schemas/` 계약 모델과 시험, `docs/SPEC.md`, SDD 6장·TEAM_GUIDE 계약 사본 정리 | `tests/test_schemas.py`로 필드 이름·순서와 제한 값을 고정(23 passed), SDD 코드 블록과 모델을 줄마다 대조, SPEC이 말하는 파일·경로가 main에 실제로 있는지 확인 | SPEC에 아직 머지 안 된 로그인 연결(`main.py`, 데모 계정 시드)을 이미 있는 것처럼 적음 → 연결 PR로 미루고 지금 상태만 적음. 평가셋 동결 해시 파일이 이미 있다고 적음 → 동결 때 생긴다고 고침 |
 | 2026-10-30 | Claude Code (김승욱) | 로그인 연결(Postgres AuthStore, 로컬 데모 계정 시드, `main.py`, compose, `.env.example`), README 실행 절차 | 가짜 연결 시험과 진짜 Postgres 시험을 따로 돌리고, `docker compose -p provena-next up`으로 `/health`·CSRF·로그인(성공 200, 틀린 비밀번호 401)·`/me`·로그아웃 204를 직접 확인한 뒤 `down -v`. 시드가 로컬 모드 밖에서는 아무것도 안 하는지 조건 5가지로 시험 | 라우터가 붙었는지 `app.routes`로 검사하는 시험을 썼으나 이 FastAPI 버전은 포함된 라우터를 `app.routes`에 풀어 담지 않아 실패 → OpenAPI 경로로 검사하도록 고침. 여러 줄 heredoc 쓰기가 실패해 파일이 하나도 안 만들어졌는데 완료한 줄 알 뻔함 → 파일 목록으로 확인해 다시 씀 |
+| 2026-10-31 | Claude Code (박진형) | 2023 권한표 표 밖 글 파싱(I-007) `parse.py` `parse_authz_prose()`·테스트 2개 | 표 밖 요소 103개가 모두 원본 줄에서 되찾아지는지 코드로 검사(실패 0), 본표·이사회 표 줄과 겹치지 않는지·정책 본문이 없으면 멈추는지 테스트, 테스트 규칙을 일부러 깨 보아 잡는지 확인(변이 2/2) | 처음 `parse_authz()` 가 표 칸만 읽고 표 밖 글을 버림 → 골든셋 정답(R15·R25)을 청크에 연결하다 발견해 추가 |
 
 ## 도구에게 일을 시킬 때 지킨 규칙
 
