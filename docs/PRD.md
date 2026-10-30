@@ -1,6 +1,5 @@
 ---
 type: prd
-cssclasses: [adr]
 project: Provena
 updated: 2026-10-28
 tags: [project, prd]

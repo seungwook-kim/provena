@@ -52,3 +52,5 @@ flowchart LR
 ## 결정 기록
 
 바꿀 때마다 한 줄씩 남깁니다. `날짜 | 무엇을 | 왜 | 대안`
+
+3조는 결정마다 이유와 버린 대안을 [`docs/decisions.md`](decisions.md)에 적는다.

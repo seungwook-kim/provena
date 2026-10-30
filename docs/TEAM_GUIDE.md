@@ -40,6 +40,14 @@
 
 원칙만 먼저 정한다: 다른 사람 일을 멈추게 할 수 있는 일(핵심 경로)은 팀장이 맡는다. 나머지는 정답이 분명하고 결과를 바로 확인할 수 있는 단위로 나눈다. 맡은 일이 끝나면 백로그 보드의 "다음 일" 칸에서 다음 일을 가져간다.
 
+**보조 담당** (가이드 p.15: 역할은 평가 축에 맞추고, 3인 조는 한 명이 두 역할을 겸하며, 모든 조원은 보조 담당 축을 하나 더 가진다)
+
+| 주 담당 | 주 담당 축 | 이 축의 보조 담당 |
+|---|---|---|
+| 박진형 | ② 검색·데이터 | 김승욱 |
+| 강경희 | ④ 서비스(화면·로그인) | 김승욱 |
+| 김승욱 | ③ 에이전트, ①⑤ 평가·문서(겸임) | 박진형, 강경희 |
+
 ## 4. 꼭 지킬 규칙 8개
 
 1. **자기 폴더만 고친다.** 다른 사람 폴더를 고쳐야 하면 그 사람에게 요청한다(5장).
@@ -63,7 +71,7 @@
 | `backend/main.py`, `backend/services/`, `Dockerfile`, `docker-compose.yml`, `db/`, `.github/workflows/` | 김승욱 (안) | FastAPI 라우트, LLM 호출(`services/llm.py` 한 곳), compose·seed·CI |
 | `backend/auth.py` | 강경희 (안) | 로그인·사용자 식별. 첫 배포(`/health`)도 강경희 |
 | `extras/mcp_skill/` | 박진형 (안) | FastMCP 서버 |
-| `web/` | 강경희 (안) | 정적 HTML·JS 화면 |
+| `web/` | 강경희 (안) | 화면 (Vite + React + Tailwind, 빌드 결과를 FastAPI가 정적 파일로 내준다) |
 | `evals/dataset_v1.jsonl`·v2, `evals/freeze.py` | 공동 | 평가셋 v1(30건)·v2(50건). 템플릿 자리 그대로 |
 | `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
 | `evals/agent/`, `evals/run_all.py` | 김승욱 (안) | 에이전트 평가, 한 줄 재현 명령 |
@@ -95,7 +103,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
 ├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ CODEOWNERS
 ├─ pyproject.toml            # [dependency-groups] rag / graph / backend / dev
 ├─ Makefile                  # make test, make eval, make eval-all
 ├─ Dockerfile, docker-compose.yml, .env.example
@@ -201,7 +208,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 | `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
 | `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
 | 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
-| `CODEOWNERS` | 위 폴더 주인을 적어 PR 리뷰어가 자동 지정되게 한다 |
 
 **Git**
 
@@ -313,7 +319,7 @@ PR을 올릴 때 아래를 모두 체크한다.
 |---|---|---|
 | 전원 | README 조원 소개 표에 자기 줄 추가 (첫 PR) | D0 (10/30) |
 | 강경희 | 빈 FastAPI를 Cloud Run에 배포하고 `/health` 주소 공유 | D0 (10/30) |
-| 김승욱 | 평가셋 설계 시작, 폴더 뼈대·CODEOWNERS·`.env.example` | D0 (10/30) |
+| 김승욱 | 평가셋 설계 시작, 폴더 뼈대·`.env.example` | D0 (10/30) |
 | 박진형 | 핸드북 git 수집(고른 절, 고정 커밋), 파싱·청킹, 저녁에 청크 수 공유 | D1 (11/2) |
 
 ## 9. 막혔을 때 올리는 양식
@@ -331,7 +337,7 @@ PR을 올릴 때 아래를 모두 체크한다.
 | 무엇 | 어디에 | 형식 |
 |---|---|---|
 | 폴더별 작업·문제 | 각 하위 폴더 `<폴더명>.md` | 5-1장 표. 해결 판정은 고친 사람이 근거와 함께 |
-| 매일 한 일 | `docs/worklog.md` | 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일 |
+| 매일 한 일 | `docs/worklog.md` | 날짜·사람별로 한 일 2~3줄, 막힌 것, 다음 할 일. **팀장이 `main`을 받을 때 새로 머지된 PR을 기준으로 세 사람 것을 한꺼번에 쓴다.** 조원은 따로 쓰지 않고, 빠지거나 틀린 내용은 팀장에게 알린다 |
 | 결정 | `docs/decisions.md` | 무엇을 정했나, 이유, 버린 대안. 이유와 버린 대안이 없으면 결정으로 치지 않는다 |
 | 기능 Spec | `docs/specs/{기능}.md` | Why, Goal, What, How, AC 다섯 칸. 구현 전에 쓴다 (`docs/specs/_example.md`) |
 | 실험 사전 등록 | `evals/PREREGISTER.md` | 바꿀 것 하나와 기대를 먼저 적는다 |
