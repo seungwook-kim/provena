@@ -351,6 +351,8 @@ class Chunk(BaseModel):
     kind: Literal["article", "annex", "row", "buchik", "pre"]  # article(섹션), row(권한표 행) 위주로 쓴다. 나머지 값은 남겨 둔다
     text: str
     source_url: str        # 핸드북 페이지 URL
+    text_sha256: str | None = None   # 본문 sha256 (11-1 3-6)
+    version_date_before: bool = False   # True면 판 날짜를 정확히 모르고 version_date 이전이라는 뜻(얕은 이력, I-001). 화면은 "YYYY-MM-DD 이전"으로 보인다
 
 class SearchQuery(BaseModel):
     query: str
@@ -362,19 +364,20 @@ class SearchQuery(BaseModel):
 class AgentEvent(BaseModel):
     type: Literal["token", "citation", "approval_request", "error", "done"]
     thread_id: str
-    data: dict
+    data: dict  # type별 키는 SDD 6장 "AgentEvent.data" 표
 
 # backend/schemas/approval.py  (에이전트 ↔ 화면)
 class ApprovalItem(BaseModel):
     approval_id: str
     kind: Literal["decision_table", "issue_table"]
     summary: str
-    created_at: str
+    created_at: datetime   # JSON에는 ISO 8601 문자열
 
 class Decision(BaseModel):
     approval_id: str
     approve: bool
     comment: str = ""
+    decided_by: str | None = None   # 승인한 관리자, 서버가 로그인 사용자로 채움 (11-1 3-3)
 
 # backend/schemas/recall.py  (수집 → 에이전트 → 화면)
 class ChangedArticle(BaseModel):   # 바뀐 섹션 (같은 페이지의 두 커밋 비교)
@@ -382,6 +385,7 @@ class ChangedArticle(BaseModel):   # 바뀐 섹션 (같은 페이지의 두 커�
     article: str
     old_version_date: str
     new_version_date: str
+    change_type: Literal["added", "removed", "modified"]   # 11-1 3-5
 
 class RecallNotice(BaseModel):
     answer_id: str
@@ -403,7 +407,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 
 | 형식 | 담는 것 |
 |---|---|
-| `DecisionRule` | 업무 종류 × 금액 구간 → 승인자(업무 승인), 협조 부서(`cooperating_depts`). 재무 승인자를 담는 방법은 11장 |
+| `DecisionRule` | 업무 종류 × 금액 구간 → 승인자(업무 승인), 재무 승인자, 협조 부서. 칸: `category`, `band`, `band_lo`, `band_hi`(USD, 없으면 비움), `approvers`, `financial_approvers`(11-1 3-2), `cooperating_depts`, `range_note`(원문에 구간 끝이 없어 해석으로 채운 칸의 설명, 답에 주의로 붙임, I-004). 이름은 수집 파트 `parse_authz()` 출력과 같다 |
 | `DecisionTable` | `decision_tables` 테이블(5장)과 같은 칸: table_id, rule_seq, version_id, cells, status(draft, approved, rejected), approved_by |
 
 핸드북 코퍼스에서 계약 필드의 뜻은 이렇다.
@@ -414,9 +418,20 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `Chunk.rule_seq` | 페이지 id |
 | `Chunk.article` | 제목 경로 (예: `Incident Management > Severities`) |
 | `Chunk.version_id`, `version_date` | 커밋 기반 판 id, 커밋 날짜 |
+| `Chunk.version_date_before` | `True`면 얕은 이력이라 정확한 날을 모르고 `version_date` 이전이라는 뜻(I-001, 기준 2023-12-01) |
 | `Chunk.kind` | `article`(섹션), `row`(권한표 행) 위주로 쓴다. 나머지 값은 남겨 둔다 |
 | `Chunk.source_url` | 핸드북 페이지 URL |
-| `DecisionRule` | 업무 종류 × 금액 구간 → 승인자(업무 승인), 협조(재무 승인자) |
+| `DecisionRule` | 업무 종류 × 금액 구간 → 업무 승인자(`approvers`), 재무 승인자(`financial_approvers`), 협조 부서(`cooperating_depts`) |
+
+`AgentEvent.data`는 `type`마다 아래 키를 담는다. 화면(SSE)은 이 키만 읽는다.
+
+| type | data 키 |
+|---|---|
+| `token` | `text` |
+| `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` |
+| `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름) |
+| `error` | `code`, `message` |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) |
 
 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.
 

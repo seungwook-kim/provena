@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-30 | 김승욱 (Claude Code) | SDD 6장의 chunk·events·approval·recall·decision 모델을 올렸다(`rule_seq`는 8자리 16진수라 DB는 BIGINT). SDD 11-1 추천안대로 `DecisionRule`에 업무 종류·금액 구간·업무 승인자·재무 승인자 칸(이름은 `parse_authz()` 출력과 같음), `Decision.decided_by`, `ChangedArticle.change_type`, `Chunk.text_sha256`을 더했다. 10/30 결정에 맞춰 `DecisionRule.range_note`(I-004), `Chunk.version_date_before`(I-001), `ApprovalItem.created_at`을 `datetime`으로, `AgentEvent.data`의 type별 키를 SDD 6장 표로 정했다. `tests/test_schemas.py`가 필드 이름을 고정한다(23 passed). 3명 승인 대기 | 미정 |
 
 ## 문제 기록 (최신이 위)
 
