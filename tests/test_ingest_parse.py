@@ -1,6 +1,8 @@
 """파싱 (docs/specs/parse.md AC). 원문 없이 작은 예시로 돈다."""
 import collections
 
+import pytest
+
 from backend.rag.ingest import parse as P
 
 PAGE = {"rule_seq": 7, "org": "security"}
@@ -80,3 +82,55 @@ def test_emoji_removed_but_identifiers_kept():
     els = elements("## :tada: Achievements\n\nUse cpe:/o:redhat:enterprise_linux:8 here.\n")
     assert els[0]["text"] == "Achievements"
     assert ":redhat:" in els[1]["text"]
+
+
+# AC-04 · 권한표 칸 밀림 감지 (2역할 + 1역할 축소판)
+def grid(rows: str) -> str:
+    return ('<div class="grid-auth-matrix">\n'
+            '<div class="item-auth-matrix grid-empty"></div>\n'
+            '<div class="item-auth-matrix" style="grid-column: 2/4"><b>Functional approval</b></div>\n'
+            '<div class="item-auth-matrix" style="grid-column: 4/5"><b>Financial approval</b></div>\n'
+            '<div class="item-auth-matrix"></div>\n'
+            '<div class="item-auth-matrix"><b>Manager</b></div>\n<div class="item-auth-matrix"><b>VP</b></div>\n'
+            '<div class="item-auth-matrix"><b>CFO</b></div>\n'
+            '<div class="item-auth-matrix" style="grid-column: 1/5"><b>Approving expense<sup>(1)</sup></b></div>\n'
+            + rows + '</div>\n<div class="treasury-auth-matrix">\n<div class="tr-auth-matrix">M&amp;A</div>\n'
+            '<div class="tr-auth-matrix">See <a href="https://docs.google.com/x">this</a></div>\n</div>\n'
+            '**Notes/Comments**:\n\n- (1) Delegation allowed.\n')
+
+
+def row(band, cells):
+    return (f'<div class="item-auth-matrix">{band}</div>\n'
+            + "".join(f'<div class="item-auth-matrix">{v}</div> <!-- {r} -->\n' for r, v in cells))
+
+
+GOOD = row("Up to $5K", [("Manager", "Approves<sup>(2)</sup>"), ("VP", ""), ("CFO", "")])
+
+
+def test_authz_parses_cells_notes_and_board():
+    a = P.parse_authz(grid(GOOD))
+    first = a["cells"][0]
+    assert (first["role"], first["value"], first["notes"]) == ("Manager", "Approves", [2])
+    assert first["category"] == "Approving expense" and first["category_notes"] == [1]
+    assert [c["approval_type"] for c in a["cells"]] == ["functional", "functional", "financial"]
+    assert a["board"][0]["private_reference"] and a["notes"] == [{"note": 1, "text": "Delegation allowed."}]
+
+
+def test_authz_comment_mismatch_raises():
+    shifted = row("Up to $5K", [("Manager", ""), ("CFO", "Approves"), ("VP", "")])
+    with pytest.raises(P.ParseError, match="칸 밀림"):
+        P.parse_authz(grid(shifted))
+
+
+def test_authz_missing_cell_raises():
+    short = row("Up to $5K", [("Manager", ""), ("VP", "")]) + '<div class="item-auth-matrix" style="grid-column: 1/5">Next</div>\n'
+    with pytest.raises(P.ParseError):
+        P.parse_authz(grid(short))
+
+
+# AC-05 · 금액 구간 끊김 보고
+def test_band_gap_reported_not_raised():
+    rows = "".join(row(b, [("Manager", "Approves"), ("VP", ""), ("CFO", "")]) for b in ("Up to $5K", ">$5K", ">$50K"))
+    a = P.parse_authz(grid(rows))
+    assert a["band_gaps"] == [{"category": "Approving expense", "after": ">$5K", "band": ">$50K"}]
+    assert P.band_range(">$25K up to $50K") == (25e3, 50e3) and P.band_range("Up to $10K") == (0.0, 10e3)

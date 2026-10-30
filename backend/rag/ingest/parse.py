@@ -1,15 +1,21 @@
 """파싱: 수집한 원문(data/corpus/)을 요소 단위 중간 표현과 권한표 칸 목록으로 바꾼다.
 
+python -m backend.rag.ingest.parse            (handbook.py 를 먼저 돌려 data/corpus/ 가 있어야 한다)
+
 Spec: docs/specs/parse.md. 원문은 읽기만 하고 결과는 data/parsed/ 에 쓴다(저장소에 커밋하지 않음).
 파서 선택 근거: 표본 20쪽 비교에서 markdown-it-py 제목 F1 0.996·표 19/20·코드 20/20.
 """
 from __future__ import annotations
 
+import argparse
 import collections
+import json
 import re
+import sys
 from html import unescape
+from pathlib import Path
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from markdown_it import MarkdownIt
 
 # ── Hugo 단축코드 분류 (원문 45종 전수 조사, 2026-10-29) ──
@@ -288,3 +294,211 @@ def found_in_source(el: dict, raw_lines: list[str]) -> bool:
     src = "\n".join(re.sub(r"[^a-z0-9]", "", s) for s in (span, unescape(span), no_link))
     text = " ".join(el["cells"]) if el["kind"] == "table_row" else el["text"]
     return all(w in src for w in WORD.findall(text.lower()))
+
+
+# ── 권한표 (2023-05, CSS grid) ──
+ROLE_ALIAS = {"Exec Team": "Exec Group"}     # 원문 주석 오타 1곳
+GRID_COL = re.compile(r"grid-column:\s*(\d+)\s*/\s*(\d+)")
+AMOUNT = re.compile(r"\$\s*([\d.]+)\s*([KkMm])?")
+
+
+def div_lines(html: str, container: str, cls: str) -> list[int]:
+    """<div class="cls ..."> 가 container 뒤에서 나오는 줄 번호(1부터)를 순서대로. lxml 은 sourceline 을 주지 않아 직접 센다."""
+    start = html.index(f'class="{container}"')
+    return [html.count("\n", 0, m.start()) + 1 for m in re.compile(rf'<div class="{cls}[" ]').finditer(html, start)]
+
+
+def comment_after(tag: Tag) -> str | None:
+    for sib in tag.next_siblings:
+        if isinstance(sib, Comment):
+            return sib.strip()
+        if isinstance(sib, Tag):
+            return None
+    return None
+
+
+def text_and_notes(tag: Tag) -> tuple[str, list[int]]:
+    notes = [int(n) for sup in tag.find_all("sup") for n in re.findall(r"\((\d+)\)", sup.get_text())]
+    clone = BeautifulSoup(str(tag), "lxml")
+    for sup in clone.find_all("sup"):
+        sup.decompose()
+    return clone.get_text(" ", strip=True), notes
+
+
+def band_range(label: str) -> tuple[float | None, float | None]:
+    nums = [float(n) * {"k": 1e3, "m": 1e6}.get((u or "").lower(), 1) for n, u in AMOUNT.findall(label)]
+    if not nums:
+        return None, None
+    if len(nums) >= 2:
+        return nums[0], nums[1]
+    return (0.0, nums[0]) if label.strip().lower().startswith("up to") else (nums[0], None)
+
+
+def band_gaps(cells: list[dict]) -> list[dict]:
+    """금액 구간이 빈틈없이 이어지는가(도메인 검산). 모든 행이 금액인 업무만 본다. 끊김은 원문 사실로 보고."""
+    gaps, by_cat = [], collections.defaultdict(list)
+    for c in cells:
+        if c["band"] not in [b["band"] for b in by_cat[c["category"]]]:
+            by_cat[c["category"]].append(c)
+    for cat, bands in by_cat.items():
+        if not bands or any(b["band_lo"] is None for b in bands):
+            continue
+        for prev, cur in zip(bands, bands[1:]):
+            if prev["band_hi"] is None or cur["band_lo"] != prev["band_hi"]:
+                gaps.append({"category": cat, "after": prev["band"], "band": cur["band"]})
+    return gaps
+
+
+def parse_authz(html: str) -> dict:
+    soup = BeautifulSoup(html, "lxml")
+    grids = soup.select("div.grid-auth-matrix")
+    if len(grids) != 1:
+        raise ParseError(f"권한표 본표가 {len(grids)}개 (1개여야 함)")
+    items = grids[0].find_all("div", class_="item-auth-matrix", recursive=False)
+    item_lines = div_lines(html, "grid-auth-matrix", "item-auth-matrix")
+    if len(item_lines) != len(items):
+        raise ParseError(f"칸 줄 번호 {len(item_lines)}개 ≠ 칸 {len(items)}개")
+
+    spans = {}
+    for d in items[:3]:
+        m = GRID_COL.search(d.get("style") or "")
+        if m:
+            spans[d.get_text(strip=True)] = int(m.group(2)) - int(m.group(1))
+    n_func, n_fin = spans.get("Functional approval"), spans.get("Financial approval")
+    if not n_func or not n_fin:
+        raise ParseError(f"머리 칸(업무/재무 승인) 구조가 다름: {spans}")
+    n = n_func + n_fin
+    roles = [d.get_text(" ", strip=True) for d in items[4:4 + n]]
+    if len(roles) != n or not all(roles):
+        raise ParseError(f"역할 머리 칸 {len(roles)}개 (기대 {n})")
+
+    cells, categories, category, cat_notes, i = [], collections.OrderedDict(), None, [], 4 + n
+    while i < len(items):
+        d = items[i]
+        m = GRID_COL.search(d.get("style") or "")
+        if m and int(m.group(1)) == 1 and int(m.group(2)) - 1 == n + 1:      # 전체 폭 = 업무 종류 제목
+            category, cat_notes = text_and_notes(d)
+            categories[category] = 0
+            i += 1
+            continue
+        if category is None:
+            raise ParseError(f"업무 종류 제목 없이 행이 시작됨 ({item_lines[i]}줄)")
+        band = d.get_text(" ", strip=True)
+        row = items[i + 1:i + 1 + n]
+        if len(row) != n:
+            raise ParseError(f"'{category} / {band}' 행의 칸 {len(row)}개 (기대 {n})")
+        lo, hi = band_range(band)
+        for col, (role, cell) in enumerate(zip(roles, row)):
+            line = item_lines[i + 1 + col]
+            note = comment_after(cell)
+            if note is None or GRID_COL.search(cell.get("style") or ""):
+                raise ParseError(f"'{category} / {band}' {col + 1}번째 칸 구조가 다름 ({line}줄)")
+            if ROLE_ALIAS.get(note, note).lower() != role.lower():
+                raise ParseError(f"칸 밀림: '{category} / {band}' 열 {role} 인데 주석 {note} ({line}줄)")
+            value, notes = text_and_notes(cell)
+            cells.append({"category": category, "category_notes": cat_notes, "band": band, "band_lo": lo,
+                          "band_hi": hi, "role": role, "approval_type": "functional" if col < n_func else "financial",
+                          "value": value, "notes": notes, "line": line,
+                          "comment_alias": note if note in ROLE_ALIAS else None})
+        categories[category] += 1
+        i += 1 + n
+
+    board_divs = soup.select("div.treasury-auth-matrix > div.tr-auth-matrix")
+    if not board_divs or len(board_divs) % 2:
+        raise ParseError(f"이사회 표 칸 {len(board_divs)}개 (짝수여야 함)")
+    board_lines = div_lines(html, "treasury-auth-matrix", "tr-auth-matrix")
+    if len(board_lines) != len(board_divs):
+        raise ParseError(f"이사회 표 줄 번호 {len(board_lines)}개 ≠ 칸 {len(board_divs)}개")
+    board = []
+    for k, (item, appr) in enumerate(zip(board_divs[::2], board_divs[1::2])):
+        hrefs = [a.get("href") for a in appr.find_all("a")]
+        board.append({"item": item.get_text(" ", strip=True), "approval": appr.get_text(" ", strip=True),
+                      "links": hrefs, "line": board_lines[2 * k],
+                      "private_reference": any("docs.google.com" in (h or "") for h in hrefs)})
+
+    notes = [{"note": int(m.group(1)), "text": m.group(2).strip()}
+             for m in re.finditer(r"^- \((\d+)\)\s*(.+)$", html.split("**Notes/Comments**", 1)[-1], re.M)]
+    if not notes:
+        raise ParseError("각주 (n) 를 찾지 못함")
+    return {"roles": roles, "n_functional": n_func, "cells": cells, "rows_by_category": dict(categories),
+            "board": board, "notes": notes, "band_gaps": band_gaps(cells)}
+
+
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    with path.open(encoding="utf-8") as f:                       # 저장 성공 ≠ 재사용 가능
+        back = sum(1 for line in f if json.loads(line))
+    if back != len(rows):
+        raise ParseError(f"다시 읽은 건수 {back} ≠ 쓴 건수 {len(rows)}: {path}")
+
+
+def run(corpus: Path, out: Path) -> dict:
+    pages = [json.loads(line) for line in (corpus / "pages.jsonl").open(encoding="utf-8")]
+    counts, elements, skipped, review_pages, prov_fail = collections.Counter(), [], [], [], []
+    for page in pages:
+        if page["redirect_to"]:
+            skipped.append(page["path"])
+            continue
+        raw = (corpus / "handbook" / page["path"].removeprefix("content/handbook/")).read_text(encoding="utf-8")
+        page_elements = parse_page(page, raw, counts)
+        if any(e["review"] and e["review"].startswith("unknown") for e in page_elements):
+            review_pages.append(page["path"])
+        raw_lines = raw.split("\n")
+        prov_fail += [e["element_id"] for e in page_elements if not found_in_source(e, raw_lines)]
+        elements += page_elements
+
+    authz = parse_authz((corpus / "authz/authorization-matrix-2023-05.html.md").read_text(encoding="utf-8"))
+    out.mkdir(parents=True, exist_ok=True)
+    write_jsonl(out / "document_ir.jsonl", elements)
+    write_jsonl(out / "authz_cells.jsonl", authz["cells"])
+    write_jsonl(out / "authz_board.jsonl", authz["board"])
+    write_jsonl(out / "authz_notes.jsonl", authz["notes"])
+
+    kinds = collections.Counter(e["kind"] for e in elements)
+    report = {
+        "parser": {"markdown-it-py": _version("markdown-it-py"), "beautifulsoup4": _version("beautifulsoup4")},
+        "corpus_id": json.loads((corpus / "collect_manifest.json").read_text(encoding="utf-8"))["corpus_id"],
+        "pages": len(pages), "pages_parsed": len(pages) - len(skipped), "skipped_redirect": skipped,
+        "elements": len(elements), "elements_by_kind": dict(kinds),
+        "review": {"unknown_shortcode_pages": review_pages,
+                   "cell_count_rows": sum(1 for e in elements if e["review"] == "cell_count")},
+        "provenance_failures": len(prov_fail), "provenance_failure_ids": prov_fail[:20],
+        "shortcodes": {k: v for k, v in sorted(counts.items())},
+        "authz": {"roles": authz["roles"], "categories": authz["rows_by_category"],
+                  "cells": len(authz["cells"]), "cells_nonempty": sum(1 for c in authz["cells"] if c["value"]),
+                  "comment_aliases": sum(1 for c in authz["cells"] if c["comment_alias"]),
+                  "band_gaps": authz["band_gaps"], "board_rows": len(authz["board"]),
+                  "board_private_reference": [b["item"] for b in authz["board"] if b["private_reference"]],
+                  "notes": len(authz["notes"])},
+    }
+    (out / "parse_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                                           encoding="utf-8", newline="\n")
+    return report
+
+
+def _version(dist: str) -> str:
+    from importlib.metadata import version
+    return version(dist)
+
+
+def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--corpus", type=Path, default=Path("data/corpus"))
+    ap.add_argument("--out", type=Path, default=Path("data/parsed"))
+    args = ap.parse_args()
+    r = run(args.corpus, args.out)
+    a = r["authz"]
+    print(f"{r['pages_parsed']}쪽 → 요소 {r['elements']}개 {r['elements_by_kind']}")
+    print(f"건너뜀 {len(r['skipped_redirect'])}쪽, 검토 대기 {len(r['review']['unknown_shortcode_pages'])}쪽, "
+          f"표 칸 수 불일치 {r['review']['cell_count_rows']}행, 원문 되찾기 실패 {r['provenance_failures']}개")
+    print(f"권한표 {len(a['categories'])}종 {a['cells']}칸(글자 {a['cells_nonempty']}), 구간 끊김 {len(a['band_gaps'])}, "
+          f"이사회 {a['board_rows']}행, 각주 {a['notes']}개")
+    if r["review"]["unknown_shortcode_pages"] or r["provenance_failures"]:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

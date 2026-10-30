@@ -5,7 +5,8 @@
 `handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화). 수집은 로컬에서 한 번 하고 원문 스냅샷과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
 
 - 주인: 박진형
-- 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`)
+- 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표)
+- 파싱 결과 `data/parsed/document_ir.jsonl` 한 줄 = 요소 하나: `element_id, rule_seq, org, kind(heading·paragraph·list_item·table_row·quote·html·code), heading_path, parent_id, order, line_start, line_end(원본 줄, 1부터), text, links, review`. 표 행은 `table_id, row, header, cells` 추가. 청킹(B-3)은 이 형식을 읽는다
 - 입력: 핸드북 저장소(고정 커밋)
 - 출력: 원문 스냅샷, 청크, 바뀐 섹션 목록(`ChangedArticle`)
 
@@ -13,6 +14,9 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-29 | 박진형 (jinyeong-731) | 원문 대조 3건(`compare.py` 대조표, GitLab 같은 판 줄 링크): 장애 대응 쪽 15요소, 표 많은 쪽 15요소, 2023 권한표 글자 있는 71칸 — 전부 일치 | PR 전 |
+| 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | `parse.py`: 1,561쪽 → 요소 85,388개(원본 줄 되찾기 실패 0, 처음 보는 단축코드 0), 권한표 9종 33행 363칸(역할 주석 대조 불일치 0, 글자 71칸), 이사회 15행, 각주 6. `compare.py` 원문 대조표. 파서는 PRD 9장대로 markdown-it-py·beautifulsoup4+lxml(표본 20쪽 비교로 확인). HTML 엔진을 기본 엔진에서 lxml로 바꾸자 깨진 HTML 표 1쪽이 바로잡힘(요소 85,389→85,388, 그 쪽 말고 차이 0). 비공개 링크만 있는 표 칸 9개 표시(`private_cells`, PRD 8장). 원문 대조는 EVAL_REPORT 1장 | PR 전 |
+| 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 권한표 파싱 `parse.py` `parse_authz()`: 2023 권한표 본표·이사회 표·각주, 칸마다 역할 주석과 열 이름 대조(다르면 멈춤), 금액 구간 끊김 보고와 테스트 | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | Markdown → 요소 `parse.py` `parse_page()`: markdown-it-py로 제목·문단·목록·표 행·코드·HTML 표를 요소로(원본 줄 번호·제목 경로 포함), 원본 되찾기 검사 `found_in_source()`와 테스트. 의존성 2줄 `backend/requirements.txt` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 단축코드 전처리 `parse.py` `preprocess()`: Hugo 단축코드를 4가지(감싸기·이름·링크·데이터)로 나눠 정리, 줄 수는 바꾸지 않음, 모르는 단축코드는 지우지 않음과 테스트. Spec `docs/specs/parse.md` | PR 전 |
 | 2026-10-29 | 박진형 (jinyeong-731, Claude Code) | 개정 이력 기간을 "최근 12개월" → 2024-01-01부터로 넓힘(팀 리콜 시험 12건 중 4건이 빠져 있었음). 핸드북 커밋 6,332건, 12건 모두 있음 확인 검사·테스트 추가. 수집 원문은 그대로(corpus_id 같음) | PR 전 |
@@ -25,6 +29,8 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| I-002 | 2026-10-29 | 박진형 | 내용 없이 "다른 곳으로 옮김"(`redirect_to`)만 있는 페이지 3쪽 | 빈 청크·잘못된 인용 | 박진형 | 해결 | 2026-10-29 | `parse.py` 가 건너뛰고 `parse_report.json` `skipped_redirect` 에 3쪽 기록 |
+| I-004 | 2026-10-29 | 박진형 | 권한표 원문 'Non Billable Expenses' 금액 구간이 `Up to $5K` → `>$5K` → `>$50K` 로 겹침(>$5K의 끝이 없음) | 결정표가 $5K~$50K 사이를 어느 칸으로 볼지 원문만으론 못 정함 | 김승욱 (결정표) | 열림 | | 원문 그대로임(파서 오류 아님). `parse_report.json` `band_gaps` |
 | I-006 | 2026-10-29 | 박진형 | 리콜 시험 커밋 `6baed99c`(장애 리뷰 기한)가 고른 폴더 밖 `engineering/root-cause-analysis.md` 도 고침 | 리콜 시연 때 바뀐 규칙의 절반만 코퍼스에 있음 | 김승욱 (리콜) | 열림 | | 고른 폴더 안 `infrastructure-platforms/incident-review.md` 변경은 이력에 있음 |
 | I-005 | 2026-10-29 | 박진형 | 개정 이력이 최근 12개월뿐이라 팀 리콜 시험 커밋 12건 중 4건(2024-01-23 2건, 2024-10-18, 2025-09-19) 누락 | 리콜 시험 데이터 부족 | 박진형 | 해결 | 2026-10-29 | 기간 2024-01-01부터, `missing_recall` 검사 + `test_missing_recall_commits_detected`, 실행 결과 12건 모두 있음 |
 | I-003 | 2026-10-29 | 박진형 | 팀 레포 `.gitignore` 의 `build/` 때문에 핸드북 폴더 `engineering/infrastructure-platforms/gitlab-delivery/build/` 13쪽이 git에 안 잡힘 | 커밋하면 1,564쪽 중 13쪽이 조용히 빠짐(평가자 재현 실패) | 김승욱 (PR #8) | 해결 | 2026-10-30 | PR #8: `.gitignore` 에 `!data/corpus/**/build/`, `.gitattributes` 에 `data/corpus/** -text`(1,564쪽 시험, decisions.md 2026-10-30) |
