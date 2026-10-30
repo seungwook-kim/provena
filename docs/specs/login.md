@@ -1,8 +1,8 @@
 # 로그인 API 명세서 초안
 
-상태: 독립 MVP 복구 및 팀 인증 라우터 이식, 앱 통합 미완료
+상태: 독립 MVP 기록과 팀 PR #9 인증 라우터 계약을 구분해 기록, 앱 통합 미완료
 작성 범위: 독립 MVP의 검증 기록, 팀 backend/auth.py의 현재 계약, 향후 통합 계획
-비고: 이 문서는 팀 통합 전 초안이다. 독립 MVP에서는 인메모리 저장소 기반 인증 API를 구현·검증했으며, 실제 PostgreSQL 스키마·마이그레이션·팀 통합은 아직 구현하지 않는다.
+비고: 아래 독립 MVP 절은 과거 검증 기록이며 팀 PR의 실행 구성이 아니다. 현재 팀 구현은 `backend/auth.py`에 명시적 `AuthStore`를 주입하는 라우터이며, 실제 PostgreSQL 스키마·마이그레이션·`backend/main.py` 연결은 아직 구현하지 않는다.
 
 ## 복구 상태와 구현 위치 (2026-10-30)
 
@@ -12,7 +12,7 @@
 
 - 원본: `../provena-login-mvp`. 실행 대상은 해당 폴더에서 `uvicorn backend.main:app`이며 `main.py`의 모듈 수준 `app = create_app()`을 사용한다.
 - `backend/main.py:create_app()`에 로그인·로그아웃·`/me`, CSRF 비교, 로그인 실패 제한, 민감 입력을 생략하는 검증 오류 처리가 있다. 같은 파일이 `/login.html`, `/login.css`, `/login.js`를 제공한다.
-- `backend/auth.py`: bcrypt, JWT HS256, 최소 32바이트 AUTH_SECRET, 인증/CSRF 쿠키, 쿠키에서 UUID 추출. `backend/user_store.py`: UserRecord, InMemoryUserStore, 로컬 환경변수 계정 시드.
+- 독립 MVP의 `backend/auth.py`는 bcrypt, JWT HS256, 최소 32바이트 AUTH_SECRET, 인증/CSRF 쿠키를 제공했고, 그 프로젝트의 `backend/user_store.py`가 `UserRecord`, `InMemoryUserStore`, 로컬 환경변수 계정 시드를 담당했다. 이 저장소의 팀 PR 구현에는 `backend/user_store.py`나 자동 테스트 계정 시드가 없다.
 - 독립 MVP: pytest `29 passed, 1 skipped`. 미실행 1건은 Playwright 미설치로 인한 선택적 브라우저 자동화 테스트이며, Chrome 수동 로그인·로그아웃 검증은 완료했다.
 - 원본은 사용자 생성 시 user/admin을 제한하고 `/me`에서 최신 활성 상태와 role을 조회한다. 별도 관리자 API 접근 제어와 사용자별 리소스 소유권 검사는 구현되지 않았다.
 
@@ -29,8 +29,7 @@
 - 검증 입력 오류는 이 라우터의 AuthRoute에서 민감한 입력을 포함하지 않는 422로 바꾼다. CSRF 실패는 403, 로그인 제한은 429, 저장소 예외는 내부 메시지 없이 503이다. 비밀번호·hash·JWT를 JSON에 반환하지 않는다. 앱 전체의 로깅/오류 마스킹은 별도 통합 검증 대상이다.
 - JWT HS256, 만료 30분, user_id/role/iat/exp, 인증 쿠키 provena_auth(HttpOnly), CSRF 쿠키 provena_csrf(읽기 가능), SameSite=Lax, Path=/를 유지한다. secret 누락/32바이트 미만은 라우터 생성 시 거부한다.
 - Secure 기본값은 True. `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1` 두 환경변수를 모두 만족할 때만 False를 허용한다. 원본의 DEV_MODE 단독 조건보다 엄격하다. 저수준 쿠키 헬퍼는 원본 호출 계약을 유지하므로 직접 사용 시 호출자가 Secure를 명시해야 한다.
-- `get_current_user_id(request, secret=...)`는 JWT에서 UUID만 추출한다. 최신 사용자 상태 확인에는 `get_current_user(request, store=..., secret=...)` 또는 `Depends(create_current_user_dependency(store=..., secret=...))`를 사용한다.
-- 기존 인자 없는 `current_user_id() -> str`는 NotImplementedError TODO를 보존했다. 조사 범위 내 호출처는 없었다. 요청 없는 호출에 임의 사용자 ID를 반환하지 않는다. 하위 API 연결 시 호출 계약 합의가 필요하다.
+- `get_current_user_id(request, secret=...)`는 JWT에서 UUID만 추출한다. 최신 사용자 상태 확인에는 `get_current_user(request, store=..., secret=...)` 또는 `Depends(create_current_user_dependency(store=..., secret=...))`를 사용한다. 기존 인자 없는 `current_user_id() -> str`는 NotImplementedError TODO를 보존했다. 요청 없는 호출에 임의 사용자 ID를 반환하지 않는다. 하위 API 연결 시 호출 계약 합의가 필요하다.
 - FastAPI 공식 참고: [APIRouter](https://fastapi.tiangolo.com/tutorial/bigger-applications/), [라우터별 APIRoute](https://fastapi.tiangolo.com/how-to/custom-request-and-route/).
 
 ### 아직 완료되지 않은 내용
@@ -39,16 +38,15 @@
 - 인메모리는 독립 MVP 테스트 수단이며 최종 저장소가 아니다. DB 스키마 합의 → 별도 승인 범위에서 adapter 이식 → 실제 PostgreSQL 검증 → 저장소 명시 주입 순서로 전환한다. 실패 시 대체 계정/저장소로 전환하지 않는다.
 - 실제 PostgreSQL 사용자 DB 연결, Google 로그인, 팀 main.py에서 include_router 연결, Vite + React + Tailwind 화면 전환, 운영 환경 통합 테스트.
 - 관리자 API 권한 검사와 사용자별 thread/memory 분리·소유권 검사는 하위 기능 통합 과제다. 분산 rate limiter, JWT 즉시 폐기, HTTPS/프록시/로그 정책 검증도 남아 있다.
-- 팀 requirements에는 bcrypt와 PyJWT가 없다. 별도 변경 승인 후 원본 선언 `bcrypt>=4.2,<5`, `PyJWT>=2.9,<3`의 팀 환경 호환성을 확인하고 추가해야 한다. 이번 작업에서는 requirements를 변경하지 않았다.
 
 ### 이번 PC 검증 상태
 
 - 현재 `.venv-auth`에서 Python 3.13.15, bcrypt 4.3.0, PyJWT 2.15.1, FastAPI 0.162.0, httpx 0.28.1, pytest 9.2.0을 확인했다. `pip check`는 `No broken requirements found`였다.
 - 팀 저장소의 인증 라우터 전용 Fake AuthStore 테스트(`tests/test_auth_router_runtime.py`)는 `6 passed`, 저장소 전체 pytest는 `18 passed, 1 warning`이었다. 테스트 앱에 `create_auth_router`를 등록해 CSRF 발급, 로그인·로그아웃·재로그인, `/me`, 401/403/422/429/503, 만료·변조 JWT, 비활성·role 변경, Secure 쿠키 정책, secret 오류를 검증했다. Python 문법 검사와 `node --check web/login.js`도 통과했다.
 - Starlette의 `httpx` TestClient 사용 deprecation warning 1건이 남았다. 독립 MVP와 이번 팀 저장소 검증 결과는 위의 각 기록으로 구분한다.
-- 현재 팀 requirements에는 bcrypt와 PyJWT가 등록되어 있지 않다. 담당자 승인 후 `bcrypt>=4.2,<5`, `PyJWT>=2.9,<3` 두 항목만 추가하고 기존 버전은 변경하지 않아야 한다.
+- 현재 팀 `backend/requirements.txt`에는 `bcrypt>=4.2,<5`와 `PyJWT>=2.9,<3`가 등록되어 있다. 이 PR은 해당 선언을 변경하지 않는다.
 - 원본 API 테스트는 `backend.main:create_app`에 연결되므로 팀 라우터 통과 증거가 아니다. 이번 검증은 별도 FastAPI 테스트 앱에서 명시적 Fake AuthStore를 주입해 수행했다.
-- 이번 화면 보강에서 변경한 파일은 `web/login.js`와 이 문서다. 기존 `backend/auth.py`, `main.py`, db, Docker, schemas, requirements, 팀원이 수정한 파일, 원본 MVP는 변경하지 않았다. 팀 라우터 자체는 이전 복구 작업의 결과이며 이번 화면 작업에서 재수정하지 않았다. 팀 규칙의 SPEC/작업 로그 갱신도 요청 범위 밖이므로 수행하지 않았다.
+- 이번 문서 수정은 독립 MVP의 `backend/user_store.py` 설명과 팀 PR의 명시적 `AuthStore` 주입·후속 PostgreSQL 연결 범위를 구분하는 데 한정한다. `backend/main.py`, DB, Docker, Compose, `.env.example`, `backend/schemas/`, 현재 HTML/CSS/JS 화면은 이 문서 수정에서 다루지 않는다.
 
 ---
 
@@ -90,9 +88,9 @@ Out of Scope: PostgreSQL users 테이블 조회·스키마·마이그레이션, 
 ## How
 
 - 독립 MVP: `backend/auth.py`는 인증 핵심, `backend/main.py:create_app()`은 API 3개와 정적 화면 라우트를 담당한다. 팀 저장소: 인증 핵심과 `create_auth_router()`가 모두 `backend/auth.py`에 있고 팀 `main.py`는 변경하지 않았다.
-- 사용자 저장소: `backend/user_store.py`의 인메모리 저장소를 테스트와 MVP 검증에만 사용한다. 팀 통합 시 PostgreSQL repository로 교체한다.
-- 로컬 계정 시드: `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1`일 때만 `PROVENA_TESTUSER_PASSWORD`와 `PROVENA_TESTADMIN_PASSWORD`를 읽는다. 두 값은 실행 중 bcrypt hash로 바꾸고 저장소에는 hash만 보관한다.
-- 의존성: 독립 MVP의 `backend/requirements.txt`와 `requirements-dev.txt`에 FastAPI, bcrypt, PyJWT, Starlette, httpx, pytest를 선언한다. 팀 저장소 requirements에는 해당 인증 라이브러리가 확인되지 않았으므로 통합 전에 팀 합의가 필요하다.
+- 사용자 저장소: 독립 MVP의 `backend/user_store.py` 인메모리 저장소와 테스트 계정 시드는 독립 MVP 전용이다. 팀 PR은 `AuthStore`를 호출자가 주입하며 자동 시드나 fallback 저장소를 두지 않는다.
+- 로컬 계정 시드: 독립 MVP의 `PROVENA_ENV=local`·`PROVENA_DEV_MODE=1` 조건과 환경변수 계정은 팀 PR 계약이 아니다.
+- 의존성: 팀 `backend/requirements.txt`는 `bcrypt>=4.2,<5`, `PyJWT>=2.9,<3`를 포함한다. `backend/requirements-dev.txt`는 루트 requirements를 포함해 테스트 의존성을 설치한다.
 - provisional 설정: 쿠키 이름 `provena_auth`, 토큰 30분, HS256은 통합 전 팀 합의가 필요한 임시값이다.
 - secret: `AUTH_SECRET` 환경변수에서만 읽고 누락 시 안전한 구성 오류를 낸다.
 - 쿠키: `HttpOnly=True`, `SameSite=Lax`, 로컬 HTTP `Secure=False`, 운영 HTTPS 호출 시 `secure=True`를 명시한다.
