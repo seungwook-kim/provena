@@ -202,7 +202,7 @@ def test_rate_limiter_separates_login_id_and_ip_and_expires(monkeypatch):
     limiter.record_failure("alice", "198.51.100.10")
     assert limiter.is_limited("alice", "198.51.100.10")
     assert limiter.is_limited("alice", "198.51.100.11")
-    assert limiter.is_limited("bob", "198.51.100.10")
+    assert not limiter.is_limited("bob", "198.51.100.10")
     assert not limiter.is_limited("bob", "198.51.100.11")
 
     now = 160.0
@@ -211,7 +211,7 @@ def test_rate_limiter_separates_login_id_and_ip_and_expires(monkeypatch):
 
 def test_rate_limit_success_resets_id_but_not_ip_and_forwarded_for_is_ignored(auth_context):
     _client, store, secret, password = auth_context
-    limiter = LoginRateLimiter(max_attempts=3, window_seconds=60)
+    limiter = LoginRateLimiter(max_attempts=3, max_ip_attempts=3, window_seconds=60)
     app = FastAPI()
     app.include_router(create_auth_router(store=store, secret=secret, cookie_secure=False, rate_limiter=limiter))
     client = TestClient(app)
@@ -225,6 +225,8 @@ def test_rate_limit_success_resets_id_but_not_ip_and_forwarded_for_is_ignored(au
     )
     assert failed.status_code == 401
     assert login(client, password).status_code == 200
+    assert store.user.login_id not in limiter._failures_by_login_id
+    assert len(limiter._failures_by_ip["testclient"]) == 1
 
     request = Request(
         {
@@ -365,3 +367,84 @@ def test_secret_and_secure_cookie_policies(auth_context, monkeypatch: pytest.Mon
     production_client = TestClient(production_app)
     production_cookie = production_client.get("/auth/csrf").headers["set-cookie"]
     assert "Secure" in production_cookie
+
+
+@pytest.mark.parametrize("elapsed, limited", [(59.999, True), (60.0, False), (60.001, False)])
+def test_default_rate_limit_window_and_abandoned_bucket_cleanup(monkeypatch, elapsed, limited):
+    now = 100.0
+    monkeypatch.setattr(auth_module.time, "monotonic", lambda: now)
+    limiter = LoginRateLimiter()
+    for index in range(30):
+        limiter.record_failure(f"user-{index // 5}", "198.51.100.10")
+    now += elapsed
+    assert limiter.is_limited("user-0", "198.51.100.11") is limited
+    assert limiter.is_limited("new-user", "198.51.100.10") is limited
+    assert not limiter.is_limited("new-user", "198.51.100.11")
+    if not limited:
+        assert limiter._failures_by_login_id == {}
+        assert limiter._failures_by_ip == {}
+
+
+def test_default_router_id_ip_budgets_and_success_cannot_bypass_ip(auth_context, monkeypatch):
+    client, store, _secret, password = auth_context
+    now = 100.0
+    monkeypatch.setattr(auth_module.time, "monotonic", lambda: now)
+    issue_csrf(client)
+
+    def attempt(login_id, candidate=password):
+        return client.post(
+            "/auth/login", json={"login_id": login_id, "password": candidate},
+            headers=csrf_headers(client),
+        )
+
+    for _ in range(5):
+        assert attempt("missing-a").status_code == 401
+    assert attempt("missing-a").status_code == 429
+    assert attempt("missing-b").status_code == 401
+    # Successful logins reset only their own ID, retaining all six IP failures.
+    assert attempt(store.user.login_id).status_code == 200
+    for index in range(24):
+        assert attempt(f"other-{index}").status_code == 401
+    assert attempt(store.user.login_id).status_code == 429
+    now = 159.999
+    assert attempt("fresh-user").status_code == 429
+    now = 160.0
+    assert attempt(store.user.login_id).status_code == 200
+    assert attempt("missing-a").status_code == 401
+
+
+def test_router_distinguishes_direct_peer_ips(auth_context):
+    client, _store, _secret, password = auth_context
+    issue_csrf(client)
+    for index in range(30):
+        response = client.post(
+            "/auth/login", json={"login_id": f"missing-{index}", "password": password},
+            headers=csrf_headers(client),
+        )
+        assert response.status_code == 401
+    assert client.post(
+        "/auth/login", json={"login_id": "fresh", "password": password},
+        headers=csrf_headers(client),
+    ).status_code == 429
+    other_client = TestClient(client.app, client=("198.51.100.11", 12345))
+    issue_csrf(other_client)
+    assert other_client.post(
+        "/auth/login", json={"login_id": "fresh", "password": password},
+        headers=csrf_headers(other_client),
+    ).status_code == 401
+
+
+def test_router_login_id_budget_survives_ip_changes(auth_context):
+    client, _store, _secret, password = auth_context
+    for index in range(6):
+        peer = TestClient(client.app, client=(f"198.51.100.{index + 1}", 12345))
+        issue_csrf(peer)
+        response = peer.post(
+            "/auth/login", json={"login_id": "same-missing-id", "password": password},
+            headers=csrf_headers(peer),
+        )
+        assert response.status_code == (401 if index < 5 else 429)
+    assert peer.post(
+        "/auth/login", json={"login_id": "different-id", "password": password},
+        headers=csrf_headers(peer),
+    ).status_code == 401

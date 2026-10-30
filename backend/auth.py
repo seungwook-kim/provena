@@ -260,27 +260,37 @@ class UserResponse(BaseModel):
 class LoginRateLimiter:
     """MVP process-local limiter; replace with shared storage before deployment."""
 
-    def __init__(self, *, max_attempts: int = 5, window_seconds: int = 60) -> None:
+    def __init__(
+        self, *, max_attempts: int = 5, max_ip_attempts: int = 30, window_seconds: int = 60
+    ) -> None:
         self.max_attempts = max_attempts
+        self.max_ip_attempts = max_ip_attempts
         self.window_seconds = window_seconds
         self._failures_by_login_id: dict[str, list[float]] = {}
         self._failures_by_ip: dict[str, list[float]] = {}
 
-    def _is_limited(self, failures: dict[str, list[float]], key: str) -> bool:
-        now = time.monotonic()
-        recent = [stamp for stamp in failures.get(key, []) if now - stamp < self.window_seconds]
-        failures[key] = recent
-        return len(recent) >= self.max_attempts
+    def _prune_expired(self, now: float) -> None:
+        # Sweep both maps so abandoned IDs and IPs do not accumulate forever.
+        for failures in (self._failures_by_login_id, self._failures_by_ip):
+            for key, stamps in list(failures.items()):
+                recent = [stamp for stamp in stamps if now - stamp < self.window_seconds]
+                if recent:
+                    failures[key] = recent
+                else:
+                    failures.pop(key, None)
 
     def is_limited(self, login_id: str, client_ip: str) -> bool:
-        """Return whether either the login ID or client IP reached its limit."""
+        """Return whether either independent failure budget is exhausted."""
 
-        return self._is_limited(self._failures_by_login_id, login_id) or self._is_limited(
-            self._failures_by_ip, client_ip
+        self._prune_expired(time.monotonic())
+        return (
+            len(self._failures_by_login_id.get(login_id, [])) >= self.max_attempts
+            or len(self._failures_by_ip.get(client_ip, [])) >= self.max_ip_attempts
         )
 
     def record_failure(self, login_id: str, client_ip: str) -> None:
         stamp = time.monotonic()
+        self._prune_expired(stamp)
         self._failures_by_login_id.setdefault(login_id, []).append(stamp)
         self._failures_by_ip.setdefault(client_ip, []).append(stamp)
 
