@@ -1,6 +1,7 @@
-"""핸드북 git 수집: 고른 절만, 고정 커밋으로.
+"""핸드북 git 수집: 고른 절만, 고정 커밋으로. 2023 권한표 1개 파일은 GitLab API로.
 
 python -m backend.rag.ingest.handbook                 (기본: data/corpus/ 에 쓴다)
+python -m backend.rag.ingest.handbook --cache D:/tmp/handbook --skip-authz
 
 Spec: docs/specs/collect.md. 원문은 바꾸지 않고 그대로 쓴다(파싱은 parse.py).
 """
@@ -12,6 +13,9 @@ import json
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -37,6 +41,12 @@ SECTIONS: dict[str, tuple[str, ...]] = {
     "tools-and-tips": ("tools-and-tips",),
     "finance": ("finance",),
 }
+
+# 2023-05 승인 권한표: 지금 핸드북에선 비공개로 옮겨져 옛 저장소 고정 커밋에서만 받는다.
+AUTHZ_PROJECT = "gitlab-com/www-gitlab-com"
+AUTHZ_COMMIT = "0a3de833754144dc4d448814e2edbcaed0883f35"   # 2023-05-11
+AUTHZ_PATH = "sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+AUTHZ_TITLE = "Authorization Matrix"
 
 
 class CollectError(RuntimeError):
@@ -154,6 +164,46 @@ def check_pages(pages: dict[str, bytes], expected: int) -> dict[str, int]:
     return by_org
 
 
+def authz_url() -> str:
+    project = urllib.parse.quote(AUTHZ_PROJECT, safe="")
+    path = urllib.parse.quote(AUTHZ_PATH, safe="")
+    return f"https://gitlab.com/api/v4/projects/{project}/repository/files/{path}/raw?ref={AUTHZ_COMMIT}"
+
+
+def check_authz(status: int, headers: dict[str, str], body: bytes) -> None:
+    """200만으로 성공이라 보지 않는다: 본문 길이·GitLab이 준 지문·제목까지 본다."""
+    if status != 200:
+        raise CollectError(f"권한표 응답 {status}")
+    if not body.strip():
+        raise CollectError("권한표 본문이 비었음")
+    expected = {k.lower(): v for k, v in headers.items()}.get("x-gitlab-content-sha256")
+    if expected != sha256(body):
+        raise CollectError(f"권한표 지문 불일치: 헤더 {expected}, 받은 본문 {sha256(body)}")
+    if front_matter(body.decode("utf-8")).get("title") != AUTHZ_TITLE:
+        raise CollectError("권한표 제목이 다름 (다른 파일이나 오류 페이지)")
+
+
+def fetch_authz() -> bytes:
+    req = urllib.request.Request(authz_url(), headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            status, headers, body = r.status, dict(r.headers), r.read()
+    except urllib.error.HTTPError as e:
+        status, headers, body = e.code, dict(e.headers), b""
+    check_authz(status, headers, body)   # 1회 요청. 재시도하지 않는다
+    return body
+
+
+def kept_authz(manifest: Path, authz_file: Path) -> dict | None:
+    """--skip-authz로 다시 돌릴 때 전에 받은 권한표 기록을 지우지 않는다. 파일 지문이 기록과 같을 때만 남긴다."""
+    if not manifest.exists() or not authz_file.exists():
+        return None
+    prev = json.loads(manifest.read_text(encoding="utf-8")).get("authz")
+    if prev and prev.get("file_sha256") == sha256(authz_file.read_bytes()):
+        return prev
+    return None
+
+
 def write_verified(target: Path, data: bytes) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
@@ -161,7 +211,7 @@ def write_verified(target: Path, data: bytes) -> None:
         raise CollectError(f"저장 후 다시 읽은 지문이 다름: {target}")
 
 
-def collect(out: Path, cache: Path) -> dict:
+def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
     ensure_checkout(cache)
     commit_date = git(cache, "show", "-s", "--format=%cs", PINNED_COMMIT).decode().strip()
     listed = list_pages(cache, PINNED_COMMIT)
@@ -187,6 +237,17 @@ def collect(out: Path, cache: Path) -> dict:
     if len({r["rule_seq"] for r in rows}) != len(rows):
         raise CollectError("페이지 id가 겹침")
 
+    authz = None
+    authz_file = out / "authz" / "authorization-matrix-2023-05.html.md"
+    if with_authz:
+        body = fetch_authz()
+        write_verified(authz_file, body)
+        authz = {"project": AUTHZ_PROJECT, "commit": AUTHZ_COMMIT, "path": AUTHZ_PATH,
+                 "source_url": f"https://gitlab.com/{AUTHZ_PROJECT}/-/blob/{AUTHZ_COMMIT}/{AUTHZ_PATH}",
+                 "file_sha256": sha256(body), "bytes": len(body)}
+    else:
+        authz = kept_authz(out / "collect_manifest.json", authz_file)
+
     with (out / "pages.jsonl").open("w", encoding="utf-8", newline="\n") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -196,7 +257,7 @@ def collect(out: Path, cache: Path) -> dict:
         "bytes": sum(len(d) for d in pages.values()),
         "redirect_pages": sum(1 for r in rows if r["redirect_to"]),
         "corpus_id": corpus_id([r["file_sha256"] for r in rows]),
-        "collected_at": fetched_at,
+        "authz": authz, "collected_at": fetched_at,
         "git_version": subprocess.run(["git", "--version"], capture_output=True, text=True).stdout.strip(),
         "license": "CC BY-SA 4.0 (data/LICENSES/LICENSES.md)",
     }
@@ -210,9 +271,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, default=Path("data/corpus"))
     ap.add_argument("--cache", type=Path, default=Path.home() / ".cache/provena/handbook")
+    ap.add_argument("--skip-authz", action="store_true", help="권한표 API 요청을 하지 않는다")
     args = ap.parse_args()
-    m = collect(args.out, args.cache)
-    print(f"{m['pages']}쪽, {m['bytes'] / 1e6:.1f}MB, corpus_id {m['corpus_id'][:16]}")
+    m = collect(args.out, args.cache, with_authz=not args.skip_authz)
+    print(f"{m['pages']}쪽, {m['bytes'] / 1e6:.1f}MB, corpus_id {m['corpus_id'][:16]}, 권한표 {'O' if m['authz'] else '건너뜀'}")
 
 
 if __name__ == "__main__":
