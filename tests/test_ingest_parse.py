@@ -96,7 +96,7 @@ def grid(rows: str) -> str:
             '<div class="item-auth-matrix" style="grid-column: 1/5"><b>Approving expense<sup>(1)</sup></b></div>\n'
             + rows + '</div>\n<div class="treasury-auth-matrix">\n<div class="tr-auth-matrix">M&amp;A</div>\n'
             '<div class="tr-auth-matrix">See <a href="https://docs.google.com/x">this</a></div>\n</div>\n'
-            '**Notes/Comments**:\n\n- (1) Delegation allowed.\n')
+            '\n**Notes/Comments**:\n\n- (1) Delegation allowed.\n')        # 원문처럼 표 뒤 빈 줄
 
 
 def row(band, cells):
@@ -126,6 +126,26 @@ def test_authz_missing_cell_raises():
     short = row("Up to $5K", [("Manager", ""), ("VP", "")]) + '<div class="item-auth-matrix" style="grid-column: 1/5">Next</div>\n'
     with pytest.raises(P.ParseError):
         P.parse_authz(grid(short))
+
+
+def authz_file(policy="**Primary Authorized Signatories**\n\nNever split a transaction.\n"):
+    return ("---\ntitle: x\n---\n# When is approval required\n\nAsk legal first.\n\n# Authorization Matrix\n\n"
+            + grid(GOOD) + "\n## Authorization Matrix Policy\n\n" + policy)
+
+
+def test_authz_prose_keeps_text_outside_tables():
+    els = P.parse_authz_prose(authz_file(), collections.Counter())
+    texts = [e["text"] for e in els]
+    assert "Ask legal first." in texts and "- (1) Delegation allowed." in texts    # 절차 글·각주(골든셋 R15)
+    assert "Never split a transaction." in texts                                   # 정책 본문(골든셋 R25)
+    assert not any("M&A" in t or "Approves" in t for t in texts)                   # 표 칸은 parse_authz 몫, 겹쳐 넣지 않음
+    raw_lines = authz_file().split("\n")
+    assert all(P.found_in_source(e, raw_lines) for e in els)
+
+
+def test_authz_prose_missing_policy_raises():
+    with pytest.raises(P.ParseError, match="Primary Authorized"):
+        P.parse_authz_prose(authz_file(policy="Other text.\n"), collections.Counter())
 
 
 # AC-05 · 금액 구간 끊김 보고

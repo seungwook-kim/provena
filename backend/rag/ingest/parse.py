@@ -18,6 +18,8 @@ from pathlib import Path
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from markdown_it import MarkdownIt
 
+from backend.rag.ingest.handbook import AUTHZ_PATH, rule_seq
+
 # ── Hugo 단축코드 분류 (원문 45종 전수 조사, 2026-10-29) ──
 WRAP = {"alert", "details", "panel", "note", "tableau"}            # 표시만 지우고 안 글자 유지
 NAME = {"member-by-name", "member-by-gitlab", "member-and-role-by-gitlab", "label"}   # 인자 글자로
@@ -424,6 +426,22 @@ def parse_authz(html: str) -> dict:
             "board": board, "notes": notes, "band_gaps": band_gaps(cells)}
 
 
+def parse_authz_prose(raw: str, counts: collections.Counter) -> list[dict]:
+    """권한표 파일의 표 밖 글(계약 승인 절차·각주·Authorization Matrix Policy) → 요소.
+    본표·이사회 표(CSS grid div)는 parse_authz 가 칸으로 따로 읽으므로 여기서 뺀다. 그 밖의 HTML이 나오면 멈춘다."""
+    lines = raw.split("\n")
+    start = next(i for i, l in enumerate(lines) if 'class="grid-auth-matrix"' in l) + 1
+    end = next(i for i, l in enumerate(lines) if l.startswith("**Notes/Comments**"))     # 표 두 개가 끝나는 곳
+    page = {"rule_seq": rule_seq(AUTHZ_PATH), "org": "finance", "path": AUTHZ_PATH}
+    els = [e for e in parse_page(page, raw, counts) if not start <= e["line_start"] <= end]
+    stray = [e for e in els if e["kind"] == "html"]
+    if stray:
+        raise ParseError(f"권한표 본문에 예상 밖 HTML {len(stray)}개 ({stray[0]['line_start']}줄)")
+    if not any("Primary Authorized Signatories" in e["text"] for e in els):
+        raise ParseError("권한표 정책 본문(Primary Authorized Signatories)을 찾지 못함")
+    return els
+
+
 def write_jsonl(path: Path, rows: list[dict]) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as f:
         for r in rows:
@@ -449,12 +467,16 @@ def run(corpus: Path, out: Path) -> dict:
         prov_fail += [e["element_id"] for e in page_elements if not found_in_source(e, raw_lines)]
         elements += page_elements
 
-    authz = parse_authz((corpus / "authz/authorization-matrix-2023-05.html.md").read_text(encoding="utf-8"))
+    authz_raw = (corpus / "authz/authorization-matrix-2023-05.html.md").read_text(encoding="utf-8")
+    authz = parse_authz(authz_raw)
+    authz_prose = parse_authz_prose(authz_raw, counts)
+    prov_fail += [e["element_id"] for e in authz_prose if not found_in_source(e, authz_raw.split("\n"))]
     out.mkdir(parents=True, exist_ok=True)
     write_jsonl(out / "document_ir.jsonl", elements)
     write_jsonl(out / "authz_cells.jsonl", authz["cells"])
     write_jsonl(out / "authz_board.jsonl", authz["board"])
     write_jsonl(out / "authz_notes.jsonl", authz["notes"])
+    write_jsonl(out / "authz_ir.jsonl", authz_prose)
 
     kinds = collections.Counter(e["kind"] for e in elements)
     report = {
@@ -471,7 +493,7 @@ def run(corpus: Path, out: Path) -> dict:
                   "comment_aliases": sum(1 for c in authz["cells"] if c["comment_alias"]),
                   "band_gaps": authz["band_gaps"], "board_rows": len(authz["board"]),
                   "board_private_reference": [b["item"] for b in authz["board"] if b["private_reference"]],
-                  "notes": len(authz["notes"])},
+                  "notes": len(authz["notes"]), "prose_elements": len(authz_prose)},
     }
     (out / "parse_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
                                            encoding="utf-8", newline="\n")
@@ -495,7 +517,7 @@ def main() -> None:
     print(f"건너뜀 {len(r['skipped_redirect'])}쪽, 검토 대기 {len(r['review']['unknown_shortcode_pages'])}쪽, "
           f"표 칸 수 불일치 {r['review']['cell_count_rows']}행, 원문 되찾기 실패 {r['provenance_failures']}개")
     print(f"권한표 {len(a['categories'])}종 {a['cells']}칸(글자 {a['cells_nonempty']}), 구간 끊김 {len(a['band_gaps'])}, "
-          f"이사회 {a['board_rows']}행, 각주 {a['notes']}개")
+          f"이사회 {a['board_rows']}행, 각주 {a['notes']}개, 표 밖 본문 요소 {a['prose_elements']}개")
     if r["review"]["unknown_shortcode_pages"] or r["provenance_failures"]:
         sys.exit(1)
 
