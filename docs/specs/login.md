@@ -14,7 +14,7 @@
 - `AuthStore`를 주입받는 FastAPI 인증 라우터로 `POST /auth/login`, `POST /auth/logout`, `GET /me`, `GET /auth/csrf` 계약을 제공한다.
 - bcrypt 비밀번호 검증, JWT(HttpOnly 쿠키), CSRF 검증, 사용자 활성 상태·role 재확인을 제공한다.
 - `Depends(current_user_id)`가 인증된 UUID 문자열을 제공하도록 한다.
-- 로그인 ID 단독으로 60초 동안 실패 5회, 직접 peer IP 단독으로 60초 동안 실패 30회를 독립 집계하고, 어느 하나라도 소진되면 다음 요청부터 HTTP 429를 반환한다.
+- 로그인 ID 단독으로 60초 동안 실패 5회, `request.client.host` 기준 IP 단독으로 60초 동안 실패 30회를 독립 집계하고, 어느 하나라도 소진되면 다음 요청부터 HTTP 429를 반환한다.
 - **Out of Scope**: 실제 PostgreSQL 사용자 DB·마이그레이션, 팀 `backend/main.py` 라우터 등록, Graph 호출 연결, 회원가입·비밀번호 재설정·Google OAuth, 분산 rate limiter.
 
 ## What
@@ -36,7 +36,7 @@
 | 없는 ID | 사전에 준비한 bcrypt 더미 해시를 `verify_password()`로 검증한 뒤 401. 더미 계정·DB 레코드 생성과 요청별 해시 생성은 하지 않는다. 응답 시간 차이 완화 목적이며 완전한 상수 시간 보장은 아니다. |
 | CSRF 쿠키·헤더 누락 또는 불일치 | 403 |
 | 검증 입력 오류 | 민감한 입력값을 노출하지 않는 422 |
-| 로그인 ID 단독의 60초 내 실패 5회 또는 직접 peer IP 단독의 60초 내 실패 30회 소진 | 다음 로그인 요청부터 429. 성공 로그인은 해당 ID 기록만 초기화하고 IP 기록은 유지한다. |
+| 로그인 ID 단독의 60초 내 실패 5회 또는 `request.client.host` 기준 IP 단독의 60초 내 실패 30회 소진 | 다음 로그인 요청부터 429. 성공 로그인은 해당 ID 기록만 초기화하고 IP 기록은 유지한다. |
 | 동일 IP에서 다른 ID로 로그인 | ID별 제한은 공유하지 않는다. 여러 ID의 실패는 해당 IP 기록에 합산되어 IP 한도를 소진하면 429를 반환한다. |
 | 동일 ID가 IP를 변경하여 로그인 | IP와 무관하게 같은 ID의 실패를 합산하므로 ID별 제한을 우회할 수 없다. |
 | 쿠키 누락·만료·변조 또는 인증 설정 오류 | `current_user_id()` 및 `/me`에서 401 |
@@ -56,8 +56,11 @@
 
 ### 로그인 제한과 운영 경계
 
-- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. 현재 IP는 `request.client.host`의 직접 peer만 사용하며, 신뢰 프록시 정책이 없으므로 `X-Forwarded-For`를 사용하지 않는다.
-- ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 직접 peer IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
+- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`는 헤더를 직접 파싱하지 않고 `request.client.host`를 사용하며, 주소가 없으면 `unknown`을 사용한다. 이 값은 ASGI 서버의 프록시 헤더 처리에 따라 달라지므로 항상 직접 peer IP인 것은 아니다. 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
+- 현재 `Dockerfile`의 `--proxy-headers`는 신뢰 대상에서 받은 `X-Forwarded-For`로 ASGI client 주소를, `X-Forwarded-Proto`로 scheme을 반영한다. 함께 지정한 `--forwarded-allow-ips=*`는 접속 peer를 제한하지 않고 모두 신뢰한다는 뜻이다. 이 설정에서 Uvicorn은 `X-Forwarded-For` 목록의 맨 앞 주소를 client 주소로 사용하므로 로그인 IP별 제한에도 그 값이 쓰인다. 헤더가 없으면 접속 peer 주소가 유지된다. `backend/main.py`는 별도의 IP 헤더 검증을 추가하지 않는다.
+- 클라이언트가 넣은 맨 앞 헤더 값이 앞단 프록시에서 제거·교체되지 않고 전달되거나 Uvicorn에 직접 접근할 수 있으면 IP 값을 위조할 수 있다. `*` 설정만으로 실제 원본 IP가 보장되지 않으며, 값을 바꿔 IP별 실패 기록을 분산할 수 있어 IP 제한은 보조 방어다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어다. 실제 배포의 접근 경로와 프록시의 헤더 정제 동작을 확인해야 한다.
+- Uvicorn 동작 참고: [공식 ProxyHeadersMiddleware 구현](https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py).
+- ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.
 - 프로세스 로컬 기록은 재시작 시 사라지고 Cloud Run 다중 인스턴스 간 공유되지 않는다. 공유 저장소 전환과 Cloud Run 실제 원본 IP 식별·신뢰 프록시 정책은 후속 검증 사항이다. PostgreSQL 사용자 DB 연동 시 Redis 또는 PostgreSQL 등의 공유 저장소 전환을 검토한다.
 - 팀 저장소에는 자동 사용자 seed나 `backend/user_store.py`가 없다. 테스트는 `tests/test_auth_router_runtime.py`의 `FakeAuthStore`가 실행 중 생성한 UUID·비밀번호를 사용한다.
@@ -76,7 +79,7 @@
 - **AC-03 더미 해시**: GIVEN 존재하지 않는 ID, WHEN 로그인, THEN 사전 생성 bcrypt 더미 해시를 검증하고 로그인에 성공하지 않는다.
 - **AC-04 CSRF**: GIVEN CSRF 쿠키·헤더가 없거나 다름, WHEN 로그인 또는 로그아웃, THEN 403을 반환한다.
 - **AC-05 사용자 ID**: GIVEN 유효한 `provena_auth` 쿠키, WHEN `Depends(current_user_id)`, THEN 인증된 UUID 문자열을 반환한다. 쿠키 누락·만료·변조는 401이다.
-- **AC-06 제한**: GIVEN 같은 ID 단독으로 60초 내 5회 실패하거나 같은 직접 peer IP 단독으로 60초 내 여러 ID의 실패가 합계 30회 누적됨, WHEN 다시 로그인, THEN 어느 한도라도 소진되었으면 429를 반환한다.
+- **AC-06 제한**: GIVEN 같은 ID 단독으로 60초 내 5회 실패하거나 같은 `request.client.host` 기준 IP 단독으로 60초 내 여러 ID의 실패가 합계 30회 누적됨, WHEN 다시 로그인, THEN 어느 한도라도 소진되었으면 429를 반환한다.
 - **AC-07 최신 사용자 상태**: GIVEN JWT 발급 뒤 사용자의 role 또는 활성 상태가 변경됨, WHEN `/me`, THEN `AuthStore`의 최신 상태를 반영한다.
 - **AC-08 회귀 검증**: GIVEN 현재 인증 구현, WHEN 인증 테스트와 전체 테스트를 실행, THEN 각각 17개와 51개가 통과한다.
 - **AC-09 같은 IP의 다른 ID**: GIVEN 한 IP에서 A ID의 실패가 5회이고 IP 실패 합계는 30회 미만, WHEN 같은 IP에서 실패 기록이 없는 B ID로 로그인, THEN A의 ID 제한으로 차단하지 않고 B의 인증 결과를 반환한다.
