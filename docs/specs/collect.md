@@ -20,7 +20,7 @@
 
 **Happy Path**
 1. `python -m backend.rag.ingest.handbook` 실행
-2. 핸드북 저장소를 캐시 폴더에 받는다(파일 내용 없이 최근 이력만, 그다음 고른 폴더만 내용 받기)
+2. 핸드북 저장소를 캐시 폴더에 받는다(파일 내용 없이 2023-12-01 이후 이력만, 그다음 고른 폴더만 내용 받기)
 3. 고정 커밋 `129243bc`의 고른 폴더에서 `.md` 목록을 만들고, git 원본 바이트를 그대로 `data/corpus/handbook/`에 쓴다
 4. 페이지마다 이름표(절, 페이지 id, 제목, 원문 URL, 판, 판 날짜, 수집일, sha256, 글자 수, 이동 안내 여부)를 `pages.jsonl`에 쓴다
 5. 권한표 1개 파일을 GitLab API로 받아 `data/corpus/authz/`에 쓴다
@@ -46,7 +46,9 @@
 - 받는 법: `git clone --filter=blob:none --no-checkout --shallow-since=2023-12-01` → `git sparse-checkout set --no-cone <폴더>` → `git checkout --detach <커밋>` → `git ls-tree`·`git cat-file --batch`로 원본 읽기
 - 권한표: GitLab API `repository/files/.../raw?ref=0a3de833754144dc4d448814e2edbcaed0883f35`, User-Agent 표시, timeout 30초, 1회
 - 페이지 id(`rule_seq`): 페이지 경로 sha256 앞 8자리 16진수 → 정수, 최대 10자리 (SDD 11-1 3-1 추천안, D0 확정 전 잠정). 15자리(18자리 정수)는 길다는 리뷰(PR #5)로 줄임 — 1,564쪽 실측 충돌 0, 계산상 충돌 확률 0.03%(5,000쪽 0.3%), 겹치면 수집이 멈춘다(`collect()` 중복 검사). DB 테이블에서는 `bigint`로 둔다(최댓값 4,294,967,295가 `integer` 최댓값 2,147,483,647을 넘음)
-- 판(`version_id`): 커밋 sha 앞 12자리. 판 날짜: 그 커밋의 날짜
+- 판(`version_id`): **페이지마다** 그 페이지를 마지막으로 고친 커밋의 sha 앞 12자리. 판 날짜(`version_date`): 그 커밋의 **커밋 날짜**(git `%cs`). 2023-12-01 뒤로 안 바뀐 페이지는 이력을 더 받지 않고 `version_date = "2023-12-01"`, `version_date_before = true`(계약 `Chunk.version_date_before`, 화면 "2023-12-01 이전"), `version_id` 는 마지막 수정 커밋을 모르므로 내용을 읽은 고정 커밋 sha 앞 12자리(계약상 비울 수 없음). 이력을 잘라 받은 경계 커밋은 모든 파일을 새로 추가한 것처럼 보이므로 마지막 수정으로 치지 않는다. I-001, 10/30 조장 결정(decisions.md 페이지별, 커밋 날짜·"이전" 표시는 조장 답). 한 커밋이 여러 페이지를 고치면 version_id가 같으므로 판은 `rule_seq` + `version_id` 로 구별한다
+- 알려진 차이: 핸드북 사이트 "Last modified"는 작성일(Hugo `:git` = author date)이라 커밋 날짜와 1,564쪽 중 53쪽이 1~18일 다르다. `version_date_before = true` 인 판은 정확한 날을 모르므로 `as_of` 비교는 "그 날짜 이전 어느 날"로 다뤄야 한다
+- 한계: 1,564쪽 중 499쪽(32%)은 마지막 수정이 100파일 넘게 바꾼 일괄 커밋(공백 제거·이름 변경·조직 개편)이다. 판 날짜는 "정책 내용이 바뀐 날"이 아니라 "글자가 마지막으로 바뀐 날"이다
 - 출력: `data/corpus/handbook/**`, `data/corpus/authz/authorization-matrix-2023-05.html.md`, `data/corpus/pages.jsonl`, `data/corpus/collect_manifest.json`, `data/corpus/history/*.jsonl`
 - 개정 이력: `git log --no-merges --no-renames --name-status` (이름 바뀜 탐지는 파일 내용을 받아야 해서 끈다), **2024-01-01부터** 고정 커밋까지. 팀 리콜 시험 커밋 12건(`study`의 참고 URL 2장, 가장 오래된 것 2024-01-23)이 모두 있어야 하고 하나라도 없으면 멈춘다. (처음엔 주제서 초안의 "최근 12개월"이라 4건이 빠졌음, 10/29 수정) 권한표 이력은 API commits(`path`), 요청 간격 1초, 최대 20쪽
 
