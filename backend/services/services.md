@@ -12,6 +12,7 @@ LLM 호출(`llm.py`)은 여기 한 곳에서만 한다. 데모 모드 재생, La
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-30 | 김승욱 (Claude Code) | `auth_store.py`(Postgres AuthStore), `demo_seed.py`(PROVENA_ENV=local, PROVENA_DEV_MODE=1일 때만 데모 계정 2개 시드)와 `tests/test_auth_store.py`. 가짜 연결로 시험하고, 진짜 Postgres 왕복 시험과 `docker compose` 로그인 흐름(CSRF, 로그인 200, 틀린 비밀번호 401, `/me`, 로그아웃 204)을 직접 돌려 확인 | 미정 |
 
 ## 문제 기록 (최신이 위)
 

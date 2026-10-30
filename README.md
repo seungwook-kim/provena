@@ -16,6 +16,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 주제와 산업 | IT: 정책 변경을 추적하는 엔지니어링 지식 AI (GitLab 공개 핸드북 기반) |
 | 배포 주소 | https://provena-api-cttaanqntq-du.a.run.app |
 | 팀 작업 지침서 | [docs/TEAM_GUIDE.md](./docs/TEAM_GUIDE.md) |
+| 정본 문서 (SPEC) | [docs/SPEC.md](./docs/SPEC.md) |
 
 ## 팀 (3조)
 
@@ -98,6 +99,44 @@ GitHub와 역할 칸은 각자 자기 줄을 채운다(브랜치 → PR → 리�
 - 동결: `python evals/freeze.py dataset_v1.jsonl` (sha256과 건수를 `evals/FROZEN.json`에 기록). 확인: `python evals/freeze.py --check`. PR마다 CI(`tests/test_frozen_evals.py`)가 동결한 파일이 바뀌었는지 검사한다.
 - 동결한 평가셋은 고치지 않는다. 동결 파일은 글자 그대로 해시하므로 줄 순서나 공백만 바꿔도 바뀐 것으로 잡힌다.
 - 검색이나 그래프를 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적는다. 자세한 규칙은 [evals/README.md](./evals/README.md).
+
+## 실행 방법 (docker compose up)
+
+평가자는 API 키가 없으므로 키 없이 뜨는 **데모 모드**가 기본이다. 필요한 것은 Docker(Compose v2)뿐이다.
+
+```bash
+git clone https://github.com/aihuman-7th/proj3-c.git
+cd proj3-c
+docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 빌드해서 시간이 걸린다
+```
+
+1. 브라우저에서 http://localhost:8000 을 연다(로그인 화면으로 이동한다). 상태 확인은 http://localhost:8000/health 이다.
+2. **로컬 데모 계정**으로 로그인한다. 아이디는 `demo-user`(일반 사용자), `demo-admin`(관리자)이다. 비밀번호는 [.env.example](./.env.example)의 `DEMO_USER_PASSWORD`, `DEMO_ADMIN_PASSWORD` 값이고, 바꾸려면 `.env`에 같은 이름으로 적는다([.env.example](./.env.example) 참고).
+3. 끝내려면 `docker compose down`, 데이터까지 지우려면 `docker compose down -v`.
+
+8000번 포트를 이미 쓰고 있으면 `.env`에 `API_PORT=8001`처럼 적고 그 포트로 연다.
+
+### 키 없이 뜨는 데모 모드
+
+- `DEMO_MODE=1`(기본)이면 LLM 키 없이 기록해 둔 응답을 재생한다. 응답 재생과 검색 스냅샷 적재는 구현 중이다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
+- DB는 compose가 띄우는 로컬 pgvector 컨테이너이고 Supabase 계정이 필요 없다.
+- 로그인은 필수이므로 데모 모드에는 **데모 전용 계정 2개**(user, admin)가 들어 있다. `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1`이 모두 켜진 로컬 실행에서만 시작할 때 만들어지고, 그 밖의 모드(배포)에서는 만들지 않는다.
+- 데모 계정 값은 내 PC용 공개 데모 값이다. 서명 키(`AUTH_SECRET`)는 저장소에 두지 않고, 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만든다(재시작하면 다시 로그인). 배포(Cloud Run)와 제출하는 평가용 계정은 이 값과 다르고 저장소에 적지 않는다.
+- 실제 모델로 호출하려면 `.env`에 키를 넣고 `DEMO_MODE=0`으로 바꾼다. 키는 `.env`에만 둔다(커밋 금지).
+
+### 테스트
+
+```bash
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r backend/requirements-dev.txt
+pytest -q
+```
+
+## 데이터 출처와 라이선스
+
+시연 데이터는 GitLab이 공개한 핸드북(https://handbook.gitlab.com, 소스 https://gitlab.com/gitlab-com/content-sites/handbook)이다. 핸드북 본문은 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)으로 공개되어 있고, 이 저장소의 원문 스냅샷은 `data/` 아래에 코드와 폴더를 나눠 두며 고지와 출처는 `data/LICENSES/`에 있다. 답에 원문을 보일 때는 페이지 URL, 라이선스, 수정 여부를 함께 표시한다.
+
+**이 프로젝트는 GitLab Inc.와 제휴·보증 관계가 없다.** GitLab 로고를 쓰지 않으며 "GitLab 핸드북 기반 데모"라는 사실만 밝힌다.
 
 ## 조원 소개: 첫 과제
 
