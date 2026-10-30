@@ -1,18 +1,26 @@
 # G2: `docker compose up` 한 줄로 전체 서비스가 10분 안에 떠야 합니다.
 # 평가자에게는 API 키가 없으므로 기본값은 데모 모드(DEMO_MODE=1)입니다.
 # 필요 없는 서비스는 지우고, 필요한 것(redis 등)은 추가하세요.
+#
+# 로컬 데모 계정 값은 .env.example에서 읽고, .env가 있으면 그 값이 이깁니다. 서명 키(AUTH_SECRET)는 저장소에 두지 않습니다:
+# 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만듭니다(backend/main.py). 배포(Cloud Run) 값은 저장소에 두지 않습니다.
 services:
   api:
     build: .
     ports:
-      - "8000:8000"
-    # .env가 없어도 뜹니다 (키가 필요 없는 데모 모드)
+      - "${API_PORT:-8000}:8000"  # 8000번이 이미 쓰이고 있으면 .env에 API_PORT=8001처럼 적습니다
+    # .env가 없어도 뜹니다 (키가 필요 없는 데모 모드). 뒤에 적은 파일이 앞 파일 값을 덮습니다
     env_file:
+      - path: .env.example
+        required: true
       - path: .env
         required: false
     environment:
       DEMO_MODE: ${DEMO_MODE:-1}
       DATABASE_URL: postgresql://app:app@db:5432/app
+      # 로컬 데모 모드: 이 둘이 모두 켜져 있을 때만 users 테이블을 만들고 데모 계정 2개를 시드하며, 쿠키 Secure를 끕니다(http://localhost)
+      PROVENA_ENV: ${PROVENA_ENV:-local}
+      PROVENA_DEV_MODE: ${PROVENA_DEV_MODE:-1}
     depends_on:
       db:
         condition: service_healthy

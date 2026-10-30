@@ -62,16 +62,19 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 
 | 항목 | 내용 |
 |---|---|
-| 기동 | `docker compose up`. `.env`가 없어도 뜬다(`.env.example`은 이름만 보여 준다) |
+| 기동 | `docker compose up`. `.env`가 없어도 뜬다. compose가 `.env.example`을 먼저 읽고 `.env`가 있으면 그 값으로 덮는다 |
 | LLM | `DEMO_MODE=1`이면 키 없이 기록해 둔 응답을 재생한다(`backend/services/llm.py`, 구현 예정) |
 | DB | 로컬 pgvector 컨테이너(`db`). 검색 스냅샷 적재는 예정 |
-| 로그인 | 로그인 API는 `backend/auth.py`(강경희, `docs/specs/login.md`). `backend/main.py` 연결, users 테이블, 로컬 데모 계정 2개 시드는 다음 PR(로그인 연결)에서 채운다 |
+| 로그인 | 로컬 데모 계정 2개(user, admin)를 시드한다. `PROVENA_ENV=local`이고 `PROVENA_DEV_MODE=1`일 때만 만들고 그 밖의 모드에서는 만들지 않는다. 아이디·비밀번호는 환경변수(`DEMO_USER_*`, `DEMO_ADMIN_*`)에서 읽고(로컬 데모 값은 `.env.example`) 비밀번호는 8자 이상이다. 코드와 SQL에는 값이 없다 |
 | 평가용 계정 | 제출하는 평가용 계정(G1)은 데모 계정과 다른 값이고 저장소에 적지 않는다 |
+| 서명 키 | `AUTH_SECRET`은 저장소에 두지 않는다. 비어 있으면 로컬 데모 모드에서만 실행마다 무작위로 만들고(재시작하면 다시 로그인), 그 밖의 모드에서는 시작하지 않는다 |
+| 구현 위치 | `backend/main.py`(라우터 연결, 시드 호출), `backend/services/auth_store.py`(Postgres 저장소), `backend/services/demo_seed.py`(시드), `db/101_auth_users.sql`(users 테이블) |
+| 시험 | `tests/test_auth_store.py`(저장소, 시드, 앱 연결), 실제 Postgres까지는 `PROVENA_TEST_DATABASE_URL`을 줄 때만 |
 
 ## 5. 파트 사이 계약과 API
 
 - 데이터 형식은 `backend/schemas/`(chunk, events, approval, recall, decision)이고 SDD 6장과 같다. 필드 추가는 PR 하나로 3명 승인, 이름 변경·삭제는 회의에서만 정한다. 시험은 `tests/test_schemas.py`. `AgentEvent.data`의 `type`별 키는 SDD 6장 표를 따른다.
-- 엔드포인트 목록은 SDD 4-4장이다. 지금 `backend/main.py`에 붙은 것은 `/health`다. 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)는 `backend/auth.py`에 있고 다음 PR에서 `main.py`에 붙인다. 나머지는 해당 기능을 만들 때 이 문서와 SDD를 같이 고친다.
+- 엔드포인트 목록은 SDD 4-4장이다. 지금 구현된 것은 `/health`와 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)이며 로그인 라우터는 `DATABASE_URL`이 있을 때만 붙는다. 나머지는 해당 기능을 만들 때 이 문서와 SDD를 같이 고친다.
 
 ## 6. 게이트와 증거
 
