@@ -1,0 +1,63 @@
+{
+ "emb e5-large cuda": {
+  "load_s": 5.7,
+  "docs100_s": 10.64,
+  "per_10k_min": 17.7,
+  "query_ms_p50": 43,
+  "query_ms_p95": 59
+ },
+ "emb e5-large cpu": {
+  "load_s": 3.3,
+  "docs100_s": 36.84,
+  "per_10k_min": 61.4,
+  "query_ms_p50": 88,
+  "query_ms_p95": 151
+ },
+ "emb e5-large-instruct cuda": {
+  "load_s": 3.2,
+  "docs100_s": 2.37,
+  "per_10k_min": 4.0,
+  "query_ms_p50": 14,
+  "query_ms_p95": 18
+ },
+ "emb e5-large-instruct cpu": {
+  "load_s": 2.3,
+  "docs100_s": 39.03,
+  "per_10k_min": 65.0,
+  "query_ms_p50": 140,
+  "query_ms_p95": 205
+ },
+ "emb kure-v1 cuda": {
+  "load_s": 5.6,
+  "docs100_s": 11.44,
+  "per_10k_min": 19.1,
+  "query_ms_p50": 44,
+  "query_ms_p95": 67
+ },
+ "emb kure-v1 cpu": {
+  "load_s": 3.1,
+  "docs100_s": 38.85,
+  "per_10k_min": 64.8,
+  "query_ms_p50": 89,
+  "query_ms_p95": 192
+ },
+ "rerank mminilm cuda": {
+  "load_s": 2.4,
+  "per_query_10cand_ms_p50": 150,
+  "p95": 196
+ },
+ "rerank mminilm cpu": {
+  "load_s": 1.8,
+  "per_query_10cand_ms_p50": 416,
+  "p95": 587
+ },
+ "emb voyage-4 api": {
+  "docs100_s": 1.36,
+  "per_10k_min": 2.3,
+  "docs100_tokens": 11095,
+  "per_10k_tokens": 1109500,
+  "query_ms_p50": 351,
+  "query_ms_p95": 708,
+  "total_tokens": 11917
+ }
+}

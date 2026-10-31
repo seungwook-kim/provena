@@ -1,0 +1,83 @@
+{
+ "emb arctic-l-v2 cuda": {
+  "load_s": 6.5,
+  "docs100_s": 10.66,
+  "per_10k_min": 17.8,
+  "query_ms_p50": 44,
+  "query_ms_p95": 59
+ },
+ "emb arctic-l-v2 cpu": {
+  "load_s": 3.2,
+  "docs100_s": 40.75,
+  "per_10k_min": 67.9,
+  "query_ms_p50": 117,
+  "query_ms_p95": 183
+ },
+ "emb voyage-4-nano cuda": {
+  "load_s": 1.4,
+  "docs100_s": 2.02,
+  "per_10k_min": 3.4,
+  "query_ms_p50": 21,
+  "query_ms_p95": 29
+ },
+ "emb voyage-4-nano cpu": {
+  "load_s": 0.7,
+  "docs100_s": 22.57,
+  "per_10k_min": 37.6,
+  "query_ms_p50": 92,
+  "query_ms_p95": 164
+ },
+ "emb qwen3-0.6b cuda": {
+  "load_s": 2.3,
+  "docs100_s": 4.54,
+  "per_10k_min": 7.6,
+  "query_ms_p50": 31,
+  "query_ms_p95": 40
+ },
+ "emb qwen3-0.6b cpu": {
+  "load_s": 1.1,
+  "docs100_s": 49.05,
+  "per_10k_min": 81.7,
+  "query_ms_p50": 215,
+  "query_ms_p95": 327
+ },
+ "emb bge-m3 cuda": {
+  "load_s": 13.0,
+  "docs100_s": 10.84,
+  "per_10k_min": 18.1,
+  "query_ms_p50": 39,
+  "query_ms_p95": 59
+ },
+ "emb bge-m3 cpu": {
+  "load_s": 1.7,
+  "docs100_s": 36.49,
+  "per_10k_min": 60.8,
+  "query_ms_p50": 86,
+  "query_ms_p95": 139
+ },
+ "rerank bge cuda": {
+  "load_s": 6.0,
+  "per_query_10cand_ms_p50": 1406,
+  "p95": 1861
+ },
+ "rerank bge cpu": {
+  "load_s": 3.1,
+  "per_query_10cand_ms_p50": 5345,
+  "p95": 7039
+ },
+ "rerank bge-int8 cpu": {
+  "load_s": 5.4,
+  "per_query_10cand_ms_p50": 2252,
+  "p95": 3124
+ },
+ "rerank qwen3 cuda": {
+  "load_s": 2.5,
+  "per_query_10cand_ms_p50": 1004,
+  "p95": 1187
+ },
+ "rerank qwen3 cpu": {
+  "load_s": 1.5,
+  "per_query_10cand_ms_p50": 12212,
+  "p95": 14170
+ }
+}
