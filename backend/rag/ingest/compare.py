@@ -56,6 +56,38 @@ def authz_sheet(parsed: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
+def chunk_sheet(corpus: Path, chunks_file: Path) -> str:
+    """청크 5종(여러 요소·겹침·긴 요소 조각·80자 미만·권한표 행)을 원본 줄 링크와 함께."""
+    pages = {p["rule_seq"]: p for p in map(json.loads, (corpus / "pages.jsonl").open(encoding="utf-8"))}
+    chunks = [json.loads(line) for line in chunks_file.open(encoding="utf-8")]
+    singles = [c for c in chunks if len(c["element_ids"]) == 1 and c["kind"] == "article"]
+    biggest = max((c["body_chars"] for c in singles), default=0)       # 크기 설정과 무관하게 가장 꽉 찬 조각
+    picks = {
+        "여러 요소를 묶음": next((c for c in chunks if len(c["element_ids"]) >= 3 and not c["overlap_chars"]), None),
+        "앞 청크와 겹침": next((c for c in chunks if c["overlap_chars"]), None),
+        "긴 요소 하나를 쪼갬": next((c for c in singles if c["body_chars"] == biggest), None),
+        "80자 미만": next((c for c in chunks if c["body_chars"] < 80 and c["kind"] == "article"), None),
+        "권한표 한 행": next((c for c in chunks if c["kind"] == "row"), None),
+    }
+    out = ["# 청크 대조 5건", "",
+           "- 보는 법: **원본 링크**를 눌러 그 줄 범위를 보고, 청크 글자가 그 내용을 빠짐없이 담았는지 본다.",
+           "- 청크 첫 줄은 머리말(페이지 > 절), 겹침이 있으면 그다음 줄이 앞 청크 끝부분이다.", ""]
+    for kind, c in picks.items():
+        if c is None:
+            out += [f"## {kind}", "", "- 이 청크 파일에는 해당하는 청크가 없다.", ""]
+            continue
+        if c["kind"] == "row":
+            link = c["source_url"]
+        else:
+            path = pages[c["rule_seq"]]["path"]
+            link = (f"https://gitlab.com/gitlab-com/content-sites/handbook/-/blob/{PINNED_COMMIT}/{path}"
+                    f"#L{c['line_start']}-{c['line_end']}")
+        out += [f"## {kind}", "", f"- 원본 링크: [L{c['line_start']}-{c['line_end']}]({link})",
+                f"- 본문 {c['body_chars']}자, 겹침 {c['overlap_chars']}자, 요소 {len(c['element_ids'])}개", "",
+                "```text", c["text"], "```", "", "- 판정: ", ""]
+    return "\n".join(out)
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     corpus, parsed = Path("data/corpus"), Path("data/parsed")
@@ -64,6 +96,8 @@ def main() -> None:
     for name, path in PAGES.items():
         (out / f"{name}.md").write_text(page_sheet(corpus, parsed, path), encoding="utf-8", newline="\n")
     (out / "authz.md").write_text(authz_sheet(parsed), encoding="utf-8", newline="\n")
+    if (Path("data/chunks/chunks.jsonl")).exists():
+        (out / "chunks.md").write_text(chunk_sheet(corpus, Path("data/chunks/chunks.jsonl")), encoding="utf-8", newline="\n")
     print("작성:", ", ".join(str(p) for p in sorted(out.glob("*.md"))))
 
 
