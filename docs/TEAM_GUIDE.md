@@ -1,4 +1,4 @@
-# 팀 작업 지침서 (초안, D0 10/30 확정)
+# 팀 작업 지침서 (D0 10/30 확정, 이후 PR로 갱신)
 
 > **한 줄 요약**  
 > 셋이 서로 기다리지 않고, 서로의 코드를 깨지 않고, AI 코딩 도구를 써도 정해진 틀을 벗어나지 않게 하는 규칙이다. 처음 읽을 때는 1~4장만 읽고, 작업을 시작할 때 5~9장을 본다.
@@ -121,7 +121,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  ├─ backend.md
 │  ├─ main.py                     # FastAPI 진입점(/health), 라우트: 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅
 │  ├─ auth.py                     # 로그인, 사용자 식별 (bcrypt + JWT 쿠키)
-│  ├─ app.py                      # 그래프 조립(build_app)
 │  ├─ persistence.py              # 체크포인터·Store (DATABASE_URL이면 Postgres)
 │  ├─ schemas/      schemas.md    # 파트 사이 데이터 형식 (3명 승인): chunk.py events.py approval.py recall.py decision.py
 │  ├─ services/                   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기)
@@ -139,7 +138,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
 │  │        rerank.py             # bge-reranker-v2-m3
 │  │        link_graph.py         # 핸드북 페이지 링크 그래프 (가산: GraphRAG)
-│  ├─ graph/        graph.md      # 질문 처리 그래프, 상태, 라우팅, 인용 검사, 답변 저장
+│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
 │  │  └─ recall/    recall.md     # 리콜 판정 (F-02)

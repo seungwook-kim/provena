@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`app.py`), 체크포인터·Store 연결(`persistence.py`)을 둔다. 엔드포인트는 연결만 하고 로직은 하위 폴더에 둔다.
+API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py`의 `build_graph`), 체크포인터·Store 연결(`persistence.py`)을 둔다. 엔드포인트는 연결만 하고 로직은 하위 폴더에 둔다.
 
 - 주인: 김승욱 (로그인 `auth.py`와 첫 배포 `/health`는 강경희)
 - 입력: 화면·업무시스템 요청

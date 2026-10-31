@@ -151,7 +151,6 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  ├─ backend.md
 │  ├─ main.py                     # FastAPI 진입점(/health), 라우트: 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅
 │  ├─ auth.py                     # 로그인, 사용자 식별 (bcrypt + JWT 쿠키)
-│  ├─ app.py                      # 그래프 조립(build_app)
 │  ├─ persistence.py              # 체크포인터·Store (DATABASE_URL이면 Postgres)
 │  ├─ schemas/      schemas.md    # 파트 사이 데이터 형식 (3명 승인): chunk.py events.py approval.py recall.py decision.py
 │  ├─ services/     services.md   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기)
@@ -169,7 +168,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
 │  │        rerank.py             # bge-reranker-v2-m3
 │  │        link_graph.py         # 핸드북 페이지 링크 그래프 (가산: GraphRAG)
-│  ├─ graph/        graph.md      # 질문 처리 그래프, 상태, 라우팅, 인용 검사, 답변 저장
+│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
 │  │  └─ recall/    recall.md     # 리콜 판정 (F-02)
@@ -187,7 +186,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ web/   web.md   (pages/: login, chat, approvals, recalls, admin)
 ├─ mock_erp/  mock_erp.md   (Spring Boot 업무시스템 목업, python_example/)
 ├─ db/    db.md    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
-├─ data/  data.md  (corpus/ 원문 스냅샷, manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처. 코드와 폴더를 나눈다, 8장)
+├─ data/  data.md  (corpus.tar.gz 원문 스냅샷(풀면 corpus/), manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처. 코드와 폴더를 나눈다, 8장)
 ├─ evals/ evals.md
 │     ├─ dataset_v1.jsonl, dataset_v2.jsonl
 │     ├─ freeze.py, FROZEN.json, PREREGISTER.md
@@ -204,7 +203,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 |---|---|---|---|
 | 수집 | GitLab 핸드북 저장소(`gitlab-com/content-sites/handbook`) 고른 절, 옛 저장소(`www-gitlab-com`)의 2023-05 권한표 1개 파일 | 원본 Markdown + 메타(절, 페이지 경로, 커밋 sha, 커밋 날짜, 원문 URL) | 공개 저장소. API 요청 간격 1초 이상. 고른 절은 PRD 8장 |
 | 파싱 | Markdown, Hugo 단축코드, HTML 표(권한표는 CSS grid div) | 제목 계층·문단·표 행 | 원문 대조 3건 이상 기록. 권한표는 행(업무 종류 × 금액 구간)과 칸(역할 11개)으로 펼친다. 비공개(`internal.gitlab.com`)로만 연결된 칸은 "비공개"로 표시하고 결정표에서 뺀다 |
-| 청킹 | 구조 | Chunk (제목 단위, 긴 절은 문단 묶음 약 800자, 앞 청크 끝 약 120자 겹침, 청크 앞에 제목 경로) | 제목 단위와 고정 길이 비교, 겹침 0자와 120자 비교(D2, 골든셋). 규모는 겹침 없이 센다: 실측 22,509청크(sha256 고유, 800자 분할), D1 수집기로 다시 센다 |
+| 청킹 | 구조 | Chunk (제목 단위, 긴 절은 문단 묶음 약 800자, 앞 청크 끝 약 120자 겹침, 청크 앞에 제목 경로) | 제목 단위와 고정 길이 비교, 겹침 0자와 120자 비교(D2, 골든셋). 규모는 서로 다른 본문으로 센다: 실측 청크 23,095, 서로 다른 본문 22,378(PR #23) |
 | 판 비교 | 같은 페이지의 두 커밋, 또는 git 없는 두 시점 문서 묶음(F-07) | `ChangedArticle`(바뀐 섹션, 변경 종류 added·removed·modified) 목록 | 제목 경로 기준 정렬 후 본문 비교. 제목만 바뀐 섹션은 본문 유사도로 같은 섹션으로 본다. 서식만 바뀐 커밋(링크·오탈자)은 표시만 하고 리콜에 넘기지 않는다. 두 입력 모두 같은 형식으로 리콜·영향 미리보기에 넘긴다 |
 | 적재 | Chunk | DB (청크, 임베딩, manifest) | manifest에 출처, 수집일, 커밋 sha, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부(가이드 p.15, p.21). 인젝션 시험용 `TEST` 문서는 G3 청크 수에서 뺀다 |
 
