@@ -12,6 +12,7 @@ COPY web/ ./web/
 COPY db/ ./db/
 
 EXPOSE 8000
-# Cloud Run 앞단이 넘겨주는 X-Forwarded-For로 실제 접속 IP를 읽는다(로그인 IP별 실패 제한).
-# 맨 앞 값은 클라이언트가 꾸밀 수 있어 IP 제한은 보조이고, ID별 제한이 주된 방어다.
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+# --no-proxy-headers: X-Forwarded-For로 client IP를 바꾸지 않는다. --forwarded-allow-ips=*이면 uvicorn이 맨 앞 값
+# (요청하는 쪽이 마음대로 적을 수 있음)을 IP로 써서 IP별 로그인 실패 제한을 피할 수 있다. 로그인 Spec(직접 peer IP만 씀)과 같게 둔다.
+# Cloud Run에서 실제 접속 IP를 쓰려면 프록시가 붙인 값만 믿는 처리를 로그인 코드에 따로 둔다(docs/specs/login.md 후속 검증 사항)
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

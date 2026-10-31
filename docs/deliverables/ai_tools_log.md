@@ -24,6 +24,7 @@
 | 2026-10-30 | Claude Code (김승욱) | `backend/schemas/` 계약 모델과 시험, `docs/SPEC.md`, SDD 6장·TEAM_GUIDE 계약 사본 정리 | `tests/test_schemas.py`로 필드 이름·순서와 제한 값을 고정(23 passed), SDD 코드 블록과 모델을 줄마다 대조, SPEC이 말하는 파일·경로가 main에 실제로 있는지 확인 | SPEC에 아직 머지 안 된 로그인 연결(`main.py`, 데모 계정 시드)을 이미 있는 것처럼 적음 → 연결 PR로 미루고 지금 상태만 적음. 평가셋 동결 해시 파일이 이미 있다고 적음 → 동결 때 생긴다고 고침 |
 | 2026-10-30 | Claude Code (김승욱) | 로그인 연결(Postgres AuthStore, 로컬 데모 계정 시드, `main.py`, compose, `.env.example`), README 실행 절차 | 가짜 연결 시험과 진짜 Postgres 시험을 따로 돌리고, `docker compose -p provena-next up`으로 `/health`·CSRF·로그인(성공 200, 틀린 비밀번호 401)·`/me`·로그아웃 204를 직접 확인한 뒤 `down -v`. 시드가 로컬 모드 밖에서는 아무것도 안 하는지 조건 5가지로 시험 | 라우터가 붙었는지 `app.routes`로 검사하는 시험을 썼으나 이 FastAPI 버전은 포함된 라우터를 `app.routes`에 풀어 담지 않아 실패 → OpenAPI 경로로 검사하도록 고침. 여러 줄 heredoc 쓰기가 실패해 파일이 하나도 안 만들어졌는데 완료한 줄 알 뻔함 → 파일 목록으로 확인해 다시 씀 |
 | 2026-10-31 | Claude Code (박진형) | 2023 권한표 표 밖 글 파싱(I-007) `parse.py` `parse_authz_prose()`·테스트 2개 | 표 밖 요소 103개가 모두 원본 줄에서 되찾아지는지 코드로 검사(실패 0), 본표·이사회 표 줄과 겹치지 않는지·정책 본문이 없으면 멈추는지 테스트, 테스트 규칙을 일부러 깨 보아 잡는지 확인(변이 2/2) | 처음 `parse_authz()` 가 표 칸만 읽고 표 밖 글을 버림 → 골든셋 정답(R15·R25)을 청크에 연결하다 발견해 추가 |
+| 2026-10-31 | Claude Code (김승욱) | 머지 뒤 점검: Dockerfile 프록시 헤더 설정 되돌리기 | 설치된 uvicorn 0.54의 `proxy_headers.py`를 읽어 `--forwarded-allow-ips=*`일 때 `X-Forwarded-For` 맨 앞 값을 client IP로 쓰는 것을 확인, Dockerfile CMD를 고정하는 시험 추가(100 passed) | PR #20에서 Cloud Run 실제 IP를 읽으려고 `--forwarded-allow-ips=*`를 넣었는데, 맨 앞 값은 요청하는 쪽이 적을 수 있어 IP별 제한을 피할 수 있었음 → 로그인 Spec과 대조하다 발견, `--no-proxy-headers`로 되돌리고 프록시 값만 믿는 처리는 로그인 담당에게 넘김 |
 
 ## 도구에게 일을 시킬 때 지킨 규칙
 
