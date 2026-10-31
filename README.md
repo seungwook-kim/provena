@@ -91,11 +91,11 @@ GitHub와 역할 칸은 각자 자기 줄을 채운다(브랜치 → PR → 리�
 
 | 버전 | 파일 | 동결 | 건수 |
 |---|---|---|---|
-| v1 | `evals/dataset_v1.jsonl` | 11/3(D2) | 30건 (관련 15, 비관련 15) |
+| v1 | `evals/dataset_v1.jsonl` | 11/1 동결(기한 11/3 D2), sha256 `174996b9…f4332` | 30건 (관련 15, 비관련 15) |
 | v2 | `evals/dataset_v2.jsonl` | 11/6(D5) | 50건 이상 (관련 25, 비관련 25), v1 30건은 그대로 |
 
 - 문항 형식은 `evals/dataset_v1.jsonl`의 예시를 따른다. `kind` 칸으로 관련(`relevant`)과 비관련(`irrelevant`)을 나눈다.
-- 정답은 초안 작성자가 아닌 두 사람(박진형, 강경희)이 따로 판정하고, 다른 판정은 팀장이 정한 뒤 동결한다.
+- 정답은 초안 작성자가 아닌 두 사람(박진형, 강경희)이 따로 판정한다. 위치가 다른 문항은 두 판정자가 질문과 기대 답만 보고 합의해 `final_gold`에 적고, 팀장은 형식(정답 위치가 청크에 있는지)만 확인한 뒤 동결한다. 판정자에게는 검색 결과를 보여 주지 않는다.
 - 동결: `python evals/freeze.py dataset_v1.jsonl` (sha256과 건수를 `evals/FROZEN.json`에 기록). 확인: `python evals/freeze.py --check`. PR마다 CI(`tests/test_frozen_evals.py`)가 동결한 파일이 바뀌었는지 검사한다.
 - 동결한 평가셋은 고치지 않는다. 동결 파일은 글자 그대로 해시하므로 줄 순서나 공백만 바꿔도 바뀐 것으로 잡힌다.
 - 검색이나 그래프를 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적는다. 자세한 규칙은 [evals/README.md](./evals/README.md).
