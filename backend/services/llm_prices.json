@@ -1,0 +1,10 @@
+{
+  "unit": "USD per 1M tokens",
+  "source": "PRD 기술 선택 표의 생성 LLM 단가. 바뀌면 이 파일만 고친다. claude-sonnet-5-5는 PRD 표에 없어 Claude Code CLI가 보고한 비용(2026-10-30 프로브 2회)에서 역산한 값이라 참고용이다(claude_cli 모델은 보고된 비용을 우선 쓴다). 다른 파일을 쓰려면 LLM_PRICES_FILE로 가리킨다. OpenRouter id(anthropic/claude-haiku-5.5 같은 벤더/이름, 점)는 아래 이름으로 맞춰 찾는다",
+  "default": {"input": 0.10, "output": 0.50},
+  "models": {
+    "claude-haiku-5-5": {"input": 0.10, "output": 0.50},
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00},
+    "gpt-6-luna": {"input": 0.10, "output": 0.50}
+  }
+}
