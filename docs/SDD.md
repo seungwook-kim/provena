@@ -314,7 +314,7 @@ flowchart TD
 | 테이블 | 주요 칸 | 쓰는 곳 |
 |---|---|---|
 | `docs` | rule_seq(페이지 id), org(절), title(페이지 제목), fmt(md), source_url(핸드북 URL), fetched_at | ingest |
-| `versions` | version_id(커밋 sha 기반), rule_seq, version_date(커밋 날짜), file_sha256 | ingest, diff |
+| `versions` | version_id(커밋 sha 기반), rule_seq, version_date(커밋 날짜), version_date_before(판 날짜가 정확하지 않고 그 이전, I-001), file_sha256 | ingest, diff |
 | `chunks` | chunk_id, version_id, article(제목 경로), kind, text, text_sha256, acl(볼 수 있는 그룹, 비면 공개), embedding | ingest, rag |
 | `rule_links` | from_rule, to_rule, kind(페이지 링크) | GraphRAG (가산), F-02 연결 정책 리콜 |
 | `users` | user_id, login_id, password_hash, role(user, admin), groups(문서 권한 그룹) | api |

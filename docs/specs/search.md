@@ -14,14 +14,14 @@
 ## Goal
 
 - **해결 목표**: `search(SearchQuery) -> list[Chunk]` 하나로 필터 → 벡터 + BM25 → RRF → 리랭킹 → 상위 k를 돌려준다. 모델과 방식은 환경 변수로 바꾸고 코드는 바꾸지 않는다.
-- **성공 기준**: 같은 입력이면 같은 결과(chunk_id 순서) / `org`·`as_of` 밖 청크 0개 / 모델을 환경 변수만 바꿔 후보 4종이 모두 돈다 / `HF_HUB_OFFLINE=1`에서 기동 / 데모 모드(키 없음)에서 죽지 않는다
+- **성공 기준**: 같은 입력이면 같은 결과(chunk_id 순서, 번역은 저장한 값을 다시 씀) / `org`·`as_of` 밖 청크 0개 / 모델을 환경 변수만 바꿔 후보 4종이 모두 돈다 / `HF_HUB_OFFLINE=1`에서 기동 / 데모 모드(키 없음)에서 죽지 않는다
 - **Out of Scope**: 최종 모델 선택(11/6 v2), 문서 권한 필터 F-06(`acl`, 별도 Spec), GraphRAG(가산), MCP 서버(`extras/mcp_skill/`), 답 생성
 
 ## What
 
 **Happy Path**
 1. 호출자가 `SearchQuery(query="외부 SaaS 3만 달러 도입은 누가 승인하나", org=None, as_of=None, k=5)`를 넘긴다.
-2. `org`·`as_of`로 대상 청크를 먼저 거른다. `as_of`가 있으면 그 날짜에 유효했던 판만 남긴다(SDD 4-2).
+2. `org`·`as_of`로 대상 청크를 먼저 거른다. 판마다 유효 구간 `[valid_from, valid_to)`를 둔다(`valid_from` = 판 날짜, `valid_to` = 같은 페이지의 다음 판 날짜, 마지막 판은 비움). `as_of`가 없으면 `valid_to`가 빈 현재 판만, 있으면 `valid_from <= as_of < valid_to`인 판만 남긴다(SDD 4-2, SDD 11장 4-5 "기준일이 없으면 최신 판"). 증분 수집 뒤에도 옛 판과 새 판이 함께 나오지 않는다.
 3. 질문을 영어 검색어로 바꾼다(`QUERY_TRANSLATE=1`일 때, `backend/services/llm.py` 경유).
 4. 벡터 검색은 한국어 질문 그대로, BM25는 영어 검색어로 각각 상위 `SEARCH_POOL`개를 뽑아 RRF(k=60)로 합친다(`SEARCH_MODE=hybrid_ko_kw`).
 5. 합친 상위 `RERANK_TOP`개를 리랭커로 다시 줄 세운다.
@@ -62,10 +62,13 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/rag/retrieve/search.py` | `search()`, 필터, RRF, 방식 분기 |
 | `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix) |
 | `backend/rag/retrieve/rerank.py` | 리랭커 불러오기, int8(CPU) 선택 |
-| `backend/rag/retrieve/translate.py` | 한국어 질문 → 영어 검색어·영어 문장. LLM은 `backend/services/llm.py`로만 부른다 |
+| `backend/rag/retrieve/translate.py` | 한국어 질문 → 영어 검색어·영어 문장. LLM은 `backend/services/llm.py`로만 부른다. 번역은 질문 sha256과 모델 이름을 키로 `query_translations` 표에 저장하고, 같은 키가 있으면 LLM을 다시 부르지 않는다 |
+| `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩 |
+| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다 |
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
-| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2 |
+| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB라 저장소에 바로 넣지 않는다. 나눠 주는 방법은 "열린 항목" 6 |
+| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)` |
 | `tests/test_search.py` | AC 시험 |
 
 **환경 변수**
@@ -76,11 +79,11 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교와 같은 커밋(`evals/retrieval/experiment_v1.py`의 `EMBEDDERS`) |
 | `SEARCH_MODE` | `hybrid_ko_kw` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
-| `RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | 후보: 이 값, `bge-int8`(같은 모델 CPU int8), `Qwen/Qwen3-Reranker-0.6B`, `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`, `none` |
+| `RERANK_MODEL` | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | 후보: 이 값, `BAAI/bge-reranker-v2-m3`, `bge-int8`(bge를 CPU int8로), `Qwen/Qwen3-Reranker-0.6B`, `none`. 기본값은 CPU에서 SPEC 3초를 지키는 유일한 후보(후보 10개 p95 0.59초)로 두고, 최종은 11/6에 정한다. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
 | `HF_HUB_OFFLINE` | `1` | 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다 |
-| `DATABASE_URL`, `DEMO_MODE`, `OPENROUTER_API_KEY` | `.env.example` | 기존 값 그대로 |
+| `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
 - 고정값: RRF k=60, 임베딩 `max_seq_length` 512, 정규화한 벡터의 내적. 1차 비교와 같게 둔다.
 - 번역 프롬프트는 1차 비교의 `keywords`·`sentence` 두 가지를 그대로 쓴다(`experiment_v1.py`의 `PROMPTS`). 데모 모드는 `llm.py`가 입력 해시로 기록을 재생한다.
@@ -95,6 +98,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 3 | BM25를 메모리(`rank_bm25`)로 할지 Postgres 전문 검색으로 할지 | 메모리. 1차 비교와 같은 토큰화(`experiment_v1.py`의 `_tokens`) | D3 |
 | 4 | 번역에 쓸 LLM | `llm.py` 기본 모델 | D3 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
+| 6 | 색인 스냅샷(`data/index/`, 약 95MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다 | GitHub Release에 올리고 Docker 빌드 때 받아 `meta.json`의 sha256으로 대조한다. 저장소에 넣으려면 강사 확인이 먼저다(`data/README.md`: 수십 MB 넘으면 먼저 문의) | 이 Spec |
 
 ## AC (Given-When-Then)
 
@@ -103,8 +107,13 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 - WHEN: `search()`를 부른다
 - THEN: 돌려준 청크가 모두 `org=="security"`이고 그 날짜에 유효한 판이다. 결과가 `k`보다 적어도 필터 밖 청크는 없다
 
+**AC-01b · 기준일이 없으면 현재 판만**
+- GIVEN: 같은 페이지에 옛 판과 새 판 청크가 함께 적재됨, `as_of=None`
+- WHEN: `search()`를 부른다
+- THEN: 새 판(`valid_to`가 빈 판) 청크만 나온다. `version_date_before=True`인 판은 결과에서도 True다
+
 **AC-02 · 같은 입력, 같은 결과**
-- GIVEN: 같은 `SearchQuery`와 같은 환경 변수
+- GIVEN: 같은 `SearchQuery`와 같은 환경 변수, 첫 호출의 번역이 `query_translations`에 저장됨
 - WHEN: 두 번 부른다
 - THEN: chunk_id 순서가 같다
 
@@ -114,7 +123,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 - THEN: 코드 수정 없이 모두 결과를 돌려준다
 
 **AC-04 · 키 없이 동작**
-- GIVEN: `DEMO_MODE=1`, `OPENROUTER_API_KEY` 없음, 번역 기록 없는 질문
+- GIVEN: `DEMO_MODE=1`, `LLM_API_KEY` 없음, 번역 기록 없는 질문
 - WHEN: `search()`를 부른다
 - THEN: 예외 없이 `dense_ko` 결과를 돌려주고 트레이스에 `fallback=dense_ko`가 남는다
 
