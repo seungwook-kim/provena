@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-`handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화). 수집은 로컬에서 한 번 하고 원문 스냅샷과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
+`handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화). 수집은 로컬에서 한 번 하고 원문 스냅샷(`snapshot.py`로 `data/corpus.tar.gz` 한 파일)과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
 
 - 주인: 박진형
 - 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표)
@@ -14,6 +14,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-10-31 | 김승욱(팀장) | 원문 스냅샷 압축 `snapshot.py`(pack·unpack·verify·ensure): `data/corpus/`를 `data/corpus.tar.gz` 한 파일로 묶고(같은 원문이면 같은 파일), 풀 때 쪽별·권한표 sha256과 `corpus_id`를 수집 때와 대조, 폴더 밖 경로는 막음. `parse`·`chunk`·`load` 시작 때 기본 위치에 원문이 없으면 자동으로 풂(각 2줄). 고치는 순서는 `data/data.md`. 테스트 `tests/test_ingest_snapshot.py` 5개 | |
 | 2026-10-31 | 박진형 (jinyeong-731, Claude Code) | 청킹 `chunk.py`·manifest `load.py`·청크 대조표 `compare.py`(Spec `docs/specs/chunk.md`): 쪽의 요소를 제목 경로(절) 단위로 묶어 800자까지 한 청크로 하고, 긴 요소는 줄→문장→글자로 쪼개며, 같은 절 안에서만 앞 청크 끝 120자를 겹치고, 임베딩 글자 앞에 `쪽 제목 > 절` 머리말을 붙임. 권한표는 업무×금액 구간 한 행=청크(각주 본문 포함)·이사회 표는 항목마다·표 밖 글은 쪽과 같은 방식. 쪽의 `version_date_before`(#18)를 청크까지 넘기고 계약 `text_sha256` 을 채움. 실행 결과: 청크 **23,095**(article 23,048·row 47), 서로 다른 본문 지문 **22,378**(80자 이상만 21,314), 문서 1,512(+권한표), 빠진 요소 0, 겹침 0/120 G3 같음, 기준선 고정 길이 800/100은 15,590. 테스트 20개(일부러 깨뜨린 33개 중 31개를 잡고 나머지 2개는 결과가 같은 변경). 800/120은 잠정값이라 D2 골든셋으로 다시 잼 | |
 | 2026-10-31 | 박진형 (jinyeong-731, Claude Code) | 2023 권한표 표 밖 본문 파싱(I-007) `parse.py` `parse_authz_prose()`: 계약 승인 절차·각주 목록·Authorization Matrix Policy 요소 103개를 `authz_ir.jsonl` 로(원문 되찾기 실패 0). 본표·이사회 표의 줄은 빼서 칸과 겹치지 않고, 정책 본문이 없거나 예상 밖 HTML이 있으면 멈춤. 테스트 2개 | #19 |
 | 2026-10-30 | 박진형 (jinyeong-731, Claude Code) | 판 날짜 페이지별(I-001) `handbook.py` `last_changes()`: 페이지마다 마지막 커밋의 커밋 날짜(`%cs`), 2023-12-01 뒤로 안 바뀐 25쪽은 `version_date` 2023-12-01·`version_date_before` true(계약 칸, 화면 "2023-12-01 이전")·판은 고정 커밋, 이력을 잘라 받은 경계 커밋은 건너뜀. 판 643종, 다시 수집해 청크 id·본문 그대로(바뀐 칸은 판 칸뿐), 잘린 캐시·전체 캐시 결과 같음(1,564쪽 중 다른 쪽 0) | #18 |
