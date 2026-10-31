@@ -49,13 +49,15 @@
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
 | `DEMO_MODE` | `1` | 1이면 키가 있어도 재생 |
-| `LLM_PROVIDER` | `anthropic`(코드), `.env.example`은 `openrouter` | `anthropic`, `openai`, `openrouter`, `claude_cli` |
-| `LLM_MODEL` | openrouter `anthropic/claude-haiku-5.5` | |
+| `LLM_PROVIDER` | `anthropic` (3조는 Anthropic 키 사용) | `anthropic`, `openai`, `openrouter`, `claude_cli` |
+| `LLM_MODEL` | anthropic `claude-haiku-5-5`, openrouter `anthropic/claude-haiku-5.5` | |
 | `LLM_API_KEY` | 없음 | 없으면 데모 모드 |
-| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | |
+| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | openrouter일 때만 |
 | `LLM_COST_CAP_USD` | `0.05` | 질문 하나의 비용 상한 |
 | `LLM_RECORD`, `DEMO_REPLAY_DIR` | 끔, `data/demo_replay` | 녹화 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | 없음 | 있으면 트레이스 |
+
+**제공자 전환**: 개발은 Anthropic 키(`LLM_PROVIDER=anthropic`, `claude-haiku-5-5`), 운영 배포는 OpenRouter 키(`LLM_PROVIDER=openrouter`, `anthropic/claude-haiku-5.5`)로 같은 모델을 쓴다. 환경 변수만 바꾸고 코드는 그대로다. 비용 단가는 OpenRouter 이름도 같은 단가표 항목으로 찾는다(`cost.normalize_model_id`).
 
 ## AC (Given-When-Then)
 
