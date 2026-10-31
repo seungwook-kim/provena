@@ -14,6 +14,7 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 
+from backend.rag.ingest import snapshot
 from backend.rag.ingest.handbook import AUTHZ_PATH, rule_seq
 
 
@@ -66,6 +67,7 @@ def main() -> None:
     ap.add_argument("--chunks", type=Path, default=Path("data/chunks"))
     ap.add_argument("--data", type=Path, default=Path("data"))
     a = ap.parse_args()
+    snapshot.ensure(a.corpus)  # clone한 뒤 처음이면 data/corpus.tar.gz를 푼다
     r = build_manifest(a.corpus, a.chunks, a.data)
     print(f"문서 {r['docs']}(청크 있는 문서 {r['docs_with_chunks']}), 청크 {r['chunks']}, "
           f"서로 다른 chunk_sha256 {r['unique_chunk_sha256']}, 건너뜀 {dict(r['skipped'])}")

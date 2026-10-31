@@ -8,6 +8,8 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ ./backend/
 COPY data/ ./data/
+# 원문 스냅샷은 압축 한 파일로 커밋한다. 이미지를 만들 때 풀고 수집 때 sha256과 같은지 확인한다(다르면 빌드 실패)
+RUN python -m backend.rag.ingest.snapshot unpack
 COPY web/ ./web/
 COPY db/ ./db/
 

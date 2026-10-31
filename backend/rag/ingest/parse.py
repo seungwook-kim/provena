@@ -18,6 +18,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from markdown_it import MarkdownIt
 
+from backend.rag.ingest import snapshot
 from backend.rag.ingest.handbook import AUTHZ_PATH, rule_seq
 
 # ── Hugo 단축코드 분류 (원문 45종 전수 조사, 2026-10-29) ──
@@ -511,6 +512,7 @@ def main() -> None:
     ap.add_argument("--corpus", type=Path, default=Path("data/corpus"))
     ap.add_argument("--out", type=Path, default=Path("data/parsed"))
     args = ap.parse_args()
+    snapshot.ensure(args.corpus)  # clone한 뒤 처음이면 data/corpus.tar.gz를 푼다
     r = run(args.corpus, args.out)
     a = r["authz"]
     print(f"{r['pages_parsed']}쪽 → 요소 {r['elements']}개 {r['elements_by_kind']}")

@@ -17,6 +17,7 @@ import statistics
 import sys
 from pathlib import Path
 
+from backend.rag.ingest import snapshot
 from backend.rag.ingest.handbook import AUTHZ_COMMIT, AUTHZ_PATH, AUTHZ_PROJECT, rule_seq
 
 AUTHZ_TITLE = "Authorization Matrix (2023-05)"
@@ -281,6 +282,7 @@ def main() -> None:
     ap.add_argument("--overlap", type=int, default=120)
     ap.add_argument("--no-header", action="store_true")
     a = ap.parse_args()
+    snapshot.ensure(a.corpus)  # clone한 뒤 처음이면 data/corpus.tar.gz를 푼다
     r = run(a.parsed, a.corpus, a.out, a.mode, a.size, a.overlap, not a.no_header)
     print(f"[{r['config']}] 청크 {r['chunks']} {r['by_kind']}, 문서 {r['docs_with_chunks']}")
     print(f"G3 서로 다른 본문 {r['g3_unique_body_sha256']} (80자 이상만 {r['g3_unique_body_sha256_ge80']}), "

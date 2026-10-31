@@ -203,7 +203,7 @@ skills/               런타임 Skill (가산)
 extras/mcp_skill/     FastMCP 서버 (가산)
 web/                  화면
 mock_erp/             업무시스템 목업
-data/                 corpus/ 원문 스냅샷, manifest, LICENSES/            (G3)
+data/                 corpus.tar.gz 원문 스냅샷, manifest, LICENSES/      (G3)
 evals/                평가셋(dataset_v1·v2.jsonl), freeze.py·FROZEN.json, 사전 등록, 평가 실행기 (G5)
 tests/                회귀 테스트 (CI가 PR마다 실행)
 db/                   pgvector 확장, 데모 계정 시드
