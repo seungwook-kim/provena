@@ -4,6 +4,8 @@ python -m backend.rag.ingest.load --manifest      (chunk.py 를 먼저 돌려야
 출력(커밋 대상): data/manifest.jsonl(문서 단위), data/chunks_index.jsonl(청크 번호·위치·지문, 본문 없음)
 형식: data/README.md. chars_kept 는 청크 본문 글자 합(겹침·머리말 제외)이라 Hugo 표시·front matter를 지운 만큼
 chars_original 보다 대체로 작다(예외 2쪽: 표 행 글자에 열 이름이 붙어 더 큼). 길이로 자른 적은 없어서 truncated 는 모두 false.
+manifest 는 체크포인트 현황판이 읽을 수 있게 작게 쓴다: 모든 줄이 같은 파서 이름은 data/parsed/parse_report.json 에,
+쪽 경로는 source_url 과 chunks.jsonl 에 있으니 빼고, skipped 는 값이 있을 때만 적는다.
 """
 from __future__ import annotations
 
@@ -11,7 +13,6 @@ import argparse
 import collections
 import json
 import sys
-from importlib.metadata import version
 from pathlib import Path
 
 from backend.rag.ingest import snapshot
@@ -24,7 +25,6 @@ def build_manifest(corpus: Path, chunks_dir: Path, data: Path) -> dict:
     for c in chunks:
         by_doc[c["rule_seq"]].append(c)
     collect = json.loads((corpus / "collect_manifest.json").read_text(encoding="utf-8"))
-    parser = f"markdown-it-py {version('markdown-it-py')} + beautifulsoup4 {version('beautifulsoup4')}"
 
     docs = [json.loads(line) for line in (corpus / "pages.jsonl").open(encoding="utf-8")]
     authz = collect["authz"]
@@ -35,17 +35,20 @@ def build_manifest(corpus: Path, chunks_dir: Path, data: Path) -> dict:
     rows = []
     for d in docs:
         cs = by_doc.get(d["rule_seq"], [])
-        rows.append({"doc_id": d["rule_seq"], "path": d["path"], "org": d["org"], "title": d["title"],
-                     "source_url": d["source_url"], "version_id": d["version_id"], "collected_at": d["fetched_at"],
-                     "parser": parser, "chunks": len(cs), "chars_original": d["chars"],
-                     "chars_kept": sum(c["body_chars"] for c in cs), "truncated": False,
-                     "skipped": "redirect" if d["redirect_to"] else ("no_body" if not cs else None)})
+        row = {"doc_id": d["rule_seq"], "org": d["org"], "title": d["title"],
+               "source_url": d["source_url"], "version_id": d["version_id"], "collected_at": d["fetched_at"],
+               "chunks": len(cs), "chars_original": d["chars"],
+               "chars_kept": sum(c["body_chars"] for c in cs), "truncated": False}
+        skipped = "redirect" if d["redirect_to"] else ("no_body" if not cs else None)
+        if skipped:
+            row["skipped"] = skipped
+        rows.append(row)
     if sum(r["chunks"] for r in rows) != len(chunks):
         raise RuntimeError("manifest 청크 수 합이 청크 파일과 다름")
 
     with (data / "manifest.jsonl").open("w", encoding="utf-8", newline="\n") as f:
         for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
     with (data / "chunks_index.jsonl").open("w", encoding="utf-8", newline="\n") as f:
         for c in chunks:
             f.write(json.dumps({"chunk_id": c["chunk_id"], "doc_id": c["rule_seq"], "seq": c["seq"], "kind": c["kind"],
@@ -56,7 +59,7 @@ def build_manifest(corpus: Path, chunks_dir: Path, data: Path) -> dict:
         raise RuntimeError("다시 읽은 manifest 가 다름")
     return {"docs": len(rows), "docs_with_chunks": sum(1 for r in rows if r["chunks"]),
             "chunks": len(chunks), "unique_chunk_sha256": len({c["body_sha256"] for c in chunks}),
-            "skipped": collections.Counter(r["skipped"] for r in rows if r["skipped"])}
+            "skipped": collections.Counter(r["skipped"] for r in rows if "skipped" in r)}
 
 
 def main() -> None:
