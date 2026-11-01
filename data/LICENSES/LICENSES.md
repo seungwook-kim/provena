@@ -4,7 +4,7 @@
 
 `data/corpus/`의 원문은 GitLab 핸드북에서 가져왔다.
 
-- 출처: https://gitlab.com/gitlab-com/content-sites/handbook (고정 커밋은 `data/manifest.jsonl`에 기록)
+- 출처: https://gitlab.com/gitlab-com/content-sites/handbook (고정 커밋 `129243bcffcf6cbc8c2e83f537f1836b99900a61`, 2026-10-27. `data/data.md`와 스냅샷 안 `collect_manifest.json`에 기록)
 - 라이선스: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
 - 답에 원문을 보일 때는 페이지 URL, 라이선스 링크, 수정 여부를 함께 표시한다.
 - 이 프로젝트는 GitLab Inc.와 제휴·보증 관계가 없다. GitLab 로고는 쓰지 않는다.

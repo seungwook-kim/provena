@@ -44,7 +44,7 @@ Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + 
 - 코드를 바꾸면 docs/SPEC.md도 같은 PR에서 바꾼다(가이드 p.14).
 - 작업을 마치면 그 폴더의 <폴더명>.md(예: backend/rag/ingest/ingest.md)의 작업 기록 표 맨 위에 한 줄 추가한다. 작업자 칸에는 이 도구를 실행한 사람의 git id, 이름, 별칭 중 하나를 쓴다(도구 이름만 쓰지 않는다). 발견한 문제는 문제 기록에 "열림"으로 올린다. 고쳤으면 판정 근거(테스트, 재현 명령, PR 번호)를 적고 "해결"로 바꾼다.
 - AI 도구로 한 작업은 docs/deliverables/ai_tools_log.md에 한 줄 남긴다(무엇을 시켰나, 무엇을 고쳤나). D12 제출물이다.
-- 외부 사이트 수집: 로그인하지 않는다, User-Agent를 숨기지 않는다, 요청 간격 1초 이상. 핸드북은 공개 저장소라 git으로 받고, 받은 커밋 sha를 manifest에 남긴다.
+- 외부 사이트 수집: 로그인하지 않는다, User-Agent를 숨기지 않는다, 요청 간격 1초 이상. 핸드북은 공개 저장소라 git으로 받고, 받은 커밋 sha는 `data/data.md`(코퍼스 고정 커밋)와 스냅샷 안 `collect_manifest.json`에, 쪽마다 받은 판은 `data/manifest.jsonl`의 `version_id`에 남긴다.
 - 핸드북 원문 텍스트는 코드와 다른 폴더에 둔다. 원문 폴더에는 CC BY-SA 4.0 고지와 출처를 적는다. 로고를 쓰지 않는다.
 - `internal.gitlab.com`처럼 비공개 주소로만 연결된 내용은 근거로 쓰지 않는다.
 
