@@ -14,7 +14,7 @@ ARG SEARCH_EMBED_MODEL=Snowflake/snowflake-arctic-embed-l-v2.0
 ARG SEARCH_EMBED_REVISION=ac6544c8a46e00af67e330e85a9028c66b8cfd9a
 ARG SEARCH_RERANK_MODEL=cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
 ARG SEARCH_RERANK_REVISION=1427fd652930e4ba29e8149678df786c240d8825
-RUN HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'])  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"
+RUN HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"
 
 COPY backend/ ./backend/
 COPY data/ ./data/

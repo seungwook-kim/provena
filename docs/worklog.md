@@ -11,12 +11,15 @@
 - 한 일(이어서): LLM 제공자를 로컬 Claude CLI, 운영 OpenRouter로 정리(`.env.example`, `docs/specs/llm.md`). 후보 재측정은 `search()` 개발 뒤 그 경로로 하고, RAGAS는 50건으로 따로 재기로 함. OpenRouter Haiku 5.5 단가를 확인(100만 토큰당 입력 0.10달러, 출력 0.50달러, `llm_prices.json`과 같음).
 - 머지 기록(이어서): PR #34(임베딩 후보 추가, 박진형·강경희 승인), PR #35(`search()`, 박진형 작업, 김승욱 머지, GitHub 리뷰 승인 기록 없음), PR #36(LLM 제공자, 2차 측정 계획, 박진형 승인).
 - 한 일(이어서): PR #35 확인. 전체 테스트 통과, 같은 번역으로 1차 비교 4조합을 재면 Recall@5, Hit@5, RR, nDCG@5가 모두 같음. DB 적재와 `docker compose up`은 Docker가 꺼져 있어 확인하지 못함. 비교 입구 `make_search`가 번역 실패를 숨기고 `dense_ko`로 재는 문제를 고침(실패하면 멈춤). `Chunk`의 `line_start`, `line_end` 추가를 승인. PR #36 충돌 해결 때 빠진 `docs/specs/search.md`의 `EMBED_REVISION` 줄과 열린 항목 6, 8을 PR #35 내용으로 되돌림.
+- 머지 기록(이어서): PR #37(비교 입구 번역 실패 중단, search Spec 복원, 박진형·강경희 승인). 이로써 `Chunk` 줄 범위 추가는 3명 승인 완료.
+- 한 일(이어서): v1 30건에서 후보 12조합의 Haiku 5.5 답변을 확인해 EVAL_REPORT 3-0-1에 기록(호출 360번, 오류 0). e5-large와 mMiniLM의 중복 가중치 파일을 받지 않게 고침.
+- 한 일(이어서): 검색 표 5개에 RLS를 켜도록 `db/201_search.sql`을 고침. Supabase에 읽기 전용으로 접속해 `users` 0건, 검색 표 없음을 확인. 적재는 11/6 모델 결정 뒤에 하며 세션 연결(5432)을 쓴다. 실제 DB에서 RLS 문장을 돌려 보지는 못함(Docker 꺼짐).
 - 막힌 것: 없음.
 - 다음 할 일: v2 번역을 먼저 저장, voyage 두 후보 `search()` 지원, 같은 경로로 재측정, DB 적재와 `docker compose up` 확인.
 
 ## 2026-11-02 박진형
 - 한 일: PR #35 머지 — `search()`(필터, 벡터 + BM25, RRF, 리랭킹), 비교 입구 `make_search`, 색인 `index.py`, 적재 `load_snapshot.py`, 번역 장부 `query_translations`, Docker 설정(CPU torch, 모델 고정 판, `loader`, `SEARCH_WARMUP`). 청크 열쇠를 `(chunk_id, version_id)`로 바꾸고 `Chunk`에 `line_start`, `line_end`를 더함.
-- 막힌 것: `Chunk` 칸 추가는 강경희 승인 대기(Spec 열린 항목 8). bge int8 리랭커 점수가 배치 크기에 따라 달라질 수 있음(I-013).
+- 막힌 것: bge int8 리랭커 점수가 배치 크기에 따라 달라질 수 있음(I-013).
 - 다음 할 일: 색인 스냅샷 저장소 커밋은 모델을 정한 뒤(Spec 열린 항목 6).
 
 ## 2026-11-01 김승욱
