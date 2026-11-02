@@ -10,6 +10,9 @@
 - `LLM_PROVIDER`: `anthropic`(기본), `openai`, `openrouter` 또는 `claude_cli`.
   `claude_cli`는 로컬 Claude Code CLI(`claude -p`)를 모델로 쓴다(`claude_cli_model.py`). `LLM_API_KEY`가 필요 없고, `DEMO_MODE=1`이 아니면 데모 모드가 아니다.
 - `LLM_MODEL`: claude_cli는 기본 `claude-haiku-5-5`. anthropic은 기본 `claude-haiku-5-5`, openai는 필수, openrouter는 기본 `anthropic/claude-haiku-5.5`(OpenRouter 모델 id).
+- `LLM_MAX_RETRIES`: 제공자 SDK가 429(요청 한도)·5xx·연결 오류에서 다시 시도하는 최대 횟수(0 이상 정수). SDK는 `Retry-After` 헤더가 있으면 그만큼 기다린다. 비우면 SDK 기본값.
+- `LLM_TIMEOUT_S`: 요청 한 번의 시간 제한(초, 양수). 비우면 SDK 기본값.
+- `LLM_FALLBACK_MODEL`: 기본 모델이 (재시도 뒤에도) 실패하면 같은 제공자·같은 키로 이 모델을 한 번 더 부른다. 비용 상한 초과(`CostCapExceeded`)와 설정 오류(ValueError)는 폴백하지 않는다. 비우면 폴백 없음.
 - `LLM_BASE_URL`: openrouter의 API 주소를 바꾼다(기본 `https://openrouter.ai/api/v1`). OpenAI 호환 주소면 된다.
   비용 단가는 OpenRouter id(`벤더/이름`, 점)를 단가표 이름으로 맞춰 찾는다(`cost.normalize_model_id`).
 
@@ -25,6 +28,8 @@ import os
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 from backend.services import tracing
@@ -61,30 +66,89 @@ def get_chat_model(responses: list[str] | None = None) -> BaseChatModel:
     return model
 
 
-def _real_chat_model() -> BaseChatModel:
-    key = os.environ.get("LLM_API_KEY")
-    provider = (os.environ.get("LLM_PROVIDER") or "anthropic").strip().lower()
-    model = (os.environ.get("LLM_MODEL") or "").strip()
+def _env_number(name: str, cast: type) -> Any:
+    """양의 값(재시도는 0 이상)만 받는다. 비었거나 잘못된 값은 None(SDK 기본값)이고 경고만 남긴다."""
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        v = cast(raw)
+    except ValueError:
+        log.warning("%s=%r는 숫자가 아니라 무시합니다", name, raw)
+        return None
+    if v < 0 or (name == "LLM_TIMEOUT_S" and v == 0):
+        log.warning("%s=%r는 범위 밖이라 무시합니다", name, raw)
+        return None
+    return v
+
+
+def _client_options() -> dict[str, Any]:
+    """제공자 SDK 클라이언트에 넘길 재시도 상한·시간 제한(G-05). 둘 다 `ChatAnthropic`·`ChatOpenAI`가 같은 이름으로 받는다."""
+    out: dict[str, Any] = {}
+    retries = _env_number("LLM_MAX_RETRIES", int)
+    if retries is not None:
+        out["max_retries"] = retries
+    timeout = _env_number("LLM_TIMEOUT_S", float)
+    if timeout is not None:
+        out["timeout"] = timeout
+    return out
+
+
+class FallbackChatModel(BaseChatModel):
+    """`primary`가 실패하면 `fallback`을 한 번 부른다. 사용량 정보(비용 집계)는 실제로 답한 쪽 것이 그대로 간다."""
+
+    primary: Any
+    fallback: Any
+    fallback_name: str = ""
+
+    @property
+    def _llm_type(self) -> str:
+        return "fallback"
+
+    def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
+        try:
+            ai = self.primary.invoke(messages, stop=stop, **kwargs)
+        except (CostCapExceeded, ValueError):
+            raise
+        except Exception as e:  # noqa: BLE001  제공자 오류(429·5xx·시간 초과 등)는 폴백 모델로 한 번 더
+            log.warning("기본 모델 호출이 실패해 폴백 모델(%s)로 다시 시도합니다: %s", self.fallback_name or "?", type(e).__name__)
+            ai = self.fallback.invoke(messages, stop=stop, **kwargs)
+        return ChatResult(generations=[ChatGeneration(message=ai)])
+
+
+def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel:
+    opts = _client_options()
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key)
+        return ChatAnthropic(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, **opts)
     if provider == "openai":
         if not model:
             raise ValueError("LLM_PROVIDER=openai이면 LLM_MODEL이 필요합니다")
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model, api_key=key)
+        return ChatOpenAI(model=model, api_key=key, **opts)
     if provider == "openrouter":
         from langchain_openai import ChatOpenAI
 
         base_url = (os.environ.get("LLM_BASE_URL") or "").strip() or OPENROUTER_BASE_URL
-        return ChatOpenAI(model=model or DEFAULT_OPENROUTER_MODEL, api_key=key, base_url=base_url)
+        return ChatOpenAI(model=model or DEFAULT_OPENROUTER_MODEL, api_key=key, base_url=base_url, **opts)
     if provider == "claude_cli":
         from backend.services.claude_cli_model import ClaudeCliChatModel
 
         return ClaudeCliChatModel(model=model or DEFAULT_ANTHROPIC_MODEL)
     raise ValueError(f"알 수 없는 LLM_PROVIDER: {provider!r} (anthropic, openai, openrouter 또는 claude_cli)")
+
+
+def _real_chat_model() -> BaseChatModel:
+    key = os.environ.get("LLM_API_KEY")
+    provider = (os.environ.get("LLM_PROVIDER") or "anthropic").strip().lower()
+    model = (os.environ.get("LLM_MODEL") or "").strip()
+    primary = _provider_model(provider, model, key)
+    fb = (os.environ.get("LLM_FALLBACK_MODEL") or "").strip()
+    if not fb or fb == (model or getattr(primary, "model", None) or getattr(primary, "model_name", "")):
+        return primary
+    return FallbackChatModel(primary=primary, fallback=_provider_model(provider, fb, key), fallback_name=fb)
 
 
 def is_demo_mode() -> bool:
