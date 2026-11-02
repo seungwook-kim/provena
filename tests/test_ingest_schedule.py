@@ -50,6 +50,17 @@ def test_event_id_same_change_same_id():
     assert schedule.event_id(a) != schedule.event_id({**a, "change_type": "removed"})
 
 
+def test_held_run_writes_alert_outputs(tmp_path):
+    """삭제를 보류한 날만 workflow에 held·reasons를 넘긴다(보류 알림). 알림 글을 깨는 글자는 뺀다."""
+    out = tmp_path / "out"
+    schedule.write_outputs({"removed_held": 0, "list_reasons": []}, str(out))
+    schedule.write_outputs({"removed_held": 2}, None)
+    assert not out.exists()
+    schedule.write_outputs({"removed_held": 2, "list_reasons": ['empty_folder:security"}\\', "empty_folder:legal"]},
+                           str(out))
+    assert out.read_text(encoding="utf-8") == "held=2\nreasons=empty_folder:security, empty_folder:legal\n"
+
+
 @pytest.mark.skipif(not (ROOT / "data/chunks/chunks.jsonl").exists() or not (ROOT / "data/corpus/pages.jsonl").exists(),
                     reason="처음 수집 결과(data/chunks·data/corpus) 없음")
 def test_page_chunks_same_as_first_collect():
@@ -91,8 +102,10 @@ class Embed:
         return np.stack([fake_vec(t) for t in texts])
 
 
-def source(old_raw, new_raw, new_version, *, head="head1", head_date="2026-10-30", removed=(), list_complete=True):
-    """diff.diff_commits 와 같은 모양의 보고서. 섹션 판정은 diff.py 실제 함수로."""
+def source(old_raw, new_raw, new_version, *, head="head1", head_date="2026-10-30", removed=(), list_complete=True,
+           reasons=("empty_folder:security",), head_paths=None, gone_raw=None):
+    """diff.diff_commits 와 같은 모양의 보고서. 섹션 판정은 diff.py 실제 함수로.
+    head_paths: 새 커밋의 쪽 경로(목록이 완전한 날 git_source 가 채움). gone_raw: 사라진 쪽의 옛 원문(사라진 섹션을 만든다)."""
     page = diff.page_of(PATH)
     pages, articles, raw = [], [], {}
     if new_raw is not None:
@@ -104,14 +117,17 @@ def source(old_raw, new_raw, new_version, *, head="head1", head_date="2026-10-30
     for path in removed:
         pages.append({"path": path, "rule_seq": rule_seq(path), "page_change": "removed", "new_version": None,
                       "kind": "content", "review": False})
+        if gone_raw:
+            secs = diff.section_changes(diff.page_of(path), gone_raw, None)
+            articles += [a.model_dump() for a in diff.changed_articles(rule_seq(path), secs, "2026-09-01", "")]
     report = {"changes": {"removed": [[p, "blob"] for p in removed], "list_complete": list_complete,
-                          "reasons": [] if list_complete else ["폴더 비었음: security"]},
+                          "reasons": [] if list_complete else list(reasons)},
               "pages": pages, "articles": articles, "summary": {}}
     calls = []
 
     def fn(from_commit):
         calls.append(from_commit)
-        return schedule.Source(head, head_date, report, raw)
+        return schedule.Source(head, head_date, report, raw, set(head_paths) if head_paths is not None else None)
     fn.calls = calls
     return fn
 
@@ -251,6 +267,58 @@ def test_incomplete_list_holds_deletion(conn):
     assert done["removed_applied"] == 1
     assert "gonev0000000" not in current_and_asof(None)
     assert "gonev0000000" in current_and_asof("2026-10-27")
+
+
+GONE = "content/handbook/security/gone.md"
+GONE_RAW = OLD.replace("Test Disclosure", "Gone")
+
+
+def gone_rows(c):
+    return c.execute("SELECT change_type, run_id FROM changed_articles WHERE rule_seq = %s",
+                     (rule_seq(GONE),)).fetchall()
+
+
+@needs_db
+def test_held_deletion_is_rechecked_next_complete_run(conn):
+    """EC-03: 보류한 날 장부가 새 커밋으로 가므로, 다음 날 두 끝 비교에는 그 쪽이 다시 '사라짐'으로 나오지 않는다.
+    다음 완전한 실행이 새 커밋 목록으로 다시 확인해 닫는다. 유효 끝 = 보류한 날, 사라진 섹션은 닫는 날 리콜로."""
+    seed(conn, GONE, GONE_RAW, "gonev0000000", "2026-09-01")
+    conn.commit()
+    held = go(conn, source(OLD, None, None, head_date="2026-11-01", removed=[GONE], list_complete=False,
+                           gone_raw=GONE_RAW))
+    assert (held["removed_held"], held["removed_applied"]) == (1, 0)
+    assert gone_rows(conn) == []                                          # 닫지 않은 쪽을 사라졌다고 알리지 않는다
+    # 다음 날: 목록 완전, 비교 결과에는 GONE이 없다(어제도 오늘도 없으니까). 새 커밋 목록에도 없다.
+    done = go(conn, source(OLD, None, None, head="head2", head_date="2026-11-03", head_paths={PATH}), slot="manual-1")
+    assert (done["removed_retried"], done["removed_applied"]) == (1, 1)
+    row = conn.execute("SELECT valid_to FROM versions WHERE version_id = 'gonev0000000'").fetchone()
+    assert str(row[0]) == "2026-11-01"
+    assert {t for t, _ in gone_rows(conn)} == {"removed"} and {r for _, r in gone_rows(conn)} == {done["run_id"]}
+    assert schedule.pending_holds(conn) == []                             # 한 번 확인하면 끝
+
+
+@needs_db
+def test_held_page_that_came_back_stays(conn):
+    """보류한 쪽이 다음 완전한 실행 때 다시 있으면(빈 폴더가 잠깐 비었던 것) 닫지 않는다."""
+    seed(conn, GONE, GONE_RAW, "gonev0000000", "2026-09-01")
+    conn.commit()
+    go(conn, source(OLD, None, None, removed=[GONE], list_complete=False, gone_raw=GONE_RAW))
+    done = go(conn, source(OLD, None, None, head="head2", head_paths={PATH, GONE}), slot="manual-1")
+    assert done["removed_retried"] == 0
+    assert conn.execute("SELECT valid_to FROM versions WHERE version_id = 'gonev0000000'").fetchone()[0] is None
+    assert gone_rows(conn) == []
+
+
+@needs_db
+@pytest.mark.parametrize("reason", ["commit_missing:old", "ls_tree_failed:boom"])
+def test_unreadable_list_fails_instead_of_holding(conn, reason):
+    """EC-03: 두 커밋을 비교하지 못한 날은 '바뀐 게 없음'이 아니다 → 성공(보류)이 아니라 실패, 장부는 그대로."""
+    src = source(OLD, NEW, ["newv00000000", "2026-10-30", False], list_complete=False, reasons=[reason])
+    with pytest.raises(schedule.SyncError):
+        go(conn, src)
+    assert conn.execute("SELECT status, error_kind FROM sync_runs").fetchone() == ("failed", "list_failed")
+    assert schedule.last_commit(conn) == schedule.PINNED_COMMIT
+    assert current_and_asof(None) == {"oldv00000000"}
 
 
 @needs_db

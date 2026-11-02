@@ -39,11 +39,24 @@ jobs:
           restore-keys: handbook-sync-
       - run: pip install -r backend/requirements.txt
       - name: 증분 수집 한 번
+        id: sync
         run: python -m backend.rag.ingest.schedule --once
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           EMBED_MODEL: ${{ vars.EMBED_MODEL }}
           HF_HUB_OFFLINE: "0"         # 새 글이 있을 때만 모델을 받는다(고정 판)
+      - name: 삭제 보류 알림
+        if: success() && steps.sync.outputs.held != ''   # 성공이지만 목록이 불완전해 삭제를 미룬 날(실패 아님)
+        env:
+          SYNC_ALERT_WEBHOOK: ${{ secrets.SYNC_ALERT_WEBHOOK }}
+          HELD: ${{ steps.sync.outputs.held }}
+          REASONS: ${{ steps.sync.outputs.reasons }}
+        run: |
+          if [ -z "$SYNC_ALERT_WEBHOOK" ]; then echo "알림 꺼짐: SYNC_ALERT_WEBHOOK 없음"; exit 0; fi
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -fsS -H "Content-Type: application/json" \
+               -d "{\"content\": \"handbook-sync 삭제 보류 ${HELD}쪽 (목록 불완전: ${REASONS}) — 다음 실행에서 다시 확인 ${url}\"}" \
+               "$SYNC_ALERT_WEBHOOK"
       - name: 실패 알림
         if: failure()                 # 파이썬이 중간에 죽어도 이 단계는 돈다
         env:
