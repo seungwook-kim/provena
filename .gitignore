@@ -41,3 +41,4 @@ data/index_exp/
 data/index/
 # 검색 1차 비교 조합별 결과는 results.tar.gz로 커밋한다. 푼 파일은 커밋하지 않는다
 evals/results/retrieval_v1_round1/[0-9a-f]*.json
+evals/results/retrieval_v1_round1_frozen/[0-9a-f]*.json

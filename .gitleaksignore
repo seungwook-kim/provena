@@ -1,0 +1,2 @@
+# AUTHZ_COMMIT은 공개 저장소의 Git 커밋 해시이며 비밀값이 아니다
+ec1376c9952d4f88311729ef54aa6106fd482a02:backend/rag/ingest/handbook.py:generic-api-key:47
