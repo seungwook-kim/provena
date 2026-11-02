@@ -20,7 +20,7 @@ from backend.schemas import (
 
 EXPECTED_FIELDS = {
     Chunk: ["chunk_id", "org", "rule_seq", "rule_title", "article", "version_id", "version_date",
-            "fetched_at", "kind", "text", "source_url", "text_sha256", "version_date_before"],
+            "fetched_at", "kind", "text", "source_url", "text_sha256", "version_date_before", "line_start", "line_end"],
     SearchQuery: ["query", "org", "as_of", "k"],
     AgentEvent: ["type", "thread_id", "data"],
     ApprovalItem: ["approval_id", "kind", "summary", "created_at"],
