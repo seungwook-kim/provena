@@ -14,7 +14,7 @@
 ## Goal
 
 - **해결 목표**: `search(SearchQuery) -> list[Chunk]` 하나로 필터 → 벡터 + BM25 → RRF → 리랭킹 → 상위 k를 돌려준다. 모델과 방식은 환경 변수로 바꾸고 코드는 바꾸지 않는다.
-- **성공 기준**: 같은 입력이면 같은 결과(chunk_id 순서, 번역은 저장한 값을 다시 씀) / `org`·`as_of` 밖 청크 0개 / 모델을 환경 변수만 바꿔 후보 4종이 모두 돈다 / `HF_HUB_OFFLINE=1`에서 기동 / 데모 모드(키 없음)에서 죽지 않는다
+- **성공 기준**: 같은 입력이면 같은 결과(chunk_id 순서, 번역은 저장한 값을 다시 씀) / `org`·`as_of` 밖 청크 0개 / 모델을 환경 변수만 바꿔 후보 6종이 모두 돈다(voyage 두 후보는 열린 항목 7의 지원을 더한 뒤) / `HF_HUB_OFFLINE=1`에서 기동 / 데모 모드(키 없음)에서 죽지 않는다
 - **Out of Scope**: 최종 모델 선택(11/6 v2), 문서 권한 필터 F-06(`acl`, 별도 Spec), GraphRAG(가산), MCP 서버(`extras/mcp_skill/`), 답 생성
 
 ## What
@@ -84,8 +84,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, `voyage-4`(API), 문서 `voyage-4` + 질문 `voyageai/voyage-4-nano`. voyage 두 후보는 평가 실행기로 먼저 재고 `search()`는 뽑히면 지원한다(열린 항목 7). 기준선 `BAAI/bge-m3` |
-| `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
+| `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, `voyage-4`(API), 문서 `voyage-4` + 질문 `voyageai/voyage-4-nano`. voyage 두 후보는 인계 뒤 지원을 더한다(열린 항목 7). 기준선 `BAAI/bge-m3` |
+| `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교와 같은 커밋(`evals/retrieval/experiment_v1.py`의 `EMBEDDERS`) |
 | `SEARCH_MODE` | `hybrid_ko_kw` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
 | `RERANK_MODEL` | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | 후보: 이 값, `BAAI/bge-reranker-v2-m3`, `bge-int8`(bge를 CPU int8로), `Qwen/Qwen3-Reranker-0.6B`, `none`. 기본값은 CPU에서 SPEC 3초를 지키는 유일한 후보(후보 10개 p95 0.59초)로 두고, 최종은 11/6에 정한다. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
@@ -109,11 +109,10 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 1 | `Chunk`에 점수 칸이 없다. SDD 4-2와 MCP `search_handbook`은 점수를 내보낸다 | `score: float \| None = None` 추가를 이 Spec PR에서 제안. 3명 승인 뒤 스키마 PR로 반영(SDD 6장) | D3 전 |
 | 2 | 벡터 차원이 모델마다 다르다(voyage-4-nano 2048, 나머지 1024). pgvector `vector` 칸의 HNSW 색인은 2,000차원까지다 | 칸 차원은 `EMBED_MODEL`에서 정하고 색인 없이 전수 비교(23,095개). nano가 뽑히면 `halfvec` 또는 차원 줄이기를 그때 정한다 | 11/6 |
 | 3 | BM25를 메모리(`rank_bm25`)로 할지 Postgres 전문 검색으로 할지 | 메모리. 1차 비교와 같은 토큰화(`experiment_v1.py`의 `_tokens`) | D3 |
-| 4 | 번역에 쓸 LLM | `llm.py` 기본 모델 | D3 |
+| 4 | 번역에 쓸 LLM | 로컬은 `LLM_PROVIDER=claude_cli`, 운영은 `openrouter`(`anthropic/claude-haiku-5.5`). 번역 저장 키의 모델 이름은 같은 값(`claude-haiku-5-5`)으로 맞추므로 두 제공자가 저장된 번역을 함께 쓴다. 운영 경로를 다시 잴 때는 저장된 번역을 비우고 시작한다 | 정함 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
-| 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | 모델을 정하기 전(11/6 전): `data/index/`는 `.gitignore`, 로컬 `data/index/`로 개발하고 받을 주소는 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 둔다(11/2 조장 답). 모델을 정한 뒤: 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다(이때 `.gitignore` 줄을 뺀다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고 없을 때만 `INDEX_URL`을 본다 | 11/6 뒤 커밋 |
-| 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/6 전에는 `search()`에 넣지 않는다. 뽑히면 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY`를 더한다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 11/6 |
-| 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — **3명 승인 대기**(SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |
+| 6 | 색인 스냅샷(`data/index/`, 약 95MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다 | 모델을 정한 뒤 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다. 저장소가 비공개라 Release 파일은 빌드 때 토큰 없이 받을 수 없다 | 11/6 뒤 |
+| 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/4 인계 범위에는 넣지 않는다. 인계 뒤 김승욱이 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY` 지원을 작은 PR로 더해 후보 6개를 같은 경로로 잰다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 인계 뒤 |
 
 ## AC (Given-When-Then)
 
@@ -133,7 +132,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 - THEN: chunk_id 순서가 같다
 
 **AC-03 · 모델은 환경 변수로만**
-- GIVEN: `EMBED_MODEL`·`RERANK_MODEL`을 후보 값으로 하나씩 바꾼다(voyage 두 후보는 뽑혔을 때, 열린 항목 7)
+- GIVEN: `EMBED_MODEL`·`RERANK_MODEL`을 후보 값으로 하나씩 바꾼다(voyage 두 후보는 지원을 더한 뒤, 열린 항목 7)
 - WHEN: 같은 질문으로 부른다
 - THEN: 코드 수정 없이 모두 결과를 돌려준다
 
