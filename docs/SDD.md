@@ -441,7 +441,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | 데모 (G2) | 로컬 pgvector 컨테이너 + 스냅샷 | 키 없음: 기록해 둔 응답 재생 | 데모 전용 2개 시드 (평가용과 다른 값) | `docker compose up` (10분 안) |
 | 운영 (G1) | Supabase Postgres + pgvector | 생성 LLM (11장) | 평가용 테스트 계정 2개 (비공개 제출) | GCP Cloud Run |
 
-- 임베딩·리랭커는 두 모드 모두 로컬 모델이다(`HF_HUB_OFFLINE=1`로 오프라인 실행 확인).
+- 리랭커와 기본 임베딩은 두 모드 모두 로컬 모델이다(`HF_HUB_OFFLINE=1`로 오프라인 실행 확인). 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재할 수 있고, 질문까지 API를 쓰는 구성은 키 없는 데모에서 기록된 질문만 재생한다. 후보는 11/6에 정한다(`docs/decisions.md` 2026-11-02).
 - 데모 모드는 키가 없으므로 한→영 질의 변환도 기록된 응답을 재생하거나, 다국어 임베딩만으로 검색한다(BM25 영어 질의 없음). 차이는 리포트에 적는다.
 - 모든 LLM 호출은 `backend/services/llm.py` 한 곳을 거친다. 데모 모드 재생, Langfuse 트레이스, 비용 상한을 이곳에서 처리한다.
 - Cloud Run 메모리와 이미지 크기는 D0에 확인한다(11장).

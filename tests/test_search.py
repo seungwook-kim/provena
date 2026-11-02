@@ -343,7 +343,7 @@ def test_real_arctic_query_prefix_and_dim():
     assert embed.used_prefixes(model, embed.spec("Snowflake/snowflake-arctic-embed-l-v2.0"))["query"] == "query: "
 
 
-# ---------- 줄 범위 (평가셋 `경로#L123` 정답, Spec 열린 항목 7) ----------
+# ---------- 줄 범위 (평가셋 `경로#L123` 정답, Spec 열린 항목 8) ----------
 
 def test_result_carries_line_range_and_line_gold_matches():
     from evals.retrieval.gold import GoldRef
