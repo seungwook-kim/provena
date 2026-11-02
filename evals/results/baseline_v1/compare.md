@@ -4,4 +4,4 @@
 
 | embedder | mode | rerank_top | reranker | Recall@5 | MRR | nDCG@5 | 비관련 거절 | 지연 p95 |
 |---|---|---|---|---|---|---|---|---|
-| bge-m3 | dense_ko | 0 | none | 0.700 | 0.602 | 0.601 | 0/15 | 0.001668 |
+| bge-m3 | dense_ko | 0 | none | 0.700 | 0.602 | 0.601 | 0/15 | 0.001596 |

@@ -8,7 +8,8 @@
 - `--grid`: JSON. `{"키": [값, ...]}`이면 모든 곱, `[{...}, {...}]`이면 그 목록 그대로. 예:
   `{"embedder": ["bge-m3", "intfloat/multilingual-e5-large"], "mode": ["dense", "hybrid"], "translate": ["glossary", "llm"],
     "reranker": ["none", "bge-reranker-v2-m3"], "rerank_top": [10, 30, 50]}`
-- 조합마다 `<out>/<번호>.json`에 저장하고, 이미 있는 조합은 건너뛴다(중간에 멈춰도 이어서 돈다).
+- 조합마다 `<out>/<번호>.json`에 저장하고(`meta.dataset_sha256`에 평가셋 sha256), 같은 평가셋으로 이미 잰 조합은 건너뛴다(중간에 멈춰도 이어서 돈다).
+  평가셋이 다르거나 sha256 기록이 없는 결과는 다시 잰다.
 - `<out>/compare.md`: 조합별 Recall@k·MRR·nDCG·비관련 거절·지연 p95 표와 상위 조합. 버린 조합도 모두 남긴다(결정의 "버린 대안").
 """
 from __future__ import annotations
@@ -17,6 +18,7 @@ import argparse
 import hashlib
 import itertools
 import json
+import time
 from pathlib import Path
 
 from evals.retrieval.run import evaluate, load_chunks, load_dataset, load_exclusions, resolve_fn
@@ -60,15 +62,17 @@ def main(argv=None) -> int:
     corpus = load_chunks(a.chunks) if a.chunks else None
     excl = load_exclusions(a.exclusions)
     factory = resolve_fn(a.factory)
+    dataset_sha256 = hashlib.sha256(a.dataset.read_bytes()).hexdigest()
     a.out.mkdir(parents=True, exist_ok=True)
     results = []
     for cfg in expand(json.loads(a.grid.read_text(encoding="utf-8"))):
         path = a.out / f"{key_of(cfg)}.json"
-        if path.is_file():
-            res = json.loads(path.read_text(encoding="utf-8"))
-        else:
+        res = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+        if res is None or res.get("meta", {}).get("dataset_sha256") != dataset_sha256:
             res = evaluate(items, factory(**cfg), a.k, exclusions=excl, corpus=corpus)
             res["config"] = cfg
+            res["meta"] = {"dataset": a.dataset.as_posix(), "dataset_sha256": dataset_sha256,
+                           "factory": a.factory, "run_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
             path.write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
             print(f"{cfg}: Recall@{a.k} {res['summary'][f'recall@{a.k}']['value']:.3f}", flush=True)
         results.append((cfg, res["summary"]))
