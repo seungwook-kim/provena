@@ -1,4 +1,5 @@
 # 원문 스냅샷은 줄바꿈을 바꾸지 않는다. Windows autocrlf로 바뀌면 sha256이 원본과 달라진다 (I-003)
 # 지금은 압축 파일(data/corpus.tar.gz) 하나로 커밋하므로 그 파일을 바이너리로 둔다. 풀린 data/corpus/는 커밋하지 않는다
 data/corpus.tar.gz binary
+evals/results/retrieval_v1_round1/results.tar.gz binary
 data/corpus/** -text

@@ -1,0 +1,127 @@
+{
+ "model": "claude-haiku-5-5",
+ "cost_usd": 0.012134,
+ "calls": 63,
+ "items": {
+  "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?": {
+   "sentence": "When I get paged while on call, how soon do I need to acknowledge it? And if someone @mentions the on-call person in Slack, is there a separate response deadline for that?",
+   "keywords": "on-call page acknowledgment time, on-call response SLA, Slack @mention on-call engineer, response deadline, escalation policy"
+  },
+  "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?": {
+   "sentence": "If the EOC does not answer a call, how is the issue escalated, and what is the escalation path if the IMOC also does not respond?",
+   "keywords": "EOC no response escalation procedure; IMOC no response escalation; EOC call unanswered; IMOC unresponsive escalation path"
+  },
+  "GitLab 정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?": {
+   "sentence": "When are GitLab's monthly releases published, and how many patch releases go out per month?",
+   "keywords": "GitLab monthly release schedule, release date, patch release frequency per month"
+  },
+  "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?": {
+   "sentence": "How long must an auto-deploy package wait in the production canary before it can move to full production, and is that promotion automatic or manual?",
+   "keywords": "auto-deploy package production canary promotion wait time automatic manual"
+  },
+  "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?": {
+   "sentence": "When the default branch is broken and a CI Health incident is opened, how is the culprit MR handled by default? How many approvals does a revert MR need?",
+   "keywords": "broken default branch, CI health incident, cause MR handling, revert MR, required approvals"
+  },
+  "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?": {
+   "sentence": "How soon must a flaky test file be fixed once it has been identified, what happens if it cannot be fixed in time, and what is the maximum length of time a quarantined test may stay in quarantine?",
+   "keywords": "flaky test file identified fix deadline SLA; unfixed flaky test consequences; quarantined test maximum duration; test quarantine policy; flaky test handling policy; engineering handbook"
+  },
+  "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?": {
+   "sentence": "Who do I need to get approval from to propose introducing a separate database or a new microservice?",
+   "keywords": "approval process, new database, new microservice, architecture proposal, design review, sign-off authority, tech stack change"
+  },
+  "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?": {
+   "sentence": "How many days do I have to complete a code review once I receive a request?",
+   "keywords": "code review request turnaround time deadline days SLA"
+  },
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?": {
+   "sentence": "What is the response time required for mitigating and remediating critical vulnerabilities with a CVSS score of 9.0 or higher?",
+   "keywords": "CVSS 9.0 critical vulnerability mitigation timeline remediation deadline SLA days policy"
+  },
+  "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?": {
+   "sentence": "How often do Red data systems and SOX-scoped applications each undergo user access reviews?",
+   "keywords": "Red data system SOX in-scope applications user access review frequency"
+  },
+  "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?": {
+   "sentence": "What is the deadline for resolving security issues classified as Critical?",
+   "keywords": "security critical vulnerability remediation deadline SLA"
+  },
+  "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?": {
+   "sentence": "What must be in place for a financial system access request (e.g., NetSuite) to be marked as Done?",
+   "keywords": "finance system access request NetSuite \"definition of done\" completion criteria manager approval role assignment SOX compliance segregation of duties least privilege provisioning verification ticket closure"
+  },
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?": {
+   "sentence": "Sales team free support for prospects: what is the time limit and extension cap, and how many prospects can receive it at the same time?",
+   "keywords": "sales team prospect free support trial period limit extension limit maximum concurrent prospects policy"
+  },
+  "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?": {
+   "sentence": "How is severity decided when a data team incident falls between Sev1 and Sev2?",
+   "keywords": "data team incident severity classification Sev1 Sev2 ambiguous borderline criteria escalation"
+  },
+  "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?": {
+   "sentence": "Who approves contracts with cloud hosting providers and committed use discount (CUD) agreements?",
+   "keywords": "cloud hosting vendor contract approval committed use discount CUD agreement signing authority"
+  },
+  "한국에서 야근시키면 법적으로 주 몇 시간까지 일하게 할 수 있어?": {
+   "sentence": "Under Korean law, what is the maximum number of working hours per week an employer can require, including overtime?",
+   "keywords": "Korea overtime legal maximum hours per week Labor Standards Act 52-hour limit"
+  },
+  "프리랜서로 받은 수입 종합소득세 신고는 어떻게 해?": {
+   "sentence": "How do I file my comprehensive income tax return for freelance income?",
+   "keywords": "freelancer income comprehensive income tax filing Korea, national tax service hometax, business income withholding 3.3%, May filing deadline, year-end tax settlement, deductible expenses, simple bookkeeping, estimated tax payment"
+  },
+  "파이썬에서 리스트 중복 제거하는 제일 빠른 방법 뭐야?": {
+   "sentence": "What is the fastest way to remove duplicates from a list in Python?",
+   "keywords": "python list remove duplicates fastest method order-preserving dict.fromkeys set"
+  },
+  "React에서 useEffect 의존성 배열에 뭘 넣어야 해?": {
+   "sentence": "What should go into the useEffect dependency array in React?",
+   "keywords": "React useEffect dependency array what to include rules"
+  },
+  "육아휴직은 최대 몇 개월까지 쓸 수 있어?": {
+   "sentence": "How many months can I take parental leave for at most?",
+   "keywords": "parental leave maximum duration months"
+  },
+  "시니어 개발자 연봉 밴드가 어떻게 돼?": {
+   "sentence": "What is the salary band for a senior developer?",
+   "keywords": "senior developer salary band compensation range"
+  },
+  "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?": {
+   "sentence": "What are the brand guidelines for putting the company logo in company documents?",
+   "keywords": "company logo usage company documents brand guidelines"
+  },
+  "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?": {
+   "sentence": "What are the mandatory contractual provisions for ICT third-party service arrangements required under the EU DORA regulation?",
+   "keywords": "DORA ICT third-party contract mandatory provisions Article 30 Regulation (EU) 2022/2554 service level description data location audit access rights incident assistance exit strategy termination rights subcontracting"
+  },
+  "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?": {
+   "sentence": "What are the criteria for declaring a severity S0 (company-wide outage) incident?",
+   "keywords": "Incident severity S0 (company-wide outage) declaration criteria"
+  },
+  "Hard PCL보다 더 강한 Critical PCL은 언제 선언하고 누가 승인해?": {
+   "sentence": "When is a Critical PCL declared, stronger than a Hard PCL, and who approves it?",
+   "keywords": "Critical PCL declaration criteria approval authority Hard PCL escalation"
+  },
+  "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?": {
+   "sentence": "How should BLACK-grade data be handled under the data classification policy?",
+   "keywords": "BLACK grade data classification handling policy restrictions"
+  },
+  "변경 심의 위원회(CAB)는 얼마나 자주 열려?": {
+   "sentence": "How often does the Change Advisory Board (CAB) meet?",
+   "keywords": "Change Advisory Board CAB meeting frequency schedule"
+  },
+  "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?": {
+   "sentence": "What's the GitLab.com service availability for September 2026?",
+   "keywords": "GitLab.com service availability September 2026 percentage uptime"
+  },
+  "2020년 3월 GitLab.com 가용률은 얼마였어?": {
+   "keywords": "GitLab.com availability March 2020 uptime percentage",
+   "sentence": "What was GitLab.com's availability in March 2020?"
+  },
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?": {
+   "sentence": "When is the application period and start date for the second cohort of the ProdSec (security team) mentorship program?",
+   "keywords": "ProdSec mentorship program second cohort application period start date"
+  }
+ }
+}

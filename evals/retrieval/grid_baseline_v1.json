@@ -1,0 +1,8 @@
+[
+{
+"embedder": "bge-m3",
+"mode": "dense_ko",
+"reranker": "none",
+"rerank_top": 0
+}
+]
