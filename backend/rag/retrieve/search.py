@@ -599,6 +599,19 @@ def _eval_reranker(c: type[_EvalCache], name: str):
     return c.reranker[1]
 
 
+def _strict_translator(store):
+    """비교용 번역: 실패하면 dense_ko로 내려가지 않고 멈춘다. 내려가면 표에 적힌 조합과 다른 방식을 재게 된다."""
+    from backend.rag.retrieve import translate
+
+    def run(query: str, kind: str):
+        res = translate.translate(query, kind, store)
+        if res.text is None:
+            raise RuntimeError(f"번역 실패로 비교를 멈춘다({kind}, {res.source}, 질문 sha256 {translate.query_sha(query)[:12]}). "
+                               "번역 장부를 채우거나 LLM_PROVIDER를 정한 뒤 다시 돌린다")
+        return res
+    return run
+
+
 def make_search(embedder: str, mode: str, reranker: str = "none", rerank_top: int = 0):
     """조합 하나 → 검색 함수(SearchQuery -> list[Chunk]). BM25만은 embedder="none"·mode="bm25_kw"(experiment_v1과 같은 규칙).
     리랭커가 없으면 rerank_top은 쓰지 않는다(후보 수 = k)."""
@@ -611,7 +624,8 @@ def make_search(embedder: str, mode: str, reranker: str = "none", rerank_top: in
     c = _eval_base(index_dir())
     store, fn = _eval_embedder(c, name)
     rr_obj = _eval_reranker(c, rr)
-    s = Searcher(cfg, store, embedder=fn or _no_embed, reranker=rr_obj, check_meta=False, bm25=c.bm25)
+    s = Searcher(cfg, store, embedder=fn or _no_embed, reranker=rr_obj, translator=_strict_translator(store),
+                 check_meta=False, bm25=c.bm25)
     c.bm25 = (s._rm, s._bm25)
     return s.search
 

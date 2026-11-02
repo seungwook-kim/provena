@@ -9,8 +9,15 @@
 - 한 일(이어서): 418조합을 동결본으로 재채점(캐시 사용). 1위 조합 그대로(0.900), 후보 임베딩 4개 그대로. 동결 검사가 Linux에서 실패하는 원인(sha256이 CRLF 파일 기준)을 찾아 `.gitattributes`로 줄바꿈을 고정. 비밀값 검사 오탐(`AUTHZ_COMMIT` 커밋 해시)을 `.gitleaksignore`에 등록.
 - 한 일(이어서): 임베딩 필수 조건을 다시 보고 voyage-4와 문서 voyage-4 + 질문 voyage-4-nano를 후보에 추가(후보 6개, 11/6 2차 65조합). Voyage 약관, 가격, 모델 카드를 확인해 EVAL_REPORT 3-0에 기록. 색인 스냅샷은 모델을 정한 뒤 저장소에 커밋하는 것으로 Spec을 고침.
 - 한 일(이어서): LLM 제공자를 로컬 Claude CLI, 운영 OpenRouter로 정리(`.env.example`, `docs/specs/llm.md`). 후보 재측정은 `search()` 개발 뒤 그 경로로 하고, RAGAS는 50건으로 따로 재기로 함. OpenRouter Haiku 5.5 단가를 확인(100만 토큰당 입력 0.10달러, 출력 0.50달러, `llm_prices.json`과 같음).
+- 머지 기록(이어서): PR #34(임베딩 후보 추가, 박진형·강경희 승인), PR #35(`search()`, 박진형 작업, 김승욱 머지, GitHub 리뷰 승인 기록 없음), PR #36(LLM 제공자, 2차 측정 계획, 박진형 승인).
+- 한 일(이어서): PR #35 확인. 전체 테스트 통과, 같은 번역으로 1차 비교 4조합을 재면 Recall@5, Hit@5, RR, nDCG@5가 모두 같음. DB 적재와 `docker compose up`은 Docker가 꺼져 있어 확인하지 못함. 비교 입구 `make_search`가 번역 실패를 숨기고 `dense_ko`로 재는 문제를 고침(실패하면 멈춤). `Chunk`의 `line_start`, `line_end` 추가를 승인. PR #36 충돌 해결 때 빠진 `docs/specs/search.md`의 `EMBED_REVISION` 줄과 열린 항목 6, 8을 PR #35 내용으로 되돌림.
 - 막힌 것: 없음.
-- 다음 할 일: 검색 `search()` 인계(11/4, 박진형) 뒤 같은 평가셋으로 재측정.
+- 다음 할 일: v2 번역을 먼저 저장, voyage 두 후보 `search()` 지원, 같은 경로로 재측정, DB 적재와 `docker compose up` 확인.
+
+## 2026-11-02 박진형
+- 한 일: PR #35 머지 — `search()`(필터, 벡터 + BM25, RRF, 리랭킹), 비교 입구 `make_search`, 색인 `index.py`, 적재 `load_snapshot.py`, 번역 장부 `query_translations`, Docker 설정(CPU torch, 모델 고정 판, `loader`, `SEARCH_WARMUP`). 청크 열쇠를 `(chunk_id, version_id)`로 바꾸고 `Chunk`에 `line_start`, `line_end`를 더함.
+- 막힌 것: `Chunk` 칸 추가는 강경희 승인 대기(Spec 열린 항목 8). bge int8 리랭커 점수가 배치 크기에 따라 달라질 수 있음(I-013).
+- 다음 할 일: 색인 스냅샷 저장소 커밋은 모델을 정한 뒤(Spec 열린 항목 6).
 
 ## 2026-11-01 김승욱
 - 한 일: 검색 1차 비교 418조합 채점(평가셋 v1 관련 15건, 동결 전 초안 정답이라 후보 추리기로만 사용). 상위는 arctic + 하이브리드 + bge 리랭커(Recall@5 0.922), 문항 차이 1~4개라 유의하지 않음. 사전 등록 #1은 6개 중 5개 맞음. 모델 12종 문서 100건 속도를 GPU·CPU로 재고 오프라인 로드와 라이선스를 확인. EVAL_REPORT 3-0, 결정 기록에 반영.

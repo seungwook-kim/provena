@@ -41,7 +41,7 @@
 | # | 상황 | 처리 방식 |
 |---|---|---|
 | EC-01 | 데모 모드인데 그 질문의 번역 기록이 없음 | `dense_ko`로 내려 검색하고 Langfuse 트레이스에 `fallback=dense_ko`를 남긴다. 죽지 않는다 |
-| EC-02 | 번역 LLM 호출 실패·시간 초과 | 재시도 1회 뒤 EC-01과 같이 처리 |
+| EC-02 | 번역 LLM 호출 실패·시간 초과 | 재시도 1회 뒤 EC-01과 같이 처리. 비교 입구 `make_search`는 내려가지 않고 멈춘다(내려가면 표에 적힌 조합과 다른 방식을 재게 된다) |
 | EC-03 | 필터 결과가 0개(없는 `org`, 너무 이른 `as_of`) | 빈 목록을 돌려준다. 호출자가 "근거 없음"으로 거절한다 |
 | EC-04 | 필터 결과가 `k`보다 적음 | 있는 만큼만 돌려준다. 채우려고 필터 밖 청크를 넣지 않는다 |
 | EC-05 | `RERANK_MODEL=none` | 리랭킹 없이 RRF 순서로 상위 `k` |
@@ -85,7 +85,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
 | `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, `voyage-4`(API), 문서 `voyage-4` + 질문 `voyageai/voyage-4-nano`. voyage 두 후보는 인계 뒤 지원을 더한다(열린 항목 7). 기준선 `BAAI/bge-m3` |
-| `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교와 같은 커밋(`evals/retrieval/experiment_v1.py`의 `EMBEDDERS`) |
+| `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `hybrid_ko_kw` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
 | `RERANK_MODEL` | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | 후보: 이 값, `BAAI/bge-reranker-v2-m3`, `bge-int8`(bge를 CPU int8로), `Qwen/Qwen3-Reranker-0.6B`, `none`. 기본값은 CPU에서 SPEC 3초를 지키는 유일한 후보(후보 10개 p95 0.59초)로 두고, 최종은 11/6에 정한다. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
@@ -111,8 +111,9 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 3 | BM25를 메모리(`rank_bm25`)로 할지 Postgres 전문 검색으로 할지 | 메모리. 1차 비교와 같은 토큰화(`experiment_v1.py`의 `_tokens`) | D3 |
 | 4 | 번역에 쓸 LLM | 로컬은 `LLM_PROVIDER=claude_cli`, 운영은 `openrouter`(`anthropic/claude-haiku-5.5`). 번역 저장 키의 모델 이름은 같은 값(`claude-haiku-5-5`)으로 맞추므로 두 제공자가 저장된 번역을 함께 쓴다. 운영 경로를 다시 잴 때는 저장된 번역을 비우고 시작한다 | 정함 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
-| 6 | 색인 스냅샷(`data/index/`, 약 95MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다 | 모델을 정한 뒤 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다. 저장소가 비공개라 Release 파일은 빌드 때 토큰 없이 받을 수 없다 | 11/6 뒤 |
+| 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | 모델을 정하기 전(11/6 전): `data/index/`는 `.gitignore`, 로컬 `data/index/`로 개발하고 받을 주소는 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 둔다(11/2 조장 답). 모델을 정한 뒤: 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다(이때 `.gitignore` 줄을 뺀다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고 없을 때만 `INDEX_URL`을 본다 | 11/6 뒤 커밋 |
 | 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/4 인계 범위에는 넣지 않는다. 인계 뒤 김승욱이 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY` 지원을 작은 PR로 더해 후보 6개를 같은 경로로 잰다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 인계 뒤 |
+| 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — 박진형 제안, 김승욱 승인(11/2), **강경희 승인 대기**(SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |
 
 ## AC (Given-When-Then)
 
