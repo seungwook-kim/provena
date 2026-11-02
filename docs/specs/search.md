@@ -67,7 +67,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다 |
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
-| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB라 저장소에 바로 넣지 않는다. 나눠 주는 방법은 "열린 항목" 6 |
+| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 나눠 주는 방법은 "열린 항목" 6 |
 | `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)` |
 | `tests/test_search.py` | AC 시험 |
 
@@ -75,7 +75,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`. 기준선 `BAAI/bge-m3` |
+| `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, `voyage-4`(API), 문서 `voyage-4` + 질문 `voyageai/voyage-4-nano`. voyage 두 후보는 평가 실행기로 먼저 재고 `search()`는 뽑히면 지원한다(열린 항목 7). 기준선 `BAAI/bge-m3` |
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교와 같은 커밋(`evals/retrieval/experiment_v1.py`의 `EMBEDDERS`) |
 | `SEARCH_MODE` | `hybrid_ko_kw` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
@@ -98,7 +98,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 3 | BM25를 메모리(`rank_bm25`)로 할지 Postgres 전문 검색으로 할지 | 메모리. 1차 비교와 같은 토큰화(`experiment_v1.py`의 `_tokens`) | D3 |
 | 4 | 번역에 쓸 LLM | `llm.py` 기본 모델 | D3 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
-| 6 | 색인 스냅샷(`data/index/`, 약 95MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다 | GitHub Release에 올리고 Docker 빌드 때 받아 `meta.json`의 sha256으로 대조한다. 저장소에 넣으려면 강사 확인이 먼저다(`data/README.md`: 수십 MB 넘으면 먼저 문의) | 이 Spec |
+| 6 | 색인 스냅샷(`data/index/`, 약 95MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다 | 모델을 정한 뒤 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다. 저장소가 비공개라 Release 파일은 빌드 때 토큰 없이 받을 수 없다 | 11/6 뒤 |
+| 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/6 전에는 `search()`에 넣지 않는다. 뽑히면 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY`를 더한다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 11/6 |
 
 ## AC (Given-When-Then)
 
@@ -118,7 +119,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 - THEN: chunk_id 순서가 같다
 
 **AC-03 · 모델은 환경 변수로만**
-- GIVEN: `EMBED_MODEL`·`RERANK_MODEL`을 후보 값으로 하나씩 바꾼다
+- GIVEN: `EMBED_MODEL`·`RERANK_MODEL`을 후보 값으로 하나씩 바꾼다(voyage 두 후보는 뽑혔을 때, 열린 항목 7)
 - WHEN: 같은 질문으로 부른다
 - THEN: 코드 수정 없이 모두 결과를 돌려준다
 
