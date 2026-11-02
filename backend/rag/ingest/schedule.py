@@ -8,6 +8,8 @@ Spec: docs/specs/incremental.md. 한 번의 실행:
 ④ 바뀐 쪽 파싱·청킹(처음 수집과 같은 함수) ⑤ 같은 글이면 벡터 재사용, 없는 것만 임베딩
 ⑥ 한 트랜잭션: 옛 판 닫기·새 판 넣기·바뀐 섹션·실행 기록·generation+1 → 실패하면 전부 되돌리고 failed로 남긴 뒤 종료 코드 1
 (실패 알림은 workflow의 if: failure() 단계가 보낸다 — 파이썬이 중간에 죽어도 알림이 간다).
+목록이 불완전한 날(빈 폴더)은 삭제만 보류하고 성공으로 끝내되 보류 알림을 보내고, 다음 완전한 실행이 보류한 쪽을 다시 확인한다.
+두 커밋을 비교하지 못한 날(커밋 없음·ls-tree 실패)은 실패다.
 """
 from __future__ import annotations
 
@@ -16,6 +18,7 @@ import collections
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -40,6 +43,9 @@ FLOOR = FROZEN_AS_OF + timedelta(days=1)
 CHUNK_SIZE, CHUNK_OVERLAP = 800, 120            # chunk.py 기본값(Spec chunk.md)과 같아야 한다 — 테스트가 대조
 CHUNK_CONFIG = f"structure-s{CHUNK_SIZE}-o{CHUNK_OVERLAP}-h"
 FETCH_TRIES = 3                                 # 재시도 정책(Spec 표): git fetch만, 간격을 늘려 3번
+# 비교 자체를 못 한 이유(diff.list_changes). 이때는 사라진 쪽뿐 아니라 새로 생긴·바뀐 쪽도 못 봤다
+# → 보류(성공)가 아니라 실패로 끝내고, 다음 실행이 같은 커밋부터 다시 본다(EC-03). empty_folder 는 보류.
+LIST_FAILED = ("commit_missing", "ls_tree_failed")
 
 
 class SyncError(RuntimeError):
@@ -68,12 +74,13 @@ class Source:
     head_date: str
     report: dict
     raw: dict[str, str] = field(default_factory=dict)
+    head_paths: set[str] | None = None      # 새 커밋의 쪽 경로 전부(목록이 완전할 때만). 보류한 삭제를 다시 확인할 때 쓴다
 
 
 def git_source(cache: Path, from_commit: str, log=print) -> Source:
     """핸드북 캐시를 준비하고(blob:none + 고른 폴더) 새 커밋을 받은 뒤 from_commit 과 비교한다."""
     from backend.rag.ingest import diff
-    from backend.rag.ingest.handbook import ensure_checkout, git
+    from backend.rag.ingest.handbook import ensure_checkout, git, list_pages
     ensure_checkout(cache)
     for i in range(FETCH_TRIES):
         done = subprocess.run(["git", "-C", str(cache), "fetch", "-q", "--filter=blob:none", "origin", "main"],
@@ -90,7 +97,8 @@ def git_source(cache: Path, from_commit: str, log=print) -> Source:
     raw: dict[str, str] = {}
     report = diff.diff_commits(cache, from_commit, head, fetch_ok=True, raw_out=raw)
     log(f"비교 {from_commit[:10]} → {head[:10]}: {report['summary']}")
-    return Source(head, head_date, report, raw)
+    head_paths = {p for p, _ in list_pages(cache, head)} if report["changes"]["list_complete"] else None
+    return Source(head, head_date, report, raw, head_paths)
 
 
 # ── 쪽 하나 → 새 판 청크 ──
@@ -127,6 +135,17 @@ def last_commit(conn) -> str:
     return row[0] if row else PINNED_COMMIT
 
 
+def pending_holds(conn) -> list[dict]:
+    """아직 다시 확인하지 못한 삭제 보류 = 마지막으로 목록을 끝까지 받아 성공한 실행 뒤의, 목록이 불완전했던 성공 실행들.
+    보류한 날 last_commit 은 앞으로 가므로, 다음 날 두 끝 비교에는 그 쪽이 다시 '사라짐'으로 나오지 않는다
+    → 여기서 따로 꺼내 다음 완전한 실행이 다시 확인한다(rag4-13 "다음 동기화에서 다시 확인")."""
+    rows = conn.execute("""SELECT detail FROM sync_runs WHERE job = %s AND status = 'succeeded' AND list_complete = false
+                           AND run_id > COALESCE((SELECT max(run_id) FROM sync_runs WHERE job = %s
+                                                  AND status = 'succeeded' AND list_complete), 0)
+                           ORDER BY run_id""", (JOB, JOB)).fetchall()
+    return [r[0] for r in rows if r[0].get("removed_held")]
+
+
 def check_index(conn, model: str, dim: int) -> None:
     """색인 장부와 지금 쓸 임베딩 모델이 같은가. 차원이 같고 모델만 달라도 오류 없이 틀리므로 이름까지 대조(rag1-11)."""
     row = conn.execute("SELECT embedder, dim, status FROM index_meta WHERE id = 1").fetchone()
@@ -141,6 +160,9 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
     """반영. 임베딩은 트랜잭션 밖에서 먼저 하고, 쓰기는 한 트랜잭션으로 한다(rag4-14)."""
     rep, fetched_at = src.report, now.astimezone(timezone.utc).date().isoformat()
     ch = rep["changes"]
+    failed = [r for r in ch["reasons"] if r.startswith(LIST_FAILED)]
+    if failed:                                      # 비교를 못 했다 ≠ 바뀐 게 없다 → 성공으로 끝내지 않는다(시끄러운 실패)
+        raise SyncError("list_failed", ", ".join(failed))
     plan, detail = [], collections.defaultdict(list)
     for p in rep["pages"]:
         if p["kind"] == "error":
@@ -174,9 +196,29 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
         known.update(zip(need, vecs))
     reused = sum(1 for _, cs in plan for c in cs) - len(need)
 
+    complete = ch["list_complete"]
     removed_seen = [r[0] for r in ch["removed"]]
-    removed_applied = removed_seen if ch["list_complete"] else []       # 못 본 것과 사라진 것은 다르다(rag4-13)
-    articles = rep["articles"]
+    removed_applied = removed_seen if complete else []                  # 못 본 것과 사라진 것은 다르다(rag4-13)
+    removed_held = [] if complete else removed_seen
+    held_seqs = {rule_seq(p) for p in removed_held}
+    # 보류한 쪽의 '사라진 섹션'은 리콜에 아직 보내지 않는다(닫지도 않은 쪽을 사라졌다고 알리지 않음) → 다시 확인해 닫는 날 보낸다
+    articles = [a for a in rep["articles"] if a["rule_seq"] not in held_seqs]
+    held_articles = [a for a in rep["articles"] if a["rule_seq"] in held_seqs]
+    # 앞서 보류한 삭제 다시 확인: 오늘 목록이 완전하고 그 쪽이 새 커밋에도 없으면 닫는다. 다시 생긴 쪽은 그대로 둔다.
+    retry, kept = [], []                                                # retry: (경로, 보류한 날의 판 날짜)
+    if complete and src.head_paths is not None:
+        seen = set(removed_seen)
+        for d in pending_holds(conn):
+            for path in d["removed_held"]:
+                if path in seen:
+                    continue
+                seen.add(path)
+                if path in src.head_paths:
+                    kept.append(path)
+                else:
+                    retry.append((path, d.get("held_date") or src.head_date))
+                    retry_seq = rule_seq(path)
+                    articles += [a for a in d.get("held_articles", []) if a["rule_seq"] == retry_seq]
     with conn.transaction():
         ord0 = conn.execute("SELECT COALESCE(max(ord), -1) + 1 FROM chunks").fetchone()[0]
         n_new = 0
@@ -213,6 +255,11 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
         for path in removed_applied:
             closed += conn.execute("""UPDATE versions SET valid_to = GREATEST(%s::date, valid_from)
                                       WHERE rule_seq = %s AND valid_to IS NULL""", (end, rule_seq(path))).rowcount
+        retried = 0
+        for path, held_date in retry:                                  # 유효 끝 = 처음 사라진 것으로 본 날(오늘이 아님)
+            retried += conn.execute("""UPDATE versions SET valid_to = GREATEST(%s::date, valid_from)
+                                       WHERE rule_seq = %s AND valid_to IS NULL""",
+                                    (max(date.fromisoformat(held_date), FLOOR), rule_seq(path))).rowcount
         with conn.cursor() as c:
             c.executemany("""INSERT INTO changed_articles (event_id, run_id, rule_seq, article, old_version_date,
                                                            new_version_date, change_type)
@@ -224,13 +271,15 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
         conn.execute("UPDATE index_meta SET generation = generation + 1 WHERE id = 1")    # api가 BM25를 다시 만든다
         counts = {"added": len(detail["added"]), "modified": len(detail["modified"]),
                   "format_only": len(detail["format_only"]), "removed_seen": len(removed_seen),
-                  "removed_applied": closed, "articles": new_articles,
-                  "embedded": len(need), "reused": reused}
-        detail.update(removed=removed_applied, removed_held=[] if ch["list_complete"] else removed_seen,
-                      list_reasons=ch["reasons"])
-        finish(conn, run_id, "succeeded", now, src.head, ch["list_complete"], counts, dict(detail))
-    log(f"반영 완료: {counts}" + ("" if ch["list_complete"] else f" — 삭제 보류(목록 불완전: {ch['reasons']})"))
-    return counts
+                  "removed_applied": closed + retried, "removed_held": len(removed_held), "removed_retried": retried,
+                  "articles": new_articles, "embedded": len(need), "reused": reused}
+        detail.update(removed=removed_applied, removed_held=removed_held, list_reasons=ch["reasons"],
+                      removed_retried=[p for p, _ in retry], removed_kept=kept)
+        if removed_held:
+            detail.update(held_date=src.head_date, held_articles=held_articles)
+        finish(conn, run_id, "succeeded", now, src.head, complete, counts, dict(detail))
+    log(f"반영 완료: {counts}" + ("" if complete else f" — 삭제 보류(목록 불완전: {ch['reasons']})"))
+    return {**counts, "list_reasons": ch["reasons"]}
 
 
 def finish(conn, run_id: int, status: str, now: datetime, to_commit: str | None, list_complete: bool | None = None,
@@ -314,7 +363,18 @@ def main(argv: list[str] | None = None) -> int:
         except SyncError:
             return 1
     print(json.dumps(out, ensure_ascii=False))
+    write_outputs(out, os.environ.get("GITHUB_OUTPUT"))
     return 0
+
+
+def write_outputs(out: dict, path: str | None) -> None:
+    """성공이지만 사람이 알아야 하는 날(목록 불완전 → 삭제 보류)을 workflow 다음 단계(보류 알림)에 넘긴다.
+    알림 글에 그대로 들어가므로 따옴표·역슬래시 같은 글자는 뺀다."""
+    if not path or not out.get("removed_held"):
+        return
+    reasons = re.sub(r"[^\w:,. /-]", "", ", ".join(out.get("list_reasons", [])))[:300]
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(f"held={int(out['removed_held'])}\nreasons={reasons}\n")
 
 
 if __name__ == "__main__":
