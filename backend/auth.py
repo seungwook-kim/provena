@@ -10,12 +10,18 @@ import os
 import secrets
 import hmac
 import time
+import base64
+import hashlib
+import json
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, cast
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from uuid import UUID
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request as UrlRequest, urlopen
+from uuid import UUID, uuid4
 
 import bcrypt
 import jwt
@@ -31,9 +37,15 @@ from starlette.responses import Response
 # integration into the team service.
 AUTH_COOKIE_NAME = "provena_auth"
 CSRF_COOKIE_NAME = "provena_csrf"
+GOOGLE_OAUTH_REQUEST_COOKIE_NAME = "provena_google_oauth"
 AUTH_TOKEN_EXPIRES_MINUTES = 30
 AUTH_COOKIE_MAX_AGE = AUTH_TOKEN_EXPIRES_MINUTES * 60
 JWT_ALGORITHM = "HS256"
+GOOGLE_OAUTH_REQUEST_TTL_SECONDS = 600
+GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
+GOOGLE_OAUTH_FAILURE_PATH = "/login?oauth_error=google_login_failed"
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_BYTES = 72
 MIN_AUTH_SECRET_BYTES = 32
@@ -52,6 +64,67 @@ class AuthConfigurationError(AuthError):
 
 class InvalidTokenError(AuthError):
     """Raised when a token is missing, expired, malformed, or tampered with."""
+
+
+class RevocationStoreUnavailableError(AuthError):
+    """Revocation cannot be checked or durably recorded; never allow access."""
+
+
+class GoogleOAuthError(AuthError):
+    """Google OAuth could not prove the browser or identity request is valid."""
+
+
+@dataclass(frozen=True)
+class GoogleOAuthConfig:
+    client_id: str
+    client_secret: str
+    redirect_uri: str
+
+    @classmethod
+    def from_environ(cls) -> "GoogleOAuthConfig":
+        values = {
+            "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+            "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI", ""),
+        }
+        if not all(values.values()):
+            raise AuthConfigurationError("Google OAuth is not configured")
+        return cls(**values)
+
+
+@dataclass(frozen=True)
+class GoogleIdentity:
+    subject: str
+
+
+class GoogleOAuthStore(Protocol):
+    """Persistence boundary for verified Google identities only."""
+
+    def get_or_create_google_user(self, provider: str, subject: str) -> "AuthUser": ...
+
+
+class GoogleTokenExchanger(Protocol):
+    def exchange_code(
+        self, *, code: str, config: GoogleOAuthConfig, code_verifier: str
+    ) -> str: ...
+
+
+class GoogleIdTokenVerifier(Protocol):
+    def verify(
+        self, *, id_token: str, config: GoogleOAuthConfig, nonce: str
+    ) -> GoogleIdentity: ...
+
+
+class TokenRevocationStore(Protocol):
+    """Shared store contract. revoke must commit before returning.
+
+    Implement with PostgreSQL, not a per-process cache. Preserve each record
+    through expires_at and use the same store for all authentication consumers.
+    """
+
+    def is_revoked(self, jti: str) -> bool: ...
+
+    def revoke(self, jti: str, expires_at: datetime) -> None: ...
 
 
 def _get_secret(secret: str | None = None) -> str:
@@ -113,12 +186,13 @@ def create_access_token(
         "role": role,
         "iat": now,
         "exp": expires_at,
+        "jti": str(uuid4()),
     }
     return jwt.encode(payload, _get_secret(secret), algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(token: str, *, secret: str | None = None) -> dict[str, Any]:
-    """Verify a JWT signature and expiration, returning its validated payload."""
+    """Verify claims only; request authentication must also check revocation."""
 
     if not token:
         raise InvalidTokenError("authentication token is missing")
@@ -128,16 +202,179 @@ def decode_access_token(token: str, *, secret: str | None = None) -> dict[str, A
             token,
             _get_secret(secret),
             algorithms=[JWT_ALGORITHM],
-            options={"require": ["user_id", "role", "exp"]},
+            options={"require": ["user_id", "role", "exp", "jti"]},
         )
         payload["user_id"] = _normalise_user_id(payload["user_id"])
         if not isinstance(payload["role"], str) or not payload["role"]:
             raise InvalidTokenError("token role is invalid")
+        if not isinstance(payload["jti"], str) or str(UUID(payload["jti"])) != payload["jti"]:
+            raise InvalidTokenError("token identifier is invalid")
+        if type(payload["exp"]) is not int:
+            raise InvalidTokenError("token expiration is invalid")
+        datetime.fromtimestamp(payload["exp"], timezone.utc)
         return payload
     except AuthConfigurationError:
         raise
-    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, KeyError, ValueError, TypeError) as exc:
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, KeyError, ValueError, TypeError, OverflowError, OSError) as exc:
         raise InvalidTokenError("authentication token is invalid") from exc
+
+
+def _pkce_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+def _encode_google_oauth_request(
+    *, state: str, nonce: str, code_verifier: str, secret: str
+) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {
+            "purpose": "google_oauth_request",
+            "state": state,
+            "nonce": nonce,
+            "code_verifier": code_verifier,
+            "iat": now,
+            "exp": now + timedelta(seconds=GOOGLE_OAUTH_REQUEST_TTL_SECONDS),
+        },
+        secret,
+        algorithm=JWT_ALGORITHM,
+    )
+
+
+def _decode_google_oauth_request(token: str, *, secret: str) -> dict[str, str]:
+    if not token:
+        raise GoogleOAuthError("OAuth request is missing")
+    try:
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=[JWT_ALGORITHM],
+            options={"require": ["purpose", "state", "nonce", "code_verifier", "exp"]},
+        )
+        if payload["purpose"] != "google_oauth_request":
+            raise GoogleOAuthError("OAuth request purpose is invalid")
+        values = {key: payload[key] for key in ("state", "nonce", "code_verifier")}
+        if not all(isinstance(value, str) and value for value in values.values()):
+            raise GoogleOAuthError("OAuth request claims are invalid")
+        return cast(dict[str, str], values)
+    except GoogleOAuthError:
+        raise
+    except (jwt.InvalidTokenError, KeyError, TypeError, ValueError) as exc:
+        raise GoogleOAuthError("OAuth request is invalid") from exc
+
+
+def _delete_google_oauth_request_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=GOOGLE_OAUTH_REQUEST_COOKIE_NAME,
+        httponly=True,
+        samesite="lax",
+        path="/auth/google/callback",
+    )
+
+
+def _google_oauth_failure_response() -> Response:
+    response = Response(status_code=303, headers={"Location": GOOGLE_OAUTH_FAILURE_PATH})
+    _delete_google_oauth_request_cookie(response)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+class GoogleAuthorizationCodeExchanger:
+    """Exchange a one-time code without returning provider secrets to callers."""
+
+    def exchange_code(
+        self, *, code: str, config: GoogleOAuthConfig, code_verifier: str
+    ) -> str:
+        body = urlencode(
+            {
+                "code": code,
+                "client_id": config.client_id,
+                "client_secret": config.client_secret,
+                "redirect_uri": config.redirect_uri,
+                "grant_type": "authorization_code",
+                "code_verifier": code_verifier,
+            }
+        ).encode("ascii")
+        request = UrlRequest(
+            GOOGLE_TOKEN_ENDPOINT,
+            data=body,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=10) as response:  # nosec B310: fixed Google HTTPS URL
+                payload = json.loads(response.read().decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError, ValueError, OSError) as exc:
+            raise GoogleOAuthError("Google token exchange failed") from exc
+        id_token = payload.get("id_token") if isinstance(payload, dict) else None
+        if not isinstance(id_token, str) or not id_token:
+            raise GoogleOAuthError("Google token response is invalid")
+        return id_token
+
+
+class GoogleJwkIdTokenVerifier:
+    """Verify Google OIDC claims with Google's rotating public JWKs."""
+
+    def __init__(self, jwks_client: Any | None = None) -> None:
+        self._jwks_client = jwks_client if jwks_client is not None else jwt.PyJWKClient(GOOGLE_JWKS_URL)
+
+    def verify(
+        self, *, id_token: str, config: GoogleOAuthConfig, nonce: str
+    ) -> GoogleIdentity:
+        try:
+            signing_key = self._jwks_client.get_signing_key_from_jwt(id_token)
+            claims = jwt.decode(
+                id_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=config.client_id,
+                issuer=("https://accounts.google.com", "accounts.google.com"),
+                options={"require": ["exp", "iss", "aud", "sub", "nonce", "email", "email_verified"]},
+            )
+        except (jwt.PyJWTError, ValueError, TypeError, OSError) as exc:
+            raise GoogleOAuthError("Google ID token is invalid") from exc
+        subject = claims.get("sub")
+        if (
+            not isinstance(subject, str)
+            or not subject
+            or len(subject) > 255
+            or not isinstance(claims.get("email"), str)
+            or not claims["email"]
+            or claims.get("email_verified") is not True
+            or not isinstance(claims.get("nonce"), str)
+            or not hmac.compare_digest(claims["nonce"], nonce)
+        ):
+            raise GoogleOAuthError("Google ID token claims are invalid")
+        return GoogleIdentity(subject=subject)
+
+
+def _revocation_store(
+    request: Request, store: TokenRevocationStore | None
+) -> TokenRevocationStore:
+    resolved = store if store is not None else getattr(request.app.state, "token_revocation_store", None)
+    if resolved is None:
+        raise RevocationStoreUnavailableError("revocation store is not configured")
+    return resolved
+
+
+def _is_revoked(store: TokenRevocationStore, jti: str) -> bool:
+    try:
+        result = store.is_revoked(jti)
+    except Exception:
+        raise RevocationStoreUnavailableError("revocation lookup failed") from None
+    if type(result) is not bool:
+        raise RevocationStoreUnavailableError("invalid revocation lookup result")
+    return result
+
+
+def _authenticated_payload(
+    request: Request, *, secret: str | None, revocation_store: TokenRevocationStore | None
+) -> dict[str, Any]:
+    payload = decode_access_token(request.cookies.get(AUTH_COOKIE_NAME, ""), secret=secret)
+    if _is_revoked(_revocation_store(request, revocation_store), payload["jti"]):
+        raise InvalidTokenError("authentication token is revoked")
+    return payload
 
 
 def set_auth_cookie(
@@ -204,15 +441,17 @@ def delete_csrf_cookie(response: Response) -> None:
     )
 
 
-def get_current_user_id(request: Request, *, secret: str | None = None) -> str:
+def get_current_user_id(
+    request: Request, *, secret: str | None = None,
+    revocation_store: TokenRevocationStore | None = None,
+) -> str:
     """Extract and validate user_id from the request cookie.
 
     The request body or query string is intentionally not consulted. The API
     layer must use this server-derived ID for ownership checks.
     """
 
-    token = request.cookies.get(AUTH_COOKIE_NAME)
-    payload = decode_access_token(token or "", secret=secret)
+    payload = _authenticated_payload(request, secret=secret, revocation_store=revocation_store)
     return payload["user_id"]
 
 
@@ -226,6 +465,8 @@ def current_user_id(request: Request) -> str:
 
     try:
         return get_current_user_id(request)
+    except RevocationStoreUnavailableError:
+        raise HTTPException(status_code=503, detail="인증 폐기 저장소를 사용할 수 없습니다.") from None
     except (AuthConfigurationError, InvalidTokenError):
         raise HTTPException(status_code=401, detail="인증이 필요합니다.") from None
 
@@ -321,7 +562,12 @@ class AuthRoute(APIRoute):
         return handler
 
 
-def _csrf_or_reject(request: Request) -> None:
+def require_csrf(request: Request) -> None:
+    """Reusable Depends(require_csrf) guard for cookie-authenticated mutations.
+
+    This validates the existing double-submit CSRF contract only; pair it with
+    a current-user or admin dependency. It does not grant authentication.
+    """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME, "")
     header_token = request.headers.get("x-csrf-token", "")
     if not cookie_token or not header_token or not hmac.compare_digest(
@@ -331,11 +577,14 @@ def _csrf_or_reject(request: Request) -> None:
 
 
 def get_current_user(
-    request: Request, *, store: AuthStore, secret: str | None = None
+    request: Request, *, store: AuthStore, secret: str | None = None,
+    revocation_store: TokenRevocationStore | None = None,
 ) -> AuthUser:
     """Re-read current role and active status; JWT role alone grants no access."""
     try:
-        user_id = get_current_user_id(request, secret=secret)
+        user_id = get_current_user_id(request, secret=secret, revocation_store=revocation_store)
+    except RevocationStoreUnavailableError:
+        raise HTTPException(status_code=503, detail="인증 폐기 저장소를 사용할 수 없습니다.") from None
     except (AuthConfigurationError, InvalidTokenError):
         raise HTTPException(status_code=401, detail="인증이 필요합니다.") from None
     try:
@@ -348,13 +597,45 @@ def get_current_user(
 
 
 def create_current_user_dependency(
-    *, store: AuthStore, secret: str | None = None
+    *, store: AuthStore, secret: str | None = None,
+    revocation_store: TokenRevocationStore | None = None,
 ) -> Callable:
     """Use Depends(result) in future protected team endpoints."""
     def current_user(request: Request) -> AuthUser:
-        return get_current_user(request, store=store, secret=secret)
+        return get_current_user(request, store=store, secret=secret, revocation_store=revocation_store)
 
     return current_user
+
+
+def require_admin(
+    request: Request, *, store: AuthStore, secret: str | None = None,
+    revocation_store: TokenRevocationStore | None = None,
+) -> AuthUser:
+    """Require an active administrator using the store's current role.
+
+    Missing/invalid authentication is 401, an active non-admin is 403, and
+    store failures remain 503. The JWT role and request fields grant no access.
+    Use create_require_admin_dependency to bind the store and signing secret.
+    """
+    user = get_current_user(request, store=store, secret=secret, revocation_store=revocation_store)
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
+    return user
+
+
+def create_require_admin_dependency(
+    *, store: AuthStore, secret: str | None = None,
+    revocation_store: TokenRevocationStore | None = None,
+) -> Callable:
+    """Bind app-owned dependencies, then use Depends(result) on admin routes.
+
+    For a state-changing route, also add Depends(require_csrf). Bind the same
+    secret as the auth router, including when local demo uses a random secret.
+    """
+    def admin_dependency(request: Request) -> AuthUser:
+        return require_admin(request, store=store, secret=secret, revocation_store=revocation_store)
+
+    return admin_dependency
 
 
 def create_auth_router(
@@ -363,6 +644,11 @@ def create_auth_router(
     secret: str | None = None,
     cookie_secure: bool | None = None,
     rate_limiter: LoginRateLimiter | None = None,
+    revocation_store: TokenRevocationStore | None = None,
+    google_oauth_store: GoogleOAuthStore | None = None,
+    google_config: GoogleOAuthConfig | None = None,
+    google_token_exchanger: GoogleTokenExchanger | None = None,
+    google_id_token_verifier: GoogleIdTokenVerifier | None = None,
 ) -> APIRouter:
     """Explicit repository only: no account seed, in-memory or DB fallback.
 
@@ -379,7 +665,21 @@ def create_auth_router(
         cookie_secure = not local_dev
     router = APIRouter(route_class=AuthRoute)
     limiter = rate_limiter if rate_limiter is not None else LoginRateLimiter()
-    current_user = create_current_user_dependency(store=store, secret=secret)
+    current_user = create_current_user_dependency(store=store, secret=secret, revocation_store=revocation_store)
+    resolved_secret = _get_secret(secret)
+    resolved_google_store = google_oauth_store
+    if resolved_google_store is None and callable(getattr(store, "get_or_create_google_user", None)):
+        resolved_google_store = cast(GoogleOAuthStore, store)
+
+    def configured_google_oauth() -> tuple[GoogleOAuthConfig, GoogleOAuthStore]:
+        config = google_config
+        if config is None:
+            config = GoogleOAuthConfig.from_environ()
+        if resolved_google_store is None:
+            raise AuthConfigurationError("Google OAuth user store is not configured")
+        if google_id_token_verifier is None and not getattr(jwt.algorithms, "has_crypto", False):
+            raise AuthConfigurationError("Google ID token verification dependency is not configured")
+        return config, resolved_google_store
 
     @router.get("/auth/csrf", status_code=204)
     def csrf() -> Response:
@@ -390,7 +690,7 @@ def create_auth_router(
 
     @router.post("/auth/login", response_model=UserResponse)
     def login(request: Request, payload: LoginRequest, response: Response) -> UserResponse:
-        _csrf_or_reject(request)
+        require_csrf(request)
         client_ip = _client_ip(request)
         if limiter.is_limited(payload.login_id, client_ip):
             raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
@@ -406,6 +706,11 @@ def create_auth_router(
             raise HTTPException(status_code=401, detail="로그인 정보가 올바르지 않습니다.")
         try:
             token = create_access_token(user.user_id, user.role, secret=secret)
+            token_claims = decode_access_token(token, secret=secret)
+            if _is_revoked(_revocation_store(request, revocation_store), token_claims["jti"]):
+                raise RevocationStoreUnavailableError("new token identifier is already revoked")
+        except RevocationStoreUnavailableError:
+            raise HTTPException(status_code=503, detail="인증 폐기 저장소를 사용할 수 없습니다.") from None
         except AuthConfigurationError:
             raise HTTPException(status_code=500, detail="인증 설정을 사용할 수 없습니다.") from None
         limiter.reset_login_id(payload.login_id)
@@ -413,9 +718,96 @@ def create_auth_router(
         response.headers["Cache-Control"] = "no-store"
         return UserResponse(user_id=str(user.user_id), role=user.role)
 
+    @router.get("/auth/google/start", status_code=303)
+    def google_start() -> Response:
+        try:
+            config, _google_store = configured_google_oauth()
+        except AuthConfigurationError:
+            raise HTTPException(status_code=503, detail="Google 로그인 서비스를 사용할 수 없습니다.") from None
+        state = secrets.token_urlsafe(32)
+        nonce = secrets.token_urlsafe(32)
+        code_verifier = secrets.token_urlsafe(64)
+        request_cookie = _encode_google_oauth_request(
+            state=state,
+            nonce=nonce,
+            code_verifier=code_verifier,
+            secret=resolved_secret,
+        )
+        query = urlencode(
+            {
+                "client_id": config.client_id,
+                "redirect_uri": config.redirect_uri,
+                "response_type": "code",
+                "scope": "openid email",
+                "state": state,
+                "nonce": nonce,
+                "code_challenge": _pkce_challenge(code_verifier),
+                "code_challenge_method": "S256",
+            }
+        )
+        response = Response(status_code=303, headers={"Location": f"{GOOGLE_AUTHORIZATION_ENDPOINT}?{query}"})
+        response.set_cookie(
+            key=GOOGLE_OAUTH_REQUEST_COOKIE_NAME,
+            value=request_cookie,
+            max_age=GOOGLE_OAUTH_REQUEST_TTL_SECONDS,
+            httponly=True,
+            samesite="lax",
+            secure=cookie_secure,
+            path="/auth/google/callback",
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @router.get("/auth/google/callback", status_code=303)
+    def google_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None) -> Response:
+        del error  # Provider details are intentionally not surfaced to the browser or logs.
+        try:
+            config, oauth_store = configured_google_oauth()
+            pending = _decode_google_oauth_request(
+                request.cookies.get(GOOGLE_OAUTH_REQUEST_COOKIE_NAME, ""), secret=resolved_secret
+            )
+            if not code or not state or not hmac.compare_digest(state, pending["state"]):
+                raise GoogleOAuthError("OAuth callback state is invalid")
+            exchanger = google_token_exchanger or GoogleAuthorizationCodeExchanger()
+            verifier = google_id_token_verifier or GoogleJwkIdTokenVerifier()
+            identity = verifier.verify(
+                id_token=exchanger.exchange_code(
+                    code=code, config=config, code_verifier=pending["code_verifier"]
+                ),
+                config=config,
+                nonce=pending["nonce"],
+            )
+            user = oauth_store.get_or_create_google_user("google", identity.subject)
+            if user is None or not user.is_active or user.role not in {"user", "admin"}:
+                raise GoogleOAuthError("OAuth user is not active")
+            token = create_access_token(user.user_id, user.role, secret=resolved_secret)
+            if _is_revoked(_revocation_store(request, revocation_store), decode_access_token(token, secret=resolved_secret)["jti"]):
+                raise RevocationStoreUnavailableError("new token identifier is already revoked")
+        except (AuthConfigurationError, GoogleOAuthError, RevocationStoreUnavailableError, InvalidTokenError, Exception):
+            # OAuth failures must not disclose token, provider, storage, or configuration details.
+            return _google_oauth_failure_response()
+        response = Response(status_code=303, headers={"Location": "/"})
+        set_auth_cookie(response, token, secure=cookie_secure)
+        _delete_google_oauth_request_cookie(response)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @router.post("/auth/logout", status_code=204)
     def logout(request: Request) -> Response:
-        _csrf_or_reject(request)
+        require_csrf(request)
+        try:
+            payload = _authenticated_payload(request, secret=secret, revocation_store=revocation_store)
+            revocations = _revocation_store(request, revocation_store)
+            try:
+                revocations.revoke(payload["jti"], datetime.fromtimestamp(payload["exp"], timezone.utc))
+            except Exception:
+                raise RevocationStoreUnavailableError("revocation write failed") from None
+            if not _is_revoked(revocations, payload["jti"]):
+                raise RevocationStoreUnavailableError("revocation was not persisted")
+        except RevocationStoreUnavailableError:
+            raise HTTPException(status_code=503, detail="인증 폐기 저장소를 사용할 수 없습니다.") from None
+        except (AuthConfigurationError, InvalidTokenError):
+            raise HTTPException(status_code=401, detail="인증이 필요합니다.") from None
         response = Response(status_code=204)
         delete_auth_cookie(response)
         delete_csrf_cookie(response)
