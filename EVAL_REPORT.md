@@ -129,6 +129,14 @@
 | 없음(BM25만) | 3 (조합 22개 중) | 0.856 | 0.675 | 0.604 | 0 | 없음 | 비교용 | 임베딩 없이 리랭커만으로 공동 2위. 모델 없는 구성이 어디까지 되는지 보는 기준 |
 | voyage-4 (API), 문서 voyage-4 + 질문 voyage-4-nano | - | 0.822, 0.889 | - | - | 351ms(네트워크) | API | 제외 | 규칙 1. 가이드 p.12 4-3은 API를 허용하지만, 우리 SDD 445(임베딩은 로컬)와 데모 모드(p.19, 키 없이 실행) 조건에 맞지 않는다. API만 쓰면 질문마다 키가 필요하고, 섞은 조합은 코퍼스를 갱신해 다시 색인할 때마다 키가 필요하다. 섞은 조합의 0.889는 arctic 1위 조합(0.922)보다 낮아 조건을 바꿀 이유도 없다 |
 
+**418조합 밖의 비교: `multilingual-e5-small`** (박진형, 384차원, 벡터만·한국어 질문·리랭커 없음, 초안 정답 25문항). 평가셋과 정답이 다르므로 위 표와 직접 비교하지 않는다.
+
+| 모델 | 채점 단위 | Recall@5 | MRR | Recall@50 |
+|---|---|---|---|---|
+| `multilingual-e5-small` | 섹션 | 0.80 | 0.596 | 0.84 |
+| `multilingual-e5-small` | 페이지(URL) | 0.84 | 0.702 | |
+| `bge-m3` (같은 조건) | | 0.84 | 0.769 | 0.92 |
+
 | 리랭커 (후보 10) | 통과 조합 수 | 조합 평균 Recall@5 / MRR | CPU 질문당 p50 / p95 | 가중치 | 결과 | 이유 |
 |---|---|---|---|---|---|---|
 | bge-reranker-v2-m3 | 8 | 0.766 / 0.730 (후보 10~50 전체) | 5.3 / 7.0초 | 2.2GB | 후보 | 점수 1위, 1위 조합 포함. CPU에서는 SPEC 3초를 넘어 GPU 전제 |
@@ -136,6 +144,26 @@
 | Qwen3-Reranker-0.6B | 5 | 0.750 / 0.729 (후보 10~50 전체) | 12.2 / 14.2초 | 1.2GB | 후보 | 2위 조합 포함. CPU 12초라 GPU 전제 |
 | mmarco-mMiniLMv2 | 0 | 0.742 / 0.681 | **0.42 / 0.59초** | 0.45GB | 후보 | 점수는 가장 낮지만 CPU에서 SPEC 3초를 지키는 유일한 리랭커 |
 | 없음 | 2 | 0.700 / 0.610 | 0 | 없음 | 비교용 | 리랭커 효과를 재는 기준 |
+
+**동결본 재채점** (2026-11-02, `evals/results/retrieval_v1_round1_frozen/`, 조합별 JSON은 `results.tar.gz`, 표는 `compare.md`, 동결본 sha256 `174996b9…`)
+
+위 표는 동결 전 정답 기준이다. 같은 418조합을 벡터·번역·리랭커 점수 캐시로 동결본에 다시 채점했다. 값이 달라진 문항은 판정으로 정답 위치가 바뀐 1번과 6번이다.
+
+| 임베딩 | 조합 평균 Recall@5 | 최고 Recall@5 (동결 전) | 0.822 이상 조합 (동결 전) | 결과 |
+|---|---|---|---|---|
+| snowflake-arctic-embed-l-v2.0 | 0.775 | 0.900 (0.922) | 1 (5) | 후보 유지 |
+| voyage-4-nano | 0.789 | 0.833 (0.856) | 2 (6) | 후보 유지 |
+| Qwen3-Embedding-0.6B | 0.776 | 0.833 (0.856) | 1 (4) | 후보 유지 |
+| multilingual-e5-large | 0.756 | 0.833 (0.822) | 1 (1) | 후보 유지 |
+| multilingual-e5-large-instruct | 0.752 | 0.833 (0.822) | 1 (1) | 제외 유지 |
+| bge-m3 | 0.758 | 0.800 (0.789) | 0 (0) | 기준선 유지 |
+| KURE-v1 | 0.748 | 0.800 (0.789) | 0 (0) | 제외 유지 |
+| 없음(BM25만) | 0.667 | 0.833 (0.856) | 1 (3) | 비교용 유지 |
+
+- 1위 조합은 그대로 arctic + 하이브리드(한국어 벡터 + 영어 검색어 BM25) + bge 후보 10이다.
+- 통과선은 동결 전에 정한 0.822를 유지한다. 로컬 통과 조합은 20개에서 7개로 줄었고 후보 임베딩 4개는 같다.
+- 규칙 2의 "1위와 1.5문항 안"을 동결본 1위 0.900으로 다시 계산하면 0.800이고, 그러면 KURE-v1이 2조합으로 규칙 3을 통과한다. 결과를 본 뒤 선을 낮추지 않기 위해 후보에 넣지 않았다. KURE-v1의 조합 평균은 임베딩 가운데 가장 낮다.
+- 후보의 공식 비교는 그대로 11/6 v2로 한다.
 
 **2차 계획** (11/6, 동결 v2 50건): 후보 임베딩 4개(arctic, voyage-4-nano, Qwen3, e5-large) × 방식 2(하이브리드 한국어 벡터 + 영어 검색어, 벡터만 영어 문장)와 BM25만(영어 검색어)에 리랭커 5가지(없음, bge, bge int8, Qwen3, mMiniLM, 후보 10)를 붙인 45조합과 기준선(bge-m3, 벡터만·한국어, 리랭커 없음)을 잰다. 최종 선택은 필수 조건(키 없이 실행·오프라인·라이선스) → 정확도(1문항 차이 안은 동점) → CPU 응답 시간(SPEC 검색+리랭킹 p95 3초) → 크기·설치 시간(G2 10분) → 색인 속도 순으로 본다. 50건 안의 v1 30건은 이미 본 문항이므로 새 20건만의 결과를 따로 보고해 순위가 유지되는지 본다. 조합마다 이미지 크기와 새 clone 기준 `docker compose up` 시간을 같이 재서 최종 선택 기준에 넣는다(모델을 넣은 이미지가 10분을 넘길 위험). 같은 50건으로 RAGAS도 잰다: 검색 결과와 평가셋의 기대 답(`expected`)으로 context precision·context recall을 조합마다 재고, 답 생성까지 붙는 조합에는 faithfulness·answer relevancy를 더한다. 채점 LLM은 답 생성 모델과 다른 모델을 쓰고, RAGAS는 Recall@5·MRR과 가이드 5지표를 대신하지 않는 보조 지표로 나란히 적는다(`ragas` 0.4.3 설치 문제는 PRD 319). 기대는 측정 전에 `evals/PREREGISTER.md` #2에 적는다.
 
@@ -228,6 +256,8 @@
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_baseline_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/baseline_v1
 # 검색 1차 비교(3-0) 원시 결과 보기: 조합별 JSON 418개를 같은 폴더에 푼다(푼 파일은 커밋하지 않는다)
 tar -xzf evals/results/retrieval_v1_round1/results.tar.gz -C evals/results/retrieval_v1_round1
+# 동결본 재채점(3-0): 위 캐시로 418조합을 다시 채점한다. 결과 evals/results/retrieval_v1_round1_frozen/
+python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/retrieval_v1_round1_frozen
 # 검색 1차 비교(3-0) 다시 재기: 색인·질문 벡터·번역 준비 뒤 418조합 채점. 결과 evals/results/retrieval_v1_round1/(compare.md, matrix.md)
 HF_HUB_OFFLINE=1 python -m evals.retrieval.experiment_v1 prepare --dataset evals/dataset_v1.jsonl
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/retrieval_v1_round1

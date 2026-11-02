@@ -1,4 +1,5 @@
 """검색 채점 도구(evals/retrieval) 시험. 모델·네트워크 없이 가짜 청크와 가짜 검색 함수로 돈다."""
+import hashlib
 import json
 from types import SimpleNamespace
 
@@ -87,6 +88,39 @@ def test_compare_grid_expands_and_resumes(tmp_path, monkeypatch):
     assert calls == [True, False]
     md = (tmp_path / "o" / "compare.md").read_text(encoding="utf-8")
     assert md.index("| True |") < md.index("| False |")  # Recall 높은 조합이 위
+
+
+def test_compare_records_dataset_sha256_and_remeasures_when_dataset_changes(tmp_path, monkeypatch):
+    data = tmp_path / "d.jsonl"
+    data.write_text(json.dumps({"id": 1, "kind": "relevant", "input": "q", "gold_chunks": [f"{PAGE} > A"]}) + "\n", encoding="utf-8")
+    grid = tmp_path / "g.json"
+    grid.write_text(json.dumps([{"hit": True}]), encoding="utf-8")
+    calls = []
+
+    def factory(hit):
+        calls.append(hit)
+        return lambda q: [chunk("1" * 16, "A")]
+
+    monkeypatch.setattr(compare, "resolve_fn", lambda spec: factory)
+    out = tmp_path / "o"
+    args = ["--dataset", str(data), "--factory", "x:y", "--grid", str(grid), "--out", str(out), "--exclusions", str(tmp_path / "none.json")]
+    compare.main(args)
+    result = out / f"{compare.key_of({'hit': True})}.json"
+    saved = json.loads(result.read_text(encoding="utf-8"))
+    assert saved["meta"]["dataset_sha256"] == hashlib.sha256(data.read_bytes()).hexdigest()
+    compare.main(args)
+    assert calls == [True]  # 같은 평가셋이면 다시 재지 않는다
+
+    data.write_text(data.read_text(encoding="utf-8") + json.dumps({"id": 2, "kind": "relevant", "input": "r", "gold_chunks": [f"{PAGE} > A"]}) + "\n", encoding="utf-8")
+    compare.main(args)
+    assert calls == [True, True]  # 평가셋이 바뀌면 다시 잰다
+    assert json.loads(result.read_text(encoding="utf-8"))["meta"]["dataset_sha256"] == hashlib.sha256(data.read_bytes()).hexdigest()
+
+    saved = json.loads(result.read_text(encoding="utf-8"))
+    del saved["meta"]
+    result.write_text(json.dumps(saved), encoding="utf-8")
+    compare.main(args)
+    assert calls == [True, True, True]  # sha256 기록이 없는 결과도 다시 잰다
 
 
 def test_judge_sheet_turns_draft_locations_into_gold_format():
