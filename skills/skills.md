@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-02 | 김승욱 (Claude Code) | 런타임 Skill 3개: `citation-rules`, `grounding-check`, `glossary` | 이번 PR |
 
 ## 문제 기록 (최신이 위)
 
