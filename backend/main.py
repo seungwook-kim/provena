@@ -9,12 +9,15 @@
 - `PROVENA_ENV=local` 이고 `PROVENA_DEV_MODE=1` 일 때만 시작할 때 users 테이블을 만들고 데모 계정 2개를 시드합니다
   (backend/services/demo_seed.py). 그 밖의 모드에서는 스키마(db/101_auth_users.sql)가 미리 적용돼 있어야 합니다.
 - `web/`의 정적 파일(현재 로그인 화면)을 `/`에서 내줍니다. API 경로가 먼저 잡히도록 마지막에 붙입니다.
+- `SEARCH_WARMUP=1`이면 시작할 때 검색 모델·BM25를 백그라운드로 올립니다(docs/specs/search.md). 실패해도 서버는 뜨고,
+  검색은 첫 요청 때 다시 준비를 시도합니다. compose의 `loader`가 색인을 적재한 뒤 api가 뜹니다.
 """
 from __future__ import annotations
 
 import logging
 import os
 import secrets
+import threading
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -61,6 +64,26 @@ def resolve_auth_secret() -> str | None:
     return secrets.token_urlsafe(48)
 
 
+def start_search_warmup() -> threading.Thread | None:
+    """SEARCH_WARMUP=1일 때만: 검색 준비(장부 대조·모델·BM25, 수십 초)를 백그라운드로. /health와 로그인은 기다리지 않는다."""
+    if os.getenv("SEARCH_WARMUP") != "1":
+        return None
+
+    def run() -> None:
+        try:
+            from backend.rag.retrieve.search import warmup
+            warmup()
+            log.info("검색 준비 완료")
+        except (RuntimeError, ValueError) as exc:   # 색인 미적재·장부 불일치 등 검색 쪽이 이유를 적은 오류
+            log.warning("검색 준비 실패(첫 검색 때 다시 시도): %s", exc)
+        except Exception as exc:  # DB 연결 오류 등. DSN(비밀번호 포함)이 섞일 수 있어 종류만 남긴다
+            log.warning("검색 준비 실패(첫 검색 때 다시 시도): %s", type(exc).__name__)
+
+    t = threading.Thread(target=run, name="search-warmup", daemon=True)
+    t.start()
+    return t
+
+
 def create_app() -> FastAPI:
     database_url = os.getenv("DATABASE_URL")
     store = PostgresAuthStore(database_url) if database_url else None
@@ -69,6 +92,7 @@ def create_app() -> FastAPI:
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         if store is not None and is_local_demo():
             bootstrap_local_auth(store)
+        start_search_warmup()
         yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)

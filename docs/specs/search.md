@@ -55,21 +55,30 @@
 def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 backend/schemas/chunk.py 그대로
 ```
 
+- **`Chunk` 출력 칸 추가 (조장 승인 대기, 열린 항목 8)**: `line_start: int | None`, `line_end: int | None` — 원본 페이지 줄 범위(1부터, 끝 포함). 스냅샷 `chunks.jsonl`에 이미 있는 값을 `chunks` 표에 싣고 그대로 돌려준다. 평가셋의 `경로#L523` 정답은 채점기(`evals/retrieval/gold.py`)가 이 두 칸으로 맞추므로, 없으면 그 문항은 늘 0점이다(v1 Q15).
+
 **파일** (체크포인트 함정 4: 숨은 의존 없이 여기 적힌 것만 쓴다)
 
 | 파일 | 하는 일 |
 |---|---|
-| `backend/rag/retrieve/search.py` | `search()`, 필터, RRF, 방식 분기 |
+| `backend/rag/retrieve/search.py` | `search()`, 필터, RRF, 방식 분기. 비교 입구 `make_search(embedder, mode, reranker, rerank_top)`: `evals/retrieval/compare.py --factory backend.rag.retrieve.search:make_search` 가 조합마다 부른다. 서비스와 같은 검색 코드를 쓰고 저장소만 DB 대신 `data/index/` 스냅샷(numpy)을 읽는다. 이름은 1차 비교(`experiment_v1`)의 짧은 이름도 받고, BM25만은 `embedder="none"`·`bm25_kw` |
 | `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix) |
 | `backend/rag/retrieve/rerank.py` | 리랭커 불러오기, int8(CPU) 선택 |
 | `backend/rag/retrieve/translate.py` | 한국어 질문 → 영어 검색어·영어 문장. LLM은 `backend/services/llm.py`로만 부른다. 번역은 질문 sha256과 모델 이름을 키로 `query_translations` 표에 저장하고, 같은 키가 있으면 LLM을 다시 부르지 않는다 |
-| `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩 |
-| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다 |
-| `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차) |
+| `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩. `translations --from <1차 비교 translations.json>` 은 번역을 `data/index/query_translations.jsonl`(meta.json에 sha256)로 옮긴다 — `load_snapshot` 이 DB 장부에, `make_search` 가 메모리 장부에 넣어 1차 비교와 같은 번역으로 돈다(번역은 부를 때마다 달라 재현의 근거가 된다) |
+| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB는 다시 넣는다) |
+| `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차. `line_start`·`line_end` 추가는 열린 항목 8, 승인 대기) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
-| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 나눠 주는 방법은 "열린 항목" 6 |
-| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)` |
+| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 모델을 정하기 전(11/6)까지는 저장소에 넣지 않는다(`.gitignore`). 나눠 주는 방법은 "열린 항목" 6 |
+| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. `chunks`에 원본 줄 범위 `line_start`·`line_end integer`(열린 항목 8, 승인 대기). 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)` |
 | `tests/test_search.py` | AC 시험 |
+| `backend/rag/retrieve/__init__.py` | `from backend.rag.retrieve import search` 로 계약 함수를 내보낸다(그래프·`services/demo_record.py`가 이렇게 부른다) |
+| `backend/requirements.txt` | 검색 의존성: torch(CPU판, `--extra-index-url .../whl/cpu`), sentence-transformers, transformers, huggingface-hub, numpy. 팀 규칙대로 한 파일에 자기 파트 줄만 더한다(TEAM_GUIDE 213) |
+| `Dockerfile` | 기본 임베딩·리랭커를 고정 판으로 빌드 때 받는다(`SEARCH_*` 빌드 인자, `HF_HOME=/app/.hf`, `HF_HUB_OFFLINE=1`). 코드 복사보다 앞에 두어 코드만 바꾸면 다시 받지 않는다. 폴더 주인 김승욱 리뷰 |
+| `docker-compose.yml` | `loader` 서비스(`load_snapshot`, `./data/index` 연결)를 더하고 api는 `loader`가 성공으로 끝난 뒤 뜬다. 폴더 주인 김승욱 리뷰 |
+| `backend/main.py` | `SEARCH_WARMUP=1`이면 시작할 때 검색 준비를 백그라운드로(`start_search_warmup`). 폴더 주인 김승욱 리뷰 |
+| `.gitignore`, `.dockerignore` | `data/index/`를 저장소·이미지에서 뺀다(이미지는 compose가 연결한 폴더를 읽는다) |
+| `.env.example` | 검색 환경 변수(아래 표) 목록 |
 
 **환경 변수**
 
@@ -82,7 +91,11 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `RERANK_MODEL` | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | 후보: 이 값, `BAAI/bge-reranker-v2-m3`, `bge-int8`(bge를 CPU int8로), `Qwen/Qwen3-Reranker-0.6B`, `none`. 기본값은 CPU에서 SPEC 3초를 지키는 유일한 후보(후보 10개 p95 0.59초)로 두고, 최종은 11/6에 정한다. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
-| `HF_HUB_OFFLINE` | `1` | 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다 |
+| `HF_HUB_OFFLINE` | `1` | 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다(Dockerfile `SEARCH_*` 빌드 인자 = 기본 임베딩·리랭커의 고정 판) |
+| `INDEX_URL`, `INDEX_SHA256` | 비움 | `data/index/`가 없을 때 `loader`가 받을 색인(tar.gz) 주소와 sha256. sha256이 없거나 다르면 받지 않는다. 둘 다 비우면 적재를 건너뛰고 검색은 준비되지 않은 채 뜬다 |
+| `INDEX_REQUIRED` | 비움 | `1`이면 색인이 없을 때 `loader`가 실패로 끝나 api가 뜨지 않는다(배포용) |
+| `SEARCH_WARMUP` | compose `1` | `1`이면 `main.py`가 시작할 때 검색 준비를 백그라운드로 한다. 실패해도 서버는 뜨고 첫 검색 때 다시 시도한다 |
+| `SEARCH_INDEX_DIR` | `data/index` | `make_search`(비교 입구)가 읽는 스냅샷 폴더 |
 | `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
 - 고정값: RRF k=60, 임베딩 `max_seq_length` 512, 정규화한 벡터의 내적. 1차 비교와 같게 둔다.

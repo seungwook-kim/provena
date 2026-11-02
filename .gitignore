@@ -37,6 +37,8 @@ data/corpus.tmp/
 data/parsed/
 data/chunks/
 data/index_exp/
+# 검색 색인(청크·벡터 약 130MB). 저장소에 넣지 않고 INDEX_URL로 받거나 index.py로 만든다(docs/specs/search.md 열린 항목 6)
+data/index/
 # 검색 1차 비교 조합별 결과는 results.tar.gz로 커밋한다. 푼 파일은 커밋하지 않는다
 evals/results/retrieval_v1_round1/[0-9a-f]*.json
 evals/results/retrieval_v1_round1_frozen/[0-9a-f]*.json

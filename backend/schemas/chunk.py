@@ -22,6 +22,10 @@ class Chunk(BaseModel):
     text_sha256: str | None = None  # 본문 sha256. G3 "서로 다른 청크 수"와 중복 제거에 쓴다 (SDD 11-1 3-6)
     # True면 판 날짜를 정확히 모르고 version_date 이전이라는 뜻(얕은 이력, I-001). 화면은 "YYYY-MM-DD 이전"으로 보인다
     version_date_before: bool = False
+    # 원본 페이지 줄 범위(1부터, 끝 포함). 평가셋의 `경로#L523` 정답을 맞추고 출처 링크에 쓴다.
+    # Spec에 없던 추가라 조장 승인 대기(docs/specs/search.md 열린 항목 8). 모르면 None
+    line_start: int | None = None
+    line_end: int | None = None
 
 
 class SearchQuery(BaseModel):
