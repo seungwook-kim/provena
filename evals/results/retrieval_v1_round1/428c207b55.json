@@ -1,0 +1,623 @@
+{
+ "summary": {
+  "k": 5,
+  "n_relevant_scored": 15,
+  "n_irrelevant": 15,
+  "excluded": [],
+  "recall@5": {
+   "value": 0.788888888888889,
+   "ci95": [
+    0.5888888888888889,
+    0.9555555555555556
+   ]
+  },
+  "hit@5": {
+   "value": 0.8666666666666667,
+   "ci95": [
+    0.6666666666666666,
+    1.0
+   ]
+  },
+  "page_hit@5": {
+   "value": 0.9333333333333333,
+   "ci95": [
+    0.8,
+    1.0
+   ]
+  },
+  "rr": {
+   "value": 0.7022222222222222,
+   "ci95": [
+    0.5133333333333333,
+    0.888888888888889
+   ]
+  },
+  "ndcg@5": {
+   "value": 0.6816172666398701,
+   "ci95": [
+    0.4904087688838199,
+    0.850332018238353
+   ]
+  },
+  "irrelevant_rejection": {
+   "value": 0.0,
+   "k": 0,
+   "n": 15,
+   "wilson95": [
+    0.0,
+    0.20388926630434784
+   ]
+  },
+  "irrelevant_rejection_by_type": {
+   "out_of_domain": {
+    "n": 4,
+    "rejected": 0
+   },
+   "unknown_entity": {
+    "n": 4,
+    "rejected": 0
+   },
+   "missing_attribute": {
+    "n": 4,
+    "rejected": 0
+   },
+   "wrong_period": {
+    "n": 3,
+    "rejected": 0
+   }
+  },
+  "latency": {
+   "n": 30,
+   "p50_s": 0.054708,
+   "p95_s": 0.147369
+  }
+ },
+ "rows": [
+  {
+   "id": 1,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.079896,
+   "returned": [
+    "f8caa09cdaaa854b",
+    "9959baf3c8f4f4dd",
+    "0a7a4a4f23fcd02e",
+    "d51cb186d7306ce4",
+    "64f26526fb9d5919"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 0.5,
+   "ndcg@5": 0.38685280723454163,
+   "first_hit_rank": 2,
+   "n_gold": 2,
+   "n_found": 2
+  },
+  {
+   "id": 2,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.080213,
+   "returned": [
+    "3069923da5795b3f",
+    "7cd641d28bcdfeb5",
+    "e3dba53a58fc6b2c",
+    "8ffd2a443138bfd7",
+    "df91699339dd7344"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 2,
+   "n_found": 2
+  },
+  {
+   "id": 3,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.059479,
+   "returned": [
+    "b7e39e2296351289",
+    "56c85d4c6a5d0beb",
+    "68b56195b2b85fb9",
+    "c54a756b719f6b1b",
+    "984967e06e6236f6"
+   ],
+   "scored": true,
+   "recall@5": 0.5,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 0.2,
+   "ndcg@5": 0.23719771276929622,
+   "first_hit_rank": 5,
+   "n_gold": 2,
+   "n_found": 1
+  },
+  {
+   "id": 4,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.05421,
+   "returned": [
+    "92e2f9bdabc17e20",
+    "b2c9ef04eb228eb1",
+    "c8367415ba48ad91",
+    "e5068fd933fbbb2d",
+    "e032faf2a13bbe40"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 0.3333333333333333,
+   "ndcg@5": 0.5,
+   "first_hit_rank": 3,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 5,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.069611,
+   "returned": [
+    "2dfdb686856e0d2e",
+    "be9b291af45f9d5b",
+    "c7816d5decaeecba",
+    "af4762b8d5b9bfea",
+    "73db71630fe0d5d4"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 0.5,
+   "ndcg@5": 0.6309297535714575,
+   "first_hit_rank": 2,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 6,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.115125,
+   "returned": [
+    "377c9fd1edb06d26",
+    "158da290de50b643",
+    "1b921a627c550b8d",
+    "09d4260f0e8bfe5c",
+    "be1df7e9c45d19f2"
+   ],
+   "scored": true,
+   "recall@5": 0.3333333333333333,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 0.46927872602275644,
+   "first_hit_rank": 1,
+   "n_gold": 3,
+   "n_found": 1
+  },
+  {
+   "id": 7,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.087728,
+   "returned": [
+    "e66db1cd1222d574",
+    "b68d26a169ef7696",
+    "71966dbc2fbceaa9",
+    "a54a99c6b9a1a78a",
+    "887070ae2bcc84c4"
+   ],
+   "scored": true,
+   "recall@5": 0.0,
+   "hit@5": 0.0,
+   "page_hit@5": 0.0,
+   "rr": 0.0,
+   "ndcg@5": 0.0,
+   "first_hit_rank": null,
+   "n_gold": 1,
+   "n_found": 0
+  },
+  {
+   "id": 8,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.042771,
+   "returned": [
+    "1e96e77a038841f2",
+    "a9fbd6de2f398bc9",
+    "a28e2bc1ab86d482",
+    "6c451ed3e04ceec7",
+    "1b79f6f86eff0638"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 9,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.054708,
+   "returned": [
+    "c3b5296636ea8c06",
+    "afbf8346bd662039",
+    "4de9926da327a146",
+    "dd0b6e8e62e286b0",
+    "0eed84cdb3a75e16"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 10,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.054814,
+   "returned": [
+    "b8f138d76e58138e",
+    "d96029d78f460b1a",
+    "6a1fe3dabb9a8ac5",
+    "d55463aa9c92f9b1",
+    "091ab000df44fd8c"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 11,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.034464,
+   "returned": [
+    "dd0b6e8e62e286b0",
+    "9f3ed854cccb328e",
+    "02438b169b225e1f",
+    "44c9254f211f9ca1",
+    "96b41efe6b9f3ac6"
+   ],
+   "scored": true,
+   "recall@5": 0.0,
+   "hit@5": 0.0,
+   "page_hit@5": 1.0,
+   "rr": 0.0,
+   "ndcg@5": 0.0,
+   "first_hit_rank": null,
+   "n_gold": 1,
+   "n_found": 0
+  },
+  {
+   "id": 12,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.122887,
+   "returned": [
+    "9096a5b57bfdd026",
+    "abd0ca2438f05946",
+    "06a4dad7b678a0b7",
+    "a2d3e1bc35ff7237",
+    "7c8152f7cf1fa9ae"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 13,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.071844,
+   "returned": [
+    "0cbc62bd8d22eda8",
+    "cf5b883111a1901a",
+    "c0a22fe276575084",
+    "41fcf503d54c9563",
+    "b997e2a3eeadd089"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 14,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.060192,
+   "returned": [
+    "a52b92e341c32575",
+    "64121d860384795d",
+    "7d1d81e9b358a5b2",
+    "861627c35cf1dc02",
+    "c86f9155d9a1ebd4"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 15,
+   "kind": "relevant",
+   "irrelevant_type": null,
+   "latency_s": 0.063832,
+   "returned": [
+    "fa4c75698c139086",
+    "221f16d102d25e79",
+    "1ac4ce5f04750b55",
+    "f08a6af4a136dc5a",
+    "a31339c08fc34b0a"
+   ],
+   "scored": true,
+   "recall@5": 1.0,
+   "hit@5": 1.0,
+   "page_hit@5": 1.0,
+   "rr": 1.0,
+   "ndcg@5": 1.0,
+   "first_hit_rank": 1,
+   "n_gold": 1,
+   "n_found": 1
+  },
+  {
+   "id": 16,
+   "kind": "irrelevant",
+   "irrelevant_type": "out_of_domain",
+   "latency_s": 0.071996,
+   "returned": [
+    "c6c9b7310051dd8e",
+    "e896a04bad54cadc",
+    "38900ccf1ff6fd26",
+    "793883501178c2b7",
+    "5a4f3ffb3114a36e"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 17,
+   "kind": "irrelevant",
+   "irrelevant_type": "out_of_domain",
+   "latency_s": 0.147369,
+   "returned": [
+    "5d87921598b56ee7",
+    "caa1abff5d24069f",
+    "0cfb38919cae767e",
+    "bd589f8fee3b4f91",
+    "8feb14112de1f90b"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 18,
+   "kind": "irrelevant",
+   "irrelevant_type": "out_of_domain",
+   "latency_s": 0.060425,
+   "returned": [
+    "54e8d1cbfa8c51ea",
+    "e3ae7a4e197f687c",
+    "db721e2dc44a850c",
+    "842732500fa97e33",
+    "3ab13c54fe7591f8"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 19,
+   "kind": "irrelevant",
+   "irrelevant_type": "out_of_domain",
+   "latency_s": 0.029043,
+   "returned": [
+    "d5413f843ba6027f",
+    "2fc2daf521bbc582",
+    "357cd8634df3f53c",
+    "478b6cb31a3bf983",
+    "8b2ede59aa698526"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 20,
+   "kind": "irrelevant",
+   "irrelevant_type": "unknown_entity",
+   "latency_s": 0.022068,
+   "returned": [
+    "f732d6046bccffe1",
+    "9dd41c613fc05b7a",
+    "f8ad5739e3666b41",
+    "8e37afa0f44e381b",
+    "29c446504accf42e"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 21,
+   "kind": "irrelevant",
+   "irrelevant_type": "unknown_entity",
+   "latency_s": 0.025733,
+   "returned": [
+    "d0ba4e57fd39f2c0",
+    "34dd48ac69150c2b",
+    "42c1cf68060e262c",
+    "90f5a7034ab38582",
+    "3612bed683a923cb"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 22,
+   "kind": "irrelevant",
+   "irrelevant_type": "unknown_entity",
+   "latency_s": 0.032446,
+   "returned": [
+    "1118bd30efe63fea",
+    "2112c0176a04646a",
+    "51b29cbd2b23b077",
+    "e086e1ad0080f169",
+    "374c0d332ab0abff"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 23,
+   "kind": "irrelevant",
+   "irrelevant_type": "unknown_entity",
+   "latency_s": 0.150528,
+   "returned": [
+    "f6bcade4653beb13",
+    "414a9ec14a809bbb",
+    "d07807464819795c",
+    "303d3fd28bc43cc9",
+    "da3c26ef94a2c97d"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 24,
+   "kind": "irrelevant",
+   "irrelevant_type": "missing_attribute",
+   "latency_s": 0.04516,
+   "returned": [
+    "bd4e490272285823",
+    "e880939feb529a03",
+    "f74b63175cbad7f9",
+    "e95c8b11222a08e4",
+    "146a219842df536b"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 25,
+   "kind": "irrelevant",
+   "irrelevant_type": "missing_attribute",
+   "latency_s": 0.046868,
+   "returned": [
+    "3822f527b7e99b40",
+    "c0a4237e384cd1f0",
+    "e8b3379abe97448d",
+    "ce039d017078ee30",
+    "e1a0f9c68aec5857"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 26,
+   "kind": "irrelevant",
+   "irrelevant_type": "missing_attribute",
+   "latency_s": 0.045199,
+   "returned": [
+    "f74b0fd1606ae25c",
+    "d1433e0a6da1c856",
+    "f8283c73c1f20e2a",
+    "83c4f2173a1c9a57",
+    "26a8176e90fb9b4a"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 27,
+   "kind": "irrelevant",
+   "irrelevant_type": "missing_attribute",
+   "latency_s": 0.039675,
+   "returned": [
+    "390af64fad8a0aa9",
+    "bd4d45473bec6358",
+    "dba64c14d43d2c11",
+    "6bd8ca8ad37e6348",
+    "130d6829502664ea"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 28,
+   "kind": "irrelevant",
+   "irrelevant_type": "wrong_period",
+   "latency_s": 0.046232,
+   "returned": [
+    "7bfaf6b32f37c8e1",
+    "aa6e7da69ced6718",
+    "5a5f1f7a2f012d77",
+    "3ec5f54633561a88",
+    "4284bced2cdd2f4f"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 29,
+   "kind": "irrelevant",
+   "irrelevant_type": "wrong_period",
+   "latency_s": 0.039725,
+   "returned": [
+    "ad0c93ebe6ebfb70",
+    "aa0ba7841b4bda9d",
+    "7bfaf6b32f37c8e1",
+    "4284bced2cdd2f4f",
+    "5a5f1f7a2f012d77"
+   ],
+   "rejected": false
+  },
+  {
+   "id": 30,
+   "kind": "irrelevant",
+   "irrelevant_type": "wrong_period",
+   "latency_s": 0.049053,
+   "returned": [
+    "a9da6ccb6b722192",
+    "29ffe097a7a9db7b",
+    "9106fce4b8654278",
+    "09e763012f9708b3",
+    "f67f2050021ac27a"
+   ],
+   "rejected": false
+  }
+ ],
+ "config": {
+  "embedder": "none",
+  "mode": "bm25_kw",
+  "reranker": "bge",
+  "rerank_top": 15
+ }
+}
