@@ -12,6 +12,7 @@ Recall@5, MRR 측정. 한 줄 재현 명령을 남긴다.
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-02 | 김승욱(팀장) | 2차 측정 계획 변경: `search()` 개발 뒤 그 경로로 재측정, 최종 1~2조합은 OpenRouter 번역으로 재확인, RAGAS는 50건으로 따로 측정 | #36 |
 | 2026-11-02 | 김승욱(팀장) | 임베딩 후보에 voyage-4와 문서 voyage-4 + 질문 voyage-4-nano 추가, 11/6 2차 65조합. 근거는 EVAL_REPORT 3-0 "후보 추가" | #34 |
 | 2026-11-02 | 김승욱(팀장) | 동결본 v1 베이스라인 측정. 조합은 `grid_baseline_v1.json`(`bge-m3`, `dense_ko`, 리랭커 없음), 결과는 `evals/results/baseline_v1/`, Recall@5 0.700, MRR 0.602 | #32 |
 | 2026-11-02 | 김승욱(팀장) | `compare.py`가 결과 JSON에 `dataset_sha256`을 남기고 평가셋이 다르면 다시 재게 함(PR #32 리뷰 반영). 418조합 동결본 재채점 결과 `evals/results/retrieval_v1_round1_frozen/` | #33 |
