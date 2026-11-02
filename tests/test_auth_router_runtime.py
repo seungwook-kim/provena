@@ -6,6 +6,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+from auth_test_support import create_test_auth_router as create_auth_router, revocations_for
 import backend.auth as auth_module
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
@@ -18,7 +19,6 @@ from backend.auth import (
     AuthUser,
     LoginRateLimiter,
     create_access_token,
-    create_auth_router,
     current_user_id,
     hash_password,
 )
@@ -57,6 +57,7 @@ def auth_context(monkeypatch: pytest.MonkeyPatch):
     )
     store = FakeAuthStore(user)
     app = FastAPI()
+    app.state.token_revocation_store = revocations_for(store)
     app.include_router(create_auth_router(store=store, secret=secret, cookie_secure=False))
     return TestClient(app), store, secret, password
 
@@ -275,7 +276,9 @@ def test_expired_tampered_tokens_and_current_user_state(auth_context):
 
     client.cookies.set(AUTH_COOKIE_NAME, valid)
     store.user = replace(store.user, role="admin")
-    assert client.get("/me").json()["role"] == "admin"
+    response = client.get("/me")
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
     store.user = replace(store.user, is_active=False)
     assert client.get("/me").status_code == 401
 
@@ -284,6 +287,7 @@ def test_current_user_id_dependency_uses_signed_cookie_not_request_body(auth_con
     _client, store, secret, _password = auth_context
     monkeypatch.setenv("AUTH_SECRET", secret)
     app = FastAPI()
+    app.state.token_revocation_store = revocations_for(store)
 
     @app.post("/graph-entry")
     def graph_entry(user_id: str = Depends(current_user_id)) -> dict[str, str]:
@@ -305,6 +309,7 @@ def test_current_user_id_dependency_rejects_missing_expired_and_tampered_tokens(
     _client, store, secret, _password = auth_context
     monkeypatch.setenv("AUTH_SECRET", secret)
     app = FastAPI()
+    app.state.token_revocation_store = revocations_for(store)
 
     @app.get("/graph-entry")
     def graph_entry(user_id: str = Depends(current_user_id)) -> dict[str, str]:

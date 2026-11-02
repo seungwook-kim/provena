@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from auth_test_support import create_test_auth_router
 
 from backend.main import WEB_DIR
 from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, verify_password
@@ -159,6 +160,7 @@ def _app(monkeypatch, **env):
         monkeypatch.setenv(key, value)
     from backend.main import create_app
 
+    monkeypatch.setattr("backend.main.create_auth_router", create_test_auth_router)
     return create_app()
 
 
