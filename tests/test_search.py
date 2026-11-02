@@ -159,6 +159,22 @@ def test_ac04_demo_without_record_falls_back_to_dense_ko(monkeypatch, tmp_path):
     assert st.translations == {}                 # 가짜 한국어 응답은 장부에 적지 않는다
 
 
+@pytest.mark.parametrize("mode", ["hybrid_ko_kw", "dense_en", "bm25_kw"])
+def test_english_query_is_not_sent_to_translator(mode):
+    calls = []
+    s = make(ROWS, mode=mode, translator=fake_translator(calls))
+    s.search(SearchQuery(query="vendor approval limit"))
+    tr = last_search_trace()
+    assert calls == [] and tr.translation_source == "as_is" and tr.mode == mode and tr.fallback is None
+
+
+def test_korean_query_still_goes_to_translator():
+    calls = []
+    s = make(ROWS, translator=fake_translator(calls))
+    s.search(SearchQuery(query="외부 SaaS 승인"))
+    assert len(calls) == 1 and last_search_trace().translation_source != "as_is"
+
+
 def test_query_translate_off_is_dense_ko():
     s = make(ROWS, translate=False)
     s.search(SearchQuery(query="외부 SaaS 승인", k=3))

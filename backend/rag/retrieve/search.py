@@ -376,6 +376,10 @@ class Searcher:
         if not self.cfg.translate:
             tr.fallback_reason = "translate_off"
             return None
+        from backend.rag.retrieve.translate import valid_english
+        if valid_english(query):                                 # 그래프의 재작성 질의처럼 이미 영어면 LLM을 부르지 않는다
+            tr.translation_source = "as_is"
+            return query
         res = self.translator(query, kind)
         tr.translation_source = res.source
         if res.text is None:

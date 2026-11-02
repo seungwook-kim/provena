@@ -55,10 +55,11 @@
 | EC-03 | LLM이 검색 결과에 없는 `chunk_id`를 인용 | 인용 검사에서 지운다 |
 | EC-04 | 질문에 기준일이 있음("2024년 기준") | `as_of`로 검색하고, 답에 그 판의 날짜를 표시한다 |
 | EC-05 | 근거 충분 판정을 점수 하나로만 함 | 대상과 기간이 질문과 맞는지 보는 결정적 검사를 따로 둔다(`build.py` 주석의 DART 실패 사례) |
-| EC-06 | LLM 응답 형식이 깨짐 | 1회 다시 요청하고, 그래도 깨지면 error 이벤트를 보낸다 |
+| EC-06 | LLM 응답 형식이 깨짐 | 1회 다시 요청한다. 그래도 깨지면 error 이벤트 없이 처리한다: 질문 종류는 정책 질문, 문서 채점은 근거 부족으로 본다. 답 작성은 인용 검사에서 거절한다. 근거 판정 LLM은 결론 없음으로 보고 코드 규칙 결과를 따른다(2026-11-02 변경, `docs/decisions.md`) |
 | EC-07 | 키 없음(`DEMO_MODE=1`) | 기록해 둔 응답을 재생한다. 오류 없이 done 이벤트까지 간다(G2) |
 | EC-08 | 검색 결과 본문 안의 지시문(간접 인젝션) | 본문은 데이터로만 다루고 지시로 따르지 않는다. 시험은 `evals/safety/` |
 | EC-09 | 비용 상한 도달 | 멈추고 error 이벤트를 보낸다 |
+| EC-10 | 질문 종류가 결정표나 합동 검토인데 해당 경로가 아직 없음 | 분류 결과는 남기고 정책 질문 경로로 처리한다(2026-11-02, `docs/decisions.md`) |
 
 ## How
 
@@ -106,3 +107,24 @@
 - GIVEN: 같은 평가셋
 - WHEN: 단일 경로와 멀티 경로를 각각 실행
 - THEN: 두 결과 파일이 남고, `EVAL_REPORT.md` 4장에 문항별 차이가 적힘
+
+## 구현 상태 (2026-11-02)
+
+단일 에이전트 그래프 v1을 구현했습니다. Supervisor와 서브에이전트, 사람 승인, Postgres 체크포인터는 D5 범위라 넣지 않았습니다.
+
+| 노드 | 하는 일 | 파일 |
+|---|---|---|
+| `load_memory` | 사용자 프로필 읽기 | `backend/graph/build.py`, `backend/memory/profile.py` |
+| `classify` | 질의 라우팅 | `backend/graph/build.py` |
+| `rewrite` | 질의 재작성(영어 검색어) | `backend/graph/build.py` |
+| `search` | `search()` 호출 | `backend/graph/build.py` |
+| `judge`, `give_up` | 문서 채점, 재검색 2회 뒤 되묻기나 거절 | `backend/graph/build.py` |
+| `write_answer` | 답 작성, 기준일과 판 날짜, 라이선스 표시 | `backend/graph/build.py`, `backend/graph/citations.py` |
+| `verify` | 인용 검사(코드) | `backend/graph/citations.py` |
+| `ground` | 근거 판정 | `backend/graph/grounding.py` |
+| `save` | 답과 인용 저장(지금은 메모리 구현, DB 표는 B-05) | `backend/graph/answer_store.py` |
+
+- 프롬프트는 `backend/prompts/question.py`, 런타임 Skill은 `skills/`의 `citation-rules`, `grounding-check`, `glossary`입니다.
+- 비관련 질문(EC-02)은 답 단계에서 거릅니다.
+- 평가 실행기는 `python -m evals.agent.run_eval`입니다.
+- 단일 기준 점수는 평가셋 v2 50건을 동결하고 검색 조합을 확정한 뒤 잽니다(2026-11-02, `docs/decisions.md`).
