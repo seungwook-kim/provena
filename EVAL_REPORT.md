@@ -72,7 +72,7 @@
 
 ### 3-0. 검색 1차 비교 (평가셋 v1 관련 15건, 2026-10-31)
 
-사전 등록 #1의 418조합(임베딩 9 × 방식 4 + BM25만 2, 리랭커 11)을 PR #23 청크(23,095개)와 동결 전 `evals/dataset_v1.jsonl`로 쟀다. 지표는 k=5, 섹션 위치 단위 Recall@5와 MRR이다. 원시 결과는 `evals/results/retrieval_v1_round1/`이고 전체 표는 그 폴더의 `compare.md`, 실행기는 `evals/retrieval/experiment_v1.py`다. 영어 질의(문장·검색어)는 Claude Haiku로 한 번 만들어 `translations.json`에 고정했다. 전체 표는 `matrix.md`(임베딩 × 방식 × 리랭커, 로컬 조합 순위)다.
+사전 등록 #1의 418조합(임베딩 9 × 방식 4 + BM25만 2, 리랭커 11)을 PR #23 청크(23,095개)와 동결 전 `evals/dataset_v1.jsonl`로 쟀다. 지표는 k=5, 섹션 위치 단위 Recall@5와 MRR이다. 원시 결과는 `evals/results/retrieval_v1_round1/results.tar.gz`(조합별 JSON 418개)이고 전체 표는 그 폴더의 `compare.md`, 실행기는 `evals/retrieval/experiment_v1.py`다. 영어 질의(문장·검색어)는 Claude Haiku로 한 번 만들어 `translations.json`에 고정했다. 전체 표는 `matrix.md`(임베딩 × 방식 × 리랭커, 로컬 조합 순위)다.
 
 > **이 비교는 후보를 추리는 1차 탐색이다.** 판정·동결 전 v1 초안 정답으로 쟀으므로 공식 점수로 쓰지 않는다. 공식 베이스라인은 11/3 v1 동결 뒤 기준선 조합으로 다시 재고, 최종 선택과 개선 전후는 11/6 동결 v2(50건)로 2차 측정을 해서 정한다. 판정자 두 사람에게는 이 결과를 보여 주지 않는다(결과를 보고 정답을 고치지 않기 위해).
 
@@ -226,7 +226,9 @@
 ```bash
 # 베이스라인(3장 표 0번). 아래 prepare로 만든 캐시를 쓴다. 결과 evals/results/baseline_v1/
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_baseline_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/baseline_v1
-# 검색 1차 비교(3-0): 색인·질문 벡터·번역 준비 뒤 418조합 채점. 결과 evals/results/retrieval_v1_round1/(compare.md, matrix.md)
+# 검색 1차 비교(3-0) 원시 결과 보기: 조합별 JSON 418개를 같은 폴더에 푼다(푼 파일은 커밋하지 않는다)
+tar -xzf evals/results/retrieval_v1_round1/results.tar.gz -C evals/results/retrieval_v1_round1
+# 검색 1차 비교(3-0) 다시 재기: 색인·질문 벡터·번역 준비 뒤 418조합 채점. 결과 evals/results/retrieval_v1_round1/(compare.md, matrix.md)
 HF_HUB_OFFLINE=1 python -m evals.retrieval.experiment_v1 prepare --dataset evals/dataset_v1.jsonl
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/retrieval_v1_round1
 # 문서 100건 속도(3-0 속도 표). 결과 evals/results/speed100/speed100_1.json(후보 4종·리랭커), speed100_2.json(나머지·voyage-4 API)
