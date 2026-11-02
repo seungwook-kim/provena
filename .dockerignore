@@ -1,0 +1,7 @@
+# 이미지에 넣지 않는 것. 검색 색인은 compose의 loader가 ./data/index를 연결해 읽는다(이미지에 130MB를 굽지 않는다)
+.git
+.venv
+**/__pycache__
+.env
+data/index/
+data/index_exp/

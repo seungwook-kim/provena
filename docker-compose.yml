@@ -21,11 +21,35 @@ services:
       # 로컬 데모 모드: 이 둘이 모두 켜져 있을 때만 users 테이블을 만들고 데모 계정 2개를 시드하며, 쿠키 Secure를 끕니다(http://localhost)
       PROVENA_ENV: ${PROVENA_ENV:-local}
       PROVENA_DEV_MODE: ${PROVENA_DEV_MODE:-1}
+      # 검색 모델·BM25를 시작할 때 백그라운드로 올린다(backend/main.py). 색인이 없으면 경고만 남고 서버는 뜬다
+      SEARCH_WARMUP: ${SEARCH_WARMUP:-1}
     depends_on:
       db:
         condition: service_healthy
+      # 색인 적재가 끝난 뒤 뜬다('켜졌다'와 '준비됐다'는 다르다). 색인이 없으면 loader는 건너뛰고 성공으로 끝난다
+      loader:
+        condition: service_completed_successfully
     # Apple Silicon에서 이미지가 안 뜨면 아래 주석을 해제해 보세요
     # platform: linux/amd64
+
+  loader:
+    # 검색 색인(data/index/)을 DB에 한 번 적재한다(backend/rag/retrieve/load_snapshot.py, docs/specs/search.md).
+    # data/index/가 없으면 INDEX_URL·INDEX_SHA256으로 받고, 둘 다 없으면 건너뛴다(색인 없이도 compose가 뜨게).
+    # 같은 스냅샷이 이미 적재돼 있으면 몇 초 안에 끝난다
+    build: .
+    command: ["python", "-m", "backend.rag.retrieve.load_snapshot"]
+    env_file:
+      - path: .env.example
+        required: true
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/app
+    volumes:
+      - ./data/index:/app/data/index
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     # pgvector 확장이 들어 있는 Postgres. 스냅샷 적재는 db/ 아래에 SQL로 추가하세요.

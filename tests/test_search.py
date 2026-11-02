@@ -504,3 +504,91 @@ def test_make_search_without_seed_calls_translator_once_per_question(tmp_path, m
     assert calls == ["keywords"] and last_search_trace().translation_source == "stored"
 
 
+
+# ---------- 배포: 이미지의 모델 판 · 색인 받기 · 시작 때 검색 준비 (Spec 파일 표, 열린 항목 6) ----------
+
+import hashlib  # noqa: E402
+import re as _re  # noqa: E402
+import tarfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from backend.rag.retrieve import load_snapshot  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_dockerfile_bakes_default_models_at_pinned_revisions():
+    """이미지에 굽는 모델 = 명부의 기본 임베딩·리랭커와 같은 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
+    args = dict(_re.findall(r"^ARG (SEARCH_\w+)=(\S*)$", (ROOT / "Dockerfile").read_text(encoding="utf-8"), _re.M))
+    e, r = embed.EMBEDDERS[embed.DEFAULT_MODEL], rerank.RERANKERS[rerank.DEFAULT_MODEL]
+    assert (args["SEARCH_EMBED_MODEL"], args["SEARCH_EMBED_REVISION"]) == (e.name, e.revision)
+    assert (args["SEARCH_RERANK_MODEL"], args["SEARCH_RERANK_REVISION"]) == (r.hf, r.revision)
+
+
+def _tarball(tmp_path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "meta.json").write_text("{}", encoding="utf-8")
+    (src / "chunks.jsonl").write_text("", encoding="utf-8")
+    tgz = tmp_path / "index.tar.gz"
+    with tarfile.open(tgz, "w:gz") as t:
+        for f in src.iterdir():
+            t.add(f, arcname=f.name)
+    return tgz, hashlib.sha256(tgz.read_bytes()).hexdigest()
+
+
+@pytest.fixture
+def no_index_env(monkeypatch):
+    for k in ("INDEX_URL", "INDEX_SHA256", "INDEX_REQUIRED"):
+        monkeypatch.delenv(k, raising=False)
+    return monkeypatch
+
+
+def test_ensure_index_skips_without_index_or_url(tmp_path, no_index_env):
+    """색인도 주소도 없으면 건너뛴다(팀원 PC·CI의 compose가 지금처럼 뜬다). 배포용 INDEX_REQUIRED=1이면 멈춘다."""
+    assert load_snapshot.ensure_index(tmp_path / "index", log=lambda *_: None) is False
+    no_index_env.setenv("INDEX_REQUIRED", "1")
+    with pytest.raises(SystemExit):
+        load_snapshot.ensure_index(tmp_path / "index", log=lambda *_: None)
+
+
+def test_ensure_index_downloads_only_with_matching_sha256(tmp_path, no_index_env):
+    tgz, digest = _tarball(tmp_path)
+    no_index_env.setenv("INDEX_URL", tgz.as_uri())
+    with pytest.raises(SystemExit, match="INDEX_SHA256"):              # 대조값 없이 받지 않는다
+        load_snapshot.ensure_index(tmp_path / "a", log=lambda *_: None)
+    no_index_env.setenv("INDEX_SHA256", "0" * 64)
+    with pytest.raises(SystemExit, match="다르다"):                     # 다르면 풀지 않는다
+        load_snapshot.ensure_index(tmp_path / "b", log=lambda *_: None)
+    assert not (tmp_path / "b" / "meta.json").exists()
+    no_index_env.setenv("INDEX_SHA256", digest)
+    assert load_snapshot.ensure_index(tmp_path / "c", log=lambda *_: None) is True
+    assert (tmp_path / "c" / "meta.json").is_file()
+
+
+def test_ensure_index_keeps_existing_index(tmp_path, no_index_env):
+    (tmp_path / "meta.json").write_text("{}", encoding="utf-8")
+    no_index_env.setenv("INDEX_URL", "http://127.0.0.1:9/never-called")
+    assert load_snapshot.ensure_index(tmp_path, log=lambda *_: None) is True
+
+
+def test_search_warmup_is_off_by_default_and_failure_does_not_stop_server(monkeypatch):
+    pytest.importorskip("fastapi")
+    from backend import main
+    monkeypatch.delenv("SEARCH_WARMUP", raising=False)
+    assert main.start_search_warmup() is None
+    monkeypatch.setenv("SEARCH_WARMUP", "1")
+
+    def broken():
+        raise RuntimeError("색인이 준비되지 않았다")
+    monkeypatch.setattr(search_mod, "warmup", broken)
+    t = main.start_search_warmup()
+    t.join(5)
+    assert not t.is_alive()                     # 예외가 스레드 밖으로 나가 서버를 멈추지 않는다
+
+
+def test_env_example_lists_search_variables():
+    text = (ROOT / ".env.example").read_text(encoding="utf-8")
+    for k in ("EMBED_MODEL", "SEARCH_MODE", "RERANK_MODEL", "RERANK_TOP", "QUERY_TRANSLATE", "INDEX_URL", "INDEX_SHA256",
+              "INDEX_REQUIRED"):
+        assert _re.search(rf"^{k}=", text, _re.M), k
