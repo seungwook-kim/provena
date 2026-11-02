@@ -184,6 +184,23 @@ def test_model_revision_must_match_cache_folder(monkeypatch, tmp_path):
         embed.snapshot_dir("BAAI/bge-m3", "a" * 40, True)
 
 
+def test_duplicate_weight_files_are_skipped_only_where_safetensors_exists():
+    """중복 가중치만 받지 않는다. bge-m3는 pytorch_model.bin이 유일한 가중치라 받아야 한다. Dockerfile도 같은 목록이다."""
+    assert "pytorch_model.bin" in embed.ignore_patterns("intfloat/multilingual-e5-large")
+    assert "pytorch_model.bin" in embed.ignore_patterns("cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
+    assert "pytorch_model.bin" not in embed.ignore_patterns("BAAI/bge-m3")
+    docker = (Path(__file__).resolve().parents[1] / "Dockerfile").read_text(encoding="utf-8")
+    assert "'pytorch_model.bin'" in docker and all(f"'{n}'" in docker for n in embed.DUPLICATE_BIN)
+
+
+def test_every_search_table_turns_on_row_level_security():
+    """Supabase Data API로 표가 열리지 않게, 201_search.sql의 모든 표에 RLS를 켠다."""
+    import re
+    sql = (Path(__file__).resolve().parents[1] / "db" / "201_search.sql").read_text(encoding="utf-8")
+    tables = re.findall(r"CREATE TABLE IF NOT EXISTS (\w+)", sql)
+    assert tables and set(tables) == set(re.findall(r"ALTER TABLE (\w+) ENABLE ROW LEVEL SECURITY;", sql))
+
+
 # ---------- 순위 결합·리랭킹 ----------
 
 def test_rrf_uses_ranks_not_scores_and_ties_keep_first_seen():

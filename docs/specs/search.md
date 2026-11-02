@@ -55,7 +55,7 @@
 def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 backend/schemas/chunk.py 그대로
 ```
 
-- **`Chunk` 출력 칸 추가 (조장 승인 대기, 열린 항목 8)**: `line_start: int | None`, `line_end: int | None` — 원본 페이지 줄 범위(1부터, 끝 포함). 스냅샷 `chunks.jsonl`에 이미 있는 값을 `chunks` 표에 싣고 그대로 돌려준다. 평가셋의 `경로#L523` 정답은 채점기(`evals/retrieval/gold.py`)가 이 두 칸으로 맞추므로, 없으면 그 문항은 늘 0점이다(v1 Q15).
+- **`Chunk` 출력 칸 추가 (3명 승인, PR #37, 열린 항목 8)**: `line_start: int | None`, `line_end: int | None` — 원본 페이지 줄 범위(1부터, 끝 포함). 스냅샷 `chunks.jsonl`에 이미 있는 값을 `chunks` 표에 싣고 그대로 돌려준다. 평가셋의 `경로#L523` 정답은 채점기(`evals/retrieval/gold.py`)가 이 두 칸으로 맞추므로, 없으면 그 문항은 늘 0점이다(v1 Q15).
 
 **파일** (체크포인트 함정 4: 숨은 의존 없이 여기 적힌 것만 쓴다)
 
@@ -70,7 +70,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차. `line_start`·`line_end` 추가는 열린 항목 8, 승인 대기) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
 | `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 모델을 정하기 전(11/6)까지는 저장소에 넣지 않는다(`.gitignore`). 나눠 주는 방법은 "열린 항목" 6 |
-| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. `chunks`에 원본 줄 범위 `line_start`·`line_end integer`(열린 항목 8, 승인 대기). 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)` |
+| `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. `chunks`에 원본 줄 범위 `line_start`·`line_end integer`(열린 항목 8, 승인 대기). 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)`. 표마다 RLS를 켠다(Supabase Data API 차단, 앱은 표 소유자로 접속) |
 | `tests/test_search.py` | AC 시험 |
 | `backend/rag/retrieve/__init__.py` | `from backend.rag.retrieve import search` 로 계약 함수를 내보낸다(그래프·`services/demo_record.py`가 이렇게 부른다) |
 | `backend/requirements.txt` | 검색 의존성: torch(CPU판, `--extra-index-url .../whl/cpu`), sentence-transformers, transformers, huggingface-hub, numpy. 팀 규칙대로 한 파일에 자기 파트 줄만 더한다(TEAM_GUIDE 213) |
@@ -113,7 +113,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
 | 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | 모델을 정하기 전(11/6 전): `data/index/`는 `.gitignore`, 로컬 `data/index/`로 개발하고 받을 주소는 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 둔다(11/2 조장 답). 모델을 정한 뒤: 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다(이때 `.gitignore` 줄을 뺀다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고 없을 때만 `INDEX_URL`을 본다 | 11/6 뒤 커밋 |
 | 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/4 인계 범위에는 넣지 않는다. 인계 뒤 김승욱이 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY` 지원을 작은 PR로 더해 후보 6개를 같은 경로로 잰다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 인계 뒤 |
-| 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — 박진형 제안, 김승욱 승인(11/2), **강경희 승인 대기**(SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |
+| 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — 박진형 제안, 김승욱·강경희 승인(11/2, PR #37, SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |
 
 ## AC (Given-When-Then)
 

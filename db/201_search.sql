@@ -80,3 +80,11 @@ CREATE TABLE IF NOT EXISTS query_translations (
     created_at   timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (query_sha256, model)
 );
+
+-- Supabase는 public 표를 Data API로 내보내고 새 표에 anon 권한을 연다. RLS를 켜고 정책을 두지 않아 anon과 authenticated를 막는다.
+-- 앱과 적재는 표 소유자로 접속하므로 RLS의 영향을 받지 않는다. 다시 실행해도 되고 로컬 DB에서도 같은 문장이 돈다.
+ALTER TABLE docs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE index_meta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE query_translations ENABLE ROW LEVEL SECURITY;

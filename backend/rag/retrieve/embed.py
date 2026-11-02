@@ -58,12 +58,21 @@ def offline() -> bool:
     return os.environ.get("HF_HUB_OFFLINE", "1") == "1"
 
 
+# model.safetensors와 같은 가중치를 pytorch_model.bin으로도 두는 저장소. bge-m3는 bin이 유일한 가중치라 넣지 않는다.
+DUPLICATE_BIN = frozenset({"intfloat/multilingual-e5-large", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"})
+
+
+def ignore_patterns(name: str) -> list[str]:
+    """받지 않을 파일. 받을 때와 캐시를 확인할 때 같은 목록을 써야 오프라인 확인을 통과한다(Dockerfile도 같은 규칙)."""
+    return ["onnx/*", "*.onnx*", "openvino/*"] + (["pytorch_model.bin"] if name in DUPLICATE_BIN else [])
+
+
 def snapshot_dir(name: str, revision: str, local_files_only: bool) -> Path:
     """그 판의 캐시 폴더. 폴더 이름(= 커밋 해시)이 요청과 다르면 멈춘다(같은 이름 다른 판이 섞이지 않게).
     transformers 5는 불러온 판을 모델에 남기지 않아 폴더에서 직접 불러 판을 보장한다(10/30 확인)."""
     from huggingface_hub import snapshot_download
     path = Path(snapshot_download(name, revision=revision, local_files_only=local_files_only,
-                                  ignore_patterns=["onnx/*", "*.onnx*", "openvino/*"]))
+                                  ignore_patterns=ignore_patterns(name)))
     if path.name != revision:
         raise ValueError(f"모델 판이 다르다: {name} 요청 {revision}, 캐시 폴더 {path.name}")
     return path
