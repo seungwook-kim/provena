@@ -622,3 +622,30 @@ def test_env_example_lists_search_variables():
     for k in ("EMBED_MODEL", "SEARCH_MODE", "RERANK_MODEL", "RERANK_TOP", "QUERY_TRANSLATE", "INDEX_URL", "INDEX_SHA256",
               "INDEX_REQUIRED"):
         assert _re.search(rf"^{k}=", text, _re.M), k
+
+
+def test_refresh_swaps_chunk_file_keeps_vectors(tmp_path, monkeypatch, eval_env):
+    """index.py refresh(I-011): 판 날짜만 바뀐 청크 파일로 갈아 끼우고 벡터는 그대로. 본문·줄 순서가 다르면 멈춘다."""
+    out = write_index(tmp_path, ROWS, monkeypatch)
+    before = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+    before["chunks_fingerprint"] = index_mod.fingerprint(index_mod.load_rows(out / "chunks.jsonl"))
+    (out / "meta.json").write_text(json.dumps(before), encoding="utf-8")
+    vec_sha = index_mod.file_sha(out / "vectors" / "arctic-l-v2.npy")
+    old = index_mod.load_rows(out / "chunks.jsonl")
+
+    def write(rows):
+        p = tmp_path / "new.jsonl"
+        p.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        return ["refresh", "--chunks", str(p), "--out", str(out)]
+
+    with pytest.raises(SystemExit, match="본문"):                       # 본문이 다르면 벡터가 틀린다
+        index_mod.main(write([dict(old[0], text="other")] + old[1:]))
+    with pytest.raises(SystemExit, match="순서"):                       # n번째 벡터 = n번째 줄
+        index_mod.main(write(old[::-1]))
+    new = [dict(r, version_date="2026-10-27") if r["chunk_id"] == "a2" else r for r in old]
+    assert index_mod.main(write(new)) == 0
+    meta = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+    assert index_mod.load_rows(out / "chunks.jsonl") == new
+    assert meta["chunks_sha256"] == index_mod.file_sha(out / "chunks.jsonl") != before["chunks_sha256"]  # 적재기가 다시 적재
+    assert meta["chunks_refreshed"]["changed"] == {"version_date": 1}
+    assert index_mod.file_sha(out / "vectors" / "arctic-l-v2.npy") == vec_sha == meta["embedders"][EMB]["sha256"]

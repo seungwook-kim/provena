@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 from backend.rag.ingest.handbook import (AUTHZ_PATH, AUTHZ_PROJECT, PINNED_COMMIT, SHALLOW_SINCE, USER_AGENT,
-                                         CollectError, all_folders, git)
+                                         VERSION_DATE_FORMAT, CollectError, all_folders, commit_day, git, utc_day)
 
 RS, US = "\x1e", "\x1f"   # 커밋 구분자, 칸 구분자 (커밋 제목에 나오지 않는 문자)
 AUTHZ_SINCE, AUTHZ_UNTIL = "2021-01-01", "2023-05-12"   # 2021-10~11 개정(SDD 4-1) ~ 고정 커밋
@@ -30,7 +30,7 @@ RECALL_COMMITS = (   # 답을 바꾸는 규칙 변경 12건, 팀장 작성 참�
 
 
 def parse_log(text: str) -> list[dict]:
-    """git log --format=RS%H US%cs US%s --name-status 출력 → 커밋 목록."""
+    """git log --format=RS%H US<날짜> US%s --name-status 출력 → 커밋 목록. 날짜 칸은 받은 그대로 둔다."""
     commits = []
     for block in filter(None, text.split(RS)):
         head, *lines = block.strip("\n").split("\n")
@@ -46,9 +46,10 @@ def parse_log(text: str) -> list[dict]:
 def handbook_history(repo: Path, since: str) -> list[dict]:
     # --no-renames: 이름 바뀜 탐지는 파일 내용을 비교해야 해서 blob:none 캐시에서 내용을 하나씩 내려받는다
     out = git(repo, "log", "--no-merges", "--no-renames", f"--since={since}",
-              f"--format={RS}%H{US}%cs{US}%s", "--name-status", PINNED_COMMIT, "--", *all_folders())
+              f"--format={RS}%H{US}{VERSION_DATE_FORMAT}{US}%s", "--name-status", PINNED_COMMIT, "--", *all_folders())
     commits = parse_log(out.decode("utf-8"))
     for c in commits:
+        c["date"] = utc_day(c["date"])   # 판 날짜와 같은 기준(UTC, I-011)
         c["files"] = [f for f in c["files"] if f["path"].endswith(".md")]
     return [c for c in commits if c["files"]]
 
@@ -98,7 +99,7 @@ def main() -> None:
     ap.add_argument("--skip-authz", action="store_true")
     args = ap.parse_args()
 
-    pinned = git(args.cache, "show", "-s", "--format=%cs", PINNED_COMMIT).decode().strip()
+    pinned = commit_day(args.cache, PINNED_COMMIT)
     hb = handbook_history(args.cache, HISTORY_SINCE)
     missing = missing_recall(hb)
     if missing:   # 캐시가 예전(1년)에 받은 것이면 이력이 모자란다

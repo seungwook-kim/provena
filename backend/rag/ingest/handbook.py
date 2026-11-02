@@ -16,16 +16,17 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 HANDBOOK_REPO = "https://gitlab.com/gitlab-com/content-sites/handbook.git"
 PINNED_COMMIT = "129243bcffcf6cbc8c2e83f537f1836b99900a61"   # 2026-10-27, PRD 8장
 SHALLOW_SINCE = "2023-12-01"   # 개정 이력(history.py)이 2024-01-01부터라 그보다 앞까지 받는다
-# 판 날짜: 페이지마다 마지막으로 고친 커밋의 커밋 날짜(%cs). 그 전부터 안 바뀐 페이지는 이력을 더 받지 않고
+# 판 날짜: 페이지마다 마지막으로 고친 커밋의 커밋 날짜(UTC). 그 전부터 안 바뀐 페이지는 이력을 더 받지 않고
 # version_date=SHALLOW_SINCE, version_date_before=True(계약 Chunk.version_date_before, 화면 "2023-12-01 이전").
 # I-001, 조장 결정(10/30). 사이트 "Last modified"는 작성일(%as)이라 53쪽이 1~18일 다르다(study 측정).
-VERSION_DATE_FORMAT = "%cs"
+# 날짜는 커밋 시각(%ct, 시간대 없는 초)을 UTC 날짜로 바꾼다. %cs 는 커밋한 사람 시간대의 날짜라 68쪽이 하루 달랐다(I-011).
+VERSION_DATE_FORMAT = "%ct"
 EXPECTED_PAGES = 1564          # 조장 실측, 경로 조장 확인 2026-10-28
 SITE = "https://handbook.gitlab.com/"
 USER_AGENT = "proj3-c-provena-collector (aihuman-7th class project)"
@@ -55,6 +56,15 @@ AUTHZ_TITLE = "Authorization Matrix"
 
 class CollectError(RuntimeError):
     """수집 결과를 믿을 수 없을 때. 조용히 넘어가지 않고 멈춘다."""
+
+
+def utc_day(epoch: str) -> str:
+    """git %ct(1970-01-01부터 초) → UTC 날짜 YYYY-MM-DD."""
+    return datetime.fromtimestamp(int(epoch), timezone.utc).date().isoformat()
+
+
+def commit_day(repo: Path, commit: str) -> str:
+    return utc_day(git(repo, "show", "-s", f"--format={VERSION_DATE_FORMAT}", commit).decode().strip())
 
 
 def git(repo: Path, *args: str, stdin: bytes | None = None) -> bytes:
@@ -134,8 +144,8 @@ def last_changes(repo: Path, commit: str, paths: list[str]) -> dict[str, tuple[s
     wanted, found, cur, edges = set(paths), {}, None, shallow_edges(repo)
     for line in out.splitlines():
         if line.startswith("@"):
-            sha, day = line[1:].split()
-            cur = None if sha in edges else (sha, day, False)
+            sha, epoch = line[1:].split()
+            cur = None if sha in edges else (sha, utc_day(epoch), False)
         elif cur and line in wanted and line not in found:
             found[line] = cur
     return {p: found.get(p, (commit, SHALLOW_SINCE, True)) for p in paths}
@@ -241,9 +251,10 @@ def write_verified(target: Path, data: bytes) -> None:
         raise CollectError(f"저장 후 다시 읽은 지문이 다름: {target}")
 
 
-def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
+def collect(out: Path, cache: Path, with_authz: bool = True, fetched_at: str | None = None) -> dict:
+    """fetched_at: 원문은 그대로 두고 판 칸만 다시 적을 때 처음 받은 날을 넘긴다(비우면 오늘)."""
     ensure_checkout(cache)
-    commit_date = git(cache, "show", "-s", "--format=%cs", PINNED_COMMIT).decode().strip()
+    commit_date = commit_day(cache, PINNED_COMMIT)
     listed = list_pages(cache, PINNED_COMMIT)
     blobs = read_blobs(cache, [b for _, b in listed])
     pages = {path: blobs[blob] for path, blob in listed}
@@ -253,7 +264,7 @@ def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
     by_org = check_pages(pages, EXPECTED_PAGES)
 
     versions = last_changes(cache, PINNED_COMMIT, list(pages))
-    fetched_at = date.today().isoformat()
+    fetched_at = fetched_at or date.today().isoformat()
     rows = []
     for path, data in pages.items():
         write_verified(out / "handbook" / path.removeprefix("content/handbook/"), data)
@@ -286,7 +297,7 @@ def collect(out: Path, cache: Path, with_authz: bool = True) -> dict:
     manifest = {
         "repo": HANDBOOK_REPO, "commit": PINNED_COMMIT, "commit_date": commit_date,
         "folders": all_folders(), "pages": len(rows), "pages_by_org": by_org,
-        "version_rule": f"페이지별 마지막 수정 커밋(sha 앞 12자리), 날짜 git {VERSION_DATE_FORMAT}, "
+        "version_rule": f"페이지별 마지막 수정 커밋(sha 앞 12자리), 날짜 git {VERSION_DATE_FORMAT}의 UTC 날짜, "
                         f"{SHALLOW_SINCE} 뒤로 안 바뀐 페이지는 version_date {SHALLOW_SINCE}·version_date_before·고정 커밋 판",
         "versions": len({r["version_id"] for r in rows}),
         "pages_before_since": sum(1 for r in rows if r["version_date_before"]),
@@ -308,8 +319,11 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("data/corpus"))
     ap.add_argument("--cache", type=Path, default=Path.home() / ".cache/provena/handbook")
     ap.add_argument("--skip-authz", action="store_true", help="권한표 API 요청을 하지 않는다")
+    ap.add_argument("--fetched-at", help="받은 날(YYYY-MM-DD). 같은 고정 커밋을 다시 읽어 판 칸만 고칠 때 처음 받은 날을 둔다")
     args = ap.parse_args()
-    m = collect(args.out, args.cache, with_authz=not args.skip_authz)
+    if args.fetched_at:
+        date.fromisoformat(args.fetched_at)   # 형식이 틀리면 여기서 멈춘다
+    m = collect(args.out, args.cache, with_authz=not args.skip_authz, fetched_at=args.fetched_at)
     print(f"{m['pages']}쪽, {m['bytes'] / 1e6:.1f}MB, corpus_id {m['corpus_id'][:16]}, 권한표 {'O' if m['authz'] else '건너뜀'}")
 
 

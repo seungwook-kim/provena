@@ -152,6 +152,20 @@ def test_last_changes_per_page_commit_date(tmp_path):
     assert got["content/handbook/security/c.md"] == (second, "2024-02-01", False)
 
 
+def test_version_date_is_utc_not_committer_timezone(tmp_path):
+    """I-011: 한국 시간 10/28 03:00 커밋은 UTC로 10/27 18:00. %cs 는 10/28 을 돌려줬다."""
+    run, _, _ = _repo_with_history(tmp_path)
+    (tmp_path / "content/handbook/security/a.md").write_text("a2")
+    env_date = "2026-10-28T03:00:00+09:00"
+    subprocess.run(["git", "-C", str(tmp_path), "commit", "-qam", "4"], check=True, capture_output=True,
+                   env=dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                            GIT_COMMITTER_EMAIL="t@t", GIT_AUTHOR_DATE=env_date, GIT_COMMITTER_DATE=env_date))
+    head = run("rev-parse", "HEAD")
+    assert hb.last_changes(tmp_path, head, PAGES)["content/handbook/security/a.md"] == (head, "2026-10-27", False)
+    assert hb.commit_day(tmp_path, head) == "2026-10-27"
+    assert run("show", "-s", "--format=%cs", head) == "2026-10-28"   # 옛 방식은 하루 늦었다
+
+
 def test_last_changes_skips_shallow_edge(tmp_path):
     """이력을 잘라 받은 캐시: 경계 커밋은 모든 파일을 추가한 것처럼 보이지만 마지막 수정으로 치지 않는다."""
     full = tmp_path / "full"

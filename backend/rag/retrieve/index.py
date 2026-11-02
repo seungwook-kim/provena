@@ -10,6 +10,9 @@
 - build: 같은 본문은 한 번만 계산하고, 1,000개마다 중간 저장(parts/)해 끊겨도 이어 간다. 저장 키에 모델·판·앞말을 넣는다(I-010).
 - import: 1차 비교 캐시(data/index_exp/<이름>.npy + chunk_ids.json)를 받아 쓴다. 순서·개수·길이·차원을 대조한다.
 - check: 청크 n개(시드 고정)를 이 장비에서 다시 임베딩해, 평가셋 질문마다 그 n개의 순위가 받은 벡터와 같은지 본다.
+- refresh: 청크 id·판·본문은 그대로이고 다른 칸(판 날짜 등)만 바뀐 청크 파일로 갈아 끼운다. 벡터는 본문과 모델로만 정해지므로
+  다시 계산하지 않는다(I-011 판 날짜 UTC). 지문이나 줄 순서가 다르면 멈춘다 → build. load_snapshot은 청크 sha256이 바뀌어 다시 적재한다.
+    python -m backend.rag.retrieve.index refresh
 - translations: 1차 비교 번역(translations.json)을 번역 장부 파일(query_translations.jsonl)로 옮기고 meta.json에 sha256을 적는다.
     python -m backend.rag.retrieve.index translations --from evals/results/retrieval_v1_round1/translations.json
 """
@@ -211,10 +214,47 @@ def cmd_translations(a) -> int:
     return 0
 
 
+def cmd_refresh(a) -> int:
+    """청크 파일만 갈아 끼운다(벡터 그대로). 벡터 n번째 = 청크 파일 n번째 줄이므로 지문과 줄 순서가 모두 같아야 한다."""
+    meta = read_meta(a.out)
+    if not meta:
+        raise SystemExit(f"{a.out}/meta.json이 없다 — build 또는 import를 먼저 돌린다")
+    for name, ent in meta.get("embedders", {}).items():   # 이미 어긋난 색인 위에 덮지 않는다
+        if file_sha(a.out / ent["file"]) != ent["sha256"]:
+            raise SystemExit(f"벡터 파일이 meta와 다르다({name}) — 색인을 다시 받거나 만든다")
+    dst = a.out / meta["chunks_file"]
+    old, new = load_rows(dst), load_rows(a.chunks)
+    if fingerprint(new) != meta["chunks_fingerprint"]:
+        raise SystemExit("청크 id·판·본문이 색인과 다르다 — 벡터를 다시 계산해야 하므로 build로 새로 만든다")
+    if [(r["chunk_id"], r["version_id"]) for r in old] != [(r["chunk_id"], r["version_id"]) for r in new]:
+        raise SystemExit("청크 줄 순서가 색인과 다르다 — n번째 벡터가 n번째 청크가 아니게 된다")
+    before = meta["chunks_sha256"]
+    if file_sha(a.chunks) == before:
+        print("같은 청크 파일 — 바꿀 것 없음")
+        return 0
+    changed: dict[str, int] = {}
+    for o, n in zip(old, new):
+        for k in sorted(set(o) | set(n)):
+            if o.get(k) != n.get(k):
+                changed[k] = changed.get(k, 0) + 1
+    tmp = dst.with_name(dst.name + ".tmp")
+    shutil.copyfile(a.chunks, tmp)
+    tmp.replace(dst)
+    meta["chunks_sha256"] = file_sha(dst)
+    meta["chunks_refreshed"] = {"from_sha256": before, "changed": changed,
+                                "at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+    (a.out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(json.dumps(meta["chunks_refreshed"], ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(prog="python -m backend.rag.retrieve.index")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("refresh", help="판 칸만 바뀐 청크 파일로 갈아 끼움(벡터 그대로)")
+    p.add_argument("--chunks", type=Path, default=CHUNKS)
+    p.add_argument("--out", type=Path, default=OUT)
     p = sub.add_parser("translations", help="1차 비교 번역 → 스냅샷 번역 장부")
     p.add_argument("--from", dest="src", type=Path, required=True)
     p.add_argument("--out", type=Path, default=OUT)
@@ -232,7 +272,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--seed", type=int, default=0)
             p.add_argument("--dataset", type=Path, default=DATASET)
     a = ap.parse_args(argv)
-    return {"build": cmd_build, "import": cmd_import, "check": cmd_check, "translations": cmd_translations}[a.cmd](a)
+    return {"build": cmd_build, "import": cmd_import, "check": cmd_check, "translations": cmd_translations,
+            "refresh": cmd_refresh}[a.cmd](a)
 
 
 if __name__ == "__main__":
