@@ -488,6 +488,19 @@ def test_translations_seed_file_and_tamper_check(tmp_path, monkeypatch, eval_env
         search_mod.seed_translations(out, meta)
 
 
+def test_make_search_stops_when_translation_fails(tmp_path, monkeypatch, eval_env):
+    """비교 입구는 번역이 실패하면 dense_ko로 내려가지 않고 멈춘다. 서비스 search()는 내려간다(Spec EC-02)."""
+    write_index(tmp_path, ROWS, monkeypatch, translations=False)
+    monkeypatch.setattr(translate, "translate", lambda q, kind, store: translate.Result(None, "timeout"))
+    q = SearchQuery(query="외부 SaaS 승인", k=1)
+    for mode in ("hybrid_ko_kw", "dense_en"):
+        with pytest.raises(RuntimeError, match="번역 실패"):
+            search_mod.make_search("arctic-l-v2", mode)(q)
+    with pytest.raises(RuntimeError, match="번역 실패"):
+        search_mod.make_search("none", "bm25_kw")(q)
+    assert search_mod.make_search("arctic-l-v2", "dense_ko")(q)      # 번역을 쓰지 않는 방식은 그대로 돈다
+
+
 def test_make_search_without_seed_calls_translator_once_per_question(tmp_path, monkeypatch, eval_env):
     """장부에 없는 질문은 서비스와 같이 llm.py로 번역해 장부에 적고, 다음 조합은 그 장부를 쓴다."""
     write_index(tmp_path, ROWS, monkeypatch, translations=False)
