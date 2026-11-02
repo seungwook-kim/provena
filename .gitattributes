@@ -2,4 +2,7 @@
 # 지금은 압축 파일(data/corpus.tar.gz) 하나로 커밋하므로 그 파일을 바이너리로 둔다. 풀린 data/corpus/는 커밋하지 않는다
 data/corpus.tar.gz binary
 evals/results/retrieval_v1_round1/results.tar.gz binary
+evals/results/retrieval_v1_round1_frozen/results.tar.gz binary
+# 동결 sha256은 CRLF 파일 기준이다. 어느 운영체제에서 받아도 같은 바이트가 되게 고정한다
+evals/dataset_v1.jsonl text eol=crlf
 data/corpus/** -text
