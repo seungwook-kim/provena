@@ -72,6 +72,14 @@
 - 로컬에서 pytest 9.2.0과 anyio 4.14.1은 pytest 플러그인 경고를 냈다. 현재 검증 환경은 pytest 8.4.2로 경고 없이 실행했다. 공용 의존성·CI의 pytest 상한 또는 pytest 9 호환 anyio 버전은 별도 결정이 필요하다.
 - 로그인 보안 리뷰 후속 수정 검증 결과: `.venv/Scripts/python.exe -m pytest tests/test_auth_router_runtime.py -q` 인증 테스트 17개, `.venv/Scripts/python.exe -m pytest -q` 전체 테스트 51개 통과. `git diff --check` 통과.
 
+## 백엔드 구현 및 연동 현황 (강경희)
+
+- `backend/auth.py`에 FastAPI 일반 로그인, bcrypt 검증, HttpOnly JWT 쿠키, CSRF, ID·IP별 로그인 실패 제한과 현재 사용자·관리자 권한 검증 의존성을 구현했다.
+- JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. J-05(로그아웃 뒤 동일 JWT 재사용)는 PostgreSQL 공유 폐기 저장소와 `main.py` 연결 전까지 열림이다.
+- Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider와 `sub`만 Google 사용자 저장소 계약에 전달하고, 이메일로 기존 계정·관리자 권한을 연결하지 않는다.
+- Mock OAuth·인증·보안 계약 테스트 26건과 DB 환경변수를 제거한 Python 전체 테스트 **215 passed, 1 skipped**를 확인했다.
+- 실제 PostgreSQL OAuth·JWT 폐기 저장소, `main.py` 운영 연결, Cloud Run callback 및 실제 Google 브라우저 로그인은 미완료·미검증이다.
+
 ## AC (Given-When-Then)
 
 - **AC-01 로그인 성공**: GIVEN 활성 사용자와 올바른 비밀번호, WHEN `POST /auth/login`, THEN 200 `{user_id, role}`과 HttpOnly JWT 쿠키를 반환한다.
