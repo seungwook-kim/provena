@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | 섹션 원문 조회 `section.py`(`get_section`·`section_names`, docs/specs/mcp.md How 2): 판 고르기는 search와 같고, 청크마다 머리말 첫 줄과 `overlap_tail()`로 다시 계산한 겹침을 떼고 `text_sha256` 대조 뒤 잇는다(다르면 `SectionIntegrityError`). 스냅샷 23,095청크 지문 전부 통과, 파싱 결과와 15,463섹션 글자까지 같음·438섹션 공백만 다름(EC-14). 시험 `tests/test_retrieve_section.py` 13개(DB 1개 포함) | (이번 PR) |
 | 2026-11-02 | 김승욱 (Claude Code) | 이미 영어인 질의는 번역 LLM을 부르지 않게 함(`search.md` EC-02-1). 평가셋 50건은 모두 한글이 있어 비교 점수에 영향이 없다 | 이번 PR |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | 판 날짜 UTC(I-011) 색인 반영: `index.py refresh`(지문·줄 순서가 같을 때만 청크 파일 교체, 벡터 그대로) + 테스트(본문·순서가 다르면 멈춤, 두 검사를 지우면 실패 확인). 실제 색인: 바뀐 칸 `version_date` 1,005행·`fetched_at` 23,095행(색인이 10/30 받은 날로 만들어져 있었음 → 10/31), 벡터 sha256 그대로. DB 사본에 `load_snapshot` 다시 적재(8.3초, generation 3): as_of 2026-10-27에 보이는 청크 23,076 → 23,095, 현재 판 23,095 그대로, 판 날짜 바뀐 판 68개, 벡터 빈 행 0 | 이 PR |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | 조장 답(11/2) 반영: 청크 열쇠 (chunk_id, version_id) 승인분 Spec 정리, 모델 판을 1차 비교 PC 캐시 커밋으로 확인(8개 모두 명부와 같음), 비교 입구 `make_search`(compare.py `--factory`, 서비스와 같은 Searcher·스냅샷 numpy·모델 하나씩·BM25 한 번), 번역 장부 파일(`index.py translations`), 줄 범위(`line_start`·`line_end`) 적재·반환, Docker(의존성·기본 모델 고정 판·`loader`·`SEARCH_WARMUP`·`INDEX_URL`). 재현(V3): 조장 동결본 재채점(PR #33)과 arctic·BM25만 × 리랭커 none·mMiniLM 9조합 문항별 상위 5가 같음(벡터만 Q1은 본문이 같은 두 청크의 동점), int8은 I-013 | 이 PR |

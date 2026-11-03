@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | FastMCP 4.1.4 읽기 전용 도구 3개(`search_handbook`·`get_section`·`list_changed_sections`), 공통 응답 모양(status·retryable), 비공개 주소 `[비공개 문서]` 표시, Bearer 토큰(`hmac.compare_digest`), `MCP_TOKEN` 있을 때만 `/mcp/`, `NOT_BUILT.md`. 시험 `tests/test_mcp_server.py` 36개 + 변이 확인 | (이번 PR) |
 
 ## 문제 기록 (최신이 위)
 
