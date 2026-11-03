@@ -1,0 +1,860 @@
+{
+ "model": "claude-haiku-5-5",
+ "items": {
+  "3": {
+   "question": "GitLab 정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?",
+   "subqueries": [
+    {
+     "ko": "GitLab 정기(monthly) 릴리스는 언제 나가나요?",
+     "en": "When are GitLab monthly releases published?",
+     "kw": "GitLab monthly release schedule date"
+    },
+    {
+     "ko": "GitLab 패치 릴리스는 한 달에 몇 번 나가나요?",
+     "en": "How many GitLab patch releases are published per month?",
+     "kw": "GitLab patch release frequency per month"
+    }
+   ],
+   "latency_s": 4.22,
+   "cost_usd": 0.0004056,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 458
+  },
+  "1": {
+   "question": "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?",
+   "subqueries": [
+    {
+     "ko": "온콜 호출(page)을 받았을 때 확인(acknowledge)해야 하는 기한",
+     "en": "What is the deadline for acknowledging an on-call page?",
+     "kw": "on-call page acknowledge deadline response time"
+    },
+    {
+     "ko": "슬랙에서 온콜 담당자를 @멘션했을 때의 응답 기한",
+     "en": "Is there a separate response deadline when the on-call engineer is mentioned in Slack?",
+     "kw": "Slack on-call mention response deadline"
+    }
+   ],
+   "latency_s": 4.83,
+   "cost_usd": 0.00043079999999999995,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 498
+  },
+  "2": {
+   "question": "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?",
+   "subqueries": [
+    {
+     "ko": "EOC가 호출에 응답하지 않을 때 에스컬레이션 절차",
+     "en": "What is the escalation procedure when the EOC does not respond to a call?",
+     "kw": "EOC escalation no response call procedure"
+    },
+    {
+     "ko": "IMOC가 호출에 응답하지 않을 때 에스컬레이션 절차",
+     "en": "What is the escalation procedure when the IMOC does not respond to a call?",
+     "kw": "IMOC escalation no response call procedure"
+    }
+   ],
+   "latency_s": 3.97,
+   "cost_usd": 0.0003639,
+   "attempts": 2,
+   "input_tokens": 2,
+   "output_tokens": 375
+  },
+  "4": {
+   "question": "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?",
+   "subqueries": [
+    {
+     "ko": "자동 배포 패키지가 프로덕션 카나리에 배포된 후 본 프로덕션으로 승격하기까지 대기 시간",
+     "en": "How long must an auto-deploy package wait on the production canary before it is promoted to full production?",
+     "kw": "auto-deploy canary production promotion wait time bake period"
+    },
+    {
+     "ko": "자동 배포 패키지의 프로덕션 카나리에서 본 프로덕션으로의 승격이 자동으로 이루어지는지 수동으로 이루어지는지",
+     "en": "Is promotion of an auto-deploy package from the production canary to full production automatic or manual?",
+     "kw": "auto-deploy canary production promotion automatic manual approval"
+    }
+   ],
+   "latency_s": 4.73,
+   "cost_usd": 0.000447,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 528
+  },
+  "5": {
+   "question": "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?",
+   "subqueries": [
+    {
+     "ko": "기본 브랜치가 깨지고 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리하나요?",
+     "en": "How is the culprit merge request handled by default when the default branch is broken and a CI Health incident is opened?",
+     "kw": "CI Health incident, default branch broken, culprit MR, revert MR, handling procedure, pipeline failure"
+    },
+    {
+     "ko": "CI Health 인시던트 대응에서 revert MR 승인에는 몇 명이 필요한가요?",
+     "en": "How many approvals are required for a revert merge request during a CI Health incident?",
+     "kw": "CI Health incident, revert MR, approvals required, merge request approval, number of approvers"
+    }
+   ],
+   "latency_s": 4.93,
+   "cost_usd": 0.000535,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 708
+  },
+  "7": {
+   "question": "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?",
+   "subqueries": [
+    {
+     "ko": "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구의 승인이 필요한가?",
+     "en": "Who must approve a proposal to introduce a new separate database or microservice?",
+     "kw": "approval, proposal, new database, microservice, architecture decision, sign-off, approver"
+    }
+   ],
+   "latency_s": 2.97,
+   "cost_usd": 0.0002411,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 129
+  },
+  "6": {
+   "question": "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?",
+   "subqueries": [
+    {
+     "ko": "flaky 테스트 파일이 식별된 후 수정해야 하는 기한은 얼마인가?",
+     "en": "What is the deadline for fixing a flaky test file after it has been identified?",
+     "kw": "flaky test, fix deadline, identified, remediation timeline, SLA, flaky test policy"
+    },
+    {
+     "ko": "flaky 테스트 파일을 기한 안에 고치지 못하면 어떤 조치가 이루어지는가?",
+     "en": "What happens if a flaky test file is not fixed within the deadline?",
+     "kw": "flaky test, not fixed, missed deadline, escalation, consequences, penalty, disable, delete"
+    },
+    {
+     "ko": "격리(quarantine)된 테스트는 최대 얼마 동안 유지할 수 있는가?",
+     "en": "What is the maximum amount of time a quarantined test can remain in quarantine?",
+     "kw": "quarantine, quarantined test, maximum duration, time limit, flaky test, isolate, exclusion period"
+    }
+   ],
+   "latency_s": 5.87,
+   "cost_usd": 0.0005118,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 658
+  },
+  "8": {
+   "question": "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?",
+   "subqueries": [
+    {
+     "ko": "코드 리뷰 요청을 받은 후 며칠 안에 리뷰를 완료해야 하나요?",
+     "en": "How many days do I have to complete a code review after receiving a review request?",
+     "kw": "code review, review request, deadline, turnaround time, days, SLA"
+    }
+   ],
+   "latency_s": 4.11,
+   "cost_usd": 0.0003363,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 325
+  },
+  "9": {
+   "question": "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?",
+   "subqueries": [
+    {
+     "ko": "CVSS 9.0 이상 크리티컬 취약점의 완화(mitigate) 소요 기한은 얼마인가",
+     "en": "What is the required timeframe to mitigate critical vulnerabilities with a CVSS score of 9.0 or higher?",
+     "kw": "critical vulnerability CVSS 9.0 mitigation timeline deadline days"
+    },
+    {
+     "ko": "CVSS 9.0 이상 크리티컬 취약점의 수정(remediate) 소요 기한은 얼마인가",
+     "en": "What is the required timeframe to remediate critical vulnerabilities with a CVSS score of 9.0 or higher?",
+     "kw": "critical vulnerability CVSS 9.0 remediation timeline deadline days patch"
+    }
+   ],
+   "latency_s": 4.44,
+   "cost_usd": 0.0004433,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 529
+  },
+  "11": {
+   "question": "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?",
+   "subqueries": [
+    {
+     "ko": "보안 Critical 등급 건 해결 기한",
+     "en": "What is the deadline for resolving security issues classified as Critical?",
+     "kw": "security critical severity remediation deadline SLA"
+    }
+   ],
+   "latency_s": 3.34,
+   "cost_usd": 0.000308,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 270
+  },
+  "10": {
+   "question": "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?",
+   "subqueries": [
+    {
+     "ko": "Red 데이터 시스템 사용자 접근 권한 리뷰 주기",
+     "en": "How often are user access reviews performed for the Red data system?",
+     "kw": "Red data system user access review frequency"
+    },
+    {
+     "ko": "SOX 대상 애플리케이션 사용자 접근 권한 리뷰 주기",
+     "en": "How often are user access reviews performed for SOX in-scope applications?",
+     "kw": "SOX in-scope applications user access review frequency"
+    }
+   ],
+   "latency_s": 4.19,
+   "cost_usd": 0.0004117,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 467
+  },
+  "12": {
+   "question": "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?",
+   "subqueries": [
+    {
+     "ko": "재무 시스템(NetSuite 등) 접근 요청이 완료(Done)로 인정되기 위한 조건",
+     "en": "What conditions must be met for a financial system access request (such as NetSuite) to be marked as Done?",
+     "kw": "financial system access request NetSuite done criteria completion approval provisioning"
+    }
+   ],
+   "latency_s": 3.69,
+   "cost_usd": 0.0003506,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 346
+  },
+  "13": {
+   "question": "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?",
+   "subqueries": [
+    {
+     "ko": "영업팀 잠재 고객(prospect) 무상 지원 기간 제한 및 연장 한도",
+     "en": "What is the time limit and extension limit for free support provided to prospects by the sales team?",
+     "kw": "sales team prospect free support duration limit extension maximum"
+    },
+    {
+     "ko": "영업팀 잠재 고객(prospect) 무상 지원 동시 제공 가능 고객 수 한도",
+     "en": "How many prospects can the sales team receive free support from at the same time?",
+     "kw": "sales team prospect free support concurrent simultaneous limit maximum customers"
+    }
+   ],
+   "latency_s": 4.76,
+   "cost_usd": 0.0004938,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 628
+  },
+  "14": {
+   "question": "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?",
+   "subqueries": [
+    {
+     "ko": "데이터팀 인시던트 심각도 Sev1과 Sev2 사이 애매할 때 판단 기준",
+     "en": "How is incident severity determined for the data team when it is unclear whether an incident is Sev1 or Sev2?",
+     "kw": "data team incident severity Sev1 Sev2 classification criteria ambiguous escalation"
+    }
+   ],
+   "latency_s": 4.4,
+   "cost_usd": 0.0003108,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 270
+  },
+  "15": {
+   "question": "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?",
+   "subqueries": [
+    {
+     "ko": "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약의 승인 권한자는 누구인가",
+     "en": "Who approves contracts with cloud hosting vendors and committed use discount (CUD) agreements?",
+     "kw": "cloud hosting vendor, committed use discount, CUD, contract approval, approver, sign-off, authorization"
+    }
+   ],
+   "latency_s": 3.96,
+   "cost_usd": 0.0003323,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 315
+  },
+  "16": {
+   "question": "한국에서 야근시키면 법적으로 주 몇 시간까지 일하게 할 수 있어?",
+   "subqueries": [
+    {
+     "ko": "근로기준법 연장근로 주 최대 근로시간 한도",
+     "en": "What is the legal maximum number of working hours per week, including overtime, under Korean labor law?",
+     "kw": "overtime limit weekly working hours 52 hours Korea labor standards act extended work"
+    }
+   ],
+   "latency_s": 4.09,
+   "cost_usd": 0.0003344,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 320
+  },
+  "17": {
+   "question": "프리랜서로 받은 수입 종합소득세 신고는 어떻게 해?",
+   "subqueries": [
+    {
+     "ko": "프리랜서 수입 종합소득세 신고 방법",
+     "en": "How do I file comprehensive income tax for freelance income?",
+     "kw": "freelance income, comprehensive income tax, filing, withholding tax, 3.3%, tax return"
+    }
+   ],
+   "latency_s": 4.37,
+   "cost_usd": 0.00036700000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 388
+  },
+  "18": {
+   "question": "파이썬에서 리스트 중복 제거하는 제일 빠른 방법 뭐야?",
+   "subqueries": [
+    {
+     "ko": "파이썬 리스트 중복 제거 가장 빠른 방법",
+     "en": "What is the fastest way to remove duplicates from a list in Python?",
+     "kw": "python list remove duplicates fastest deduplicate set dict.fromkeys"
+    }
+   ],
+   "latency_s": 3.8,
+   "cost_usd": 0.0003633,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 379
+  },
+  "19": {
+   "question": "React에서 useEffect 의존성 배열에 뭘 넣어야 해?",
+   "subqueries": [
+    {
+     "ko": "React useEffect 의존성 배열에는 무엇을 넣어야 하나요?",
+     "en": "What should be included in the dependency array of React useEffect?",
+     "kw": "React useEffect dependency array dependencies rules hooks"
+    }
+   ],
+   "latency_s": 3.73,
+   "cost_usd": 0.00034480000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 344
+  },
+  "20": {
+   "question": "육아휴직은 최대 몇 개월까지 쓸 수 있어?",
+   "subqueries": [
+    {
+     "ko": "육아휴직 최대 사용 기간은 몇 개월인가요?",
+     "en": "What is the maximum number of months of parental leave that can be taken?",
+     "kw": "parental leave maximum duration months policy"
+    }
+   ],
+   "latency_s": 3.63,
+   "cost_usd": 0.0003126,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 280
+  },
+  "21": {
+   "question": "시니어 개발자 연봉 밴드가 어떻게 돼?",
+   "subqueries": [
+    {
+     "ko": "시니어 개발자 연봉 밴드 범위",
+     "en": "What is the salary band for senior developers?",
+     "kw": "senior developer salary band compensation range grade"
+    }
+   ],
+   "latency_s": 3.74,
+   "cost_usd": 0.00030000000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 256
+  },
+  "22": {
+   "question": "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?",
+   "subqueries": [
+    {
+     "ko": "회사 문서에 회사 로고를 넣을 때의 브랜드 가이드라인은 무엇인가요?",
+     "en": "What are the brand guidelines for using the company logo in company documents?",
+     "kw": "company logo brand guidelines documents usage placement size clear space"
+    }
+   ],
+   "latency_s": 2.86,
+   "cost_usd": 0.0002296,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 110
+  },
+  "23": {
+   "question": "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?",
+   "subqueries": [
+    {
+     "ko": "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항",
+     "en": "What mandatory contractual provisions does the EU DORA regulation require for contracts with ICT third-party service providers?",
+     "kw": "EU DORA ICT third-party contract mandatory provisions Article 30 service provider agreement"
+    }
+   ],
+   "latency_s": 4.11,
+   "cost_usd": 0.0003753,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 401
+  },
+  "24": {
+   "question": "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?",
+   "subqueries": [
+    {
+     "ko": "인시던트 심각도 S0(전사 장애) 등급 선언 기준",
+     "en": "What criteria are used to declare an incident severity S0 (company-wide outage) level?",
+     "kw": "incident severity S0 company-wide outage declaration criteria"
+    }
+   ],
+   "latency_s": 3.45,
+   "cost_usd": 0.0003305,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 313
+  },
+  "25": {
+   "question": "Hard PCL보다 더 강한 Critical PCL은 언제 선언하고 누가 승인해?",
+   "subqueries": [
+    {
+     "ko": "Critical PCL 선언 시점과 조건 (Hard PCL보다 강한 단계)",
+     "en": "When should a Critical PCL be declared, and what conditions trigger it compared with a Hard PCL?",
+     "kw": "Critical PCL declaration criteria trigger conditions when to declare Hard PCL escalation"
+    },
+    {
+     "ko": "Critical PCL 승인자와 승인 권한",
+     "en": "Who approves the declaration of a Critical PCL?",
+     "kw": "Critical PCL approval approver authority sign-off Hard PCL"
+    }
+   ],
+   "latency_s": 5.19,
+   "cost_usd": 0.0004724,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 596
+  },
+  "26": {
+   "question": "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?",
+   "subqueries": [
+    {
+     "ko": "데이터 분류 체계에서 BLACK 등급 데이터의 취급 방법",
+     "en": "How should data classified as BLACK grade be handled under the data classification policy?",
+     "kw": "data classification, BLACK grade, BLACK level data, handling rules, restricted data, data handling policy"
+    }
+   ],
+   "latency_s": 3.98,
+   "cost_usd": 0.00031329999999999997,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 279
+  },
+  "27": {
+   "question": "변경 심의 위원회(CAB)는 얼마나 자주 열려?",
+   "subqueries": [
+    {
+     "ko": "변경 심의 위원회(CAB) 회의 주기 및 개최 빈도",
+     "en": "How often does the Change Advisory Board (CAB) meet?",
+     "kw": "Change Advisory Board CAB meeting frequency schedule cadence"
+    }
+   ],
+   "latency_s": 3.67,
+   "cost_usd": 0.00031570000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 287
+  },
+  "28": {
+   "question": "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?",
+   "subqueries": [
+    {
+     "ko": "2026년 9월 GitLab.com 서비스 가용률",
+     "en": "What was the GitLab.com service availability percentage in September 2026?",
+     "kw": "GitLab.com availability September 2026 uptime percentage"
+    }
+   ],
+   "latency_s": 3.1,
+   "cost_usd": 0.00021979999999999998,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 92
+  },
+  "29": {
+   "question": "2020년 3월 GitLab.com 가용률은 얼마였어?",
+   "subqueries": [
+    {
+     "ko": "GitLab.com 2020년 3월 가용률(availability) 수치는 얼마였나요?",
+     "en": "What was GitLab.com's availability percentage in March 2020?",
+     "kw": "GitLab.com availability March 2020 uptime percentage monthly"
+    }
+   ],
+   "latency_s": 2.84,
+   "cost_usd": 0.0002252,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 106
+  },
+  "30": {
+   "question": "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?",
+   "subqueries": [
+    {
+     "ko": "보안팀(ProdSec) 멘토십 프로그램 2기 신청 기간 및 시작일",
+     "en": "When are applications open for the second cohort of the ProdSec mentorship program, and when does it start?",
+     "kw": "ProdSec mentorship program second cohort application period start date"
+    }
+   ],
+   "latency_s": 3.99,
+   "cost_usd": 0.000349,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 346
+  },
+  "32": {
+   "question": "주말에 S3/S4 알림이 울리면 EOC는 주말에도 바로 대응해야 해?",
+   "subqueries": [
+    {
+     "ko": "주말 S3/S4 알림 발생 시 EOC 즉시 대응 필요 여부",
+     "en": "Does the EOC need to respond immediately to S3 and S4 alerts on weekends?",
+     "kw": "EOC weekend response S3 S4 alert severity on-call escalation"
+    }
+   ],
+   "latency_s": 3.97,
+   "cost_usd": 0.0002986,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 248
+  },
+  "31": {
+   "question": "Severity 1 인시던트가 해결된 뒤 공개 RCA는 얼마 안에 나와야 하고, 인시던트 리뷰는 며칠 안에 닫아야 해?",
+   "subqueries": [
+    {
+     "ko": "Severity 1 인시던트 해결 후 공개 RCA 발행 기한",
+     "en": "How soon after resolution must the public RCA be published for a Severity 1 incident?",
+     "kw": "severity 1 incident public RCA publication deadline after resolution"
+    },
+    {
+     "ko": "Severity 1 인시던트 리뷰 종료 기한 일수",
+     "en": "How many days do we have to close the incident review for a Severity 1 incident?",
+     "kw": "severity 1 incident review closure deadline days"
+    }
+   ],
+   "latency_s": 4.57,
+   "cost_usd": 0.0004678,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 574
+  },
+  "33": {
+   "question": "패치 릴리스 기간에는 post-deploy migration(PDM)을 왜 돌리지 않아?",
+   "subqueries": [
+    {
+     "ko": "패치 릴리스 기간에 post-deploy migration(PDM)을 실행하지 않는 이유는 무엇인가?",
+     "en": "Why is the post-deploy migration (PDM) not run during patch release periods?",
+     "kw": "post-deploy migration PDM patch release period reason"
+    }
+   ],
+   "latency_s": 4.44,
+   "cost_usd": 0.00034520000000000004,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 342
+  },
+  "35": {
+   "question": "DevEx 팀에서 MR에 AI를 얼마나 썼는지는 어떻게 표시해야 해? 척도는 어떻게 돼?",
+   "subqueries": [
+    {
+     "ko": "DevEx 팀 MR에서 AI 사용량을 어떻게 표시해야 하나요?",
+     "en": "How should AI usage be labeled in merge requests for the DevEx team?",
+     "kw": "DevEx team merge request AI usage label disclosure"
+    },
+    {
+     "ko": "DevEx 팀 MR의 AI 사용량 표시 척도는 무엇인가요?",
+     "en": "What is the scale used to indicate the amount of AI usage in DevEx team merge requests?",
+     "kw": "DevEx team merge request AI usage scale levels"
+    }
+   ],
+   "latency_s": 3.36,
+   "cost_usd": 0.0002796,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 204
+  },
+  "34": {
+   "question": "정규 일정 밖의 패치(out-of-band patch)를 내려면 어떤 절차가 필수야?",
+   "subqueries": [
+    {
+     "ko": "정규 일정 밖의 패치(out-of-band patch)를 배포할 때 필수 절차는 무엇인가?",
+     "en": "What mandatory procedures must be followed to release an out-of-band patch outside the regular release schedule?",
+     "kw": "out-of-band patch, emergency patch, hotfix, regular release schedule, mandatory procedure, approval, deployment process"
+    }
+   ],
+   "latency_s": 4.03,
+   "cost_usd": 0.00039630000000000004,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 443
+  },
+  "36": {
+   "question": "외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효하고, 만료되면 어떻게 돼?",
+   "subqueries": [
+    {
+     "ko": "외부 SaaS 벤더 보안 평가(TPRM)의 유효 기간은 얼마인가",
+     "en": "How long is a third-party SaaS vendor security assessment (TPRM) valid?",
+     "kw": "TPRM vendor security assessment validity period SaaS third-party"
+    },
+    {
+     "ko": "외부 SaaS 벤더 보안 평가(TPRM)가 만료되면 어떻게 처리되는가",
+     "en": "What happens when a third-party SaaS vendor security assessment (TPRM) expires?",
+     "kw": "TPRM vendor security assessment expiration renewal SaaS third-party"
+    }
+   ],
+   "latency_s": 4.35,
+   "cost_usd": 0.0004125,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 471
+  },
+  "37": {
+   "question": "사내 비밀번호 표준에서 최소 길이는 몇 자고, 로그인 몇 번 실패하면 계정을 잠가야 해? 특수문자나 주기적 변경도 요구해?",
+   "subqueries": [
+    {
+     "ko": "사내 비밀번호 표준 최소 길이",
+     "en": "What is the minimum password length required by the company password standard?",
+     "kw": "password standard minimum length characters policy"
+    },
+    {
+     "ko": "사내 계정 잠금 로그인 실패 횟수 기준",
+     "en": "How many failed login attempts trigger an account lockout under the company policy?",
+     "kw": "account lockout failed login attempts threshold policy"
+    },
+    {
+     "ko": "사내 비밀번호 특수문자 요구 및 주기적 변경 정책",
+     "en": "Does the company password standard require special characters or periodic password changes?",
+     "kw": "password special characters complexity periodic expiration rotation policy"
+    }
+   ],
+   "latency_s": 4.84,
+   "cost_usd": 0.00044790000000000005,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 533
+  },
+  "38": {
+   "question": "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?",
+   "subqueries": [
+    {
+     "ko": "새 SaaS 도구 도입 요청은 어디서 시작하나요?",
+     "en": "Where does a request to adopt a new SaaS tool start?",
+     "kw": "new SaaS tool adoption request intake process submit"
+    },
+    {
+     "ko": "SaaS 도구 도입 시 보안 검토(TPRM)는 언제 필요한가요?",
+     "en": "When is a TPRM security review required before adopting a new SaaS tool?",
+     "kw": "TPRM third-party risk management security review SaaS when required"
+    }
+   ],
+   "latency_s": 4.83,
+   "cost_usd": 0.0004557,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 555
+  },
+  "39": {
+   "question": "GitLab 계정 2FA 초기화 요청은 어떻게 처리해?",
+   "subqueries": [
+    {
+     "ko": "GitLab 계정 2FA 초기화 요청 처리 방법",
+     "en": "How are GitLab account two-factor authentication (2FA) reset requests handled?",
+     "kw": "GitLab account 2FA reset request two-factor authentication recovery"
+    }
+   ],
+   "latency_s": 3.67,
+   "cost_usd": 0.0003421,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 339
+  },
+  "40": {
+   "question": "같은 벤더와 계약을 한 번 승인받은 뒤 60일 안에 추가 계약이 또 나오면 승인 금액 기준은 어떻게 계산해? 계약을 쪼개서 결재받아도 돼?",
+   "subqueries": [
+    {
+     "ko": "같은 벤더와 60일 이내 추가 계약이 발생할 때 결재 승인 금액 기준은 어떻게 합산해서 계산하나요?",
+     "en": "How is the approval amount threshold calculated when additional contracts with the same vendor are signed within 60 days of a previously approved contract?",
+     "kw": "approval threshold, same vendor, 60 days, additional contract, aggregate amount, contract approval, purchasing policy"
+    },
+    {
+     "ko": "계약을 나누어(분할하여) 각각 결재받는 것이 허용되나요?",
+     "en": "Is it allowed to split a contract into smaller contracts so that each one gets a separate approval?",
+     "kw": "contract splitting, split contracts, separate approval, avoid approval threshold, contract approval policy, prohibited"
+    }
+   ],
+   "latency_s": 4.69,
+   "cost_usd": 0.0004486,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 530
+  },
+  "41": {
+   "question": "한국 개인정보보호법상 유출 사고 나면 몇 시간 안에 신고해야 해?",
+   "subqueries": [
+    {
+     "ko": "개인정보보호법 개인정보 유출 사고 신고 기한 시간 이내 신고 의무",
+     "en": "Under South Korea's Personal Information Protection Act, how many hours do I have to report a personal information breach?",
+     "kw": "PIPA Korea personal information breach leak notification deadline hours report incident"
+    }
+   ],
+   "latency_s": 4.49,
+   "cost_usd": 0.0003819,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 415
+  },
+  "42": {
+   "question": "Pod가 OOMKilled로 계속 죽는데 원인 어떻게 찾아?",
+   "subqueries": [
+    {
+     "ko": "Pod가 OOMKilled 상태로 반복 종료될 때 원인을 찾는 방법",
+     "en": "How do I find the cause when a Pod keeps getting OOMKilled?",
+     "kw": "Pod OOMKilled out of memory troubleshooting root cause memory limit kubectl describe"
+    }
+   ],
+   "latency_s": 4.03,
+   "cost_usd": 0.0003206,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 294
+  },
+  "43": {
+   "question": "스톡옵션 행사 가격이랑 베스팅 일정은 어떻게 정해져?",
+   "subqueries": [
+    {
+     "ko": "스톡옵션 행사 가격은 어떻게 결정되나요?",
+     "en": "How is the exercise price of stock options determined?",
+     "kw": "stock options exercise price strike price grant determination fair market value"
+    },
+    {
+     "ko": "스톡옵션 베스팅 일정은 어떻게 정해지나요?",
+     "en": "How is the vesting schedule for stock options determined?",
+     "kw": "stock options vesting schedule cliff vesting period grant terms"
+    }
+   ],
+   "latency_s": 3.85,
+   "cost_usd": 0.0003311,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 315
+  },
+  "44": {
+   "question": "ActivityPub 설계 문서에서 연합(federation) 방식은 어떻게 설명해?",
+   "subqueries": [
+    {
+     "ko": "ActivityPub 설계 문서에서 연합(federation) 방식은 어떻게 설명되어 있나요?",
+     "en": "How does the ActivityPub design document explain the federation approach?",
+     "kw": "ActivityPub federation design document approach"
+    }
+   ],
+   "latency_s": 3.83,
+   "cost_usd": 0.00032700000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 306
+  },
+  "45": {
+   "question": "직장 내 괴롭힘을 당하면 어디에 어떻게 신고해야 돼?",
+   "subqueries": [
+    {
+     "ko": "직장 내 괴롭힘 신고 방법 및 절차",
+     "en": "How do I report workplace harassment and what is the procedure?",
+     "kw": "workplace harassment report procedure complaint channel HR"
+    },
+    {
+     "ko": "직장 내 괴롭힘 신고 접수 기관 및 담당 부서",
+     "en": "Which department or agency should I report workplace harassment to?",
+     "kw": "workplace harassment reporting agency department HR labor office contact"
+    }
+   ],
+   "latency_s": 3.33,
+   "cost_usd": 0.00026000000000000003,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 172
+  },
+  "46": {
+   "question": "Platinum 지원 플랜의 첫 응답 SLA는 몇 시간이야?",
+   "subqueries": [
+    {
+     "ko": "Platinum 지원 플랜의 첫 응답 SLA는 몇 시간인가요?",
+     "en": "What is the first response SLA time in hours for the Platinum support plan?",
+     "kw": "Platinum support plan first response SLA hours"
+    }
+   ],
+   "latency_s": 3.67,
+   "cost_usd": 0.00022360000000000001,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 100
+  },
+  "47": {
+   "question": "우리 인프라가 ISO 9001 인증 받았어? 갱신 주기가 어떻게 돼?",
+   "subqueries": [
+    {
+     "ko": "인프라 팀 ISO 9001 인증 취득 여부 및 인증 현황",
+     "en": "Has our infrastructure team obtained ISO 9001 certification?",
+     "kw": "infrastructure ISO 9001 certification status"
+    },
+    {
+     "ko": "ISO 9001 인증 갱신 주기 및 재인증 절차",
+     "en": "What is the ISO 9001 certification renewal cycle and recertification process?",
+     "kw": "ISO 9001 certification renewal cycle recertification audit"
+    }
+   ],
+   "latency_s": 4.61,
+   "cost_usd": 0.00033700000000000006,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 324
+  },
+  "48": {
+   "question": "보안 부서 AI 프로그램(ATO)의 FY28-Q1 마일스톤과 목표 날짜는?",
+   "subqueries": [
+    {
+     "ko": "보안 부서 AI 프로그램(ATO) FY28-Q1 마일스톤 및 목표 날짜",
+     "en": "What are the FY28-Q1 milestones and target dates for the security department AI program (ATO)?",
+     "kw": "ATO AI program security department FY28-Q1 milestones target date"
+    }
+   ],
+   "latency_s": 4.75,
+   "cost_usd": 0.00032990000000000005,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 309
+  },
+  "49": {
+   "question": "2027년 2월 Presidents' Day에 AMER 지원 커버리지 목표는 몇 퍼센트야?",
+   "subqueries": [
+    {
+     "ko": "2027년 2월 Presidents' Day AMER 지원 커버리지 목표 비율",
+     "en": "What is the AMER support coverage target percentage for Presidents' Day in February 2027?",
+     "kw": "AMER support coverage target percentage Presidents' Day February 2027 holiday"
+    }
+   ],
+   "latency_s": 3.86,
+   "cost_usd": 0.00032970000000000005,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 309
+  },
+  "50": {
+   "question": "2021년 Elasticsearch 롤아웃 일정은 어떻게 잡혀 있었어?",
+   "subqueries": [
+    {
+     "ko": "2021년 Elasticsearch 롤아웃 일정",
+     "en": "What was the Elasticsearch rollout schedule planned for 2021?",
+     "kw": "Elasticsearch rollout schedule 2021 timeline plan"
+    }
+   ],
+   "latency_s": 3.74,
+   "cost_usd": 0.00032740000000000004,
+   "attempts": 1,
+   "input_tokens": 2,
+   "output_tokens": 306
+  }
+ }
+}

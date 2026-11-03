@@ -1,0 +1,3844 @@
+{
+ "기준(상위 5)": {
+  "var": {
+   "kind": "plain"
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 5.0,
+  "avg_chars": 3193,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "순위 6~7위 덧붙임 N=2 (추가)": {
+  "var": {
+   "kind": "topn",
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.0,
+  "avg_chars": 4327,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "순위 6~9위 덧붙임 N=4 (추가)": {
+  "var": {
+   "kind": "topn",
+   "n": 4
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 9.0,
+  "avg_chars": 5427,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "순위 6~11위 덧붙임 N=6 (추가)": {
+  "var": {
+   "kind": "topn",
+   "n": 6
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 11.0,
+  "avg_chars": 6547,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "순위 6~13위 덧붙임 N=8 (추가)": {
+  "var": {
+   "kind": "topn",
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 13.0,
+  "avg_chars": 7678,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위5 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 5,
+   "n": 2
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 6.0,
+  "avg_chars": 3831,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위5 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 5,
+   "n": 4
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 6.93,
+  "avg_chars": 4412,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위5 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 5,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 7.8,
+  "avg_chars": 4907,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위5 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 5,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.933,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 8.63,
+  "avg_chars": 5450,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위10 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 10,
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 6.47,
+  "avg_chars": 4104,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위10 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 10,
+   "n": 4
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 7.9,
+  "avg_chars": 4924,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위10 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 10,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 9.3,
+  "avg_chars": 5746,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=link 시작=상위10 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "link",
+   "start": 10,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.933,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 10.67,
+  "avg_chars": 6530,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위5 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 5,
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.0,
+  "avg_chars": 4347,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위5 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 5,
+   "n": 4
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 8.97,
+  "avg_chars": 5510,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위5 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 5,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 10.9,
+  "avg_chars": 6667,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위5 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 5,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 12.77,
+  "avg_chars": 7812,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위10 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 10,
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.0,
+  "avg_chars": 4327,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위10 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 10,
+   "n": 4
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 9.0,
+  "avg_chars": 5427,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위10 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 10,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 11.0,
+  "avg_chars": 6588,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=page 시작=상위10 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "page",
+   "start": 10,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 13.0,
+  "avg_chars": 7839,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위5 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 5,
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.0,
+  "avg_chars": 4364,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위5 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 5,
+   "n": 4
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 9.0,
+  "avg_chars": 5537,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위5 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 5,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 11.0,
+  "avg_chars": 6746,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위5 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 5,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 12.93,
+  "avg_chars": 7979,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위10 +2": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 10,
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.0,
+  "avg_chars": 4327,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위10 +4": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 10,
+   "n": 4
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 9.0,
+  "avg_chars": 5427,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위10 +6": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 10,
+   "n": 6
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 11.0,
+  "avg_chars": 6588,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "풀=both 시작=상위10 +8": {
+  "var": {
+   "kind": "pool",
+   "pool": "both",
+   "start": 10,
+   "n": 8
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   3
+  ],
+  "q3": 0.0,
+  "q7": 1.0,
+  "avg_materials": 13.0,
+  "avg_chars": 7839,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 순위 +1씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_top",
+   "n": 1
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 6.5,
+  "avg_chars": 4065,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 풀(링크+페이지) +1씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 1
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 6.23,
+  "avg_chars": 3932,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 순위 +1씩": {
+  "var": {
+   "kind": "dec_top",
+   "n": 1,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 6.8,
+  "avg_chars": 4122,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 풀 +1씩": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 1,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 6.4,
+  "avg_chars": 3897,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 순위 +2씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_top",
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.83,
+  "avg_chars": 4839,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 풀(링크+페이지) +2씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 2
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 7.57,
+  "avg_chars": 4804,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 순위 +2씩": {
+  "var": {
+   "kind": "dec_top",
+   "n": 2,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 8.2,
+  "avg_chars": 4957,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 풀 +2씩": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 2,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 7.8,
+  "avg_chars": 4804,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 순위 +3씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_top",
+   "n": 3
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 9.17,
+  "avg_chars": 5631,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 하위 질문별 풀(링크+페이지) +3씩 (상위 5=원 검색)": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 3
+  },
+  "n_any_frozen": 13.0,
+  "recall_materials_frozen": 0.833,
+  "miss_ids": [
+   3,
+   7
+  ],
+  "q3": 0.0,
+  "q7": 0.0,
+  "avg_materials": 8.87,
+  "avg_chars": 5571,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 순위 +3씩": {
+  "var": {
+   "kind": "dec_top",
+   "n": 3,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 9.6,
+  "avg_chars": 5805,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ },
+ "분해 상위 5 + 하위 질문별 풀 +3씩": {
+  "var": {
+   "kind": "dec_pool",
+   "n": 3,
+   "base5": "dec"
+  },
+  "n_any_frozen": 14.0,
+  "recall_materials_frozen": 0.9,
+  "miss_ids": [
+   7
+  ],
+  "q3": 0.5,
+  "q7": 0.0,
+  "avg_materials": 9.2,
+  "avg_chars": 5657,
+  "by_id": {
+   "1": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "2": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "3": {
+    "any_frozen": 1.0,
+    "recall_frozen": 0.5,
+    "any_alt": 1.0
+   },
+   "4": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "5": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "6": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "7": {
+    "any_frozen": 0.0,
+    "recall_frozen": 0.0,
+    "any_alt": 0.0
+   },
+   "8": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "9": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "10": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "11": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "12": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "13": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "14": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   },
+   "15": {
+    "any_frozen": 1.0,
+    "recall_frozen": 1.0,
+    "any_alt": 1.0
+   }
+  }
+ }
+}
