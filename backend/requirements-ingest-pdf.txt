@@ -1,0 +1,13 @@
+# PDF 색인용 의존성(운영 이미지에는 넣지 않는다. Dockerfile·requirements.txt는 그대로).
+# 로컬에서 PDF를 한 번 파싱해 data/parsed/pdf_ir.jsonl, data/chunks/pdf_chunks.jsonl 을 만들 때만 따로 설치한다.
+#   python -m venv .venv-pdf && .venv-pdf/Scripts/pip install -r backend/requirements-ingest-pdf.txt
+#   .venv-pdf/Scripts/python -m backend.rag.ingest.pdf run
+# 아래는 2026-11-03 비교 측정(조사/PDF 파서 비교 측정)에서 CPU만으로 시험한 버전이다. OCR은 끄고 쓴다(코드: PdfPipelineOptions(do_ocr=False)).
+--extra-index-url https://download.pytorch.org/whl/cpu
+docling==2.145.0
+docling-core==2.105.0
+docling-ibm-models==4.0.4
+docling-parse==7.24.2
+torch==2.15.0
+torchvision==0.29.2
+transformers==5.22.1

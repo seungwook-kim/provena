@@ -12,7 +12,7 @@
 
 ## Goal
 
-- **해결 목표**: 원문을 요소 단위 중간 표현(`document_ir.jsonl`)과 권한표 칸 목록(`authz_cells.jsonl`)으로 바꾸고, 무엇을 지웠고 무엇을 못 했는지 기록한다.
+- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 색인 대상은 고정 커밋 `static/pdfs/` 아래 PDF 7건이다(`data/pdf/pdf_manifest.json`). 글자가 같은 `customer_dpa_05_01_26.pdf`와 `customer_dpa_5_1_26.pdf`는 하나만 둔다.
 - **성공 기준**: 처음 보는 단축코드 0종(있으면 그 쪽은 검토 대기) / 요소 원문 되찾기 실패 0 / 권한표 363칸 역할 주석 불일치 0 / 금액 구간 끊김은 실패가 아니라 목록으로 보고
 - **Out of Scope**: 청킹·청크 수(B-3), include 26곳 끌어오기(데이터카드에 기록), 결정표 만들기(F-04), 이모지를 그림 글자로 바꾸기
 
@@ -72,3 +72,89 @@
 - GIVEN: `Up to $5K`, `>$5K`, `>$50K`
 - WHEN: 구간 검산
 - THEN: 끊김 1건 보고, 예외 없음
+
+---
+
+# Spec — PDF 파싱 (Docling, OCR 끔)
+
+## Why
+
+- **페르소나**: 핸드북이 링크하는 PDF도 답의 근거로 인용해야 하는 에이전트와, "이 인용이 PDF 몇 쪽인가"를 확인하는 평가자
+- **상황**: 핸드북 고정 커밋 `129243bcffcf`의 `static/pdfs/` 아래에 PDF가 있다. Markdown 파서(`parse.py`)는 PDF를 읽지 못한다.
+- **문제**: 쪽 번호, 제목 계층, 표 행·열을 함께 주는 파서가 필요하다. 비교 측정에서 Docling을 골랐다(근거와 측정값은 `조사/PDF 파서 비교 측정 (2026-11-03)`). 평가 색인(`chunks.jsonl`)과 동결 평가셋은 바꾸지 않는다.
+
+## Goal
+
+- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 색인 대상은 치트시트 1건이다.
+- **성공 기준**: 빠진 요소 0 / Chunk 계약 통과 / 기존 `chunks.jsonl`과 평가 파일 해시 변동 0
+- **Out of Scope**: OCR·스캔 PDF, 평가 색인에 PDF 넣기, 임베딩과 DB 적재(모델 확정 뒤)
+
+## What
+
+**Happy Path**
+1. `python -m backend.rag.ingest.pdf collect --from <받아 둔 폴더> --collected-at YYYY-MM-DD`: 고정 커밋 원본과 크기·sha256·git blob id가 모두 같은 파일만 `data/pdf/`에 복사하고 `pdf_manifest.json`을 쓴다. `--download`는 고정 커밋 원본을 직접 받는다.
+2. `python -m backend.rag.ingest.pdf run`: Docling(OCR 끔, 표 구조 켬, CPU)으로 변환해 JSON을 `data/parsed/pdf_docling/`에 저장하고(`--reuse-docling`이면 변환을 건너뜀), 본문 트리를 문서 순서로 훑어 요소를 만든다.
+3. 청킹은 `chunk.py`의 `chunk_structure`를 그대로 쓴다. 쪽은 `source_url`의 `#page=N`(청크가 시작하는 쪽)에, 걸친 쪽 전체는 청크 파일의 `pages`에 둔다. `Chunk` 계약 칸은 늘리지 않는다. `line_start`, `line_end`는 비운다.
+
+**요소 규칙** (글 모양만 본다)
+- 쪽 머리글·바닥글(Docling `furniture`), 숫자만 있는 쪽 번호, 그림은 요소로 만들지 않고 건수를 `pdf_parse_report.json`에 센다.
+- 제목 모양: 12단어 이하, 작은 낱말(of, the, and ...)을 뺀 모든 낱말이 대문자·숫자로 시작, 쉼표·쌍점으로 끝나지 않음, `Inc.` 같은 약어에서 끊지 않음.
+- 숫자 표지(`13.`)가 있는 목록 항목 중 같은 목록에서 가장 왼쪽이고 첫 구절이 제목 모양이면 그 구절을 제목으로, 나머지를 문단으로 나눈다. 글자 표지(`a.`)나 안쪽 항목은 제목이 아니다. Docling이 제목으로 낸 글도 `제목. 본문` 모양이면 같은 방식으로 나눈다.
+- 제목 수준: 문서 첫 제목 = 1, `EXHIBIT`·`ANNEX`·`APPENDIX`·`SCHEDULE`·`ATTACHMENT`로 시작하는 제목 = 2(그 뒤의 다른 제목은 3), 그 밖 = 2. `heading_path`는 이 수준으로 만든다.
+- 표지가 없고 앞 쪽에서 끝난 문장 부호 없는 글 뒤에 오는 문단·목록 항목은 쪽 경계에서 끊긴 글로 보고 앞 요소에 잇는다(`page_end`에 쪽 범위).
+- 한 단짜리 쪽(가로로 떨어지면서 세로로 겹치는 요소 쌍이 없는 쪽)은 위에서 아래로 순서를 다시 세운다. 다단 쪽은 Docling 순서를 그대로 둔다.
+- 표는 기존 표 행 형식(`table_id, row, header, cells`, 행 글자는 `머리: 값 | ...`)으로 펼친다. 병합 칸은 왼쪽 위 칸에만 글자를 둔다.
+
+**Edge Cases**
+
+| # | 상황 | 처리 방식 |
+|---|---|---|
+| EC-PDF-01 | 받은 파일이 고정 커밋 원본과 다름(이름이 비슷한 다른 파일 포함) | `ValueError`로 멈춘다(크기, sha256, git blob id 모두 대조) |
+| EC-PDF-02 | 그림 안의 글자(OCR 끔) | 요소로 만들지 않는다 |
+
+## How
+
+- 라이브러리: `docling==2.145.0`(`backend/requirements-ingest-pdf.txt`, 운영 이미지와 `backend/requirements.txt`에는 넣지 않음). `pdf.py`는 Docling을 `convert()` 안에서만 가져오므로 Docling 없는 환경에서도 이 모듈과 시험이 돈다.
+- 출력(저장소에 커밋하지 않음): `data/parsed/pdf_ir.jsonl`, `data/parsed/pdf_parse_report.json`, `data/parsed/pdf_docling/*.docling.json`, `data/chunks/pdf_chunks.jsonl`. 원본 PDF와 `pdf_manifest.json`은 `data/pdf/`
+- 요소 필드: 위 기존 요소 필드와 같고, `line_start`·`line_end`는 `null`, 대신 `page`(시작 쪽, 1부터), `page_end`, `bbox`(PDF 포인트 `[왼쪽, 아래, 오른쪽, 위]`, 원점 왼쪽 아래)
+- 청크 칸: `org`는 `static/pdfs/` 아래 첫 폴더, `rule_seq`는 `static/pdfs/...` 경로의 해시, 제목은 문서의 수준 1 제목, `version_id`는 고정 커밋 앞 12자, `version_date`는 고정 커밋 날짜이고 파일을 고친 날을 모르므로 `version_date_before`는 참
+- `chunk.py` 변경: `line_span()`을 추가해 줄 번호가 없는 요소(PDF)는 `line_start`·`line_end`를 비운다. 줄 번호가 있는 Markdown 요소는 이전과 같다.
+- 적재: 임베딩 모델이 확정되면 `chunks.jsonl`과 같은 방식으로 `pdf_chunks.jsonl`을 임베딩해 같은 청크 저장소에 넣는다. 평가 색인과 `manifest.jsonl`은 바꾸지 않는다.
+- 시험: `tests/test_ingest_pdf.py`. 번호 조항·부록·쪽 이음·순서 재정렬은 시험 안에서 지어낸 합성 입력으로, 표·머리글·그림은 `tests/fixtures/docling_pdf_sample.json`(치트시트 일부)으로 확인한다. 제목 규칙을 실제 문서에서 잰 값은 저장소 밖 시험 자료와 위 조사 문서에 있다.
+
+## AC (Given-When-Then)
+
+**AC-PDF-01 · 번호 조항 목록 항목이 제목이 됨**
+- GIVEN: Docling 목록 항목 `2.` + `Status of the Parties. This agreement applies ...`(가장 왼쪽 숫자 표지)
+- WHEN: 요소 만들기
+- THEN: 제목 `2. Status of the Parties`(2수준)와 문단 `This agreement applies ...`로 나뉜다. 글자 표지 `a.`와 안쪽 숫자 항목은 제목이 아니다
+
+**AC-PDF-02 · 부록 안 제목은 한 수준 아래**
+- GIVEN: `EXHIBIT C`, `Region Specific Terms`, `1. ALPHA` 순서의 제목
+- WHEN: 수준 부여
+- THEN: `EXHIBIT C` 2수준, 나머지 3수준, 제목 경로 `... > EXHIBIT C > 1. ALPHA`
+
+**AC-PDF-03 · 쪽 경계에서 끊긴 글 잇기, 순서 바로잡기**
+- GIVEN: 쪽 끝에서 문장이 끝나지 않고 다음 쪽 첫머리가 표지 없는 글, 그리고 쪽 위쪽 제목이 본문 뒤에 나온 한 단짜리 쪽
+- WHEN: 요소 만들기
+- THEN: 앞 요소에 이어져 `page_end`가 다음 쪽이 되고, 제목이 위로 올라온다. 다단 쪽의 순서는 그대로다
+
+**AC-PDF-04 · 표는 기존 표 행 형식**
+- GIVEN: Docling 표 셀(열 제목 행, 병합 칸 포함)
+- WHEN: 표 펼치기
+- THEN: `table_id, row, header, cells`와 `parse.py`와 같은 행 글자, 병합 칸은 왼쪽 위 칸에만 글자
+
+**AC-PDF-05 · 청크 쪽과 계약**
+- GIVEN: PDF 요소
+- WHEN: 청킹
+- THEN: 청크가 `Chunk` 계약을 통과하고 `line_start`·`line_end`는 비며, `source_url`은 `...#page=N`(시작 쪽), 청크 파일의 `pages`는 걸친 쪽 전체다. 빠진 요소 0
+
+**AC-PDF-06 · 수집은 고정 커밋 원본만**
+- GIVEN: 크기·sha256·git blob id 중 하나라도 다른 파일
+- WHEN: `collect`
+- THEN: `ValueError`
+
+**AC-PDF-07 · Docling 없이 돈다**
+- GIVEN: Docling이 없는 환경
+- WHEN: `backend.rag.ingest.pdf`를 가져오고 시험을 돌림
+- THEN: 가져오기가 Docling을 불러오지 않고 시험이 통과한다
