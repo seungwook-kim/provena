@@ -172,7 +172,7 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 | ID | 기능 | 요구사항 |
 |---|---|---|
 | P-01 | 로그인과 사용자별 기억 | 로그인을 구현한다. 사용자 id로 대화(thread)와 장기 기억(Store namespace)을 분리하고, Store 기반 시멘틱 메모리(팀·역할·담당 서비스)를 둔다. 무엇을 기억할지 기준, State와 Store의 경계, 틀린 기억을 고치는 절차, DB 기반 Store를 둔다(가이드 p.10) (G4) |
-| P-02 | 문서 적재 | Markdown 파싱, 청킹, 임베딩, 인덱스 목록(`data/manifest.jsonl`)을 만든다. manifest에는 출처, 수집일, 커밋, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부를 적는다(가이드 p.15, p.21). 새 커밋만 받는 증분 수집을 한다 |
+| P-02 | 문서 적재 | Markdown·PDF 파싱, 청킹, 임베딩, 인덱스 목록(`data/manifest.jsonl`)을 만든다. manifest에는 출처, 수집일, 커밋, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부를 적는다(가이드 p.15, p.21). 새 커밋만 받는 증분 수집을 한다 |
 | P-03 | 업무시스템 연동 | REST API(OpenAPI 명세), 자동 생성 SDK(Java·Python), FastMCP 서버(`extras/mcp_skill/`), 웹훅을 제공한다. 시연용 업무시스템 목업(`mock_erp/`)은 Java(Spring Boot)와 Python으로 만든다 |
 | P-04 | 데모 모드 | `docker compose up` 한 줄로, 키 없이 뜬다. 로컬 pgvector 스냅샷과 기록된 응답을 쓰고, 데모 전용 계정 2개를 시드로 넣는다 (G2) |
 
@@ -269,7 +269,7 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 | 컨테이너·배포 | Docker compose, GCP Cloud Run | 가이드 필수 |
 | 벡터DB | Supabase pgvector | 가이드 권고 |
 | MCP | FastMCP | 확정 (가산 인정 조건) |
-| 문서 파싱 | Markdown 파서 + 권한표 HTML(CSS grid) 전용 파서 | 확정 (D1 원문 대조 3건) |
+| 문서 파싱 | Markdown 파서 + 권한표 HTML(CSS grid) 전용 파서 + PDF는 Docling(OCR 끔) | 확정 (D1 원문 대조 3건). PDF는 `PDF 파서 비교 측정 (2026-11-03)` 근거 |
 | 업무시스템 목업 | Java(Spring Boot), Python | 확정 |
 | LLM, 임베딩, 리랭커 | 아래 모델 후보 | D0에 후보를 정하고 D2 평가셋 v1로 비교해 확정 |
 

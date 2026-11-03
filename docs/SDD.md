@@ -49,7 +49,7 @@ flowchart LR
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅 | FastAPI, OpenAPI 자동 문서 |
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
 | `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |
-| `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
+| `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
 | `extras/mcp_skill/` | 검색을 읽기 전용 MCP 도구 3개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
 | `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | Java(Spring Boot) 목업은 크게, Python 예제는 작게 |
@@ -159,6 +159,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     handbook.py           # 핸드북 git 수집(고른 절만), 2023 권한표 판 고정
 │  │  │     history.py            # git 커밋 이력에서 판 목록 (리콜 시험 데이터)
 │  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
+│  │  │     pdf.py                # PDF 파싱(Docling, OCR 끔) → 같은 요소 형식, 쪽 번호 보존, 서비스 색인 전용 청크
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
@@ -203,6 +204,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 |---|---|---|---|
 | 수집 | GitLab 핸드북 저장소(`gitlab-com/content-sites/handbook`) 고른 절, 옛 저장소(`www-gitlab-com`)의 2023-05 권한표 1개 파일 | 원본 Markdown + 메타(절, 페이지 경로, 커밋 sha, 커밋 날짜, 원문 URL) | 공개 저장소. API 요청 간격 1초 이상. 고른 절은 PRD 8장 |
 | 파싱 | Markdown, Hugo 단축코드, HTML 표(권한표는 CSS grid div) | 제목 계층·문단·표 행 | 원문 대조 3건 이상 기록. 권한표는 행(업무 종류 × 금액 구간)과 칸(역할 11개)으로 펼친다. 비공개(`internal.gitlab.com`)로만 연결된 칸은 "비공개"로 표시하고 결정표에서 뺀다 |
+| 파싱(PDF) | 핸드북 고정 커밋 `static/pdfs/` 아래 글자 층이 있는 PDF(원본 목록 `SOURCES`, 현재 7건) | 같은 요소 형식(제목·문단·목록 항목·표 행). 줄 번호 대신 쪽 번호와 좌표. 서비스 색인 전용 청크 `data/chunks/pdf_chunks.jsonl`(쪽은 `source_url`의 `#page=N`) | Docling(CPU, OCR 끔)으로 로컬에서 한 번 변환하며 운영 이미지에는 넣지 않는다. 문서 형식별 코드는 없다. 평가 색인(`chunks.jsonl`)에는 넣지 않는다. 임베딩·DB 적재는 모델 확정 뒤 같은 적재 단계로 한다 |
 | 청킹 | 구조 | Chunk (제목 단위, 긴 절은 문단 묶음 약 800자, 앞 청크 끝 약 120자 겹침, 청크 앞에 제목 경로) | 제목 단위와 고정 길이 비교, 겹침 0자와 120자 비교(D2, 골든셋). 규모는 서로 다른 본문으로 센다: 실측 청크 23,095, 서로 다른 본문 22,378(PR #23) |
 | 판 비교 | 같은 페이지의 두 커밋, 또는 git 없는 두 시점 문서 묶음(F-07) | `ChangedArticle`(바뀐 섹션, 변경 종류 added·removed·modified) 목록 | 제목 경로 기준 정렬 후 본문 비교. 제목만 바뀐 섹션은 본문 유사도로 같은 섹션으로 본다. 서식만 바뀐 커밋(링크·오탈자)은 표시만 하고 리콜에 넘기지 않는다. 두 입력 모두 같은 형식으로 리콜·영향 미리보기에 넘긴다 |
 | 적재 | Chunk | DB (청크, 임베딩, manifest) | manifest에 출처, 수집일, 커밋 sha, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부(가이드 p.15, p.21). 인젝션 시험용 `TEST` 문서는 G3 청크 수에서 뺀다 |

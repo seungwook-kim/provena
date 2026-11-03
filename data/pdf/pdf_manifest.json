@@ -1,0 +1,63 @@
+{
+  "commit": "129243bcffcf6cbc8c2e83f537f1836b99900a61",
+  "version_date": "2026-10-27",
+  "collected_at": "2026-11-03",
+  "files": [
+    {
+      "path": "static/pdfs/customer-experience/customer-success-vision/gitlab-customer-journey.pdf",
+      "file": "customer-experience/customer-success-vision/gitlab-customer-journey.pdf",
+      "sha256": "75869d729d94bb4501d0be802ed14a5d8a13dba3597f4b072788dca666a02625",
+      "git_blob": "0a8a07d7345999da1aaa1ddfb5f3cce30b39a278",
+      "bytes": 87109,
+      "source_url": "https://handbook.gitlab.com/pdfs/customer-experience/customer-success-vision/gitlab-customer-journey.pdf"
+    },
+    {
+      "path": "static/pdfs/customer-experience/customer-success-vision/gitlab_customer_success_capabilities_roadmap.pdf",
+      "file": "customer-experience/customer-success-vision/gitlab_customer_success_capabilities_roadmap.pdf",
+      "sha256": "8af6bb94f41003d84936937fd0501715e9dcdcd7674abdd4ff3b70ea271bf17f",
+      "git_blob": "49bf49125411dc87e323718107fecdb019e76692",
+      "bytes": 90164,
+      "source_url": "https://handbook.gitlab.com/pdfs/customer-experience/customer-success-vision/gitlab_customer_success_capabilities_roadmap.pdf"
+    },
+    {
+      "path": "static/pdfs/customer-experience/industry-ai-governance-question-bank.pdf",
+      "file": "customer-experience/industry-ai-governance-question-bank.pdf",
+      "sha256": "c242b6e70439a58ff6aa4e78083b18bd5b55a283162dd157b9a18b5ba74e3ca5",
+      "git_blob": "4b255fe34a70aa8a0e2fb43a8cf760858bc4380c",
+      "bytes": 273320,
+      "source_url": "https://handbook.gitlab.com/pdfs/customer-experience/industry-ai-governance-question-bank.pdf"
+    },
+    {
+      "path": "static/pdfs/legal/privacy/customer_dpa_5_1_26.pdf",
+      "file": "legal/privacy/customer_dpa_5_1_26.pdf",
+      "sha256": "6a50187be3d1c02b42765e33b08f18d2ee3f3a289dc28de1c4bda70c89f3dd2e",
+      "git_blob": "151e0ce6b9f0c98f82c7ccd113ce2a7fe9f49ca2",
+      "bytes": 211288,
+      "source_url": "https://handbook.gitlab.com/pdfs/legal/privacy/customer_dpa_5_1_26.pdf"
+    },
+    {
+      "path": "static/pdfs/marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Incident_Response_Flow_SecOpsEngineer.pdf",
+      "file": "marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Incident_Response_Flow_SecOpsEngineer.pdf",
+      "sha256": "25e4b3f7c1c0efa4e21625317e2164a8d3dc5bde757028efea2030a467f367e7",
+      "git_blob": "774cd7e510188e287cbe3ed6f1804e8dc9519b55",
+      "bytes": 54036,
+      "source_url": "https://handbook.gitlab.com/pdfs/marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Incident_Response_Flow_SecOpsEngineer.pdf"
+    },
+    {
+      "path": "static/pdfs/marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Persona_SecOpsEngineer.pdf",
+      "file": "marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Persona_SecOpsEngineer.pdf",
+      "sha256": "5b10d3807b1dd989f9aacba0d5cdb19f2a5f3e065bc2f7b780b0410b6e6005b6",
+      "git_blob": "89b7cbf555817a88232b994e689a20b9e6a946f5",
+      "bytes": 137350,
+      "source_url": "https://handbook.gitlab.com/pdfs/marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Persona_SecOpsEngineer.pdf"
+    },
+    {
+      "path": "static/pdfs/press/git-cheat-sheet.pdf",
+      "file": "press/git-cheat-sheet.pdf",
+      "sha256": "8ad44445094b4f6c2576935e13bd4215405795a4a6712c7c04dd9696d727569a",
+      "git_blob": "65f37212c8cb3f7ae1ee6e7f3bf9486ece659bf7",
+      "bytes": 290368,
+      "source_url": "https://handbook.gitlab.com/pdfs/press/git-cheat-sheet.pdf"
+    }
+  ]
+}

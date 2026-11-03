@@ -17,6 +17,19 @@
 | 기록 위치 | 스냅샷 안 `data/corpus/collect_manifest.json`(`commit`, `corpus_id`), 쪽마다 받은 판은 `data/manifest.jsonl`의 `version_id` |
 | 규모 | 문서 1,565(1,564쪽 + 2023 권한표), 청크 23,095, 서로 다른 `chunk_sha256` 22,378 |
 
+## PDF (서비스 색인 전용)
+
+글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱한다. 문서 형식별 코드는 없고 `backend/rag/ingest/pdf.py`의 원본 목록(`SOURCES`)에 추가하면 된다. 현재 색인 대상은 고정 커밋 `129243bcffcf`의 `static/pdfs/` 아래 PDF 7건이다.
+
+| 항목 | 값 |
+|---|---|
+| 원본 | `data/pdf/` 아래 7개 파일과 `pdf_manifest.json`(합계 약 1.1MB, 저장소에 커밋하는 대상). 모두 고정 커밋 원본과 크기·sha256·git blob id가 같다. 폴더: `customer-experience/`(3), `legal/privacy/`(1), `marketing/.../roles-personas/assets/`(2), `press/`(1) |
+| 뺀 것 | `legal/privacy/customer_dpa_05_01_26.pdf`: `customer_dpa_5_1_26.pdf`와 추출한 글자가 같아 하나만 둔다 |
+| 파생 | `data/parsed/pdf_ir.jsonl`(요소 800개), `data/chunks/pdf_chunks.jsonl`(청크 205개). 커밋하지 않고 `python -m backend.rag.ingest.pdf run`으로 다시 만든다(Docling 필요, `backend/requirements-ingest-pdf.txt`) |
+| 평가와의 관계 | 평가 색인(`chunks.jsonl`, `manifest.jsonl`, `chunks_index.jsonl`)과 동결 평가셋에는 포함하지 않는다. G3 청크 수에도 더하지 않았다 |
+| 라이선스 | 미확인(`LICENSES/LICENSES.md`) |
+| Spec | `docs/specs/parse.md` "PDF 파싱" 절 |
+
 ## 원문 스냅샷 쓰는 법
 
 원문(1,570파일)은 `data/corpus.tar.gz` 한 파일로 커밋하고, 풀린 `data/corpus/`는 커밋하지 않는다(`.gitignore`).
@@ -33,6 +46,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-03 | 김승욱(팀장, Claude Code) | 고정 커밋 `static/pdfs/`의 PDF 7건을 `data/pdf/`에 받아 두고(고정 커밋 원본과 sha256·git blob id 대조) Docling(OCR 끔)으로 파싱·청킹하는 `backend/rag/ingest/pdf.py`를 추가함. 산출물은 평가 색인과 분리(`pdf_ir.jsonl` 요소 800개, `pdf_chunks.jsonl` 청크 205개). `chunks.jsonl`·`manifest.jsonl`·`chunks_index.jsonl` 해시 변동 없음, 임베딩·DB 적재는 하지 않음 | |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | 판 날짜 UTC(I-011)로 `data/corpus.tar.gz` 다시 만듦: 같은 고정 커밋을 `handbook --skip-authz --fetched-at 2026-10-31`·`history --skip-authz`로 다시 읽음. 바뀐 것은 `pages.jsonl` 72쪽의 `version_date`, `history/handbook_commits.jsonl` 219건의 `date`, `collect_manifest.json`의 `version_rule` 글자·`git_version`(2.54→2.55)뿐. 원문·`corpus_id`·`manifest.jsonl`·`chunks_index.jsonl` 그대로 | 이 PR |
 | 2026-11-01 | 김승욱(팀장) | 코퍼스 고정 커밋을 이 파일 "코퍼스 고정 커밋" 절에 적고, `AGENTS.md`·`LICENSES/LICENSES.md`의 "manifest에 기록" 문장을 실제 위치로 맞춤(고정 커밋은 스냅샷 안 `collect_manifest.json`에만 있어 저장소에서 바로 보이지 않았음) | 이 PR |
 | 2026-11-01 | 김승욱(팀장) | `manifest.jsonl`을 773KB에서 489KB로 줄임: 체크포인트 현황판이 G3 칸을 "manifest가 커서 읽지 못함"으로 표시해 확인하니 GitHub GraphQL이 파일 내용을 잘라 돌려줌(`isTruncated`). 모든 줄이 같은 `parser`(`data/parsed/parse_report.json`에 있음)와 `path`(`source_url`과 같은 쪽)를 빼고, `skipped`는 값이 있는 53줄에만 적고, JSON 공백을 없앰. 가이드 필수 칸(출처, 수집일, 문서당 청크 수, 원문·보존 길이, 잘림 여부)과 숫자(문서 1,565, 청크 23,095)는 그대로 | 이 PR |
