@@ -1,7 +1,12 @@
 """검색 `search(SearchQuery) -> list[Chunk]` (docs/specs/search.md, 설계 study 쪽 design-search.md).
 
 필터(org·as_of, 검색 전에) → 벡터 + BM25 각 SEARCH_POOL개 → RRF(k=60) → 상위 max(k, RERANK_TOP) 리랭킹 → 상위 k.
-모델과 방식은 환경 변수로만 바꾼다(EMBED_MODEL, SEARCH_MODE, SEARCH_POOL, RERANK_MODEL, RERANK_TOP, QUERY_TRANSLATE).
+모델과 방식은 환경 변수로만 바꾼다(EMBED_MODEL, SEARCH_MODE, SEARCH_POOL, RERANK_MODEL, RERANK_TOP, QUERY_TRANSLATE, SEARCH_LINK_N).
+기본(확정 조합, 2026-11-05): voyage-4 · dense_en(영어 문장 벡터) · 리랭커 없음 · k=5 · 링크 확장 L1x2.
+
+하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
+링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
+전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
 
 1차 비교(evals/retrieval/experiment_v1.py)와 같은 점수가 나오게 둔 것:
 - BM25 토큰화 `_tokens`(소문자 [a-z0-9]+, 한 글자·불용어 뺌), 상위 고르기 `top_positions`(0점도 후보에 듦, numpy 순서 그대로).
@@ -21,12 +26,14 @@ import os
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
 import numpy as np
 
+from backend.rag.retrieve.embed import EmbedNoKey
 from backend.schemas.chunk import Chunk, SearchQuery
 
 log = logging.getLogger(__name__)
@@ -42,21 +49,23 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 @dataclass(frozen=True)
 class SearchConfig:
     embed_model: str
-    mode: str = "hybrid_ko_kw"
+    mode: str = "dense_en"
     pool: int = 100
-    rerank_model: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+    rerank_model: str = "none"
     rerank_top: int = 10
     translate: bool = True
+    link_n: int = 2          # 링크 확장으로 바꿀 뒤 자리 수(확정 조합 L1x2 = 2, PREREGISTER #8). 0이면 끔
 
     @classmethod
     def from_env(cls) -> "SearchConfig":
         from backend.rag.retrieve import embed, rerank
         cfg = cls(embed_model=embed.spec().name,
-                  mode=os.environ.get("SEARCH_MODE") or "hybrid_ko_kw",
+                  mode=os.environ.get("SEARCH_MODE") or "dense_en",
                   pool=int(os.environ.get("SEARCH_POOL") or 100),
                   rerank_model=rerank.model_name(),
                   rerank_top=int(os.environ.get("RERANK_TOP") or 10),
-                  translate=(os.environ.get("QUERY_TRANSLATE") or "1") != "0")
+                  translate=(os.environ.get("QUERY_TRANSLATE") or "1") != "0",
+                  link_n=int(os.environ.get("SEARCH_LINK_N") or 2))
         cfg.check()
         return cfg
 
@@ -65,6 +74,8 @@ class SearchConfig:
             raise ValueError(f"모르는 SEARCH_MODE: {self.mode} (후보: {', '.join(MODES)})")
         if self.pool < 1 or self.rerank_top < 1:
             raise ValueError(f"SEARCH_POOL·RERANK_TOP은 1 이상: {self.pool}, {self.rerank_top}")
+        if self.link_n < 0:
+            raise ValueError(f"SEARCH_LINK_N은 0 이상: {self.link_n}")
 
 
 # ---------- 기록 ----------
@@ -77,11 +88,13 @@ class SearchTrace:
     requested_mode: str
     mode: str = ""
     fallback: str | None = None          # dense_ko로 내렸으면 "dense_ko"
-    fallback_reason: str | None = None   # translate_off | demo_no_record | invalid | timeout | error | cost_cap
+    fallback_reason: str | None = None   # translate_off | demo_no_record | invalid | timeout | error | cost_cap | no_key
     translation_source: str | None = None
     n_filtered: int = 0                  # 필터 뒤 대상 청크 수 (0이면 진짜 없음, rag4-09)
     n_dense: int = 0
     n_bm25: int = 0
+    n_sub: int = 0                       # 하위 질문 수(0이면 나누지 않음)
+    n_link: int = 0                      # 링크 확장으로 바꾼 자리 수
     n_returned: int = 0
     ms: dict = field(default_factory=dict)
 
@@ -113,6 +126,8 @@ class Store(Protocol):
     def generation(self) -> int: ...
     def row_meta(self) -> RowMeta: ...
     def vector_top(self, qvec: np.ndarray, embedder: str, org: str | None, as_of: str | None, n: int) -> list[tuple[Key, float]]: ...
+    def page_vector_top(self, qvec: np.ndarray, embedder: str, rule_seqs: list[int], org: str | None, as_of: str | None,
+                        exclude: list[Key], n: int) -> list[tuple[Key, float]]: ...
     def fetch(self, keys: list[Key]) -> dict[Key, dict]: ...
     def get_translation(self, query_sha256: str, model: str) -> dict | None: ...
     def put_translation(self, query_sha256: str, model: str, kind: str, text: str) -> None: ...
@@ -149,6 +164,7 @@ class MemoryStore:
             valid_from=np.array([r["valid_from"] for r in rows], dtype="datetime64[D]"),
             valid_to=np.array([r.get("valid_to") or "NaT" for r in rows], dtype="datetime64[D]"),
             texts=[r["text"] for r in rows])
+        self._seq = np.array([int(r["rule_seq"]) for r in rows], dtype=np.int64)
 
     def meta(self):
         return self._meta
@@ -163,6 +179,19 @@ class MemoryStore:
         if embedder != self.embedder:
             raise ValueError(f"저장소 벡터는 {self.embedder}, 요청은 {embedder}")
         pos = np.flatnonzero(valid_mask(self._rm, org, as_of))
+        if not len(pos):
+            return []
+        s = self.vectors[pos] @ np.asarray(qvec, dtype=np.float32)
+        order = sorted(range(len(pos)), key=lambda j: (-s[j], self._rm.keys[pos[j]][0]))[:n]
+        return [(self._rm.keys[pos[j]], float(s[j])) for j in order]
+
+    def page_vector_top(self, qvec, embedder, rule_seqs, org, as_of, exclude, n):
+        """그 페이지들의 청크 중(필터 안, exclude 밖) 질문과 가까운 n개. 동점은 chunk_id 순(vector_top과 같다)."""
+        if embedder != self.embedder:
+            raise ValueError(f"저장소 벡터는 {self.embedder}, 요청은 {embedder}")
+        m = valid_mask(self._rm, org, as_of) & np.isin(self._seq, np.asarray(list(rule_seqs), dtype=np.int64))
+        ex = set(exclude)
+        pos = np.asarray([p for p in np.flatnonzero(m) if self._rm.keys[p] not in ex], dtype=np.int64)
         if not len(pos):
             return []
         s = self.vectors[pos] @ np.asarray(qvec, dtype=np.float32)
@@ -235,16 +264,30 @@ ORDER BY c.embedding <#> %(q)s::vector, c.chunk_id LIMIT %(n)s"""
                                "org": org, "as_of": as_of, "n": n})
         return [((r[0], r[1]), float(r[2])) for r in rows]
 
+    def page_vector_top(self, qvec, embedder, rule_seqs, org, as_of, exclude, n):
+        """링크 확장 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 exclude에 없는 것, 거리순·동점 chunk_id."""
+        if not rule_seqs:
+            return []
+        sql = f"""SELECT c.chunk_id, c.version_id, -(c.embedding <#> %(q)s::vector) AS score {_JOIN}
+WHERE c.embedder = %(embedder)s AND c.rule_seq = ANY(%(seqs)s::bigint[]) AND {_FILTER}
+  AND NOT EXISTS (SELECT 1 FROM unnest(%(ex_i)s::text[], %(ex_v)s::text[]) AS x(chunk_id, version_id)
+                  WHERE x.chunk_id = c.chunk_id AND x.version_id = c.version_id)
+ORDER BY c.embedding <#> %(q)s::vector, c.chunk_id LIMIT %(n)s"""
+        rows = self._all(sql, {"q": np.asarray(qvec, dtype=np.float32), "embedder": embedder,
+                               "seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of,
+                               "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
+        return [((r[0], r[1]), float(r[2])) for r in rows]
+
     def fetch(self, keys):
         if not keys:
             return {}
         sql = f"""SELECT c.chunk_id, c.version_id, d.org, c.rule_seq, d.title, c.article, v.version_date, d.fetched_at,
-       c.kind, c.text, c.source_url, c.text_sha256, v.version_date_before, c.line_start, c.line_end {_JOIN}
+       c.kind, c.text, c.source_url, c.text_sha256, v.version_date_before, c.line_start, c.line_end, c.link_targets {_JOIN}
 JOIN unnest(%(ids)s::text[], %(vers)s::text[]) AS k(chunk_id, version_id)
   ON k.chunk_id = c.chunk_id AND k.version_id = c.version_id"""
         rows = self._all(sql, {"ids": [k[0] for k in keys], "vers": [k[1] for k in keys]})
         cols = ("chunk_id", "version_id", "org", "rule_seq", "rule_title", "article", "version_date", "fetched_at",
-                "kind", "text", "source_url", "text_sha256", "version_date_before", "line_start", "line_end")
+                "kind", "text", "source_url", "text_sha256", "version_date_before", "line_start", "line_end", "link_targets")
         return {(r[0], r[1]): dict(zip(cols, r)) for r in rows}
 
     def get_translation(self, query_sha256, model):
@@ -285,11 +328,36 @@ def rrf(rankings: list[list[Key]], k: int = RRF_K) -> list[tuple[Key, float]]:
     return sorted(fused.items(), key=lambda x: -x[1])
 
 
+MAX_SUB_QUERIES = 3       # 측정 분해 규칙: 서로 다른 사실이 둘 이상일 때만, 최대 3개(exp_decompose_v1.py)
+MAX_QUERY_CHARS = 1000    # MCP 도구 입력 한도와 같다(extras/mcp_skill/mcp_server/server.py MAX_QUERY)
+
+
+def roundrobin(lists: list[list[Key]], k: int) -> list[Key]:
+    """목록들을 차례로 하나씩 번갈아 합친다. 이미 든 것은 건너뛴다(exp_decompose_v1.roundrobin과 같다)."""
+    out: list[Key] = []
+    r, longest = 0, max((len(x) for x in lists), default=0)
+    while len(out) < k and r < longest:
+        for x in lists:
+            if r < len(x) and x[r] not in out:
+                out.append(x[r])
+                if len(out) == k:
+                    break
+        r += 1
+    return out
+
+
 def check_query(q: SearchQuery) -> None:
     if not q.query or not q.query.strip():
         raise ValueError("빈 질문")
     if q.k < 1:
         raise ValueError(f"k는 1 이상: {q.k}")
+    subs = q.sub_queries or []                    # None과 []는 "나누지 않음"
+    if subs:
+        if not 2 <= len(subs) <= MAX_SUB_QUERIES:
+            raise ValueError(f"sub_queries는 2~{MAX_SUB_QUERIES}개: {len(subs)}개")
+        for s in subs:
+            if not isinstance(s, str) or not s.strip() or len(s) > MAX_QUERY_CHARS:
+                raise ValueError(f"sub_queries 항목은 1~{MAX_QUERY_CHARS}자 글")
     if q.as_of is not None:
         if not _DATE.match(q.as_of):
             raise ValueError(f"as_of는 YYYY-MM-DD: {q.as_of!r}")
@@ -372,63 +440,49 @@ class Searcher:
                 if g != self._gen:
                     self._build_bm25()
 
-    def _translate(self, query: str, kind: str, tr: SearchTrace) -> str | None:
+    def _translate_one(self, query: str, kind: str) -> tuple[str | None, str | None, str | None]:
+        """(번역문, 출처, 내린 이유). 하위 질문을 동시에 번역하려고 기록(tr)을 직접 고치지 않는다."""
         if not self.cfg.translate:
-            tr.fallback_reason = "translate_off"
-            return None
+            return None, None, "translate_off"
         from backend.rag.retrieve.translate import valid_english
         if valid_english(query):                                 # 그래프의 재작성 질의처럼 이미 영어면 LLM을 부르지 않는다
-            tr.translation_source = "as_is"
-            return query
+            return query, "as_is", None
         res = self.translator(query, kind)
-        tr.translation_source = res.source
-        if res.text is None:
-            tr.fallback_reason = res.source
-        return res.text
+        return res.text, res.source, (res.source if res.text is None else None)
 
-    def search(self, q: SearchQuery) -> list[Chunk]:
-        check_query(q)
-        self._refresh()
-        cfg = self.cfg
-        tr = SearchTrace(cfg.embed_model, cfg.rerank_model, cfg.mode)
-        t0 = time.perf_counter()
+    def _translate_all(self, texts: list[str], kind: str, tr: SearchTrace) -> list[str | None]:
+        """전체 질문 + 하위 질문. 둘 이상이면 동시에 번역해 기다림을 한 번 분량으로(번역 한도 15초씩, translate.py)."""
+        if len(texts) == 1:
+            got = [self._translate_one(texts[0], kind)]
+        else:
+            with ThreadPoolExecutor(max_workers=len(texts)) as ex:
+                got = list(ex.map(lambda t: self._translate_one(t, kind), texts))
+        tr.translation_source = got[0][1]
+        reasons = [r for _, _, r in got if r]
+        if reasons:
+            tr.fallback_reason = reasons[0]
+        return [t for t, _, _ in got]
 
-        mode, keywords, sentence = cfg.mode, None, None
-        if mode in ("hybrid_ko_kw", "bm25_kw"):
-            keywords = self._translate(q.query, "keywords", tr)
-        elif mode == "dense_en":
-            sentence = self._translate(q.query, "sentence", tr)
-        if mode != "dense_ko" and keywords is None and sentence is None:
-            mode, tr.fallback = "dense_ko", "dense_ko"          # Spec EC-01·EC-02, QUERY_TRANSLATE=0
-            log.info("검색 방식을 dense_ko로 내림: %s", tr.fallback_reason)
-        tr.mode = mode
-        tr.ms["translate"] = _ms(t0)
-
-        rm, bm25 = self._rm, self._bm25
-        mask = valid_mask(rm, q.org, q.as_of)
-        tr.n_filtered = int(mask.sum())
-        if tr.n_filtered == 0:                                   # Spec EC-03: 없는 org, 너무 이른 as_of
-            _last.set(tr)
-            return []
-        n = max(q.k, cfg.rerank_top if self.reranker else 0)
-
+    def _ranked(self, text: str, trans: str | None, qvec, mode: str, q: SearchQuery, mask: np.ndarray, n: int,
+                tr: SearchTrace) -> tuple[list[Key], dict[Key, dict]]:
+        """질문 하나의 상위 k(벡터·BM25 → RRF → 리랭킹). 하위 질문마다 같은 과정을 돈다."""
+        cfg, rm, bm25 = self.cfg, self._rm, self._bm25
         dense: list[Key] = []
         if mode != "bm25_kw":
             t = time.perf_counter()
-            qvec = self.embed([sentence if mode == "dense_en" else q.query])[0]
-            tr.ms["embed"] = _ms(t)
-            t = time.perf_counter()
             dense = [k for k, _ in self.store.vector_top(qvec, cfg.embed_model, q.org, q.as_of,
                                                          cfg.pool if mode == "hybrid_ko_kw" else n)]
-            tr.ms["vector"], tr.n_dense = _ms(t), len(dense)
+            tr.ms["vector"] = round(tr.ms.get("vector", 0) + _ms(t), 1)
+            tr.n_dense += len(dense)
 
         bm: list[Key] = []
         if mode in ("hybrid_ko_kw", "bm25_kw"):
             t = time.perf_counter()
             pos = np.flatnonzero(mask)
-            scores = np.asarray(bm25.get_scores(tokens(keywords)), dtype=float)[pos]
+            scores = np.asarray(bm25.get_scores(tokens(trans)), dtype=float)[pos]
             bm = [rm.keys[pos[i]] for i in top_positions(scores, cfg.pool if mode == "hybrid_ko_kw" else n)]
-            tr.ms["bm25"], tr.n_bm25 = _ms(t), len(bm)
+            tr.ms["bm25"] = round(tr.ms.get("bm25", 0) + _ms(t), 1)
+            tr.n_bm25 += len(bm)
 
         if mode == "hybrid_ko_kw":
             cand = [k for k, _ in rrf([dense, bm])][:n]
@@ -439,10 +493,72 @@ class Searcher:
         cand = [k for k in cand if k in rows]
         if self.reranker is not None and cand:
             t = time.perf_counter()
-            sc = self.reranker.score(q.query, [rows[k]["text"] for k in cand])     # 질문은 한국어 원문(1차 비교와 같음)
+            sc = self.reranker.score(text, [rows[k]["text"] for k in cand])     # 질문은 한국어 원문(1차 비교와 같음)
             cand = [cand[i] for i in sorted(range(len(cand)), key=lambda i: -sc[i])]
-            tr.ms["rerank"] = _ms(t)
-        out = [to_chunk(rows[k]) for k in cand[: q.k]]
+            tr.ms["rerank"] = round(tr.ms.get("rerank", 0) + _ms(t), 1)
+        return cand[: q.k], rows
+
+    def _link_expand(self, top: list[Key], rows: dict[Key, dict], qvec, q: SearchQuery, tr: SearchTrace) -> list[Key]:
+        """L1x2: 상위 k가 링크한 페이지의 청크(같은 필터, 상위 k 밖)를 전체 질문 벡터와 가까운 순으로 link_n개 → 뒤 자리를 바꾼다."""
+        n = self.cfg.link_n
+        if not n or q.k <= n or qvec is None or not top:
+            return top
+        t = time.perf_counter()
+        seqs = sorted({int(s) for k in top for s in (rows[k].get("link_targets") or [])})
+        ext = [k for k, _ in self.store.page_vector_top(qvec, self.cfg.embed_model, seqs, q.org, q.as_of, top, n)] if seqs else []
+        if ext:
+            rows.update(self.store.fetch(ext))
+            ext = [k for k in ext if k in rows]
+        tr.n_link, tr.ms["link"] = len(ext), _ms(t)
+        return top[: q.k - len(ext)] + ext if ext else top
+
+    def search(self, q: SearchQuery) -> list[Chunk]:
+        check_query(q)
+        self._refresh()
+        cfg = self.cfg
+        tr = SearchTrace(cfg.embed_model, cfg.rerank_model, cfg.mode)
+        t0 = time.perf_counter()
+        texts = [q.query, *(q.sub_queries or [])]               # 0 = 전체 질문, 1.. = 하위 질문
+        tr.n_sub = len(texts) - 1
+
+        mode = cfg.mode
+        kind = {"hybrid_ko_kw": "keywords", "bm25_kw": "keywords", "dense_en": "sentence"}.get(mode)
+        trans = self._translate_all(texts, kind, tr) if kind else [None] * len(texts)
+        if mode != "dense_ko" and any(t is None for t in trans):
+            mode, tr.fallback = "dense_ko", "dense_ko"          # Spec EC-01·EC-02, QUERY_TRANSLATE=0
+            log.info("검색 방식을 dense_ko로 내림: %s", tr.fallback_reason)
+        tr.mode = mode
+        tr.ms["translate"] = _ms(t0)
+
+        mask = valid_mask(self._rm, q.org, q.as_of)
+        tr.n_filtered = int(mask.sum())
+        if tr.n_filtered == 0:                                   # Spec EC-03: 없는 org, 너무 이른 as_of
+            _last.set(tr)
+            return []
+        n = max(q.k, cfg.rerank_top if self.reranker else 0)
+
+        qvecs = None
+        if mode != "bm25_kw":
+            t = time.perf_counter()
+            try:                                                 # 전체 + 하위 질문 벡터를 한 번에(API면 요청 1번)
+                qvecs = self.embed([trans[i] if mode == "dense_en" else texts[i] for i in range(len(texts))])
+            except EmbedNoKey:                                   # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
+                tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
+                log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
+                _last.set(tr)
+                return []
+            tr.ms["embed"] = _ms(t)
+
+        idx = range(1, len(texts)) if len(texts) > 1 else range(1)   # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음)
+        rows: dict[Key, dict] = {}
+        lists = []
+        for i in idx:
+            got, r = self._ranked(texts[i], trans[i], None if qvecs is None else qvecs[i], mode, q, mask, n, tr)
+            lists.append(got)
+            rows.update(r)
+        top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
+        top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
+        out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)
         _last.set(tr)
         return out
@@ -464,7 +580,8 @@ def warmup() -> Searcher:
     with _init_lock:
         if _searcher is None:
             s = Searcher(SearchConfig.from_env(), PgStore.from_env())
-            s.embed(["warm-up"])
+            if not embed.spec(s.cfg.embed_model).api:           # API 모델은 미리 부를 것이 없고, 부르면 돈이 든다
+                s.embed(["warm-up"])
             _searcher = s
     return _searcher
 
