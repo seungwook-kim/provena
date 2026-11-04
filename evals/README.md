@@ -51,7 +51,7 @@ python evals/freeze.py dataset_v1.jsonl     # sha256과 건수를 FROZEN.json에
 python evals/freeze.py --check              # 동결 이후 바뀐 파일이 없는지 확인
 ```
 
-동결 뒤에는 정답을 고치지 않습니다. `tests/test_frozen_evals.py`가 PR마다 해시를 확인하고, 바뀌면 CI가 실패합니다. 정답이 정말 틀렸다면 파일을 고치지 말고 `docs/`에 이유를 적고 강사와 상의하세요.
+동결 뒤에는 정답을 고치지 않습니다. `tests/test_frozen_evals.py`가 PR마다 해시를 확인하고, 바뀌면 CI가 실패합니다.
 
 ### 동결 뒤에 코퍼스를 바꿨다면
 

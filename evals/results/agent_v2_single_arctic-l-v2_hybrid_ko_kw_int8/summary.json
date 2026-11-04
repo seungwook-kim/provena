@@ -1,0 +1,32 @@
+{
+ "meta": {
+  "dataset": "dataset_v2.jsonl",
+  "dataset_sha256": "c0d55f99677bc3dd86f99ee6c2845c3afb58b06a82516b448b6f7e6d36338c76",
+  "search": {
+   "embedder": "arctic-l-v2",
+   "mode": "hybrid_ko_kw",
+   "reranker": "int8",
+   "rerank_top": 10
+  },
+  "llm": "claude-haiku-5-5 CLI",
+  "동시 실행": 3,
+  "응답 시간": "동시 3개 실행과 CLI 값이라 참고값"
+ },
+ "metrics": {
+  "n": 50,
+  "errors": 0,
+  "cited_correct_rate": 0.8733333333333333,
+  "wrong_citation_rate": 0.625,
+  "over_refusal_rate": 0.04,
+  "correct_refusal_rate": 0.96,
+  "hallucination_risk_rate": 0.038461538461538464,
+  "answer_check_refusals": 1,
+  "correct_refusal_rate_without_answer_check": 0.92,
+  "over_refusal_rate_without_answer_check": 0.04,
+  "citation_accuracy": 0.686111111111111,
+  "as_of_shown_rate": 1.0,
+  "latency_p95_s": 66.106,
+  "judge_score": null,
+  "cost_usd": 0.177848
+ }
+}

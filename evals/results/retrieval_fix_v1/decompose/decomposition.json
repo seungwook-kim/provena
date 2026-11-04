@@ -1,0 +1,1330 @@
+{
+ "model": "claude-haiku-5-5",
+ "system_prompt": "너는 사내 핸드북 검색을 위한 질문 분해기다. 사용자의 한국어 질문이 서로 다른 사실을 둘 이상 묻는 경우에만 독립된 한국어 하위 질문(최대 3개)으로 나눈다.\n- 하나의 사실을 묻는 질문, 같은 사실을 다른 말로 두 번 묻는 질문, 하나의 사실에 조건·예외를 붙인 질문은 나누지 않는다.\n- 하위 질문은 질문에 있는 핵심 용어를 그대로 쓰고, 질문에 없는 정보를 더하지 않는다. 각 하위 질문만 읽어도 무엇을 묻는지 알 수 있어야 한다.\n- 나누지 않으면 split을 false로 하고 sub_questions는 빈 목록으로 둔다.\n- 설명 없이 JSON 한 개만 출력한다. 예 1: 질문 \"배송은 며칠 걸리고 반품 수수료는 얼마야?\" -> {\"split\": true, \"sub_questions\": [\"배송은 며칠 걸려?\", \"반품 수수료는 얼마야?\"]}. 예 2: 질문 \"휴가 신청은 어떻게 해?\" -> {\"split\": false, \"sub_questions\": []}.",
+ "items": {
+  "1": {
+   "question": "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?",
+    "슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?\", \"슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0004588,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1158,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 454,
+    "output_tokens_details": {
+     "thinking_tokens": 359
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1158,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 454,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1158,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1158
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "2": {
+   "question": "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?",
+    "IMOC도 호출에 응답이 없으면 어떻게 에스컬레이션돼?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?\", \"IMOC도 호출에 응답이 없으면 어떻게 에스컬레이션돼?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0005787,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1130,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 705,
+    "output_tokens_details": {
+     "thinking_tokens": 617
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1130,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 705,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1130,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1130
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "3": {
+   "question": "GitLab 정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "GitLab 정기(monthly) 릴리스는 언제 나가?",
+    "패치 릴리스는 한 달에 몇 번 나가?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"GitLab 정기(monthly) 릴리스는 언제 나가?\", \"패치 릴리스는 한 달에 몇 번 나가?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0003643,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1133,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 275,
+    "output_tokens_details": {
+     "thinking_tokens": 206
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1133,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 275,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1133,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1133
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "4": {
+   "question": "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "자동 배포 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해?",
+    "프로덕션 카나리에서 본 프로덕션으로의 승격은 자동이야 수동이야?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"자동 배포 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해?\", \"프로덕션 카나리에서 본 프로덕션으로의 승격은 자동이야 수동이야?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.00043190000000000004,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1161,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 399,
+    "output_tokens_details": {
+     "thinking_tokens": 284
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1161,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 399,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1161,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1161
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "5": {
+   "question": "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?",
+    "revert MR 승인은 몇 명 필요해?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?\", \"revert MR 승인은 몇 명 필요해?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0005434,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1156,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 624,
+    "output_tokens_details": {
+     "thinking_tokens": 530
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1156,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 624,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1156,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1156
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "6": {
+   "question": "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해?",
+    "flaky 테스트를 못 고치면 어떻게 돼?",
+    "격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해?\", \"flaky 테스트를 못 고치면 어떻게 돼?\", \"격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0004819,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1161,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 499,
+    "output_tokens_details": {
+     "thinking_tokens": 389
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1161,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 499,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1161,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1161
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "7": {
+   "question": "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002904,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1131,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 128,
+    "output_tokens_details": {
+     "thinking_tokens": 111
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1131,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 128,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1131,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1131
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "8": {
+   "question": "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002974,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1116,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 148,
+    "output_tokens_details": {
+     "thinking_tokens": 131
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1116,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 148,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1116,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1116
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "9": {
+   "question": "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)해야 해?",
+    "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 수정(remediate)해야 해?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)해야 해?\", \"CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 수정(remediate)해야 해?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.00044650000000000007,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1144,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 435,
+    "output_tokens_details": {
+     "thinking_tokens": 328
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1144,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 435,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1144,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1144
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "10": {
+   "question": "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?",
+    "SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?\", \"SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0003725,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1139,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 289,
+    "output_tokens_details": {
+     "thinking_tokens": 188
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1139,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 289,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1139,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1139
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "11": {
+   "question": "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00031620000000000004,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1115,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 186,
+    "output_tokens_details": {
+     "thinking_tokens": 169
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1115,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 186,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1115,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1115
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "12": {
+   "question": "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0003756,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1137,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 296,
+    "output_tokens_details": {
+     "thinking_tokens": 279
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1137,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 296,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1137,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1137
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "13": {
+   "question": "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?",
+   "kind": "relevant",
+   "split": true,
+   "sub_questions": [
+    "영업팀이 잠재 고객(prospect)에게 무상 지원을 해줄 때 기간 제한과 연장 한도는?",
+    "영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"영업팀이 잠재 고객(prospect)에게 무상 지원을 해줄 때 기간 제한과 연장 한도는?\", \"영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0004886000000000001,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1147,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 518,
+    "output_tokens_details": {
+     "thinking_tokens": 401
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1147,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 518,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1147,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1147
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "14": {
+   "question": "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00034030000000000003,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1128,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 229,
+    "output_tokens_details": {
+     "thinking_tokens": 212
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1128,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 229,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1128,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1128
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "15": {
+   "question": "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?",
+   "kind": "relevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002771,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1122,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 105,
+    "output_tokens_details": {
+     "thinking_tokens": 88
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1122,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 105,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1122,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1122
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "16": {
+   "question": "한국에서 야근시키면 법적으로 주 몇 시간까지 일하게 할 수 있어?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00031150000000000004,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1119,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 175,
+    "output_tokens_details": {
+     "thinking_tokens": 158
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1119,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 175,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1119,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1119
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "17": {
+   "question": "프리랜서로 받은 수입 종합소득세 신고는 어떻게 해?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00032030000000000003,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1113,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 195,
+    "output_tokens_details": {
+     "thinking_tokens": 178
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1113,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 195,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1113,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1113
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "18": {
+   "question": "파이썬에서 리스트 중복 제거하는 제일 빠른 방법 뭐야?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002884,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1116,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 130,
+    "output_tokens_details": {
+     "thinking_tokens": 113
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1116,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 130,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1116,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1116
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "19": {
+   "question": "React에서 useEffect 의존성 배열에 뭘 넣어야 해?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002971,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1112,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 149,
+    "output_tokens_details": {
+     "thinking_tokens": 132
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1112,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 149,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1112,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1112
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "20": {
+   "question": "육아휴직은 최대 몇 개월까지 쓸 수 있어?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00023070000000000002,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1110,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1110,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 17,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1110,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1110
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "21": {
+   "question": "시니어 개발자 연봉 밴드가 어떻게 돼?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00023009999999999998,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1107,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 17,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1107,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 17,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1107,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1107
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "22": {
+   "question": "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0002957,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1120,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 143,
+    "output_tokens_details": {
+     "thinking_tokens": 126
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1120,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 143,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1120,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1120
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "23": {
+   "question": "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0003129,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1121,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 177,
+    "output_tokens_details": {
+     "thinking_tokens": 160
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1121,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 177,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1121,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1121
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "24": {
+   "question": "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0003123,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1118,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 177,
+    "output_tokens_details": {
+     "thinking_tokens": 160
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1118,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 177,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1118,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1118
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "25": {
+   "question": "Hard PCL보다 더 강한 Critical PCL은 언제 선언하고 누가 승인해?",
+   "kind": "irrelevant",
+   "split": true,
+   "sub_questions": [
+    "Critical PCL은 언제 선언해?",
+    "Critical PCL은 누가 승인해?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"Critical PCL은 언제 선언해?\", \"Critical PCL은 누가 승인해?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.0004898000000000001,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1118,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 532,
+    "output_tokens_details": {
+     "thinking_tokens": 480
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1118,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 532,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1118,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1118
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "26": {
+   "question": "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0003028,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1118,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 158,
+    "output_tokens_details": {
+     "thinking_tokens": 141
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1118,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 158,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1118,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1118
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "27": {
+   "question": "변경 심의 위원회(CAB)는 얼마나 자주 열려?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00026770000000000006,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1110,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 91,
+    "output_tokens_details": {
+     "thinking_tokens": 74
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1110,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 91,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1110,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1110
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "28": {
+   "question": "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.00029810000000000004,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1117,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 149,
+    "output_tokens_details": {
+     "thinking_tokens": 132
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1117,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 149,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1117,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1117
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "29": {
+   "question": "2020년 3월 GitLab.com 가용률은 얼마였어?",
+   "kind": "irrelevant",
+   "split": false,
+   "sub_questions": [],
+   "raw": "{\"split\": false, \"sub_questions\": []}",
+   "attempts": 1,
+   "cost_usd": 0.0003061,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1107,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 169,
+    "output_tokens_details": {
+     "thinking_tokens": 152
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1107,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 169,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1107,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1107
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  },
+  "30": {
+   "question": "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?",
+   "kind": "irrelevant",
+   "split": true,
+   "sub_questions": [
+    "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받아?",
+    "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 시작해?"
+   ],
+   "raw": "{\"split\": true, \"sub_questions\": [\"보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받아?\", \"보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 시작해?\"]}",
+   "attempts": 1,
+   "cost_usd": 0.00044500000000000003,
+   "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1129,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 438,
+    "output_tokens_details": {
+     "thinking_tokens": 339
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 1129,
+     "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+     {
+      "input_tokens": 2,
+      "output_tokens": 438,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 1129,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 1129
+      },
+      "type": "message"
+     }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+   }
+  }
+ }
+}
