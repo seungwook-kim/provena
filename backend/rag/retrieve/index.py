@@ -15,6 +15,9 @@
     python -m backend.rag.retrieve.index refresh
 - translations: 1차 비교 번역(translations.json)을 번역 장부 파일(query_translations.jsonl)로 옮기고 meta.json에 sha256을 적는다.
     python -m backend.rag.retrieve.index translations --from evals/results/retrieval_v1_round1/translations.json
+- links: 청크마다 본문 링크가 가리키는 코퍼스 안 다른 페이지(rule_seq) 목록 → links.jsonl(줄 순서 = chunks.jsonl), meta.json에 sha256.
+  링크 확장(L1x2) 재료. 규칙은 links.py(= 측정 코드 exp_decompose_v1.Links). LLM·모델을 부르지 않는다.
+    python -m backend.rag.retrieve.index links
 """
 from __future__ import annotations
 
@@ -30,11 +33,14 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.rag.retrieve import embed
+from backend.rag.retrieve import embed, links
 
 CHUNKS = Path("data/chunks/chunks.jsonl")
 OUT = Path("data/index")
 DATASET = Path("evals/dataset_v1.jsonl")
+IR = Path("data/parsed/document_ir.jsonl")
+MANIFEST = Path("data/manifest.jsonl")
+LINKS_FILE = "links.jsonl"
 
 
 def sha(s: str) -> str:
@@ -248,6 +254,29 @@ def cmd_refresh(a) -> int:
     return 0
 
 
+def cmd_links(a) -> int:
+    """스냅샷 청크(data/index/chunks.jsonl) 줄 순서대로 링크 대상 페이지를 적는다."""
+    meta = read_meta(a.out)
+    if not meta:
+        raise SystemExit(f"{a.out}/meta.json이 없다 — build 또는 import를 먼저 돌린다")
+    rows = load_rows(a.out / meta["chunks_file"])
+    tg = links.build(rows, a.ir, a.manifest)
+    dst = a.out / LINKS_FILE
+    tmp = dst.with_name(dst.name + ".tmp")
+    with tmp.open("w", encoding="utf-8", newline="\n") as f:
+        for r, t in zip(rows, tg):
+            f.write(json.dumps({"chunk_id": r["chunk_id"], "version_id": r["version_id"], "targets": t}) + "\n")
+    tmp.replace(dst)
+    n_with = sum(1 for t in tg if t)
+    meta["links"] = {"file": LINKS_FILE, "sha256": file_sha(dst), "n": len(rows), "n_with_targets": n_with,
+                     "n_targets": sum(len(t) for t in tg), "ir_sha256": file_sha(a.ir),
+                     "manifest_sha256": file_sha(a.manifest),
+                     "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+    (a.out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(json.dumps(meta["links"], ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(prog="python -m backend.rag.retrieve.index")
@@ -258,9 +287,13 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("translations", help="1차 비교 번역 → 스냅샷 번역 장부")
     p.add_argument("--from", dest="src", type=Path, required=True)
     p.add_argument("--out", type=Path, default=OUT)
+    p = sub.add_parser("links", help="청크마다 링크한 코퍼스 안 다른 페이지 → links.jsonl (L1x2 재료)")
+    p.add_argument("--ir", type=Path, default=IR)
+    p.add_argument("--manifest", type=Path, default=MANIFEST)
+    p.add_argument("--out", type=Path, default=OUT)
     for name in ("build", "import", "check"):
         p = sub.add_parser(name)
-        p.add_argument("--embedder", default=None, help="EMBED_MODEL 값 (기본: 환경 변수, 없으면 arctic)")
+        p.add_argument("--embedder", default=None, help="EMBED_MODEL 값 (기본: 환경 변수, 없으면 voyage-4)")
         p.add_argument("--chunks", type=Path, default=CHUNKS)
         p.add_argument("--out", type=Path, default=OUT)
         p.add_argument("--device", default=None)
@@ -273,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--dataset", type=Path, default=DATASET)
     a = ap.parse_args(argv)
     return {"build": cmd_build, "import": cmd_import, "check": cmd_check, "translations": cmd_translations,
-            "refresh": cmd_refresh}[a.cmd](a)
+            "refresh": cmd_refresh, "links": cmd_links}[a.cmd](a)
 
 
 if __name__ == "__main__":

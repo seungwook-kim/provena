@@ -6,7 +6,8 @@
 
 순서(설계 D13): ① meta.json sha256으로 파일 대조 ② 같은 스냅샷이 이미 ready면 건너뜀 ③ index_meta=loading
 ④ docs·versions·chunks를 배치마다 커밋((chunk_id, version_id)로 upsert, 멱등) ⑤ 스냅샷 밖 행은 지우지 않음(증분이 넣은 판)
-⑥ 대조: 스냅샷 청크가 다 있고, 벡터가 비었거나 다른 모델인 행이 0 ⑦ 번역 장부 ⑧ 마지막에만 ready·generation+1.
+⑥ 대조: 스냅샷 청크가 다 있고, 벡터가 비었거나 다른 모델인 행이 0 ⑦ 링크 대상(links.jsonl, L1x2) ⑧ 번역 장부
+⑨ 마지막에만 ready·generation+1.
 중간에 끊기면 loading으로 남아 api가 뜨지 않는다(배치 커밋이지만 '준비 완료'는 맨 끝에만, rag4-09 행 수 대조).
 """
 from __future__ import annotations
@@ -21,6 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
+from backend.rag.retrieve import embed
 from backend.rag.retrieve.index import file_sha, load_rows
 
 SQL = Path(__file__).resolve().parents[3] / "db" / "201_search.sql"
@@ -52,7 +54,7 @@ def versions_of(rows: list[dict]) -> list[dict]:
 
 def pick_embedder(meta: dict, name: str | None) -> tuple[str, dict]:
     ents = meta.get("embedders") or {}
-    name = name or os.environ.get("EMBED_MODEL") or "Snowflake/snowflake-arctic-embed-l-v2.0"
+    name = name or os.environ.get("EMBED_MODEL") or embed.DEFAULT_MODEL
     if name not in ents:
         raise SystemExit(f"스냅샷에 {name} 벡터가 없다(있는 것: {', '.join(ents) or '없음'})")
     return name, ents[name]
@@ -72,10 +74,16 @@ def load(conn, index: Path, embedder: str | None = None, batch: int = BATCH, log
     conn.execute(SQL.read_text(encoding="utf-8"))
     conn.commit()
 
-    cur = conn.execute("SELECT embedder, chunks_sha256, vectors_sha256, status, generation FROM index_meta WHERE id = 1").fetchone()
+    lk = meta.get("links")
+    if lk and file_sha(index / lk["file"]) != lk["sha256"]:
+        raise SystemExit(f"링크 파일이 meta.json과 다르다: {lk['file']}")
+    cur = conn.execute("SELECT embedder, chunks_sha256, vectors_sha256, status, generation, links_sha256 "
+                       "FROM index_meta WHERE id = 1").fetchone()
     # 줄 범위 칸이 생기기 전에 적재한 DB는 같은 스냅샷이어도 다시 넣는다(칸이 비어 있으면 #L 정답을 못 맞춘다)
     no_lines = conn.execute("SELECT EXISTS (SELECT 1 FROM chunks WHERE line_start IS NULL)").fetchone()[0]
-    if cur and cur[:4] == (name, meta["chunks_sha256"], ent["sha256"], "ready") and not no_lines:
+    # 링크 파일이 있는 스냅샷인데 아직 안 실었으면(링크 칸이 생기기 전 적재) 다시 넣는다
+    same_links = not lk or cur and cur[5] == lk["sha256"]
+    if cur and cur[:4] == (name, meta["chunks_sha256"], ent["sha256"], "ready") and not no_lines and same_links:
         log(f"같은 스냅샷이 이미 적재됨({name}, generation {cur[4]}) — 건너뜀")
         return {"skipped": True, "generation": cur[4]}
     conn.execute("""INSERT INTO index_meta (id, embedder, revision, dim, prefixes, max_seq_length, n_chunks, chunks_sha256,
@@ -84,7 +92,8 @@ def load(conn, index: Path, embedder: str | None = None, batch: int = BATCH, log
                     ON CONFLICT (id) DO UPDATE SET embedder = EXCLUDED.embedder, revision = EXCLUDED.revision,
                         dim = EXCLUDED.dim, prefixes = EXCLUDED.prefixes, max_seq_length = EXCLUDED.max_seq_length,
                         n_chunks = EXCLUDED.n_chunks, chunks_sha256 = EXCLUDED.chunks_sha256,
-                        vectors_sha256 = EXCLUDED.vectors_sha256, status = 'loading', loaded_at = now()""",
+                        vectors_sha256 = EXCLUDED.vectors_sha256, links_sha256 = NULL, status = 'loading',
+                        loaded_at = now()""",
                  {"e": name, "r": ent["revision"], "d": ent["dim"], "p": json.dumps(ent.get("prefixes") or {}),
                   "m": ent.get("max_seq_length"), "n": meta["n_chunks"], "c": meta["chunks_sha256"], "v": ent["sha256"]})
     conn.commit()
@@ -138,6 +147,8 @@ def load(conn, index: Path, embedder: str | None = None, batch: int = BATCH, log
     if present != want or stale:
         raise SystemExit(f"대조 실패: 스냅샷 청크 {want}개 중 DB에 {present}개, 다른 모델·빈 벡터 {stale}행 — loading으로 남김")
 
+    n_link = load_links(conn, index, lk, rows) if lk else 0
+
     n_tr = 0
     tr = meta.get("query_translations")
     if tr:
@@ -154,8 +165,32 @@ def load(conn, index: Path, embedder: str | None = None, batch: int = BATCH, log
                        "WHERE id = 1 RETURNING generation").fetchone()[0]
     conn.commit()
     secs = round(time.perf_counter() - t0, 1)
-    log(f"적재 완료: {name}, 청크 {present}개, 번역 {n_tr}개, {secs}초, generation {gen}")
-    return {"skipped": False, "chunks": present, "translations": n_tr, "seconds": secs, "generation": gen}
+    log(f"적재 완료: {name}, 청크 {present}개, 링크 있는 청크 {n_link}개, 번역 {n_tr}개, {secs}초, generation {gen}")
+    return {"skipped": False, "chunks": present, "links": n_link, "translations": n_tr, "seconds": secs, "generation": gen}
+
+
+def load_links(conn, index: Path, lk: dict, rows: list[dict]) -> int:
+    """links.jsonl(줄 순서 = chunks.jsonl) → chunks.link_targets. 줄 순서·개수가 청크와 다르면 멈춘다(loading으로 남음)."""
+    items = [json.loads(x) for x in (index / lk["file"]).read_text(encoding="utf-8").splitlines() if x.strip()]
+    if [(x["chunk_id"], x["version_id"]) for x in items] != [(r["chunk_id"], r["version_id"]) for r in rows]:
+        raise SystemExit("링크 파일 줄이 청크 파일과 다르다 — index links를 다시 돌린다")
+    conn.execute("CREATE TEMP TABLE IF NOT EXISTS links_in (chunk_id text, version_id text, targets bigint[]) "
+                 "ON COMMIT PRESERVE ROWS")
+    with conn.cursor() as c:
+        c.execute("TRUNCATE links_in")
+        # 배열은 PostgreSQL 배열 글('{1,2}', 빈 목록은 '{}')로 직접 써서 넘긴다. 빈 파이썬 list는 원소 형을 몰라
+        # 드라이버 추론에 기대게 되므로, 텍스트 COPY에서 서버가 칸 형(bigint[])으로 읽게 한다(PostgreSQL 문서 8.15.2).
+        with c.copy("COPY links_in (chunk_id, version_id, targets) FROM STDIN") as cp:
+            for x in items:
+                cp.write_row([x["chunk_id"], x["version_id"], "{" + ",".join(str(int(t)) for t in x["targets"]) + "}"])
+        n = c.execute("""UPDATE chunks SET link_targets = l.targets FROM links_in l
+                         WHERE chunks.chunk_id = l.chunk_id AND chunks.version_id = l.version_id""").rowcount
+        want = len({(x["chunk_id"], x["version_id"]) for x in items})
+        if n != want:
+            raise SystemExit(f"링크 대조 실패: {want}행 중 {n}행만 반영 — loading으로 남김")
+        c.execute("UPDATE index_meta SET links_sha256 = %(s)s WHERE id = 1", {"s": lk["sha256"]})
+    conn.commit()
+    return sum(1 for x in items if x["targets"])
 
 
 def ensure_index(index: Path, log=print) -> bool:

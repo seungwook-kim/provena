@@ -28,8 +28,13 @@ class Chunk(BaseModel):
     line_end: int | None = None
 
 
+# 검색 결과 수 기본값. 그래프와 MCP가 같은 값을 쓴다(확정 조합 측정 k=5, docs/specs/search.md).
+DEFAULT_K = 5
+
+
 class SearchQuery(BaseModel):
     query: str
     org: str | None = None  # 절
     as_of: str | None = None  # 이 날짜 기준 핸드북 판(커밋)만
-    k: int = 8
+    k: int = DEFAULT_K
+    sub_queries: list[str] | None = None  # 질문 분해 결과(2~3개). 검사는 search.check_query
