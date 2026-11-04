@@ -17,7 +17,7 @@ from fastmcp import Client  # noqa: E402
 
 from backend.rag.ingest.changes import LastRun  # noqa: E402
 from backend.rag.retrieve.section import MemorySectionStore  # noqa: E402
-from backend.schemas.chunk import Chunk, SearchQuery  # noqa: E402
+from backend.schemas.chunk import DEFAULT_K, Chunk, SearchQuery  # noqa: E402
 from backend.schemas.recall import ChangedArticle  # noqa: E402
 from extras.mcp_skill.mcp_server import server  # noqa: E402
 
@@ -347,7 +347,7 @@ def test_snapshot_v1_mcp_equals_direct():
     mcp_fn = server.build_server(search_fn=fn, section_store=section_rows(["x"]), changes_store=FakeChanges())
     same = 0
     for q in qs:
-        direct = [c.chunk_id for c in fn(SearchQuery(query=q, k=8))]
-        via = call(mcp_fn, "search_handbook", {"query": q, "k": 8})
+        direct = [c.chunk_id for c in fn(SearchQuery(query=q, k=DEFAULT_K))]
+        via = call(mcp_fn, "search_handbook", {"query": q, "k": DEFAULT_K})
         same += direct == [c["chunk_id"] for c in via["results"]]
     assert len(qs) == 30 and same == 30

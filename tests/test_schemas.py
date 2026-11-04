@@ -21,7 +21,7 @@ from backend.schemas import (
 EXPECTED_FIELDS = {
     Chunk: ["chunk_id", "org", "rule_seq", "rule_title", "article", "version_id", "version_date",
             "fetched_at", "kind", "text", "source_url", "text_sha256", "version_date_before", "line_start", "line_end"],
-    SearchQuery: ["query", "org", "as_of", "k"],
+    SearchQuery: ["query", "org", "as_of", "k", "sub_queries"],
     AgentEvent: ["type", "thread_id", "data"],
     ApprovalItem: ["approval_id", "kind", "summary", "created_at"],
     Decision: ["approval_id", "approve", "comment", "decided_by"],
@@ -70,7 +70,7 @@ def test_chunk_requires_every_field():
 
 def test_search_query_defaults():
     q = SearchQuery(query="외부 SaaS 승인")
-    assert (q.org, q.as_of, q.k) == (None, None, 8)
+    assert (q.org, q.as_of, q.k, q.sub_queries) == (None, None, 5, None)
 
 
 def test_agent_event_type_is_restricted():
