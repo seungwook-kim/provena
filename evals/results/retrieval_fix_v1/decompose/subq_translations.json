@@ -1,0 +1,99 @@
+{
+ "model": "claude-haiku-5-5",
+ "calls": 47,
+ "cost_usd": 0.008961,
+ "items": {
+  "온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?": {
+   "sentence": "When I get paged while on call, how soon do I have to acknowledge it?",
+   "keywords": "on-call page acknowledge time limit SLA response time"
+  },
+  "슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?": {
+   "sentence": "Is there a separate response deadline when someone @mentions the on-call person in Slack?",
+   "keywords": "Slack on-call engineer @mention response time SLA deadline"
+  },
+  "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?": {
+   "sentence": "How is escalation handled if the EOC does not respond to a call?",
+   "keywords": "EOC no-response escalation procedure, unanswered call, escalation path"
+  },
+  "IMOC도 호출에 응답이 없으면 어떻게 에스컬레이션돼?": {
+   "sentence": "What is the escalation process if IMOC also does not respond to a call?",
+   "keywords": "IMOC escalation no response call procedure"
+  },
+  "GitLab 정기(monthly) 릴리스는 언제 나가?": {
+   "sentence": "When does GitLab's monthly release go out?",
+   "keywords": "GitLab monthly release release date schedule"
+  },
+  "패치 릴리스는 한 달에 몇 번 나가?": {
+   "sentence": "How often do patch releases go out per month?",
+   "keywords": "patch release how many times a month english search keywords"
+  },
+  "자동 배포 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해?": {
+   "sentence": "How long do I need to wait after the automatic deployment package goes to the production canary before promoting it to full production?",
+   "keywords": "auto deploy package production canary wait time before full production rollout"
+  },
+  "프로덕션 카나리에서 본 프로덕션으로의 승격은 자동이야 수동이야?": {
+   "sentence": "Is promotion from the production canary to production automatic or manual?",
+   "keywords": "production canary to production promotion automatic or manual"
+  },
+  "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?": {
+   "sentence": "How do you normally handle the culprit MR when a CI Health incident is opened because the default branch is broken?",
+   "keywords": "default branch broken CI health incident culprit MR handling default process"
+  },
+  "revert MR 승인은 몇 명 필요해?": {
+   "sentence": "How many approvals are required for a revert MR?",
+   "keywords": "revert MR approval how many people needed"
+  },
+  "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해?": {
+   "sentence": "How soon must a flaky test file be fixed once it has been identified?",
+   "keywords": "flaky test file fix deadline, flaky test remediation timeline, flaky test SLA, flaky test triage policy"
+  },
+  "flaky 테스트를 못 고치면 어떻게 돼?": {
+   "sentence": "What happens if we can't fix a flaky test?",
+   "keywords": "flaky test unfixable consequences what happens if cannot fix flaky test"
+  },
+  "격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?": {
+   "sentence": "How long can a quarantined test stay in quarantine at most?",
+   "keywords": "quarantined test maximum duration limit policy flaky test quarantine retention period"
+  },
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)해야 해?": {
+   "sentence": "When is a critical vulnerability (CVSS 9.0+) required to be mitigated within how many days?",
+   "keywords": "CVSS 9.0 critical vulnerability mitigation timeline deadline SLA"
+  },
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 수정(remediate)해야 해?": {
+   "sentence": "Within how long must critical vulnerabilities with a CVSS score of 9.0 or higher be remediated?",
+   "keywords": "CVSS 9.0 critical vulnerability remediation timeline SLA policy"
+  },
+  "Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?": {
+   "sentence": "How often is the user access rights review done for the Red data system?",
+   "keywords": "Red data system user access rights review frequency"
+  },
+  "SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?": {
+   "sentence": "How often do you run user access reviews for SOX in-scope applications?",
+   "keywords": "SOX in-scope application user access review frequency quarterly semi-annual annual"
+  },
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 해줄 때 기간 제한과 연장 한도는?": {
+   "sentence": "What is the time limit for free support granted to prospects by the sales team, and what is the maximum extension allowed?",
+   "keywords": "sales team prospect free support trial period time limit extension limit"
+  },
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?": {
+   "sentence": "How many prospects can the sales team provide free support to at the same time?",
+   "keywords": "sales team free support prospects concurrent limit, prospect free trial simultaneous maximum, sales pilot quota per rep, prospect no-cost support capacity"
+  },
+  "Critical PCL은 언제 선언해?": {
+   "sentence": "When is Critical PCL declared?",
+   "keywords": "Critical PCL declaration timing when to declare criteria"
+  },
+  "Critical PCL은 누가 승인해?": {
+   "sentence": "Who approves Critical PCL?",
+   "keywords": "Critical PCL approver who approves"
+  },
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받아?": {
+   "sentence": "When is the application period for the second cohort of the ProdSec (security team) mentorship program?",
+   "keywords": "ProdSec mentorship program second cohort application schedule"
+  },
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 시작해?": {
+   "sentence": "When does the second cohort of the ProdSec (security team) mentorship program start?",
+   "keywords": "ProdSec mentorship program second cohort start date"
+  }
+ }
+}

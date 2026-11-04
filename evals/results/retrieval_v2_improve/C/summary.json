@@ -1,0 +1,752 @@
+{
+ "summary": {
+  "어제 같은 조합(앞뒤 없음)": {
+   "응답": "50/50",
+   "JSON 실패": 0,
+   "정답 위치 인용": "23/25",
+   "인용 못 한 문항": [
+    "3",
+    "7"
+   ],
+   "비관련 거절": "24/25",
+   "거절 안 한 문항": [
+    "42"
+   ],
+   "자료에 없는 인용": 0,
+   "입력 토큰 평균": 2618,
+   "출력 토큰 평균": 823,
+   "CLI 보고 비용 합계(달러)": 0.0463,
+   "시간 p50": 6.53,
+   "시간 p95": 8.97,
+   "모델": [
+    "claude-haiku-5-5"
+   ],
+   "자료에 든 청크 수 평균": 5
+  },
+  "앞뒤 ±1 추가": {
+   "응답": "50/50",
+   "JSON 실패": 0,
+   "정답 위치 인용": "24/25",
+   "인용 못 한 문항": [
+    "3"
+   ],
+   "비관련 거절": "24/25",
+   "거절 안 한 문항": [
+    "22"
+   ],
+   "자료에 없는 인용": 0,
+   "입력 토큰 평균": 4650,
+   "출력 토큰 평균": 898,
+   "CLI 보고 비용 합계(달러)": 0.0689,
+   "시간 p50": 6.0,
+   "시간 p95": 9.07,
+   "모델": [
+    "claude-haiku-5-5"
+   ],
+   "자료에 든 청크 수 평균": 12.18
+  }
+ },
+ "per_question": [
+  {
+   "id": 1,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2353,
+   "new_input_tokens": 5406,
+   "neighbor_only_cited": [
+    "f8caa09cdaaa854b"
+   ]
+  },
+  {
+   "id": 2,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2644,
+   "new_input_tokens": 5427,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 3,
+   "kind": "relevant",
+   "old_cited_gold": false,
+   "new_cited_gold": false,
+   "old_gold_in_context": false,
+   "new_gold_in_context": false,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2176,
+   "new_input_tokens": 4375,
+   "neighbor_only_cited": [
+    "5f3164dd09a5c336"
+   ]
+  },
+  {
+   "id": 4,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2836,
+   "new_input_tokens": 4680,
+   "neighbor_only_cited": [
+    "57e141b336fd3aa7"
+   ]
+  },
+  {
+   "id": 5,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2850,
+   "new_input_tokens": 4769,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 6,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2940,
+   "new_input_tokens": 5251,
+   "neighbor_only_cited": [
+    "5614f04fd3d4a3da",
+    "9dd41c613fc05b7a"
+   ]
+  },
+  {
+   "id": 7,
+   "kind": "relevant",
+   "old_cited_gold": false,
+   "new_cited_gold": true,
+   "old_gold_in_context": false,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2532,
+   "new_input_tokens": 4662,
+   "neighbor_only_cited": [
+    "78621d46c7424c88",
+    "273b8283122bad03"
+   ]
+  },
+  {
+   "id": 8,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2529,
+   "new_input_tokens": 4040,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 9,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 3147,
+   "new_input_tokens": 4969,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 10,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2591,
+   "new_input_tokens": 5012,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 11,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2807,
+   "new_input_tokens": 5313,
+   "neighbor_only_cited": [
+    "ecda4ef19cdf033a",
+    "f7a8ab483f1a9e7c"
+   ]
+  },
+  {
+   "id": 12,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2487,
+   "new_input_tokens": 3729,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 13,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2404,
+   "new_input_tokens": 3294,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 14,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2568,
+   "new_input_tokens": 4705,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 15,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2211,
+   "new_input_tokens": 3788,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 16,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2554,
+   "new_input_tokens": 5138,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 17,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2159,
+   "new_input_tokens": 4359,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 18,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 3192,
+   "new_input_tokens": 4273,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 19,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2604,
+   "new_input_tokens": 5739,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 20,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 1938,
+   "new_input_tokens": 4485,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 21,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2541,
+   "new_input_tokens": 5922,
+   "neighbor_only_cited": [
+    "5635dc6f280d5ef1"
+   ]
+  },
+  {
+   "id": 22,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": false,
+   "old_input_tokens": 2468,
+   "new_input_tokens": 3747,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 23,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2670,
+   "new_input_tokens": 4345,
+   "neighbor_only_cited": [
+    "ea56323fd738fe51"
+   ]
+  },
+  {
+   "id": 24,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 3020,
+   "new_input_tokens": 6160,
+   "neighbor_only_cited": [
+    "bd4e490272285823"
+   ]
+  },
+  {
+   "id": 25,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2578,
+   "new_input_tokens": 3879,
+   "neighbor_only_cited": [
+    "1c67d32904811d49"
+   ]
+  },
+  {
+   "id": 26,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2428,
+   "new_input_tokens": 4718,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 27,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2430,
+   "new_input_tokens": 4838,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 28,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 3488,
+   "new_input_tokens": 3938,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 29,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 3477,
+   "new_input_tokens": 3928,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 30,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2660,
+   "new_input_tokens": 3945,
+   "neighbor_only_cited": [
+    "026abc9a96824b93"
+   ]
+  },
+  {
+   "id": 31,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2263,
+   "new_input_tokens": 3739,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 32,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2573,
+   "new_input_tokens": 5992,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 33,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2638,
+   "new_input_tokens": 3938,
+   "neighbor_only_cited": [
+    "ee6b973c265fabc1"
+   ]
+  },
+  {
+   "id": 34,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2757,
+   "new_input_tokens": 4547,
+   "neighbor_only_cited": [
+    "7373a0cc7191a2aa"
+   ]
+  },
+  {
+   "id": 35,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2899,
+   "new_input_tokens": 4827,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 36,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2656,
+   "new_input_tokens": 6101,
+   "neighbor_only_cited": [
+    "46febe6f4a6ae0bc",
+    "556f4a5aac4c4c31",
+    "d96029d78f460b1a"
+   ]
+  },
+  {
+   "id": 37,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2456,
+   "new_input_tokens": 3299,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 38,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2924,
+   "new_input_tokens": 5264,
+   "neighbor_only_cited": [
+    "14cd1150f75d2995",
+    "13f5864914ff1608",
+    "1c4feae2ebd09577"
+   ]
+  },
+  {
+   "id": 39,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2271,
+   "new_input_tokens": 3986,
+   "neighbor_only_cited": [
+    "1349310bf3d9c2f7",
+    "6a3b20f538fd3649",
+    "2782ff2febf78d5b",
+    "b579ee5fefd307d2"
+   ]
+  },
+  {
+   "id": 40,
+   "kind": "relevant",
+   "old_cited_gold": true,
+   "new_cited_gold": true,
+   "old_gold_in_context": true,
+   "new_gold_in_context": true,
+   "old_refused": null,
+   "new_refused": null,
+   "old_input_tokens": 2774,
+   "new_input_tokens": 5314,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 41,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2833,
+   "new_input_tokens": 4956,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 42,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": false,
+   "new_refused": true,
+   "old_input_tokens": 2454,
+   "new_input_tokens": 5407,
+   "neighbor_only_cited": [
+    "ac5c982070633ad6",
+    "85501a4c7fa639c9"
+   ]
+  },
+  {
+   "id": 43,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2719,
+   "new_input_tokens": 5602,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 44,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 1722,
+   "new_input_tokens": 2989,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 45,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2078,
+   "new_input_tokens": 4274,
+   "neighbor_only_cited": [
+    "d29732be7af37f97"
+   ]
+  },
+  {
+   "id": 46,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2703,
+   "new_input_tokens": 5707,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 47,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2523,
+   "new_input_tokens": 4852,
+   "neighbor_only_cited": [
+    "572ec8242782fd96"
+   ]
+  },
+  {
+   "id": 48,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2444,
+   "new_input_tokens": 4042,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 49,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 2865,
+   "new_input_tokens": 3392,
+   "neighbor_only_cited": []
+  },
+  {
+   "id": 50,
+   "kind": "irrelevant",
+   "old_cited_gold": null,
+   "new_cited_gold": null,
+   "old_gold_in_context": null,
+   "new_gold_in_context": null,
+   "old_refused": true,
+   "new_refused": true,
+   "old_input_tokens": 3053,
+   "new_input_tokens": 5435,
+   "neighbor_only_cited": [
+    "8559d81ba986552a"
+   ]
+  }
+ ]
+}

@@ -17,6 +17,7 @@ KDT AI Human 7기 3차 팀 프로젝트 · 3조 · 김승욱(팀장), 박진형,
 | 배포 주소 | https://provena-api-cttaanqntq-du.a.run.app |
 | 팀 작업 지침서 | [docs/TEAM_GUIDE.md](./docs/TEAM_GUIDE.md) |
 | 정본 문서 (SPEC) | [docs/SPEC.md](./docs/SPEC.md) |
+| 임베딩 측정 기록 | [docs/embedding_measurement.md](./docs/embedding_measurement.md) |
 
 ## 팀 (3조)
 

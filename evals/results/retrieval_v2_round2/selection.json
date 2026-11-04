@@ -1,0 +1,1780 @@
+{
+ "rows": [
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|bge",
+   "recall": 0.8933333333333333,
+   "recall_ci": [
+    0.8133333333333332,
+    0.9666666666666667
+   ],
+   "mrr": 0.836,
+   "mrr_ci": [
+    0.716,
+    0.9413333333333334
+   ],
+   "ms": 7222,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.9,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|bge",
+   "recall": 0.8733333333333333,
+   "recall_ci": [
+    0.7666666666666667,
+    0.96
+   ],
+   "mrr": 0.8213333333333334,
+   "mrr_ci": [
+    0.6906666666666667,
+    0.93
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|int8",
+   "recall": 0.8733333333333333,
+   "recall_ci": [
+    0.7666666666666667,
+    0.96
+   ],
+   "mrr": 0.816,
+   "mrr_ci": [
+    0.6759999999999999,
+    0.9359999999999999
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|mminilm",
+   "recall": 0.8633333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9566666666666667
+   ],
+   "mrr": 0.7746666666666667,
+   "mrr_ci": [
+    0.6393333333333333,
+    0.898
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|bge",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8213333333333334,
+   "mrr_ci": [
+    0.6913333333333334,
+    0.9333333333333332
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|qwen3",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.74,
+    0.9466666666666668
+   ],
+   "mrr": 0.7946666666666666,
+   "mrr_ci": [
+    0.664,
+    0.9079999999999999
+   ],
+   "ms": 14334,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|qwen3",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.7879999999999999,
+   "mrr_ci": [
+    0.6533333333333333,
+    0.9079999999999999
+   ],
+   "ms": 14497,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage-4|dense_en|none",
+   "recall": 0.8433333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.96
+   ],
+   "mrr": 0.838,
+   "mrr_ci": [
+    0.698,
+    0.96
+   ],
+   "ms": 708,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|bge",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8533333333333333,
+   "mrr_ci": [
+    0.7266666666666667,
+    0.96
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.85,
+   "mrr_ci": [
+    0.72,
+    0.96
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_en|bge",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8333333333333333,
+   "mrr_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "ms": 7747,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|bge",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8333333333333333,
+   "mrr_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.828,
+   "mrr_ci": [
+    0.696,
+    0.94
+   ],
+   "ms": 3832,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_ko|none",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.828,
+   "mrr_ci": [
+    0.6859999999999999,
+    0.96
+   ],
+   "ms": 708,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8233333333333333,
+   "mrr_ci": [
+    0.69,
+    0.9333333333333332
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8233333333333333,
+   "mrr_ci": [
+    0.69,
+    0.94
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|none",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8113333333333334,
+   "mrr_ci": [
+    0.6646666666666667,
+    0.938
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.81,
+   "mrr_ci": [
+    0.68,
+    0.93
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8033333333333332,
+   "mrr_ci": [
+    0.6633333333333333,
+    0.9233333333333333
+   ],
+   "ms": 1295,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8166666666666668,
+   "mrr_ci": [
+    0.6766666666666667,
+    0.9333333333333332
+   ],
+   "ms": 3307,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8166666666666668,
+   "mrr_ci": [
+    0.6766666666666667,
+    0.9333333333333332
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8079999999999999,
+   "mrr_ci": [
+    0.664,
+    0.93
+   ],
+   "ms": 3451,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|qwen3",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7266666666666667,
+    0.9333333333333332
+   ],
+   "mrr": 0.7966666666666667,
+   "mrr_ci": [
+    0.6666666666666667,
+    0.91
+   ],
+   "ms": 14353,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|qwen3",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7266666666666667,
+    0.9333333333333332
+   ],
+   "mrr": 0.79,
+   "mrr_ci": [
+    0.6533333333333333,
+    0.9066666666666667
+   ],
+   "ms": 14334,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|mminilm",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.7646666666666667,
+   "mrr_ci": [
+    0.6226666666666667,
+    0.8966666666666667
+   ],
+   "ms": 770,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|none",
+   "recall": 0.8233333333333333,
+   "recall_ci": [
+    0.6866666666666668,
+    0.94
+   ],
+   "mrr": 0.8333333333333333,
+   "mrr_ci": [
+    0.7,
+    0.94
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "voyage-4|hybrid_ko_kw|int8",
+   "recall": 0.8233333333333333,
+   "recall_ci": [
+    0.69,
+    0.9366666666666668
+   ],
+   "mrr": 0.8079999999999999,
+   "mrr_ci": [
+    0.664,
+    0.93
+   ],
+   "ms": 3832,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "qwen3-0.6b|dense_en|qwen3",
+   "recall": 0.8233333333333333,
+   "recall_ci": [
+    0.6733333333333333,
+    0.96
+   ],
+   "mrr": 0.7733333333333333,
+   "mrr_ci": [
+    0.6266666666666666,
+    0.9
+   ],
+   "ms": 14497,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|mminilm",
+   "recall": 0.8233333333333333,
+   "recall_ci": [
+    0.69,
+    0.9366666666666668
+   ],
+   "mrr": 0.7613333333333334,
+   "mrr_ci": [
+    0.618,
+    0.8933333333333333
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "arctic-l-v2|dense_en|bge",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6733333333333333,
+    0.94
+   ],
+   "mrr": 0.81,
+   "mrr_ci": [
+    0.66,
+    0.93
+   ],
+   "ms": 7222,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "arctic-l-v2|dense_en|int8",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6733333333333333,
+    0.94
+   ],
+   "mrr": 0.81,
+   "mrr_ci": [
+    0.66,
+    0.93
+   ],
+   "ms": 3307,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|qwen3",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6866666666666668,
+    0.93
+   ],
+   "mrr": 0.7933333333333333,
+   "mrr_ci": [
+    0.6466666666666667,
+    0.92
+   ],
+   "ms": 14334,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|qwen3",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6866666666666668,
+    0.93
+   ],
+   "mrr": 0.7733333333333333,
+   "mrr_ci": [
+    0.6266666666666666,
+    0.9066666666666667
+   ],
+   "ms": 14334,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_en|qwen3",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6866666666666668,
+    0.93
+   ],
+   "mrr": 0.7733333333333333,
+   "mrr_ci": [
+    0.6266666666666666,
+    0.9066666666666667
+   ],
+   "ms": 14878,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "arctic-l-v2|dense_en|mminilm",
+   "recall": 0.8166666666666668,
+   "recall_ci": [
+    0.6733333333333333,
+    0.94
+   ],
+   "mrr": 0.7533333333333333,
+   "mrr_ci": [
+    0.6033333333333334,
+    0.89
+   ],
+   "ms": 770,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "e5-large|hybrid_ko_kw|int8",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6733333333333333,
+    0.9333333333333332
+   ],
+   "mrr": 0.82,
+   "mrr_ci": [
+    0.68,
+    0.94
+   ],
+   "ms": 3275,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "e5-large|hybrid_ko_kw|bge",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6733333333333333,
+    0.9333333333333332
+   ],
+   "mrr": 0.82,
+   "mrr_ci": [
+    0.68,
+    0.94
+   ],
+   "ms": 7190,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|bge",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6733333333333333,
+    0.9333333333333332
+   ],
+   "mrr": 0.8033333333333332,
+   "mrr_ci": [
+    0.6566666666666667,
+    0.92
+   ],
+   "ms": 7366,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "e5-large|dense_en|none",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6666666666666667,
+    0.94
+   ],
+   "mrr": 0.7713333333333334,
+   "mrr_ci": [
+    0.6193333333333333,
+    0.9079999999999999
+   ],
+   "ms": 151,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.7833333333333333
+  },
+  {
+   "name": "e5-large|hybrid_ko_kw|mminilm",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6733333333333333,
+    0.9333333333333332
+   ],
+   "mrr": 0.7666666666666667,
+   "mrr_ci": [
+    0.62,
+    0.9
+   ],
+   "ms": 738,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "e5-large|hybrid_ko_kw|qwen3",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6733333333333333,
+    0.9333333333333332
+   ],
+   "mrr": 0.76,
+   "mrr_ci": [
+    0.6066666666666667,
+    0.8933333333333333
+   ],
+   "ms": 14321,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|dense_en|none",
+   "recall": 0.8133333333333332,
+   "recall_ci": [
+    0.6533333333333333,
+    0.96
+   ],
+   "mrr": 0.738,
+   "mrr_ci": [
+    0.5760000000000001,
+    0.888
+   ],
+   "ms": 327,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8333333333333333
+  },
+  {
+   "name": "e5-large|dense_en|bge",
+   "recall": 0.8066666666666668,
+   "recall_ci": [
+    0.66,
+    0.94
+   ],
+   "mrr": 0.8,
+   "mrr_ci": [
+    0.64,
+    0.92
+   ],
+   "ms": 7190,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8666666666666668
+  },
+  {
+   "name": "e5-large|dense_en|int8",
+   "recall": 0.8066666666666668,
+   "recall_ci": [
+    0.66,
+    0.94
+   ],
+   "mrr": 0.8,
+   "mrr_ci": [
+    0.64,
+    0.92
+   ],
+   "ms": 3275,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8666666666666668
+  },
+  {
+   "name": "e5-large|dense_en|mminilm",
+   "recall": 0.8066666666666668,
+   "recall_ci": [
+    0.66,
+    0.94
+   ],
+   "mrr": 0.7266666666666667,
+   "mrr_ci": [
+    0.5733333333333334,
+    0.8666666666666667
+   ],
+   "ms": 738,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8666666666666668
+  },
+  {
+   "name": "voyage-4|hybrid_ko_kw|bge",
+   "recall": 0.8033333333333332,
+   "recall_ci": [
+    0.66,
+    0.93
+   ],
+   "mrr": 0.8033333333333332,
+   "mrr_ci": [
+    0.6566666666666667,
+    0.92
+   ],
+   "ms": 7747,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "voyage-4|hybrid_ko_kw|qwen3",
+   "recall": 0.8033333333333332,
+   "recall_ci": [
+    0.67,
+    0.92
+   ],
+   "mrr": 0.78,
+   "mrr_ci": [
+    0.64,
+    0.9066666666666667
+   ],
+   "ms": 14878,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "qwen3-0.6b|dense_en|mminilm",
+   "recall": 0.8033333333333332,
+   "recall_ci": [
+    0.6566666666666667,
+    0.93
+   ],
+   "mrr": 0.7746666666666667,
+   "mrr_ci": [
+    0.62,
+    0.9079999999999999
+   ],
+   "ms": 914,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "voyage-4|hybrid_ko_kw|mminilm",
+   "recall": 0.8033333333333332,
+   "recall_ci": [
+    0.66,
+    0.93
+   ],
+   "mrr": 0.7566666666666667,
+   "mrr_ci": [
+    0.6066666666666667,
+    0.8933333333333333
+   ],
+   "ms": 1295,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|mminilm",
+   "recall": 0.8033333333333332,
+   "recall_ci": [
+    0.66,
+    0.93
+   ],
+   "mrr": 0.7566666666666667,
+   "mrr_ci": [
+    0.6066666666666667,
+    0.8933333333333333
+   ],
+   "ms": 914,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "arctic-l-v2|dense_en|qwen3",
+   "recall": 0.7966666666666667,
+   "recall_ci": [
+    0.6533333333333333,
+    0.92
+   ],
+   "mrr": 0.76,
+   "mrr_ci": [
+    0.6066666666666667,
+    0.8933333333333333
+   ],
+   "ms": 14353,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|none",
+   "recall": 0.7966666666666667,
+   "recall_ci": [
+    0.65,
+    0.9233333333333333
+   ],
+   "mrr": 0.7166666666666667,
+   "mrr_ci": [
+    0.5833333333333334,
+    0.8533333333333333
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.7916666666666666
+  },
+  {
+   "name": "qwen3-0.6b|dense_en|bge",
+   "recall": 0.7933333333333333,
+   "recall_ci": [
+    0.64,
+    0.92
+   ],
+   "mrr": 0.82,
+   "mrr_ci": [
+    0.66,
+    0.94
+   ],
+   "ms": 7366,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8333333333333333
+  },
+  {
+   "name": "qwen3-0.6b|dense_en|int8",
+   "recall": 0.7933333333333333,
+   "recall_ci": [
+    0.64,
+    0.92
+   ],
+   "mrr": 0.82,
+   "mrr_ci": [
+    0.66,
+    0.94
+   ],
+   "ms": 3451,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.8333333333333333
+  },
+  {
+   "name": "voyage-4|hybrid_ko_kw|none",
+   "recall": 0.79,
+   "recall_ci": [
+    0.65,
+    0.9166666666666667
+   ],
+   "mrr": 0.7546666666666667,
+   "mrr_ci": [
+    0.6146666666666667,
+    0.888
+   ],
+   "ms": 708,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7666666666666667,
+   "new_part": 0.825
+  },
+  {
+   "name": "e5-large|dense_en|qwen3",
+   "recall": 0.7866666666666667,
+   "recall_ci": [
+    0.64,
+    0.92
+   ],
+   "mrr": 0.7666666666666667,
+   "mrr_ci": [
+    0.6133333333333334,
+    0.9066666666666667
+   ],
+   "ms": 14321,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8666666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_ko|none",
+   "recall": 0.7833333333333333,
+   "recall_ci": [
+    0.6366666666666666,
+    0.92
+   ],
+   "mrr": 0.7933333333333333,
+   "mrr_ci": [
+    0.6466666666666667,
+    0.92
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|none",
+   "recall": 0.7833333333333333,
+   "recall_ci": [
+    0.64,
+    0.9133333333333333
+   ],
+   "mrr": 0.7266666666666667,
+   "mrr_ci": [
+    0.58,
+    0.8666666666666667
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_ko|none",
+   "recall": 0.7766666666666667,
+   "recall_ci": [
+    0.6366666666666666,
+    0.9066666666666667
+   ],
+   "mrr": 0.7293333333333334,
+   "mrr_ci": [
+    0.5733333333333334,
+    0.8746666666666667
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|none",
+   "recall": 0.7733333333333333,
+   "recall_ci": [
+    0.6333333333333333,
+    0.9
+   ],
+   "mrr": 0.7333333333333333,
+   "mrr_ci": [
+    0.5833333333333334,
+    0.87
+   ],
+   "ms": 183,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8333333333333334
+  },
+  {
+   "name": "arctic-l-v2|dense_en|none",
+   "recall": 0.7633333333333333,
+   "recall_ci": [
+    0.6133333333333334,
+    0.8933333333333333
+   ],
+   "mrr": 0.8,
+   "mrr_ci": [
+    0.66,
+    0.92
+   ],
+   "ms": 183,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.8083333333333332
+  },
+  {
+   "name": "arctic-l-v2|dense_ko|none",
+   "recall": 0.7566666666666667,
+   "recall_ci": [
+    0.61,
+    0.8866666666666667
+   ],
+   "mrr": 0.7833333333333333,
+   "mrr_ci": [
+    0.6333333333333333,
+    0.92
+   ],
+   "ms": 183,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7,
+   "new_part": 0.8416666666666668
+  },
+  {
+   "name": "bge-m3|dense_ko|none",
+   "recall": 0.7533333333333333,
+   "recall_ci": [
+    0.5933333333333334,
+    0.9
+   ],
+   "mrr": 0.7213333333333334,
+   "mrr_ci": [
+    0.56,
+    0.8733333333333333
+   ],
+   "ms": 139,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7,
+   "new_part": 0.8333333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|none",
+   "recall": 0.7466666666666667,
+   "recall_ci": [
+    0.6066666666666667,
+    0.8733333333333333
+   ],
+   "mrr": 0.6913333333333334,
+   "mrr_ci": [
+    0.544,
+    0.8213333333333334
+   ],
+   "ms": 327,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7333333333333333,
+   "new_part": 0.7666666666666666
+  },
+  {
+   "name": "qwen3-0.6b|dense_ko|none",
+   "recall": 0.7166666666666667,
+   "recall_ci": [
+    0.54,
+    0.8666666666666667
+   ],
+   "mrr": 0.66,
+   "mrr_ci": [
+    0.49333333333333335,
+    0.8133333333333332
+   ],
+   "ms": 327,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.6333333333333333,
+   "new_part": 0.8416666666666668
+  },
+  {
+   "name": "e5-large|dense_ko|none",
+   "recall": 0.71,
+   "recall_ci": [
+    0.5533333333333333,
+    0.8533333333333333
+   ],
+   "mrr": 0.748,
+   "mrr_ci": [
+    0.588,
+    0.888
+   ],
+   "ms": 151,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.7,
+   "new_part": 0.725
+  },
+  {
+   "name": "e5-large|hybrid_ko_kw|none",
+   "recall": 0.7033333333333333,
+   "recall_ci": [
+    0.5433333333333333,
+    0.8533333333333333
+   ],
+   "mrr": 0.7,
+   "mrr_ci": [
+    0.54,
+    0.84
+   ],
+   "ms": 151,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.6333333333333333,
+   "new_part": 0.8083333333333333
+  },
+  {
+   "name": "none|bm25_kw|bge",
+   "recall": 0.7,
+   "recall_ci": [
+    0.5466666666666666,
+    0.84
+   ],
+   "mrr": 0.7433333333333333,
+   "mrr_ci": [
+    0.5866666666666667,
+    0.89
+   ],
+   "ms": 7039,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.6666666666666666,
+   "new_part": 0.75
+  },
+  {
+   "name": "none|bm25_kw|int8",
+   "recall": 0.7,
+   "recall_ci": [
+    0.5466666666666666,
+    0.84
+   ],
+   "mrr": 0.738,
+   "mrr_ci": [
+    0.578,
+    0.888
+   ],
+   "ms": 3124,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.6666666666666666,
+   "new_part": 0.75
+  },
+  {
+   "name": "none|bm25_kw|qwen3",
+   "recall": 0.7,
+   "recall_ci": [
+    0.5466666666666666,
+    0.84
+   ],
+   "mrr": 0.6933333333333332,
+   "mrr_ci": [
+    0.5333333333333333,
+    0.84
+   ],
+   "ms": 14170,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.6666666666666666,
+   "new_part": 0.75
+  },
+  {
+   "name": "none|bm25_kw|mminilm",
+   "recall": 0.68,
+   "recall_ci": [
+    0.5133333333333333,
+    0.8266666666666667
+   ],
+   "mrr": 0.66,
+   "mrr_ci": [
+    0.5,
+    0.82
+   ],
+   "ms": 587,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.6333333333333333,
+   "new_part": 0.75
+  },
+  {
+   "name": "none|bm25_kw|none",
+   "recall": 0.6466666666666667,
+   "recall_ci": [
+    0.48666666666666664,
+    0.8
+   ],
+   "mrr": 0.5533333333333333,
+   "mrr_ci": [
+    0.39666666666666667,
+    0.6966666666666668
+   ],
+   "ms": 0,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.6333333333333333,
+   "new_part": 0.6666666666666667
+  }
+ ],
+ "per": {
+  "arctic-l-v2": {
+   "under5": "arctic-l-v2|hybrid_ko_kw|int8",
+   "all": "arctic-l-v2|hybrid_ko_kw|bge",
+   "under3": "arctic-l-v2|hybrid_ko_kw|mminilm"
+  },
+  "voyage-4-nano": {
+   "under5": "voyage-4-nano|dense_en|int8",
+   "all": "voyage-4-nano|dense_en|bge",
+   "under3": "voyage-4-nano|dense_en|none"
+  },
+  "qwen3-0.6b": {
+   "under5": "qwen3-0.6b|dense_en|int8",
+   "all": "qwen3-0.6b|hybrid_ko_kw|int8",
+   "under3": "qwen3-0.6b|dense_en|mminilm"
+  },
+  "e5-large": {
+   "under5": "e5-large|hybrid_ko_kw|int8",
+   "all": "e5-large|hybrid_ko_kw|int8",
+   "under3": "e5-large|dense_en|none"
+  },
+  "voyage-4": {
+   "under5": "voyage-4|dense_en|none",
+   "all": "voyage-4|dense_en|none",
+   "under3": "voyage-4|dense_en|none"
+  },
+  "voyage4-doc+nano-query": {
+   "under5": "voyage4-doc+nano-query|dense_en|int8",
+   "all": "voyage4-doc+nano-query|dense_en|bge",
+   "under3": "voyage4-doc+nano-query|dense_en|none"
+  }
+ },
+ "combos": [
+  "arctic-l-v2|hybrid_ko_kw|bge",
+  "arctic-l-v2|hybrid_ko_kw|int8",
+  "e5-large|hybrid_ko_kw|int8",
+  "qwen3-0.6b|dense_en|int8",
+  "qwen3-0.6b|hybrid_ko_kw|int8",
+  "voyage-4-nano|dense_en|bge",
+  "voyage-4-nano|dense_en|int8",
+  "voyage-4|dense_en|none",
+  "voyage4-doc+nano-query|dense_en|bge",
+  "voyage4-doc+nano-query|dense_en|int8"
+ ],
+ "overall5": {
+  "name": "voyage4-doc+nano-query|dense_en|int8",
+  "recall": 0.8366666666666667,
+  "recall_ci": [
+   0.7066666666666667,
+   0.9466666666666668
+  ],
+  "mrr": 0.85,
+  "mrr_ci": [
+   0.72,
+   0.96
+  ],
+  "ms": 3288,
+  "under5": true,
+  "under3": false,
+  "v1_part": 0.8,
+  "new_part": 0.8916666666666668
+ },
+ "overall": {
+  "name": "arctic-l-v2|hybrid_ko_kw|bge",
+  "recall": 0.8933333333333333,
+  "recall_ci": [
+   0.8133333333333332,
+   0.9666666666666667
+  ],
+  "mrr": 0.836,
+  "mrr_ci": [
+   0.716,
+   0.9413333333333334
+  ],
+  "ms": 7222,
+  "under5": false,
+  "under3": false,
+  "v1_part": 0.9,
+  "new_part": 0.8833333333333334
+ },
+ "overall3": {
+  "name": "voyage-4|dense_en|none",
+  "recall": 0.8433333333333333,
+  "recall_ci": [
+   0.7066666666666667,
+   0.96
+  ],
+  "mrr": 0.838,
+  "mrr_ci": [
+   0.698,
+   0.96
+  ],
+  "ms": 708,
+  "under5": true,
+  "under3": true,
+  "v1_part": 0.8333333333333334,
+  "new_part": 0.8583333333333332
+ },
+ "tie5": [
+  {
+   "name": "voyage-4|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.828,
+   "mrr_ci": [
+    0.696,
+    0.94
+   ],
+   "ms": 3832,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8233333333333333,
+   "mrr_ci": [
+    0.69,
+    0.9333333333333332
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|mminilm",
+   "recall": 0.8633333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9566666666666667
+   ],
+   "mrr": 0.7746666666666667,
+   "mrr_ci": [
+    0.6393333333333333,
+    0.898
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "voyage-4|dense_en|none",
+   "recall": 0.8433333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.96
+   ],
+   "mrr": 0.838,
+   "mrr_ci": [
+    0.698,
+    0.96
+   ],
+   "ms": 708,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8583333333333332
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|mminilm",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.7646666666666667,
+   "mrr_ci": [
+    0.6226666666666667,
+    0.8966666666666667
+   ],
+   "ms": 770,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage-4-nano|dense_en|none",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8113333333333334,
+   "mrr_ci": [
+    0.6646666666666667,
+    0.938
+   ],
+   "ms": 164,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8166666666666668,
+   "mrr_ci": [
+    0.6766666666666667,
+    0.9333333333333332
+   ],
+   "ms": 3307,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|int8",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.85,
+   "mrr_ci": [
+    0.72,
+    0.96
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage4-doc+nano-query|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8233333333333333,
+   "mrr_ci": [
+    0.69,
+    0.94
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8033333333333332,
+   "mrr_ci": [
+    0.6633333333333333,
+    0.9233333333333333
+   ],
+   "ms": 1295,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|dense_en|mminilm",
+   "recall": 0.8366666666666667,
+   "recall_ci": [
+    0.7066666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.81,
+   "mrr_ci": [
+    0.68,
+    0.93
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8,
+   "new_part": 0.8916666666666668
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8166666666666668,
+   "mrr_ci": [
+    0.6766666666666667,
+    0.9333333333333332
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|int8",
+   "recall": 0.8733333333333333,
+   "recall_ci": [
+    0.7666666666666667,
+    0.96
+   ],
+   "mrr": 0.816,
+   "mrr_ci": [
+    0.6759999999999999,
+    0.9359999999999999
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|int8",
+   "recall": 0.8333333333333333,
+   "recall_ci": [
+    0.7066666666666667,
+    0.94
+   ],
+   "mrr": 0.8079999999999999,
+   "mrr_ci": [
+    0.664,
+    0.93
+   ],
+   "ms": 3451,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8,
+   "new_part": 0.8833333333333334
+  }
+ ],
+ "tie": [
+  {
+   "name": "arctic-l-v2|hybrid_ko_kw|bge",
+   "recall": 0.8933333333333333,
+   "recall_ci": [
+    0.8133333333333332,
+    0.9666666666666667
+   ],
+   "mrr": 0.836,
+   "mrr_ci": [
+    0.716,
+    0.9413333333333334
+   ],
+   "ms": 7222,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.9,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|qwen3",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.74,
+    0.9466666666666668
+   ],
+   "mrr": 0.7946666666666666,
+   "mrr_ci": [
+    0.664,
+    0.9079999999999999
+   ],
+   "ms": 14334,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|mminilm",
+   "recall": 0.8633333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9566666666666667
+   ],
+   "mrr": 0.7746666666666667,
+   "mrr_ci": [
+    0.6393333333333333,
+    0.898
+   ],
+   "ms": 751,
+   "under5": true,
+   "under3": true,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8583333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|bge",
+   "recall": 0.8733333333333333,
+   "recall_ci": [
+    0.7666666666666667,
+    0.96
+   ],
+   "mrr": 0.8213333333333334,
+   "mrr_ci": [
+    0.6906666666666667,
+    0.93
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage-4-nano|hybrid_ko_kw|bge",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.8213333333333334,
+   "mrr_ci": [
+    0.6913333333333334,
+    0.9333333333333332
+   ],
+   "ms": 7203,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "qwen3-0.6b|hybrid_ko_kw|qwen3",
+   "recall": 0.8533333333333333,
+   "recall_ci": [
+    0.7466666666666667,
+    0.9466666666666668
+   ],
+   "mrr": 0.7879999999999999,
+   "mrr_ci": [
+    0.6533333333333333,
+    0.9079999999999999
+   ],
+   "ms": 14497,
+   "under5": false,
+   "under3": false,
+   "v1_part": 0.8333333333333334,
+   "new_part": 0.8833333333333334
+  },
+  {
+   "name": "voyage4-doc+nano-query|hybrid_ko_kw|int8",
+   "recall": 0.8733333333333333,
+   "recall_ci": [
+    0.7666666666666667,
+    0.96
+   ],
+   "mrr": 0.816,
+   "mrr_ci": [
+    0.6759999999999999,
+    0.9359999999999999
+   ],
+   "ms": 3288,
+   "under5": true,
+   "under3": false,
+   "v1_part": 0.8666666666666667,
+   "new_part": 0.8833333333333334
+  }
+ ]
+}

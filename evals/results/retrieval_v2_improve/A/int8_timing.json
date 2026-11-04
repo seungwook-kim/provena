@@ -1,0 +1,54 @@
+{
+ "threads": 14,
+ "runs": {
+  "voyage-4|dense_en::10": {
+   "wall_p50": 1.977,
+   "wall_p95": 3.133,
+   "wall_max": 3.503,
+   "cpu_p50": 16.875,
+   "cpu_p95": 25.234,
+   "n_questions": 50
+  },
+  "voyage-4|dense_en::15": {
+   "wall_p50": 2.99,
+   "wall_p95": 4.25,
+   "wall_max": 4.611,
+   "cpu_p50": 25.391,
+   "cpu_p95": 35.094,
+   "n_questions": 50
+  },
+  "voyage-4|dense_en::20": {
+   "wall_p50": 3.747,
+   "wall_p95": 4.777,
+   "wall_max": 5.067,
+   "cpu_p50": 32.172,
+   "cpu_p95": 43.766,
+   "n_questions": 50
+  },
+  "arctic-l-v2|hybrid_ko_kw::10": {
+   "wall_p50": 2.17,
+   "wall_p95": 2.876,
+   "wall_max": 3.123,
+   "cpu_p50": 17.328,
+   "cpu_p95": 24.391,
+   "n_questions": 50
+  },
+  "arctic-l-v2|hybrid_ko_kw::15": {
+   "wall_p50": 2.969,
+   "wall_p95": 4.143,
+   "wall_max": 4.305,
+   "cpu_p50": 25.789,
+   "cpu_p95": 33.703,
+   "n_questions": 50
+  },
+  "arctic-l-v2|hybrid_ko_kw::20": {
+   "wall_p50": 3.353,
+   "wall_p95": 4.194,
+   "wall_max": 5.137,
+   "cpu_p50": 31.562,
+   "cpu_p95": 40.578,
+   "n_questions": 50
+  }
+ },
+ "run_at": "2026-11-03T11:05:31"
+}
