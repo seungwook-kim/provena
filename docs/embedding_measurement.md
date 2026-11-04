@@ -628,7 +628,7 @@ Recall@5가 높은 순이다. v1 15는 앞 15문항의 값, 새 10은 새로 넣
 | 번역·분해 포함 p95, 제한 없음 (초, CLI 실측) | 9.7 | 8.0 |
 | 스레드 수에 따른 상위 5 | 청크 집합 변화 없음(12번 순서만 다른 경우 있음). 인용 유지 재지 않음 | 2스레드 9문항, 4스레드 13문항에서 집합이 바뀜. 4스레드에서 3번이 빠져 hit@5 .933. 인용 유지 재지 않음 |
 | 외부 의존 | Voyage API(질문과 하위 질문 임베딩, 질문마다 호출), LLM 호출 3종(분해, 영어 문장 번역, 하위 질문 번역) | LLM 호출 1종(영어 검색어 번역), 로컬 모델 2개(arctic 임베딩, bge 리랭커) |
-| 저장소 구현 | 질문 분해와 링크 확장 코드 없음(임시 코드로만 측정) | 1200/75 색인과 bge int8 리랭커 기본값 없음(저장소 기본 리랭커는 mmarco MiniLM) |
+| 저장소 구현 | 서비스 코드에는 질문 분해와 링크 확장이 없다. 측정용 코드는 `evals/retrieval/exp_decompose_v1.py`, `exp_answer_v1.py`(재현 명령 절) | 1200/75 색인과 bge int8 리랭커 기본값 없음(저장소 기본 리랭커는 mmarco MiniLM) |
 | 한계 | 분해 규칙과 L1x2는 같은 30건을 본 뒤 정함(L1x2는 7번 1문항 근거). 분해 판단이 질문마다 달라질 수 있음(저장값 1회). Voyage API 호출 필요 | 12칸 중 1등 칸을 같은 30건으로 고름. 스레드 수에 따라 상위 5가 달라질 수 있어 운영 CPU 설정에 민감. 리랭킹이 시간의 대부분 |
 | 팀 결정(2026-11-03) | 채택 | 버림 |
 
@@ -805,6 +805,15 @@ AI가 저장된 답을 기대 답과 대조해 판정한 값이다. 사람 판�
 | voyage-4 질문 분해만 | 뺌 | 7번을 인용하지 못함(14/15) |
 | voyage-4 L3, L3x2 | 뺌 | 3번 또는 7번을 인용하지 못하고 22번을 거절하지 못함 |
 | arctic-l-v2 800/120과 그 변형 | 뺌 | 인용 13/15 또는 14/15. 링크 확장은 arctic-l-v2 800/120에서 7번을 오히려 잃음 |
+| voyage-4 하이브리드(한국어 벡터 + 영어 검색어 BM25, RRF), 리랭커 없음 | 뺌 | 평가셋 v2 관련 25건에서 Recall@5가 영어 문장 벡터 단독 0.843(0.707~0.960)보다 낮은 0.790(0.650~0.917), MRR 0.838에서 0.755. 달라진 문항은 좋아짐 2(3, 39번), 나빠짐 3(1, 11, 36번)이고 부호 검정 p 1.0이라 "나빠졌다"고 단정하지 않는다. 올리지 못했으므로 쓰지 않았다. CPU p95 추정은 같은 0.7초. v1 15건도 같은 방향(0.833에서 0.767, MRR 0.833에서 0.713) |
+| voyage-4 영어 문장 벡터 + 리랭커 bge | 뺌 | Recall@5 0.837(0.707~0.947), MRR 0.833으로 리랭커 없음(0.843, 0.838)을 올리지 못했다. 좋아짐 1(39번), 나빠짐 1(1번), p 1.0. CPU p95 추정 7.7초로 0.7초에서 늘었고 3초와 5초 기준을 모두 넘는다 |
+| voyage-4 영어 문장 벡터 + 리랭커 bge int8 | 뺌 | Recall@5 0.837, MRR 0.828. 좋아짐 1(39번), 나빠짐 1(1번), p 1.0. CPU p95 추정 3.8초로 5초 안이지만 3초를 넘는다. 올리지 못하고 시간만 늘었다 |
+| voyage-4 영어 문장 벡터 + 리랭커 mMiniLM | 뺌 | Recall@5 0.837, MRR 0.803. 좋아짐 1(39번), 나빠짐 1(1번), p 1.0. CPU p95 추정 1.3초로 3초 안이지만 MRR이 0.838에서 0.803으로 낮아졌고 올리지 못했다 |
+| voyage-4 영어 문장 벡터 + 리랭커 Qwen3 | 뺌 | Recall@5 0.817(0.687~0.930), MRR 0.773. 좋아짐 1(39번), 나빠짐 2(1, 2번), p 1.0. CPU p95 추정 14.9초 |
+| arctic-l-v2 하이브리드 + 리랭커 bge (후보 10) | 뺌 | 72조합 중 Recall@5 전체 1위 0.893(0.813~0.967), MRR 0.836. 리랭커 없음 0.773(MRR 0.733)보다 좋아진 문항 4(3, 7, 11, 33번), 나빠진 문항 없음, p 0.125라 4문항 차이를 개선이라 쓰지 않는다. 그래도 CPU p95 추정 7.2초로 3초와 5초 기준을 모두 넘어 채택하지 않았다. 리랭커가 점수를 올린 조합이 있었다는 사실은 숨기지 않는다 |
+| arctic-l-v2 하이브리드 + 리랭커 bge int8 (후보 10) | 뺌 | Recall@5 0.853(0.733~0.960), MRR 0.808. 리랭커 없음보다 좋아짐 3(7, 11, 33번), 나빠짐 1(1번), p 0.625. CPU p95 추정 3.3초로 5초 안이지만 3초를 넘는다. 11.1의 1200/75 구성은 이 설정을 청크 크기만 바꾼 것이다 |
+
+위 7개 행의 값은 평가셋 v2 관련 25건, 청크 800/120, k=5의 "전체 72조합" 표(10장)에서 옮겼고 좋아진 문항과 나빠진 문항은 `evals/results/retrieval_v2_round2/`와 `retrieval_v2_round2_clean/`의 문항별 결과로 직접 센 값이다. 시간은 부품 합 추정이다. v1 15건 값은 동결본 `evals/results/retrieval_v1_round1_frozen/compare.md`와 5, 6장 표에서 옮겼다. bge int8 값은 점수 저장 값 공유(`backend/rag/retrieve/retrieve.md` I-013) 때문에 v2는 재측정 값이고, v1의 int8 값은 다시 재지 않아 같은 영향이 있을 수 있다(`arctic-l-v2` 하이브리드 int8의 v1 15건은 동결 비교표 0.800, 72조합 표의 v1 15 열 0.833으로 다르다). 차이가 0~4문항이고 95% 구간이 모두 겹친다. 이 비교는 기본형(분해와 링크 확장 없음) 위의 전후이며 분해 + L1x2 위에 하이브리드나 리랭커를 얹은 조합은 재지 않았다. 강사 확인 전이다.
 
 ### 11.10 한계와 아직 재지 않은 것
 
@@ -812,8 +821,9 @@ AI가 저장된 답을 기대 답과 대조해 판정한 값이다. 사람 판�
 - 3회 반복은 같은 검색 저장값으로 답변만 반복했다. 분해 판단은 저장값 1회다.
 - 22번은 분해만, L1x2만, 분해 + L1x2의 상위 5가 같다. 분해만의 1회 실행에서 거절로 세지 않은 것은 규칙의 효과가 아니라 Haiku 실행 차이다. 거절 15/15가 다른 실행에서도 항상 유지된다고 말할 수 없다.
 - 번역과 분해를 포함한 p95가 약 9.7초라, 답변 생성을 더하면 전체 p95 10초 기준을 넘을 가능성이 크다. 운영 경로는 재지 않았다.
+- 하이브리드와 리랭커를 쓰지 않은 근거(11.9)는 기본형 위의 전후다. 확정한 분해 + L1x2 위에 하이브리드나 리랭커를 더한 조합은 재지 않았다.
 - 평가셋 v2 50건, 단일 에이전트 그래프, RAGAS는 이 조합으로 재지 않았다. 그래프 값은 800/120 기본형만 있다(voyage-4 정답 근거 .867, 오답 근거 .929, 올바른 거절 1.000. arctic-l-v2 .900, .714, .933).
-- 저장소에 없는 것: 서비스 `embed.py`의 `voyage-4`(현재 `voyage-4-nano`만 있음), 질문 분해, 링크 확장, 링크 DB 칸(`chunks` 표), 링크로 가져온 청크의 `org`·`as_of` 필터.
+- 서비스 코드에 없는 것: 서비스 `embed.py`의 `voyage-4`(현재 `voyage-4-nano`만 있음), 질문 분해, 링크 확장, 링크 DB 칸(`chunks` 표), 링크로 가져온 청크의 `org`·`as_of` 필터. 평가 전용 측정 코드는 있다(`exp_decompose_v1.py`는 `voyage-4` 800/120의 기본형, L1x2, 분해, 분해 + L1x2를, `exp_answer_v1.py`는 Haiku 답변과 인용 집계를 다시 계산한다). 청크 12칸, `arctic-l-v2` 변형, 표 문장 보강, 시간 측정 코드는 저장소에 두지 않았고 원자료만 있다.
 - 링크 확장은 강의자료에서 같은 방법을 찾지 못했다. 질문 분해는 LangGraph 19·20강의 비교 질문 예시를 비교 질문 외로 넓혔다.
 
 ## 재현 명령
@@ -838,9 +848,19 @@ python -m evals.retrieval.experiment_v1 prepare-api --dataset evals/dataset_v2.j
 python -m evals.retrieval.compare --dataset evals/dataset_v2.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_v2.json --chunks data/chunks/chunks.jsonl --out evals/results/retrieval_v2_round2
 # bge int8 13조합 재측정(조합마다 점수를 새로 계산하는 래퍼, grid는 reranker가 int8인 조합만. 래퍼는 결과 폴더에 있음)
 PYTHONPATH=evals/results/retrieval_v2_round2_clean HF_HUB_OFFLINE=1 python -m evals.retrieval.compare --dataset evals/dataset_v2.jsonl --factory clean_factory:make_search --grid <int8 조합만 뽑은 grid> --chunks data/chunks/chunks.jsonl --out evals/results/retrieval_v2_round2_clean
+# 질문 분해 + 링크 확장(11장, voyage-4 800/120). 필요한 로컬 파일: data/chunks/chunks.jsonl, data/parsed/document_ir.jsonl, data/index_exp/(voyage-4.npy, voyage-4.queries.json, chunk_ids.json)
+# 1) 분해와 하위 질문 번역(Claude CLI, 키 없음). 이미 받은 결과는 다시 부르지 않는다
+python -m evals.retrieval.exp_decompose_v1 prep
+# 2) 하위 질문 벡터(유료 Voyage API, 환경 변수 VOYAGE_API_KEY). 저장된 벡터가 있으면 다시 만들지 않아도 된다
+python -m evals.retrieval.exp_decompose_v1 embed
+# 3) 검색과 채점. 저장된 분해, 번역, 벡터만 읽어 비용이 없고, --check-stored로 저장된 결과와 지표(분해 + L1x2는 Recall@5 0.967, MRR 0.880, nDCG@5 0.880)를 비교한다
+python -m evals.retrieval.exp_decompose_v1 search --variant all --check-stored --out <결과 폴더>
+# 4) Haiku 5.5 답변(Claude CLI, 키 없음)과 인용 집계. stats는 저장된 답변만 읽어 비용이 없다
+python -m evals.retrieval.exp_answer_v1 answer --search-json <결과 폴더>/dec+L1x2.json --out <답변 폴더>
+python -m evals.retrieval.exp_answer_v1 stats --raw evals/results/retrieval_fix_v1/haiku/dec_voyage_dec+L1x2_ctrl/raw.jsonl
 # 평가셋 동결 검사
 python evals/freeze.py --check
 ```
 
-Haiku 응답, 단일 에이전트 그래프, RAGAS 실행 스크립트는 저장소에 두지 않았고 원본 결과를 결과 폴더에 둔다.
+평가셋 v2 50건의 Haiku 응답, 단일 에이전트 그래프, RAGAS 실행 스크립트는 저장소에 두지 않았고 원본 결과를 결과 폴더에 둔다. 11장의 분해 + L1x2 검색과 Haiku 답변 집계는 위 명령으로 다시 계산한다. Haiku 답변은 실행할 때마다 달라질 수 있어 새로 받은 답은 15/15와 다를 수 있다. `search`는 행렬 곱 오차로 점수가 거의 같은 청크의 순서가 저장 결과와 바뀔 수 있다(1번 문항에서 확인, 청크 집합은 같다).
 
