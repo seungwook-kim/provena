@@ -55,10 +55,10 @@ class FakeChanges:
     def __init__(self, items=(), run="ok", exc=None):
         self.items, self.run, self.exc, self.writes = list(items), run, exc, 0
 
-    def rows(self, since, org, limit):
+    def rows(self, since, org, limit, offset=0):
         if self.exc:
             raise self.exc
-        return [a.model_dump() for a in self.items][:limit]
+        return [a.model_dump() for a in self.items][offset:offset + limit]
 
     def last_run(self):
         if self.run is None:
@@ -129,6 +129,24 @@ def test_search_db_failure_is_unavailable_without_detail():
     assert secret not in json.dumps(r, ensure_ascii=False) and "pw" not in json.dumps(r)
 
 
+@pytest.mark.parametrize("exc", [ValueError("bad vector dim /srv/app/secret"), KeyError("chunk_id"),
+                                 RuntimeError("DATABASE_URL이 없다")])
+def test_internal_error_is_error_not_retryable(exc):
+    """리뷰(#45): 코드·설정 오류는 다시 불러도 같다 → error, retryable=false, 예외 글은 응답에 없다(EC-04)."""
+    r = call(make(FakeSearch(exc=exc)), "search_handbook", {"query": "q"})
+    assert r["status"] == "error" and r["retryable"] is False
+    assert str(exc).strip("'") not in json.dumps(r, ensure_ascii=False)
+
+
+def test_db_operational_error_is_unavailable():
+    """리뷰(#45): DB 연결 실패(psycopg OperationalError, 풀 대기 초과 포함)만 unavailable."""
+    import psycopg
+    import psycopg_pool
+    for exc in (psycopg.OperationalError("server closed"), psycopg_pool.PoolTimeout("pool")):
+        r = call(make(FakeSearch(exc=exc)), "search_handbook", {"query": "q"})
+        assert r["status"] == "unavailable" and r["retryable"] is True and "server closed" not in json.dumps(r)
+
+
 def test_search_fallback_reason_in_note():
     """EC-12: 번역 실패로 내려간 검색은 ok + note."""
     r = call(make(FakeSearch(fallback="translate_timeout")), "search_handbook", {"query": "q"})
@@ -168,6 +186,14 @@ def test_get_section_missing_lists_candidates():
     assert r["status"] == "not_found" and "A" in r["note"]
     r = call(make(store=section_rows(["x"])), "get_section", {"rule_seq": 8, "article": "A"})
     assert r["status"] == "not_found" and "판이 없습니다" in r["note"]
+
+
+def test_get_section_candidate_names_are_redacted():
+    """리뷰(#45) 4: 섹션 이름 후보(note)에도 비공개 주소를 내보내지 않는다."""
+    st = section_rows(["x"])
+    st.rows[0]["article"] = "See https://internal.gitlab.com/handbook/x"
+    r = call(make(store=st), "get_section", {"rule_seq": 7, "article": "Nope"})
+    assert r["status"] == "not_found" and "internal.gitlab.com" not in r["note"] and "[비공개 문서]" in r["note"]
 
 
 def test_get_section_before_first_version_is_not_found():
@@ -214,13 +240,31 @@ def test_list_changed_states():
 
 
 @pytest.mark.parametrize("args", [{"since": "2026-13-01"}, {"since": "2026-10-01", "limit": 0},
-                                  {"since": "2026-10-01", "limit": 201}, {"since": "2026-10-01", "org": "nope"}])
+                                  {"since": "2026-10-01", "limit": 201}, {"since": "2026-10-01", "org": "nope"},
+                                  {"since": "2026-10-01", "offset": -1}])
 def test_list_changed_bad_input(args):
     assert call(make(changes=FakeChanges([ART])), "list_changed_sections", args)["status"] == "invalid"
 
 
+def test_list_changed_truncation_is_flagged_and_offset_continues():
+    """리뷰(#45) 1: limit에서 잘리면 ok여도 note에 '더 있음: offset=N', 그 offset으로 나머지를 받는다."""
+    arts = [ART.model_copy(update={"rule_seq": i}) for i in range(3)]
+    ch = FakeChanges(arts)
+    r = call(make(changes=ch), "list_changed_sections", {"since": "2026-10-01", "limit": 2})
+    assert r["status"] == "ok" and len(r["results"]) == 2 and "offset=2" in r["note"]
+    r2 = call(make(changes=ch), "list_changed_sections", {"since": "2026-10-01", "limit": 2, "offset": 2})
+    assert [a["rule_seq"] for a in r["results"] + r2["results"]] == [0, 1, 2] and r2["note"] is None
+
+
+def test_list_changed_truncation_and_held_both_in_note():
+    r = call(make(changes=FakeChanges([ART, ART], run="held")), "list_changed_sections", {"since": "2026-10-01", "limit": 1})
+    assert "더 있음" in r["note"] and "삭제를 보류" in r["note"]
+
+
 def test_list_changed_db_failure():
-    r = call(make(changes=FakeChanges(exc=OSError("db down"))), "list_changed_sections", {"since": "2026-10-01"})
+    import psycopg
+    r = call(make(changes=FakeChanges(exc=psycopg.OperationalError("db down"))), "list_changed_sections",
+             {"since": "2026-10-01"})
     assert r["status"] == "unavailable" and r["retryable"] is True and "db down" not in json.dumps(r)
 
 

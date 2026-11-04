@@ -37,7 +37,7 @@ MAX_ARTICLE = 500
 MAX_NAMES = 10
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
-# 비공개 주소(internal.gitlab.com)는 공개 핸드북 본문에도 링크로 남아 있다(스냅샷 9청크). 도구는 근거로 내보내지 않고
+# 비공개 주소(internal.gitlab.com)는 공개 핸드북 본문에도 링크로 남아 있다(스냅샷 23,095청크 중 `text` 7청크, 다른 칸 0). 도구는 근거로 내보내지 않고
 # "비공개 문서"로 표시한다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 하고, 내보낼 때만 바꾼다.
 PRIVATE_MARK = "[비공개 문서]"
 _PRIVATE_LINK = re.compile(r"\[([^\]]*)\]\(\s*(?:https?://)?internal\.gitlab\.com[^)]*\)")
@@ -113,17 +113,37 @@ async def _run(fn: Callable, *args):
     return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=TOOL_TIMEOUT_S)
 
 
+def _transient(exc: BaseException) -> str | None:
+    """다시 부르면 될 수 있는 실패면 그 종류, 아니면 None. 시간 초과와 연결 실패만 해당한다."""
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return "시간 초과"
+    if isinstance(exc, ConnectionError):
+        return "저장소 연결 실패"
+    try:
+        import psycopg
+    except ImportError:            # pragma: no cover — requirements에 있음
+        return None
+    return "저장소 연결 실패" if isinstance(exc, psycopg.OperationalError) else None   # PoolTimeout 포함
+
+
 def _failure(tool: str, source: str, exc: BaseException) -> ToolResponse:
-    """예외 → 상태. 예외 글·DB 주소는 응답에 넣지 않고 로그에는 종류만(EC-04)."""
+    """예외 → 상태. 예외 글·DB 주소는 응답에 넣지 않고 로그에는 종류만(EC-04).
+
+    invalid = 이 파일이 입력을 검사해 직접 만든 Invalid뿐(note는 우리가 쓴 글). 시간 초과·연결 실패 = unavailable(재시도 가능).
+    그 밖의 예외(내부 ValueError·코드 오류 포함)는 error, retryable=false — 다시 불러도 같으므로 재시도시키지 않는다.
+    """
     from backend.rag.retrieve.section import SectionIntegrityError
+    if isinstance(exc, Invalid):
+        return _resp("invalid", source, note=str(exc))
     if isinstance(exc, SectionIntegrityError):
         log.error("mcp %s: %s", tool, exc)                       # 메시지 = chunk_id만
         return _resp("error", source, note="섹션 원문 검사에 실패해 돌려주지 않았습니다. 다시 불러도 같습니다.")
-    if isinstance(exc, (Invalid, ValueError)):
-        return _resp("invalid", source, note=str(exc) if isinstance(exc, Invalid) else f"입력 오류: {exc}")
-    kind = "시간 초과" if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) else "저장소 연결 실패"
-    log.warning("mcp %s 실패: %s", tool, type(exc).__name__)
-    return _resp("unavailable", source, note=f"{kind}. 잠시 뒤 다시 부르세요.")
+    kind = _transient(exc)
+    if kind:
+        log.warning("mcp %s 실패: %s", tool, type(exc).__name__)
+        return _resp("unavailable", source, note=f"{kind}. 잠시 뒤 다시 부르세요.")
+    log.error("mcp %s 내부 오류: %s", tool, type(exc).__name__)
+    return _resp("error", source, retryable=False, note="서버 내부 오류입니다. 다시 불러도 같으니 다른 방법으로 답하세요.")
 
 
 def _check_org(org: str | None, deps: _Deps) -> None:
@@ -146,7 +166,8 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
     deps = _Deps(search_fn, section_store, changes_store)
     mcp = FastMCP("provena-handbook", auth=auth, instructions=(
         "GitLab 공개 핸드북(고정 커밋) 검색 도구 3개. 모두 읽기 전용이다. 답에는 결과의 source_url·version_date를 인용한다. "
-        "status가 ok가 아니면 note를 읽고 다음 행동을 고른다(invalid=입력을 고쳐 다시, unavailable=잠시 뒤 다시)."))
+        "status가 ok가 아니면 note를 읽고 다음 행동을 고른다(invalid=입력을 고쳐 다시, unavailable=잠시 뒤 다시, "
+        "error=다시 부르지 말고 이 도구 없이 답)."))
 
     @mcp.tool(annotations=READ_ONLY)
     async def search_handbook(query: str, org: str | None = None, as_of: str | None = None, k: int = 8) -> ToolResponse:
@@ -168,7 +189,11 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
                 raise Invalid(f"k는 1~{MAX_K}: {k}")
             _check_date(as_of, "as_of")
             await _run(_check_org, org, deps)
-            chunks, fallback = await _run(deps.search, SearchQuery(query=query, org=org, as_of=as_of, k=k))
+            try:
+                q = SearchQuery(query=query, org=org, as_of=as_of, k=k)
+            except ValueError as e:                              # pydantic 검사 — 위 검사와 어긋날 때만
+                raise Invalid("검색 입력이 형식에 맞지 않습니다(query·org·as_of·k).") from e
+            chunks, fallback = await _run(deps.search, q)
         except Exception as e:  # noqa: BLE001 — 상태로 돌려준다
             return _failure("search_handbook", src, e)
         note = f"fallback_reason={fallback}" if fallback else None
@@ -205,21 +230,24 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
             if not names:
                 return _resp("not_found", src, as_of=as_of,
                              note="그 페이지가 없거나 그날(as_of) 유효한 판이 없습니다. 가장 가까운 판으로 바꾸지 않았습니다.")
-            shown = [n if n is not None else "(제목 없음: article 비움)" for n in names[:MAX_NAMES]]
+            shown = [redact(n) if n is not None else "(제목 없음: article 비움)" for n in names[:MAX_NAMES]]
             return _resp("not_found", src, as_of=as_of,
                          note="그 판에 없는 섹션입니다. 섹션 이름 후보: " + " | ".join(shown))
         return _resp("ok", src, [_out(sec)], as_of=as_of)
 
     @mcp.tool(annotations=READ_ONLY)
-    async def list_changed_sections(since: str, org: str | None = None, limit: int = 200) -> ToolResponse:
+    async def list_changed_sections(since: str, org: str | None = None, limit: int = 200,
+                                    offset: int = 0) -> ToolResponse:
         """증분 수집이 찾은 '바뀐 섹션' 목록(추가·수정·삭제)을 읽는다. 아무것도 바꾸지 않는다.
 
         언제 쓰나: 어느 날 이후 개정된 정책이 무엇인지, 지난 답이 인용한 섹션이 바뀌었는지 볼 때.
         언제 쓰지 않나: 바뀐 내용 자체를 읽을 때는 get_section(as_of로 전후 판).
-        입력: since = YYYY-MM-DD(이날 이후 새 판, 쪽 통째 삭제는 기록한 날 기준) / org = 핸드북 절, 모르면 비움 / limit = 1~200.
+        입력: since = YYYY-MM-DD(이날 이후 새 판, 쪽 통째 삭제는 기록한 날 기준) / org = 핸드북 절, 모르면 비움 / limit = 1~200 /
+              offset = 앞에서 건너뛸 개수(기본 0). note에 "더 있음"이 오면 그 offset으로 다시 불러 이어 받는다.
         출력: results = ChangedArticle 목록(rule_seq, article, old_version_date, new_version_date, change_type).
               as_of = 마지막 성공 증분 실행이 끝난 시각, source = sync_runs:<run_id>@<커밋>.
         제약: 증분 실행이 한 번도 없으면 not_ready("바뀐 것 없음"과 다름). 마지막 실행이 삭제를 보류했으면 note에 표시.
+              오래된 날짜부터 정렬한다. limit에서 잘리면 note에 "더 있음: offset=N" — 받지 않으면 최근 변경을 놓친다.
         """
         src = "sync_runs"
         try:
@@ -228,19 +256,24 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
             _check_date(since, "since")
             if not 1 <= limit <= 200:
                 raise Invalid(f"limit는 1~200: {limit}")
+            from backend.rag.ingest.changes import MAX_OFFSET
+            if not 0 <= offset <= MAX_OFFSET:
+                raise Invalid(f"offset은 0~{MAX_OFFSET}: {offset}")
             await _run(_check_org, org, deps)
             from backend.rag.ingest.changes import list_changed
-            items, last = await _run(list_changed, since, org, limit, deps.changes_store())
+            items, last, more = await _run(list_changed, since, org, limit, deps.changes_store(), offset)
         except Exception as e:  # noqa: BLE001
             return _failure("list_changed_sections", src, e)
         if last is None:
             return _resp("not_ready", src, retryable=False,
                          note="증분 수집 실행 기록이 아직 없습니다. 바뀐 것이 없다는 뜻이 아닙니다.")
         src = f"sync_runs:{last.run_id}@{last.to_commit}"
-        note = None
+        notes = []
+        if more:
+            notes.append(f"더 있음: 목록이 limit({limit})에서 잘렸습니다. offset={offset + len(items)}로 다시 불러 이어 받으세요.")
         if last.list_complete is False:
-            note = "마지막 실행이 파일 목록을 끝까지 받지 못해 삭제를 보류했습니다. 사라진 섹션이 아직 목록에 없을 수 있습니다."
-        return _resp("ok", src, [a.model_dump() for a in items], as_of=last.finished_at, note=note)
+            notes.append("마지막 실행이 파일 목록을 끝까지 받지 못해 삭제를 보류했습니다. 사라진 섹션이 아직 목록에 없을 수 있습니다.")
+        return _resp("ok", src, [a.model_dump() for a in items], as_of=last.finished_at, note=" / ".join(notes) or None)
 
     return mcp
 

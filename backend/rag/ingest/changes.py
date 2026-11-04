@@ -1,7 +1,8 @@
 """바뀐 섹션 목록 읽기 `list_changed` (docs/specs/mcp.md How 2). SELECT만 한다.
 
 증분 수집(schedule.py)이 changed_articles에 쓴 줄을 새 판 날짜 >= since 로 읽고(쪽 통째 삭제는 새 판이 없어 적은 날로), 마지막 성공 실행(sync_runs
-status IN succeeded·noop)을 함께 돌려준다. 실행 기록이 아예 없으면 last_run=None — "바뀐 것 없음"(빈 목록 + 실행 있음)과
+status IN succeeded·noop)을 함께 돌려준다. 한 번에 limit개까지이고, 더 있으면 more=True — offset으로 이어 받는다
+(정렬은 날짜·rule_seq·article·change_type·event_id로 고정이라 쪽이 겹치거나 빠지지 않는다). 실행 기록이 아예 없으면 last_run=None — "바뀐 것 없음"(빈 목록 + 실행 있음)과
 가른다(EC-06). changed_articles.status(pending·sent·failed)는 리콜 쪽이 바꾸는 칸이라 여기서 건드리지 않는다.
 """
 from __future__ import annotations
@@ -17,6 +18,7 @@ from backend.rag.retrieve.section import check_date
 from backend.schemas.recall import ChangedArticle
 
 MAX_LIMIT = 200
+MAX_OFFSET = 1_000_000
 
 
 class LastRun(BaseModel):
@@ -28,21 +30,25 @@ class LastRun(BaseModel):
 
 
 class ChangesStore(Protocol):
-    def rows(self, since: str, org: str | None, limit: int) -> list[dict]: ...
+    def rows(self, since: str, org: str | None, limit: int, offset: int = 0) -> list[dict]: ...
     def last_run(self) -> dict | None: ...
 
 
-def list_changed(since: str, org: str | None = None, limit: int = MAX_LIMIT,
-                 store: ChangesStore | None = None) -> tuple[list[ChangedArticle], LastRun | None]:
+def list_changed(since: str, org: str | None = None, limit: int = MAX_LIMIT, store: ChangesStore | None = None,
+                 offset: int = 0) -> tuple[list[ChangedArticle], LastRun | None, bool]:
+    """(바뀐 섹션 limit개까지, 마지막 성공 실행 또는 None, 뒤에 더 있는가)."""
     if since is None:
         raise ValueError("since는 꼭 준다(YYYY-MM-DD)")
     check_date(since, "since")
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"limit는 1~{MAX_LIMIT}: {limit!r}")
+    if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= MAX_OFFSET:
+        raise ValueError(f"offset은 0~{MAX_OFFSET}: {offset!r}")
     st = store or default_store()
     run = st.last_run()
-    items = [ChangedArticle(**r) for r in st.rows(since, org, limit)]
-    return items, (LastRun(**run) if run else None)
+    rows = st.rows(since, org, limit + 1, offset)          # 하나 더 읽어 잘렸는지 안다
+    items = [ChangedArticle(**r) for r in rows[:limit]]
+    return items, (LastRun(**run) if run else None), len(rows) > limit
 
 
 # 기준 날짜 = 새 판 날짜. 쪽 통째 삭제는 새 판이 없어 new_version_date가 빈 칸(diff.py) → 그 줄을 적은 날(UTC)로 본다(EC-13).
@@ -58,13 +64,13 @@ class PgChangesStore:
         with self.pool.connection() as conn:
             return conn.execute(sql, params).fetchall()
 
-    def rows(self, since, org, limit):
+    def rows(self, since, org, limit, offset=0):
         rows = self._all(f"""SELECT ca.rule_seq, ca.article, ca.old_version_date, ca.new_version_date, ca.change_type
 FROM changed_articles ca
 WHERE {_DAY} >= %(since)s::date
   AND (%(org)s::text IS NULL OR EXISTS (SELECT 1 FROM docs d WHERE d.rule_seq = ca.rule_seq AND d.org = %(org)s::text))
-ORDER BY {_DAY}, ca.rule_seq, ca.article, ca.change_type
-LIMIT %(limit)s""", {"since": since, "org": org, "limit": limit})
+ORDER BY {_DAY}, ca.rule_seq, ca.article, ca.change_type, ca.event_id
+LIMIT %(limit)s OFFSET %(offset)s""", {"since": since, "org": org, "limit": limit, "offset": offset})
         cols = ("rule_seq", "article", "old_version_date", "new_version_date", "change_type")
         return [dict(zip(cols, r)) for r in rows]
 

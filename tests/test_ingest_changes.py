@@ -21,8 +21,8 @@ class FakeStore:
     def __init__(self, rows=(), run=None):
         self._rows, self._run = list(rows), run
 
-    def rows(self, since, org, limit):
-        return self._rows[:limit]
+    def rows(self, since, org, limit, offset=0):
+        return self._rows[offset:offset + limit]
 
     def last_run(self):
         return self._run
@@ -40,12 +40,34 @@ def test_bad_limit_is_value_error(limit):
         changes.list_changed("2026-10-01", limit=limit, store=FakeStore())
 
 
+@pytest.mark.parametrize("offset", [-1, True, 1.5, changes.MAX_OFFSET + 1])
+def test_bad_offset_is_value_error(offset):
+    with pytest.raises(ValueError):
+        changes.list_changed("2026-10-01", offset=offset, store=FakeStore())
+
+
+def _row(i):
+    return {"rule_seq": i, "article": "A", "old_version_date": "2026-09-01", "new_version_date": "2026-10-30",
+            "change_type": "modified"}
+
+
+def test_more_flag_and_offset_pages_without_gap_or_overlap():
+    """리뷰(#45): limit에서 잘리면 more=True, offset으로 이어 받아 전부를 겹침·빠짐 없이 받는다."""
+    st = FakeStore(rows=[_row(i) for i in range(5)])
+    a, _, more_a = changes.list_changed("2026-10-01", limit=2, store=st)
+    b, _, more_b = changes.list_changed("2026-10-01", limit=2, offset=2, store=st)
+    c, _, more_c = changes.list_changed("2026-10-01", limit=2, offset=4, store=st)
+    assert (more_a, more_b, more_c) == (True, True, False)
+    assert [i.rule_seq for i in a + b + c] == [0, 1, 2, 3, 4]
+    assert changes.list_changed("2026-10-01", limit=5, store=st)[2] is False      # 딱 맞으면 잘림 아님
+
+
 def test_no_run_is_none_not_empty_ok():
     """EC-06: 실행 기록이 없으면 last_run=None("아직 모름"). 빈 목록 + 실행 있음("바뀐 것 없음")과 다르다."""
-    assert changes.list_changed("2026-10-01", store=FakeStore()) == ([], None)
+    assert changes.list_changed("2026-10-01", store=FakeStore()) == ([], None, False)
     run = {"run_id": 3, "status": "noop", "finished_at": "2026-11-02T18:08:00+00:00", "to_commit": "abc",
            "list_complete": True}
-    items, last = changes.list_changed("2026-10-01", store=FakeStore(run=run))
+    items, last, _ = changes.list_changed("2026-10-01", store=FakeStore(run=run))
     assert items == [] and last.run_id == 3 and last.status == "noop"
 
 
@@ -103,7 +125,7 @@ def table_print(c) -> str:
 @needs_db
 def test_pg_no_run_is_not_ready(conn, pg):
     """AC-07 (가): sync_runs가 빈 DB → last_run None."""
-    assert changes.list_changed("2026-01-01", store=pg) == ([], None)
+    assert changes.list_changed("2026-01-01", store=pg) == ([], None, False)
 
 
 @needs_db
@@ -114,7 +136,7 @@ def test_pg_lists_changes_and_does_not_write(conn, pg):
     a = changes.list_changed("2026-10-30", store=pg)
     b = changes.list_changed("2026-10-30", store=pg)
     assert a == b and table_print(conn) == before
-    items, last = a
+    items, last, _ = a
     kinds = {(i.article, i.change_type, i.new_version_date) for i in items}
     assert ("Disclosure", "modified", "2026-10-30") in kinds                      # 새 판 날짜 = since 인 날도 든다(>=)
     assert ("Old rule", "removed", "") in kinds                                     # 쪽 통째 삭제(새 판 없음)도 든다
@@ -128,7 +150,7 @@ def test_pg_lists_changes_and_does_not_write(conn, pg):
 def test_pg_since_after_change_is_empty_ok(conn, pg):
     """AC-07 (나): since 뒤 바뀐 것이 없으면 빈 목록 + 마지막 실행(삭제 줄은 적은 날 기준이라 내일 since면 빠짐)."""
     run_once(conn, removed=())
-    items, last = changes.list_changed("2026-10-31", store=pg)
+    items, last, _ = changes.list_changed("2026-10-31", store=pg)
     assert items == [] and last is not None and last.finished_at
 
 
@@ -138,11 +160,19 @@ def test_pg_org_and_limit(conn, pg):
     assert changes.list_changed("2026-10-01", org="finance", store=pg)[0] == []
     assert len(changes.list_changed("2026-10-01", org="security", store=pg)[0]) >= 2
     assert len(changes.list_changed("2026-10-01", limit=1, store=pg)[0]) == 1
+    every = changes.list_changed("2026-10-01", store=pg)[0]
+    paged, off, more = [], 0, True
+    for _ in range(len(every) + 1):                                                # 리뷰(#45): offset 이어 받기, 상한을 둬 무한 반복 없이
+        if not more:
+            break
+        page, _, more = changes.list_changed("2026-10-01", limit=1, offset=off, store=pg)
+        paged, off = paged + page, off + len(page)
+    assert not more and paged == every and len(every) >= 2
 
 
 @needs_db
 def test_pg_held_run_is_flagged(conn, pg):
     """AC-07 (다): 마지막 성공 실행이 목록 불완전(삭제 보류)이면 list_complete=False."""
     run_once(conn, list_complete=False)
-    _, last = changes.list_changed("2026-10-01", store=pg)
+    _, last, _ = changes.list_changed("2026-10-01", store=pg)
     assert last.list_complete is False
