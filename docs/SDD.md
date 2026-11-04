@@ -485,7 +485,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | 연결 정책 후보, 링크 추출 | `evals/agent/` | 후보 정밀도, 링크 그래프 간선 정확도 |
 | GraphRAG (가산) | `evals/retrieval/` | 벡터 검색이 지는 질문 유형에서 그래프 검색 개선 전후 (가이드 p.20) |
 | Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다 |
-| MCP 경로 결과 일치 (가산) | `extras/mcp_skill/tests/` | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
+| MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
 | 재현 | `evals/run_all.py` | 한 줄 재현 명령 |
 

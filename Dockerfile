@@ -22,6 +22,8 @@ COPY data/ ./data/
 RUN python -m backend.rag.ingest.snapshot unpack
 COPY web/ ./web/
 COPY db/ ./db/
+# MCP 도구(MCP_TOKEN이 있을 때만 /mcp/에 붙음, docs/specs/mcp.md)
+COPY extras/ ./extras/
 
 EXPOSE 8000
 # --no-proxy-headers: X-Forwarded-For로 client IP를 바꾸지 않는다. --forwarded-allow-ips=*이면 uvicorn이 맨 앞 값
