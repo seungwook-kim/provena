@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS users (
     groups        text[] NOT NULL DEFAULT '{}',  -- 문서 권한 그룹 (SDD 5장). F-06을 넣을 때까지 쓰지 않는다
     created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;

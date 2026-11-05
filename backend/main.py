@@ -29,7 +29,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.auth import create_auth_router
-from backend.services.auth_store import PostgresAuthStore
+from backend.services.auth_store import PostgresAuthStore, PostgresTokenRevocationStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
 
 log = logging.getLogger(__name__)
@@ -96,6 +96,7 @@ def create_mcp_app():
 def create_app() -> FastAPI:
     database_url = os.getenv("DATABASE_URL")
     store = PostgresAuthStore(database_url) if database_url else None
+    revocation_store = PostgresTokenRevocationStore(database_url) if database_url else None
     mcp_app = create_mcp_app()
 
     @asynccontextmanager
@@ -107,6 +108,9 @@ def create_app() -> FastAPI:
             yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
+
+    if revocation_store is not None:
+        app.state.token_revocation_store = revocation_store
 
     @app.get("/health")
     def health() -> dict:
