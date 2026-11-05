@@ -66,8 +66,16 @@ def test_not_found_is_empty_list_and_note_kept():
     assert "no_key" in (mc.last_mcp_note() or "")
 
 
-def test_sub_queries_are_refused_not_dropped():
+def test_sub_queries_reach_server_not_dropped():
+    fake = FakeSearch(out=[chunk(2, "a"), chunk(1, "b")])
     q = SearchQuery(query="두 가지 질문", sub_queries=["하나", "둘"])
+    got = mc.search_via_mcp(q, make(fake))
+    assert fake.calls[0].sub_queries == ["하나", "둘"]       # 빠짐없이, 같은 순서로
+    assert [c.chunk_id for c in got] == ["c2", "c1"]
+
+
+def test_bad_sub_queries_are_refused_by_server():
+    q = SearchQuery.model_construct(query="q", k=5, sub_queries=["하나"])   # 1개 — 서버 검사(2~3개)에 걸린다
     with pytest.raises(mc.McpSearchError) as e:
         mc.search_via_mcp(q, make())
     assert e.value.status == "invalid" and not e.value.retryable
