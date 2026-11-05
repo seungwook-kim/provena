@@ -105,6 +105,19 @@ def test_search_passes_query_and_returns_chunks_in_order():
     assert r["as_of"] == "2026-10-27" and r["source"] == "handbook"
 
 
+def test_search_passes_sub_queries_and_checks_count():
+    """열린 항목 7: 분해 질문을 SearchQuery.sub_queries로 그대로 넘기고, 2~3개가 아니면 search() 전에 invalid."""
+    fs = FakeSearch()
+    r = call(make(fs), "search_handbook", {"query": "두 가지", "sub_queries": ["하나", "둘"]})
+    assert r["status"] == "ok" and fs.calls[0].sub_queries == ["하나", "둘"]
+    for bad in (["하나"], ["a", "b", "c", "d"], ["a", " "]):
+        r = call(make(fs), "search_handbook", {"query": "q", "sub_queries": bad})
+        assert r["status"] == "invalid", bad
+    assert len(fs.calls) == 1
+    call(make(fs), "search_handbook", {"query": "q", "sub_queries": []})
+    assert fs.calls[-1].sub_queries is None                 # 빈 목록 = 나누지 않음
+
+
 def test_search_empty_is_not_found():
     """EC-01: 결과 0개는 ok + 빈 목록이 아니다."""
     r = call(make(FakeSearch(out=[])), "search_handbook", {"query": "없는 것"})

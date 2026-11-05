@@ -30,7 +30,7 @@
 **Happy Path**
 1. 앱이 뜰 때 `MCP_TOKEN`이 있으면 FastAPI 앱 `/mcp`에 MCP 서버를 붙인다(Streamable HTTP, `stateless_http=True`).
 2. 클라이언트가 `Authorization: Bearer <MCP_TOKEN>`으로 도구 목록을 받는다. 도구 설명은 5요소(무엇을 / 언제 쓰고 언제 쓰지 말지 / 입력 / 출력 / 제약)를 담는다.
-3. `search_handbook(query, org?, as_of?, k?)` → `SearchQuery`로 바꿔 `search()`를 부르고, `Chunk` 목록과 그 검색 기록의 `fallback_reason`(번역 실패로 한국어 벡터만 썼는지, 키가 없는지 `no_key` 등)을 돌려준다. 검색은 voyage-4 영어 문장 벡터·리랭커 없음·뒤 2자리 링크 확장(`docs/specs/search.md`). Voyage API 연결 오류·시간 초과는 `unavailable`(재시도 가능, note "임베딩 API 연결 실패"), 키·요청 오류(401·403·400)는 `error`. MCP는 `sub_queries`를 넘기지 않는다(분해 LLM을 부르지 않음).
+3. `search_handbook(query, org?, as_of?, k?)` → `SearchQuery`로 바꿔 `search()`를 부르고, `Chunk` 목록과 그 검색 기록의 `fallback_reason`(번역 실패로 한국어 벡터만 썼는지, 키가 없는지 `no_key` 등)을 돌려준다. 검색은 voyage-4 영어 문장 벡터·리랭커 없음·뒤 2자리 링크 확장(`docs/specs/search.md`). Voyage API 연결 오류·시간 초과는 `unavailable`(재시도 가능, note "임베딩 API 연결 실패"), 키·요청 오류(401·403·400)는 `error`. `sub_queries`(선택, 2~3개)를 주면 `SearchQuery.sub_queries`로 그대로 넘긴다 — 분해는 부르는 쪽(그래프)이 하고 서버는 분해 LLM을 부르지 않는다. 개수·길이가 틀리면 `search()` 전에 `invalid`(열린 항목 7).
 4. `get_section(rule_seq, article, as_of?)` → `get_section()`이 판을 고르고(아래 How 2) 그 섹션 청크를 `seq` 순서로 읽어 겹침을 떼고 이어 붙인다.
 5. `list_changed_sections(since, org?, limit?, offset?)` → `list_changed()`가 `changed_articles`에서 `new_version_date >= since`인 줄을 오래된 날짜부터 `limit`개까지 읽고, 마지막 성공 증분 실행(`sync_runs`)의 끝난 시각·커밋·`list_complete`를 함께 돌려준다. 더 있으면 `note`에 "더 있음: offset=N"을 적고, 클라이언트는 그 `offset`으로 이어 받는다(EC-16).
 6. 세 도구 모두 같은 응답 모양(How 1)으로 돌려준다.
@@ -113,6 +113,7 @@
 | `backend/main.py` | `/mcp` 붙이기 | 김승욱 리뷰 |
 | `Dockerfile` | `COPY extras/ ./extras/` 한 줄(지금 이미지에 `extras/`가 없다) | 김승욱 리뷰 |
 | `backend/requirements.txt`, `.env.example` | `fastmcp==4.1.4`, `MCP_TOKEN=` | 내 줄만 |
+| `extras/mcp_skill/mcp_client/client.py`, `tests/test_mcp_client.py` | 클라이언트(아래 "클라이언트" 절). `requirements.txt`에 `langchain[mcp]==1.4.9` 한 줄 | 박진형 (그래프 연결은 김승욱) |
 
 **열린 항목**
 
@@ -122,6 +123,19 @@
 4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 79줄): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다
 5. 배포 호출 제한(#45 리뷰): 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용. 넣기 전까지 배포에서는 `MCP_TOKEN`을 비워 `/mcp`를 열지 않는다(EC-10)
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다
+
+7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
+
+## 클라이언트 (그래프 쪽 MCP 호출, 2026-11-05 추가)
+
+가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 서버를 부르는 쪽을 `extras/mcp_skill/mcp_client/client.py`에 둔다. 그래프에 붙이는 일(`SEARCH_VIA_MCP`, SDD 2-3절)은 김승욱이 `backend/graph/build.py`에서 한다 — 이 절은 `build.py`·`search.py`를 고치지 않는다.
+
+- 라이브러리: `langchain[mcp]` 1.4.9(PRD 319줄·SDD 77줄, 베타). `langchain.mcp.MCPAdapter`가 FastMCP `Client` 위에서 MCP 도구를 LangChain `StructuredTool`로 바꾼다(결과의 `structured_content`는 `ToolMessage.artifact`). sandbox에서 `fastmcp==4.1.4`와 같이 설치되는 것을 확인했다(`langchain-core` 1.7.5 이상을 끌어온다). 공식 문서: https://docs.langchain.com/oss/python/langchain/mcp
+- `load_tools(target, token)` → LangChain 도구 3개. 에이전트가 도구를 직접 고르게 할 때.
+- `search_via_mcp(q: SearchQuery, target, token) -> list[Chunk]` → `search(q)`와 같은 모양. 검색 노드가 `search()` 대신 부르면 된다. 이미 이벤트 루프 안이어도 부를 수 있다(새 스레드). 서버 note(`fallback_reason` 등)는 `last_mcp_note()`.
+- 상태 → 결과: `ok` = Chunk 목록, `not_found` = 빈 목록, `unavailable`·연결 실패·시간 초과 = `McpUnavailable`(재시도 가능, `ConnectionError` 하위), `invalid`·`error`·`not_ready` = `McpSearchError`(재시도 불가).
+- 주소·토큰: `MCP_URL`(기본 `http://127.0.0.1:8000/mcp/`), `MCP_TOKEN`(Bearer). 문자열 주소는 http(s)만 받는다 — fastmcp는 문자열을 파일 경로로 먼저 읽어 `.py`면 실행하기 때문이다(langchain.mcp도 같은 이유로 막는다). 토큰이 비면 `ValueError`.
+- 클라이언트 쪽 호출 시간 제한 35초(서버 도구 30초보다 길게 — 서버가 먼저 `unavailable`로 답하게).
 
 ## AC (Given-When-Then)
 
@@ -179,3 +193,23 @@
 - GIVEN: 로컬 `docker compose up`, `MCP_TOKEN` 설정
 - WHEN: Claude Code에 `claude mcp add --transport http` 로 `/mcp/`를 등록하고 핸드북 질문을 한다
 - THEN: `search_handbook`이 불리고 청크·출처 URL이 화면에 나온다(시연 영상 캡처)
+
+**AC-C1 · 클라이언트가 도구 3개를 LangChain 도구로 받는다** (`tests/test_mcp_client.py`)
+- GIVEN: 가짜 검색기를 넣은 서버(같은 프로세스)
+- WHEN: `load_tools()`
+- THEN: 이름이 정확히 세 개인 `BaseTool`이 오고, `search_handbook` 호출 결과의 `artifact.structured_content.status`가 `ok`다
+
+**AC-C2 · `search_via_mcp` = 직접 `search()`**
+- GIVEN: 같은 가짜 검색기, `query·org·as_of·k`를 채운 `SearchQuery`
+- WHEN: `search_via_mcp(q)`와 직접 호출
+- THEN: 같은 `Chunk`가 같은 순서로 온다. 서버에 간 입력 네 칸이 같다. `not_found`는 빈 목록. `sub_queries`는 빠짐없이 같은 순서로 서버까지 가고, 개수가 틀리면 서버가 `invalid`로 거절한다(열린 항목 7)
+
+**AC-C3 · 실패를 재시도 가능과 불가로 나눈다**
+- GIVEN: 검색기가 `ConnectionError` / `KeyError`를 낸다, 또는 서버 주소가 닫혀 있다
+- WHEN: `search_via_mcp`
+- THEN: `ConnectionError`·닫힌 주소 → `McpUnavailable`(retryable) / `KeyError` → `McpSearchError("error")`(retryable 아님)
+
+**AC-C4 · HTTP Bearer 토큰**
+- GIVEN: `mcp_http_app(token="abc")`를 ASGI로 붙인 HTTP 클라이언트(네트워크 없음)
+- WHEN: 토큰 `abc` / `abd`로 검색
+- THEN: `abc`는 결과를 받고, `abd`는 서버 인증이 401로 막는다(재시도 가능 실패로 바꾸지 않는다)
