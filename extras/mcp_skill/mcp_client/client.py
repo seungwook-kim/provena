@@ -73,10 +73,10 @@ async def load_tools(target: Any = None, token: str | None = None) -> list:
 
 
 def _args(q: SearchQuery) -> dict[str, Any]:
-    if q.sub_queries:
-        # 서버 search_handbook은 sub_queries를 받지 않는다. 몰래 빼면 직접 search()와 결과가 달라지므로 막는다.
-        raise McpSearchError("invalid", "search_handbook이 sub_queries를 받지 않습니다(서버 도구에 칸 추가 필요).", retryable=False)
     args: dict[str, Any] = {"query": q.query, "k": q.k}
+    if q.sub_queries:
+        # 몰래 빼지 않고 그대로 보낸다(빼면 직접 search()와 결과가 달라진다). 검사(2~3개)는 서버가 invalid로 돌려준다.
+        args["sub_queries"] = list(q.sub_queries)
     if q.org is not None:
         args["org"] = q.org
     if q.as_of is not None:
