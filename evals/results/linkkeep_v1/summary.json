@@ -1,0 +1,140 @@
+{
+ "gate": {
+  "mem_vs_stored_diff": [],
+  "mem_recall": 0.9667,
+  "pg_exact_vs_mem_diff": [],
+  "pg_exact_recall": 0.9667,
+  "passed": true
+ },
+ "ef_search": 200,
+ "iterative_scan": "strict_order",
+ "pgvector": "0.8.7",
+ "explain_query": "item 7 full",
+ "explain": [
+  "Incremental Sort",
+  "  Sort Key: s.dist, s.chunk_id",
+  "  Presorted Key: s.dist",
+  "  ->  Subquery Scan on s",
+  "        ->  Limit",
+  "              ->  Nested Loop",
+  "                    ->  Nested Loop",
+  "                          ->  Index Scan using chunks_emb_hnsw_half on chunks c",
+  "                                Order By: ((embedding)::halfvec(1024) <#> '[질문 벡터]'::halfvec(1024))",
+  "                          ->  Memoize",
+  "                                Cache Key: c.rule_seq",
+  "                                Cache Mode: logical",
+  "                                ->  Index Only Scan using docs_pkey on docs d",
+  "                                      Index Cond: (rule_seq = c.rule_seq)",
+  "                    ->  Memoize",
+  "                          Cache Key: c.rule_seq, c.version_id",
+  "                          Cache Mode: logical",
+  "                          ->  Index Scan using versions_one_current on versions v",
+  "                                Index Cond: (rule_seq = c.rule_seq)",
+  "                                Filter: (version_id = c.version_id)"
+ ],
+ "index_used": true,
+ "cells": {
+  "exact_keep0": {
+   "recall@5": 0.9667,
+   "seconds": 8.37,
+   "recall_by_id": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 0.5,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0
+   }
+  },
+  "exact_keep2": {
+   "recall@5": 0.9667,
+   "seconds": 8.95,
+   "recall_by_id": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 0.5,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0
+   }
+  },
+  "hnsw_keep0": {
+   "recall@5": 0.9667,
+   "seconds": 1.18,
+   "recall_by_id": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 0.5,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0
+   }
+  },
+  "hnsw_keep2": {
+   "recall@5": 0.9667,
+   "seconds": 1.07,
+   "recall_by_id": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 0.5,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0
+   }
+  }
+ },
+ "keep_diff_exact": [
+  3,
+  4,
+  6,
+  13,
+  25
+ ],
+ "keep_diff_hnsw": [
+  3,
+  4,
+  6,
+  13,
+  25
+ ],
+ "hnsw_diff_keep0": [],
+ "hnsw_diff_keep2": [],
+ "vector_top_same": 42,
+ "vector_top_n": 42
+}

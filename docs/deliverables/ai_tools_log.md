@@ -4,6 +4,7 @@
 
 | 날짜 | 도구 | 맡긴 일 | 결과를 어떻게 검증했나 | AI가 틀린 곳 |
 |---|---|---|---|---|
+| 2026-11-05 | Claude Code (박진형) | 사전 등록 #26·#27 측정: 실행기 `evals/retrieval/exp_linkkeep_v1.py`(서비스 `Searcher` + 저장 벡터, 로컬 pgvector `127.0.0.1:54331` 새 DB만 허용)와 결과 `evals/results/linkkeep_v1/` (운영 DB·LLM·Voyage 호출 없음) | 측정 전 관문 2개 통과(`MemoryStore` keep=0 = 저장 `dec+L1x2.json` 30/30·0.9667, 로컬 `PgStore` 전수 = 그것 30/30), 다른 접속 주소 3개로 실행기가 멈추는지 확인, `EXPLAIN`으로 HNSW 색인 사용 확인, 같은 명령 2회 실행해 지연을 뺀 원시 결과가 같음, 6번 keep=2 결과를 저장된 `dec.json`과 대조 | 첫 실행의 `summary.json`에 EXPLAIN의 질문 벡터 1024개 값이 그대로 들어가 읽기 어려웠고, 연결 풀을 닫지 않아 종료 때 경고가 났다. 벡터 값을 줄이고 풀을 닫게 고쳐 다시 돌렸다 |
 | 2026-11-05 | Claude Code (박진형) | 조장 요청(#54 댓글 3번) `link_keep_per_sub` 0→2와 진형 추가 전수→HNSW 오프라인 측정의 사전 등록 #26·#27 (측정 전, 운영 DB·LLM·Voyage 호출 없음) | 기대 범위의 근거를 코드 줄(`search.py:60`·`:547~561`·`:224~226`)과 저장 결과 `decompose/voyage/dec.json`·`dec+L1x2.json`에서 직접 셈(나뉜 11문항의 링크 삽입 수), 측정 재료(저장 벡터·분해·링크 표·로컬 pgvector) 유무를 sha256으로 대조. keep=2의 Recall@5는 미리 계산하지 않음 | 처음 안은 두 변경을 한 건으로 등록하려 했다. "한 번에 하나만 바꾼다"(`PREREGISTER.md:3`)에 어긋나 #26·#27로 나눴다 |
 | 2026-11-05 | Claude Code (박진형) | #51 리뷰 반영: MCP `search_handbook`에 `sub_queries` 칸, 클라이언트가 그대로 보내기, `.env.example` `MCP_URL` | `tests/test_mcp_server.py`·`test_mcp_client.py`만 돌림(56 통과, DB 시험 2개 건너뜀, sandbox 3.14): 분해 질문이 빠짐없이 같은 순서로 `search()`까지 감, 1개·4개·빈 글은 `search()` 전에 `invalid`, 빈 목록은 "나누지 않음" | 없음 |
 | 2026-11-05 | Claude Code (김승욱) | D5 Supervisor 멀티 그래프, 합동 검토, 결정표 구현과 v2 50건 3회 측정 | 시험 실행과 측정 원시 결과로 확인했다. 주의 문항 6건의 답은 정답지와 대조했다 | 측정에 쓸 API 키의 출처를 시작 전에 확인하지 않았다 |
