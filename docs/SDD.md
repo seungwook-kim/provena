@@ -258,7 +258,7 @@ flowchart TD
 | 답 작성 | 있음 | `citation-rules` Skill을 쓴다. 결정표 질문이면 `delegation` Skill도 쓴다 |
 | 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. `grounding-check` Skill을 기준으로 삼는다 |
 | 결정표 실행 | 없음 | 관리자가 승인한 결정표만 실행한다 |
-| Supervisor, 팀 에이전트 | 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다 |
+| Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다 |
 | 사람 승인 | 없음 | interrupt로 멈추고 `resume()`으로 이어 간다 |
 
 **단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`single_pass`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다. 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
