@@ -1,0 +1,83 @@
+"""질문 분해: 한국어 질문이 서로 다른 사실을 둘 이상 물으면 2~3개의 하위 질문으로 나눈다 (docs/specs/question-graph.md 4단계).
+
+분해(LLM)는 검색이 아니라 그래프 단계가 한다. 사용자가 쓴 한국어 원 질문을 나누고(측정과 같은 입력), 결과를 `SearchQuery.sub_queries`로 검색에 넘긴다.
+프롬프트 본문(`SYSTEM`)과 응답 읽기 규칙은 측정 코드(`evals/retrieval/exp_decompose_v1.py`)와 같고, 시험이 대조한다. 다른 점은 아래와 같다.
+- 노드 표지(`[[task:decompose]]`)를 프롬프트 맨 앞에 붙인다(시험용 가짜 모델이 노드를 구분하는 표지).
+- 응답 형식이 깨지면 1회 다시 요청한다(`ATTEMPTS`=2). 측정 때는 최대 3번이었다.
+- 하위 질문이 1개이거나, 4개 이상이면 앞 3개만 쓰고, 항목이 비었거나 1000자를 넘거나 원 질문과 같으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙).
+실패(형식 오류, 호출 오류)하거나 나누지 않으면 빈 목록이고, 검색은 질문 하나로 그대로 이어 간다. 분해 때문에 답이 멈추지 않는다.
+켜는 곳: `decompose_enabled()`. 환경 변수 `SEARCH_DECOMPOSE`가 `1`이면 켠다. 기본은 끔이다(검색이 `sub_queries`를 쓰기 전에는 호출이 낭비다).
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+from collections.abc import Callable
+
+log = logging.getLogger(__name__)
+
+MIN_SUB = 2
+MAX_SUB = 3
+MAX_SUB_CHARS = 1000
+ATTEMPTS = 2  # 첫 호출 + 재시도 1회
+TASK = "decompose"
+
+SYSTEM = (
+    "너는 사내 핸드북 검색을 위한 질문 분해기다. 사용자의 한국어 질문이 서로 다른 사실을 둘 이상 묻는 경우에만 독립된 한국어 하위 질문(최대 3개)으로 나눈다.\n"
+    "- 하나의 사실을 묻는 질문, 같은 사실을 다른 말로 두 번 묻는 질문, 하나의 사실에 조건·예외를 붙인 질문은 나누지 않는다.\n"
+    "- 하위 질문은 질문에 있는 핵심 용어를 그대로 쓰고, 질문에 없는 정보를 더하지 않는다. 각 하위 질문만 읽어도 무엇을 묻는지 알 수 있어야 한다.\n"
+    "- 나누지 않으면 split을 false로 하고 sub_questions는 빈 목록으로 둔다.\n"
+    "- 설명 없이 JSON 한 개만 출력한다. 예 1: 질문 \"배송은 며칠 걸리고 반품 수수료는 얼마야?\" -> {\"split\": true, \"sub_questions\": [\"배송은 며칠 걸려?\", \"반품 수수료는 얼마야?\"]}. "
+    "예 2: 질문 \"휴가 신청은 어떻게 해?\" -> {\"split\": false, \"sub_questions\": []}."
+)
+SYSTEM_TAGGED = f"[[task:{TASK}]]\n{SYSTEM}"
+
+
+def decompose_enabled() -> bool:
+    return (os.environ.get("SEARCH_DECOMPOSE") or "").strip() == "1"
+
+
+def parse_split(text: str) -> dict | None:
+    """분해 응답 JSON을 읽는다(측정 코드와 같은 규칙). 형식이 틀리면 None."""
+    m = re.search(r"\{.*\}", text or "", re.S)
+    if not m:
+        return None
+    try:
+        obj = json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(obj, dict) or not isinstance(obj.get("split"), bool) or not isinstance(obj.get("sub_questions"), list):
+        return None
+    if not all(isinstance(x, str) and x.strip() for x in obj["sub_questions"]):
+        return None
+    return obj
+
+
+def normalize(question: str, obj: dict) -> list[str]:
+    """검색에 넘길 하위 질문. 앞 3개만 쓰고, 2개 미만이거나 원 질문과 같은 항목이 있거나 1000자를 넘는 항목이 있으면 나누지 않은 것이다."""
+    subs = [s.strip() for s in obj["sub_questions"]][:MAX_SUB]
+    ok = bool(obj["split"]) and len(subs) >= MIN_SUB and all(s != (question or "").strip() and 0 < len(s) <= MAX_SUB_CHARS for s in subs)
+    return subs if ok else []
+
+
+def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
+    """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
+    if not question or not question.strip():
+        return [], "skipped"
+    source = "invalid"
+    for _ in range(ATTEMPTS):
+        try:
+            text = ask(SYSTEM_TAGGED, question)
+        except Exception as e:  # noqa: BLE001  분해가 실패해도 검색은 원 질문 그대로 이어 간다. 비용 상한은 그대로 올린다
+            if type(e).__name__ == "CostCapExceeded":
+                raise
+            log.warning("질문 분해 호출 실패: %s", type(e).__name__)
+            source = "error"
+            continue
+        obj = parse_split(text)
+        if obj is not None:
+            return normalize(question, obj), "llm"
+        source = "invalid"
+    return [], source

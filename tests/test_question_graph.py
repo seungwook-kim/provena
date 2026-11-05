@@ -7,7 +7,7 @@ from langgraph.store.memory import InMemoryStore
 from qgraph_fakes import ScriptedLLM, answer_with_top_chunk, first_chunk_id, j, normal_llm
 
 from backend.graph.answer_store import AnswerStore, InMemoryAnswerStore
-from backend.graph.build import build_graph
+from backend.graph.build import MSG_REFUSE, build_graph
 from backend.graph.parsing import parse_json_obj
 from backend.graph.stream import stream_events
 from backend.memory import delete_profile, get_profile, put_profile
@@ -289,3 +289,440 @@ def test_memory_checkpointer_keeps_thread_state():
     cfg = {"configurable": {"thread_id": "tk"}}
     g.invoke({"question": Q, "user_id": "u1", "thread_id": "tk", "as_of": "2025-06-01"}, cfg)
     assert g.get_state(cfg).values["kind"] == "answer"
+
+
+# ---------- 재검색 결과 합치기 (수정 A) ----------
+def _by_article(article, version_date="2025-01-01"):
+    from fake_search import _CORPUS
+
+    return next(c for c in _CORPUS if c.article == article and c.version_date == version_date)
+
+
+def test_merge_chunks_keeps_previous_dedups_and_caps():
+    from backend.graph.build import MAX_CHUNKS, merge_chunks
+
+    def mk(i, v="v"):
+        return {"chunk_id": f"{i:016x}", "version_id": v}
+
+    def ids(chunks):
+        return [c["chunk_id"] for c in chunks]
+
+    prev = [mk(0), mk(1), mk(2)]
+    got = merge_chunks(prev, [mk(2), mk(3), mk(1, "other"), mk(4)])
+    assert ids(got) == [f"{i:016x}" for i in (0, 1, 2, 3, 1, 4)]  # 같은 chunk_id라도 판이 다르면 다른 청크
+    assert ids(merge_chunks(prev, [])) == ids(prev)
+    assert ids(merge_chunks([], prev)) == ids(prev)
+    capped = merge_chunks([mk(i) for i in range(8)], [mk(i) for i in range(8, 20)])
+    assert len(capped) == 10 == MAX_CHUNKS
+    assert ids(capped) == [f"{i:016x}" for i in range(10)]  # 앞 결과가 먼저 남고 새 청크는 상한까지만
+    assert len(merge_chunks([mk(i) for i in range(12)], [], limit=10)) == 10
+
+
+def test_requery_keeps_first_search_chunks_so_their_citation_survives():
+    """6번 문항 경로: 첫 검색에서 찾은 정답이 재검색 뒤에도 근거 목록에 있어야 인용 검사를 통과한다."""
+    paging, escal = _by_article("Incident Response > Paging"), _by_article("Incident Response > Escalation")
+    f1 = _by_article("Adoption Policy > Review Request", "2024-05-01")
+    f2 = _by_article("Adoption Policy > Contingency", "2024-05-01")
+    f3 = _by_article("Adoption Policy > Simplified Adoption", "2024-05-01")
+    results = [[paging, f1, f2], [escal, f1, f3]]
+    calls = []
+
+    def retriever(q):
+        calls.append(q)
+        return results[len(calls) - 1]
+
+    llm = normal_llm(
+        judge=[j(sufficient=False, reason="부족", clarify=None), j(sufficient=True)],
+        rewrite=distinct_rewrites(),
+        answer=lambda u: j(answer=f"최초 대응은 15분 이내이다 [{paging.chunk_id}]", citations=[{"chunk_id": paging.chunk_id}]),
+    )
+    out = run(graph(retriever, llm=llm))
+    assert len(calls) == 2
+    assert [c["chunk_id"] for c in out["chunks"]] == [c.chunk_id for c in (paging, f1, f2, escal, f3)]  # 앞 결과 유지, 중복 한 번, 새 청크는 뒤
+    assert out["kind"] == "answer" and [c["chunk_id"] for c in out["citations"]] == [paging.chunk_id] and out["dropped_citations"] == []
+    second_judge = [u for t, u in llm.calls if t == "judge"][1]
+    assert paging.chunk_id in second_judge and escal.chunk_id in second_judge  # 판단이 합친 목록을 본다
+    answer_user = next(u for t, u in llm.calls if t == "answer")
+    assert all(c.chunk_id in answer_user for c in (paging, f1, f2, escal, f3))  # 답 작성도 합친 목록을 본다
+
+
+def test_merged_list_is_capped_and_search_count_stays_three():
+    from fake_search import _CORPUS
+
+    pool = list(_CORPUS)
+    assert len(pool) >= 15
+    batches = [pool[0:5], pool[5:10], pool[10:15]]
+    calls = []
+
+    def retriever(q):
+        calls.append(q)
+        return batches[len(calls) - 1]
+
+    llm = normal_llm(judge=j(sufficient=False, reason="부족", clarify=None), rewrite=distinct_rewrites())
+    out = run(graph(retriever, llm=llm))
+    assert len(calls) == 3 and out["kind"] == "refuse"
+    assert [c["chunk_id"] for c in out["chunks"]] == [c.chunk_id for c in pool[:10]]  # 상한 10, 세 번째 검색의 새 청크는 들어오지 못한다
+
+
+# ---------- 되묻기 제한 (수정 B) ----------
+def test_clarify_with_a_number_becomes_a_refusal():
+    """28번 경로: 판단이 인용 없이 수치를 담은 되묻기를 내면 사용자에게 보이지 않고 거절로 바꾼다."""
+    for text in ("99.74%가 맞나요?", "SEV 1이 맞는 등급인가요?", "사업소득 3.3% 원천징수 대상인가요?", "2024년 3월에 5일 이내인가요?"):
+        llm = normal_llm(judge=j(sufficient=False, reason="부족", clarify=text))
+        out = run(graph(llm=llm))
+        assert out["kind"] == "refuse" and out["answer"] == MSG_REFUSE and out["citations"] == [], text
+        assert text not in out["answer"]
+        assert out["clarify_question"] == text  # 기록에는 남는다
+
+
+def test_clarify_about_section_or_period_is_kept():
+    from backend.graph.build import clarify_has_number
+
+    for text in ("어느 절 기준인가요?", "2023년 기준인가요?", "2024-05-01 이전 판을 말씀하시나요?", "2024년 3월 기준인가요, 아니면 이후 기준인가요?"):
+        assert not clarify_has_number(text), text
+        out = run(graph(llm=normal_llm(judge=j(sufficient=False, reason="시점 불명", clarify=text))))
+        assert out["kind"] == "clarify" and out["answer"] == text
+    assert clarify_has_number("99.74%") and clarify_has_number("SEV2") and clarify_has_number("30분 이내") and not clarify_has_number("")
+
+
+def test_judge_prompt_limits_clarify_to_missing_section_or_period():
+    from backend.prompts.question import JUDGE_SYSTEM
+
+    assert "절(핸드북 섹션)이나 기준 시점이 빠져" in JUDGE_SYSTEM and "그 밖에는 clarify를 null" in JUDGE_SYSTEM
+    assert "사용자에게 문서나 자료를 달라고 하지 않는다" in JUDGE_SYSTEM
+
+
+# ---------- 도메인 밖 경로 (수정 C) ----------
+def test_out_of_domain_refuses_without_rewrite_or_search():
+    from backend.graph.build import MSG_REFUSE_OUT_OF_DOMAIN
+
+    fn, calls = counting_search()
+    st = InMemoryAnswerStore()
+    llm = normal_llm(classify=j(route="out_of_domain"))
+    out = run(graph(fn, llm=llm, answer_store=st))
+    assert out["route"] == "out_of_domain" and out["kind"] == "refuse" and out["answer"] == MSG_REFUSE_OUT_OF_DOMAIN
+    assert len(calls) == 0 and out["citations"] == [] and st.all_answers() == []
+    assert llm.count("rewrite") == 0 and llm.count("judge") == 0 and llm.count("answer") == 0
+    assert not out.get("drafted") and not out.get("refuse_reason")  # 답 단계 거절이 아니라 답 초안 전 거절이다
+
+
+def test_policy_routes_still_search_and_answer():
+    for route in ("rule", "decision", "review"):
+        fn, calls = counting_search()
+        out = run(graph(fn, llm=normal_llm(classify=j(route=route))))
+        assert out["kind"] == "answer" and len(calls) == 1, route
+
+
+def test_ambiguous_or_broken_classification_goes_to_policy_path():
+    for raw in ("??", "", j(route=None), j(route="Out_Of_Domain"), j(route="unknown"), "{"):
+        fn, calls = counting_search()
+        out = run(graph(fn, llm=normal_llm(classify=raw)))
+        assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1, raw
+
+
+def test_classify_prompt_names_out_of_domain_and_defaults_to_rule():
+    from backend.prompts.question import CLASSIFY_SYSTEM
+
+    assert "out_of_domain" in CLASSIFY_SYSTEM and "모호하면 rule로 분류한다" in CLASSIFY_SYSTEM
+
+
+# ---------- 인용 범위 (수정 1) ----------
+def _six_chunks():
+    from fake_search import _CORPUS
+
+    return list(_CORPUS[:6])
+
+
+def _answer_marking(ids_in_body, ids_in_list):
+    body = " ".join(f"문장 {i} [{c}]." for i, c in enumerate(ids_in_body))
+    return lambda user: j(answer=body, citations=[{"chunk_id": c} for c in ids_in_list])
+
+
+def test_citation_cap_keeps_first_four_in_body_order_and_records_trimmed():
+    """인용 상한: 본문에 먼저 나온 4개만 남기고 나머지는 `trimmed_citations`에 둔다. 가짜 인용이 아니므로 `dropped_citations`는 비어 있다."""
+    from backend.graph.build import MAX_CITATIONS
+
+    chunks = _six_chunks()
+    ids = [c.chunk_id for c in chunks]
+    body_order = [ids[5], ids[0], ids[3], ids[1], ids[4], ids[2]]
+    llm = normal_llm(answer=_answer_marking(body_order, ids))
+    out = run(graph(lambda q: chunks, llm=llm), question="일반 질문입니다")
+    assert MAX_CITATIONS == 4
+    assert out["kind"] == "answer"
+    assert [c["chunk_id"] for c in out["citations"]] == body_order[:4]
+    assert out["trimmed_citations"] == [c for c in ids if c not in body_order[:4]]
+    assert out["dropped_citations"] == []
+    assert all(t not in out["answer"] for t in body_order[4:]) and "[5]" not in out["answer"]
+
+
+def test_citation_not_marked_in_body_is_not_kept():
+    chunks = _six_chunks()
+    ids = [c.chunk_id for c in chunks]
+    llm = normal_llm(answer=_answer_marking([ids[0]], [ids[0], ids[1], ids[2]]))
+    out = run(graph(lambda q: chunks, llm=llm), question="일반 질문입니다")
+    assert [c["chunk_id"] for c in out["citations"]] == [ids[0]] and out["trimmed_citations"] == [ids[1], ids[2]]
+
+
+def test_citations_without_any_body_mark_follow_list_order_up_to_cap():
+    from backend.graph.build import select_citations
+
+    valid = [{"chunk_id": f"{i:016x}"} for i in range(6)]
+    kept, trimmed, text = select_citations(valid, "표시 없는 답입니다.")
+    assert [c["chunk_id"] for c in kept] == [f"{i:016x}" for i in range(4)] and len(trimmed) == 2 and text == "표시 없는 답입니다."
+    kept, trimmed, _ = select_citations(valid[:3], "답 [" + valid[2]["chunk_id"] + "]")
+    assert [c["chunk_id"] for c in kept] == [valid[2]["chunk_id"]] and len(trimmed) == 2
+
+
+def test_two_citations_are_untouched():
+    chunks = _six_chunks()
+    ids = [c.chunk_id for c in chunks]
+    llm = normal_llm(answer=_answer_marking([ids[1], ids[0]], [ids[0], ids[1]]))
+    out = run(graph(lambda q: chunks, llm=llm), question="일반 질문입니다")
+    assert [c["chunk_id"] for c in out["citations"]] == [ids[1], ids[0]] and out["trimmed_citations"] == []
+
+
+def test_answer_prompt_asks_for_directly_supporting_chunks_with_the_same_cap():
+    from backend.prompts.question import ANSWER_SYSTEM, MAX_CITATIONS
+
+    assert MAX_CITATIONS == 4 and "4개 이하" in ANSWER_SYSTEM
+    assert "직접 받치는 근거" in ANSWER_SYSTEM and "답에 표시한 chunk_id만" in ANSWER_SYSTEM
+    assert "답에 쓰지 않은 자료는 citations에 넣지 않는다" in ANSWER_SYSTEM
+
+
+# ---------- 근거 판정의 부분 제거 (수정 2) ----------
+def _sentences_answer(*pairs):
+    """(문장, 청크) 쌍으로 답과 인용을 만든다."""
+    body = " ".join(f"{text} [{cid}]." for text, cid in pairs)
+    cites = list(dict.fromkeys(cid for _, cid in pairs))
+    return j(answer=body, citations=[{"chunk_id": c} for c in cites])
+
+
+def _partial_setup(claims, second=None, three=True):
+    paging, escal = _by_article("Incident Response > Paging"), _by_article("Incident Response > Escalation")
+    s1, s2, s3 = "SEV2 장애 최초 대응은 15분 이내이다", "담당자가 직접 호출한다", "에스컬레이션은 2시간 상한이다"
+    pairs = [(s1, paging.chunk_id), (s2, paging.chunk_id)] + ([(s3, escal.chunk_id)] if three else [])
+
+    def grounding(user):
+        if second is not None and "<<<답>>>" in user and s3 not in user:
+            return second
+        return j(grounded=False, reason_code="unsupported", reason="2시간이 자료와 다름", unsupported_sentences=claims(s1, s2, s3))
+
+    llm = normal_llm(answer=_sentences_answer(*pairs), grounding=grounding)
+    return llm, paging, escal, (s1, s2, s3)
+
+
+def test_unsupported_sentence_is_removed_and_the_answer_is_kept():
+    llm, paging, escal, (s1, s2, s3) = _partial_setup(lambda a, b, c: [f"{c} [{_by_article('Incident Response > Escalation').chunk_id}]."], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True, answer_store=InMemoryAnswerStore()))
+    assert out["kind"] == "answer" and not out.get("refuse_reason")
+    assert s1 in out["answer"] and s2 in out["answer"] and s3 not in out["answer"]
+    assert [c["chunk_id"] for c in out["citations"]] == [paging.chunk_id]  # 뺀 문장만 받치던 청크는 인용에서도 빠진다
+    g = out["grounding"]
+    assert g["revised"] is True and g["rejudge"] == "grounded" and g["llm"] == "ungrounded"
+    assert [r["sentence"].startswith(s3) for r in g["removed"]] == [True] and g["removed"][0]["reason"] == "2시간이 자료와 다름"
+    assert s3 in g["draft_answer"]  # 원래 답은 기록에 남는다
+    assert llm.count("grounding") == 2  # 판정 한 번, 남은 답의 재판정 한 번
+    assert "2025-01-01" in out["answer"] and "CC BY-SA 4.0" in out["answer"]
+
+
+def test_revised_answer_must_pass_the_rejudge_or_it_is_refused():
+    for second in (j(grounded=False, reason_code="unsupported", reason="아직 틀림", unsupported_sentences=[]), "판정 불가 응답"):
+        llm, paging, escal, _ = _partial_setup(lambda a, b, c: [c], second=second)
+        out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == []
+        assert out["grounding"]["revise"]["result"].startswith("rejudge_") and "revised" not in out["grounding"]
+        assert llm.count("grounding") >= 2
+
+
+def test_claim_that_matches_no_sentence_refuses_the_whole_answer_without_rejudge():
+    llm, paging, escal, _ = _partial_setup(lambda a, b, c: ["답에 없는 문장을 지어 낸 항목입니다"], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported"
+    assert out["grounding"]["revise"]["result"] == "unmatched" and llm.count("grounding") == 1
+
+
+def test_answer_that_loses_more_than_half_or_everything_is_refused():
+    """빼고 남은 말이 질문에 답하지 못하는 경우: 문장 3개 중 2개를 빼면 거절한다."""
+    llm, paging, escal, _ = _partial_setup(lambda a, b, c: [b, c], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["grounding"]["revise"]["result"] == "too_many_removed" and llm.count("grounding") == 1
+    llm, paging, escal, _ = _partial_setup(lambda a, b, c: [a, b, c], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["grounding"]["revise"]["result"] == "nothing_left"
+
+
+def test_ungrounded_without_sentence_list_or_with_other_reason_is_refused_as_before():
+    llm = normal_llm(grounding=j(grounded=False, reason_code="unsupported", reason="기한이 다름"))
+    out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and llm.count("grounding") == 1
+    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=["근거에 따라 답합니다"]))
+    out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and llm.count("grounding") == 1
+
+
+def test_code_rules_still_refuse_before_any_llm_judgement():
+    llm, paging, escal, _ = _partial_setup(lambda a, b, c: [c], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True), question="SEV9 장애 최초 대응은 몇 분 이내인가요?")
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "nonexistent_entity" and llm.count("grounding") == 0
+
+
+def test_prune_answer_rules():
+    from backend.graph.grounding import MAX_REMOVED_SHARE, prune_answer, split_sentences
+
+    a, b, c = "0123456789abcdef", "fedcba9876543210", "aaaaaaaaaaaaaaaa"
+    assert MAX_REMOVED_SHARE == 0.5
+    text = f"SEV2는 99.74퍼센트를 지킨다 [{a}]. 담당자는 15분 안에 답한다 [{b}]. 나머지는 팀이 정한다 [{c}]."
+    assert split_sentences(text) == [f"SEV2는 99.74퍼센트를 지킨다 [{a}].", f"담당자는 15분 안에 답한다 [{b}].", f"나머지는 팀이 정한다 [{c}]."]
+    r = prune_answer(text, ["나머지는  팀이 정한다"])  # 공백과 표시 차이는 무시한다
+    assert r.ok and r.answer == f"SEV2는 99.74퍼센트를 지킨다 [{a}]. 담당자는 15분 안에 답한다 [{b}]." and r.removed == [f"나머지는 팀이 정한다 [{c}]."]
+    assert prune_answer(text, ["짧음"]).reason == "unmatched" and prune_answer(text, []).reason == "no_claims"
+    two = prune_answer(text, ["담당자는 15분 안에 답한다 [" + b + "]. 나머지는 팀이 정한다 [" + c + "]."])
+    assert not two.ok and two.reason == "too_many_removed"
+    multi = f"첫 줄 문장이 있다 [{a}].\n둘째 줄 문장이 있다 [{b}].\n셋째 줄 문장이 있다 [{c}]."
+    r = prune_answer(multi, ["둘째 줄 문장이 있다"])
+    assert r.ok and r.answer == f"첫 줄 문장이 있다 [{a}].\n셋째 줄 문장이 있다 [{c}]."
+
+
+def test_grounding_prompt_keeps_the_criteria_and_adds_only_the_sentence_list():
+    from backend.prompts.question import GROUNDING_SYSTEM
+
+    for kept in ("자료 밖 지식으로 받쳐졌다고 보지 않는다", "문장이 그럴듯하다는 이유로 통과시키지 않는다", "unsupported: 자료는 관련 있지만 답의 주장"):
+        assert kept in GROUNDING_SYSTEM
+    assert "unsupported_sentences" in GROUNDING_SYSTEM and "한 글자도 바꾸지 않고 그대로 복사" in GROUNDING_SYSTEM
+    assert "판정 기준을 낮추지 않는다" in GROUNDING_SYSTEM
+
+
+# ---------- 요청한 기간의 자료가 없는 답 (수정 3) ----------
+Q_PERIOD = "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?"
+
+
+def _adjacent_value_answer(text, covered=True):
+    def fn(user):
+        cid = first_chunk_id(user)
+        return j(answer=f"{text} [{cid}]", citations=[{"chunk_id": cid}], period_covered=covered)
+
+    return fn
+
+
+def test_answer_that_says_the_requested_month_is_missing_but_cites_a_nearby_value_is_refused():
+    """28번 경로: 기간 자료가 없다고 말하면서 가까운 달 값을 인용한 답은 거절한다. 사유 out_of_period, 답 단계 거절이다."""
+    from backend.graph.build import MSG_REFUSE_BY_REASON
+
+    for text in ("제공된 자료에는 2026년 9월 가용률이 없습니다. 가장 최근 값은 2026년 8월 99.74%입니다.", "2026년 9월 값은 확인 필요하지만 8월은 99.74%입니다."):
+        out = run(graph(llm=normal_llm(answer=_adjacent_value_answer(text))), question=Q_PERIOD)
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and out["citations"] == []
+        assert out["answer"] == MSG_REFUSE_BY_REASON["out_of_period"] and "99.74" not in out["answer"]
+        assert out["drafted"] is True and out["dropped_citations"] == [] and "9월" in out["grounding"]["detail"]
+
+
+def test_period_covered_false_refuses_even_with_an_empty_answer():
+    llm = normal_llm(answer=j(answer="", citations=[], period_covered=False))
+    out = run(graph(llm=llm), question=Q_PERIOD)
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and out["grounding"]["detail"] == "period_covered=false"
+
+
+def test_period_rule_does_not_apply_to_questions_without_a_period():
+    """시점 표현이 없는 질문은 답에 "없다"가 있어도, 모델이 period_covered=false를 내도 이 규칙으로 거절하지 않는다."""
+    ans = j(answer="최초 대응은 15분 이내이다. 다만 담당 연락처는 자료에 없다 [{cid}]", citations=[{"chunk_id": "{cid}"}], period_covered=False)
+
+    def fn(user):
+        return ans.replace("{cid}", first_chunk_id(user))
+
+    out = run(graph(llm=normal_llm(answer=fn)))  # Q에는 연도나 월이 없다
+    assert out["kind"] == "answer" and not out.get("refuse_reason")
+
+
+def test_period_question_with_a_normal_answer_is_kept():
+    """기간을 묻는 질문이라도 답이 그 기간의 값을 주면(없다는 말이 없으면) 그대로 답한다."""
+    out = run(graph(llm=normal_llm(answer=_adjacent_value_answer("2025년 판 기준 최초 대응은 15분 이내이다."))), question="2025년 기준 SEV2 장애 최초 대응은 몇 분 이내인가요?")
+    assert out["kind"] == "answer"
+
+
+def test_period_missing_rule_units():
+    from backend.graph.grounding import period_missing, question_periods
+
+    assert question_periods("2026년 9월 가용률과 2020년 기준, 3월 값, 2024-05 판") == ["2026년9월", "2020년", "3월", "2024-05"]
+    assert question_periods("SEV2 최초 대응은?") == []
+    assert period_missing("SEV2 최초 대응은?", "자료에 없다", False) == ""
+    assert period_missing(Q_PERIOD, "99.74%입니다.", None) == "" and period_missing(Q_PERIOD, "99.74%입니다.", True) == ""
+    assert period_missing(Q_PERIOD, "99.74%입니다.", False) == "period_covered=false"
+    assert period_missing(Q_PERIOD, "8월은 99.74%입니다. 2026년 9월은 자료에 없다.", True).startswith("answer says")
+    assert period_missing(Q_PERIOD, "2026년 8월은 없다.", True) == ""  # 질문의 시점(9월)에 대한 말이 아니다
+
+
+def test_answer_prompt_carries_the_period_rule_and_output_flag():
+    from backend.prompts.question import ANSWER_SYSTEM
+
+    assert "period_covered를 false로 하고 answer를 빈 문자열, citations를 빈 목록으로 한다" in ANSWER_SYSTEM
+    assert "가까운 다른 기간의 값이 있어도 그 값을 답으로 쓰지 않는다" in ANSWER_SYSTEM and '"period_covered": true' in ANSWER_SYSTEM
+
+
+# ---------- 기준일 (수정 4) ----------
+def _search_with_as_of():
+    seen = []
+
+    def fn(q):
+        seen.append(q.as_of)
+        return fake_search(q)
+
+    return fn, seen
+
+
+def test_rewrite_as_of_is_ignored_when_the_question_has_no_period():
+    """15번 경로: 질문에 시점이 없는데 재작성이 낸 기준일(측정일 등)은 쓰지 않고 오늘로 둔다."""
+    from datetime import date
+
+    fn, seen = _search_with_as_of()
+    llm = normal_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of="2025-03-04"))
+    out = run(graph(fn, llm=llm), as_of=None)
+    assert seen == [date.today().isoformat()] and out["as_of"] == date.today().isoformat()
+
+
+def test_rewrite_as_of_is_used_when_the_question_has_a_period():
+    fn, seen = _search_with_as_of()
+    llm = normal_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of="2025-03-04"))
+    out = run(graph(fn, llm=llm), as_of=None, question="2025년 3월 기준 SEV2 장애 최초 대응은 몇 분 이내인가요?")
+    assert seen == ["2025-03-04"] and out["as_of"] == "2025-03-04"
+
+
+def test_given_as_of_always_wins_over_rewrite():
+    fn, seen = _search_with_as_of()
+    llm = normal_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of="2025-03-04"))
+    run(graph(fn, llm=llm), as_of="2025-06-01", question="2025년 3월 기준 SEV2 장애 최초 대응은 몇 분 이내인가요?")
+    assert seen == ["2025-06-01"]
+
+
+def test_mentions_period_examples():
+    from backend.graph.build import mentions_period
+
+    for q in ("2023년 5월 승인 한도는?", "3월에 바뀐 규정은?", "작년 휴가 정책", "2분기 목표 승인자", "FY25 예산 승인", "Q3 정책", "6개월 전 규칙", "지난달 변경", "오늘 기준 한도"):
+        assert mentions_period(q), q
+    for q in ("SEV2 최초 대응은 누가 해?", "신규 DB 도입 승인은?", "", "승인 한도"):
+        assert not mentions_period(q), q
+
+
+def test_month_level_as_of_of_the_dataset_becomes_the_last_day_of_the_month():
+    from evals.agent.run_eval import _as_of
+
+    cases = [("2026-10-27", "2026-10-27"), ("2023-05", "2023-05-31"), ("2024-02", "2024-02-29"), ("2023-02", "2023-02-28"), ("2025-12", "2025-12-31"),
+             ("2025-13", None), ("2025-00", None), ("2025", None), ("", None), (None, None), (202305, None), ("05-2023", None)]
+    for raw, want in cases:
+        assert _as_of({"as_of": raw}) == want, raw
+    assert _as_of({}) is None
+
+
+def test_removal_that_leaves_no_citation_mark_is_refused_by_the_citation_recheck():
+    """빼고 남은 문장에 인용 표시가 하나도 없으면(받치는 자료를 보일 수 없는 답) 남은 답을 내지 않고 원래 판정대로 거절한다."""
+    paging = _by_article("Incident Response > Paging")
+    keep1, keep2, bad = "SEV2 장애 최초 대응은 15분 이내이다", "담당자가 직접 호출한다", "에스컬레이션은 2시간 상한이다"
+    body = f"{keep1}. {keep2}. {bad} [{paging.chunk_id}]."
+
+    def grounding(user):
+        if "<<<답>>>" in user and bad not in user:
+            return j(grounded=True)
+        return j(grounded=False, reason_code="unsupported", reason="2시간이 자료와 다름", unsupported_sentences=[bad])
+
+    llm = normal_llm(answer=j(answer=body, citations=[{"chunk_id": paging.chunk_id}]), grounding=grounding)
+    out = run(graph(lambda q: [paging], llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == []
+    assert out["grounding"]["revise"]["result"] == "citation_check_failed" and llm.count("grounding") == 1

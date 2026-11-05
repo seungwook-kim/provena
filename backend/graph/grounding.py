@@ -118,3 +118,89 @@ def check_rules(
         return Verdict(False, NONEXISTENT_ENTITY, "질문에 있는 " + ", ".join(missing) + "이(가) 검색된 근거 어디에도 없습니다", checks)
 
     return Verdict(True, "", "", checks)
+
+
+# ---------- 받쳐지지 않는 문장만 빼기 (수정 2) ----------
+MAX_REMOVED_SHARE = 0.5  # 빼는 문장이 전체의 이 비율을 넘으면 질문에 답하지 못하는 답으로 보고 전체를 거절한다
+_MIN_CLAIM = 6  # 이보다 짧은 목록 항목은 어느 문장인지 믿을 수 없어 일치로 보지 않는다
+_MARKS = r"(?:\s*\[[0-9a-f]{16}\])*"
+_SENTENCE = re.compile(r".+?[.!?。]" + _MARKS + r"(?=\s|$)|.+$", re.S)
+_ANY_MARK = re.compile(r"\[[0-9a-f]{16}\]")
+
+
+@dataclass
+class Pruned:
+    ok: bool
+    answer: str = ""
+    removed: list[str] = field(default_factory=list)
+    reason: str = ""  # 실패 사유: no_claims | unmatched | nothing_left | too_many_removed
+
+
+def split_sentences(line: str) -> list[str]:
+    """한 줄을 문장으로 나눈다. 문장 끝의 `[chunk_id]` 표시는 그 문장에 붙여 둔다. 소수점(99.74)은 문장 끝으로 보지 않는다."""
+    return [m.group(0).strip() for m in _SENTENCE.finditer(line.strip()) if m.group(0).strip()]
+
+
+def _flat(text: str) -> str:
+    return re.sub(r"\s+", "", _ANY_MARK.sub("", text or ""))
+
+
+def prune_answer(answer: str, claims: list[str]) -> Pruned:
+    """판정이 받쳐지지 않는다고 한 문장(`claims`, 답에서 복사한 것)과 일치하는 문장을 답에서 뺀다. 줄 구분은 유지한다.
+
+    일치: 공백과 표시를 지운 문장이 항목에 들어 있거나 항목이 문장에 들어 있다. 어느 문장과도 맞지 않는 항목이 하나라도 있으면
+    무엇이 틀렸는지 알 수 없으므로 실패한다(호출한 쪽이 전체를 거절한다). 남는 문장이 없거나 뺀 문장이 절반을 넘어도 실패한다."""
+    wanted = [c for c in (claims or []) if isinstance(c, str) and c.strip()]
+    if not wanted:
+        return Pruned(False, reason="no_claims")
+    lines = [[s for s in split_sentences(ln)] for ln in (answer or "").splitlines() if ln.strip()]
+    sentences = [s for ln in lines for s in ln]
+    flat = [_flat(s) for s in sentences]
+    drop: set[int] = set()
+    for claim in wanted:
+        c = _flat(claim)
+        hit = [i for i, f in enumerate(flat) if len(c) >= _MIN_CLAIM and f and len(f) >= _MIN_CLAIM and (c in f or f in c)]
+        if not hit:
+            return Pruned(False, reason="unmatched")
+        drop.update(hit)
+    if len(drop) >= len(sentences):
+        return Pruned(False, reason="nothing_left")
+    if len(drop) / len(sentences) > MAX_REMOVED_SHARE:
+        return Pruned(False, reason="too_many_removed")
+    out, n = [], 0
+    for ln in lines:
+        keep = []
+        for s in ln:
+            if n not in drop:
+                keep.append(s)
+            n += 1
+        if keep:
+            out.append(" ".join(keep))
+    return Pruned(True, "\n".join(out), [sentences[i] for i in sorted(drop)])
+
+
+# ---------- 요청한 기간의 자료가 없는 답 (수정 3) ----------
+# 질문에 연도, 연월, 월이 있어야 적용한다. 공백은 지우고 비교한다("2026년 9월" -> "2026년9월")
+_PERIOD_EXPR = re.compile(r"(?:(?:19|20)\d{2}\s*년\s*)?\d{1,2}\s*월|(?:19|20)\d{2}\s*년|(?:19|20)\d{2}-\d{2}(?!\d)")
+_ABSENCE = ("없", "확인 필요", "찾을 수 없", "제공되지")  # 답이 그 기간의 자료가 없다고 밝히는 말
+
+
+def question_periods(question: str) -> list[str]:
+    """질문에 적힌 시점 표현(연월, 연도, 월). 공백을 지운 형태로 돌려준다."""
+    return list(dict.fromkeys(re.sub(r"\s+", "", m.group(0)) for m in _PERIOD_EXPR.finditer(question or "")))
+
+
+def period_missing(question: str, answer: str, period_covered: object) -> str:
+    """답이 질문의 기간 자료가 없다고 밝히면 그 근거를, 아니면 ""를 돌려준다. 질문에 시점 표현이 없으면 적용하지 않는다.
+    (a) 답 작성이 `period_covered`를 false로 냈다. (b) 답의 한 문장에 질문의 시점 표현과 "없다"류 표현이 함께 있다."""
+    periods = question_periods(question)
+    if not periods:
+        return ""
+    if period_covered is False:
+        return "period_covered=false"
+    for line in (answer or "").splitlines():
+        for sentence in split_sentences(line):
+            flat = re.sub(r"\s+", "", sentence)
+            if any(p in flat for p in periods) and any(w in sentence for w in _ABSENCE):
+                return "answer says the period is missing: " + sentence[:120]
+    return ""
