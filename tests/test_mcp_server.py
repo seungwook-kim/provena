@@ -1,4 +1,4 @@
-"""MCP 읽기 전용 도구 3개 시험 (docs/specs/mcp.md AC-01·02·03·07·08·09, EC-01~12).
+"""MCP 읽기 전용 도구 시험 (검색 3개. explain_decision·get_agent_trace는 tests/test_mcp_decision_tool.py·test_mcp_trace_tool.py) (docs/specs/mcp.md AC-01·02·03·07·08·09, EC-01~12).
 
 CI: 가짜 검색기·가짜 저장소를 넣은 서버를 fastmcp 메모리 클라이언트로 부른다(네트워크 없음). /mcp 인증은 FastAPI TestClient로.
 로컬: 스냅샷(data/index/)이 있으면 BM25 검색기로 평가셋 v1 30문항을 MCP와 직접 호출로 대조하고, 전체 청크의 비공개 주소를 본다.
@@ -22,7 +22,7 @@ from backend.schemas.recall import ChangedArticle  # noqa: E402
 from extras.mcp_skill.mcp_server import server  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = {"search_handbook", "get_section", "list_changed_sections"}
+TOOLS = {"search_handbook", "get_section", "list_changed_sections", "explain_decision", "get_agent_trace"}
 
 
 def chunk(i: int, text: str = "body", org: str = "security") -> Chunk:
@@ -81,7 +81,7 @@ def make(search=None, store=None, changes=None):
 
 # ---------- AC-01 ----------
 
-def test_exactly_three_read_only_ascii_tools():
+def test_exactly_five_read_only_ascii_tools():
     async def go():
         async with Client(make()) as c:
             return await c.list_tools()

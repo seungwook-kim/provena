@@ -19,7 +19,7 @@ from extras.mcp_skill.mcp_client import client as mc  # noqa: E402
 from extras.mcp_skill.mcp_server import server  # noqa: E402
 from tests.test_mcp_server import FakeChanges, FakeSearch, chunk, section_rows  # noqa: E402
 
-TOOLS = {"search_handbook", "get_section", "list_changed_sections"}
+TOOLS = {"search_handbook", "get_section", "list_changed_sections", "explain_decision", "get_agent_trace"}
 
 
 def deps(search=None):
@@ -30,9 +30,9 @@ def make(search=None):
     return server.build_server(**deps(search))
 
 
-# ---------- AC-C1: 도구 3개가 LangChain 도구로 ----------
+# ---------- AC-C1: 도구 5개가 LangChain 도구로 ----------
 
-def test_load_tools_gives_three_langchain_tools():
+def test_load_tools_gives_five_langchain_tools():
     from langchain_core.tools import BaseTool
     tools = asyncio.run(mc.load_tools(make()))
     assert {t.name for t in tools} == TOOLS
