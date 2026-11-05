@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -15,6 +16,7 @@ from uuid import UUID
 from backend.auth import AuthUser
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "101_auth_users.sql"
+REVOCATION_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "102_auth_token_revocations.sql"
 
 _COLUMNS = "user_id, login_id, password_hash, role, is_active"
 
@@ -81,7 +83,34 @@ class PostgresAuthStore:
         return user
 
     def ensure_schema(self) -> None:
-        """`CREATE TABLE IF NOT EXISTS`로 users 테이블을 만든다. 이미 있으면 아무것도 바꾸지 않는다."""
-        sql = SCHEMA_FILE.read_text(encoding="utf-8")
+        """Additive auth schemas for fresh and existing local databases."""
         with self._connect() as conn:
-            conn.execute(sql)
+            for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE):
+                conn.execute(schema_file.read_text(encoding="utf-8"))
+
+
+class PostgresTokenRevocationStore:
+    """Durable ``TokenRevocationStore`` implementation backed by PostgreSQL."""
+
+    def __init__(self, dsn: str | None = None, *, connect: Callable[[], Any] | None = None) -> None:
+        if connect is None:
+            if not dsn:
+                raise ValueError("dsn or connect is required")
+            connect = _default_connect(dsn)
+        self._connect = connect
+
+    def is_revoked(self, jti: str) -> bool:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT EXISTS (SELECT 1 FROM token_revocations WHERE jti = %s AND expires_at > now())",
+                (jti,),
+            ).fetchone()
+        return bool(row and row[0])
+
+    def revoke(self, jti: str, expires_at: datetime) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO token_revocations (jti, expires_at) VALUES (%s, %s) "
+                "ON CONFLICT (jti) DO NOTHING",
+                (jti, expires_at),
+            )

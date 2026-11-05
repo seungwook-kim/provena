@@ -15,7 +15,7 @@ from auth_test_support import create_test_auth_router
 
 from backend.main import WEB_DIR
 from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, verify_password
-from backend.services.auth_store import SCHEMA_FILE, PostgresAuthStore
+from backend.services.auth_store import REVOCATION_SCHEMA_FILE, SCHEMA_FILE, PostgresAuthStore
 from backend.services.demo_seed import seed_demo_accounts
 
 LOCAL = {"PROVENA_ENV": "local", "PROVENA_DEV_MODE": "1"}
@@ -91,12 +91,13 @@ def test_upsert_user_rejects_unknown_role_and_uses_conflict_update():
     assert "ON CONFLICT (login_id) DO UPDATE" in log[0][0]
 
 
-def test_ensure_schema_runs_the_sql_file_without_account_values():
+def test_ensure_schema_runs_additive_auth_schema_files_without_account_values():
     store, log, _ = fake_store()
     store.ensure_schema()
     assert log[0][0] == SCHEMA_FILE.read_text(encoding="utf-8")
-    sql = log[0][0]
-    assert "user_id       uuid" in sql and "is_active" in sql and "INSERT" not in sql.upper()
+    assert log[1][0] == REVOCATION_SCHEMA_FILE.read_text(encoding="utf-8")
+    sql = "\n".join(row[0] for row in log)
+    assert "user_id       uuid" in sql and "token_revocations" in sql and "INSERT" not in sql.upper()
 
 
 # ---- 데모 시드 -------------------------------------------------------------
@@ -225,6 +226,55 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     assert client.get("/me").json() == {"user_id": str(uid), "role": "user"}
     assert client.post("/auth/logout", headers=headers).status_code == 204
     assert client.get("/me").status_code == 401
+
+
+def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(monkeypatch):
+    from backend.main import create_app
+    from backend.auth import hash_password
+
+    uid, password = uuid4(), secrets.token_urlsafe(12)
+    user = AuthUser(uid, "demo-user", hash_password(password), "user", True)
+    revocations = set()
+
+    class FakeAuthStore:
+        def __init__(self, _dsn):
+            self.user = user
+
+        def ensure_schema(self):
+            pass
+
+        def get_by_login_id(self, login_id):
+            return self.user if login_id == self.user.login_id else None
+
+        def get_by_user_id(self, user_id):
+            return self.user if str(user_id) == str(self.user.user_id) else None
+
+    class FakeRevocationStore:
+        def __init__(self, _dsn):
+            pass
+
+        def is_revoked(self, jti):
+            return jti in revocations
+
+        def revoke(self, jti, _expires_at):
+            revocations.add(jti)
+
+    for key, value in {"DATABASE_URL": "postgresql://test", "AUTH_SECRET": secrets.token_urlsafe(32), **LOCAL}.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr("backend.main.PostgresAuthStore", FakeAuthStore)
+    monkeypatch.setattr("backend.main.PostgresTokenRevocationStore", FakeRevocationStore)
+
+    app = create_app()
+    assert isinstance(app.state.token_revocation_store, FakeRevocationStore)
+    with TestClient(app) as client:
+        assert client.get("/auth/csrf").status_code == 204
+        headers = {"X-CSRF-Token": client.cookies.get(CSRF_COOKIE_NAME)}
+        assert client.post("/auth/login", json={"login_id": user.login_id, "password": password}, headers=headers).status_code == 200
+        token = client.cookies.get(AUTH_COOKIE_NAME)
+        assert client.get("/me").status_code == 200
+        assert client.post("/auth/logout", headers=headers).status_code == 204
+        client.cookies.set(AUTH_COOKIE_NAME, token, domain="testserver.local", path="/")
+        assert client.get("/me").status_code == 401
 
 
 @pytest.mark.skipif(not (WEB_DIR / "login.html").is_file(), reason="web/login.html 없음 (로그인 화면 PR 전)")
