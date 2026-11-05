@@ -11,6 +11,7 @@
 - `web/`의 정적 파일(현재 로그인 화면)을 `/`에서 내줍니다. API 경로가 먼저 잡히도록 마지막에 붙입니다.
 - `SEARCH_WARMUP=1`이면 시작할 때 검색 모델·BM25를 백그라운드로 올립니다(docs/specs/search.md). 실패해도 서버는 뜨고,
   검색은 첫 요청 때 다시 준비를 시도합니다. compose의 `loader`가 색인을 적재한 뒤 api가 뜹니다.
+- `MCP_TOKEN`이 있으면 읽기 전용 MCP 도구 3개를 `/mcp/`에 붙입니다(Bearer 토큰, docs/specs/mcp.md). 비어 있으면 붙이지 않습니다.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ import secrets
 import threading
 import time
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -84,17 +85,26 @@ def start_search_warmup() -> threading.Thread | None:
     return t
 
 
+def create_mcp_app():
+    """MCP_TOKEN이 있을 때만 MCP 앱(extras/mcp_skill). 비어 있으면 None — /mcp를 붙이지 않고 앱의 나머지는 그대로 뜬다."""
+    if not os.getenv("MCP_TOKEN", "").strip():
+        return None
+    from extras.mcp_skill.mcp_server.server import mcp_http_app
+    return mcp_http_app()
+
+
 def create_app() -> FastAPI:
     database_url = os.getenv("DATABASE_URL")
     store = PostgresAuthStore(database_url) if database_url else None
-    revocation_store = PostgresTokenRevocationStore(database_url) if database_url else None
+    mcp_app = create_mcp_app()
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         if store is not None and is_local_demo():
             bootstrap_local_auth(store)
         start_search_warmup()
-        yield
+        async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
+            yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
 
@@ -108,6 +118,9 @@ def create_app() -> FastAPI:
 
     if store is not None:
         app.include_router(create_auth_router(store=store, secret=resolve_auth_secret()))
+
+    if mcp_app is not None:
+        app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 
     # TODO: 도메인 엔드포인트를 여기에 추가하세요 (아래 정적 파일 마운트보다 위에).
     #   - 질의 엔드포인트: 로그인한 사용자 id로 thread를 정하고 그래프를 호출합니다

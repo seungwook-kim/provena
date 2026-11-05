@@ -290,6 +290,9 @@ def test_same_settings_as_experiment_v1():
     assert translate.PROMPTS == ex.PROMPTS
     assert search_mod.RRF_K == ex.RRF_K and SearchConfig(embed_model="x").pool == ex.POOL
     for s in embed.EMBEDDERS.values():
+        if s.api:                                   # API 모델은 1차 비교의 API 명부와 대조
+            assert ex.API_EMBEDDERS[s.short] == s.name
+            continue
         hf, prefixes, _ = ex.EMBEDDERS[s.short]
         assert (hf, prefixes) == (s.name, s.prefixes)
     for s in rerank.RERANKERS.values():
@@ -566,7 +569,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_dockerfile_bakes_default_models_at_pinned_revisions():
     """이미지에 굽는 모델 = 명부의 기본 임베딩·리랭커와 같은 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
     args = dict(_re.findall(r"^ARG (SEARCH_\w+)=(\S*)$", (ROOT / "Dockerfile").read_text(encoding="utf-8"), _re.M))
-    e, r = embed.EMBEDDERS[embed.DEFAULT_MODEL], rerank.RERANKERS[rerank.DEFAULT_MODEL]
+    # 기본은 API 임베딩(voyage-4)·리랭커 없음이라 내려받을 것이 없다 → 굽는 것은 키 없는 비교용 로컬 모델
+    assert embed.EMBEDDERS[embed.DEFAULT_MODEL].api and rerank.DEFAULT_MODEL == rerank.NONE
+    e, r = embed.EMBEDDERS[embed.LOCAL_MODEL], rerank.RERANKERS[rerank.BAKED_MODEL]
     assert (args["SEARCH_EMBED_MODEL"], args["SEARCH_EMBED_REVISION"]) == (e.name, e.revision)
     assert (args["SEARCH_RERANK_MODEL"], args["SEARCH_RERANK_REVISION"]) == (r.hf, r.revision)
 

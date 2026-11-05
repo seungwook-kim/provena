@@ -1,6 +1,9 @@
 """임베딩 모델 불러오기와 질문·문서 앞말 (docs/specs/search.md). 문서 전체 임베딩(색인 만들기)은 index.py.
 
-- 모델은 환경 변수 EMBED_MODEL(기본 arctic)로만 고르고, 판은 EMBEDDERS의 고정 커밋(EMBED_REVISION으로 바꿀 수 있음)만 쓴다.
+- 모델은 환경 변수 EMBED_MODEL(기본 voyage-4)로만 고르고, 판은 EMBEDDERS의 고정 커밋(EMBED_REVISION으로 바꿀 수 있음)만 쓴다.
+- voyage-4는 Voyage AI REST API(확정 조합, docs/specs/search.md). 키는 환경 변수 VOYAGE_API_KEY를 부를 때 읽고 어디에도 찍지 않는다.
+  연결 오류·시간 초과·429·5xx는 EmbedUnavailable(ConnectionError → MCP 재시도 가능), 키 없음은 EmbedNoKey(검색은 빈 결과),
+  401·403·400은 EmbedConfigError. 시간 한도 10초·재시도 0번: MCP 도구 한도 30초에서 번역 한도 15초를 뺀 안쪽.
 - 앞말·길이·정규화는 1차 비교(evals/retrieval/experiment_v1.py `_encode`)와 같다: 명부에 앞말이 있으면 글 앞에 붙이고,
   없으면 모델 설정의 prompts(예: Qwen3 질문 지시문)를 쓴다. max_seq_length 512, batch 16, 길이 1로 정규화.
 - fp32로 고정한다. 설정 기본값을 따르면 Qwen3는 bf16으로 불러져 모델 말고 정밀도도 달라진다(I-008).
@@ -26,6 +29,7 @@ class EmbedderSpec:
     dim: int
     prefixes: tuple[str, str] | None = None   # (질문 앞말, 문서 앞말). None이면 모델 설정의 prompts
     trust_remote_code: bool = False            # 원격 코드는 판을 고정했을 때만
+    api: bool = False                          # True면 내려받는 모델이 아니라 REST API(판 = "api:모델 이름")
 
 
 EMBEDDERS: dict[str, EmbedderSpec] = {s.name: s for s in (
@@ -37,8 +41,73 @@ EMBEDDERS: dict[str, EmbedderSpec] = {s.name: s for s in (
     EmbedderSpec("intfloat/multilingual-e5-large", "e5-large", "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3", 1024,
                  prefixes=("query: ", "passage: ")),          # 모델 카드의 앞말
     EmbedderSpec("BAAI/bge-m3", "bge-m3", "5617a9f61b028005a4858fdac845db406aefb181", 1024),   # 기준선
+    # 확정 조합(retrieval_fix_v1). 문서 벡터는 1차 비교 때 만든 data/index_exp/voyage-4.npy, 질문은 input_type=query
+    EmbedderSpec("voyage-4", "voyage-4", "api:voyage-4", 1024, api=True),
 )}
-DEFAULT_MODEL = "Snowflake/snowflake-arctic-embed-l-v2.0"
+DEFAULT_MODEL = "voyage-4"
+LOCAL_MODEL = "Snowflake/snowflake-arctic-embed-l-v2.0"     # 이미지에 구워 두는 내려받는 모델(Dockerfile, 키 없는 비교용)
+
+VOYAGE_URL = "https://api.voyageai.com/v1/embeddings"
+VOYAGE_TIMEOUT_S = 10.0
+VOYAGE_BATCH = 128
+
+
+class EmbedUnavailable(ConnectionError):
+    """잠깐 뒤 다시 하면 될 수 있는 실패(연결 오류·시간 초과·429·5xx). MCP는 unavailable·retryable로 보낸다."""
+
+
+class EmbedNoKey(RuntimeError):
+    """VOYAGE_API_KEY가 없다. 검색은 죽지 않고 빈 결과(fallback_reason=no_key, G2 키 없는 데모)."""
+
+
+class EmbedConfigError(RuntimeError):
+    """키가 틀렸거나(401·403) 요청이 잘못됐다(400). 다시 해도 같다."""
+
+
+class VoyageClient:
+    """voyage-4 REST 호출. sentence-transformers 모델 자리에 들어간다(encode가 갈라 부른다)."""
+
+    def __init__(self, s: "EmbedderSpec", timeout: float = VOYAGE_TIMEOUT_S):
+        self.spec, self.timeout = s, timeout
+        self.pinned_name, self.pinned_revision = s.name, s.revision
+
+    def embed(self, texts: list[str], role: str) -> np.ndarray:
+        import http.client
+        import json
+        import socket
+        import urllib.error
+        import urllib.request
+        key = os.environ.get("VOYAGE_API_KEY")
+        if not key:
+            raise EmbedNoKey("VOYAGE_API_KEY가 없다")
+        out: list[list[float]] = []
+        for i in range(0, len(texts), VOYAGE_BATCH):
+            body = json.dumps({"input": texts[i:i + VOYAGE_BATCH], "model": self.spec.name,
+                               "input_type": role}).encode("utf-8")
+            req = urllib.request.Request(VOYAGE_URL, data=body, headers={
+                "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                    d = json.loads(r.read())
+            except urllib.error.HTTPError as e:            # URLError보다 먼저(하위 클래스)
+                if e.code == 429 or e.code >= 500:
+                    raise EmbedUnavailable(f"Voyage API {e.code}") from None
+                raise EmbedConfigError(f"Voyage API {e.code}") from None
+            except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError,
+                    http.client.HTTPException) as e:       # 읽다 끊김(IncompleteRead)도 연결 실패
+                raise EmbedUnavailable(f"Voyage API 연결 실패: {type(e).__name__}") from None
+            except ValueError:                             # 200인데 JSON이 깨짐(잘린 응답) → 다시 하면 될 수 있다
+                raise EmbedUnavailable("Voyage API 응답 형식 오류(JSON)") from None
+            batch = texts[i:i + VOYAGE_BATCH]
+            try:
+                got = [x["embedding"] for x in sorted(d["data"], key=lambda x: x["index"])]
+            except (KeyError, TypeError):
+                raise EmbedUnavailable("Voyage API 응답 형식 오류(data 없음)") from None
+            if len(got) != len(batch):                     # 개수가 다르면 질문과 벡터가 어긋난다 → 쓰지 않는다
+                raise EmbedUnavailable(f"Voyage API 응답 개수 {len(got)} ≠ 요청 {len(batch)}")
+            out += got
+        m = np.asarray(out, dtype=np.float32)
+        return m / np.linalg.norm(m, axis=1, keepdims=True)   # 1차 비교 _voyage 와 같게 길이 1로
 
 
 def spec(name: str | None = None) -> EmbedderSpec:
@@ -87,10 +156,12 @@ def device() -> str:
 
 
 def load_model(name: str | None = None, dev: str | None = None):
-    """고정 판·fp32로 불러온다. 불러온 판은 model.pinned_name·pinned_revision 에 남긴다."""
+    """고정 판·fp32로 불러온다. 불러온 판은 model.pinned_name·pinned_revision 에 남긴다. API 모델은 호출기를 돌려준다."""
+    s = spec(name)
+    if s.api:
+        return VoyageClient(s)
     import torch
     from sentence_transformers import SentenceTransformer
-    s = spec(name)
     rev = revision_for(s)
     path = snapshot_dir(s.name, rev, offline())
     model = SentenceTransformer(str(path), device=dev or device(), trust_remote_code=s.trust_remote_code,
@@ -114,6 +185,12 @@ def _texts_and_kwargs(model, s: EmbedderSpec, texts: list[str], role: str) -> tu
 
 def encode(model, texts: list[str], role: str, s: EmbedderSpec | None = None) -> np.ndarray:
     s = s or spec(getattr(model, "pinned_name", None))
+    if isinstance(model, VoyageClient):
+        vecs = model.embed(texts, role)
+        check_norms(vecs)
+        if vecs.shape[1] != s.dim:
+            raise ValueError(f"차원이 다르다: {s.name} 명부 {s.dim}, 실제 {vecs.shape[1]}")
+        return vecs
     texts, kw = _texts_and_kwargs(model, s, texts, role)
     vecs = np.asarray(model.encode(texts, batch_size=BATCH, normalize_embeddings=True,
                                    show_progress_bar=False, **kw), dtype=np.float32)
@@ -133,6 +210,8 @@ def encode_docs(model, texts: list[str]) -> np.ndarray:
 
 def used_prefixes(model, s: EmbedderSpec) -> dict:
     """장부(meta.json·index_meta)에 남길 실제 앞말. 무엇으로 잰 벡터인지 기록한다."""
+    if s.api:
+        return {"query": "", "document": "", "source": "api_input_type"}
     if s.prefixes:
         return {"query": s.prefixes[0], "document": s.prefixes[1], "source": "registry"}
     p = getattr(model, "prompts", None) or {}

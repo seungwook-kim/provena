@@ -18,9 +18,11 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import hashlib
 import json
 import math
+import re
 import time
 import uuid
 from pathlib import Path
@@ -46,8 +48,14 @@ def verify_frozen(path: Path) -> None:
 
 
 def _as_of(item: dict) -> str | None:
+    """평가셋의 as_of를 YYYY-MM-DD로 바꾼다. 월 단위(YYYY-MM)는 그 달의 마지막 날로 둔다(그 달 안에 유효했던 가장 늦은 판이 기준).
+    형식이 맞지 않는 값은 None(기준일 없음, 그래프가 오늘로 채운다)."""
     v = item.get("as_of")
-    return v if isinstance(v, str) and len(v) == 10 else None
+    if isinstance(v, str) and len(v) == 10:
+        return v
+    if isinstance(v, str) and re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", v):
+        return f"{v}-{calendar.monthrange(int(v[:4]), int(v[5:]))[1]:02d}"
+    return None
 
 
 def run_item(graph, item: dict, *, run_id: str, judge_llm: Any = None) -> dict:

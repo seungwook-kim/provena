@@ -1,0 +1,34 @@
+등록 시각: 2026-11-05T02:26:07+09:00
+evals/PREREGISTER.md sha256: 12fdc7b9cfc5a35b1d8c542de72ee73703d2e70b309c130c873c4cc14ef585e6
+행: #17 (2026-11-05) 수정 1 인용 범위
+git HEAD: 6923807
+--- git diff --stat ---
+ backend/graph/build.py                             |  60 ++++++-
+ backend/graph/state.py                             |   3 +-
+ backend/prompts/question.py                        |  12 +-
+ docs/worklog.md                                    |   1 +
+ evals/PREREGISTER.md                               |   8 +
+ .../results/retrieval_v1_round1/translations.json  |  84 ++++++++-
+ tests/test_question_graph.py                       | 200 ++++++++++++++++++++-
+ 7 files changed, 353 insertions(+), 15 deletions(-)
+--- git status --short ---
+ M backend/graph/build.py
+ M backend/graph/state.py
+ M backend/prompts/question.py
+ M docs/worklog.md
+ M evals/PREREGISTER.md
+ M evals/results/retrieval_v1_round1/translations.json
+ M tests/test_question_graph.py
+?? evals/agent/exp_confirmed_v1.py
+?? evals/results/agent_v1_final_cite/
+?? evals/results/agent_v1_final_cite_r2/
+?? evals/results/agent_v1_final_cite_r3/
+?? evals/results/agent_v1_fix_clarify/
+?? evals/results/agent_v1_fix_requery/
+?? evals/results/agent_v1_fix_route/
+?? evals/results/agent_v1_fix_route_r2/
+?? evals/results/agent_v1_fix_route_r3/
+?? evals/results/agent_v1_single_confirmed/
+?? evals/results/agent_v1_single_confirmed_r2/
+?? evals/results/agent_v1_single_confirmed_r3/
+?? tests/test_exp_confirmed.py

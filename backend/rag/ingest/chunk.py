@@ -86,6 +86,12 @@ def pack_section(elements: list[dict], size: int) -> list[list[tuple[dict, str]]
     return groups
 
 
+def line_span(els: list[dict], key: str, pick) -> int | None:
+    """요소들의 줄 번호 중 min/max. 줄 번호가 없는 요소(PDF, 쪽으로 가리킴)가 있으면 None."""
+    values = [e.get(key) for e in els]
+    return None if any(v is None for v in values) else pick(values)
+
+
 def make_chunk(page: dict, article: str | None, seq: int, body: str, tail: str, els: list[dict],
                header_on: bool, kind: str, config: str, **extra) -> dict:
     rest = article
@@ -102,8 +108,8 @@ def make_chunk(page: dict, article: str | None, seq: int, body: str, tail: str, 
         "body_chars": len(body), "seq": seq,
         "header": header if header_on else None, "overlap_chars": len(tail),
         "element_ids": list(dict.fromkeys(e["element_id"] for e in els)),
-        "line_start": extra.pop("line_start", None) or min(e["line_start"] for e in els),
-        "line_end": extra.pop("line_end", None) or max(e["line_end"] for e in els),
+        "line_start": extra.pop("line_start", None) or line_span(els, "line_start", min),
+        "line_end": extra.pop("line_end", None) or line_span(els, "line_end", max),
         "config": config, "_body": body, **extra,      # _body: 검사용, 파일에 쓰기 전에 뺀다
     }
 
@@ -123,7 +129,7 @@ def chunk_structure(page: dict, elements: list[dict], size: int, overlap: int, h
             tail = overlap_tail(prev, overlap)
             lines = {}
             first, piece = group[0]
-            if len(group) == 1 and len(piece) < len(first["text"]) and first["kind"] == "code":
+            if len(group) == 1 and len(piece) < len(first["text"]) and first["kind"] == "code" and first.get("line_start") is not None:
                 start = first["line_start"] + 1 + first["text"][:done[first["element_id"]]].count("\n")   # 펜스 줄 다음부터
                 lines = {"line_start": start, "line_end": start + piece.rstrip("\n").count("\n")}
             if len(group) == 1:

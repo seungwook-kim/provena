@@ -24,3 +24,5 @@ sentence-transformers>=5.4            # 임베딩·CrossEncoder 리랭커. 5.4+�
 transformers>=5.0                     # Qwen3 리랭커(yes/no 확률), 모델 판 폴더 직접 읽기(sandbox 5.21.0)
 huggingface-hub>=1.0                  # 고정 판(커밋) 모델 받기·오프라인 확인(sandbox 2.3.0)
 numpy>=2.0
+fastmcp==4.1.4                        # 읽기 전용 MCP 도구 3개(extras/mcp_skill, docs/specs/mcp.md). PRD 319줄 4.x, 판 고정
+langchain[mcp]==1.4.9                 # MCP 클라이언트(extras/mcp_skill/mcp_client). PRD 319줄 langchain[mcp](베타), 판 고정

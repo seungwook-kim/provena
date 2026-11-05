@@ -5,5 +5,12 @@
     "relevant": 15,
     "irrelevant": 15,
     "frozen_at": "2026-11-01"
+  },
+  "dataset_v2.jsonl": {
+    "sha256": "c0d55f99677bc3dd86f99ee6c2845c3afb58b06a82516b448b6f7e6d36338c76",
+    "count": 50,
+    "relevant": 25,
+    "irrelevant": 25,
+    "frozen_at": "2026-11-02"
   }
 }

@@ -1,0 +1,414 @@
+[
+{
+"embedder": "bge-m3",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "arctic-l-v2",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4-nano",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "qwen3-0.6b",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "e5-large",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "e5-large",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "e5-large",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "e5-large",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage-4",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_ko",
+"reranker": "none"
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "hybrid_ko_kw",
+"reranker": "none"
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "hybrid_ko_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "hybrid_ko_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "hybrid_ko_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "hybrid_ko_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_en",
+"reranker": "none"
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_en",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_en",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_en",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "voyage4-doc+nano-query",
+"mode": "dense_en",
+"reranker": "mminilm",
+"rerank_top": 10
+},
+{
+"embedder": "none",
+"mode": "bm25_kw",
+"reranker": "none"
+},
+{
+"embedder": "none",
+"mode": "bm25_kw",
+"reranker": "bge",
+"rerank_top": 10
+},
+{
+"embedder": "none",
+"mode": "bm25_kw",
+"reranker": "int8",
+"rerank_top": 10
+},
+{
+"embedder": "none",
+"mode": "bm25_kw",
+"reranker": "qwen3",
+"rerank_top": 10
+},
+{
+"embedder": "none",
+"mode": "bm25_kw",
+"reranker": "mminilm",
+"rerank_top": 10
+}
+]

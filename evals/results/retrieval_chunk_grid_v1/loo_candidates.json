@@ -1,0 +1,233 @@
+[
+ {
+  "label": "800/120, v2 50건 관련 25 (후보 1 대 후보 2)",
+  "n": 25,
+  "recall@5": {
+   "a": 0.8433,
+   "b": 0.8533,
+   "diff_a_minus_b": -0.01,
+   "sign": -1,
+   "kept": 22,
+   "flip_when_removed": {
+    "7": 0.0312,
+    "38": 0.0,
+    "39": 0.0035
+   },
+   "a_better_q": [
+    1,
+    36
+   ],
+   "b_better_q": [
+    7,
+    38,
+    39
+   ]
+  },
+  "rr": {
+   "a": 0.838,
+   "b": 0.808,
+   "diff_a_minus_b": 0.03,
+   "sign": 1,
+   "kept": 24,
+   "flip_when_removed": {
+    "1": -0.0104
+   },
+   "a_better_q": [
+    1,
+    4,
+    5
+   ],
+   "b_better_q": [
+    7,
+    11,
+    38,
+    39
+   ]
+  },
+  "ndcg@5": {
+   "a": 0.8143,
+   "b": 0.7871,
+   "diff_a_minus_b": 0.0272,
+   "sign": 1,
+   "kept": 24,
+   "flip_when_removed": {
+    "1": -0.0082
+   },
+   "a_better_q": [
+    1,
+    2,
+    4,
+    5,
+    36
+   ],
+   "b_better_q": [
+    7,
+    11,
+    38,
+    39
+   ]
+  }
+ },
+ {
+  "label": "800/120, v1 구간 관련 15",
+  "n": 15,
+  "recall@5": {
+   "a": 0.8333,
+   "b": 0.8333,
+   "diff_a_minus_b": 0.0,
+   "sign": 0,
+   "kept": 13,
+   "flip_when_removed": {
+    "1": -0.0714,
+    "7": 0.0714
+   },
+   "a_better_q": [
+    1
+   ],
+   "b_better_q": [
+    7
+   ]
+  },
+  "rr": {
+   "a": 0.8333,
+   "b": 0.7244,
+   "diff_a_minus_b": 0.1089,
+   "sign": 1,
+   "kept": 15,
+   "flip_when_removed": {},
+   "a_better_q": [
+    1,
+    4,
+    5
+   ],
+   "b_better_q": [
+    7,
+    11
+   ]
+  },
+  "ndcg@5": {
+   "a": 0.8027,
+   "b": 0.7251,
+   "diff_a_minus_b": 0.0776,
+   "sign": 1,
+   "kept": 15,
+   "flip_when_removed": {},
+   "a_better_q": [
+    1,
+    2,
+    4,
+    5
+   ],
+   "b_better_q": [
+    7,
+    11
+   ]
+  }
+ },
+ {
+  "label": "800/120, 새 20건 관련 10",
+  "n": 10,
+  "recall@5": {
+   "a": 0.8583,
+   "b": 0.8833,
+   "diff_a_minus_b": -0.025,
+   "sign": -1,
+   "kept": 8,
+   "flip_when_removed": {
+    "38": 0.0,
+    "39": 0.0093
+   },
+   "a_better_q": [
+    36
+   ],
+   "b_better_q": [
+    38,
+    39
+   ]
+  },
+  "rr": {
+   "a": 0.845,
+   "b": 0.9333,
+   "diff_a_minus_b": -0.0883,
+   "sign": -1,
+   "kept": 10,
+   "flip_when_removed": {},
+   "a_better_q": [],
+   "b_better_q": [
+    38,
+    39
+   ]
+  },
+  "ndcg@5": {
+   "a": 0.8317,
+   "b": 0.88,
+   "diff_a_minus_b": -0.0483,
+   "sign": -1,
+   "kept": 9,
+   "flip_when_removed": {
+    "39": 0.0008
+   },
+   "a_better_q": [
+    36
+   ],
+   "b_better_q": [
+    38,
+    39
+   ]
+  }
+ },
+ {
+  "label": "v1 15건, 각 후보 12칸 최고 칸 (후보 1 800/180 대 후보 2 1200/75)",
+  "n": 15,
+  "recall@5": {
+   "a": 0.8333,
+   "b": 0.9,
+   "diff_a_minus_b": -0.0667,
+   "sign": -1,
+   "kept": 14,
+   "flip_when_removed": {
+    "7": 0.0
+   },
+   "a_better_q": [
+    1
+   ],
+   "b_better_q": [
+    3,
+    7
+   ]
+  },
+  "rr": {
+   "a": 0.8333,
+   "b": 0.7856,
+   "diff_a_minus_b": 0.0478,
+   "sign": 1,
+   "kept": 15,
+   "flip_when_removed": {},
+   "a_better_q": [
+    8,
+    9
+   ],
+   "b_better_q": [
+    3,
+    7
+   ]
+  },
+  "ndcg@5": {
+   "a": 0.8056,
+   "b": 0.7717,
+   "diff_a_minus_b": 0.0339,
+   "sign": 1,
+   "kept": 15,
+   "flip_when_removed": {},
+   "a_better_q": [
+    1,
+    8,
+    9
+   ],
+   "b_better_q": [
+    3,
+    7
+   ]
+  }
+ }
+]

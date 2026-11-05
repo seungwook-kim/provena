@@ -1,0 +1,32 @@
+{
+ "rerun": [
+  "arctic-l-v2|hybrid_ko_kw|int8",
+  "e5-large|hybrid_ko_kw|bge",
+  "e5-large|hybrid_ko_kw|int8",
+  "qwen3-0.6b|dense_en|int8",
+  "qwen3-0.6b|hybrid_ko_kw|bge",
+  "voyage-4-nano|dense_en|none",
+  "voyage4-doc+nano-query|dense_en|int8"
+ ],
+ "unchanged": [
+  "bge-m3|dense_ko|none",
+  "arctic-l-v2|hybrid_ko_kw|bge",
+  "voyage-4-nano|dense_en|bge",
+  "voyage-4|dense_en|none",
+  "voyage4-doc+nano-query|dense_en|bge"
+ ],
+ "base_names": [
+  "bge-m3|dense_ko|none",
+  "arctic-l-v2|hybrid_ko_kw|bge",
+  "arctic-l-v2|hybrid_ko_kw|int8",
+  "e5-large|hybrid_ko_kw|bge",
+  "e5-large|hybrid_ko_kw|int8",
+  "qwen3-0.6b|dense_en|int8",
+  "qwen3-0.6b|hybrid_ko_kw|bge",
+  "voyage-4-nano|dense_en|bge",
+  "voyage-4-nano|dense_en|none",
+  "voyage-4|dense_en|none",
+  "voyage4-doc+nano-query|dense_en|bge",
+  "voyage4-doc+nano-query|dense_en|int8"
+ ]
+}

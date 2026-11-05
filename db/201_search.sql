@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS chunks (
 -- 줄 범위 칸이 생기기 전에 만든 DB에도 칸을 더한다(CREATE TABLE IF NOT EXISTS는 있는 표를 바꾸지 않는다)
 ALTER TABLE chunks ADD COLUMN IF NOT EXISTS line_start integer;
 ALTER TABLE chunks ADD COLUMN IF NOT EXISTS line_end integer;
+-- 이 청크 본문의 링크가 가리키는 코퍼스 안 다른 페이지(rule_seq). 링크 확장(L1x2)이 읽는다. 판이 아니라 페이지라서
+-- 대상 페이지가 개정돼도 as_of에 맞는 판의 청크를 고른다. 자기 페이지·코퍼스 밖·비공개 주소는 넣지 않는다(links.py).
+ALTER TABLE chunks ADD COLUMN IF NOT EXISTS link_targets bigint[] NOT NULL DEFAULT '{}';
 CREATE INDEX IF NOT EXISTS chunks_page ON chunks (rule_seq, version_id);
 
 -- 색인 장부 (한 줄 = 지금 적재된 모델). status가 ready일 때만 api가 뜬다.
@@ -70,6 +73,8 @@ CREATE TABLE IF NOT EXISTS index_meta (
     generation     bigint NOT NULL DEFAULT 0,       -- 적재·증분 반영마다 +1 (api가 BM25를 다시 만들 때 본다)
     loaded_at      timestamptz NOT NULL DEFAULT now()
 );
+-- 링크 파일(data/index/links.jsonl) sha256. 같은 스냅샷이어도 링크를 아직 안 실었으면 다시 적재한다
+ALTER TABLE index_meta ADD COLUMN IF NOT EXISTS links_sha256 text;
 
 -- 번역 장부: 같은 질문·같은 모델이면 LLM을 다시 부르지 않는다 (Spec). model은 cost.normalize_model_id 로 맞춘 이름.
 CREATE TABLE IF NOT EXISTS query_translations (

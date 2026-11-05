@@ -1,0 +1,18 @@
+등록 시각: 2026-11-05T00:39:22+09:00
+evals/PREREGISTER.md sha256: df520a51549ed96caf312e902e1345c8ea184854f2de3644dfdb1f8878011538
+행: #11 (2026-11-05) 반복 r3
+git HEAD: 6923807
+--- git diff --stat ---
+ docs/worklog.md                                    |  1 +
+ evals/PREREGISTER.md                               |  2 +
+ .../results/retrieval_v1_round1/translations.json  | 84 +++++++++++++++++++++-
+ 3 files changed, 85 insertions(+), 2 deletions(-)
+--- git status --short ---
+ M docs/worklog.md
+ M evals/PREREGISTER.md
+ M evals/results/retrieval_v1_round1/translations.json
+?? evals/agent/exp_confirmed_v1.py
+?? evals/results/agent_v1_single_confirmed/
+?? evals/results/agent_v1_single_confirmed_r2/
+?? evals/results/agent_v1_single_confirmed_r3/
+?? tests/test_exp_confirmed.py

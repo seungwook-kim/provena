@@ -127,4 +127,71 @@
 - 프롬프트는 `backend/prompts/question.py`, 런타임 Skill은 `skills/`의 `citation-rules`, `grounding-check`, `glossary`입니다.
 - 비관련 질문(EC-02)은 답 단계에서 거릅니다.
 - 평가 실행기는 `python -m evals.agent.run_eval`입니다.
-- 단일 기준 점수는 평가셋 v2 50건을 동결하고 검색 조합을 확정한 뒤 잽니다(2026-11-02, `docs/decisions.md`).
+- 단일 기준 점수는 v1 30건으로 2026-11-05에 3회 쟀습니다(`EVAL_REPORT.md` 3장 3-3). 이 조합의 v2 50건 측정은 D5에 합니다.
+
+## 수정 이력 (2026-11-05)
+
+측정 결과를 본 뒤 단일 에이전트 그래프에 다음 수정을 넣었습니다. 각 수정은 `evals/PREREGISTER.md`에 기대를 먼저 적고 한 번에 하나씩 넣었습니다. 통과선은 인용 정확도 0.85, 정답 근거 인용률 0.85, 비관련 거절 0.90입니다.
+
+| 수정 | 바꾼 곳 | 사전 등록 |
+|---|---|---|
+| 재검색 결과 합치기 | `backend/graph/build.py` `search` 노드, `MAX_CHUNKS` 10 | #12 |
+| 되묻기 제한 | `JUDGE_SYSTEM`, `clarify_has_number` | #13 |
+| 도메인 밖 라우팅 | `classify`의 `out_of_domain` 경로 | #14 |
+| 인용 범위 | `ANSWER_SYSTEM`, `select_citations`, `MAX_CITATIONS` 4 | #17 |
+| 근거 판정의 부분 제거 | `GROUNDING_SYSTEM`, `grounding.prune_answer`, `ground` 노드 | #18 |
+| 요청 기간 자료 없음은 거절 | `grounding.period_missing`, 답 JSON의 `period_covered` | #19 |
+| 기준일 | `rewrite`의 `mentions_period`, 평가 실행기 `_as_of` | #20 |
+| 질문 분해의 그래프 연결 | `backend/graph/decompose.py`, `search` 노드 | #21 |
+
+**인용 범위 (AC-08)**
+- GIVEN: 답이 본문에서 청크 5개를 인용하고 검색 결과에는 더 많은 청크가 있다
+- WHEN: `verify`가 인용을 정리한다
+- THEN: 본문에 표시가 있는 청크만 처음 나온 순서로 최대 4개(`MAX_CITATIONS`)를 인용으로 남기고, 잘린 청크의 표시는 본문에서 지운다. 잘린 청크는 `trimmed_citations`에 기록하며 가짜 인용으로 세지 않는다
+
+**근거 판정의 부분 제거 (AC-09)**
+- GIVEN: 판정 LLM이 `unsupported`(근거 없는 주장)로 판정하고 받쳐지지 않는 문장을 원문 그대로 돌려준다
+- WHEN: `ground`가 `prune_answer`로 그 문장을 뺀다
+- THEN: 남은 답이 인용 검사, 내부 표현 누출 검사, 코드 근거 규칙, 판정 LLM 재판정을 모두 통과하면 남은 답을 내고, 하나라도 통과하지 못하면 원래 판정대로 답 전체를 거절한다. 문장의 절반을 넘게 빼야 하거나 문장이 답과 일치하지 않거나 모두 빠지면 거절한다. 두 번째 제거는 하지 않는다. `unsupported` 외의 사유(수치 불일치 등)는 부분 제거 없이 거절한다
+
+**요청 기간 자료 없음은 거절 (AC-10)**
+- GIVEN: 질문에 연도나 월 표현이 있고, 답이 `period_covered`를 false로 하거나 질문의 기간 표현과 "없다" 계열 표현을 한 문장에 함께 쓴다
+- WHEN: `verify`가 `period_missing`을 검사한다
+- THEN: 가까운 기간의 값을 인용했더라도 답 단계 거절(`out_of_period`)로 끝낸다. 질문에 기간 표현이 없으면 이 규칙은 돌지 않는다
+
+**기준일 (AC-11)**
+- GIVEN: 사용자가 기준일을 주지 않았고, 질문에 시점 표현이 없다
+- WHEN: `rewrite`가 기준일을 돌려준다
+- THEN: 그 기준일은 버리고 오늘 날짜를 쓴다. 평가 실행기는 `YYYY-MM` 형태의 평가 기준일을 그 달의 마지막 날로 바꿔 넘긴다
+
+## 질문 분해의 그래프 연결 (4단계 `search` 노드)
+
+질문 분해(LLM)는 검색이 아니라 그래프의 `search` 노드가 첫 검색 전에 한 번 합니다. `SearchQuery.sub_queries`(PR #48)에 결과를 넣어 검색에 넘기고, 검색은 분해를 하지 않습니다.
+
+| 항목 | 규칙 |
+|---|---|
+| 입력 | 사용자가 쓴 한국어 원 질문(재작성한 영어 검색어가 아니다) |
+| 프롬프트와 응답 읽기 | `evals/retrieval/exp_decompose_v1.py`와 같은 본문(`decompose.SYSTEM`)과 같은 JSON 읽기 규칙. 시험이 두 코드의 본문 일치를 확인한다 |
+| 측정 코드와 다른 점 | ① 프롬프트 맨 앞에 노드 표지(`[[task:decompose]]`)를 붙인다. ② 응답이 깨지면 1회만 다시 묻는다(최대 2번, 측정은 최대 3번). ③ 하위 질문이 1000자를 넘으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙) |
+| 넘기는 값 | 하위 질문 2~3개이면 `sub_queries`로 넘긴다. 1개이거나 규칙을 어기면 넘기지 않는다(`None`). 4개 이상이면 앞 3개만 쓴다 |
+| k | 검색마다 `DEFAULT_K`(5) 상수(`SEARCH_K`) |
+| 첫 검색 | 원 질문(한국어)과 `sub_queries`. 영어 번역은 검색 서비스가 한다 |
+| 재검색 | 재작성한 영어 검색어 하나, 분해 없이 |
+| 검색 기억 | 같은 실행 안의 검색 기억 열쇠에 `sub_queries`를 넣는다. 하위 질문이 다르면 다른 검색이다 |
+| 실패 처리 | 분해 호출 오류나 응답 형식 오류이면 원 질문 하나로 검색한다(답은 멈추지 않는다). 비용 상한 초과 예외는 그대로 올린다 |
+| 임베딩 오류 | `EmbedUnavailable`이면 예외를 올리지 않고 고정 문구의 거절로 끝낸다(`search_error=unavailable`) |
+| 키 없음 | 검색 결과가 비었고 `fallback_reason=no_key`이면 같은 검색을 되풀이하지 않고 고정 문구의 거절로 끝낸다(`search_error=no_key`) |
+| 켜는 곳 | `build_graph(decompose=True)` 또는 환경 변수 `SEARCH_DECOMPOSE=1`. 기본은 끔이다 |
+| 측정 경로 | `exp_confirmed_v1`은 저장된 분해를 읽으므로 `decompose=False`로 그래프를 만든다. 환경 변수가 켜져 있어도 분해 호출이 없고 측정 값이 바뀌지 않는다(시험이 확인한다) |
+
+**질문 분해 연결 (AC-12)**
+- GIVEN: 분해를 켠 그래프와 가짜 모델, 가짜 검색기
+- WHEN: 두 가지 사실을 묻는 한국어 질문을 넣는다
+- THEN: 첫 검색은 원 질문과 하위 질문 2개, k=5로 호출되고, 재검색은 재작성한 검색어로 `sub_queries` 없이 호출된다. 분해가 깨졌을 때 첫 검색은 `sub_queries` 없이 호출되며 답은 정상으로 끝난다
+
+**검색 불가 처리 (AC-13)**
+- GIVEN: 검색기가 `EmbedUnavailable`을 던지거나 `fallback_reason=no_key`로 빈 결과를 돌려준다
+- WHEN: 그래프를 실행한다
+- THEN: 예외 없이 고정 문구의 거절로 끝나고, 판단과 답 작성 단계는 호출되지 않는다
+
+측정 조건 기록: 그래프가 재검색에 넘기는 재작성 영어 검색어(키워드 형태)는 측정에서 쓰던 영어 문장과 형태가 다르다. 이 차이는 고치지 않고 `EVAL_REPORT.md` 3-3-1에 측정 조건으로 적었다.

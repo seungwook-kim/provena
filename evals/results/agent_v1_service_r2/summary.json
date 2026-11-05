@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "dataset": "dataset_v1.jsonl",
+    "dataset_sha256": "174996b9b499da38f739f700854e919bf7f122c3bbffb6c73021d31a1e9f4332",
+    "service_path": "service_search_memory_store: 서비스 Searcher를 MemoryStore(DB 왕복 없음)로 돌린 값이다. 측정 전용 검색기(exp_confirmed_v1) 값과 다르고, 운영 DB(PgStore) 값도 아니다",
+    "store": "MemoryStore",
+    "search": {
+      "rows_source": "data/chunks/chunks.jsonl",
+      "rows": 23095,
+      "links_with_targets": 2661,
+      "config": {
+        "embed_model": "voyage-4",
+        "mode": "dense_en",
+        "pool": 100,
+        "rerank_model": "none",
+        "rerank_top": 10,
+        "translate": true,
+        "link_n": 2
+      },
+      "first_search": "그래프가 원 질문(한국어)과 하위 질문을 `Searcher.search`에 넘긴다. 번역은 서비스 translate(Claude CLI Haiku 5.5), 분해는 그래프(Claude CLI Haiku 5.5), 질문 임베딩은 Voyage API",
+      "requery": "재작성 검색어(영어)를 분해 없이 `Searcher.search`에 넘긴다"
+    },
+    "llm": {
+      "provider": "claude_cli",
+      "model": "claude-haiku-5-5",
+      "anthropic_api_key": "unused"
+    },
+    "excluded": [],
+    "partial": false,
+    "first_searches": 27,
+    "requery_searches": 25,
+    "fallback_dense_ko": 0,
+    "fallback_reasons": [],
+    "decomposed_questions": 10,
+    "run_id": "eval-question-20261105-044224",
+    "finished": "2026-11-05 04:55:47"
+  },
+  "metrics": {
+    "n": 30,
+    "errors": 0,
+    "cited_correct_rate": 0.9,
+    "wrong_citation_rate": 0.3333333333333333,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "hallucination_risk_rate": 0.0,
+    "answer_check_refusals": 1,
+    "correct_refusal_rate_without_answer_check": 0.9333333333333333,
+    "over_refusal_rate_without_answer_check": 0.0,
+    "citation_accuracy": 0.7555555555555556,
+    "as_of_shown_rate": 1.0,
+    "latency_p95_s": 37.126,
+    "judge_score": null,
+    "cost_usd": 0.068331
+  }
+}
