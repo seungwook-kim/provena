@@ -94,6 +94,7 @@ def test_upsert_user_rejects_unknown_role_and_uses_conflict_update():
 def test_ensure_schema_runs_additive_auth_schema_files_without_account_values():
     store, log, _ = fake_store()
     store.ensure_schema()
+    assert REVOCATION_SCHEMA_FILE.name == "103_auth_token_revocations.sql"
     assert log[0][0] == SCHEMA_FILE.read_text(encoding="utf-8")
     assert log[1][0] == REVOCATION_SCHEMA_FILE.read_text(encoding="utf-8")
     sql = "\n".join(row[0] for row in log)

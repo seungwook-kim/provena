@@ -96,6 +96,7 @@ def create_mcp_app():
 def create_app() -> FastAPI:
     database_url = os.getenv("DATABASE_URL")
     store = PostgresAuthStore(database_url) if database_url else None
+    revocation_store = PostgresTokenRevocationStore(database_url) if database_url else None
     mcp_app = create_mcp_app()
 
     @asynccontextmanager

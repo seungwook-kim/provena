@@ -16,7 +16,7 @@ from uuid import UUID
 from backend.auth import AuthUser
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "101_auth_users.sql"
-REVOCATION_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "102_auth_token_revocations.sql"
+REVOCATION_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "103_auth_token_revocations.sql"
 
 _COLUMNS = "user_id, login_id, password_hash, role, is_active"
 

@@ -9,3 +9,5 @@ CREATE TABLE IF NOT EXISTS token_revocations (
 
 CREATE INDEX IF NOT EXISTS token_revocations_expires_at
     ON token_revocations (expires_at);
+
+ALTER TABLE token_revocations ENABLE ROW LEVEL SECURITY;
