@@ -15,6 +15,7 @@ from typing import Any
 from backend.schemas import AgentEvent
 
 CITATION_KEYS = ("chunk_id", "rule_title", "article", "version_date", "version_date_before", "source_url")
+APPROVAL_KEYS = ("approval_id", "kind", "summary")  # SDD 6장. 초안과 대조표는 `GET /approvals`로 본다
 _TOKEN = re.compile(r"\s*\S+\s*")
 
 
@@ -31,11 +32,10 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
         for update in graph.stream(graph_input, cfg, stream_mode="updates"):
             for node, delta in update.items():
                 if node == "__interrupt__":
-                    yield AgentEvent(
-                        type="approval_request",
-                        thread_id=thread_id,
-                        data={"interrupts": [{"id": getattr(i, "id", None), "value": getattr(i, "value", i)} for i in delta]},
-                    )
+                    for i in delta:
+                        value = getattr(i, "value", i)
+                        value = value if isinstance(value, dict) else {}
+                        yield AgentEvent(type="approval_request", thread_id=thread_id, data={k: value.get(k) for k in APPROVAL_KEYS})
                     return
                 if isinstance(delta, dict):
                     final.update(delta)

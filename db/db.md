@@ -12,6 +12,7 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | `201_search.sql`(검색 파트 200번대): `docs`·`versions`(판 유효 구간 `valid_from`·`valid_to`, `version_date_before`)·`chunks`(열쇠 (chunk_id, version_id), 줄 범위, 차원 없는 `vector`)·`index_meta`(색인 장부)·`query_translations`(번역 장부). 모두 `IF NOT EXISTS`라 compose 첫 기동(initdb)과 `loader`가 두 번 돌려도 같다 | 이 PR |
 | 2026-10-30 | 김승욱 (Claude Code) | `101_auth_users.sql`(users 테이블, SQL 번호대 100번대는 김승욱 파트로 잡음) 추가. 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다 | 미정 |
 

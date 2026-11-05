@@ -4,7 +4,7 @@
 여기서는 엔드포인트로 연결만 합니다. LLM 호출은 services/llm.py 한 곳에서만 합니다.
 
 - `/health`는 항상 있습니다(DB 없이도).
-- `DATABASE_URL`이 있으면 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)를 붙입니다.
+- `DATABASE_URL`이 있으면 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)와 결정표 실행·승인 라우터를 붙입니다.
   이때 `AUTH_SECRET`(32바이트 이상)이 없으면 시작하지 않습니다. 로컬 데모 모드에서만 비어 있으면 실행마다 무작위로 만듭니다.
 - `PROVENA_ENV=local` 이고 `PROVENA_DEV_MODE=1` 일 때만 시작할 때 users 테이블을 만들고 데모 계정 2개를 시드합니다
   (backend/services/demo_seed.py). 그 밖의 모드에서는 스키마(db/101_auth_users.sql)가 미리 적용돼 있어야 합니다.
@@ -29,6 +29,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.auth import create_auth_router
+from backend.graph.decision.routes import create_decision_router, open_decision_runtime
 from backend.services.auth_store import PostgresAuthStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
 
@@ -96,6 +97,7 @@ def create_mcp_app():
 def create_app() -> FastAPI:
     database_url = os.getenv("DATABASE_URL")
     store = PostgresAuthStore(database_url) if database_url else None
+    auth_secret = resolve_auth_secret() if store is not None else None   # 로컬 데모의 무작위 키도 라우터끼리 같아야 한다
     mcp_app = create_mcp_app()
 
     @asynccontextmanager
@@ -103,8 +105,9 @@ def create_app() -> FastAPI:
         if store is not None and is_local_demo():
             bootstrap_local_auth(store)
         start_search_warmup()
-        async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
-            yield
+        with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
+            async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
+                yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
 
@@ -114,7 +117,8 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     if store is not None:
-        app.include_router(create_auth_router(store=store, secret=resolve_auth_secret()))
+        app.include_router(create_auth_router(store=store, secret=auth_secret))
+        app.include_router(create_decision_router(store=store, secret=auth_secret))
 
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저

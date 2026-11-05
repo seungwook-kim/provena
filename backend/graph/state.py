@@ -25,6 +25,7 @@ class AgentState(TypedDict, total=False):
     chunks: list[dict]  # 검색 결과. 인용 검사는 이 목록과 대조한다
     retries: int  # 재검색 횟수
     judge_reason: str
+    judge_partial: bool  # 근거 판단의 결과: 근거가 모자라지만 묻는 사실 중 일부에는 자료가 직접 답한다. 재검색이 다 끝나도 이 값이면 그 부분만 답한다
     clarify_question: str | None
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
     search_cache: dict  # 이번 실행 안의 검색 결과 기억
@@ -43,4 +44,9 @@ class AgentState(TypedDict, total=False):
     grounding: dict  # 근거 판정 기록
     skills_used: list[str]  # 이번 질문에서 실제로 쓴 런타임 Skill
     drafted: bool  # 답 초안이 만들어졌는지
+    decision_query: dict  # 결정표 질문에서 뽑은 {task_type, amount_usd, band}
+    decision_result: dict  # 승인된 결정표 실행 결과
+    decision_error: dict  # 실행을 거절한 이유 {status, reason, message}
+    review_status: str  # 합동 검토 결과: clarify | no_issues | team_review_failed | pending_approval | approved | rejected (정책 질문이면 없음)
+    issue_table: dict  # 승인되어 저장된 쟁점표(합동 검토)
     period_covered: bool | None  # 답 작성이 낸 "질문의 기간 자료가 있는가". false이고 질문에 시점 표현이 있으면 거절한다

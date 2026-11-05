@@ -74,7 +74,7 @@ def _searcher(c, calls):
         calls.append(len(texts))
         return np.stack([vec[t] for t in texts])
 
-    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none")
+    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none", link_keep_per_sub=0)  # 저장된 측정(#9)은 자리를 지키지 않았다
     assert (cfg.mode, cfg.rerank_model, cfg.link_n) == (SearchConfig.mode, SearchConfig.rerank_model, SearchConfig.link_n)
     return Searcher(cfg, MemoryStore(c.rows, c.docs, "voyage-4"), embedder=embedder, reranker=None,
                     translator=lambda q, kind: translate.Result(q, "stored"), check_meta=False)

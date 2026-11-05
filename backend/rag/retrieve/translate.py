@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
+from backend.services import llm_trace
+
 log = logging.getLogger(__name__)
 
 KINDS = ("keywords", "sentence")
@@ -97,7 +99,7 @@ def translate(query: str, kind: str, store: TranslationStore, call=_call) -> Res
     reason = "error"
     for _ in range(1 if demo else ATTEMPTS):      # 재생은 같은 입력에 같은 답이라 다시 불러도 소용없다
         try:
-            text = _pool.submit(call, query, kind).result(timeout=TIMEOUT_S)
+            text = _pool.submit(llm_trace.bind(call), query, kind).result(timeout=TIMEOUT_S)
         except cf.TimeoutError:
             reason = "timeout"
             continue

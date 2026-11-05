@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 김승욱 (Claude Code) | `search.py` 주석의 HNSW SQL 위치를 `db/manual/chunks_hnsw_voyage4.sql`로 고침. 동작 변경 없음 | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | 검색 v2 = 확정 조합(조장 요청 5건): 기본값 voyage-4(API, `VoyageClient`, 실패 분류 EmbedUnavailable·EmbedConfigError·EmbedNoKey)·`dense_en`·리랭커 없음·k=5(`DEFAULT_K`, 그래프·MCP 같은 상수). `SearchQuery.sub_queries`(하위 질문마다 상위 k → 번갈아 합침), 링크 확장 L1x2(`links.py`, `chunks.link_targets`, 적재·증분 반영, 링크 후보도 org·as_of 필터). 재현 시험: 측정과 같은 벡터로 v1 30문항 청크 집합 30/30·Recall@5 0.9667, 링크 대상 23,095청크 일치. 변이 9/9 | 이번 PR |
 | 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | 섹션 원문 조회 `section.py`(`get_section`·`section_names`, docs/specs/mcp.md How 2): 판 고르기는 search와 같고, 청크마다 머리말 첫 줄과 `overlap_tail()`로 다시 계산한 겹침을 떼고 `text_sha256` 대조 뒤 잇는다(다르면 `SectionIntegrityError`). 스냅샷 23,095청크 지문 전부 통과, 파싱 결과와 15,463섹션 글자까지 같음·438섹션 공백만 다름(EC-14). 시험 `tests/test_retrieve_section.py` 13개(DB 1개 포함) | (이번 PR) |
 | 2026-11-02 | 김승욱 (Claude Code) | 이미 영어인 질의는 번역 LLM을 부르지 않게 함(`search.md` EC-02-1). 평가셋 50건은 모두 한글이 있어 비교 점수에 영향이 없다 | 이번 PR |

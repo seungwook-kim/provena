@@ -401,9 +401,29 @@ def test_out_of_domain_refuses_without_rewrite_or_search():
     llm = normal_llm(classify=j(route="out_of_domain"))
     out = run(graph(fn, llm=llm, answer_store=st))
     assert out["route"] == "out_of_domain" and out["kind"] == "refuse" and out["answer"] == MSG_REFUSE_OUT_OF_DOMAIN
-    assert len(calls) == 0 and out["citations"] == [] and st.all_answers() == []
+    assert len(calls) == 0 and out["citations"] == [] and st.all_answers() == [] and llm.count("classify") == 2
     assert llm.count("rewrite") == 0 and llm.count("judge") == 0 and llm.count("answer") == 0
     assert not out.get("drafted") and not out.get("refuse_reason")  # 답 단계 거절이 아니라 답 초안 전 거절이다
+
+
+def test_out_of_domain_needs_two_same_answers_and_a_split_goes_to_policy_path():
+    fn, calls = counting_search()
+    llm = normal_llm(classify=[j(route="out_of_domain"), j(route="rule")])
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1 and llm.count("classify") == 2
+
+
+def test_other_routes_are_classified_once():
+    fn, _ = counting_search()
+    llm = normal_llm(classify=j(route="rule"))
+    run(graph(fn, llm=llm))
+    assert llm.count("classify") == 1
+
+
+def test_answer_prompt_limits_scope_and_citations_per_fact():
+    from backend.prompts.question import ANSWER_SYSTEM
+
+    assert "질문이 묻는 사실에만 답한다" in ANSWER_SYSTEM and "가장 직접적인 근거 하나만" in ANSWER_SYSTEM
 
 
 def test_policy_routes_still_search_and_answer():
@@ -726,3 +746,295 @@ def test_removal_that_leaves_no_citation_mark_is_refused_by_the_citation_recheck
     out = run(graph(lambda q: [paging], llm=llm, grounding_llm=True))
     assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == []
     assert out["grounding"]["revise"]["result"] == "citation_check_failed" and llm.count("grounding") == 1
+
+
+# ---------- 답의 일부를 뺐다는 안내 ----------
+def test_removed_sentence_is_announced_once_before_the_date_line():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    llm, paging, escal, (_, _, s3) = _partial_setup(lambda a, b, c: [c], second=j(grounded=True))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "answer" and s3 not in out["answer"]
+    assert out["answer"].count(MSG_PARTIAL_NOTE) == 1
+    assert out["answer"].index(MSG_PARTIAL_NOTE) < out["answer"].index("기준일")
+
+
+def test_answer_with_nothing_removed_has_no_partial_note():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    out = run(graph(llm=normal_llm(grounding=j(grounded=True)), grounding_llm=True))
+    assert out["kind"] == "answer" and MSG_PARTIAL_NOTE not in out["answer"]
+
+
+# ---------- 판정 입력: 인용 자료와 같은 페이지 참고 ----------
+def _chunk_copy(base: Chunk, **kw) -> Chunk:
+    return base.model_copy(update=kw)
+
+
+def test_same_page_context_keeps_only_uncited_chunks_of_the_same_page_and_version():
+    from backend.graph.grounding import same_page_context
+
+    paging = _by_article("Incident Response > Paging").model_dump()
+    sibling = _by_article("Incident Response > Escalation").model_dump()
+    other_page = {**sibling, "chunk_id": "1" * 16, "rule_seq": 12345}
+    other_version = {**sibling, "chunk_id": "2" * 16, "version_id": "TEST-old"}
+    got = same_page_context([paging], [paging, sibling, sibling, other_page, other_version])
+    assert [c["chunk_id"] for c in got] == [sibling["chunk_id"]]
+    assert same_page_context([], [paging, sibling]) == []
+
+
+def test_grounding_input_separates_cited_material_from_same_page_context_and_leaves_other_pages_out():
+    paging, sibling = _by_article("Incident Response > Paging"), _by_article("Incident Response > Escalation")
+    other = _chunk_copy(sibling, chunk_id="3" * 16, rule_seq=12345, text="다른 페이지의 문장이다")
+    llm = normal_llm(answer=_sentences_answer(("SEV2 장애 최초 대응은 15분 이내이다", paging.chunk_id)), grounding=j(grounded=True))
+    run(graph(lambda q: [paging, sibling, other], llm=llm, grounding_llm=True))
+    user = next(u for t, u in llm.calls if t == "grounding")
+    material, _, context = user.partition("<<<참고>>>")
+    assert f"chunk_id={paging.chunk_id}" in material and sibling.chunk_id not in material
+    assert f"chunk_id={sibling.chunk_id}" in context and paging.chunk_id not in context
+    assert other.chunk_id not in user and "다른 페이지의 문장이다" not in user
+
+
+def test_grounding_input_has_no_context_block_without_a_same_page_chunk():
+    paging = _by_article("Incident Response > Paging")
+    other = _chunk_copy(_by_article("Incident Response > Escalation"), chunk_id="3" * 16, rule_seq=12345)
+    llm = normal_llm(answer=_sentences_answer(("SEV2 장애 최초 대응은 15분 이내이다", paging.chunk_id)), grounding=j(grounded=True))
+    run(graph(lambda q: [paging, other], llm=llm, grounding_llm=True))
+    assert "<<<참고>>>" not in next(u for t, u in llm.calls if t == "grounding")
+
+
+def test_context_is_for_applicability_only_and_a_value_must_be_in_the_cited_material():
+    from backend.prompts.question import GROUNDING_SYSTEM
+
+    assert "적용되는지" in GROUNDING_SYSTEM and "<<<참고>>>에만 있으면 받쳐지지 않은 것으로 본다" in GROUNDING_SYSTEM
+    assert "자료 밖 지식으로 받쳐졌다고 보지 않는다" in GROUNDING_SYSTEM
+
+
+def _material_only_judge(value: str):
+    """프롬프트 규칙대로 판정하는 가짜 모델: 값이 <<<자료>>> 칸에 있어야 통과한다. <<<참고>>> 칸은 보지 않는다."""
+
+    def grounding(user):
+        material = user.split("<<<답>>>", 1)[1].split("<<<끝>>>", 1)[1].partition("<<<참고>>>")[0]
+        return j(grounded=True) if value in material else j(grounded=False, reason_code="unsupported", reason=f"{value}이 인용 자료에 없음", unsupported_sentences=[])
+
+    return grounding
+
+
+def test_value_found_only_in_same_page_context_does_not_pass():
+    """검색된 같은 페이지 청크에 값이 있어도 그 청크를 인용하지 않으면 답이 나가지 않는다. 다시 써서 인용을 고치면 나간다."""
+    paging, escal = _by_article("Incident Response > Paging"), _by_article("Incident Response > Escalation")
+    wrong = _sentences_answer(("에스컬레이션은 2시간 상한이다", paging.chunk_id))
+    llm = normal_llm(answer=wrong, grounding=_material_only_judge("2시간"))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == [] and "2시간" not in out["answer"]
+    fixed = _sentences_answer(("에스컬레이션 상한은 2시간이다", escal.chunk_id))
+    llm = normal_llm(answer=[wrong, fixed], grounding=_material_only_judge("2시간"))
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "answer" and [c["chunk_id"] for c in out["citations"]] == [escal.chunk_id] and out["grounding"]["redrafted"] is True
+
+
+# ---------- 답 다시 쓰기: 근거 판정이 거절한 답을 한 번 ----------
+def _redraft_setup(second_answer, verdicts=None, claims=None, chunks=None):
+    paging = _by_article("Incident Response > Paging")
+    first = _sentences_answer(("SEV2 장애 최초 대응은 2시간 이내이다", paging.chunk_id))
+    bad = j(grounded=False, reason_code="unsupported", reason="2시간이 자료와 다름", unsupported_sentences=claims if claims is not None else ["SEV2 장애 최초 대응은 2시간 이내이다"])
+    llm = normal_llm(answer=[first, second_answer], grounding=verdicts or [bad, j(grounded=True)])
+    return llm, paging, chunks or [paging]
+
+
+def test_refused_answer_is_rewritten_once_and_must_pass_the_judge_again():
+    good = _by_article("Incident Response > Paging")
+    llm, paging, chunks = _redraft_setup(_sentences_answer(("SEV2 장애 최초 대응은 15분 이내이다", good.chunk_id)))
+    out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True, answer_store=InMemoryAnswerStore()))
+    assert out["kind"] == "answer" and "15분" in out["answer"] and "2시간" not in out["answer"] and not out.get("refuse_reason")
+    g = out["grounding"]
+    assert g["redrafted"] is True and g["redraft"]["result"] == "rejudge_grounded" and "2시간" in g["draft_answer"]
+    assert "revise" not in g and "revised" not in g  # 다시 쓰기가 먼저이고, 통과하면 문장을 빼지 않는다
+    assert llm.count("answer") == 2 and llm.count("grounding") == 2
+    assert out["answer_id"] and "2025-01-01" in out["answer"] and "CC BY-SA 4.0" in out["answer"] and "[1]" in out["answer"]
+    second = [u for t, u in llm.calls if t == "answer"][1]
+    assert "<<<이전 답>>>" in second and "2시간이 자료와 다름" in second
+
+
+def test_rewrite_keeps_the_answering_sentence_that_removal_would_lose():
+    """핵심 문장에 틀린 말이 섞이면 빼는 것으로는 답이 사라진다. 빼기 전에 다시 써서 핵심 사실을 남긴다."""
+    paging = _by_article("Incident Response > Paging")
+    core, side = "SEV2 장애 최초 대응은 배정 시점부터 15분 이내이다", "이 기한은 외부 담당자에게 적용되지 않는다"
+    first = _sentences_answer((core, paging.chunk_id), (side, paging.chunk_id))
+    fixed = _sentences_answer(("SEV2 장애 최초 대응은 15분 이내이다", paging.chunk_id))
+
+    def grounding(user):
+        return j(grounded=False, reason_code="unsupported", reason="배정 시점이 자료에 없음", unsupported_sentences=[core]) if core in user else j(grounded=True)
+
+    llm = normal_llm(answer=[first, fixed], grounding=grounding)
+    out = run(graph(lambda q: [paging], llm=llm, grounding_llm=True))
+    assert out["kind"] == "answer" and "SEV2 장애 최초 대응은 15분 이내이다" in out["answer"] and side not in out["answer"]
+    assert out["grounding"]["redrafted"] is True and "revise" not in out["grounding"]
+
+
+def test_removal_is_the_fallback_when_the_rewrite_does_not_pass():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    paging, escal = _by_article("Incident Response > Paging"), _by_article("Incident Response > Escalation")
+    s1, s2, s3 = "SEV2 장애 최초 대응은 15분 이내이다", "담당자가 직접 호출한다", "에스컬레이션은 3시간 상한이다"
+    first = _sentences_answer((s1, paging.chunk_id), (s2, paging.chunk_id), (s3, escal.chunk_id))
+    rewrite = _sentences_answer(("에스컬레이션은 지어낸 값 9시간 상한이다", escal.chunk_id))
+
+    def grounding(user):
+        if s3 in user or "9시간" in user:
+            return j(grounded=False, reason_code="unsupported", reason="상한이 자료와 다름", unsupported_sentences=[s3])
+        return j(grounded=True)
+
+    llm = normal_llm(answer=[first, rewrite], grounding=grounding)
+    out = run(graph(lambda q: [paging, escal], llm=llm, grounding_llm=True))
+    assert out["kind"] == "answer" and s1 in out["answer"] and s3 not in out["answer"] and "9시간" not in out["answer"] and MSG_PARTIAL_NOTE in out["answer"]
+    g = out["grounding"]
+    assert g["redraft"]["result"] == "rejudge_ungrounded" and g["revise"]["result"] == "pruned" and g["revised"] is True and "redrafted" not in g
+    assert llm.count("answer") == 2 and llm.count("grounding") == 3
+
+
+def test_rewritten_answer_without_support_is_still_refused():
+    """다시 쓴 답도 판정이 거절하거나 결론이 없으면 나가지 않는다. 다시 쓰기는 한 번뿐이다."""
+    good = _by_article("Incident Response > Paging")
+    bad = j(grounded=False, reason_code="unsupported", reason="근거 없음", unsupported_sentences=["자료에 없는 문장"])
+    for second_verdict in (bad, "판정 불가 응답", j(grounded=False, reason_code="no_evidence", reason="없음")):
+        llm, _, chunks = _redraft_setup(_sentences_answer(("SEV2 장애 최초 대응은 지어낸 값 3분이다", good.chunk_id)), verdicts=[bad, second_verdict])
+        out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == []
+        assert "3분" not in out["answer"] and not out.get("answer_id")
+        assert out["grounding"]["redraft"]["result"].startswith("rejudge_") and "redrafted" not in out["grounding"]
+        assert llm.count("answer") == 2 and llm.count("grounding") <= 3
+
+
+def test_rewritten_answer_with_a_made_up_chunk_id_is_refused_and_counted():
+    from evals.agent import run_eval as E
+
+    llm, _, chunks = _redraft_setup(j(answer=f"최초 대응은 15분 이내이다 [{FAKE_ID}].", citations=[{"chunk_id": FAKE_ID}]))
+    out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["grounding"]["redraft"]["result"] == "citation_check_failed" and llm.count("grounding") == 1
+    assert out["dropped_citations"] == [{"chunk_id": FAKE_ID}]  # 환각 위험 지표가 세는 칸이다
+    assert FAKE_ID not in out["answer"]
+    row = E._row({"id": 1, "kind": "relevant", "input": Q, "gold": []}, out, 0.1)
+    assert E.compute_metrics([row])["hallucination_risk_rate"] == 1.0
+
+
+def test_empty_or_broken_or_unchanged_rewrite_is_refused_without_another_judgement():
+    paging = _by_article("Incident Response > Paging")
+    same = _sentences_answer(("SEV2 장애 최초 대응은 2시간 이내이다", paging.chunk_id))
+    for second, result in ((j(answer="", citations=[]), "empty"), ("JSON이 아닌 응답", "empty"), (same, "unchanged")):
+        llm, _, chunks = _redraft_setup(second)
+        out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["grounding"]["redraft"]["result"] == result
+        assert llm.count("grounding") == 1
+
+
+def test_rewrite_that_says_the_period_is_missing_is_refused():
+    good = _by_article("Incident Response > Paging")
+    second = j(answer=f"최초 대응은 15분이다 [{good.chunk_id}].", citations=[{"chunk_id": good.chunk_id}], period_covered=False)
+    llm, _, chunks = _redraft_setup(second)
+    out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True), question="2025년 1월 SEV2 장애 최초 대응은 몇 분이었나요?")
+    assert out["kind"] == "refuse" and out["grounding"]["redraft"]["result"] == "answer_check_failed" and llm.count("grounding") == 1
+
+
+def test_only_unsupported_gets_a_rewrite():
+    for code in ("no_evidence", "out_of_period", "nonexistent_entity"):
+        llm = normal_llm(grounding=j(grounded=False, reason_code=code, reason="없음", unsupported_sentences=["근거에 따라 답합니다"]))
+        out = run(graph(llm=llm, grounding_llm=True))
+        assert out["kind"] == "refuse" and out["refuse_reason"] == code and llm.count("answer") == 1 and "redraft" not in out["grounding"]
+
+
+def test_rewrite_that_dropped_an_asked_fact_says_so():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    good = _by_article("Incident Response > Paging")
+    second = j(answer=f"최초 대응은 15분 이내이다 [{good.chunk_id}].", citations=[{"chunk_id": good.chunk_id}], partial=True)
+    llm, _, chunks = _redraft_setup(second)
+    out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+    assert out["kind"] == "answer" and out["answer"].count(MSG_PARTIAL_NOTE) == 1
+
+
+def test_refused_draft_stays_in_the_record_not_in_the_answer():
+    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음"))
+    out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and "근거에 따라 답합니다" in out["grounding"]["draft_answer"] and "근거에 따라 답합니다" not in out["answer"]
+
+
+# ---------- 일부 근거만 있는 나뉜 질문 ----------
+TWO_FACTS = j(split=True, sub_questions=["SEV2 최초 대응 기한은 얼마인가요?", "SEV2 장애 사후 분석 담당은 누구인가요?"])
+PARTIAL = j(sufficient=False, partial=True, reason="사후 분석 담당이 자료에 없다", clarify=None)
+NOT_PARTIAL = j(sufficient=False, partial=False, reason="대상이 자료에 없다", clarify=None)
+
+
+def _rewrites():
+    n = iter(range(100))
+    return lambda user: j(query=f"SEV2 최초 대응 {next(n)}", org="TEST-security", as_of=None)
+
+
+def test_compound_question_with_partial_evidence_answers_that_part_and_says_the_rest_is_out():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    fn, calls = counting_search()
+    llm = normal_llm(decompose=TWO_FACTS, judge=PARTIAL, rewrite=_rewrites(), grounding=j(grounded=True))
+    out = run(graph(fn, llm=llm, decompose=True, grounding_llm=True, answer_store=InMemoryAnswerStore()))
+    assert len(calls) == 3 and llm.count("judge") == 3  # 나머지 근거를 찾으러 재검색은 다 한다
+    assert out["kind"] == "answer" and out["citations"] and out["answer_id"] and out["answer"].count(MSG_PARTIAL_NOTE) == 1
+    assert out["grounding"]["partial_route"] is True
+    assert "자료가 직접 답하는 사실만 답하고" in next(u for t, u in llm.calls if t == "answer")
+
+
+def test_partial_answer_must_still_pass_the_grounding_judge():
+    llm = normal_llm(decompose=TWO_FACTS, judge=PARTIAL, rewrite=_rewrites(),
+                     grounding=j(grounded=False, reason_code="no_evidence", reason="질문의 대상이 자료에 없다"))
+    out = run(graph(llm=llm, decompose=True, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "no_evidence" and out["citations"] == []
+
+
+def test_research_that_finds_the_rest_gives_a_full_answer_without_the_note():
+    from backend.graph.build import MSG_PARTIAL_NOTE
+
+    llm = normal_llm(decompose=TWO_FACTS, judge=[PARTIAL, j(sufficient=True)], rewrite=_rewrites(), grounding=j(grounded=True))
+    out = run(graph(llm=llm, decompose=True, grounding_llm=True))
+    assert out["kind"] == "answer" and MSG_PARTIAL_NOTE not in out["answer"] and out["judge_partial"] is False
+    assert "자료가 직접 답하는 사실만 답하고" not in next(u for t, u in llm.calls if t == "answer")
+
+
+def test_partial_flag_on_a_single_fact_question_is_refused_as_before():
+    """나뉘지 않은 질문은 일부 근거 경로로 가지 않는다. 없는 대상을 비슷한 자료로 답하지 않기 위한 코드 조건이다."""
+    fn, calls = counting_search()
+    llm = normal_llm(decompose=j(split=False, sub_questions=[]), judge=PARTIAL, rewrite=_rewrites())
+    out = run(graph(fn, llm=llm, decompose=True, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["answer"] == MSG_REFUSE and len(calls) == 3 and llm.count("answer") == 0
+    llm = normal_llm(judge=PARTIAL, rewrite=_rewrites())  # 분해를 끈 경로
+    out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and llm.count("answer") == 0
+
+
+def test_compound_question_without_the_partial_flag_is_refused():
+    for verdict in (NOT_PARTIAL, j(sufficient=False, partial="true", reason="x", clarify=None), j(sufficient=False, reason="x", clarify=None)):
+        llm = normal_llm(decompose=TWO_FACTS, judge=verdict, rewrite=_rewrites())
+        out = run(graph(llm=llm, decompose=True, grounding_llm=True))
+        assert out["kind"] == "refuse" and out["answer"] == MSG_REFUSE and llm.count("answer") == 0
+
+
+def test_judge_prompt_limits_the_partial_flag():
+    from backend.prompts.question import JUDGE_SYSTEM
+
+    assert "partial=true" in JUDGE_SYSTEM and "사실이 하나뿐이거나" in JUDGE_SYSTEM and "질문의 대상 자체가 자료에 없거나" in JUDGE_SYSTEM
+
+
+def test_answer_prompt_lists_the_asked_facts_first():
+    from backend.prompts.question import ANSWER_SYSTEM
+
+    assert '"asked"' in ANSWER_SYSTEM and "asked에 없는 내용은 자료에 있어도 쓰지 않는다" in ANSWER_SYSTEM and "먼저 나온 자료를 고른다" in ANSWER_SYSTEM
+    assert "조직 전체에 적용되는 지침을 고른다" in ANSWER_SYSTEM
+
+
+def test_grounding_prompt_asks_for_the_reason_before_the_verdict():
+    """판정을 먼저 쓰면 뒤의 이유가 판정과 어긋나도 판정이 남는다. 형식 예시 모두 reason이 grounded보다 앞이어야 한다."""
+    import re
+
+    from backend.prompts.question import GROUNDING_SYSTEM
+
+    examples = re.findall(r"\{.*?\}", GROUNDING_SYSTEM.split("JSON 한 개만 출력한다", 1)[1])
+    assert len(examples) == 3 and all(e.index('"reason"') < e.index('"grounded"') for e in examples)
+    assert "reason을 먼저 써서" in GROUNDING_SYSTEM

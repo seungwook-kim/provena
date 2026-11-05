@@ -2,6 +2,8 @@
 
 흐름: 기억 불러오기 -> 질의 라우팅(도메인 밖이면 검색 없이 거절) -> (정책 질문) 질의 재작성 -> 검색 -> 문서 채점 -> 부족하면 재작성으로(재검색 최대 2회)
 -> 답 작성(재검색 결과는 앞 결과에 합친다) -> 인용 검사(코드) -> 근거 판정(코드 규칙 + LLM) -> 저장.
+재검색 뒤에도 근거가 모자란데 여러 사실을 묻는 질문의 일부에 자료가 직접 답하면(`judge_partial`) 그 부분만 답하고 나머지를 뺐다고 밝힌다.
+근거 판정이 받쳐지지 않는 주장을 찾으면 답을 한 번 다시 쓰고(`redraft_answer`), 안 되면 그 문장을 빼 본다(`revise_answer`). 어느 쪽도 재판정을 통과해야 나가고, 아니면 거절한다.
 결정표와 합동 검토 경로는 별도 Spec이다. 연결되기 전에는 분류 결과만 남기고 정책 질문으로 처리한다. 막다른 답을 내면 답이 있는 질문을 거절하게 된다.
 
 D5(11/6)에 Supervisor와 서브에이전트로 나누고 같은 평가셋(v2)으로 다시 잰다.
@@ -25,7 +27,9 @@ from langgraph.store.memory import InMemoryStore
 from backend.graph import grounding as G
 from backend.graph.answer_store import AnswerStore
 from backend.graph.citations import check_citations
-from backend.graph.decompose import decompose_enabled, decompose_question
+from backend.graph.decision.execute import DecisionExecutor, decision_citation, format_decision_answer, make_execute_node
+from backend.graph.decision.params import DECISION_PARAMS_SYSTEM, params_from_obj, params_user
+from backend.graph.decompose import decompose_enabled, decompose_question, drop_company_prefix
 from backend.graph.parsing import parse_json_obj
 from backend.graph.state import AgentState
 from backend.memory.profile import get_profile
@@ -54,6 +58,7 @@ _WHEN = re.compile(r"(?<!\d)(?:(?:19|20)\d{2}(?:[-./]\d{1,2}(?:[-./]\d{1,2})?)?|
 
 MSG_REFUSE = "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
 MSG_REFUSE_OUT_OF_DOMAIN = "핸드북과 관련 없는 질문이라 답하지 않습니다."
+MSG_PARTIAL_NOTE = "질문의 나머지 부분은 근거를 확인하지 못해 답에서 뺐습니다."
 MSG_REFUSE_SEARCH_DOWN = "검색을 지금 쓸 수 없어 답하지 않습니다. 잠시 뒤에 다시 시도해 주세요."
 MSG_REFUSE_NO_KEY = "검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다."
 MSG_REFUSE_LEAK = "답에 내부 지시문이 섞여 있어 답하지 않습니다."
@@ -160,6 +165,8 @@ def build_graph(
     use_skills: bool | None = None,
     grounding_llm: bool | None = None,
     decompose: bool | None = None,
+    decision_repo=None,
+    review_graph=None,
 ):
     """컴파일된 질문 그래프를 만든다.
 
@@ -168,7 +175,10 @@ def build_graph(
     - store: 장기 기억 Store. None이면 InMemoryStore.
     - use_skills: None이면 환경변수 USE_SKILLS를 따른다. True/False는 켬과 끔 비교용이다.
     - grounding_llm: 근거 판정에 LLM을 쓸지. None이면 데모 모드가 아닐 때만 쓴다. 코드 규칙은 이 값과 무관하게 돈다.
-    - decompose: 첫 검색 전에 한국어 원 질문을 LLM으로 나눌지. None이면 환경 변수 `SEARCH_DECOMPOSE=1`을 따른다(기본 끔).
+    - review_graph: 합동 검토 하위 그래프(`backend.graph.departments.review.build_review_graph(...)`). 있으면 질문 종류가 review일 때 그쪽으로 보낸다.
+      하위 그래프에는 체크포인터를 따로 주지 않는다(이 그래프의 체크포인터를 쓴다). 없으면 review도 정책 질문으로 처리한다.
+      승인함에 올리려면 `build_review_graph(..., approvals=저장소)`로 만들고, 재개 경로의 `app.state.review_graph`에는 이 질문 그래프를 넣는다(대화 체크포인트가 이 그래프에 있다).
+    - decompose: 첫 검색 전에 한국어 원 질문을 LLM으로 나눌지. None이면 환경 변수 `SEARCH_DECOMPOSE`를 따른다(`decompose_enabled()`: 기본 켬, 0, false, no, off이면 끔).
       켜면 첫 검색은 원 질문과 하위 질문(`sub_queries`)을 넘기고, 재검색은 재작성 검색어만 분해 없이 넘긴다. 측정 전용 검색기(저장된 분해를 읽는다)는 끈다.
     """
     retrieve = retriever or _default_retriever
@@ -223,6 +233,7 @@ def build_graph(
             "answer": "",
             "retries": 0,
             "judge_reason": "",
+            "judge_partial": False,
             "clarify_question": None,
             "raw_citations": [],
             "citations": [],
@@ -243,9 +254,30 @@ def build_graph(
         }
 
     def classify(state: AgentState) -> dict:
-        obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
-        route = (obj or {}).get("route")
-        return {"route": route if route in ROUTES else "rule"}  # 모르면 일반 정책 질문
+        def once() -> str:
+            obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
+            route = (obj or {}).get("route")
+            return route if route in ROUTES else "rule"  # 모르면 일반 정책 질문
+
+        route = once()
+        # 도메인 밖은 검색 없이 끝나 뒤 단계가 되돌릴 수 없다. 두 번 다 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다
+        if route == "out_of_domain" and once() != "out_of_domain":
+            route = "rule"
+        return {"route": route}
+
+    def decision_params(state: AgentState) -> dict:
+        """결정표 질문에서 업무 종류와 금액을 뽑는다(LLM 1회). 실행은 다음 노드(LLM 없음)."""
+        cats = sorted({t.cells[0]["category"] for t in decision_repo.list_approved() if t.cells})
+        obj, _ = ask_json(DECISION_PARAMS_SYSTEM, params_user(state["question"], cats))
+        return {"decision_query": params_from_obj(obj)}
+
+    run_decision = make_execute_node(DecisionExecutor(decision_repo)) if decision_repo is not None else None
+
+    def decision_answer(state: AgentState) -> dict:
+        """실행 결과를 코드로 한국어 답으로 쓴다. 거절이면 이유를 그대로 알린다."""
+        if state.get("decision_error"):
+            return {"kind": "refuse", "answer": "결정표를 실행하지 않았습니다: " + state["decision_error"]["message"], "citations": []}
+        return {"kind": "answer", "answer": format_decision_answer(state["decision_result"]), "citations": [decision_citation(state["decision_result"])]}
 
     def out_of_domain(state: AgentState) -> dict:
         """분명히 핸드북과 무관한 질문은 재작성과 검색 없이 거절한다."""
@@ -278,7 +310,7 @@ def build_graph(
         if split:
             subs, source = decompose_question(ask, state["question"])
             extra = {"sub_queries": subs, "decompose_source": source}
-        q = SearchQuery(query=state["question"] if split else state["search_query"], org=state.get("search_org"), as_of=state.get("as_of"),
+        q = SearchQuery(query=drop_company_prefix([state["question"]])[0] if split else state["search_query"], org=state.get("search_org"), as_of=state.get("as_of"),
                         k=SEARCH_K, sub_queries=subs or None)
         _forget_search_trace()
         try:
@@ -294,14 +326,15 @@ def build_graph(
     def judge(state: AgentState) -> dict:
         chunks = state.get("chunks", [])
         if not chunks:  # 자료가 없으면 LLM에 묻지 않고 부족으로 본다
-            return {"judge_reason": "검색 결과 없음", "retries": state.get("retries", 0) + 1}
+            return {"judge_reason": "검색 결과 없음", "judge_partial": False, "retries": state.get("retries", 0) + 1}
         obj, _ = ask_json(P.JUDGE_SYSTEM, P.judge_user(state["question"], chunks))
         obj = obj or {}
         if obj.get("sufficient") is True:  # 파싱 실패나 모호한 값은 부족으로 본다
-            return {"judge_reason": ""}
+            return {"judge_reason": "", "judge_partial": False}
         clarify = obj["clarify"] if isinstance(obj.get("clarify"), str) and obj["clarify"].strip() else None
         return {
             "judge_reason": str(obj.get("reason") or "근거 부족"),
+            "judge_partial": obj.get("partial") is True,
             "clarify_question": clarify,
             "retries": state.get("retries", 0) + 1,
         }
@@ -309,7 +342,10 @@ def build_graph(
     def after_judge(state: AgentState) -> str:
         if not state.get("judge_reason"):
             return "write_answer"
-        return "rewrite" if state.get("retries", 0) <= MAX_RESEARCH else "give_up"
+        if state.get("retries", 0) <= MAX_RESEARCH:
+            return "rewrite"
+        # 재검색이 끝나도 일부 근거만 있으면 그 부분을 답한다. 나뉜 질문(사실 둘 이상)일 때만이다. 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 된다
+        return "write_answer" if state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2 else "give_up"
 
     def give_up(state: AgentState) -> dict:
         ask_back = state.get("clarify_question")
@@ -321,7 +357,7 @@ def build_graph(
         rules = skill("citation-rules")
         system = P.with_skills(P.ANSWER_SYSTEM, [("인용 규칙 Skill", rules)])
         used = note_skills(state, *(["citation-rules"] if rules else []))
-        obj, raw = ask_json(system, P.answer_user(state["question"], state.get("chunks", []), state.get("as_of")))
+        obj, raw = ask_json(system, P.answer_user(state["question"], state.get("chunks", []), state.get("as_of"), partial=bool(state.get("judge_partial"))))
         if obj is None:  # JSON이 아니면 인용을 알 수 없으므로 인용 검사가 거절한다
             return {"answer": raw, "raw_citations": [], "drafted": True, "skills_used": used}
         cites = obj.get("citations")
@@ -350,12 +386,13 @@ def build_graph(
     def after_verify(state: AgentState) -> str:
         return "ground" if state.get("kind") == "answer" else END
 
-    def llm_verdict(question: str, answer: str, cited: list[dict], as_of: str | None, body: str) -> dict:
-        """근거 판정 LLM 한 번. state는 grounded, ungrounded, inconclusive 중 하나다(명확히 거절한 경우만 ungrounded)."""
+    def llm_verdict(question: str, answer: str, cited: list[dict], as_of: str | None, body: str, retrieved: list[dict]) -> dict:
+        """근거 판정 LLM 한 번. state는 grounded, ungrounded, inconclusive 중 하나다(명확히 거절한 경우만 ungrounded).
+        인용 청크를 자료로, 같은 페이지의 다른 검색 청크를 참고로 넘긴다. 값은 자료에 있어야 한다(`GROUNDING_SYSTEM`)."""
         out: dict = {"state": "inconclusive", "code": "", "detail": "", "claims": []}
         try:
             system = P.with_skills(P.GROUNDING_SYSTEM, [("근거 판정 Skill", body)])
-            obj, _ = ask_json(system, P.grounding_user(question, answer, cited, as_of))
+            obj, _ = ask_json(system, P.grounding_user(question, answer, cited, as_of, G.same_page_context(cited, retrieved)))
             obj = obj or {}
             if obj.get("grounded") is True:
                 out["state"] = "grounded"
@@ -393,43 +430,96 @@ def build_graph(
         if not again.ok:
             rec["result"] = f"rules:{again.reason}"
             return None
-        second = llm_verdict(question, cleaned, valid, as_of, body)
+        second = llm_verdict(question, cleaned, valid, as_of, body, chunks)
         info["rejudge"] = second["state"]
         if second["state"] != "grounded":  # 더 빼지 않는다. 결론이 없어도 거절 쪽으로 둔다
             rec["result"] = f"rejudge_{second['state']}"
             return None
         info.update(revised=True, draft_answer=state["answer"], removed=[{"sentence": x, "reason": verdict["detail"]} for x in pruned.removed])
-        return {"kind": "answer", "answer": finish_answer(cleaned, valid, as_of), "citations": valid, "grounding": info, "skills_used": used}
+        # 뺀 문장이 있으면 답이 일부만 남았다고 밝힌다. 말없이 빼면 질문 전체에 답한 것처럼 보인다
+        return {"kind": "answer", "answer": finish_answer(f"{cleaned} {MSG_PARTIAL_NOTE}", valid, as_of), "citations": valid, "grounding": info, "skills_used": used}
+
+    def redraft_answer(state: AgentState, verdict: dict, info: dict, body: str, used: list[str]) -> dict | None:
+        """받쳐지지 않는 주장이 있으면 판정 사유를 주고 답을 한 번 다시 쓴다. 문장 빼기보다 먼저 한다. 빼면 틀린 말이 섞인 핵심 문장까지 사라져 질문에 답하지 못하는 말이 남을 수 있다.
+        판정 기준은 그대로이고 다시 쓴 답은 처음 답과 같은 검사(누출, 기간, 인용, 코드 규칙, 판정 LLM)를 모두 통과해야 나간다. 하나라도 걸리면 None을 돌려준다."""
+        as_of, question, chunks = state.get("as_of"), state["question"], state.get("chunks", [])
+        rec: dict = {"result": ""}
+        info["redraft"] = rec
+        rules = skill("citation-rules")
+        try:
+            obj, _ = ask_json(P.with_skills(P.ANSWER_SYSTEM, [("인용 규칙 Skill", rules)]),
+                              P.redraft_user(question, chunks, as_of, state.get("answer", ""), verdict["detail"], verdict["claims"]))
+        except CostCapExceeded:
+            raise
+        except Exception as e:  # noqa: BLE001  호출 실패는 다시 쓰지 못한 것으로 보고 원래 판정대로 거절한다
+            log.warning("답 다시 쓰기 호출 실패: %s: %s", type(e).__name__, e)
+            rec["result"] = "error"
+            return None
+        obj = obj or {}
+        text = str(obj.get("answer") or "")
+        rec["answer"] = text
+        if not text.strip():
+            rec["result"] = "empty"
+        elif G.same_text(text, state.get("answer", "")):  # 그대로면 판정 결과도 같다
+            rec["result"] = "unchanged"
+        elif leaks_internal(text) or G.period_missing(question, text, obj.get("period_covered")):
+            rec["result"] = "answer_check_failed"
+        if rec["result"]:
+            return None
+        raw = obj.get("citations")
+        valid, dropped, cleaned = check_citations(raw if isinstance(raw, list) else [], chunks, text)
+        if dropped:
+            rec["dropped"] = dropped
+        if not valid or not cleaned or dropped:
+            rec["result"] = "citation_check_failed"
+            return None
+        kept, trimmed, cleaned = select_citations(valid, cleaned)
+        again = G.check_rules(question, kept, chunks)
+        if not again.ok:
+            rec["result"] = f"rules:{again.reason}"
+            return None
+        second = llm_verdict(question, cleaned, kept, as_of, body, chunks)
+        rec["result"] = f"rejudge_{second['state']}"
+        if second["state"] != "grounded":
+            return None
+        info.update(redrafted=True, draft_answer=state.get("answer", ""))
+        text = f"{cleaned} {MSG_PARTIAL_NOTE}" if obj.get("partial") is True or state.get("judge_partial") else cleaned
+        return {"kind": "answer", "answer": finish_answer(text, kept, as_of), "citations": kept, "trimmed_citations": [c["chunk_id"] for c in trimmed], "grounding": info, "skills_used": used}
 
     def ground(state: AgentState) -> dict:
         """인용 검사를 통과한 답이 검색된 근거로 받쳐지는지 본다. 코드 규칙이 먼저이고, 한쪽이라도 거절하면 거절한다.
-        LLM이 일부 문장만 받쳐지지 않는다고 하면(`unsupported`) 그 문장만 빼고 답을 유지한다(`revise_answer`). 그 밖의 사유는 전체를 거절한다."""
+        LLM이 받쳐지지 않는 주장이 있다고 하면(`unsupported`) 답을 한 번 다시 쓰고(`redraft_answer`), 안 되면 그 문장만 빼 본다(`revise_answer`). 그 밖의 사유는 전체를 거절한다."""
         body = skill("grounding-check")
         as_of, cited = state.get("as_of"), state.get("citations", [])
-        final = {"answer": finish_answer(state.get("answer", ""), cited, as_of)}
+        partial = bool(state.get("judge_partial"))  # 일부 근거만 있어 그 부분만 쓴 답. 나머지를 뺐다고 코드가 밝힌다
+        draft = state.get("answer", "")
+        final = {"answer": finish_answer(f"{draft} {MSG_PARTIAL_NOTE}" if partial else draft, cited, as_of)}
         if not body:  # USE_SKILLS를 끄면 건너뛴다
             return {**final, "grounding": {"llm": "off", "rules": "skipped(USE_SKILLS off)"}}
         used = note_skills(state, "grounding-check")
         v = G.check_rules(state["question"], cited, state.get("chunks", []))
-        info: dict = {"rules": v.checks, "llm": "off"}
+        info: dict = {"rules": v.checks, "llm": "off", **({"partial_route": True} if partial else {})}
         reason, detail = v.reason, v.detail
         if v.ok and (grounding_llm if grounding_llm is not None else not is_demo_mode()):
-            verdict = llm_verdict(state["question"], state.get("answer", ""), cited, as_of, body)
+            verdict = llm_verdict(state["question"], draft, cited, as_of, body, state.get("chunks", []))
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
             if verdict.get("error"):
                 info["llm_error"] = verdict["error"]
             if verdict["state"] == "ungrounded":
                 reason, detail = verdict["code"], verdict["detail"]
-                if reason == G.UNSUPPORTED and verdict["claims"]:
-                    revised = revise_answer(state, cited, verdict, info, body, used)
+                if reason == G.UNSUPPORTED:
+                    revised = redraft_answer(state, verdict, info, body, used)
+                    if revised is None and verdict["claims"]:
+                        revised = revise_answer(state, cited, verdict, info, body, used)
                     if revised is not None:
                         return revised
         if reason:
-            info.update(reason=reason, detail=detail)  # 판정 사유는 기록에만 둔다. 청크 id 같은 내부 값을 사용자에게 보이지 않는다
+            info.update(reason=reason, detail=detail, draft_answer=draft)  # 판정 사유와 초안은 기록에만 둔다. 청크 id 같은 내부 값을 사용자에게 보이지 않는다
             return {
                 "kind": "refuse",
                 "answer": MSG_REFUSE_BY_REASON[reason],
                 "citations": [],
+                "dropped_citations": [*state.get("dropped_citations", []), *(info.get("redraft") or {}).get("dropped", [])],
                 "refuse_reason": reason,
                 "grounding": info,
                 "skills_used": used,
@@ -472,8 +562,19 @@ def build_graph(
     g.add_edge(START, "load_memory")
     g.add_edge("load_memory", "classify")
     # 결정표와 합동 검토를 연결하면 이 표의 목적지만 바꾼다
-    g.add_conditional_edges("classify", lambda s: s.get("route", "rule"), {"rule": "rewrite", "decision": "rewrite", "review": "rewrite", "out_of_domain": "out_of_domain"})
+    if decision_repo is not None:   # 결정표 저장소가 있을 때만 결정표 경로를 따로 연다. 없으면 지금처럼 정책 질문으로 처리한다
+        g.add_node("decision_params", decision_params)
+        g.add_node("decision_run", run_decision)
+        g.add_node("decision_answer", decision_answer)
+        g.add_edge("decision_params", "decision_run")
+        g.add_edge("decision_run", "decision_answer")
+        g.add_edge("decision_answer", END)
+    decision_target = "decision_params" if decision_repo is not None else "rewrite"
+    g.add_conditional_edges("classify", lambda s: s.get("route", "rule"), {"rule": "rewrite", "decision": decision_target, "review": "review" if review_graph is not None else "rewrite", "out_of_domain": "out_of_domain"})
     g.add_edge("out_of_domain", END)
+    if review_graph is not None:
+        g.add_node("review", review_graph)  # 팀 합동 검토(F-03): 사람 승인 interrupt에서 멈추고 같은 thread_id로 재개한다
+        g.add_edge("review", END)
     g.add_edge("rewrite", "search")
     g.add_conditional_edges("search", lambda s: "end" if s.get("search_error") else "judge", {"end": END, "judge": "judge"})
     g.add_conditional_edges("judge", after_judge, {"write_answer": "write_answer", "rewrite": "rewrite", "give_up": "give_up"})

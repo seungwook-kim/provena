@@ -88,6 +88,13 @@ def test_not_split_or_out_of_rule_sends_no_sub_queries(raw):
     assert calls[0].sub_queries is None and calls[0].query == Q and calls[0].k == 5
 
 
+def test_company_name_at_the_start_of_a_sub_question_is_removed():
+    raw = j(split=True, sub_questions=["GitLab 정기 릴리스는 언제 나가?", "GitLab의 패치 릴리스는 몇 번 나가?", "GitLab.com 가용률은 얼마야?"])
+    fn, calls = recording_search()
+    run(build_graph(fn, llm=normal_llm(decompose=raw), decompose=True))
+    assert calls[0].sub_queries == ["정기 릴리스는 언제 나가?", "패치 릴리스는 몇 번 나가?", "GitLab.com 가용률은 얼마야?"]
+
+
 def test_four_sub_questions_are_cut_to_three():
     four = j(split=True, sub_questions=["첫째 질문", "둘째 질문", "셋째 질문", "넷째 질문"])
     fn, calls = recording_search()
@@ -136,14 +143,14 @@ def test_cost_cap_is_not_swallowed_by_decompose():
         dec.decompose_question(ask, Q)
 
 
-def test_off_by_default_and_the_search_gets_the_rewritten_query_as_before():
+def test_off_when_asked_and_the_search_gets_the_rewritten_query_as_before():
     fn, calls = recording_search()
     llm = normal_llm(decompose=GOOD)
-    out = run(build_graph(fn, llm=llm))
+    out = run(build_graph(fn, llm=llm, decompose=False))
     assert llm.count("decompose") == 0 and calls[0].sub_queries is None and calls[0].query == "SEV2 최초 대응" and out["sub_queries"] == []
 
 
-@pytest.mark.parametrize("env,want", [({}, False), ({"SEARCH_DECOMPOSE": "1"}, True), ({"SEARCH_DECOMPOSE": "0"}, False), ({"SEARCH_DECOMPOSE": ""}, False)])
+@pytest.mark.parametrize("env,want", [({}, True), ({"SEARCH_DECOMPOSE": "1"}, True), ({"SEARCH_DECOMPOSE": "0"}, False), ({"SEARCH_DECOMPOSE": "off"}, False), ({"SEARCH_DECOMPOSE": ""}, True)])
 def test_env_switch_and_explicit_argument(monkeypatch, env, want):
     for k, v in env.items():
         monkeypatch.setenv(k, v)
@@ -253,3 +260,26 @@ def test_answer_step_still_works_with_sub_queries_and_default_retriever_gets_the
     monkeypatch.setattr(search_mod, "_searcher", type("S", (), {"search": lambda self, q: (seen.append(q), fake_search(q))[1]})())
     out = run(build_graph(llm=normal_llm(decompose=GOOD, answer=lambda u: j(answer=f"답 [{first_chunk_id(u)}]", citations=[{"chunk_id": first_chunk_id(u)}])), decompose=True))
     assert seen and seen[0].sub_queries and seen[0].k == 5 and out["kind"] in ("answer", "refuse")
+
+
+# ---------- 첫 검색의 회사 이름 ----------
+@pytest.mark.parametrize("question,want", [
+    ("GitLab 정기 릴리스는 언제 나가?", "정기 릴리스는 언제 나가?"),
+    ("GitLab의 패치 릴리스는 몇 번 나가?", "패치 릴리스는 몇 번 나가?"),
+    ("gitlab에서 온콜은 누가 해?", "온콜은 누가 해?"),
+    ("GitLab.com 가용률은 얼마야?", "GitLab.com 가용률은 얼마야?"),
+    ("정기 릴리스는 GitLab 어디에 적혀 있어?", "정기 릴리스는 GitLab 어디에 적혀 있어?"),
+])
+def test_first_search_drops_the_company_name_at_the_start_of_the_question(question, want):
+    fn, calls = recording_search()
+    llm = insufficient_llm(decompose=NOT_SPLIT)
+    run(build_graph(fn, llm=llm, decompose=True), question=question)
+    assert calls[0].query == want
+    assert next(u for t, u in llm.calls if t == "decompose") == question  # 분해 입력은 사용자가 쓴 질문 그대로다
+    assert all(c.query != want for c in calls[1:])  # 재검색은 재작성 검색어를 쓴다
+
+
+def test_company_name_is_kept_when_decompose_is_off():
+    fn, calls = recording_search()
+    run(build_graph(fn, llm=normal_llm(rewrite=j(query="release schedule", org=None, as_of=None)), decompose=False), question="GitLab의 패치 릴리스는 몇 번 나가?")
+    assert calls[0].query == "release schedule"

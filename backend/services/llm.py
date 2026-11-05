@@ -20,6 +20,7 @@ LLM 호출의 트레이스와 비용 기록도 이 파일 한 곳으로 모은�
 끝나면 `finish_run(config)`을 부른다.
 - Langfuse 트레이스: `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`가 있을 때만(`tracing.py`). 없으면 트레이스 없이 그대로 돈다.
 - 비용 상한: `LLM_COST_CAP_USD`(`cost.py`). 한 질문의 LLM 비용이 상한에 닿으면 다음 호출에서 `CostCapExceeded`.
+- 호출별 시간 기록: `llm_trace.capture()` 안에서 만든 config에만 붙는다(`llm_trace.py`). 평가 실행기가 켠다.
 """
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
-from backend.services import tracing
+from backend.services import llm_trace, tracing
 from backend.services.demo_replay import env_flag
 from backend.services.cost import CostCapExceeded, CostTracker, cost_cap_from_env
 
@@ -191,6 +192,9 @@ def run_config(
     handler = tracing.get_handler()
     if handler is not None:
         callbacks.append(handler)
+    recorder = llm_trace.handler()  # `llm_trace.capture()` 안에서만 있다. 평소에는 None
+    if recorder is not None:
+        callbacks.append(recorder)
     config: dict[str, Any] = {
         "callbacks": callbacks,
         "metadata": meta,

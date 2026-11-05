@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 김승욱 (Claude Code) | `build_graph` 설명의 `SEARCH_DECOMPOSE` 문구를 코드(기본 켬, `decompose_enabled()`)에 맞춤. 동작 변경 없음 | 미정 |
 | 2026-11-02 | 김승욱 (Claude Code) | 단일 에이전트 그래프 v1: `build_graph`, 노드 10개, 재검색 2회 상한, 인용 검사, 근거 판정, 저장, `AgentEvent` 흐름 | 이번 PR |
 
 ## 문제 기록 (최신이 위)

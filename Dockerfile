@@ -22,6 +22,8 @@ COPY data/ ./data/
 RUN python -m backend.rag.ingest.snapshot unpack
 COPY web/ ./web/
 COPY db/ ./db/
+# 런타임 Skill(SKILL.md). backend/services/skills.py가 /app/skills/<이름>/SKILL.md를 읽는다. 이미지에 없으면 USE_SKILLS가 켜진 정책 질문이 FileNotFoundError로 실패한다
+COPY skills/ ./skills/
 # MCP 도구(MCP_TOKEN이 있을 때만 /mcp/에 붙음, docs/specs/mcp.md)
 COPY extras/ ./extras/
 

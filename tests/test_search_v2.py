@@ -108,9 +108,21 @@ def test_k_not_above_link_n_skips_expansion():
 
 # ---------- 하위 질문 (요청 2) ----------
 
+def test_split_question_keeps_two_places_per_sub_question_before_links():
+    # 하위 질문 2개는 4자리를 지키고 남은 1자리만 링크로 바꾼다
+    got = make().search(SearchQuery(query=Q, sub_queries=[S1, S2]))
+    assert ids(got) == ["a1", "c1", "a2", "c2", "b2"] and last_search_trace().n_link == 1
+
+
+def test_three_sub_questions_leave_no_place_for_links():
+    # 하위 질문 3개는 5자리를 모두 번갈아 합친 결과로 채운다. 링크가 하위 질문의 2위를 밀어내지 않는다(평가셋 v1 6번)
+    got = make().search(SearchQuery(query=Q, sub_queries=[S1, S2, "third part"]))
+    assert last_search_trace().n_link == 0 and last_search_trace().n_sub == 3 and len(got) == 5
+
+
 def test_sub_queries_roundrobin_then_l1x2_with_full_query_vector():
     calls = []
-    got = make(calls=calls).search(SearchQuery(query=Q, sub_queries=[S1, S2]))
+    got = make(calls=calls, link_keep_per_sub=0).search(SearchQuery(query=Q, sub_queries=[S1, S2]))
     # 하위 질문 1 → a1 a2 a3 …, 하위 질문 2 → c1 c2 … 를 번갈아 5개(a1 c1 a2 c2 a3) → 뒤 2자리를 전체 질문 벡터로 고른 9쪽 청크로
     assert ids(got) == ["a1", "c1", "a2", "b2", "b3"]             # 하위 질문 2 벡터로 골랐다면 b1·b3
     assert calls == [[Q, S1, S2]]                                  # 임베딩은 한 번에(API 요청 1번)
