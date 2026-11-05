@@ -1,11 +1,13 @@
-"""FastMCP 읽기 전용 도구 3개 (docs/specs/mcp.md). 가산 MCP·Skill의 서버 쪽.
+"""FastMCP 읽기 전용 도구 5개 (docs/specs/mcp.md). 가산 MCP·Skill의 서버 쪽.
 
-도구는 backend/rag/ 함수를 감싸기만 하고 검색 로직을 다시 짜지 않는다. 쓰기·실행 도구는 없다(NOT_BUILT.md).
+도구는 backend/ 함수를 감싸기만 하고 검색·판단 로직을 다시 짜지 않는다. 쓰기·실행 도구는 없다(NOT_BUILT.md).
   search_handbook        → backend.rag.retrieve.search.search
   get_section            → backend.rag.retrieve.section.get_section
   list_changed_sections  → backend.rag.ingest.changes.list_changed
+  explain_decision       → backend.graph.decision.execute.DecisionExecutor.run   (decision_tool.py)
+  get_agent_trace        → LangGraph 체크포인터 list(thread_id) 읽기만             (trace_tool.py)
 
-세 도구는 같은 응답 모양(ToolResponse)을 돌려준다. 글만 돌려주면 "못 찾음"·"고장"이 그럴듯한 문장에 묻히므로
+다섯 도구는 같은 응답 모양(ToolResponse)을 돌려준다. 글만 돌려주면 "못 찾음"·"고장"이 그럴듯한 문장에 묻히므로
 에이전트가 다음 행동을 고를 수 있게 status와 retryable을 따로 둔다(Spec How 1).
 
 연결: backend/main.py가 MCP_TOKEN이 있을 때만 `/mcp`에 mcp_http_app()을 붙인다. 인증은 Bearer 헤더 하나(정적 토큰).
@@ -18,6 +20,7 @@ import hmac
 import logging
 import os
 import re
+import threading
 from typing import Any, Callable, Literal
 
 from fastmcp import FastMCP
@@ -108,6 +111,38 @@ class _Deps:
         return default_store()
 
 
+_pg_lock = threading.Lock()
+_pg = None
+
+
+def pg_pool():
+    """결정표 저장소·체크포인터를 읽을 연결 풀. DATABASE_URL이 없으면 None. 처음 부를 때 한 번 만든다(section.default_store와 같은 방식).
+
+    모양은 두 쪽이 요구하는 autocommit·dict_row(repo.py PostgresDecisionRepo 주석, checkpoint.py open_persistence의 풀).
+    prepare_threshold=None(준비된 문장 안 씀)은 section.PgSectionStore와 같다. 표를 만들지 않는다(setup 없음).
+    """
+    global _pg
+    with _pg_lock:
+        if _pg is None:
+            url = (os.environ.get("DATABASE_URL") or "").strip()
+            if not url:
+                return None
+            from psycopg.rows import dict_row
+            from psycopg_pool import ConnectionPool
+            _pg = ConnectionPool(url, min_size=1, max_size=2, open=True,
+                                 kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row})
+    return _pg
+
+
+def missing_table(exc: BaseException) -> bool:
+    """표가 아직 없음(setup·SQL 적용 전). 고장이 아니라 '아직 없음'이므로 도구가 not_ready로 돌려준다."""
+    try:
+        from psycopg.errors import UndefinedTable
+    except ImportError:            # pragma: no cover — requirements에 있음
+        return False
+    return isinstance(exc, UndefinedTable)
+
+
 async def _run(fn: Callable, *args):
     """막는 함수(DB·모델)를 스레드에서, 제한 시간 안에."""
     return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=TOOL_TIMEOUT_S)
@@ -165,12 +200,15 @@ def _check_date(value: str | None, name: str) -> None:
         raise Invalid(f"{name}는 YYYY-MM-DD 형식의 실제 날짜: {value!r}") from e
 
 
-def build_server(search_fn=None, section_store=None, changes_store=None, auth: TokenVerifier | None = None) -> FastMCP:
+def build_server(search_fn=None, section_store=None, changes_store=None, auth: TokenVerifier | None = None,
+                 decision_repo=None, checkpointer=None) -> FastMCP:
     deps = _Deps(search_fn, section_store, changes_store)
     mcp = FastMCP("provena-handbook", auth=auth, instructions=(
-        "GitLab 공개 핸드북(고정 커밋) 검색 도구 3개. 모두 읽기 전용이다. 답에는 결과의 source_url·version_date를 인용한다. "
+        "읽기 전용 도구 5개. GitLab 공개 핸드북(고정 커밋) 검색 3개(search_handbook, get_section, list_changed_sections), "
+        "승인된 결정표 실행 결과 explain_decision, 대화(thread_id)의 에이전트 실행 단계 get_agent_trace. "
+        "답에는 결과의 source_url·version_date를 인용한다. "
         "status가 ok가 아니면 note를 읽고 다음 행동을 고른다(invalid=입력을 고쳐 다시, unavailable=잠시 뒤 다시, "
-        "error=다시 부르지 말고 이 도구 없이 답)."))
+        "not_ready=아직 없음이지 '없다'가 아님, error=다시 부르지 말고 이 도구 없이 답)."))
 
     @mcp.tool(annotations=READ_ONLY)
     async def search_handbook(query: str, org: str | None = None, as_of: str | None = None, k: int = DEFAULT_K,
@@ -288,6 +326,9 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
             notes.append("마지막 실행이 파일 목록을 끝까지 받지 못해 삭제를 보류했습니다. 사라진 섹션이 아직 목록에 없을 수 있습니다.")
         return _resp("ok", src, [a.model_dump() for a in items], as_of=last.finished_at, note=" / ".join(notes) or None)
 
+    from extras.mcp_skill.mcp_server import decision_tool, trace_tool   # 두 모듈이 이 파일을 import하므로 여기서 불러 순환을 피한다
+    decision_tool.register(mcp, repo=decision_repo)
+    trace_tool.register(mcp, saver=checkpointer)
     return mcp
 
 

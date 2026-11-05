@@ -3,7 +3,7 @@
 가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 이 파일은 부르는 쪽만 만든다.
 그래프 연결(SEARCH_VIA_MCP, SDD 2-3절)은 김승욱 build.py에서 한다 — 여기서 build.py·search.py를 고치지 않는다.
 
-  load_tools()        MCP 도구 3개를 LangChain 도구로 (에이전트가 도구를 직접 고르게 할 때)
+  load_tools()        MCP 도구 5개를 LangChain 도구로 (에이전트가 도구를 직접 고르게 할 때)
   search_via_mcp(q)   search()와 같은 모양(list[Chunk])으로 search_handbook을 부른다 (검색 노드가 search() 대신 부를 때)
 
 라이브러리: langchain[mcp] (PRD 319줄·SDD 77줄, 베타). langchain.mcp는 FastMCP Client 위에서 MCP 도구를 LangChain 도구로 바꾼다.
@@ -64,7 +64,7 @@ def make_client(target: Any = None, token: str | None = None, timeout: float = C
 
 
 async def load_tools(target: Any = None, token: str | None = None) -> list:
-    """서버의 도구(지금 3개)를 LangChain 도구로. 도구 결과의 structured_content는 ToolMessage.artifact에 담긴다."""
+    """서버의 도구(지금 5개)를 LangChain 도구로. 도구 결과의 structured_content는 ToolMessage.artifact에 담긴다."""
     from langchain_core._api import LangChainBetaWarning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", LangChainBetaWarning)

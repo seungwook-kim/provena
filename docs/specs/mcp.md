@@ -1,5 +1,6 @@
-# Spec — FastMCP 읽기 전용 도구 3개 (박진형, 업무 분담 6번 · 가산 MCP·Skill)
+# Spec — FastMCP 읽기 전용 도구 5개 (박진형, 업무 분담 6번 · 가산 MCP·Skill)
 
+> 2026-11-05: 조장 요청으로 결정표 실행 결과(`explain_decision`)·체크포인트 실행 단계(`get_agent_trace`) 도구 2개를 더했다(아래 "도구 4·5" 절). 검색 도구 3개의 약속은 그대로다.
 > 2026-11-03판(구현과 같이 고침, 조장 확인 전). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 486줄(시험), 501줄(섹션 조회), 529줄(같은 서비스)과 PRD 319줄(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
 
 ## Why
@@ -16,7 +17,7 @@
 
 - **해결 목표**: 검색·섹션 조회·바뀐 섹션 목록을 읽기 전용 MCP 도구 3개로 연다. 도구는 `backend/rag/` 함수를 감싸기만 하고 검색 로직을 다시 짜지 않는다. 쓰기·실행 도구는 내보내지 않는다.
 - **성공 기준**
-  - 도구는 정확히 3개(`search_handbook`, `get_section`, `list_changed_sections`)이고 이름·입력 이름은 ASCII만 쓴다.
+  - 도구는 정확히 5개(검색 `search_handbook`, `get_section`, `list_changed_sections` + `explain_decision`, `get_agent_trace`)이고 이름·입력 이름은 ASCII만 쓴다. 5개는 강의의 도구 수 기준(3~5개) 상한이다 — 더 늘리려면 다른 도구를 줄이거나 합칠지 먼저 본다.
   - MCP로 부른 `search_handbook` 결과 = `search()` 직접 호출 결과(chunk_id 순서까지, v1 30문항 30/30).
   - `get_section`이 되살린 본문은 청크마다 sha256이 `chunks.text_sha256`과 같고, 섹션 3개 이상을 파싱 결과와 글자 단위로 대조해 같다.
   - `list_changed_sections`를 불러도 `changed_articles`가 바뀌지 않는다(호출 전후 표 지문이 같음).
@@ -114,6 +115,8 @@
 | `Dockerfile` | `COPY extras/ ./extras/` 한 줄(지금 이미지에 `extras/`가 없다) | 김승욱 리뷰 |
 | `backend/requirements.txt`, `.env.example` | `fastmcp==4.1.4`, `MCP_TOKEN=` | 내 줄만 |
 | `extras/mcp_skill/mcp_client/client.py`, `tests/test_mcp_client.py` | 클라이언트(아래 "클라이언트" 절). `requirements.txt`에 `langchain[mcp]==1.4.9` 한 줄 | 박진형 (그래프 연결은 김승욱) |
+| `extras/mcp_skill/mcp_server/decision_tool.py`, `tests/test_mcp_decision_tool.py` | `explain_decision`(아래 "도구 4·5" 절) | 박진형 |
+| `extras/mcp_skill/mcp_server/trace_tool.py`, `tests/test_mcp_trace_tool.py` | `get_agent_trace`(아래 "도구 4·5" 절) | 박진형 |
 
 **열린 항목**
 
@@ -125,24 +128,54 @@
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다
 
 7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
+8. `get_agent_trace` 조회 범위(2026-11-05): 토큰 하나만 있으면 아무 thread_id나 조회할 수 있다. 칸을 화이트리스트로 줄여 대화 내용·사람 정보는 나가지 않지만, 그 대화가 있었다는 사실·진행 상태·시각은 드러난다. 사람 로그인과 thread를 묶는 `/chat` 연결 때 MCP 쪽도 사용자 범위를 둘지 정한다(지금 MCP 토큰은 기계 키 하나라 누가 묻는지 모른다)
+9. 비용(2026-11-05): 체크포인트에 비용 칸이 없어 `get_agent_trace`의 `cost_usd`는 null이다. 서비스 경로에서 LLM 호출 비용을 남기려면(`llm_trace.py`를 켜거나 상태에 칸을 더하기) 그래프 쪽 결정이 먼저다
+10. 도구 수: 5개로 강의 기준(3~5개) 상한이다. 더 더하기 전에 같은 문항으로 도구 선택이 나빠지는지 본다
 
 ## 클라이언트 (그래프 쪽 MCP 호출, 2026-11-05 추가)
 
 가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 서버를 부르는 쪽을 `extras/mcp_skill/mcp_client/client.py`에 둔다. 그래프에 붙이는 일(`SEARCH_VIA_MCP`, SDD 2-3절)은 김승욱이 `backend/graph/build.py`에서 한다 — 이 절은 `build.py`·`search.py`를 고치지 않는다.
 
 - 라이브러리: `langchain[mcp]` 1.4.9(PRD 319줄·SDD 77줄, 베타). `langchain.mcp.MCPAdapter`가 FastMCP `Client` 위에서 MCP 도구를 LangChain `StructuredTool`로 바꾼다(결과의 `structured_content`는 `ToolMessage.artifact`). sandbox에서 `fastmcp==4.1.4`와 같이 설치되는 것을 확인했다(`langchain-core` 1.7.5 이상을 끌어온다). 공식 문서: https://docs.langchain.com/oss/python/langchain/mcp
-- `load_tools(target, token)` → LangChain 도구 3개. 에이전트가 도구를 직접 고르게 할 때.
+- `load_tools(target, token)` → LangChain 도구 5개(서버 도구 전부). 에이전트가 도구를 직접 고르게 할 때.
 - `search_via_mcp(q: SearchQuery, target, token) -> list[Chunk]` → `search(q)`와 같은 모양. 검색 노드가 `search()` 대신 부르면 된다. 이미 이벤트 루프 안이어도 부를 수 있다(새 스레드). 서버 note(`fallback_reason` 등)는 `last_mcp_note()`.
 - 상태 → 결과: `ok` = Chunk 목록, `not_found` = 빈 목록, `unavailable`·연결 실패·시간 초과 = `McpUnavailable`(재시도 가능, `ConnectionError` 하위), `invalid`·`error`·`not_ready` = `McpSearchError`(재시도 불가).
 - 주소·토큰: `MCP_URL`(기본 `http://127.0.0.1:8000/mcp/`), `MCP_TOKEN`(Bearer). 문자열 주소는 http(s)만 받는다 — fastmcp는 문자열을 파일 경로로 먼저 읽어 `.py`면 실행하기 때문이다(langchain.mcp도 같은 이유로 막는다). 토큰이 비면 `ValueError`.
 - 클라이언트 쪽 호출 시간 제한 35초(서버 도구 30초보다 길게 — 서버가 먼저 `unavailable`로 답하게).
 
+## 도구 4·5 — `explain_decision`, `get_agent_trace` (2026-11-05 추가, 조장 요청)
+
+둘 다 읽기 전용이고 같은 응답 모양(How 1)이다. 저장소는 MCP 앱이 FastAPI lifespan보다 먼저 만들어지므로(`backend/main.py` `create_app`) `app.state`를 읽지 않는다. 시험은 `build_server(decision_repo=..., checkpointer=...)`로 넣고, 비우면 처음 부를 때 `DATABASE_URL`로 읽기용 풀(`server.pg_pool()`, autocommit·dict_row, 표를 만들지 않음) 위에 `PostgresDecisionRepo`·`PostgresSaver`를 만든다. `DATABASE_URL`이 없거나 표가 아직 없으면 `not_ready`("없다"가 아님).
+
+**`explain_decision(task_type, amount_usd?, table_id?, band?)`** (`decision_tool.py`)
+- 판단 코드를 따로 두지 않고 그래프·HTTP와 같은 실행기 `DecisionExecutor(repo).run(...)`을 부른다(그래프 `build.py` `make_execute_node`, HTTP `routes.py` `execute`). 경계 금액·겹치는 구간 거절·위 끝이 빈 구간 해석은 모두 `rules.py`를 따른다.
+- 입력: `task_type` 필수 1~200자(HTTP `_parse_run`과 같다), `table_id`·`band` 1~200자 또는 비움, `amount_usd`는 JSON 숫자만(글 `"30000"`·`true`는 MCP 입력 검사에서 막힌다. 기본 float는 `true`를 1로 받아 실행했다 — 실측). 금액 값 검사는 실행기 `check_amount`.
+- 출력: HTTP 실행 응답 `RunResponse`와 같은 칸(table_id, version_id, band_label, range_note, approvers, functional_approvers, financial_approvers, cooperating, source{rule_seq, category, band, article, source_url}) + `approved: true`. 승인한 관리자 id(`approved_by`)는 내보내지 않는다(HTTP 응답에도 없다). `source = decision_tables:<table_id>@<version_id>`, `as_of` = 고정해 둔 권한표 판 날짜(모르는 판이면 null).
+- 실행기 오류 → 상태: `BadRequest`(400) → `invalid` / `NotFound`(404) → `not_found` / `NotApproved`(409) → `not_ready` / `AmbiguousTable`(409) 승인된 표 0개 → `not_ready`(note에 승인된 업무 종류 후보), 2개 이상 → `invalid`(note에 후보 table_id) / `AmbiguousBand`(422) → `not_found`(입력이 틀린 것이 아니고 band를 줘도 같다. 결정표가 그 금액에 답하지 않는다). note는 실행기 글만 쓴다.
+
+**`get_agent_trace(thread_id)`** (`trace_tool.py`)
+- Langfuse trace_id가 아니라 대화 `thread_id`로 LangGraph 체크포인트를 읽는다(조장 지시). 체크포인터의 `list()`만 부르고 쓰지 않는다.
+- 체크포인트 모양(실측, 메모리 체크포인터로 실제 그래프를 돌려 확인): 바깥 그래프는 `checkpoint_ns=""`, 하위 그래프는 `"<노드>:<task id>"`(질문 그래프의 합동 검토 `review:…`, 멀티 그래프의 `retriever:…`·`writer:…`·`verifier:…`). 합동 검토 그래프를 단독으로 돌리면 검토 상태가 `""`에 있다. 하위 그래프 체크포인트 metadata `parents[""]`가 바깥 체크포인트 id다. metadata에는 `step`·`source`·`parents`만 있어 돈 노드는 앞뒤 체크포인트의 `versions_seen` 차이로 읽는다.
+- 출력(마지막 실행 하나): 돈 노드 순서와 단계별 시각·걸린 시간(같은 그래프의 앞 체크포인트 `ts`와의 차이, 사람 승인을 기다린 단계는 `includes_human_wait`), `route`, 멀티 그래프의 `agent_trace`·`supervisor_log`(after·to·closed_by만), 합동 검토 `review_status`·팀별 상태와 시도 횟수·실패한 팀 id, 승인 대기 여부(`__interrupt__`가 있고 `__resume__`이 없음), `stopped_on_error`, 이 thread의 실행 수. `cost_usd`는 null(체크포인트에 비용 칸이 없고, `llm_trace.py`는 서비스 경로에서 켜지 않는다). 최신 체크포인트 200개까지 읽고 넘으면 `complete=false`.
+- 내보내지 않음: 질문·답, user_id, 검색 청크, 쟁점표 행, 사람 결정의 comment·decided_by, 팀 결과의 rows·reason, Supervisor 지시 글. 칸을 지우지 않고 고른 칸만 옮긴다(이름은 식별자 모양만, 상태는 코드가 정한 값만).
+- thread_id: 1~200자, 제어 문자 없음. 형식이 정해진 곳이 없어(SDD `/chat` `{thread_id, message}`) 길이만 막는다.
+
 ## AC (Given-When-Then)
 
-**AC-01 · 도구는 3개, 읽기 전용**
+**AC-01 · 도구는 5개, 읽기 전용**
 - GIVEN: `MCP_TOKEN`이 있는 앱
 - WHEN: 도구 목록을 받는다
-- THEN: 이름이 정확히 `search_handbook`·`get_section`·`list_changed_sections`이고 모두 ASCII. 쓰기·실행 도구가 없다
+- THEN: 이름이 정확히 `search_handbook`·`get_section`·`list_changed_sections`·`explain_decision`·`get_agent_trace`이고 모두 ASCII·읽기 전용 표시. 쓰기·실행 도구가 없다(`explain_decision`은 승인된 표의 규칙을 계산만 한다. 표를 만들거나 승인하지 않는다)
+
+**AC-D1 · 결정표 답 = 실행기 답** (`tests/test_mcp_decision_tool.py`)
+- GIVEN: 2023 권한표 `Approving expense`를 승인한 메모리 저장소
+- WHEN: 경계 금액 포함 9개 금액으로 `explain_decision`과 `DecisionExecutor.run`을 부른다
+- THEN: 결과가 HTTP `RunResponse` 칸 그대로 같고(+`approved: true`), 출력 어디에도 승인자 id가 없다. $500,000(두 구간)은 `not_found`, 승인된 표 0개는 `not_ready`, 2개는 `invalid`, 초안 표는 `not_ready`
+
+**AC-T1 · 체크포인트 단계와 상태** (`tests/test_mcp_trace_tool.py`)
+- GIVEN: 가짜 모델로 돌린 질문 그래프+합동 검토 하위 그래프 / 합동 검토 단독(팀 실패) / 멀티 그래프, 메모리 체크포인터
+- WHEN: 그 thread_id로 `get_agent_trace`
+- THEN: 돈 노드 순서, 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
 
 **AC-02 · MCP 결과 = 직접 호출 결과**
 - GIVEN: 평가셋 v1 30문항, 같은 검색 설정
@@ -194,10 +227,10 @@
 - WHEN: Claude Code에 `claude mcp add --transport http` 로 `/mcp/`를 등록하고 핸드북 질문을 한다
 - THEN: `search_handbook`이 불리고 청크·출처 URL이 화면에 나온다(시연 영상 캡처)
 
-**AC-C1 · 클라이언트가 도구 3개를 LangChain 도구로 받는다** (`tests/test_mcp_client.py`)
+**AC-C1 · 클라이언트가 도구 5개를 LangChain 도구로 받는다** (`tests/test_mcp_client.py`)
 - GIVEN: 가짜 검색기를 넣은 서버(같은 프로세스)
 - WHEN: `load_tools()`
-- THEN: 이름이 정확히 세 개인 `BaseTool`이 오고, `search_handbook` 호출 결과의 `artifact.structured_content.status`가 `ok`다
+- THEN: 이름이 정확히 다섯 개인 `BaseTool`이 오고, `search_handbook` 호출 결과의 `artifact.structured_content.status`가 `ok`다
 
 **AC-C2 · `search_via_mcp` = 직접 `search()`**
 - GIVEN: 같은 가짜 검색기, `query·org·as_of·k`를 채운 `SearchQuery`

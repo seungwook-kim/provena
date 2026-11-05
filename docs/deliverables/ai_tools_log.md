@@ -4,6 +4,7 @@
 
 | 날짜 | 도구 | 맡긴 일 | 결과를 어떻게 검증했나 | AI가 틀린 곳 |
 |---|---|---|---|---|
+| 2026-11-05 | Claude Code (박진형) | MCP 읽기 전용 도구 `explain_decision`(결정표 실행기 그대로)·`get_agent_trace`(thread_id로 체크포인트 읽기) 추가, Spec·`NOT_BUILT.md` 갱신 | 체크포인트가 어디 남는지는 가짜 모델로 실제 그래프 3가지(질문+검토 하위, 검토 단독, 멀티)를 메모리 체크포인터로 돌려 확인. MCP 시험 105 통과·2 건너뜀(DB 없음), 결정표·합동 검토·멀티 관련 시험 441 통과(sandbox 3.14). 결정표 답은 실행기 결과·HTTP 응답 칸과 9개 금액에서 같음. 변이 6개(승인자 id 유출, 다른 판단 2가지, 비용 0, 팀 실패 이유 유출, 첫 실행 읽기) 모두 시험이 잡음 | 금액 칸을 기본 float로 두어 MCP가 `true`를 $1로 받아 실행함 → 연기 시험에서 발견, 엄격 숫자로 고치고 시험 추가. 첫 "다른 판단" 변이는 출처 주소 차이로만 잡혀 판단 차이만 남긴 변이로 다시 확인 |
 | 2026-11-05 | Claude Code (박진형) | #51 리뷰 반영: MCP `search_handbook`에 `sub_queries` 칸, 클라이언트가 그대로 보내기, `.env.example` `MCP_URL` | `tests/test_mcp_server.py`·`test_mcp_client.py`만 돌림(56 통과, DB 시험 2개 건너뜀, sandbox 3.14): 분해 질문이 빠짐없이 같은 순서로 `search()`까지 감, 1개·4개·빈 글은 `search()` 전에 `invalid`, 빈 목록은 "나누지 않음" | 없음 |
 | 2026-11-05 | Claude Code (김승욱) | D5 Supervisor 멀티 그래프, 합동 검토, 결정표 구현과 v2 50건 3회 측정 | 시험 실행과 측정 원시 결과로 확인했다. 주의 문항 6건의 답은 정답지와 대조했다 | 측정에 쓸 API 키의 출처를 시작 전에 확인하지 않았다 |
 | 2026-11-05 | Claude Code (박진형) | MCP 클라이언트 `extras/mcp_skill/mcp_client/client.py`(조장 요청, 그래프 연결 전 단계): `langchain[mcp]` 1.4.9로 도구 3개를 LangChain 도구로 받기, `search()`와 같은 모양의 `search_via_mcp`, 재시도 가능·불가 실패 구분 | `tests/test_mcp_client.py` 12개(같은 프로세스 서버, 네트워크·유료 API 없음): 직접 `search()`와 같은 Chunk·같은 순서, 틀린 토큰 401, 닫힌 주소 → 재시도 가능 실패. 핵심 한 줄 변이 2개를 시험이 잡음. 설치·시험은 Python 3.14 sandbox, 3.12는 PR CI | 서버 `search_handbook`에 `sub_queries` 칸이 없어 분해 질문을 못 넘김(Spec 열린 항목 7) — 클라이언트는 빼지 않고 `invalid`로 거절 |

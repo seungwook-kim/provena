@@ -1,16 +1,18 @@
 # 만들지 않는 MCP 도구와 이유
 
-MCP 서버(`mcp_server/server.py`)는 읽기 전용 도구 3개만 연다(`docs/specs/mcp.md`). 아래 도구는 일부러 만들지 않았다.
-새 도구를 더하려면 이 표의 이유를 먼저 반박하고 Spec부터 고친다.
+MCP 서버(`mcp_server/server.py`)는 읽기 전용 도구 5개만 연다(`docs/specs/mcp.md`). 아래 도구는 일부러 만들지 않았다.
+새 도구를 더하려면 이 표의 이유를 먼저 반박하고 Spec부터 고친다. 5개는 강의의 도구 수 기준(3~5개) 상한이다.
 
 | 만들지 않는 도구 | 이유 | 대신 쓰는 곳 |
 |---|---|---|
-| 결정표 실행·승인 (`approve_decision` 같은 것) | 사람 승인 지점이다(G4 interrupt). 도구로 열면 승인 없이 실행할 길이 생긴다 | 그래프의 interrupt → 승인함 화면 |
+| 결정표 만들기·승인·수정 (`approve_decision` 같은 것) | 사람 승인 지점이다(G4 interrupt). 도구로 열면 승인 없이 실행할 길이 생긴다. `explain_decision`은 이미 승인된 표의 규칙을 실행기로 계산만 하고, 승인 전 표는 실행기가 막는다(`NotApproved`) | 그래프의 interrupt → 승인함 화면 |
+| 합동 검토 재개·승인 보내기(`Command(resume=...)`) | 사람 결정이다. `get_agent_trace`는 체크포인트를 읽기만 하고(`list()`), 승인 대기 여부만 알린다 | `POST /approvals/{id}`(관리자·CSRF) |
+| 체크포인트 상태 통째로 보기 | 질문·답·user_id·쟁점표·사람 결정 사유가 들어 있다. MCP 토큰은 누가 묻는지 모른다 | `get_agent_trace`가 고른 칸(노드 순서·상태값·시각)만 |
 | 리콜 확인·정정 보내기 | 지난 답을 바꾸는 쓰기다. 어느 답을 바꿀지는 리콜 그래프가 판단하고 기록을 남긴다 | 리콜 그래프(김승욱) |
 | `changed_articles.status` 바꾸기(`pending → sent`) | 리콜 쪽이 받았다는 표시다. 목록 도구가 바꾸면 리콜이 영영 못 받는 줄이 생긴다(AC-06, AC-10 변이) | 리콜 쪽 코드 |
 | 증분 수집 실행 | 정시 실행·중복 방지(`sync_runs` 슬롯)는 Actions 한 곳에서만. 도구로 열면 아무나 여러 번 돌린다 | `.github/workflows/` 증분 작업 |
 | 아무 SQL 실행 | 표 전부(로그인 표 포함)를 읽고 쓸 수 있게 된다 | 없음 |
 | 아무 URL 가져오기 | 코퍼스는 고정 커밋 공개 핸드북이다. 바깥 글을 근거로 끌어오면 판 날짜·출처를 보장 못 하고 간접 인젝션 통로가 된다 | 없음 |
 | 비공개 문서(`internal.gitlab.com`) 따라가기 | 코퍼스 밖이다(PRD 68줄). 본문의 그 링크는 `[비공개 문서]`로 바꿔 보낸다(SDD 76줄) | 없음 |
-| `FastMCP.from_fastapi` 자동 변환 | 로그인·관리 경로까지 도구로 나간다 | 도구 3개를 손으로 정의 |
-| MCP resource·prompt | 이번 범위 밖(Spec Out of Scope). 도구 3개로 가산 조건을 채운다 | — |
+| `FastMCP.from_fastapi` 자동 변환 | 로그인·관리 경로까지 도구로 나간다 | 도구 5개를 손으로 정의 |
+| MCP resource·prompt | 이번 범위 밖(Spec Out of Scope). 도구로 가산 조건을 채운다 | — |
