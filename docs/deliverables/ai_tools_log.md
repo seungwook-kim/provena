@@ -4,6 +4,7 @@
 
 | 날짜 | 도구 | 맡긴 일 | 결과를 어떻게 검증했나 | AI가 틀린 곳 |
 |---|---|---|---|---|
+| 2026-11-05 | Claude Code (박진형) | 조장 요청(#54 댓글 3번) `link_keep_per_sub` 0→2와 진형 추가 전수→HNSW 오프라인 측정의 사전 등록 #26·#27 (측정 전, 운영 DB·LLM·Voyage 호출 없음) | 기대 범위의 근거를 코드 줄(`search.py:60`·`:547~561`·`:224~226`)과 저장 결과 `decompose/voyage/dec.json`·`dec+L1x2.json`에서 직접 셈(나뉜 11문항의 링크 삽입 수), 측정 재료(저장 벡터·분해·링크 표·로컬 pgvector) 유무를 sha256으로 대조. keep=2의 Recall@5는 미리 계산하지 않음 | 처음 안은 두 변경을 한 건으로 등록하려 했다. "한 번에 하나만 바꾼다"(`PREREGISTER.md:3`)에 어긋나 #26·#27로 나눴다 |
 | 2026-11-05 | Claude Code (박진형) | #51 리뷰 반영: MCP `search_handbook`에 `sub_queries` 칸, 클라이언트가 그대로 보내기, `.env.example` `MCP_URL` | `tests/test_mcp_server.py`·`test_mcp_client.py`만 돌림(56 통과, DB 시험 2개 건너뜀, sandbox 3.14): 분해 질문이 빠짐없이 같은 순서로 `search()`까지 감, 1개·4개·빈 글은 `search()` 전에 `invalid`, 빈 목록은 "나누지 않음" | 없음 |
 | 2026-11-05 | Claude Code (김승욱) | D5 Supervisor 멀티 그래프, 합동 검토, 결정표 구현과 v2 50건 3회 측정 | 시험 실행과 측정 원시 결과로 확인했다. 주의 문항 6건의 답은 정답지와 대조했다 | 측정에 쓸 API 키의 출처를 시작 전에 확인하지 않았다 |
 | 2026-11-05 | Claude Code (박진형) | MCP 클라이언트 `extras/mcp_skill/mcp_client/client.py`(조장 요청, 그래프 연결 전 단계): `langchain[mcp]` 1.4.9로 도구 3개를 LangChain 도구로 받기, `search()`와 같은 모양의 `search_via_mcp`, 재시도 가능·불가 실패 구분 | `tests/test_mcp_client.py` 12개(같은 프로세스 서버, 네트워크·유료 API 없음): 직접 `search()`와 같은 Chunk·같은 순서, 틀린 토큰 401, 닫힌 주소 → 재시도 가능 실패. 핵심 한 줄 변이 2개를 시험이 잡음. 설치·시험은 Python 3.14 sandbox, 3.12는 PR CI | 서버 `search_handbook`에 `sub_queries` 칸이 없어 분해 질문을 못 넘김(Spec 열린 항목 7) — 클라이언트는 빼지 않고 `invalid`로 거절 |
