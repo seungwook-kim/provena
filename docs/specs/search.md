@@ -25,10 +25,10 @@
 3. 질문(과 `sub_queries`가 있으면 하위 질문)을 영어 문장으로 바꾼다(`QUERY_TRANSLATE=1`일 때, `backend/services/llm.py` 경유, 여럿이면 동시에). 이미 영어면 그대로 쓴다(EC-02-1).
 4. 질문 벡터를 voyage-4 API로 한 번에 만든다(전체 질문 + 하위 질문, `input_type=query`).
 5. `sub_queries`가 없으면 전체 질문 벡터로 상위 `k`개, 있으면 하위 질문마다 상위 `k`개를 뽑아 번갈아(이미 든 것은 건너뜀) `k`개로 합친다.
-6. 링크 확장 L1x2: 그 `k`개가 링크한 다른 페이지(`chunks.link_targets`)의 청크 중 같은 `org`·`as_of` 필터를 지나고 아직 안 든 것을 **전체 질문 벡터**와 가까운 순으로 `SEARCH_LINK_N`(2)개 골라 뒤 자리를 바꾼다. 리랭커는 기본 없음.
+6. 링크 확장 L1x2: 그 `k`개가 링크한 다른 페이지(`chunks.link_targets`)의 청크 중 같은 `org`·`as_of` 필터를 지나고 아직 안 든 것을 **전체 질문 벡터**와 가까운 순으로 `SEARCH_LINK_N`(2)개 골라 뒤 자리를 바꾼다. 나뉜 질문은 하위 질문마다 2자리(`link_keep_per_sub`)를 지키고 남은 자리만 바꾼다(하위 질문 2개면 1자리, 3개면 바꾸지 않음). 리랭커는 기본 없음.
 7. 상위 `k`개를 `Chunk`로 돌려준다.
 
-확정 조합(2026-11-05, `evals/results/retrieval_fix_v1/`): voyage-4 · `dense_en` · 리랭커 없음 · k=5 · 질문 분해 · L1x2 = v1 Recall@5 0.967. 링크 확장은 강사 확인을 받았다(조장 11/5). 분해 LLM은 그래프가 부르고 `sub_queries`로 넘긴다(MCP는 넘기지 않는다).
+확정 조합(2026-11-05, `evals/results/retrieval_fix_v1/`): voyage-4 · `dense_en` · 리랭커 없음 · k=5 · 질문 분해 · L1x2 = v1 Recall@5 0.967(자리 지키기를 넣기 전 값, `link_keep_per_sub=0`). 링크 확장은 강사 확인을 받았다(조장 11/5). 분해 LLM은 그래프가 부르고 `sub_queries`로 넘긴다(MCP는 넘기지 않는다).
 
 **검색 방식** (`SEARCH_MODE`, 1차 비교에서 남긴 두 방식과 비교용)
 
@@ -99,6 +99,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
+| `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 아직 운영 기본값이 아니다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다 |
 | `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(이미지에 굽는 것, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
@@ -158,7 +159,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 **AC-07 · 확정 조합 재현 (11/5, `tests/test_search_v2_repro.py`)**
 - GIVEN: 측정과 같은 질문 벡터·하위 질문 벡터(유료 API를 부르지 않음), v1 30문항, 필터 없음(측정은 전체 청크에서 찾았다)
 - WHEN: `search()`를 부른다
-- THEN: 링크 대상이 측정 코드 `Links.target`과 23,095청크 모두 같고, 문항마다 돌려준 청크 집합이 `voyage/L1x2.json`·`decompose/voyage/dec+L1x2.json`과 30/30 같으며 Recall@5 0.9667. 입력 파일(`data/index_exp/`, 청크·파싱 결과)이 없으면 건너뛴다
+- THEN: 링크 대상이 측정 코드 `Links.target`과 23,095청크 모두 같고, 문항마다 돌려준 청크 집합이 `voyage/L1x2.json`·`decompose/voyage/dec+L1x2.json`과 30/30 같으며 Recall@5 0.9667(`link_keep_per_sub=0`으로 저장된 측정 조건을 재현). 입력 파일(`data/index_exp/`, 청크·파싱 결과)이 없으면 건너뛴다
 
 **AC-05 · 오프라인 기동**
 - GIVEN: `HF_HUB_OFFLINE=1`, 모델이 이미지에 있음

@@ -38,7 +38,7 @@
 3. 질의 재작성: 한국어 질문을 핸드북 영어 용어 검색어로 바꾸고, 절과 기준일(`as_of`) 조건을 뽑는다.
 4. 검색: `SearchQuery` → `list[Chunk]` (`backend/schemas/`)
 5. 근거 충분 판정. 부족하면 3으로 돌아간다(최대 2회).
-6. 답 작성: 문장마다 `[n]` 인용을 붙이고, 판 날짜, 출처 URL, CC BY-SA 4.0을 표시한다.
+6. 답 작성: 질문이 묻는 사실에만 답하고, 문장마다 `[n]` 인용을 붙이고(한 사실에 가장 직접적인 근거 하나), 판 날짜, 출처 URL, CC BY-SA 4.0을 표시한다.
 7. 인용 검사(코드, LLM 없음): 인용한 `chunk_id`가 이번 검색 결과에 있고 `version_id`가 맞는지 본다. 맞지 않는 인용은 지우고, 남은 근거가 없으면 거절한다.
 8. 답과 인용을 저장한다(리콜이 쓰는 인용 기록). `AgentEvent`(token, citation, done)로 흘려보낸다.
 
@@ -66,7 +66,7 @@
 - **파일**: `backend/graph/build.py`(조립), `backend/graph/state.py`(상태), `backend/prompts/`(프롬프트). LLM 호출은 `backend/services/llm.py` 한 곳으로만 한다(`docs/SCAFFOLD.md`).
 - **조립 함수**: `build_graph(retriever=None, checkpointer=None)`. 검색기와 체크포인터를 주입받아, 검색 파트가 늦어도 가짜 검색기와 메모리 체크포인터로 키 없이 시험한다. 검색 호출 수를 셀 수 있어야 한다.
 - **계약**: 입력 `SearchQuery`, `Chunk`, 출력 `AgentEvent` (`backend/schemas/`, `docs/SDD.md` 6장. D0에 동결)
-- **체크포인터**: Postgres. 같은 `thread_id`로 재개된다.
+- **체크포인터**: Postgres. 같은 `thread_id`로 재개된다. `open_persistence()`는 `setup` 직후 LangGraph 표 6개(`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `store`, `store_migrations`)에 RLS를 켜고 정책은 두지 않는다. 공개 키 역할은 막히고, 표 소유자인 앱은 그대로 쓴다.
 - **상한**: 재검색 횟수는 상수 하나(2). 한 질문의 LLM 비용 상한은 환경변수로 둔다.
 - **환경변수**: `.env.example`의 LLM 키, `DEMO_MODE`, `DATABASE_URL`, `LANGFUSE_*`. 새로 쓰는 변수는 `docs/ARCHITECTURE.md` 조원 간 계약서에 적는다.
 - **런타임 Skill**: `citation-rules`(답 작성), `grounding-check`(인용 검사), `glossary`(질의 재작성) (`docs/SDD.md` 2-3장)
@@ -137,12 +137,12 @@
 |---|---|---|
 | 재검색 결과 합치기 | `backend/graph/build.py` `search` 노드, `MAX_CHUNKS` 10 | #12 |
 | 되묻기 제한 | `JUDGE_SYSTEM`, `clarify_has_number` | #13 |
-| 도메인 밖 라우팅 | `classify`의 `out_of_domain` 경로 | #14 |
-| 인용 범위 | `ANSWER_SYSTEM`, `select_citations`, `MAX_CITATIONS` 4 | #17 |
-| 근거 판정의 부분 제거 | `GROUNDING_SYSTEM`, `grounding.prune_answer`, `ground` 노드 | #18 |
+| 도메인 밖 라우팅 | `classify`의 `out_of_domain` 경로. 두 번 모두 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다 | #14, #23 |
+| 인용 범위 | `ANSWER_SYSTEM`, `citation-rules`, `select_citations`, `MAX_CITATIONS` 4. 묻는 사실에만 답하고 한 사실에 근거 하나, 주제 전용 섹션을 우선한다 | #17, #23 |
+| 근거 판정의 부분 제거 | `GROUNDING_SYSTEM`, `grounding.prune_answer`, `ground` 노드. 뺀 문장이 있으면 답에 밝힌다(`MSG_PARTIAL_NOTE`) | #18, #23 |
 | 요청 기간 자료 없음은 거절 | `grounding.period_missing`, 답 JSON의 `period_covered` | #19 |
 | 기준일 | `rewrite`의 `mentions_period`, 평가 실행기 `_as_of` | #20 |
-| 질문 분해의 그래프 연결 | `backend/graph/decompose.py`, `search` 노드 | #21 |
+| 질문 분해의 그래프 연결 | `backend/graph/decompose.py`, `search` 노드. 검색어 맨 앞의 회사 이름을 뗀다(`drop_company_prefix`) | #21, #23 |
 
 **인용 범위 (AC-08)**
 - GIVEN: 답이 본문에서 청크 5개를 인용하고 검색 결과에는 더 많은 청크가 있다
@@ -152,7 +152,7 @@
 **근거 판정의 부분 제거 (AC-09)**
 - GIVEN: 판정 LLM이 `unsupported`(근거 없는 주장)로 판정하고 받쳐지지 않는 문장을 원문 그대로 돌려준다
 - WHEN: `ground`가 `prune_answer`로 그 문장을 뺀다
-- THEN: 남은 답이 인용 검사, 내부 표현 누출 검사, 코드 근거 규칙, 판정 LLM 재판정을 모두 통과하면 남은 답을 내고, 하나라도 통과하지 못하면 원래 판정대로 답 전체를 거절한다. 문장의 절반을 넘게 빼야 하거나 문장이 답과 일치하지 않거나 모두 빠지면 거절한다. 두 번째 제거는 하지 않는다. `unsupported` 외의 사유(수치 불일치 등)는 부분 제거 없이 거절한다
+- THEN: 남은 답이 인용 검사, 내부 표현 누출 검사, 코드 근거 규칙, 판정 LLM 재판정을 모두 통과하면 남은 답에 일부를 뺐다는 안내를 붙여 내고, 하나라도 통과하지 못하면 원래 판정대로 답 전체를 거절한다. 문장의 절반을 넘게 빼야 하거나 문장이 답과 일치하지 않거나 모두 빠지면 거절한다. 두 번째 제거는 하지 않는다. `unsupported` 외의 사유(수치 불일치 등)는 부분 제거 없이 거절한다
 
 **요청 기간 자료 없음은 거절 (AC-10)**
 - GIVEN: 질문에 연도나 월 표현이 있고, 답이 `period_covered`를 false로 하거나 질문의 기간 표현과 "없다" 계열 표현을 한 문장에 함께 쓴다
@@ -172,16 +172,16 @@
 |---|---|
 | 입력 | 사용자가 쓴 한국어 원 질문(재작성한 영어 검색어가 아니다) |
 | 프롬프트와 응답 읽기 | `evals/retrieval/exp_decompose_v1.py`와 같은 본문(`decompose.SYSTEM`)과 같은 JSON 읽기 규칙. 시험이 두 코드의 본문 일치를 확인한다 |
-| 측정 코드와 다른 점 | ① 프롬프트 맨 앞에 노드 표지(`[[task:decompose]]`)를 붙인다. ② 응답이 깨지면 1회만 다시 묻는다(최대 2번, 측정은 최대 3번). ③ 하위 질문이 1000자를 넘으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙) |
+| 측정 코드와 다른 점 | ① 프롬프트 맨 앞에 노드 표지(`[[task:decompose]]`)를 붙인다. ② 응답이 깨지면 1회만 다시 묻는다(최대 2번, 측정은 최대 3번). ③ 하위 질문이 1000자를 넘으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙). ④ 하위 질문 맨 앞의 `GitLab`을 뗀다. `GitLab.com`처럼 이어진 말은 그대로 둔다 |
 | 넘기는 값 | 하위 질문 2~3개이면 `sub_queries`로 넘긴다. 1개이거나 규칙을 어기면 넘기지 않는다(`None`). 4개 이상이면 앞 3개만 쓴다 |
 | k | 검색마다 `DEFAULT_K`(5) 상수(`SEARCH_K`) |
-| 첫 검색 | 원 질문(한국어)과 `sub_queries`. 영어 번역은 검색 서비스가 한다 |
+| 첫 검색 | 원 질문(한국어, 맨 앞의 `GitLab`은 뗀다)과 `sub_queries`. 영어 번역은 검색 서비스가 한다 |
 | 재검색 | 재작성한 영어 검색어 하나, 분해 없이 |
 | 검색 기억 | 같은 실행 안의 검색 기억 열쇠에 `sub_queries`를 넣는다. 하위 질문이 다르면 다른 검색이다 |
 | 실패 처리 | 분해 호출 오류나 응답 형식 오류이면 원 질문 하나로 검색한다(답은 멈추지 않는다). 비용 상한 초과 예외는 그대로 올린다 |
 | 임베딩 오류 | `EmbedUnavailable`이면 예외를 올리지 않고 고정 문구의 거절로 끝낸다(`search_error=unavailable`) |
 | 키 없음 | 검색 결과가 비었고 `fallback_reason=no_key`이면 같은 검색을 되풀이하지 않고 고정 문구의 거절로 끝낸다(`search_error=no_key`) |
-| 켜는 곳 | `build_graph(decompose=True)` 또는 환경 변수 `SEARCH_DECOMPOSE=1`. 기본은 끔이다 |
+| 켜는 곳 | `build_graph(decompose=True 또는 False)`로 정한다. `None`(기본)이면 환경 변수 `SEARCH_DECOMPOSE`를 따른다. 기본은 켬이다. 값이 없거나 비어 있어도 켜지고, `0`, `false`, `no`, `off`이면 끈다 |
 | 측정 경로 | `exp_confirmed_v1`은 저장된 분해를 읽으므로 `decompose=False`로 그래프를 만든다. 환경 변수가 켜져 있어도 분해 호출이 없고 측정 값이 바뀌지 않는다(시험이 확인한다) |
 
 **질문 분해 연결 (AC-12)**

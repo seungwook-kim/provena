@@ -96,6 +96,7 @@ class RecordingSearch:
         from backend.rag.retrieve.search import last_search_trace
 
         first = not self.calls
+        t0 = time.perf_counter()
         try:
             out = self.searcher.search(q)
         except BaseException as e:  # 조용히 넘기지 않는다: 실행기가 기록을 보고 멈춘다
@@ -104,14 +105,15 @@ class RecordingSearch:
         tr = last_search_trace()
         self.calls.append({"n": len(self.calls) + 1, "kind": "first" if first else "requery", "graph_query": q.query, "sub_queries": q.sub_queries,
                            "org": q.org, "as_of": q.as_of, "k_requested": q.k, "returned": [c.chunk_id for c in out],
-                           "trace": dataclasses.asdict(tr) if tr else None})
+                           "trace": dataclasses.asdict(tr) if tr else None, "wall_s": round(time.perf_counter() - t0, 3)})
         return out
 
 
 def run_cmd(args) -> int:
     X.fix_env()
     X.load_voyage_key()
-    verify_frozen(DATASET)
+    dataset = Path(args.dataset) if args.dataset else DATASET
+    verify_frozen(dataset)
     from backend.graph.build import build_graph
     from backend.services.llm import is_demo_mode
     from evals.agent import tracking
@@ -120,7 +122,7 @@ def run_cmd(args) -> int:
     if is_demo_mode():
         raise SystemExit("데모 모드다: 실제 모델 설정이 아니라 멈춘다")
     excluded = load_exclusions(ROOT / "evals" / "exclusions.json")
-    items = [it for it in load_dataset(DATASET) if str(it["id"]) not in excluded]
+    items = [it for it in load_dataset(dataset) if str(it["id"]) not in excluded]
     if args.ids:
         want = {x.strip() for x in args.ids.split(",")}
         items = [it for it in items if str(it["id"]) in want]
@@ -152,8 +154,8 @@ def run_cmd(args) -> int:
     metrics = compute_metrics(rows)
     traces = [c["trace"] for r in rows for c in r["retrieval_calls"] if c.get("trace")]
     meta = {
-        "dataset": DATASET.name,
-        "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
+        "dataset": dataset.name,
+        "dataset_sha256": hashlib.sha256(dataset.read_bytes()).hexdigest(),
         "service_path": SERVICE_PATH_PG if use_pg else SERVICE_PATH,
         "store": "PgStore" if use_pg else "MemoryStore",
         "search": {**setup, "first_search": "그래프가 원 질문(한국어)과 하위 질문을 `Searcher.search`에 넘긴다. 번역은 서비스 translate(Claude CLI Haiku 5.5), 분해는 그래프(Claude CLI Haiku 5.5), 질문 임베딩은 Voyage API",
@@ -182,6 +184,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("run", help="그래프 실행(서비스 Searcher, 기본 MemoryStore)")
     p.add_argument("--store", choices=("memory", "pg"), default="memory", help="검색 저장소. pg는 .env의 DATABASE_URL로 운영 DB를 읽는다")
+    p.add_argument("--dataset", help="평가셋 경로. 기본은 동결 v1이고, 동결된 파일만 돈다")
     p.add_argument("--ids", help="쉼표로 고른 문항만 돈다(partial, 점수로 쓰지 않는다)")
     p.add_argument("--out", required=True, help="summary.json과 rows.jsonl을 쓸 폴더")
     p.set_defaults(fn=run_cmd)

@@ -1,0 +1,57 @@
+등록 시각: 2026-11-05T14:37:58+09:00
+evals/PREREGISTER.md sha256: 00b43967c2bb7c9ed613bf8b6aaf616e3af729bf86c195adcc905f4fe270c830
+행: #24 (2026-11-05) 수정 묶음
+git HEAD: baadf13
+--- git status --short ---
+ M .env.example
+ M Dockerfile
+ M backend/graph/build.py
+ M backend/graph/decompose.py
+ M backend/graph/grounding.py
+ M backend/graph/state.py
+ M backend/prompts/question.py
+ M backend/rag/retrieve/search.py
+ M docs/specs/question-graph.md
+ M docs/specs/search.md
+ M evals/PREREGISTER.md
+ M evals/agent/exp_service_v1.py
+ M evals/results/retrieval_v1_round1/translations.json
+ M skills/citation-rules/SKILL.md
+ M skills/grounding-check/SKILL.md
+ M tests/test_graph_search_wiring.py
+ M tests/test_question_graph.py
+ M tests/test_search_v2.py
+ M tests/test_search_v2_repro.py
+?? backend/graph/checkpoint.py
+?? backend/graph/decision/convert.py
+?? backend/graph/decision/execute.py
+?? backend/graph/decision/params.py
+?? backend/graph/decision/repo.py
+?? backend/graph/decision/routes.py
+?? backend/graph/decision/rules.py
+?? backend/graph/departments/issue_table.py
+?? backend/graph/departments/review.py
+?? backend/graph/departments/store.py
+?? backend/graph/departments/teams.py
+?? backend/graph/multi.py
+?? db/102_decision_approvals.sql
+?? db/110_issue_tables.sql
+?? evals/agent/exp_multi_v2.py
+?? evals/results/agent_v1_fix2_pg/
+?? evals/results/agent_v1_fix_pg/
+?? evals/results/agent_v1_fix_pg_r2/
+?? evals/results/agent_v1_fix_pg_r3/
+?? skills/finance/
+?? skills/infra/
+?? skills/itops/
+?? skills/security/
+?? tests/decision_fixtures.py
+?? tests/decision_restart_worker.py
+?? tests/team_review_fakes.py
+?? tests/test_decision_approval.py
+?? tests/test_decision_bands.py
+?? tests/test_decision_routes.py
+?? tests/test_decision_wiring.py
+?? tests/test_exp_multi.py
+?? tests/test_multi_graph.py
+?? tests/test_team_review.py
