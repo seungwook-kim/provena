@@ -43,3 +43,8 @@ CREATE TABLE IF NOT EXISTS changed_articles (
     created_at       timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS changed_articles_pending ON changed_articles (status) WHERE status = 'pending';
+
+-- Supabase는 public 표를 Data API로 내보내고 새 표에 anon 권한을 연다. RLS를 켜고 정책을 두지 않아 anon과 authenticated를 막는다(201_search.sql과 같은 방식).
+-- schedule.py는 표 소유자로 접속하므로 RLS의 영향을 받지 않는다. 다시 실행해도 된다.
+ALTER TABLE sync_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE changed_articles ENABLE ROW LEVEL SECURITY;
