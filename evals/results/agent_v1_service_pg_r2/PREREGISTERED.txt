@@ -1,0 +1,51 @@
+등록 시각: 2026-11-05T09:57:42+09:00
+evals/PREREGISTER.md sha256: 404a7b25ac4b2b692c64fa60b3e1b896e3a3898fa139f65138e630da1d94641e
+행: #22 (2026-11-05) 실제 search() PgStore
+git HEAD: e847c88
+--- git status --short ---
+ M .env.example
+ M EVAL_REPORT.md
+ M backend/graph/build.py
+ M backend/graph/grounding.py
+ M backend/graph/state.py
+ M backend/prompts/question.py
+ M docs/GATES.md
+ M docs/decisions.md
+ M docs/deliverables/ai_tools_log.md
+ M docs/specs/question-graph.md
+ M docs/specs/search.md
+ M docs/worklog.md
+ M evals/PREREGISTER.md
+ M evals/agent/run_eval.py
+ M evals/results/retrieval_v1_round1/translations.json
+ M tests/test_question_graph.py
+?? backend/graph/decompose.py
+?? evals/agent/exp_confirmed_v1.py
+?? evals/agent/exp_service_v1.py
+?? evals/results/agent_v1_final_asof/
+?? evals/results/agent_v1_final_asof_r2/
+?? evals/results/agent_v1_final_asof_r3/
+?? evals/results/agent_v1_final_cite/
+?? evals/results/agent_v1_final_cite_r2/
+?? evals/results/agent_v1_final_cite_r3/
+?? evals/results/agent_v1_final_ground/
+?? evals/results/agent_v1_final_ground_r2/
+?? evals/results/agent_v1_final_ground_r3/
+?? evals/results/agent_v1_final_period/
+?? evals/results/agent_v1_final_period_r2/
+?? evals/results/agent_v1_final_period_r3/
+?? evals/results/agent_v1_fix_clarify/
+?? evals/results/agent_v1_fix_requery/
+?? evals/results/agent_v1_fix_route/
+?? evals/results/agent_v1_fix_route_r2/
+?? evals/results/agent_v1_fix_route_r3/
+?? evals/results/agent_v1_service/
+?? evals/results/agent_v1_service_pg/
+?? evals/results/agent_v1_service_r2/
+?? evals/results/agent_v1_service_r3/
+?? evals/results/agent_v1_single_confirmed/
+?? evals/results/agent_v1_single_confirmed_r2/
+?? evals/results/agent_v1_single_confirmed_r3/
+?? tests/test_exp_confirmed.py
+?? tests/test_exp_service.py
+?? tests/test_graph_search_wiring.py

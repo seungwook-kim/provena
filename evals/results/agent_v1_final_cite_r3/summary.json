@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "dataset": "dataset_v1.jsonl",
+    "dataset_sha256": "174996b9b499da38f739f700854e919bf7f122c3bbffb6c73021d31a1e9f4332",
+    "search": {
+      "embedder": "voyage-4",
+      "doc_input_type": "document",
+      "query_input_type": "query",
+      "query_vector": "english sentence",
+      "chunk": "800/120",
+      "reranker": "none",
+      "decompose": true,
+      "link": "L1x2",
+      "k": 5,
+      "first_search": "문항의 원 질문, 저장된 분해·하위 질문 벡터·질문 벡터(모델·API 호출 없음)",
+      "requery": "그래프가 넘긴 재작성 질의를 Voyage query 벡터로(분해 없음, 상위 5 + L1x2), 벡터는 파일 캐시",
+      "filter": "q.org, q.as_of를 벡터 후보와 링크 청크 양쪽에(valid_mask)",
+      "rows_source": "data/chunks/chunks.jsonl"
+    },
+    "llm": {
+      "provider": "claude_cli",
+      "model": "claude-haiku-5-5",
+      "anthropic_api_key": "unused"
+    },
+    "service_path": "not_service_search: 측정 전용 검색기이며 서비스 경로(backend.rag.retrieve.search) 값이 아니다",
+    "excluded": [],
+    "partial": false,
+    "voyage_tokens": 187,
+    "first_searches": 27,
+    "requery_searches": 22,
+    "run_id": "eval-question-20261105-022612",
+    "finished": "2026-11-05 02:37:09"
+  },
+  "metrics": {
+    "n": 30,
+    "errors": 0,
+    "cited_correct_rate": 0.8333333333333334,
+    "wrong_citation_rate": 0.5384615384615384,
+    "over_refusal_rate": 0.13333333333333333,
+    "correct_refusal_rate": 1.0,
+    "hallucination_risk_rate": 0.0,
+    "answer_check_refusals": 2,
+    "correct_refusal_rate_without_answer_check": 1.0,
+    "over_refusal_rate_without_answer_check": 0.0,
+    "citation_accuracy": 0.717948717948718,
+    "as_of_shown_rate": 1.0,
+    "latency_p95_s": 33.351,
+    "judge_score": null,
+    "cost_usd": 0.060527
+  }
+}
