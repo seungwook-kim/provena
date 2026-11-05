@@ -19,7 +19,7 @@ class AgentState(TypedDict, total=False):
     org: str | None  # 사용자가 지정한 절(핸드북 섹션)
     # --- 대화 중 값 ---
     profile: dict
-    route: str  # rule | decision | review
+    route: str  # rule | decision | review | out_of_domain
     search_query: str
     search_org: str | None
     chunks: list[dict]  # 검색 결과. 인용 검사는 이 목록과 대조한다
@@ -29,13 +29,18 @@ class AgentState(TypedDict, total=False):
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
     search_cache: dict  # 이번 실행 안의 검색 결과 기억
     search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수}
+    sub_queries: list[str]  # 첫 검색 전에 나눈 한국어 하위 질문(나누지 않았거나 분해를 끄면 빈 목록)
+    decompose_source: str  # 분해 결과의 출처: llm | invalid | error | skipped(분해를 끄면 빈 문자열)
+    search_error: str  # 검색을 쓸 수 없어 끝낸 이유: unavailable(임베딩 API 일시 오류) | no_key(키 없음). 정상이면 빈 문자열
     # --- 출력 ---
     kind: str  # answer | clarify | refuse
     answer: str
     citations: list[dict]  # 검사를 통과한 인용 청크
     dropped_citations: list  # 검사에서 걸러진 인용
+    trimmed_citations: list  # 인용 수 상한(`MAX_CITATIONS`)이나 본문에 표시되지 않아 잘린 청크 id. 가짜 인용이 아니므로 `dropped_citations`와 따로 둔다
     answer_id: str | None
     refuse_reason: str  # no_evidence | out_of_period | nonexistent_entity | unsupported
     grounding: dict  # 근거 판정 기록
     skills_used: list[str]  # 이번 질문에서 실제로 쓴 런타임 Skill
     drafted: bool  # 답 초안이 만들어졌는지
+    period_covered: bool | None  # 답 작성이 낸 "질문의 기간 자료가 있는가". false이고 질문에 시점 표현이 있으면 거절한다

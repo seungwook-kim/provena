@@ -1,0 +1,42 @@
+등록 시각: 2026-11-05T03:36:49+09:00
+evals/PREREGISTER.md sha256: ecdc8fa8f7707716666032eec364e6317a04cd35576f2cb57f244bff9b9eb6ce
+행: #19 (2026-11-05) 수정 3 기간 다름
+git HEAD: 6923807
+--- git diff --stat ---
+ backend/graph/build.py                             | 148 +++++++--
+ backend/graph/grounding.py                         |  86 +++++
+ backend/graph/state.py                             |   4 +-
+ backend/prompts/question.py                        |  18 +-
+ docs/worklog.md                                    |   1 +
+ evals/PREREGISTER.md                               |  10 +
+ .../results/retrieval_v1_round1/translations.json  |  84 ++++-
+ tests/test_question_graph.py                       | 368 ++++++++++++++++++++-
+ 8 files changed, 684 insertions(+), 35 deletions(-)
+--- git status --short ---
+ M backend/graph/build.py
+ M backend/graph/grounding.py
+ M backend/graph/state.py
+ M backend/prompts/question.py
+ M docs/worklog.md
+ M evals/PREREGISTER.md
+ M evals/results/retrieval_v1_round1/translations.json
+ M tests/test_question_graph.py
+?? evals/agent/exp_confirmed_v1.py
+?? evals/results/agent_v1_final_cite/
+?? evals/results/agent_v1_final_cite_r2/
+?? evals/results/agent_v1_final_cite_r3/
+?? evals/results/agent_v1_final_ground/
+?? evals/results/agent_v1_final_ground_r2/
+?? evals/results/agent_v1_final_ground_r3/
+?? evals/results/agent_v1_final_period/
+?? evals/results/agent_v1_final_period_r2/
+?? evals/results/agent_v1_final_period_r3/
+?? evals/results/agent_v1_fix_clarify/
+?? evals/results/agent_v1_fix_requery/
+?? evals/results/agent_v1_fix_route/
+?? evals/results/agent_v1_fix_route_r2/
+?? evals/results/agent_v1_fix_route_r3/
+?? evals/results/agent_v1_single_confirmed/
+?? evals/results/agent_v1_single_confirmed_r2/
+?? evals/results/agent_v1_single_confirmed_r3/
+?? tests/test_exp_confirmed.py

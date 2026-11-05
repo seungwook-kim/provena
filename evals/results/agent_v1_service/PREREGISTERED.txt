@@ -1,0 +1,108 @@
+등록 시각: 2026-11-05T04:28:54+09:00
+evals/PREREGISTER.md sha256: 58653b886fd29b861c15a6fd05a94e9a6498485d3d314d44abd474cd24bd1952
+행: #21 (2026-11-05) 실제 search()
+git HEAD: 6923807
+--- git diff --stat ---
+ .env.example                                       |   5 +
+ Dockerfile                                         |   2 +
+ backend/graph/build.py                             | 207 ++++++++--
+ backend/graph/grounding.py                         |  86 +++++
+ backend/graph/state.py                             |   7 +-
+ backend/main.py                                    |  20 +-
+ backend/prompts/question.py                        |  18 +-
+ backend/rag/ingest/ingest.md                       |   1 +
+ backend/rag/ingest/schedule.py                     |  12 +-
+ backend/rag/retrieve/embed.py                      |  87 ++++-
+ backend/rag/retrieve/index.py                      |  39 +-
+ backend/rag/retrieve/load_snapshot.py              |  49 ++-
+ backend/rag/retrieve/rerank.py                     |   5 +-
+ backend/rag/retrieve/retrieve.md                   |   2 +
+ backend/rag/retrieve/search.py                     | 223 ++++++++---
+ backend/requirements.txt                           |   1 +
+ backend/schemas/chunk.py                           |   7 +-
+ db/201_search.sql                                  |   5 +
+ docs/SDD.md                                        |   2 +-
+ docs/TEAM_GUIDE.md                                 |   2 +-
+ docs/deliverables/ai_tools_log.md                  |   3 +
+ docs/specs/search.md                               |  43 ++-
+ docs/worklog.md                                    |   1 +
+ evals/PREREGISTER.md                               |  12 +
+ evals/agent/run_eval.py                            |  10 +-
+ .../results/retrieval_v1_round1/translations.json  |  84 +++-
+ extras/mcp_skill/mcp_server/server.py              | 314 ++++++++++++++-
+ extras/mcp_skill/mcp_skill.md                      |   2 +
+ tests/test_ingest_schedule.py                      |  16 +
+ tests/test_question_graph.py                       | 422 ++++++++++++++++++++-
+ tests/test_schemas.py                              |   4 +-
+ tests/test_search.py                               |   7 +-
+ 32 files changed, 1548 insertions(+), 150 deletions(-)
+--- git status --short ---
+ M .env.example
+ M Dockerfile
+ M backend/graph/build.py
+ M backend/graph/grounding.py
+ M backend/graph/state.py
+ M backend/main.py
+ M backend/prompts/question.py
+ M backend/rag/ingest/ingest.md
+ M backend/rag/ingest/schedule.py
+ M backend/rag/retrieve/embed.py
+ M backend/rag/retrieve/index.py
+ M backend/rag/retrieve/load_snapshot.py
+ M backend/rag/retrieve/rerank.py
+ M backend/rag/retrieve/retrieve.md
+ M backend/rag/retrieve/search.py
+ M backend/requirements.txt
+ M backend/schemas/chunk.py
+ M db/201_search.sql
+ M docs/SDD.md
+ M docs/TEAM_GUIDE.md
+ M docs/deliverables/ai_tools_log.md
+ M docs/specs/search.md
+ M docs/worklog.md
+ M evals/PREREGISTER.md
+ M evals/agent/run_eval.py
+ M evals/results/retrieval_v1_round1/translations.json
+ M extras/mcp_skill/mcp_server/server.py
+ M extras/mcp_skill/mcp_skill.md
+ M tests/test_ingest_schedule.py
+ M tests/test_question_graph.py
+ M tests/test_schemas.py
+ M tests/test_search.py
+?? backend/graph/decompose.py
+?? backend/rag/ingest/changes.py
+?? backend/rag/retrieve/links.py
+?? backend/rag/retrieve/section.py
+?? docs/specs/mcp.md
+?? evals/agent/exp_confirmed_v1.py
+?? evals/agent/exp_service_v1.py
+?? evals/results/agent_v1_final_asof/
+?? evals/results/agent_v1_final_asof_r2/
+?? evals/results/agent_v1_final_asof_r3/
+?? evals/results/agent_v1_final_cite/
+?? evals/results/agent_v1_final_cite_r2/
+?? evals/results/agent_v1_final_cite_r3/
+?? evals/results/agent_v1_final_ground/
+?? evals/results/agent_v1_final_ground_r2/
+?? evals/results/agent_v1_final_ground_r3/
+?? evals/results/agent_v1_final_period/
+?? evals/results/agent_v1_final_period_r2/
+?? evals/results/agent_v1_final_period_r3/
+?? evals/results/agent_v1_fix_clarify/
+?? evals/results/agent_v1_fix_requery/
+?? evals/results/agent_v1_fix_route/
+?? evals/results/agent_v1_fix_route_r2/
+?? evals/results/agent_v1_fix_route_r3/
+?? evals/results/agent_v1_service/
+?? evals/results/agent_v1_single_confirmed/
+?? evals/results/agent_v1_single_confirmed_r2/
+?? evals/results/agent_v1_single_confirmed_r3/
+?? extras/mcp_skill/NOT_BUILT.md
+?? tests/test_exp_confirmed.py
+?? tests/test_exp_service.py
+?? tests/test_graph_search_wiring.py
+?? tests/test_ingest_changes.py
+?? tests/test_mcp_server.py
+?? tests/test_retrieve_section.py
+?? tests/test_search_v2.py
+?? tests/test_search_v2_repro.py
