@@ -42,7 +42,7 @@
 - 라이브러리: `markdown-it-py`(4.2.0), `beautifulsoup4`(4.15.0). 비교 근거: 표본 20쪽 파서 비교(제목 F1 0.996, 표 19/20, 코드 20/20)
 - 단축코드 분류: 감싸기(alert·details·panel·note·tableau: 표시만 지우고 안 글자 유지, details·panel 제목 글자는 남김) / 이름(member-by-name·member-by-gitlab·member-and-role-by-gitlab·label: 인자 글자로) / 링크(ref: 경로로) / 데이터(나머지 36종: 사이트가 다른 데이터로 채움, 지우고 개수 기록)
 - HTML → 글자 순서(rag1-07): script·style 내용째 제거 → 줄바꿈 태그를 줄바꿈으로 → 나머지 태그를 공백으로 → 엔티티 복원 → 공백 정리
-- 출력 `data/parsed/`(저장소에 커밋하지 않음, 원문에서 다시 만든다): `document_ir.jsonl`, `authz_cells.jsonl`, `authz_board.jsonl`, `authz_notes.jsonl`, `authz_ir.jsonl`, `parse_report.json`
+- 출력 `data/parsed/`(원문에서 다시 만들므로 커밋하지 않는다. 결정표 변환이 실행 중에 읽는 `authz_cells.jsonl`만 커밋한다): `document_ir.jsonl`, `authz_cells.jsonl`, `authz_board.jsonl`, `authz_notes.jsonl`, `authz_ir.jsonl`, `parse_report.json`
 - 요소 필드: `element_id, rule_seq, org, kind, heading_path, parent_id, order, line_start, line_end, text, links, review` (+ 표 행: `table_id, row, header`)
 - 권한표 칸 필드: `category, category_notes, band, band_lo, band_hi, role, approval_type(functional|financial), value, notes, line`
 

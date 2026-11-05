@@ -188,6 +188,10 @@ def build_multi_graph(
         upd: dict = {}
         view = dict(state)
         log = list(state.get("supervisor_log") or [])
+        # 체크포인터가 있으면 앞 실행의 기록이 남아 있다. 앞 실행이 끝났거나(`end`) 에이전트 도중에 멈춘 채로(결정 수와 부른 수가 다르다) 여기로 들어오면 새 질문이다.
+        # 재개는 멈춘 에이전트에서 이어 가므로 결정 수와 부른 수가 같아진 뒤에 여기로 돌아온다
+        if state.get("next_agent") == "end" or len(log) != len(state.get("agent_trace") or []):
+            log = []
 
         def apply(delta: dict) -> None:
             upd.update(delta)

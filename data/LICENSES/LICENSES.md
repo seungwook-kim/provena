@@ -18,10 +18,19 @@
 - GitLab 블로그 "Our handbook is open source, here's why"(2016-07-12, `https://about.gitlab.com/blog/our-handbook-is-open-source-heres-why/`)에 핸드북이 Creative Commons 라이선스라는 문장이 있으나 `static/pdfs/` 파일은 언급하지 않는다.
 - 7건 모두 텍스트 층에서 저작권 표시(`©`, `Copyright`, `All rights reserved`)와 Creative Commons 문구를 찾지 못했다. 본문의 `license`라는 낱말은 문서 내용이다.
 
+## 2023 권한표 (`data/corpus/authz/`, `data/parsed/authz_cells.jsonl`)
+
+- 출처 저장소: https://gitlab.com/gitlab-com/www-gitlab-com (위 핸드북 저장소와 다른 옛 저장소)
+- 커밋: `0a3de833754144dc4d448814e2edbcaed0883f35` (2023-05-11, `backend/rag/ingest/handbook.py`의 `AUTHZ_COMMIT`)
+- 파일: `sites/handbook/source/handbook/finance/authorization-matrix/index.html.md`
+- 라이선스: CC BY-SA 4.0. 근거는 같은 커밋의 `sites/handbook/source/handbook/handbook-usage/index.html.md`에 있는 문장 "Our handbook falls under the Attribution-ShareAlike 4.0 International license"다. 확인한 범위는 이 문장까지다. 권한표 파일 자체에는 라이선스 문구가 없고, 같은 커밋의 저장소 최상위에서 `LICENSE`, `LICENSE.md`, `LICENSE.txt`를 찾지 못했다.
+- `data/parsed/authz_cells.jsonl`은 이 파일의 표를 `parse_authz()`로 칸 단위 JSON Lines로 바꾼 파생 파일이다. 칸 값은 고치지 않았다.
+
 ## 작업 기록 (최신이 위)
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 김승욱(팀장, Claude Code) | `data/parsed/authz_cells.jsonl`을 커밋 대상으로 바꾸면서 2023 권한표의 출처와 라이선스 근거를 같은 커밋에서 확인해 기록 | #54 |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | `static/pdfs/` PDF 7건의 라이선스 근거를 공개 페이지에서 찾았으나 PDF 자체의 라이선스는 찾지 못해 "미확인"으로 기록 | |
 
 ## 문제 기록 (최신이 위)

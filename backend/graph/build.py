@@ -49,6 +49,9 @@ SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP�
 MAX_CITATIONS = P.MAX_CITATIONS  # 답 하나가 인용할 수 있는 청크 수의 상한. 답 프롬프트와 같은 값이다
 JSON_ATTEMPTS = 2  # LLM 응답 형식이 깨지면 1회 다시 요청한다 (Spec EC-06)
 ROUTES = ("rule", "decision", "review", "out_of_domain")
+# 한 실행 안에서만 뜻이 있는데 `load_memory`의 기본값에 없는 칸. 체크포인터가 있으면 앞 실행의 값이 남아 있으므로 새 질문에서 비운다.
+# 남아 있을 때만 쓴다: 체크포인터 없는 실행의 결과에 없던 칸이 생기지 않는다
+LEFTOVER_FIELDS = {"search_query": "", "search_org": None, "decision_query": {}, "decision_result": {}, "decision_error": {}, "review_status": "", "issue_table": {}}
 LICENSE_NOTE = "출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)"
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _MARK = re.compile(r"\[([0-9a-f]{16})\]")
@@ -226,6 +229,7 @@ def build_graph(
     def load_memory(state: AgentState) -> dict:
         user_id = state.get("user_id") or ""
         return {
+            **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             "profile": get_profile(store, user_id) if user_id else {},
             "as_of": state.get("as_of") or date.today().isoformat(),
             "as_of_given": bool(state.get("as_of")),

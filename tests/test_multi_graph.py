@@ -246,6 +246,318 @@ def test_checkpointer_keeps_thread_state():
     assert g.get_state(cfg).values["kind"] == "answer"
 
 
+# ---------- 체크포인터가 있을 때 같은 thread의 다음 질문 ----------
+Q2 = "SEV2 장애 사후 분석은 몇 분 이내인가요?"
+OFF_DOMAIN = "사내 연봉 협상은 어떻게 하나요?"
+THREAD = {"configurable": {"thread_id": "tn"}}
+
+
+def _input(question):
+    return {"question": question, "user_id": "u1", "thread_id": "tn", "as_of": "2025-06-01"}
+
+
+def _answer_by_question(user):
+    cid = first_chunk_id(user)
+    return j(answer=f"{'둘째' if Q2 in user else '첫째'} 답이다 [{cid}].", citations=[{"chunk_id": cid}])
+
+
+def _classify_by_question(user):
+    return j(route="out_of_domain" if OFF_DOMAIN in user else "rule")
+
+
+def _thread_llm(**over):
+    return normal_llm(**{"answer": _answer_by_question, "classify": _classify_by_question, **over})
+
+
+def _thread_graph(build, llm, search=fake_search, store=None):
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    return build(search, InMemorySaver(), llm=llm, answer_store=store, decompose=False)
+
+
+def test_second_question_on_a_thread_gets_a_new_answer_with_the_same_call_order():
+    llm, (fn, calls), store = _thread_llm(), recorded(), InMemoryAnswerStore()
+    g = _thread_graph(build_multi_graph, llm, fn, store)
+    first = g.invoke(_input(Q), THREAD)
+    n = len(llm.calls)
+    second = g.invoke(_input(Q2), THREAD)
+    assert "첫째" in first["answer"] and "둘째" in second["answer"] and second["question"] == Q2
+    assert [t for t, _ in llm.calls[:n]] == [t for t, _ in llm.calls[n:]] == ["classify", "rewrite", "judge", "answer"]
+    assert len(calls) == 2 and second["answer_id"] != first["answer_id"] and len(store.all_answers()) == 2
+
+
+def test_second_question_starts_its_own_records():
+    g = _thread_graph(build_multi_graph, _thread_llm())
+    g.invoke(_input(Q), THREAD)
+    second = g.invoke(_input(Q2), THREAD)
+    assert second["agent_trace"] == ["retriever", "writer", "verifier"]
+    assert [(e["after"], e["to"]) for e in second["supervisor_log"]] == [("intake", "retriever"), ("retriever", "writer"), ("writer", "verifier"), ("verifier", "end")]
+    assert [h["agent"] for h in second["handoffs"]] == ["retriever", "writer", "verifier"]
+
+
+def test_earlier_answer_does_not_leak_into_a_refused_second_question():
+    from backend.graph.build import MSG_REFUSE_OUT_OF_DOMAIN
+
+    g = _thread_graph(build_multi_graph, _thread_llm())
+    first = g.invoke(_input(Q), THREAD)
+    assert first["kind"] == "answer" and first["citations"] and first["chunks"]
+    second = g.invoke(_input(OFF_DOMAIN), THREAD)
+    assert second["kind"] == "refuse" and second["answer"] == MSG_REFUSE_OUT_OF_DOMAIN and second["citations"] == [] and second["chunks"] == []
+    assert second["answer_id"] is None and second["drafted"] is False and second["agent_trace"] == [] and second["handoffs"] == []
+    assert second["search_stats"] == {"calls": 0, "cache_hits": 0} and len(second["supervisor_log"]) == 1
+
+
+def test_retries_of_a_refused_question_do_not_count_against_the_next_one():
+    llm = _thread_llm(judge=[j(sufficient=False, reason="x", clarify=None)] * 3 + [j(sufficient=True)], rewrite=rewrites())
+    g = _thread_graph(build_multi_graph, llm)
+    assert g.invoke(_input(Q), THREAD)["retries"] == 3
+    second = g.invoke(_input(Q2), THREAD)
+    assert second["kind"] == "answer" and second["retries"] == 0 and second["judge_reason"] == "" and second["agent_trace"] == ["retriever", "writer", "verifier"]
+
+
+@pytest.mark.parametrize("questions", [(Q, Q2), (Q, OFF_DOMAIN), (OFF_DOMAIN, Q2), (Q, Q)], ids=["answer_answer", "answer_refuse", "refuse_answer", "same_question"])
+def test_two_questions_on_a_thread_end_exactly_like_single(questions):
+    outs = {}
+    for label, build in (("single", build_graph), ("multi", build_multi_graph)):
+        llm, (fn, calls) = _thread_llm(), recorded()
+        g = _thread_graph(build, llm, fn)
+        results = [g.invoke(_input(q), THREAD) for q in questions]
+        outs[label] = ([{k: v for k, v in r.items() if k not in MULTI_ONLY | {"answer_id"}} for r in results], llm.calls, calls)
+    assert outs["multi"] == outs["single"]
+
+
+def test_resume_after_an_interrupt_inside_an_agent_is_not_a_new_question():
+    from langgraph.types import Command, interrupt
+
+    def asks_a_person(q):
+        interrupt("사람 확인")
+        return fake_search(q)
+
+    llm = _thread_llm()
+    g = _thread_graph(build_multi_graph, llm, asks_a_person)
+    stopped = g.invoke(_input(Q), THREAD)
+    assert stopped["__interrupt__"][0].value == "사람 확인" and g.get_state(THREAD).next == ("retriever",)
+    done = g.invoke(Command(resume="확인함"), THREAD)
+    assert done["kind"] == "answer" and "첫째" in done["answer"] and done["agent_trace"] == ["retriever", "writer", "verifier"]
+    assert [t for t, _ in llm.calls] == ["classify", "rewrite", "judge", "answer"]  # 처음부터 다시 돌지 않는다
+    assert [e["after"] for e in done["supervisor_log"]] == ["intake", "retriever", "writer", "verifier"]
+
+
+@pytest.mark.parametrize("stop", [{"interrupt_after": ["retriever"]}, {"interrupt_before": ["writer"]}, {"interrupt_before": ["verifier"]}, {"interrupt_after": ["verifier"]}],
+                         ids=["after_retriever", "before_writer", "before_verifier", "after_verifier"])
+def test_continuing_a_stopped_run_is_not_a_new_question(stop):
+    llm = _thread_llm()
+    g = _thread_graph(build_multi_graph, llm)
+    g.invoke(_input(Q), THREAD, **stop)
+    done = g.invoke(None, THREAD)
+    assert done["kind"] == "answer" and done["agent_trace"] == ["retriever", "writer", "verifier"]
+    assert [t for t, _ in llm.calls] == ["classify", "rewrite", "judge", "answer"]
+    assert [e["after"] for e in done["supervisor_log"]] == ["intake", "retriever", "writer", "verifier"]
+
+
+def _fails_once():
+    left = [RuntimeError("검색 실패")]
+
+    def search(q):
+        if left:
+            raise left.pop()
+        return fake_search(q)
+
+    return search
+
+
+def test_retrying_a_failed_run_continues_and_a_new_question_starts_over():
+    llm = _thread_llm()
+    g = _thread_graph(build_multi_graph, llm, _fails_once())
+    with pytest.raises(RuntimeError):
+        g.invoke(_input(Q), THREAD)
+    retried = g.invoke(None, THREAD)
+    assert retried["kind"] == "answer" and llm.count("classify") == 1 and retried["agent_trace"] == ["retriever", "writer", "verifier"]
+    outs = {}
+    for label, build in (("single", build_graph), ("multi", build_multi_graph)):
+        llm = _thread_llm()
+        g = _thread_graph(build, llm, _fails_once())
+        with pytest.raises(RuntimeError):
+            g.invoke(_input(Q), THREAD)
+        out = g.invoke(_input(Q2), THREAD)  # 앞 실행이 에이전트 도중에 멈춘 채로 새 질문이 온다
+        assert "둘째" in out["answer"] and llm.count("classify") == 2
+        outs[label] = ({k: v for k, v in out.items() if k not in MULTI_ONLY | {"answer_id"}}, llm.calls)
+        if label == "multi":
+            assert out["agent_trace"] == ["retriever", "writer", "verifier"] and out["supervisor_log"][0]["after"] == "intake"
+    assert outs["multi"] == outs["single"]
+
+
+def test_new_question_instead_of_a_resume_starts_over_like_single():
+    from langgraph.types import interrupt
+
+    def asks_once():
+        asked = []
+
+        def search(q):
+            if not asked:
+                asked.append(q)
+                interrupt("사람 확인")
+            return fake_search(q)
+
+        return search
+
+    outs = {}
+    for label, build in (("single", build_graph), ("multi", build_multi_graph)):
+        llm = _thread_llm()
+        g = _thread_graph(build, llm, asks_once())
+        assert g.invoke(_input(Q), THREAD)["__interrupt__"]
+        out = g.invoke(_input(Q2), THREAD)
+        assert "둘째" in out["answer"]
+        outs[label] = ({k: v for k, v in out.items() if k not in MULTI_ONLY | {"answer_id"}}, llm.calls)
+    assert outs["multi"] == outs["single"]
+
+
+def test_stream_events_on_a_second_question_stream_the_new_answer():
+    g = _thread_graph(build_multi_graph, _thread_llm(), store=InMemoryAnswerStore())
+    runs = [list(stream_events(g, _input(q), thread_id="tn")) for q in (Q, Q2)]
+    texts = ["".join(e.data["text"] for e in ev if e.type == "token") for ev in runs]
+    assert "첫째" in texts[0] and "둘째" in texts[1] and runs[0][-1].data["answer_id"] != runs[1][-1].data["answer_id"]
+
+
+def test_without_a_checkpointer_each_run_stands_alone():
+    llm, (fn, calls) = _thread_llm(), recorded()
+    g = build_multi_graph(fn, llm=llm, decompose=False)
+    runs = [g.invoke(_input(q)) for q in (Q, Q2)]
+    assert "첫째" in runs[0]["answer"] and "둘째" in runs[1]["answer"] and len(calls) == 2
+    assert [t for t, _ in llm.calls] == ["classify", "rewrite", "judge", "answer"] * 2
+    for r in runs:
+        assert r["agent_trace"] == ["retriever", "writer", "verifier"] and [e["after"] for e in r["supervisor_log"]] == ["intake", "retriever", "writer", "verifier"]
+
+
+# ---------- 앞 질문의 칸이 다음 질문에 남지 않는다 ----------
+GRAPHS = [build_graph, build_multi_graph]
+GRAPH_IDS = ["single", "multi"]
+
+
+def _bare_input(question, **kw):
+    return {"question": question, "user_id": "u1", "thread_id": "tn", **kw}
+
+
+def _approved_repo():
+    from decision_fixtures import EXPENSE_CELLS
+
+    from backend.graph.decision import rules as R
+    from backend.graph.decision.repo import InMemoryDecisionRepo
+    from backend.schemas import DecisionTable
+
+    repo = InMemoryDecisionRepo()
+    rec = repo.queue_draft("x", DecisionTable(table_id="d", rule_seq=1, version_id="0a3de83375ab", cells=R.rules_from_cells(EXPENSE_CELLS), status="draft"), "s")
+    repo.decide(rec.approval_id, True, "admin")
+    return repo
+
+
+def test_refused_decision_question_does_not_refuse_the_next_one():
+    """재현: 앞 질문의 `decision_error`가 남으면 정상인 다음 질문도 거절된다."""
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    from qgraph_fakes import ScriptedLLM
+
+    replies = iter([j(task_type="Approving expense", amount_usd=None, band=None), j(task_type="Approving expense", amount_usd=30000, band=None)])
+    llm = ScriptedLLM({"classify": j(route="decision"), "decision_params": lambda u: next(replies)})
+    g = build_graph(fake_search, InMemorySaver(), llm=llm, decision_repo=_approved_repo())
+    first = g.invoke(_input("금액이 빠진 결재"), THREAD)
+    assert first["kind"] == "refuse" and first["decision_error"]
+    second = g.invoke(_input("3만 달러 결재"), THREAD)
+    assert second["kind"] == "answer" and "Director" in second["answer"] and second["citations"] and not second["decision_error"] and second["decision_result"]
+
+
+def test_answered_decision_question_leaves_nothing_for_a_policy_question():
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    llm = normal_llm(classify=lambda u: j(route="decision" if "결재" in u else "rule"), decision_params=j(task_type="Approving expense", amount_usd=30000, band=None))
+    g = build_graph(fake_search, InMemorySaver(), llm=llm, decision_repo=_approved_repo(), decompose=False)
+    assert g.invoke(_input("3만 달러 결재"), THREAD)["decision_result"]
+    out = g.invoke(_input(Q), THREAD)
+    assert out["kind"] == "answer" and not out["decision_result"] and not out["decision_query"] and not out.get("decision_error")
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_leftover_fields_are_cleared_for_the_next_question(build):
+    g = _thread_graph(build, _thread_llm())
+    g.invoke(_input(Q), THREAD)
+    g.update_state(THREAD, {"decision_query": {"task_type": "x"}, "decision_result": {"a": 1}, "decision_error": {"reason": "x"}, "review_status": "approved", "issue_table": {"rows": [1]}})
+    out = g.invoke(_input(OFF_DOMAIN), THREAD)
+    assert out["kind"] == "refuse"
+    assert (out["decision_query"], out["decision_result"], out["decision_error"], out["review_status"], out["issue_table"]) == ({}, {}, {}, "", {})
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_search_query_and_org_do_not_survive_a_question_that_does_not_search(build):
+    g = _thread_graph(build, _thread_llm())
+    assert g.invoke(_input(Q), THREAD)["search_query"]
+    out = g.invoke(_input(OFF_DOMAIN), THREAD)
+    assert out["search_query"] == "" and out["search_org"] is None
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_runs_without_a_checkpointer_get_no_new_fields(build):
+    from backend.graph.build import LEFTOVER_FIELDS
+
+    out = run(build(fake_search, llm=_thread_llm(), decompose=False), question=OFF_DOMAIN)
+    assert not set(LEFTOVER_FIELDS) & set(out)
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_date_from_an_earlier_question_is_not_inherited_through_the_chat_adapter(build):
+    """AC-11: 기준일을 주지 않았고 질문에 시점 표현이 없으면 오늘 날짜다. 앞 질문이 고른 기준일은 다음 질문의 입력이 아니다."""
+    from datetime import date
+
+    llm, (fn, calls) = _thread_llm(rewrite=lambda u: j(query="SEV2 최초 대응", org=None, as_of="2024-01-15" if "2024" in u else None)), recorded()
+    g = _thread_graph(build, llm, fn)
+    list(stream_events(g, _bare_input("2024년 기준 SEV2 장애 최초 대응은 몇 분 이내인가요?"), thread_id="tn"))
+    assert calls[-1].as_of == "2024-01-15"
+    list(stream_events(g, _bare_input(Q2), thread_id="tn"))
+    state = g.get_state(THREAD).values
+    assert calls[-1].as_of == date.today().isoformat() and state["as_of"] == date.today().isoformat() and state["as_of_given"] is False
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_given_date_and_section_are_not_inherited_through_the_chat_adapter(build):
+    from datetime import date
+
+    llm, (fn, calls) = _thread_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of=None)), recorded()
+    g = _thread_graph(build, llm, fn)
+    list(stream_events(g, _bare_input(Q, as_of="2025-06-01", org="TEST-security"), thread_id="tn"))
+    assert (calls[-1].as_of, calls[-1].org) == ("2025-06-01", "TEST-security")
+    list(stream_events(g, _bare_input(Q2), thread_id="tn"))
+    assert (calls[-1].as_of, calls[-1].org) == (date.today().isoformat(), None) and g.get_state(THREAD).values["org"] is None
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_adapter_keeps_values_given_for_this_question(build):
+    llm, (fn, calls) = _thread_llm(), recorded()
+    g = _thread_graph(build, llm, fn)
+    list(stream_events(g, _bare_input(Q, as_of="2025-06-01"), thread_id="tn"))
+    list(stream_events(g, _bare_input(Q2, as_of="2025-03-01", org="TEST-security"), thread_id="tn"))
+    state = g.get_state(THREAD).values
+    assert (calls[-1].as_of, calls[-1].org) == ("2025-03-01", "TEST-security") and state["as_of_given"] is True
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_explicit_none_clears_the_date_on_a_direct_call(build):
+    from datetime import date
+
+    llm, (fn, calls) = _thread_llm(), recorded()
+    g = _thread_graph(build, llm, fn)
+    g.invoke(_input(Q), THREAD)
+    out = g.invoke(_bare_input(Q2, as_of=None), THREAD)
+    assert out["as_of"] == date.today().isoformat() and out["as_of_given"] is False and calls[-1].as_of == out["as_of"]
+
+
+@pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
+def test_known_limit_direct_call_without_the_key_cannot_be_told_from_a_leftover(build):
+    """한계를 고정한다: `invoke`에 칸을 아예 빼면 그래프는 입력에 없는 것과 앞 실행에서 남은 것을 구분하지 못해 앞 값을 쓴다. 서비스 입력은 `stream_events`를 지나므로 이 길을 타지 않는다."""
+    g = _thread_graph(build, _thread_llm())
+    g.invoke(_input(Q), THREAD)
+    out = g.invoke(_bare_input(Q2), THREAD)
+    assert out["as_of"] == "2025-06-01" and out["as_of_given"] is True
+
+
 def test_eval_runner_reads_multi_output_like_single():
     from evals.agent.run_eval import run_item
     from evals.retrieval.gold import GoldRef
