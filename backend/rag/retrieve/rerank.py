@@ -1,7 +1,7 @@
 """리랭킹: 검색 후보를 (질문, 청크) 한 쌍씩 다시 채점해 순서를 고친다 (docs/specs/search.md).
 
 후보는 환경 변수 RERANK_MODEL로만 고른다. 채점 방식은 1차 비교(evals/retrieval/experiment_v1.py `_Scores`)와 같다.
-- CrossEncoder 셋(mMiniLM 기본, bge, bge-int8): max_length 512, batch 16, 모델 기본 출력(순위에만 쓴다).
+- 기본은 리랭커 없음(none, 확정 조합). CrossEncoder 셋(mMiniLM, bge, bge-int8): max_length 512, batch 16, 모델 기본 출력(순위에만 쓴다).
 - bge-int8: 같은 bge를 CPU에서 Linear 층만 int8로(동적 양자화). GPU 없는 배포를 가정한 후보.
 - Qwen3-Reranker: 모델 카드 방식 — 지시문·질문·문서를 넣고 마지막 토큰의 "yes" 대 "no" 확률. max_length 1024, batch 8.
 - 질문은 한국어 원문 그대로 넣는다(1차 비교와 같음). 점수는 모델마다 척도가 달라 절대값에 기준선을 두지 않는다.
@@ -39,8 +39,9 @@ RERANKERS: dict[str, RerankerSpec] = {s.name: s for s in (
     RerankerSpec("Qwen/Qwen3-Reranker-0.6B", "qwen3", "Qwen/Qwen3-Reranker-0.6B",
                  "e61197ed45024b0ed8a2d74b80b4d909f1255473", "qwen3", needs_gpu=True),
 )}
-DEFAULT_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 NONE = "none"
+DEFAULT_MODEL = NONE   # 확정 조합(retrieval_fix_v1)은 리랭커 없음. 켜려면 RERANK_MODEL
+BAKED_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"   # 이미지에 구워 두는 리랭커(Dockerfile, 비교용)
 
 QWEN_PREFIX = ("<|im_start|>system\nJudge whether the Document meets the requirements based on the Query and the Instruct provided. "
                "Note that the answer can only be \"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n")

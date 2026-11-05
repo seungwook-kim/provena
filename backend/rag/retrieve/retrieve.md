@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | 검색 v2 = 확정 조합(조장 요청 5건): 기본값 voyage-4(API, `VoyageClient`, 실패 분류 EmbedUnavailable·EmbedConfigError·EmbedNoKey)·`dense_en`·리랭커 없음·k=5(`DEFAULT_K`, 그래프·MCP 같은 상수). `SearchQuery.sub_queries`(하위 질문마다 상위 k → 번갈아 합침), 링크 확장 L1x2(`links.py`, `chunks.link_targets`, 적재·증분 반영, 링크 후보도 org·as_of 필터). 재현 시험: 측정과 같은 벡터로 v1 30문항 청크 집합 30/30·Recall@5 0.9667, 링크 대상 23,095청크 일치. 변이 9/9 | 이번 PR |
 | 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | 섹션 원문 조회 `section.py`(`get_section`·`section_names`, docs/specs/mcp.md How 2): 판 고르기는 search와 같고, 청크마다 머리말 첫 줄과 `overlap_tail()`로 다시 계산한 겹침을 떼고 `text_sha256` 대조 뒤 잇는다(다르면 `SectionIntegrityError`). 스냅샷 23,095청크 지문 전부 통과, 파싱 결과와 15,463섹션 글자까지 같음·438섹션 공백만 다름(EC-14). 시험 `tests/test_retrieve_section.py` 13개(DB 1개 포함) | (이번 PR) |
 | 2026-11-02 | 김승욱 (Claude Code) | 이미 영어인 질의는 번역 LLM을 부르지 않게 함(`search.md` EC-02-1). 평가셋 50건은 모두 한글이 있어 비교 점수에 영향이 없다 | 이번 PR |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | 판 날짜 UTC(I-011) 색인 반영: `index.py refresh`(지문·줄 순서가 같을 때만 청크 파일 교체, 벡터 그대로) + 테스트(본문·순서가 다르면 멈춤, 두 검사를 지우면 실패 확인). 실제 색인: 바뀐 칸 `version_date` 1,005행·`fetched_at` 23,095행(색인이 10/30 받은 날로 만들어져 있었음 → 10/31), 벡터 sha256 그대로. DB 사본에 `load_snapshot` 다시 적재(8.3초, generation 3): as_of 2026-10-27에 보이는 청크 23,076 → 23,095, 현재 판 23,095 그대로, 판 날짜 바뀐 판 68개, 벡터 빈 행 0 | 이 PR |

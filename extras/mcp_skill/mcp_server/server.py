@@ -25,7 +25,7 @@ from fastmcp.server.auth import AccessToken, TokenVerifier
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
-from backend.schemas.chunk import SearchQuery
+from backend.schemas.chunk import DEFAULT_K, SearchQuery
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +117,9 @@ def _transient(exc: BaseException) -> str | None:
     """다시 부르면 될 수 있는 실패면 그 종류, 아니면 None. 시간 초과와 연결 실패만 해당한다."""
     if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
         return "시간 초과"
+    from backend.rag.retrieve.embed import EmbedUnavailable
+    if isinstance(exc, EmbedUnavailable):                        # Voyage API 연결 오류·시간 초과·429·5xx (ConnectionError 하위)
+        return "임베딩 API 연결 실패"
     if isinstance(exc, ConnectionError):
         return "저장소 연결 실패"
     try:
@@ -170,16 +173,18 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
         "error=다시 부르지 말고 이 도구 없이 답)."))
 
     @mcp.tool(annotations=READ_ONLY)
-    async def search_handbook(query: str, org: str | None = None, as_of: str | None = None, k: int = 8) -> ToolResponse:
-        """GitLab 핸드북에서 질문과 관련된 청크(섹션 조각)를 찾는다. 하이브리드 검색(벡터+BM25) 뒤 리랭킹한 상위 k개.
+    async def search_handbook(query: str, org: str | None = None, as_of: str | None = None, k: int = DEFAULT_K) -> ToolResponse:
+        """GitLab 핸드북에서 질문과 관련된 청크(섹션 조각)를 찾는다. 질문을 영어 문장으로 바꿔 voyage-4 벡터로 찾은 상위 k개이고
+        (리랭커 없음), k가 3 이상이면 뒤 2자리는 상위 결과가 링크한 다른 페이지의 청크다(링크 확장, 같은 org·as_of 필터).
 
-        언제 쓰나: 핸드북 정책·절차·권한에 대한 질문의 근거를 찾을 때. 한국어 질문도 된다(검색어를 영어로 바꿔 찾는다).
+        언제 쓰나: 핸드북 정책·절차·권한에 대한 질문의 근거를 찾을 때. 한국어 질문도 된다(영어 문장으로 바꿔 찾는다).
         언제 쓰지 않나: 섹션 하나를 통째로 읽을 때는 get_section, 최근 바뀐 섹션 목록은 list_changed_sections.
         입력: query 1~1000자 / org = 핸드북 절(예: security, finance, engineering), 모르면 비움 /
-              as_of = YYYY-MM-DD, 그날 유효했던 판만(비우면 현재 판) / k = 1~20, 기본 8.
+              as_of = YYYY-MM-DD, 그날 유효했던 판만(비우면 현재 판) / k = 1~20, 기본 5.
         출력: results = Chunk 목록(chunk_id, rule_seq, article, text, source_url, version_date ...). 첫 줄은 제목 경로.
               비공개 주소 링크는 [비공개 문서]로 바꿔 보낸다 — 그 링크 너머 내용은 근거가 아니다.
-        제약: 결과가 없으면 status=not_found(빈 ok가 아님). note에 검색이 내려간 이유(번역 실패 등)가 올 수 있다.
+        제약: 결과가 없으면 status=not_found(빈 ok가 아님). note에 검색이 내려간 이유(번역 실패, 임베딩 키 없음 no_key 등)가
+              올 수 있다. 임베딩 API 연결 실패·시간 초과는 status=unavailable(잠시 뒤 다시).
         """
         src = "handbook"
         try:

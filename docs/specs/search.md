@@ -22,17 +22,20 @@
 **Happy Path**
 1. 호출자가 `SearchQuery(query="외부 SaaS 3만 달러 도입은 누가 승인하나", org=None, as_of=None, k=5)`를 넘긴다.
 2. `org`·`as_of`로 대상 청크를 먼저 거른다. 판마다 유효 구간 `[valid_from, valid_to)`를 둔다(`valid_from` = 판 날짜, `valid_to` = 같은 페이지의 다음 판 날짜, 마지막 판은 비움). `as_of`가 없으면 `valid_to`가 빈 현재 판만, 있으면 `valid_from <= as_of < valid_to`인 판만 남긴다(SDD 4-2, SDD 11장 4-5 "기준일이 없으면 최신 판"). 증분 수집 뒤에도 옛 판과 새 판이 함께 나오지 않는다.
-3. 질문을 영어 검색어로 바꾼다(`QUERY_TRANSLATE=1`일 때, `backend/services/llm.py` 경유).
-4. 벡터 검색은 한국어 질문 그대로, BM25는 영어 검색어로 각각 상위 `SEARCH_POOL`개를 뽑아 RRF(k=60)로 합친다(`SEARCH_MODE=hybrid_ko_kw`).
-5. 합친 상위 `RERANK_TOP`개를 리랭커로 다시 줄 세운다.
-6. 상위 `k`개를 `Chunk`로 돌려준다.
+3. 질문(과 `sub_queries`가 있으면 하위 질문)을 영어 문장으로 바꾼다(`QUERY_TRANSLATE=1`일 때, `backend/services/llm.py` 경유, 여럿이면 동시에). 이미 영어면 그대로 쓴다(EC-02-1).
+4. 질문 벡터를 voyage-4 API로 한 번에 만든다(전체 질문 + 하위 질문, `input_type=query`).
+5. `sub_queries`가 없으면 전체 질문 벡터로 상위 `k`개, 있으면 하위 질문마다 상위 `k`개를 뽑아 번갈아(이미 든 것은 건너뜀) `k`개로 합친다.
+6. 링크 확장 L1x2: 그 `k`개가 링크한 다른 페이지(`chunks.link_targets`)의 청크 중 같은 `org`·`as_of` 필터를 지나고 아직 안 든 것을 **전체 질문 벡터**와 가까운 순으로 `SEARCH_LINK_N`(2)개 골라 뒤 자리를 바꾼다. 리랭커는 기본 없음.
+7. 상위 `k`개를 `Chunk`로 돌려준다.
+
+확정 조합(2026-11-05, `evals/results/retrieval_fix_v1/`): voyage-4 · `dense_en` · 리랭커 없음 · k=5 · 질문 분해 · L1x2 = v1 Recall@5 0.967. 링크 확장은 강사 확인을 받았다(조장 11/5). 분해 LLM은 그래프가 부르고 `sub_queries`로 넘긴다(MCP는 넘기지 않는다).
 
 **검색 방식** (`SEARCH_MODE`, 1차 비교에서 남긴 두 방식과 비교용)
 
 | 값 | 벡터에 넣는 질문 | BM25에 넣는 질문 | 용도 |
 |---|---|---|---|
-| `hybrid_ko_kw` (기본) | 한국어 원문 | 영어 검색어 | 1차 상위 조합 |
-| `dense_en` | 영어 문장 | 없음 | 2차 후보 |
+| `hybrid_ko_kw` | 한국어 원문 | 영어 검색어 | 1차 상위 조합 |
+| `dense_en` (기본) | 영어 문장 | 없음 | 확정 조합 |
 | `bm25_kw` | 없음 | 영어 검색어 | 비교용(임베딩 없음) |
 | `dense_ko` | 한국어 원문 | 없음 | 기준선, 데모 모드에서 번역 기록이 없을 때 |
 
@@ -48,6 +51,10 @@
 | EC-05 | `RERANK_MODEL=none` | 리랭킹 없이 RRF 순서로 상위 `k` |
 | EC-06 | 같은 섹션이 여러 청크로 잘림 | 청크 단위로 돌려준다. 섹션 합치기는 호출자 몫(채점도 섹션 위치로 맞춤, `docs/specs/eval-retrieval.md`) |
 | EC-07 | 모델 파일이 이미지에 없음 | `HF_HUB_OFFLINE=1`이라 기동 때 바로 실패한다. 내려받기로 넘어가지 않는다 |
+| EC-08 | Voyage API 연결 오류·시간 초과(10초)·429·5xx | 재시도 없이 `EmbedUnavailable`(ConnectionError). MCP는 `unavailable`·`retryable=true`. 401·403·400은 `EmbedConfigError` → MCP `error`. 오류 글에 키를 넣지 않는다 |
+| EC-09 | `VOYAGE_API_KEY` 없음 | 빈 목록 + 트레이스 `fallback_reason=no_key`. 죽지 않는다(G2). 질문 벡터 장부(키 없이 재생)는 다음 PR |
+| EC-10 | `sub_queries`가 1개·4개 이상·빈 글·1000자 초과 | `ValueError`. `None`·`[]`은 나누지 않음 |
+| EC-11 | 상위 결과에 링크가 없음·링크 대상이 필터 밖 | 바꾸지 않고(있는 만큼만 바꾸고) 그대로 돌려준다. `k <= SEARCH_LINK_N`이면 확장하지 않는다 |
 
 ## How
 
@@ -63,11 +70,12 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 파일 | 하는 일 |
 |---|---|
 | `backend/rag/retrieve/search.py` | `search()`, 필터, RRF, 방식 분기. 비교 입구 `make_search(embedder, mode, reranker, rerank_top)`: `evals/retrieval/compare.py --factory backend.rag.retrieve.search:make_search` 가 조합마다 부른다. 서비스와 같은 검색 코드를 쓰고 저장소만 DB 대신 `data/index/` 스냅샷(numpy)을 읽는다. 이름은 1차 비교(`experiment_v1`)의 짧은 이름도 받고, BM25만은 `embedder="none"`·`bm25_kw` |
-| `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix) |
+| `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix). voyage-4는 REST 호출(`VoyageClient`, 시간 한도 10초·재시도 0번 = MCP 30초 − 번역 15초 안쪽) |
+| `backend/rag/retrieve/links.py` | 링크 확장 재료: 청크 `element_ids` → 파싱 결과 `links` → 청크 주소 기준 urljoin → '#'·끝 '/' 뗌 → manifest 주소로 rule_seq. 자기 쪽·코퍼스 밖 제외. 측정 코드 `exp_decompose_v1.Links`와 같은 규칙(AC-07에서 23,095청크 대조) |
 | `backend/rag/retrieve/rerank.py` | 리랭커 불러오기, int8(CPU) 선택 |
 | `backend/rag/retrieve/translate.py` | 한국어 질문 → 영어 검색어·영어 문장. LLM은 `backend/services/llm.py`로만 부른다. 번역은 질문 sha256과 모델 이름을 키로 `query_translations` 표에 저장하고, 같은 키가 있으면 LLM을 다시 부르지 않는다 |
-| `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩. `refresh`: 청크 id·판·본문(지문)과 줄 순서가 같고 다른 칸(판 날짜 등)만 바뀐 청크 파일로 갈아 끼운다. 벡터는 본문과 모델로만 정해지므로 다시 계산하지 않고, 지문이나 순서가 다르면 멈춘다(I-011). 청크 sha256이 바뀌므로 `load_snapshot`이 다시 적재한다. `translations --from <1차 비교 translations.json>` 은 번역을 `data/index/query_translations.jsonl`(meta.json에 sha256)로 옮긴다 — `load_snapshot` 이 DB 장부에, `make_search` 가 메모리 장부에 넣어 1차 비교와 같은 번역으로 돈다(번역은 부를 때마다 달라 재현의 근거가 된다) |
-| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB는 다시 넣는다) |
+| `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩. `refresh`: 청크 id·판·본문(지문)과 줄 순서가 같고 다른 칸(판 날짜 등)만 바뀐 청크 파일로 갈아 끼운다. 벡터는 본문과 모델로만 정해지므로 다시 계산하지 않고, 지문이나 순서가 다르면 멈춘다(I-011). 청크 sha256이 바뀌므로 `load_snapshot`이 다시 적재한다. `translations --from <1차 비교 translations.json>` 은 번역을 `data/index/query_translations.jsonl`(meta.json에 sha256)로 옮긴다 — `load_snapshot` 이 DB 장부에, `make_search` 가 메모리 장부에 넣어 1차 비교와 같은 번역으로 돈다(번역은 부를 때마다 달라 재현의 근거가 된다). `links`: 청크마다 링크 대상 페이지 → `data/index/links.jsonl`(줄 순서 = chunks.jsonl, meta.json에 sha256) |
+| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB, 링크를 아직 안 실은 DB는 다시 넣는다). 링크는 `chunks.link_targets bigint[]`, 장부 `index_meta.links_sha256`. 증분(`schedule.py`)도 새 판 청크에 같은 규칙으로 링크를 넣는다 |
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차. `line_start`·`line_end` 추가는 열린 항목 8, 승인 대기) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
 | `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 모델을 정하기 전(11/6)까지는 저장소에 넣지 않는다(`.gitignore`). 나눠 주는 방법은 "열린 항목" 6 |
@@ -85,11 +93,13 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `EMBED_MODEL` | `Snowflake/snowflake-arctic-embed-l-v2.0` | 후보: 이 값, `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, `voyage-4`(API), 문서 `voyage-4` + 질문 `voyageai/voyage-4-nano`. voyage 두 후보는 인계 뒤 지원을 더한다(열린 항목 7). 기준선 `BAAI/bge-m3` |
+| `EMBED_MODEL` | `voyage-4` | API(1024차원, 키 `VOYAGE_API_KEY`). 비교 후보: `Snowflake/snowflake-arctic-embed-l-v2.0`(이미지에 굽는 로컬 모델), `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, 기준선 `BAAI/bge-m3` |
+| `VOYAGE_API_KEY` | 비움 | voyage-4 질문 임베딩. 부를 때 읽고 어디에도 찍지 않는다. 없으면 EC-09 |
+| `SEARCH_LINK_N` | `2` | 링크 확장으로 바꿀 뒤 자리 수. `0`이면 끈다 |
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
-| `SEARCH_MODE` | `hybrid_ko_kw` | 위 표 |
+| `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
-| `RERANK_MODEL` | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | 후보: 이 값, `BAAI/bge-reranker-v2-m3`, `bge-int8`(bge를 CPU int8로), `Qwen/Qwen3-Reranker-0.6B`, `none`. 기본값은 CPU에서 SPEC 3초를 지키는 유일한 후보(후보 10개 p95 0.59초)로 두고, 최종은 11/6에 정한다. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
+| `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(이미지에 굽는 것, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
 | `HF_HUB_OFFLINE` | `1` | 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다(Dockerfile `SEARCH_*` 빌드 인자 = 기본 임베딩·리랭커의 고정 판) |
@@ -113,7 +123,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 4 | 번역에 쓸 LLM | 로컬은 `LLM_PROVIDER=claude_cli`, 운영은 `openrouter`(`anthropic/claude-haiku-5.5`). 번역 저장 키의 모델 이름은 같은 값(`claude-haiku-5-5`)으로 맞추므로 두 제공자가 저장된 번역을 함께 쓴다. 운영 경로를 다시 잴 때는 저장된 번역을 비우고 시작한다 | 정함 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
 | 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | 모델을 정하기 전(11/6 전): `data/index/`는 `.gitignore`, 로컬 `data/index/`로 개발하고 받을 주소는 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 둔다(11/2 조장 답). 모델을 정한 뒤: 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다(이때 `.gitignore` 줄을 뺀다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고 없을 때만 `INDEX_URL`을 본다 | 11/6 뒤 커밋 |
-| 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | 11/4 인계 범위에는 넣지 않는다. 인계 뒤 김승욱이 `EMBED_QUERY_MODEL`, `VOYAGE_API_KEY` 지원을 작은 PR로 더해 후보 6개를 같은 경로로 잰다. voyage-4가 뽑히면 키 없는 새 질문에 안내를 돌려주는 처리와 Voyage 학습 사용 거부 설정도 더한다 | 인계 뒤 |
+| 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | **닫음(11/5)**: 확정 조합 voyage-4를 기본으로 지원(`embed.py` `VoyageClient`, 문서 벡터는 1차 비교 캐시 `index import --embedder voyage-4`). 질문 모델이 다른 `voyage4-doc+nano-query`는 넣지 않았다. 키 없는 질문은 EC-09(빈 결과), 질문 벡터 장부와 Voyage 학습 사용 거부 설정은 다음 PR | 11/5 |
+| 9 | L1x2를 잰 조건 밖: `k≠5`, 리랭커 켬, `org` 지정, 증분으로 새로 생긴 페이지를 가리키는 옛 청크의 링크(다시 계산하지 않음) | 같은 규칙으로 돌지만 점수는 재지 않았다. 링크 대상은 페이지(rule_seq)라 대상 페이지가 개정돼도 `as_of`에 맞는 판을 고른다 | v2 측정 때 |
 | 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — 박진형 제안, 김승욱·강경희 승인(11/2, PR #37, SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |
 
 ## AC (Given-When-Then)
@@ -142,6 +153,12 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 - GIVEN: `DEMO_MODE=1`, `LLM_API_KEY` 없음, 번역 기록 없는 질문
 - WHEN: `search()`를 부른다
 - THEN: 예외 없이 `dense_ko` 결과를 돌려주고 트레이스에 `fallback=dense_ko`가 남는다
+- (voyage-4, 11/5) `VOYAGE_API_KEY`도 없으면 예외 없이 빈 목록, 트레이스 `fallback_reason=no_key`(EC-09). 기동 때 미리 부르기(warmup)는 API 모델이면 건너뛴다
+
+**AC-07 · 확정 조합 재현 (11/5, `tests/test_search_v2_repro.py`)**
+- GIVEN: 측정과 같은 질문 벡터·하위 질문 벡터(유료 API를 부르지 않음), v1 30문항, 필터 없음(측정은 전체 청크에서 찾았다)
+- WHEN: `search()`를 부른다
+- THEN: 링크 대상이 측정 코드 `Links.target`과 23,095청크 모두 같고, 문항마다 돌려준 청크 집합이 `voyage/L1x2.json`·`decompose/voyage/dec+L1x2.json`과 30/30 같으며 Recall@5 0.9667. 입력 파일(`data/index_exp/`, 청크·파싱 결과)이 없으면 건너뛴다
 
 **AC-05 · 오프라인 기동**
 - GIVEN: `HF_HUB_OFFLINE=1`, 모델이 이미지에 있음

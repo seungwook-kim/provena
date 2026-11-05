@@ -32,6 +32,7 @@ import numpy as np
 from backend.rag.ingest import chunk as chunking
 from backend.rag.ingest.handbook import PINNED_COMMIT, commit_day, front_matter, org_of, page_url, rule_seq
 from backend.rag.ingest.parse import ParseError, parse_page
+from backend.rag.retrieve import links
 
 JOB = "handbook-sync"
 SQL = Path(__file__).resolve().parents[3] / "db" / "202_sync.sql"
@@ -115,6 +116,7 @@ def page_chunks(path: str, raw: str, version: list, fetched_at: str) -> tuple[di
     chunks = chunking.chunk_structure(page, elements, CHUNK_SIZE, CHUNK_OVERLAP, True, CHUNK_CONFIG)
     for c in chunks:
         c.pop("_body", None)
+    page["_element_links"] = {e["element_id"]: e.get("links") or [] for e in elements}   # 링크 확장(L1x2) 재료
     return page, chunks
 
 
@@ -219,6 +221,9 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
                     retry.append((path, d.get("held_date") or src.head_date))
                     retry_seq = rule_seq(path)
                     articles += [a for a in d.get("held_articles", []) if a["rule_seq"] == retry_seq]
+    # 링크 대상: 이미 있는 쪽 + 오늘 반영하는 쪽의 주소 → rule_seq (처음 적재의 links.py 규칙과 같다)
+    url2seq = links.url_map([*conn.execute("SELECT source_url, rule_seq FROM docs").fetchall(),
+                             *((pg["source_url"], pg["rule_seq"]) for pg, _ in plan)])
     with conn.transaction():
         ord0 = conn.execute("SELECT COALESCE(max(ord), -1) + 1 FROM chunks").fetchone()[0]
         n_new = 0
@@ -240,11 +245,12 @@ def apply(conn, run_id: int, src: Source, model: str, embed_fn: Callable[[list[s
                             VALUES (%s, %s, %s, %s, %s)""", (page["rule_seq"], vid, vdate, page["version_date_before"], start))
             with conn.cursor() as c:
                 c.executemany("""INSERT INTO chunks (chunk_id, version_id, rule_seq, seq, ord, article, kind, text, source_url,
-                                                     text_sha256, line_start, line_end, embedding, embedder)
-                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                                     text_sha256, line_start, line_end, embedding, embedder, link_targets)
+                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                               [(x["chunk_id"], vid, x["rule_seq"], x["seq"], ord0 + n_new + i, x["article"], x["kind"],
                                 x["text"], x["source_url"], x["text_sha256"], x["line_start"], x["line_end"],
-                                known[x["text"]], model) for i, x in enumerate(chunks)])
+                                known[x["text"]], model, links.targets(x, page["_element_links"], url2seq))
+                               for i, x in enumerate(chunks)])
             n_new += len(chunks)
             got = conn.execute("SELECT count(*) FROM chunks WHERE rule_seq = %s AND version_id = %s",
                                (page["rule_seq"], vid)).fetchone()[0]

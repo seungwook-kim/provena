@@ -349,3 +349,19 @@ def test_embedding_failure_keeps_old_current(conn):
         go(conn, source(OLD, NEW, ["newv00000000", "2026-10-30", False]), Embed(fail=True))
     assert current_and_asof(None) == {"oldv00000000"}
     assert schedule.last_commit(conn) == schedule.PINNED_COMMIT
+
+
+@needs_db
+def test_new_chunks_get_link_targets_like_first_load(conn):
+    """증분으로 넣은 새 판 청크도 링크 대상(코퍼스 안 다른 쪽 rule_seq)을 갖는다 — 처음 적재(index links)와 같은 규칙(links.py).
+    자기 쪽·코퍼스 밖 주소는 빠지고, 이미 있는 쪽(docs 표)으로 가는 상대 주소는 잡힌다."""
+    other = "content/handbook/security/other-page.md"
+    seed(conn, other, "---\ntitle: Other\n---\n\n## Other\n\nOther page body.\n", "othv00000000", "2026-09-01")
+    conn.commit()
+    linked = OLD.replace("Ask the security team", "Ask the [team](/handbook/security/other-page/#who), "
+                         "[self](/handbook/security/test-disclosure/) or [out](https://example.com/x)")
+    out = go(conn, source(OLD, linked, ["lnkv00000000", "2026-10-30", False]))
+    assert out["status"] == "succeeded"
+    rows = conn.execute("SELECT text, link_targets FROM chunks WHERE version_id = 'lnkv00000000' ORDER BY seq").fetchall()
+    assert rows and {tuple(t) for _, t in rows} == {(), (rule_seq(other),)}
+    assert all(("Ask the team" in text) == bool(t) for text, t in rows)    # 링크가 든 섹션만(본문엔 링크 글만 남음)
