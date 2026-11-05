@@ -136,9 +136,27 @@ class Pruned:
     reason: str = ""  # 실패 사유: no_claims | unmatched | nothing_left | too_many_removed
 
 
+def same_page_context(cited: list[dict], retrieved: list[dict]) -> list[dict]:
+    """인용 청크와 같은 페이지, 같은 판의 검색 청크 중 인용되지 않은 것. 판정 LLM이 규칙의 적용 범위를 확인할 때만 보는 참고이고 값의 근거로 세지 않는다.
+    다른 페이지의 청크는 넣지 않는다. 비슷한 주제의 다른 문서가 근거처럼 읽히면 환각을 통과시킬 수 있다."""
+    pages = {(c.get("rule_seq"), c.get("version_id")) for c in cited}
+    seen = {c["chunk_id"] for c in cited}
+    out: list[dict] = []
+    for c in retrieved:
+        if c["chunk_id"] not in seen and (c.get("rule_seq"), c.get("version_id")) in pages:
+            seen.add(c["chunk_id"])
+            out.append(c)
+    return out
+
+
 def split_sentences(line: str) -> list[str]:
     """한 줄을 문장으로 나눈다. 문장 끝의 `[chunk_id]` 표시는 그 문장에 붙여 둔다. 소수점(99.74)은 문장 끝으로 보지 않는다."""
     return [m.group(0).strip() for m in _SENTENCE.finditer(line.strip()) if m.group(0).strip()]
+
+
+def same_text(a: str, b: str) -> bool:
+    """공백과 인용 표시를 빼고 같은 글인지. 다시 쓴 답이 그대로면 판정을 다시 하지 않는다."""
+    return _flat(a) == _flat(b)
 
 
 def _flat(text: str) -> str:

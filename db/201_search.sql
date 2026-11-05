@@ -30,7 +30,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS versions_one_current ON versions (rule_seq) WH
 
 -- 청크. chunk_id = sha(rule_seq:seq:본문) 이라 개정판에서 안 바뀐 섹션은 옛 판과 id가 같다 → 열쇠는 (chunk_id, version_id).
 -- embedding은 차원 없는 vector (모델마다 1024·2048). 한 번에 한 모델 벡터만 둔다(embedder = 그 행의 벡터를 만든 모델).
--- HNSW 색인은 만들지 않는다: 필터를 걸면 결과가 조용히 줄어든다(rag3-12). 전수 비교.
+-- 기본은 전수 비교. HNSW 색인은 이 파일이 아니라 따로 만든다(적재가 끝난 뒤 한 번, 수동: db/manual/chunks_hnsw_voyage4.sql):
+-- 필터를 걸면 결과가 조용히 줄 수 있어(rag3-12) 반복 스캔(strict_order)과 ef_search를 코드(search.py HNSW_*)가 질의마다 준다.
 CREATE TABLE IF NOT EXISTS chunks (
     chunk_id    text NOT NULL,
     version_id  text NOT NULL,

@@ -1,0 +1,20 @@
+등록 시각: 2026-11-05T12:34:08+09:00
+evals/PREREGISTER.md sha256: 9a8e63dca2088fd38471471f3bed9c071069067e847fa7b466d388acb9acf4c0
+행: #23 (2026-11-05) 수정 묶음
+git HEAD: baadf13
+--- git status --short ---
+ M backend/graph/build.py
+ M backend/graph/decompose.py
+ M backend/prompts/question.py
+ M backend/rag/retrieve/search.py
+ M docs/specs/question-graph.md
+ M docs/specs/search.md
+ M evals/PREREGISTER.md
+ M evals/agent/exp_service_v1.py
+ M evals/results/retrieval_v1_round1/translations.json
+ M skills/citation-rules/SKILL.md
+ M tests/test_graph_search_wiring.py
+ M tests/test_question_graph.py
+ M tests/test_search_v2.py
+ M tests/test_search_v2_repro.py
+?? evals/results/agent_v1_fix_pg/

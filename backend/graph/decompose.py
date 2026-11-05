@@ -6,7 +6,7 @@
 - 응답 형식이 깨지면 1회 다시 요청한다(`ATTEMPTS`=2). 측정 때는 최대 3번이었다.
 - 하위 질문이 1개이거나, 4개 이상이면 앞 3개만 쓰고, 항목이 비었거나 1000자를 넘거나 원 질문과 같으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙).
 실패(형식 오류, 호출 오류)하거나 나누지 않으면 빈 목록이고, 검색은 질문 하나로 그대로 이어 간다. 분해 때문에 답이 멈추지 않는다.
-켜는 곳: `decompose_enabled()`. 환경 변수 `SEARCH_DECOMPOSE`가 `1`이면 켠다. 기본은 끔이다(검색이 `sub_queries`를 쓰기 전에는 호출이 낭비다).
+켜는 곳: `decompose_enabled()`. 기본은 켬이다(측정한 확정 조합). 환경 변수 `SEARCH_DECOMPOSE`가 0, false, no, off이면 끈다.
 """
 from __future__ import annotations
 
@@ -33,10 +33,15 @@ SYSTEM = (
     "예 2: 질문 \"휴가 신청은 어떻게 해?\" -> {\"split\": false, \"sub_questions\": []}."
 )
 SYSTEM_TAGGED = f"[[task:{TASK}]]\n{SYSTEM}"
+_COMPANY_PREFIX = re.compile(r"^GitLab(?:의|은|는|이|에서는|에서)?\s+", re.I)
+
+
+_OFF_VALUES = {"0", "false", "no", "off"}
 
 
 def decompose_enabled() -> bool:
-    return (os.environ.get("SEARCH_DECOMPOSE") or "").strip() == "1"
+    """SEARCH_DECOMPOSE가 없거나 비어 있으면 켬(확정 조합). 0, false, no, off면 끔."""
+    return (os.environ.get("SEARCH_DECOMPOSE") or "1").strip().lower() not in _OFF_VALUES
 
 
 def parse_split(text: str) -> dict | None:
@@ -62,6 +67,12 @@ def normalize(question: str, obj: dict) -> list[str]:
     return subs if ok else []
 
 
+def drop_company_prefix(subs: list[str]) -> list[str]:
+    """하위 질문 맨 앞의 회사 이름을 뗀다. 모든 문서가 GitLab 핸드북이라 찾는 데 도움이 안 되고, 붙으면 개요 문서로 끌린다(평가셋 v1 3번)."""
+    out = [_COMPANY_PREFIX.sub("", s, count=1).strip() for s in subs]
+    return out if all(out) else subs
+
+
 def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
     """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
     if not question or not question.strip():
@@ -78,6 +89,6 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
             continue
         obj = parse_split(text)
         if obj is not None:
-            return normalize(question, obj), "llm"
+            return drop_company_prefix(normalize(question, obj)), "llm"
         source = "invalid"
     return [], source

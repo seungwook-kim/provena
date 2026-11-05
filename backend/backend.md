@@ -12,6 +12,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-05 | 김승욱 (Claude Code) | `requirements.txt`의 langgraph에 상한 `<1.3`을 둠. `graph/multi.py`가 컴파일된 그래프의 내부 구조를 읽어, 시험한 1.2.18과 같은 1.2 판까지만 받는다 | 미정 |
 | 2026-11-02 | kkh-hue | Google OAuth Authorization Code + PKCE 시작·콜백, state/nonce 요청 쿠키 검증, Google JWK ID 토큰 검증, 주입형 OAuth 사용자 저장소·토큰 교환기 경계와 기존 JWT 쿠키 발급을 `auth.py`에 추가했다. 저장소 또는 RS256 검증 의존성이 없으면 503으로 차단하며 실제 DB·Cloud Run 검증은 하지 않았다. OAuth·기존 인증 관련 테스트와 전체 Python 테스트는 각각 53 passed, 214 passed·1 skipped였다. | #43 |
 | 2026-11-01 | 강경희 | `require_admin`·주입용 팩터리와 `require_csrf`를 구현하고, 실제 Supabase PostgreSQL 인증 저장소에서 승인된 `public.users` 생성·RLS·API 역할 권한 회수 및 A(user)·B(admin) 계정을 확인했다. 별도 프로세스에서 데모·자동 스키마·시드를 차단한 로그인·실패·`/me`·권한·CSRF·Secure/HttpOnly 쿠키·로그아웃·A/B 전환 검사 26개와 보안 테스트 28개를 수행했다. 로그아웃 뒤 동일 JWT 재사용이 `/me` 200으로 재현된 J-05 후속으로 `jti`·폐기 저장소 인터페이스·조회 장애 503 차단·폐기 저장 확인 로그아웃을 구현했다. 당시 전체 Python은 189 passed, 1 skipped였고 J-05 후속은 206 passed, 1 skipped였다. 프로세스 간 계약 시험은 임시 SQLite 어댑터이며 PostgreSQL 공유 폐기 저장소·`main.py` 연결과 운영 재사용 차단 검증은 미완료라 J-05는 열림으로 유지한다. | #43 |
 | 2026-10-30 | 강경희 | 로그인 보안 리뷰 후속: ID 단독 60초/5회·IP 단독 60초/30회 실패 제한으로 분리하고 만료된 키를 정리했다. 성공 시 ID만 초기화하고 IP 기록은 유지한다. `.venv/Scripts/python.exe -m pytest tests/test_auth_router_runtime.py -q` 17개, `.venv/Scripts/python.exe -m pytest -q` 51개 통과. | #15 |

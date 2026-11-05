@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.schemas import Chunk
+from backend.services import llm_trace
 from backend.services.cost import CostCapExceeded
 from evals.agent import tracking
 from evals.agent.judge import judge_answer
@@ -60,16 +61,18 @@ def _as_of(item: dict) -> str | None:
 
 def run_item(graph, item: dict, *, run_id: str, judge_llm: Any = None) -> dict:
     thread_id = f"eval-{item['id']}-{uuid.uuid4().hex[:6]}"
-    config = tracking.eval_config("question", item["id"], run_id=run_id, thread_id=thread_id)
-    t0 = time.perf_counter()
-    try:
-        out = graph.invoke({"question": item["input"], "user_id": "eval-user", "thread_id": thread_id, "as_of": _as_of(item)}, config)
-    except CostCapExceeded:
-        tracking.finish_item(config)
-        raise
-    except Exception as e:  # noqa: BLE001  한 문항의 실패로 전체 측정을 잃지 않는다. 답을 못 낸 문항으로 세고 오류 수를 따로 보인다
-        out = {"kind": "error", "answer": f"{type(e).__name__}: {e}"}
-    row = _row(item, out, time.perf_counter() - t0)
+    with llm_trace.capture() as llm_calls:  # 호출별 시간(`llm_trace` 칸). 지표 계산에는 쓰지 않는다
+        config = tracking.eval_config("question", item["id"], run_id=run_id, thread_id=thread_id)
+        t0 = time.perf_counter()
+        try:
+            out = graph.invoke({"question": item["input"], "user_id": "eval-user", "thread_id": thread_id, "as_of": _as_of(item)}, config)
+        except CostCapExceeded:
+            tracking.finish_item(config)
+            raise
+        except Exception as e:  # noqa: BLE001  한 문항의 실패로 전체 측정을 잃지 않는다. 답을 못 낸 문항으로 세고 오류 수를 따로 보인다
+            out = {"kind": "error", "answer": f"{type(e).__name__}: {e}"}
+        row = _row(item, out, time.perf_counter() - t0)
+    row["llm_trace"] = list(llm_calls)
     cost = tracking.finish_item(config, _item_scores(row))
     row["cost_usd"] = cost.get("cost_usd", 0.0)
     if judge_llm is not None and row["answered"] and item["kind"] == "relevant":

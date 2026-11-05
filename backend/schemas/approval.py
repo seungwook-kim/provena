@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class ApprovalItem(BaseModel):
     approval_id: str
-    kind: Literal["decision_table", "issue_table"]
+    kind: Literal["decision_table", "issue_table", "team_review_failed"]
     summary: str
     created_at: datetime  # JSON에는 ISO 8601 문자열로 나간다
 

@@ -14,7 +14,10 @@ from typing import Any
 
 from backend.schemas import AgentEvent
 
+# 질문마다 주는 입력. 그래프는 입력에 없는 칸과 앞 실행에서 남은 칸을 구분하지 못하므로, 주지 않았으면 없음(None)으로 넘겨 같은 thread의 앞 질문 값을 이어 받지 않게 한다
+PER_QUESTION_INPUTS = {"as_of": None, "org": None}
 CITATION_KEYS = ("chunk_id", "rule_title", "article", "version_date", "version_date_before", "source_url")
+APPROVAL_KEYS = ("approval_id", "kind", "summary")  # SDD 6장. 초안과 대조표는 `GET /approvals`로 본다
 _TOKEN = re.compile(r"\s*\S+\s*")
 
 
@@ -26,16 +29,17 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
     """`graph_input`은 입력 dict 또는 `Command(resume=...)`."""
     cfg = {**(config or {})}
     cfg["configurable"] = {**cfg.get("configurable", {}), "thread_id": thread_id}
+    if isinstance(graph_input, dict):
+        graph_input = {**PER_QUESTION_INPUTS, **graph_input}
     final: dict = {}
     try:
         for update in graph.stream(graph_input, cfg, stream_mode="updates"):
             for node, delta in update.items():
                 if node == "__interrupt__":
-                    yield AgentEvent(
-                        type="approval_request",
-                        thread_id=thread_id,
-                        data={"interrupts": [{"id": getattr(i, "id", None), "value": getattr(i, "value", i)} for i in delta]},
-                    )
+                    for i in delta:
+                        value = getattr(i, "value", i)
+                        value = value if isinstance(value, dict) else {}
+                        yield AgentEvent(type="approval_request", thread_id=thread_id, data={k: value.get(k) for k in APPROVAL_KEYS})
                     return
                 if isinstance(delta, dict):
                     final.update(delta)

@@ -35,10 +35,12 @@ import numpy as np
 
 from backend.rag.retrieve.embed import EmbedNoKey
 from backend.schemas.chunk import Chunk, SearchQuery
+from backend.services import llm_trace
 
 log = logging.getLogger(__name__)
 
 MODES = ("hybrid_ko_kw", "dense_en", "bm25_kw", "dense_ko")
+BM25_MODES = ("hybrid_ko_kw", "bm25_kw")     # BM25를 쓰는 방식. 내림(fallback)은 dense_ko로만 가므로 나머지는 BM25를 부르지 않는다
 RRF_K = 60
 _STOP = set("a an the of to in on for and or is are be by with what how when who which do does can if it at as from this that".split())
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -55,6 +57,7 @@ class SearchConfig:
     rerank_top: int = 10
     translate: bool = True
     link_n: int = 2          # 링크 확장으로 바꿀 뒤 자리 수(확정 조합 L1x2 = 2, PREREGISTER #8). 0이면 끔
+    link_keep_per_sub: int = 2  # 나뉜 질문은 하위 질문마다 이만큼 자리를 지키고 남은 자리만 링크로 바꾼다. 0이면 지키지 않는다(#9 측정과 같음)
 
     @classmethod
     def from_env(cls) -> "SearchConfig":
@@ -216,15 +219,26 @@ JOIN versions v ON v.rule_seq = c.rule_seq AND v.version_id = c.version_id
 JOIN docs d ON d.rule_seq = c.rule_seq"""
 
 
+# HNSW 색인(db/manual/chunks_hnsw_voyage4.sql)이 있는 모델과 차원. chunks.embedding은 차원 없는 vector라 색인은 식 `embedding::halfvec(1024)`로 만들고,
+# 질의도 같은 식을 써야 색인을 탄다. 다른 모델(다른 차원)은 이 식이 오류가 나므로 아래 목록에 있는 모델만 새 질의를 쓴다.
+HNSW_DIMS = {"voyage-4": 1024}
+HNSW_EF_SEARCH = 200      # 로컬 측정(2026-11-05): 200이면 필터가 넓을 때 색인, 좁을 때 계획이 전수 비교로 가서 둘 다 전수와 상위 5 일치
+HNSW_ITERATIVE = "strict_order"   # 필터로 5개 미만이 되면 색인을 더 걷는다(pgvector 0.8). 순서 보장
+
+
 class PgStore:
-    """pgvector 저장소. 색인(HNSW) 없이 전수 비교 — 필터를 걸어도 결과가 줄지 않는다(rag3-12 Step 4).
-    값은 SQL 문장에 이어 붙이지 않고 자리(%(이름)s)로 넘긴다. Supabase transaction pooler 대비 prepare_threshold=None(rag3-12)."""
+    """pgvector 저장소. 기본은 전수 비교. SEARCH_HNSW=1이고 모델이 HNSW_DIMS에 있으면 HNSW 색인 질의(색인이 없어도 결과는 같고 느릴 뿐).
+    값은 SQL 문장에 이어 붙이지 않고 자리(%(이름)s)로 넘긴다. Supabase transaction pooler 대비 prepare_threshold=None(rag3-12).
+    풀러에서도 SET이 남지 않도록 색인 설정은 트랜잭션 안 set_config(.., true)(= SET LOCAL)로만 준다."""
+
+    hnsw = False
 
     def __init__(self, url: str):
         from pgvector.psycopg import register_vector
         from psycopg_pool import ConnectionPool
         self.pool = ConnectionPool(url, min_size=1, max_size=4, open=True,
                                    kwargs={"prepare_threshold": None}, configure=register_vector)
+        self.hnsw = os.environ.get("SEARCH_HNSW") == "1"
 
     @classmethod
     def from_env(cls) -> "PgStore":
@@ -234,8 +248,14 @@ class PgStore:
         return cls(url)
 
     def _all(self, sql: str, params=None) -> list[tuple]:
+        """읽기 한 문장. BEGIN·COMMIT 왕복을 빼려고 이 문장 동안만 autocommit으로 둔다(바꾸기 자체는 통신이 없다).
+        풀의 기본은 그대로라, 여러 문장을 한 트랜잭션으로 묶는 쪽의 동작은 바뀌지 않는다."""
         with self.pool.connection() as conn:
-            return conn.execute(sql, params or {}).fetchall()
+            conn.set_autocommit(True)
+            try:
+                return conn.execute(sql, params or {}).fetchall()
+            finally:
+                conn.set_autocommit(False)
 
     def meta(self):
         rows = self._all("SELECT embedder, revision, dim, prefixes, status, generation FROM index_meta WHERE id = 1")
@@ -248,31 +268,55 @@ class PgStore:
         rows = self._all("SELECT generation FROM index_meta WHERE id = 1")
         return int(rows[0][0]) if rows else 0
 
-    def row_meta(self):
-        rows = self._all(f"SELECT c.chunk_id, c.version_id, d.org, v.valid_from, v.valid_to, c.text {_JOIN} ORDER BY c.ord, c.chunk_id")
+    def row_meta(self, with_text: bool = True):
+        """with_text=False면 본문을 읽지 않고 texts를 비워 둔다(BM25를 쓰지 않는 방식은 필터 가면만 쓴다)."""
+        text = ", c.text" if with_text else ""
+        rows = self._all(f"SELECT c.chunk_id, c.version_id, d.org, v.valid_from, v.valid_to{text} {_JOIN} ORDER BY c.ord, c.chunk_id")
         return RowMeta(keys=[(r[0], r[1]) for r in rows],
                        org=np.array([r[2] for r in rows], dtype=object),
                        valid_from=np.array([r[3] for r in rows], dtype="datetime64[D]"),
                        valid_to=np.array([r[4] if r[4] is not None else "NaT" for r in rows], dtype="datetime64[D]"),
-                       texts=[r[5] for r in rows])
+                       texts=[r[5] for r in rows] if with_text else [])
 
+    # 거리 식은 안쪽에서 한 번만 쓴다. SELECT와 ORDER BY에 따로 쓰면 행마다 TOAST 읽기와 거리 계산이 두 번 일어난다.
+    # 안쪽에 LIMIT이 있어 계획기가 서브쿼리를 펼치지 않는다. 정렬 열쇠(거리, chunk_id)는 그대로이고 점수는 같은 거리의 부호만 바꾼 값이다.
     def vector_top(self, qvec, embedder, org, as_of, n):
-        sql = f"""SELECT c.chunk_id, c.version_id, -(c.embedding <#> %(q)s::vector) AS score {_JOIN}
+        params = {"q": np.asarray(qvec, dtype=np.float32), "embedder": embedder, "org": org, "as_of": as_of, "n": n}
+        dim = HNSW_DIMS.get(embedder) if self.hnsw else None
+        if dim:
+            # 색인 식과 같은 `embedding::halfvec(dim)`. 색인을 타려면 안쪽 정렬은 거리 하나뿐이어야 한다(chunk_id를 더하면 색인 순서를 그대로 못 쓴다).
+            # 점수는 반정밀도 거리이고, 같은 거리의 동점은 바깥 ORDER BY가 chunk_id 순으로 깬다.
+            # 전수 질의와 달리 안쪽 LIMIT에서 동점 경계가 갈릴 수 있다(색인은 근사라 어차피 보장하지 않는다).
+            t = f"halfvec({int(dim)})"
+            sql = f"""SELECT chunk_id, version_id, -dist AS score FROM (
+SELECT c.chunk_id, c.version_id, c.embedding::{t} <#> %(q)s::{t} AS dist {_JOIN}
 WHERE c.embedder = %(embedder)s AND {_FILTER}
-ORDER BY c.embedding <#> %(q)s::vector, c.chunk_id LIMIT %(n)s"""
-        rows = self._all(sql, {"q": np.asarray(qvec, dtype=np.float32), "embedder": embedder,
-                               "org": org, "as_of": as_of, "n": n})
+ORDER BY dist LIMIT %(n)s) s
+ORDER BY dist, chunk_id"""
+            with self.pool.connection() as conn:     # 이 블록 하나가 트랜잭션(풀 기본. `_all`이 autocommit을 되돌려 둔다): 끝나면 COMMIT, 설정은 거기서 사라진다
+                conn.execute("SELECT set_config('hnsw.ef_search', %(ef)s, true), set_config('hnsw.iterative_scan', %(it)s, true)",
+                             {"ef": str(HNSW_EF_SEARCH), "it": HNSW_ITERATIVE})
+                rows = conn.execute(sql, params).fetchall()
+            return [((r[0], r[1]), float(r[2])) for r in rows]
+        sql = f"""SELECT chunk_id, version_id, -dist AS score FROM (
+SELECT c.chunk_id, c.version_id, c.embedding <#> %(q)s::vector AS dist {_JOIN}
+WHERE c.embedder = %(embedder)s AND {_FILTER}
+ORDER BY dist, c.chunk_id LIMIT %(n)s) s
+ORDER BY dist, chunk_id"""
+        rows = self._all(sql, params)
         return [((r[0], r[1]), float(r[2])) for r in rows]
 
     def page_vector_top(self, qvec, embedder, rule_seqs, org, as_of, exclude, n):
         """링크 확장 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 exclude에 없는 것, 거리순·동점 chunk_id."""
         if not rule_seqs:
             return []
-        sql = f"""SELECT c.chunk_id, c.version_id, -(c.embedding <#> %(q)s::vector) AS score {_JOIN}
+        sql = f"""SELECT chunk_id, version_id, -dist AS score FROM (
+SELECT c.chunk_id, c.version_id, c.embedding <#> %(q)s::vector AS dist {_JOIN}
 WHERE c.embedder = %(embedder)s AND c.rule_seq = ANY(%(seqs)s::bigint[]) AND {_FILTER}
   AND NOT EXISTS (SELECT 1 FROM unnest(%(ex_i)s::text[], %(ex_v)s::text[]) AS x(chunk_id, version_id)
                   WHERE x.chunk_id = c.chunk_id AND x.version_id = c.version_id)
-ORDER BY c.embedding <#> %(q)s::vector, c.chunk_id LIMIT %(n)s"""
+ORDER BY dist, c.chunk_id LIMIT %(n)s) s
+ORDER BY dist, chunk_id"""
         rows = self._all(sql, {"q": np.asarray(qvec, dtype=np.float32), "embedder": embedder,
                                "seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of,
                                "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
@@ -427,7 +471,9 @@ class Searcher:
     def _build_bm25(self) -> None:
         from rank_bm25 import BM25Okapi
         t = time.perf_counter()
-        rm = self.store.row_meta()
+        # DB에서는 BM25를 쓰는 방식일 때만 본문 전체를 읽는다. MemoryStore(비교 입구)는 조합끼리 색인을 같이 쓰므로 그대로 만든다.
+        lean = isinstance(self.store, PgStore) and self.cfg.mode not in BM25_MODES
+        rm = self.store.row_meta(with_text=False) if lean else self.store.row_meta()
         bm25 = BM25Okapi([tokens(x) for x in rm.texts]) if rm.texts else None
         self._rm, self._bm25, self._gen = rm, bm25, self.store.generation()
         log.info("BM25 색인 %d행 %.1f초 (generation %s)", len(rm.texts), time.perf_counter() - t, self._gen)
@@ -456,7 +502,7 @@ class Searcher:
             got = [self._translate_one(texts[0], kind)]
         else:
             with ThreadPoolExecutor(max_workers=len(texts)) as ex:
-                got = list(ex.map(lambda t: self._translate_one(t, kind), texts))
+                got = list(ex.map(llm_trace.bind(lambda t: self._translate_one(t, kind)), texts))
         tr.translation_source = got[0][1]
         reasons = [r for _, _, r in got if r]
         if reasons:
@@ -501,6 +547,8 @@ class Searcher:
     def _link_expand(self, top: list[Key], rows: dict[Key, dict], qvec, q: SearchQuery, tr: SearchTrace) -> list[Key]:
         """L1x2: 상위 k가 링크한 페이지의 청크(같은 필터, 상위 k 밖)를 전체 질문 벡터와 가까운 순으로 link_n개 → 뒤 자리를 바꾼다."""
         n = self.cfg.link_n
+        if tr.n_sub:
+            n = min(n, max(0, q.k - self.cfg.link_keep_per_sub * tr.n_sub))
         if not n or q.k <= n or qvec is None or not top:
             return top
         t = time.perf_counter()

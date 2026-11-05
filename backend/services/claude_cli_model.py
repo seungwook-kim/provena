@@ -15,7 +15,7 @@
 - `--safe-mode`: 사용자 전역 CLAUDE.md, 훅(terse 스타일·SessionStart 등), 플러그인, 스킬, MCP를 모두 끈다. 인증(구독 로그인)은 그대로 쓴다. (`--bare`는 OAuth를 안 읽어 쓸 수 없다.)
 - `--tools ""`: 내장 도구 전부 끔. `--system-prompt`: 기본 시스템 프롬프트를 대체한다(시스템 메시지가 없어도 중립 문구를 넣는다).
 - 시스템 메시지 이외의 메시지는 "역할: 내용" 형식으로 이어 붙여 stdin으로 보낸다. 시스템 프롬프트가 너무 길면(Windows 명령줄 한도) stdin 앞머리로 옮긴다.
-- 반환 `AIMessage.usage_metadata`는 입력(캐시 생성·읽기 포함)·출력 토큰, `response_metadata`는 `total_cost_usd`(CLI가 보고한 API 환산 비용)·`model`·`duration_ms`·`duration_api_ms`.
+- 반환 `AIMessage.usage_metadata`는 입력(캐시 생성·읽기 포함)·출력 토큰, `response_metadata`는 `total_cost_usd`(CLI가 보고한 API 환산 비용)·`model`·`duration_ms`·`duration_api_ms`·`wall_s`(하위 프로세스 전체)·`cli_queue_s`(동시 실행 대기)·`cli_retries`(다시 시도한 횟수).
   `CostTracker`는 `total_cost_usd`가 있으면 단가표 계산 대신 그 값을 쓴다.
 """
 from __future__ import annotations
@@ -203,17 +203,22 @@ class ClaudeCliChatModel(BaseChatModel):
         last: Exception | None = None
         for attempt in range(self.retries + 1):
             try:
+                t_wait = time.perf_counter()
                 with _semaphore():
                     t0 = time.perf_counter()
                     data = self._run_once(system, prompt)
                     data["_wall_s"] = round(time.perf_counter() - t0, 4)
+                    data["_queue_s"] = round(t0 - t_wait, 4)
+                    data["_retries"] = attempt
                     return data
             except ClaudeCliError as e:
                 last = e
                 log.warning("claude CLI 호출 실패 (%d/%d): %s", attempt + 1, self.retries + 1, e)
                 if attempt < self.retries:
                     time.sleep(min(2.0 * (attempt + 1), 6.0))
-        raise ClaudeCliError(str(last))
+        err = ClaudeCliError(str(last))
+        err.retries = self.retries  # 호출별 기록(`llm_trace.py`)이 읽는다
+        raise err
 
     def _generate(self, messages: list[BaseMessage], stop: Optional[list[str]] = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         system, prompt = split_messages(messages)
@@ -235,6 +240,8 @@ class ClaudeCliChatModel(BaseChatModel):
             "duration_ms": data.get("duration_ms"),
             "duration_api_ms": data.get("duration_api_ms"),
             "wall_s": data.get("_wall_s"),
+            "cli_queue_s": data.get("_queue_s"),
+            "cli_retries": data.get("_retries"),
             "cache_creation_input_tokens": int(usage.get("cache_creation_input_tokens") or 0),
             "cache_read_input_tokens": int(usage.get("cache_read_input_tokens") or 0),
             "stop_reason": data.get("stop_reason"),

@@ -2,7 +2,7 @@
 
 python -m backend.rag.ingest.parse            (handbook.py 를 먼저 돌려 data/corpus/ 가 있어야 한다)
 
-Spec: docs/specs/parse.md. 원문은 읽기만 하고 결과는 data/parsed/ 에 쓴다(저장소에 커밋하지 않음).
+Spec: docs/specs/parse.md. 원문은 읽기만 하고 결과는 data/parsed/ 에 쓴다(저장소에 커밋하지 않음. 결정표 변환이 실행 중에 읽는 authz_cells.jsonl만 커밋한다).
 파서 선택 근거: 표본 20쪽 비교에서 markdown-it-py 제목 F1 0.996·표 19/20·코드 20/20.
 """
 from __future__ import annotations
