@@ -163,6 +163,55 @@ def test_no_key_returns_empty_without_crash():
     assert last_search_trace().fallback_reason == "no_key"
 
 
+# ---------- 서비스 입구 warmup()·search() (리뷰: warmup에서 embed import 누락 → 첫 호출 NameError) ----------
+
+def _pad(vecs, dim):
+    """3칸 시험 벡터를 모델 차원으로 늘린다(나머지 0, 점수는 그대로)."""
+    m = np.zeros((len(vecs), dim), dtype=np.float32)
+    m[:, :3] = vecs
+    return m
+
+
+def _service(monkeypatch, model_name):
+    """warmup()을 그대로 부른다. DB만 MemoryStore로 바꾸고 장부는 지금 설정과 같게 둔다."""
+    import importlib
+    search_mod = importlib.import_module("backend.rag.retrieve.search")  # 패키지의 search 이름은 함수라 모듈로 직접
+    s = embed.spec(model_name)
+    store = MemoryStore(ROWS, _pad([r["_v"] for r in ROWS], s.dim), s.name,
+                        meta={"status": "ready", "embedder": s.name, "revision": embed.revision_for(s), "dim": s.dim})
+    for var in ("SEARCH_MODE", "SEARCH_POOL", "RERANK_MODEL", "RERANK_TOP", "QUERY_TRANSLATE", "SEARCH_LINK_N"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("EMBED_MODEL", s.name)
+    monkeypatch.setattr(search_mod.PgStore, "from_env", staticmethod(lambda: store))
+    monkeypatch.setattr(search_mod, "_searcher", None)
+    return search_mod
+
+
+def test_first_search_runs_warmup_with_api_model_and_skips_warmup_call(monkeypatch):
+    search_mod = _service(monkeypatch, "voyage-4")
+    calls = []
+
+    def fake_voyage(self, texts, role):
+        calls.append((list(texts), role))
+        return _pad([QVEC.get(t, [0.1, 0.1, 0.1]) for t in texts], 1024)
+    monkeypatch.setattr(embed.VoyageClient, "embed", fake_voyage)
+    out = search_mod.search(SearchQuery(query=Q))          # 첫 호출 → warmup() → Searcher
+    assert search_mod._searcher is not None
+    assert len(out) == DEFAULT_K
+    assert calls == [([Q], "query")]                       # warm-up 문장은 보내지 않는다(API는 부르면 돈)
+    assert search_mod.warmup() is search_mod._searcher     # 두 번째는 만든 것을 그대로
+
+
+def test_warmup_with_local_model_embeds_once(monkeypatch):
+    search_mod = _service(monkeypatch, embed.LOCAL_MODEL)
+    calls = []
+    monkeypatch.setattr(embed, "load_model", lambda name=None, dev=None: object())
+    monkeypatch.setattr(embed, "used_prefixes", lambda model, s: {"query": "", "document": "", "source": "test"})
+    monkeypatch.setattr(embed, "encode_queries", lambda model, texts: calls.append(list(texts)) or np.zeros((len(texts), 3)))
+    search_mod.warmup()
+    assert calls == [["warm-up"]]                          # 내려받는 모델은 미리 한 번 돌려 둔다
+
+
 # ---------- 링크 대상 (links.py) ----------
 
 def test_link_targets_rule():

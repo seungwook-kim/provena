@@ -577,6 +577,7 @@ _init_lock = threading.Lock()
 def warmup() -> Searcher:
     """서버 기동 때 한 번 부른다: 장부 대조 → 모델·리랭커·BM25 올리기 → 질문 하나 미리 돌리기."""
     global _searcher
+    from backend.rag.retrieve import embed
     with _init_lock:
         if _searcher is None:
             s = Searcher(SearchConfig.from_env(), PgStore.from_env())
