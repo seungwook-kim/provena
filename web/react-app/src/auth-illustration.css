@@ -1,0 +1,17 @@
+.auth-illustration img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 30px #1d1c1a1f);
+  animation: auth-illustration-float 4.5s ease-in-out infinite;
+}
+
+@keyframes auth-illustration-float {
+  0%, 100% { transform: translateY(-7px); }
+  50% { transform: translateY(7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-illustration img { animation: none; }
+}
