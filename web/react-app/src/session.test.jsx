@@ -270,7 +270,7 @@ describe('React authentication and session isolation', () => {
     server.logoutStatus = status
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
     expect((await screen.findByRole('alert')).textContent).toContain('종료를 확인')
-    expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
+    await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
     server.logoutStatus = 204
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
