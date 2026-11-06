@@ -1,0 +1,8 @@
+.admin-users-page { min-height: calc(100vh - 56px); padding: 34px clamp(20px, 6vw, 88px) 72px; background: var(--paper, #f7f5f0); }
+.admin-users-page > header { max-width: 960px; margin: 0 auto 22px; }
+.admin-users-page > header h1 { margin: 0; font-size: 34px; }
+.admin-users-table-wrap { max-width: 960px; margin: auto; overflow-x: auto; background: var(--surface, #fffdf8); border: 1px solid var(--line, #e4dfd4); border-radius: 16px; box-shadow: 0 18px 40px -32px #1d1c1a80; }
+.admin-users-table { width: 100%; border-collapse: collapse; text-align: left; }
+.admin-users-table th, .admin-users-table td { padding: 15px 16px; border-bottom: 1px solid var(--line, #e4dfd4); white-space: nowrap; }
+.admin-users-table th { color: var(--muted, #6b665c); font-size: 12px; font-weight: 500; }
+.admin-users-table td { font-size: 14px; }

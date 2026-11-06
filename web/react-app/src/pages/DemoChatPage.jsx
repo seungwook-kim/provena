@@ -1,0 +1,189 @@
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import DemoLayout from '../components/DemoLayout'
+import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
+import { createChatService } from '../lib/chat-service'
+import { useSession } from '../lib/session'
+
+function CitationButtons({ citations, selectedCitation, onSelect }) {
+  return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => onSelect(citation)}>[{index + 1}] {citation.title}</button>)}</div>
+}
+
+function timestampValue(value) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function messageTimestamp(message) {
+  return timestampValue(message?.timestamp ?? message?.createdAt ?? message?.created_at ?? message?.sentAt ?? message?.sent_at)
+}
+
+function threadTimestamp(thread) {
+  const direct = thread?.lastActivityAt ?? thread?.last_activity_at ?? thread?.updatedAt ?? thread?.updated_at ?? thread?.lastActivity ?? thread?.last_activity
+  const directDate = timestampValue(direct)
+  if (directDate) return directDate
+  return (thread?.messages ?? []).map(messageTimestamp).filter(Boolean).sort((left, right) => right - left)[0] ?? null
+}
+
+function formatActivity(value) {
+  const date = timestampValue(value)
+  if (!date) return ''
+  const now = new Date()
+  const today = date.toDateString() === now.toDateString()
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString() === date.toDateString()
+  const time = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (today) return `오늘 ${time}`
+  if (yesterday) return `어제 ${time}`
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+}
+
+function dateKey(value) {
+  const date = timestampValue(value)
+  return date ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` : ''
+}
+
+function formatDateDivider(value) {
+  const date = timestampValue(value)
+  return date ? `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일` : ''
+}
+
+function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
+  return <>{messages.map((message, index) => {
+    const timestamp = messageTimestamp(message)
+    const currentDate = dateKey(timestamp)
+    const previousDate = index > 0 ? dateKey(messageTimestamp(messages[index - 1])) : ''
+    const showDivider = Boolean(currentDate && currentDate !== previousDate)
+    const messageTime = timestamp ? timestamp.toLocaleString('ko-KR') : undefined
+    return <Fragment key={index}>
+      {showDivider && <div className="demo-message-date"><span>{formatDateDivider(timestamp)}</span></div>}
+      {message.role === 'user' ? <div className="demo-user-message" title={messageTime} tabIndex={messageTime ? 0 : undefined}>{message.text}</div> : <article className={`demo-answer ${message.state}`} title={messageTime} tabIndex={messageTime ? 0 : undefined}>
+        <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
+        {message.state === 'generating' && <p className="demo-answer-progress">답변을 생성하고 있습니다.</p>}
+        {message.text && <p>{message.text}</p>}
+        {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} onSelect={onSelectCitation} />}
+        {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}
+      </article>}
+    </Fragment>
+  })}</>
+}
+
+export default function DemoChatPage() {
+  const location = useLocation()
+  const serviceRef = useRef(null)
+  const citationPanelRef = useRef(null)
+  const [threads, setThreads] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [filter, setFilter] = useState('')
+  const [input, setInput] = useState('')
+  const [selectedCitation, setSelectedCitation] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [processingId, setProcessingId] = useState(null)
+
+  const current = useMemo(() => threads.find(thread => thread.id === selectedId) ?? null, [selectedId, threads])
+  const threadRecords = useMemo(() => threads.map(thread => ({ thread, activity: threadTimestamp(thread) })), [threads])
+  const canSortByActivity = threadRecords.length > 0 && threadRecords.every(item => item.activity)
+  const visibleThreads = useMemo(() => {
+    const normalized = filter.trim().toLowerCase()
+    return threadRecords
+      .filter(item => item.thread.title.toLowerCase().includes(normalized))
+      .sort((left, right) => canSortByActivity ? right.activity - left.activity : 0)
+      .map(item => item.thread)
+  }, [canSortByActivity, filter, threadRecords])
+  const citationOptions = useMemo(() => {
+    const seen = new Set()
+    return (current?.messages ?? []).flatMap(message => message.citations ?? []).filter(citation => {
+      if (seen.has(citation.id)) return false
+      seen.add(citation.id)
+      return true
+    })
+  }, [current])
+  const activeCitation = citationOptions.find(citation => citation.id === selectedCitation?.id) ?? null
+  const activeCitationId = activeCitation?.id ?? null
+  const processing = processingId !== null
+
+  useEffect(() => {
+    if (activeCitationId && typeof citationPanelRef.current?.scrollTo === 'function') citationPanelRef.current.scrollTo({ top: 0, behavior: 'auto' })
+  }, [activeCitationId])
+
+  useEffect(() => {
+    const adapter = createPreviewChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId })
+    const service = createChatService(adapter)
+    serviceRef.current = service
+    service.listThreads().then(items => {
+      setThreads(items)
+    }).finally(() => setLoading(false))
+    return () => service.dispose()
+  }, [])
+
+  useEffect(() => {
+    if (typeof location.state?.question === 'string') setInput(location.state.question)
+  }, [location.state])
+
+  async function newConversation() {
+    if (processing) return
+    await serviceRef.current?.createConversation()
+    setSelectedId(null)
+    setSelectedCitation(null)
+    setInput('')
+  }
+
+  async function ask(value) {
+    const message = value.trim()
+    if (!message || processing || !serviceRef.current) return
+    const result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
+    if (!result) return
+    setSelectedId(result.threadId)
+    setSelectedCitation(null)
+    setInput('')
+  }
+
+  async function stopAnswer() {
+    if (processingId) await serviceRef.current?.stopMessage(processingId)
+  }
+
+  function handleComposerKeyDown(event) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return
+    event.preventDefault()
+    ask(input)
+  }
+
+  return <DemoLayout active="chat"><div className="demo-chat-page"><div className="demo-chat-grid">
+    <aside className="demo-thread-sidebar" aria-label="대화 목록">
+      <button type="button" className="button button-dark" onClick={newConversation} disabled={processing}>+ 새 대화</button>
+      <label className="demo-thread-search"><span>대화 검색</span><input value={filter} onChange={event => setFilter(event.target.value)} placeholder="대화 제목 검색" disabled={loading || processing} /></label>
+      <p className="demo-thread-list-heading"><span>대화 목록</span>{canSortByActivity && <small>최근 활동순</small>}</p>
+      {loading && <div className="demo-thread-state">대화를 불러오는 중입니다.</div>}
+      {!loading && visibleThreads.length === 0 && <div className="demo-thread-state">{threads.length ? '검색 결과가 없습니다.' : <>아직 대화가 없습니다.<br />새 대화를 시작해 보세요.</>}</div>}
+      {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => { setSelectedId(thread.id); const answer = thread.messages.findLast(message => message.role === 'assistant'); setSelectedCitation(answer?.citations?.[0] ?? null) }}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
+    </aside>
+    <main className="demo-chat-main">
+      <div className="demo-chat-status">{processing && <span className="demo-generating">답변을 생성하고 있습니다.</span>}</div>
+      <div className="demo-messages">
+        {loading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack"><MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{PREVIEW_SUGGESTIONS.map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
+      </div>
+      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
+    </main>
+    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation(citation)}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd><dt>최종 수정일</dt><dd>{activeCitation.version}</dd></dl><a href="https://handbook.gitlab.com/handbook/finance/procurement/" target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
+  </div></div></DemoLayout>
+}
+
+function ChatUnavailable() {
+  return <DemoLayout active="chat"><main className="demo-chat-unavailable"><h1>현재 채팅을 사용할 수 없습니다.</h1><p>잠시 후 다시 시도해 주세요.</p></main></DemoLayout>
+}
+
+export function DemoOnlyChat() {
+  const [params] = useSearchParams()
+  const location = useLocation()
+  const { user } = useSession()
+  const previewMode = import.meta.env.DEV && (location.pathname.startsWith('/demo/') || params.get('demo') === '1')
+  if (previewMode) return <DemoChatPage />
+  if (!user) return <Navigate to="/login" replace />
+  return <ChatUnavailable />
+}
+
+export function DemoAdminBlocked() {
+  const [params] = useSearchParams()
+  if (!import.meta.env.DEV || params.get('demo') !== '1') return <Navigate to="/login" replace />
+  return <main className="status-page"><p role="alert">현재 이 기능을 사용할 수 없습니다.</p><Link className="button button-dark" to="/demo/chat">채팅으로 돌아가기</Link></main>
+}
