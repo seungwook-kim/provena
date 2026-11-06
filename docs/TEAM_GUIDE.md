@@ -149,7 +149,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │     ├─ delegation/SKILL.md      # 권한표 해석
 │     ├─ security/ finance/ (sre/ it-ops/: 이름은 D0 판단, 11장)
 │     └─ citation-rules/ grounding-check/ glossary/   # 공통 Skill 3개
-├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 3개 search_handbook, get_section, list_changed_sections
+├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py)
 ├─ web/   (pages/: login, chat, approvals, recalls, admin)
 ├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
 ├─ db/    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)

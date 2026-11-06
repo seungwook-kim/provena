@@ -63,8 +63,8 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 | 항목 | 내용 |
 |---|---|
 | 기동 | `docker compose up`. `.env`가 없어도 뜬다. compose가 `.env.example`을 먼저 읽고 `.env`가 있으면 그 값으로 덮는다 |
-| LLM | `DEMO_MODE=1`이면 키 없이 기록해 둔 응답을 재생한다(`backend/services/llm.py`, 구현 예정) |
-| DB | 로컬 pgvector 컨테이너(`db`). 검색 스냅샷 적재는 예정 |
+| LLM | `DEMO_MODE=1`이면 키 없이 기록해 둔 응답을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다(`backend/services/llm.py`, `backend/services/demo_replay.py`) |
+| DB | 로컬 pgvector 컨테이너(`db`). 검색 색인은 compose의 `loader` 서비스가 `data/index/` 또는 `INDEX_URL`에서 적재한다(`backend/rag/retrieve/load_snapshot.py`). 색인이 없으면 적재를 건너뛰고 서버는 뜨며, 질문은 거절로 끝난다 |
 | 로그인 | 로컬 데모 계정 2개(user, admin)를 시드한다. `PROVENA_ENV=local`이고 `PROVENA_DEV_MODE=1`일 때만 만들고 그 밖의 모드에서는 만들지 않는다. 아이디·비밀번호는 환경변수(`DEMO_USER_*`, `DEMO_ADMIN_*`)에서 읽고(로컬 데모 값은 `.env.example`) 비밀번호는 8자 이상이다. 코드와 SQL에는 값이 없다 |
 | 평가용 계정 | 제출하는 평가용 계정(G1)은 데모 계정과 다른 값이고 저장소에 적지 않는다 |
 | 서명 키 | `AUTH_SECRET`은 저장소에 두지 않는다. 비어 있으면 로컬 데모 모드에서만 실행마다 무작위로 만들고(재시작하면 다시 로그인), 그 밖의 모드에서는 시작하지 않는다 |
@@ -74,7 +74,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 ## 5. 파트 사이 계약과 API
 
 - 데이터 형식은 `backend/schemas/`(chunk, events, approval, recall, decision)이고 SDD 6장과 같다. 필드 추가는 PR 하나로 3명 승인, 이름 변경·삭제는 회의에서만 정한다. 시험은 `tests/test_schemas.py`. `AgentEvent.data`의 `type`별 키는 SDD 6장 표를 따른다.
-- 엔드포인트 목록은 SDD 4-4장이다. 지금 구현된 것은 `/health`와 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)이며 로그인 라우터는 `DATABASE_URL`이 있을 때만 붙는다. 나머지는 해당 기능을 만들 때 이 문서와 SDD를 같이 고친다.
+- 엔드포인트 목록은 SDD 4-4장이다. 지금 구현된 것은 `/health`, 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`), 결정표·승인 라우터, `/chat`(SSE), `/threads`, `/threads/{thread_id}`, `/me/memory`이며 `/health` 밖의 라우터는 `DATABASE_URL`이 있을 때만 붙는다. 모든 오류는 `{"error": {"code", "message", "request_id"}}` 한 모양이고(화면 호환을 위해 같은 문구의 `detail` 문자열을 함께 낸다) 화면은 `code`로 분기한다(`backend/api/errors.py`). 요청마다 `X-Request-ID` 헤더와 로그 한 줄을 남긴다(`backend/api/middleware.py`). 오류 본문, HTTP 상태별 `code`, 요청 ID, 재시도 안내는 SDD 4-4절을, `/chat` SSE의 전달 형식·이벤트 순서·`done`의 `code`는 SDD 6장을 따른다. 나머지는 해당 기능을 만들 때 이 문서와 SDD를 같이 고친다.
 
 ## 6. 게이트와 증거
 

@@ -15,6 +15,7 @@
   합동 검토를 질문 그래프의 하위 그래프로 돌리면 `app.state.review_graph`에는 그 질문 그래프를 둔다. 같은 체크포인터에서 대화를 시작한 그래프로 재개해야 한다.
 - 재개 뒤 저장 실패: 사람 결정은 체크포인트에 남고 승인 건은 `pending`인 채 그래프가 `finalize` 앞에 멈춘다. 503(`save_failed`)으로 알리고, 승인함에는 `save_failed: true`로 보인다.
   같은 결정을 다시 보내면 그 노드만 다시 돈다(저장은 같은 번호로 두 번 돌아도 한 건). 다른 결정은 409다. 이미 접수된 결정을 말없이 바꾸지 않는다.
+- 같은 승인 건에 동시에 온 요청은 프로세스 안에서 하나씩 처리한다(`_decision_lock`). 뒤 요청은 끝난 건의 재전송으로 처리되어 그래프를 다시 재개하지 않는다.
 - 팀 실패 알림의 결정 뒤에는 그래프가 다음 단계로 이어져 응답의 `next_approval`에 다음 승인 건이 온다. 다음 단계에서 실패하면 같은 503이고 같은 결정을 다시 보내면 이어서 돈다.
 """
 from __future__ import annotations
@@ -22,6 +23,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
+import weakref
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
@@ -392,7 +395,7 @@ def create_decision_router(
         _csrf: None = Depends(require_csrf), body: Any = Depends(_json_body),
     ) -> DecisionResult:
         repo = _state(request, "decision_repo")
-        try:
+        with _decision_lock(approval_id), _decide_errors(approval_id):   # 같은 승인 건의 동시 요청은 차례로: 뒤 요청은 끝난 건으로 보고 재개하지 않는다
             rec = repo.get_approval(approval_id)
             if rec.kind == TEAM_FAILED_KIND:
                 value = _parse_team_action(approval_id, body, admin)
@@ -409,15 +412,38 @@ def create_decision_router(
             if rec.status == "pending":      # 그래프는 끝났는데 승인 건이 그대로다: 성공으로 돌려주지 않는다
                 raise RuntimeError("approval still pending after resume")
             return _result(rec, graph)
-        except R.DecisionError as e:
-            raise _http(e) from None
-        except HTTPException:
-            raise
-        except Exception as exc:  # noqa: BLE001 - DB 오류 등. 메시지에 접속 문자열이 섞일 수 있어 종류만 남긴다
-            log.warning("승인 저장 실패 %s: %s", approval_id, type(exc).__name__)
-            raise HTTPException(status_code=503, detail={"reason": "save_failed", "message": MSG_SAVE_FAILED}) from None
 
     return router
+
+
+_LOCKS_GUARD = threading.Lock()
+_DECISION_LOCKS: "weakref.WeakValueDictionary[str, threading.Lock]" = weakref.WeakValueDictionary()
+
+
+@contextmanager
+def _decision_lock(approval_id: str) -> Iterator[None]:
+    """같은 승인 건의 결정 요청을 이 프로세스 안에서 하나씩 처리한다. 없으면 동시에 온 같은 결정 두 건이 둘 다 `pending`을 보고
+    그래프를 두 번 재개했다(저장은 승인 건 번호로 한 건이지만 재개 노드가 두 번 돈다). 여러 인스턴스 사이는 막지 못한다."""
+    with _LOCKS_GUARD:
+        lock = _DECISION_LOCKS.get(approval_id)
+        if lock is None:
+            lock = _DECISION_LOCKS[approval_id] = threading.Lock()
+    with lock:
+        yield
+
+
+@contextmanager
+def _decide_errors(approval_id: str) -> Iterator[None]:
+    """결정 처리의 오류를 응답으로 바꾼다. 규칙은 모듈 설명."""
+    try:
+        yield
+    except R.DecisionError as e:
+        raise _http(e) from None
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 - DB 오류 등. 메시지에 접속 문자열이 섞일 수 있어 종류만 남긴다
+        log.warning("승인 저장 실패 %s: %s", approval_id, type(exc).__name__)
+        raise HTTPException(status_code=503, detail={"reason": "save_failed", "message": MSG_SAVE_FAILED}) from None
 
 
 class _LazyChatModel:
@@ -432,6 +458,7 @@ class _LazyChatModel:
 @contextmanager
 def open_decision_runtime(app: Any) -> Iterator[None]:
     """앱 시작(lifespan)에서 체크포인터, 결정표 저장소, 변환 그래프, 합동 검토 그래프를 열어 `app.state`에 둔다.
+    체크포인터와 Store(`app.state.checkpointer`, `app.state.store`), 쟁점표 저장소(`app.state.issue_store`)도 같이 두어 질문 그래프가 나눠 쓴다.
     DB가 없으면 메모리로 내려가지 않고 경고를 남기며, 결정표 라우트는 503을 돌려준다(`/health`와 로그인은 그대로 뜬다)."""
     try:
         persistence = open_persistence()
@@ -447,10 +474,12 @@ def open_decision_runtime(app: Any) -> Iterator[None]:
         repo = PostgresDecisionRepo(saver.conn) if durable else InMemoryDecisionRepo()
         # 쟁점표 저장소는 튜플 행을 읽으므로 dict_row 풀(saver.conn)을 나눠 쓰지 않고 호출마다 연결한다. Postgres 체크포인터는 DATABASE_URL 없이 열리지 않는다
         issue_store = PgIssueTableStore(_default_connect(os.environ["DATABASE_URL"])) if durable else InMemoryIssueTableStore()
+        app.state.checkpointer, app.state.store, app.state.issue_store = saver, store, issue_store   # 질문 그래프(backend/main.py)가 같은 것을 쓴다
         app.state.decision_repo = repo
         app.state.decision_graph = build_convert_graph(_LazyChatModel(), repo, saver, store)
         app.state.review_graph = build_review_graph(None, saver, llm=_LazyChatModel(), store=issue_store, approvals=repo)
         yield
     finally:
         app.state.decision_repo = app.state.decision_graph = app.state.review_graph = None
+        app.state.checkpointer = app.state.store = app.state.issue_store = None
         persistence.__exit__(None, None, None)

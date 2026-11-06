@@ -1,4 +1,4 @@
-"""FastMCP 읽기 전용 도구 5개 (docs/specs/mcp.md). 가산 MCP·Skill의 서버 쪽.
+"""FastMCP 읽기 전용 도구 6개 (docs/specs/mcp.md). 가산 MCP·Skill의 서버 쪽.
 
 도구는 backend/ 함수를 감싸기만 하고 검색·판단 로직을 다시 짜지 않는다. 쓰기·실행 도구는 없다(NOT_BUILT.md).
   search_handbook        → backend.rag.retrieve.search.search
@@ -6,8 +6,9 @@
   list_changed_sections  → backend.rag.ingest.changes.list_changed
   explain_decision       → backend.graph.decision.execute.DecisionExecutor.run   (decision_tool.py)
   get_agent_trace        → LangGraph 체크포인터 list(thread_id) 읽기만             (trace_tool.py)
+  get_grounding          → 답 저장소 get_grounding(answer_id) 읽기만              (grounding_tool.py)
 
-다섯 도구는 같은 응답 모양(ToolResponse)을 돌려준다. 글만 돌려주면 "못 찾음"·"고장"이 그럴듯한 문장에 묻히므로
+여섯 도구는 같은 응답 모양(ToolResponse)을 돌려준다. 글만 돌려주면 "못 찾음"·"고장"이 그럴듯한 문장에 묻히므로
 에이전트가 다음 행동을 고를 수 있게 status와 retryable을 따로 둔다(Spec How 1).
 
 연결: backend/main.py가 MCP_TOKEN이 있을 때만 `/mcp`에 mcp_http_app()을 붙인다. 인증은 Bearer 헤더 하나(정적 토큰).
@@ -19,7 +20,6 @@ import asyncio
 import hmac
 import logging
 import os
-import re
 import threading
 from typing import Any, Callable, Literal
 
@@ -28,6 +28,7 @@ from fastmcp.server.auth import AccessToken, TokenVerifier
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
+from backend.rag.retrieve.privacy import PRIVATE_MARK, redact  # noqa: F401 - decision_tool과 시험이 server.redact, server.PRIVATE_MARK를 읽는다
 from backend.schemas.chunk import DEFAULT_K, SearchQuery
 
 log = logging.getLogger(__name__)
@@ -42,14 +43,7 @@ READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotent
 
 # 비공개 주소(internal.gitlab.com)는 공개 핸드북 본문에도 링크로 남아 있다(스냅샷 23,095청크 중 `text` 7청크, 다른 칸 0). 도구는 근거로 내보내지 않고
 # "비공개 문서"로 표시한다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 하고, 내보낼 때만 바꾼다.
-PRIVATE_MARK = "[비공개 문서]"
-_PRIVATE_LINK = re.compile(r"\[([^\]]*)\]\(\s*(?:https?://)?internal\.gitlab\.com[^)]*\)")
-_PRIVATE_URL = re.compile(r"(?:https?://)?internal\.gitlab\.com[^\s)\]>|\"'`]*")
-
-
-def redact(text: str) -> str:
-    text = _PRIVATE_LINK.sub(lambda m: f"{m.group(1)} {PRIVATE_MARK}".strip(), text)
-    return _PRIVATE_URL.sub(PRIVATE_MARK, text)
+# 가리는 함수는 그래프와 같은 것을 쓴다(backend/rag/retrieve/privacy.py).
 
 
 def _out(model: BaseModel) -> dict[str, Any]:
@@ -201,11 +195,12 @@ def _check_date(value: str | None, name: str) -> None:
 
 
 def build_server(search_fn=None, section_store=None, changes_store=None, auth: TokenVerifier | None = None,
-                 decision_repo=None, checkpointer=None) -> FastMCP:
+                 decision_repo=None, checkpointer=None, answer_store_fn=None) -> FastMCP:
     deps = _Deps(search_fn, section_store, changes_store)
     mcp = FastMCP("provena-handbook", auth=auth, instructions=(
-        "읽기 전용 도구 5개. GitLab 공개 핸드북(고정 커밋) 검색 3개(search_handbook, get_section, list_changed_sections), "
-        "승인된 결정표 실행 결과 explain_decision, 대화(thread_id)의 에이전트 실행 단계 get_agent_trace. "
+        "읽기 전용 도구 6개. GitLab 공개 핸드북(고정 커밋) 검색 3개(search_handbook, get_section, list_changed_sections), "
+        "승인된 결정표 실행 결과 explain_decision, 대화(thread_id)의 에이전트 실행 단계 get_agent_trace, "
+        "저장된 답(answer_id)의 근거 판정 기록 get_grounding. "
         "답에는 결과의 source_url·version_date를 인용한다. "
         "status가 ok가 아니면 note를 읽고 다음 행동을 고른다(invalid=입력을 고쳐 다시, unavailable=잠시 뒤 다시, "
         "not_ready=아직 없음이지 '없다'가 아님, error=다시 부르지 말고 이 도구 없이 답)."))
@@ -326,9 +321,10 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
             notes.append("마지막 실행이 파일 목록을 끝까지 받지 못해 삭제를 보류했습니다. 사라진 섹션이 아직 목록에 없을 수 있습니다.")
         return _resp("ok", src, [a.model_dump() for a in items], as_of=last.finished_at, note=" / ".join(notes) or None)
 
-    from extras.mcp_skill.mcp_server import decision_tool, trace_tool   # 두 모듈이 이 파일을 import하므로 여기서 불러 순환을 피한다
+    from extras.mcp_skill.mcp_server import decision_tool, grounding_tool, trace_tool   # 세 모듈이 이 파일을 import하므로 여기서 불러 순환을 피한다
     decision_tool.register(mcp, repo=decision_repo)
     trace_tool.register(mcp, saver=checkpointer)
+    grounding_tool.register(mcp, store_fn=answer_store_fn)   # 답 저장소는 앱 lifespan에서 열리므로 호출할 때 읽는 함수로 받는다
     return mcp
 
 
