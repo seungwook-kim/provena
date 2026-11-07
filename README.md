@@ -117,16 +117,16 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 
 8000번 포트를 이미 쓰고 있으면 `.env`에 `API_PORT=8001`처럼 적고 그 포트로 연다.
 
-검색 색인은 `data/index/`(`meta.json`, `chunks.jsonl`, `vectors/`)에 둔다. `docker compose up`을 하면 `loader` 서비스가 `python -m backend.rag.retrieve.load_snapshot`으로 이 폴더를 DB에 한 번 적재한 뒤 `api`가 뜬다.
+검색 색인은 `data/index.tar.gz` 한 파일로 저장소에 들어 있고, 풀린 `data/index/`(`meta.json`, `chunks.jsonl`, `links.jsonl`, `vectors/`)는 커밋하지 않는다. `docker compose up`을 하면 압축이 자동으로 풀리고, `loader` 서비스가 `python -m backend.rag.retrieve.load_snapshot`으로 `data/index/`를 DB에 한 번 적재한 뒤 `api`가 뜬다.
 
-- 색인을 넣는 방법은 두 가지다. `data/index/`에 색인 파일을 직접 두거나, `.env`에 `INDEX_URL`(색인 tar.gz 주소)과 `INDEX_SHA256`(그 파일의 sha256 64자)을 함께 적는다. `INDEX_URL`은 `data/index/meta.json`이 없을 때만 쓰며, loader가 받은 파일을 `INDEX_SHA256`과 대조한 뒤 `data/index/`에 푼다.
+- 새로 clone하면 `data/index.tar.gz`가 들어 있어 따로 넣을 것이 없다. loader는 `data/index/meta.json`이 없을 때 이 압축을 풀고 파일마다 `meta.json`의 sha256과 대조한다. 압축 파일이 없을 때만 `.env`에 `INDEX_URL`(색인 tar.gz 주소)과 `INDEX_SHA256`(그 파일의 sha256 64자)을 함께 적으면 loader가 받은 파일을 `INDEX_SHA256`과 대조한 뒤 `data/index/`에 푼다. 색인을 고치고 다시 압축하는 순서는 `data/data.md`의 "검색 색인 스냅샷 쓰는 법"에 있다.
 - 색인을 직접 만들 때는 `python -m backend.rag.retrieve.index build`(임베딩 모델 필요)를, 비교 실험 캐시를 옮길 때는 `python -m backend.rag.retrieve.index import --from data/index_exp`를 쓴다(`backend/rag/retrieve/index.py`).
 - 색인을 넣은 뒤 `docker compose up`을 다시 하면 loader가 적재한다. 같은 스냅샷이 이미 적재돼 있으면 몇 초 안에 끝난다.
-- `data/index/`가 없고 `INDEX_URL`도 비어 있으면 loader는 적재를 건너뛰고 서버는 그대로 뜬다. 이때 질문은 오류 없이 "검색 색인이 아직 준비되지 않아 답할 수 없습니다."라는 거절로 끝난다.
+- `data/index/`, `data/index.tar.gz`, `INDEX_URL`이 모두 없으면 loader는 적재를 건너뛰고 서버는 그대로 뜬다. 이때 질문은 오류 없이 "검색 색인이 아직 준비되지 않아 답할 수 없습니다."라는 거절로 끝난다.
 
 ### 키 없이 뜨는 데모 모드
 
-- `DEMO_MODE=1`(기본)이면 LLM 키 없이 기록해 둔 응답(`data/demo_replay/`)을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다. 검색 색인은 위 절차대로 `loader`가 `data/index/` 또는 `INDEX_URL`에서 적재하며, 색인이 없으면 질문은 거절로 끝난다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
+- `DEMO_MODE=1`(기본)이면 LLM 키 없이 기록해 둔 응답(`data/demo_replay/`)을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다. 검색 색인은 위 절차대로 `loader`가 `data/index.tar.gz`(없으면 `INDEX_URL`)를 풀어 적재하며, 색인이 없으면 질문은 거절로 끝난다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
 - DB는 compose가 띄우는 로컬 pgvector 컨테이너이고 Supabase 계정이 필요 없다.
 - 로그인은 필수이므로 데모 모드에는 **데모 전용 계정 2개**(user, admin)가 들어 있다. `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1`이 모두 켜진 로컬 실행에서만 시작할 때 만들어지고, 그 밖의 모드(배포)에서는 만들지 않는다.
 - 데모 계정 값은 내 PC용 공개 데모 값이다. 서명 키(`AUTH_SECRET`)는 저장소에 두지 않고, 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만든다(재시작하면 다시 로그인). 배포(Cloud Run)와 제출하는 평가용 계정은 이 값과 다르고 저장소에 적지 않는다.

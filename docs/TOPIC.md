@@ -44,18 +44,18 @@
 
 ## 7. 범위
 
-- 이번 3차에서 하는 것: 제출본에 따로 적지 않았다. D0(10/30)에서 정해 적는다
-- 이번 3차에서 뺀 것(그리고 이유): D0(10/30)에서 정해 적는다
+- 이번 3차에서 하는 것(2026-11-06 중간 점검 기준, 기능은 줄이지 않는다. 결정 0066): 핵심 기능 F-01 근거 답변, F-02 답변 리콜, F-03 팀 합동 검토, F-04 결정표(사람이 승인한 뒤에만 실행), 공통 기능 P-01~P-04(로그인과 사용자별 대화·기억, 문서 적재, 업무시스템 연동, 데모 모드), 확장 기능 F-05 변경 전 영향 미리보기, F-06 문서 권한, F-07 git 없는 변경 감지, F-08 알림 피로 줄이기, 가산 3종(증분 수집 자동화, GraphRAG, MCP와 Skill)이다
+- 이번 3차에서 뺀 것(그리고 이유): 기능은 뺀 것이 없다. 2026-11-06 중간 점검의 "무엇을 뺄 것인가"에서 확장 기능 F-05~F-08과 가산 3종을 모두 유지하기로 했다(결정 0059, 0066). 대가는 F-05~F-08의 코드가 아직 없어 11/16 코드 동결까지 일이 늘어나는 것이다. 처음부터 하지 않기로 정한 것은 다음과 같다. ① 파인튜닝(가이드 가산 +5): 하지 않는다(PRD 3장 비목표, 결정 0005). ② 최종 판단을 대신하는 것, 실제 구매·배포 승인과 외부 발송, 결재 상신: 하지 않고 승인 후 저장까지만 한다(PRD 3장, 가이드 p.7). ③ 실제 조직 시스템(배포·구매) 연동, 조직 내부망 배포, GitLab 비공개(internal) 문서: 다루지 않는다(SDD 1장). ④ 법무·인사·채용·보상 절: 엔지니어링 정책이라는 주제에서 벗어난 행정 문서로 보여 코퍼스에서 뺐다(결정 0013)
 - 2차를 이어가는 경우 가져오는 것과 새로 만드는 것: D0(10/30)에서 정해 적는다
 
 ## 근거 (제출본 첨부)
 
-1. 사람인 공고 집계(2026-10-27): LLM·RAG·에이전트 개발 공고 352건, 목록 50건은 `조사/공고 50건 (2026-10-27).md`. https://www.saramin.co.kr
+1. 사람인 공고 집계(2026-10-27): LLM·RAG·에이전트 개발 공고 352건, 그중 50건을 목록으로 정리했다. https://www.saramin.co.kr
 2. Stack Overflow Developer Survey 2024 (해당 문항 28,911명): https://survey.stackoverflow.co/2024/professional-developers
 3. Atlassian Developer Experience Report 2025 (3,500명): https://www.atlassian.com/blog/developer/developer-experience-report-2025
 4. Port 2025 State of Internal Developer Portals: https://www.port.io/state-of-internal-developer-portals
 5. Stack Overflow Developer Survey 2025 AI (49,000명 이상): https://survey.stackoverflow.co/2025/ai
-6. GitLab 핸드북 https://handbook.gitlab.com (원본 https://gitlab.com/gitlab-com/content-sites/handbook), 이용 조건 https://handbook.gitlab.com/handbook/about/handbook-usage/ . 실측·개정 이력: `조사/IT 전환 조사 (2026-10-28).md`. 이 프로젝트는 GitLab Inc.와 제휴·보증 관계가 없다
+6. GitLab 핸드북 https://handbook.gitlab.com (원본 https://gitlab.com/gitlab-com/content-sites/handbook), 이용 조건 https://handbook.gitlab.com/handbook/about/handbook-usage/ . 실측·개정 이력은 `docs/PRD.md` 5장과 8장, 실제 수집·청킹 결과는 `data/data.md`에 있다. 이 프로젝트는 GitLab Inc.와 제휴·보증 관계가 없다
 7. 경쟁 제품 조사(2026-10-28): Guru https://help.getguru.com/docs/what-is-verifcation , Glean https://docs.glean.com/user-guide/knowledge/verification/how-verification-works , Notion https://www.notion.com/help/wikis-and-verified-pages . 이미 나간 답의 수신자 재통지와 사람이 승인한 결정표는 찾지 못했다(문서 기준). 정리는 PRD 4-3
 8. Sacra Glean 분석: https://sacra.com/research/glean/
 9. 국내 기업 생성형 AI 도입 조사(AI·IT 담당자 749명): https://www.itworld.co.kr/article/4045729/
