@@ -247,6 +247,10 @@ class PgStore:
             raise RuntimeError("DATABASE_URL이 없다")
         return cls(url)
 
+    def close(self) -> None:
+        """풀을 닫는다(연결·백그라운드 스레드 정리). warmup이 실패했을 때 부른다."""
+        self.pool.close()
+
     def _all(self, sql: str, params=None) -> list[tuple]:
         """읽기 한 문장. BEGIN·COMMIT 왕복을 빼려고 이 문장 동안만 autocommit으로 둔다(바꾸기 자체는 통신이 없다).
         풀의 기본은 그대로라, 여러 문장을 한 트랜잭션으로 묶는 쪽의 동작은 바뀌지 않는다."""
@@ -628,9 +632,15 @@ def warmup() -> Searcher:
     from backend.rag.retrieve import embed
     with _init_lock:
         if _searcher is None:
-            s = Searcher(SearchConfig.from_env(), PgStore.from_env())
-            if not embed.spec(s.cfg.embed_model).api:           # API 모델은 미리 부를 것이 없고, 부르면 돈이 든다
-                s.embed(["warm-up"])
+            cfg = SearchConfig.from_env()
+            store = PgStore.from_env()
+            try:
+                s = Searcher(cfg, store)
+                if not embed.spec(s.cfg.embed_model).api:           # API 모델은 미리 부를 것이 없고, 부르면 돈이 든다
+                    s.embed(["warm-up"])
+            except BaseException:
+                store.close()       # 실패하면 방금 연 풀을 닫는다. 안 닫으면 다음 search()의 재시도마다 풀이 하나씩 쌓인다
+                raise
             _searcher = s
     return _searcher
 
