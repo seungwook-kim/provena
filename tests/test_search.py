@@ -567,13 +567,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_dockerfile_bakes_default_models_at_pinned_revisions():
-    """이미지에 굽는 모델 = 명부의 기본 임베딩·리랭커와 같은 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
+    """비교용 로컬 모델은 서비스 이미지에 넣지 않는다(모델 이름 빌드 인자 기본값이 비어 있음). --build-arg로 이름을 주면 받을
+    판 = 명부의 고정 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
     args = dict(_re.findall(r"^ARG (SEARCH_\w+)=(\S*)$", (ROOT / "Dockerfile").read_text(encoding="utf-8"), _re.M))
-    # 기본은 API 임베딩(voyage-4)·리랭커 없음이라 내려받을 것이 없다 → 굽는 것은 키 없는 비교용 로컬 모델
+    # 기본은 API 임베딩(voyage-4)·리랭커 없음이라 내려받을 것이 없다 → 로컬 모델은 비교할 때만 --build-arg로
     assert embed.EMBEDDERS[embed.DEFAULT_MODEL].api and rerank.DEFAULT_MODEL == rerank.NONE
+    assert args["SEARCH_EMBED_MODEL"] == "" and args["SEARCH_RERANK_MODEL"] == ""
     e, r = embed.EMBEDDERS[embed.LOCAL_MODEL], rerank.RERANKERS[rerank.BAKED_MODEL]
-    assert (args["SEARCH_EMBED_MODEL"], args["SEARCH_EMBED_REVISION"]) == (e.name, e.revision)
-    assert (args["SEARCH_RERANK_MODEL"], args["SEARCH_RERANK_REVISION"]) == (r.hf, r.revision)
+    assert args["SEARCH_EMBED_REVISION"] == e.revision and args["SEARCH_RERANK_REVISION"] == r.revision
 
 
 def _tarball(tmp_path):

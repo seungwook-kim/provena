@@ -82,8 +82,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. `chunks`에 원본 줄 범위 `line_start`·`line_end integer`(열린 항목 8, 승인 대기). 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)`. 표마다 RLS를 켠다(Supabase Data API 차단, 앱은 표 소유자로 접속) |
 | `tests/test_search.py` | AC 시험 |
 | `backend/rag/retrieve/__init__.py` | `from backend.rag.retrieve import search` 로 계약 함수를 내보낸다(그래프·`services/demo_record.py`가 이렇게 부른다) |
-| `backend/requirements.txt` | 검색 의존성: torch(CPU판, `--extra-index-url .../whl/cpu`), sentence-transformers, transformers, huggingface-hub, numpy. 팀 규칙대로 한 파일에 자기 파트 줄만 더한다(TEAM_GUIDE 213) |
-| `Dockerfile` | 기본 임베딩·리랭커를 고정 판으로 빌드 때 받는다(`SEARCH_*` 빌드 인자, `HF_HOME=/app/.hf`, `HF_HUB_OFFLINE=1`). 코드 복사보다 앞에 두어 코드만 바꾸면 다시 받지 않는다. 폴더 주인 김승욱 리뷰 |
+| `backend/requirements.txt` | 검색 의존성: numpy. 로컬 모델용 torch(CPU판, `--extra-index-url .../whl/cpu`), sentence-transformers, transformers, huggingface-hub는 비교용이라 `backend/requirements-local-models.txt`에 두고 서비스 이미지에는 넣지 않는다. 팀 규칙대로 한 파일에 자기 파트 줄만 더한다(TEAM_GUIDE 213) |
+| `Dockerfile` | 비교용 로컬 임베딩·리랭커는 서비스 이미지에 넣지 않는다(`SEARCH_*_MODEL` 빌드 인자 기본값 비움). 비교할 때만 `--build-arg`로 모델 이름을 주면 `requirements-local-models.txt`를 설치하고 고정 판으로 받는다(`HF_HOME=/app/.hf`, `HF_HUB_OFFLINE=1`). 코드 복사보다 앞에 두어 코드만 바꾸면 다시 받지 않는다. 폴더 주인 김승욱 리뷰 |
 | `docker-compose.yml` | `loader` 서비스(`load_snapshot`, `./data/index` 연결)를 더하고 api는 `loader`가 성공으로 끝난 뒤 뜬다. 폴더 주인 김승욱 리뷰 |
 | `backend/main.py` | `SEARCH_WARMUP=1`이면 시작할 때 검색 준비를 백그라운드로(`start_search_warmup`). 폴더 주인 김승욱 리뷰 |
 | `.gitignore`, `.dockerignore` | `data/index/`를 저장소·이미지에서 뺀다(이미지는 compose가 연결한 폴더를 읽는다) |
@@ -93,17 +93,17 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `EMBED_MODEL` | `voyage-4` | API(1024차원, 키 `VOYAGE_API_KEY`). 비교 후보: `Snowflake/snowflake-arctic-embed-l-v2.0`(이미지에 굽는 로컬 모델), `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, 기준선 `BAAI/bge-m3` |
+| `EMBED_MODEL` | `voyage-4` | API(1024차원, 키 `VOYAGE_API_KEY`). 비교 후보: `Snowflake/snowflake-arctic-embed-l-v2.0`(비교용 로컬 모델, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로), `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, 기준선 `BAAI/bge-m3` |
 | `VOYAGE_API_KEY` | 비움 | voyage-4 질문 임베딩. 부를 때 읽고 어디에도 찍지 않는다. 없으면 EC-09 |
 | `SEARCH_LINK_N` | `2` | 링크 확장으로 바꿀 뒤 자리 수. `0`이면 끈다 |
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
 | `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 아직 운영 기본값이 아니다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다 |
-| `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(이미지에 굽는 것, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
+| `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(비교용, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
-| `HF_HUB_OFFLINE` | `1` | 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다(Dockerfile `SEARCH_*` 빌드 인자 = 기본 임베딩·리랭커의 고정 판) |
+| `HF_HUB_OFFLINE` | `1` | 로컬 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다. 서비스 이미지에는 넣지 않고, 비교할 때만 Dockerfile `SEARCH_*` 빌드 인자(`--build-arg`, 판 = 명부의 고정 판)로 넣는다 |
 | `INDEX_URL`, `INDEX_SHA256` | 비움 | `data/index/`가 없을 때 `loader`가 받을 색인(tar.gz) 주소와 sha256. sha256이 없거나 다르면 받지 않는다. 둘 다 비우면 적재를 건너뛰고 검색은 준비되지 않은 채 뜬다 |
 | `INDEX_REQUIRED` | 비움 | `1`이면 색인이 없을 때 `loader`가 실패로 끝나 api가 뜨지 않는다(배포용) |
 | `SEARCH_WARMUP` | compose `1` | `1`이면 `main.py`가 시작할 때 검색 준비를 백그라운드로 한다. 실패해도 서버는 뜨고 첫 검색 때 다시 시도한다 |

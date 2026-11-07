@@ -41,6 +41,20 @@ class Verdict:
     checks: dict = field(default_factory=dict)
 
 
+_PUBLIC_GROUNDING = ("llm", "reason", "rejudge", "revised", "redrafted", "partial_route")
+
+
+def public_grounding(info: dict) -> dict:
+    """근거 판정 기록 중 밖으로 낼 수 있는 값만 고른다(MCP `get_grounding`). 초안, 뺀 문장, 판정 이유 문장, 질문에서 뽑은 말은 뺀다."""
+    out = {k: info[k] for k in _PUBLIC_GROUNDING if k in info}
+    rules = info.get("rules")
+    out["rules"] = {k: rules[k] for k in ("cited", "retrieved") if k in rules} if isinstance(rules, dict) else rules
+    for key in ("redraft", "revise"):
+        if isinstance(info.get(key), dict) and "result" in info[key]:
+            out[key] = {"result": info[key]["result"]}
+    return out
+
+
 def question_years(question: str) -> list[int]:
     return sorted({int(m) for rx in (_YEAR_KO, _YEAR_ISO) for m in rx.findall(question or "")})
 
