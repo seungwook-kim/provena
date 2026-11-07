@@ -4,6 +4,7 @@
 - G1 되묻기(give_up) 길에도 유출 검사
 - G2 청크 머리(제목·절)도 구분자 지우기
 - G3 구분자 지우기를 더 안 바뀔 때까지 되풀이
+- G4 유출 검사 정규화(폭 없는 글자·전각·문장부호·대소문자, 긴 줄 중 한 문장)
 """
 from __future__ import annotations
 
@@ -128,3 +129,33 @@ def test_g3_normal_text_unchanged():
     """대조군: 구분자가 없는 글, 화살표·부등호(`<<`, `>>`, `->`)는 그대로 둔다."""
     for s in ("a << b >> c", "x -> y <= z", "", "SEV2 initial response"):
         assert P._strip_marks(s) == s
+
+
+# ---------------- G4: 유출 검사 정규화 ----------------
+def test_g4_leak_check_catches_disguised_copies():
+    zw = "\u200b"
+    assert P.leaks_internal(LEAKED.replace("판정기", f"판정{zw}기"))           # 폭 없는 글자 끼우기
+    assert P.leaks_internal(LEAKED.replace(".", ","))                         # 문장부호 바꾸기
+    assert P.leaks_internal(f"**{LEAKED[:13]}** {LEAKED[13:]}")                # 마크다운 강조
+    assert P.leaks_internal("질문에 답하는 데 아래 자료가 충분한지 판단한다.")  # 긴 줄 중 한 문장만
+    assert P.leaks_internal("ＪＳＯＮ 한 개만 출력한다. 예: {\"route\": \"rule\"}")  # 전각 글자
+    assert P.leaks_internal(f"[[ta{zw}sk:judge]]") and P.leaks_internal("［［task:judge］］")  # 내부 표식 위장
+
+
+def test_g4_normal_answers_not_flagged():
+    """대조군: 저장된 v2 결과(evals/results/agent_v2_multi_pg/single/rows.jsonl)의 실제 답·거절 문장은 걸리지 않는다."""
+    normal = [
+        "승인은 CEO와 Fellow Engineer 1명에게 받아야 합니다. [1]",
+        "GitLab 팀원이 작성한 MR의 리뷰 응답 SLO는 2 영업일 미만입니다. [1]",
+        "두 등급 사이에서 애매하면 처음에는 더 높은 등급을 선택하며, 여기서는 Sev1이 됩니다. [1]",
+        "EOC는 주말에도 알림에 대응할 책임이 있다 [1]. 주말에 즉시 대응해야 하는지(대응 시한)는 자료에 없다.",
+        "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.",
+    ]
+    assert not any(P.leaks_internal(t) for t in normal)
+
+
+def test_g4_known_limits_not_caught():
+    """코드로 못 막는 것(남은 것) 기록: 번역, 바꿔 말하기, 글자 15자 미만 줄. 막게 되면 이 시험을 고친다."""
+    assert not P.leaks_internal("You are a sufficiency judge. Decide whether the materials below are enough.")
+    assert not P.leaks_internal("너는 근거 충분성 판정기다 요약: 자료가 충분한지 본다")
+    assert not P.leaks_internal("JSON 한 개만 출력한다.")
