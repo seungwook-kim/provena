@@ -121,8 +121,15 @@ export async function changeAdminRole(loginId, action) {
 export function getThreads() { return apiJson('/threads', { suppressUnauthorized: true }) }
 export function getThread(threadId) { return apiJson(`/threads/${encodeURIComponent(threadId)}`) }
 export function getMemory() { return apiJson('/me/memory', { suppressUnauthorized: true }) }
-export function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, body: JSON.stringify(value) }) }
-export function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true }) }
+async function csrfHeaders() {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable. Please try again.', 0, 'csrf_unavailable')
+  return { 'X-CSRF-Token': decodeURIComponent(token) }
+}
+
+export async function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, headers: await csrfHeaders(), body: JSON.stringify(value) }) }
+export async function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true, headers: await csrfHeaders() }) }
 export function getRecalls() { return apiJson('/recalls') }
 export function getApprovals() { return apiJson('/approvals') }
 export function getDecisionTables() { return apiJson('/decision-tables') }
@@ -145,7 +152,7 @@ export async function sendChatMessage(threadId, message) {
 export async function streamChatMessage(threadId, message, { signal, onEvent } = {}) {
   const payload = { message }
   if (threadId !== null) payload.thread_id = threadId
-  const response = await apiRequest('/chat', { method: 'POST', signal, body: JSON.stringify(payload) })
+  const response = await apiRequest('/chat', { method: 'POST', signal, headers: await csrfHeaders(), body: JSON.stringify(payload) })
   if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('text/event-stream')) throw new ApiError('채팅 서버가 스트리밍 응답을 반환하지 않았습니다.', response.status, 'invalid_stream')
   if (!response.body) throw new ApiError('채팅 스트림을 읽을 수 없습니다.', response.status, 'stream_unavailable')
   const reader = response.body.getReader()
