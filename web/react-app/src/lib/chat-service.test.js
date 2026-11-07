@@ -15,6 +15,22 @@ function setup(events) {
 }
 
 describe('createApiChatAdapter event handling', () => {
+  it('turns an SSE approval_request event into approval state without losing citations', async () => {
+    const citation = { chunk_id: 'c1', title: '원문' }
+    const { snapshots, service } = setup([
+      { type: 'token', thread_id: 't1', data: { text: '답변' } },
+      { type: 'citation', thread_id: 't1', data: citation },
+      { type: 'approval_request', thread_id: 't1', data: { code: 'approval_pending' } },
+    ])
+
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer.state).toBe('approval')
+    expect(answer.text).toBe('답변')
+    expect(answer.citations).toEqual([expect.objectContaining(citation)])
+  })
+
   it('preserves the limit_exceeded code on error events', async () => {
     const { snapshots, service } = setup([{ type: 'error', thread_id: 't1', data: { code: 'limit_exceeded', message: 'too many requests' } }])
     await service.sendMessage({ threadId: 't1', message: '질문' })
@@ -42,6 +58,36 @@ describe('createApiChatAdapter event handling', () => {
     expect(answer.state).toBe('done')
     expect(answer.citations.map(item => item.chunk_id)).toEqual(['c1'])
     expect(answer.attribution).toEqual(expect.anything())
+  })
+
+  it('stops an active request, ignores AbortError, and allows a later message', async () => {
+    const snapshots = []
+    let release
+    let lateEvent
+    streamChatMessage
+      .mockImplementationOnce((_threadId, _message, { signal, onEvent }) => new Promise((resolve, reject) => {
+        lateEvent = onEvent
+        onEvent({ type: 'token', thread_id: 't1', data: { text: '첫 답변' } })
+        release = () => resolve()
+        signal.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })), { once: true })
+      }))
+      .mockImplementationOnce(async (_threadId, _message, { onEvent }) => onEvent({ type: 'done', thread_id: 't1', data: {} }))
+    const adapter = createApiChatAdapter({ onThreadsChange: value => snapshots.push(value) })
+    const service = createChatService(adapter)
+
+    const first = service.sendMessage({ threadId: 't1', message: '첫 질문' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(await service.stopMessage('t1')).toBe(true)
+    lateEvent({ type: 'token', thread_id: 't1', data: { text: '늦은 토큰' } })
+    release()
+    await first
+
+    const stopped = snapshots.at(-1)[0].messages.at(-1)
+    expect(stopped.state).toBe('stopped')
+    expect(stopped.text).toBe('첫 답변')
+    await service.sendMessage({ threadId: 't1', message: '두 번째 질문' })
+    expect(snapshots.at(-1)[0].messages.at(-1).state).toBe('done')
+    expect(snapshots.at(-1)[0].messages.at(-2).text).toBe('두 번째 질문')
   })
 })
 

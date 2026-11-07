@@ -36,6 +36,10 @@ export function mapThreadResponse(payload) {
   return []
 }
 
+function isAbortError(error) {
+  return error?.name === 'AbortError' || error?.code === 'ABORT_ERR'
+}
+
 export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {}) {
   const controllers = new Map()
   let threads = []
@@ -65,14 +69,17 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     async sendMessage({ threadId, message }) {
       const { streamChatMessage } = await import('./api')
       const controller = new AbortController(); const streamId = threadId ?? `pending-${Date.now()}`
-      controllers.set(streamId, controller); onProcessingChange?.(streamId)
+      const request = { controller, activeThreadId: threadId, cancelled: false }
+      controllers.set(streamId, request); onProcessingChange?.(streamId)
       const userMessage = { role: 'user', text: message, timestamp: new Date().toISOString() }
       const answer = { role: 'assistant', text: '', citations: [], state: 'generating', timestamp: new Date().toISOString() }
       const existing = threads.find(thread => thread.id === threadId)
       if (existing) upsert(threadId, { messages: [...(existing.messages ?? []), userMessage, answer] })
       try {
         await streamChatMessage(threadId, message, { signal: controller.signal, onEvent: event => {
+          if (request.cancelled || controllers.get(streamId) !== request) return
           const id = event.thread_id ?? threadId
+          request.activeThreadId = id
           if (!threads.some(thread => thread.id === id)) threads = [{ id, title: message, messages: [userMessage, answer] }, ...threads]
           const current = threads.find(thread => thread.id === id); const messages = [...(current?.messages ?? [])]
           const draft = messages[messages.length - 1]?.role === 'assistant' ? messages[messages.length - 1] : answer
@@ -93,9 +100,36 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
           upsert(id, { title: current?.title ?? message, messages, lastActivityAt: new Date().toISOString() })
         }})
         return { threadId: threadId ?? threads[0]?.id }
-      } finally { controllers.delete(streamId); onProcessingChange?.(null) }
+      } catch (error) {
+        if (!request.cancelled && !isAbortError(error)) throw error
+        return { threadId: request.activeThreadId ?? threadId }
+      } finally {
+        if (controllers.get(streamId) === request) {
+          controllers.delete(streamId)
+          onProcessingChange?.(null)
+        }
+      }
     },
-    async stopMessage(id) { controllers.get(id)?.abort() },
+    async stopMessage(id) {
+      const request = controllers.get(id)
+      if (!request) return false
+      request.cancelled = true
+      request.controller.abort()
+      const threadId = request.activeThreadId
+      if (threadId) {
+        const thread = threads.find(item => item.id === threadId)
+        const messages = [...(thread?.messages ?? [])]
+        const answer = messages.findLast(message => message.role === 'assistant')
+        if (answer?.state === 'generating') {
+          answer.state = 'stopped'
+          answer.error = '응답 생성을 중단했습니다.'
+          upsert(threadId, { messages, lastActivityAt: new Date().toISOString() })
+        }
+      }
+      controllers.delete(id)
+      onProcessingChange?.(null)
+      return true
+    },
     async searchThreads(query) { const q = query.trim().toLowerCase(); return threads.filter(thread => thread.title.toLowerCase().includes(q)) },
     dispose() { controllers.forEach(controller => controller.abort()); controllers.clear() },
   }
