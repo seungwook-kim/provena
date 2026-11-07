@@ -326,11 +326,11 @@ def _strip_marks(text: object) -> str:
 
 
 def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
-    """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다."""
+    """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다. 머리(제목·절)도 문서 front matter에서 오므로 같이 지운다."""
     parts = []
     for c in chunks:
         text = _strip_marks(c.get("text", ""))
-        head = (
+        head = _strip_marks(
             f"chunk_id={c.get('chunk_id')} | {c.get('org')} {c.get('rule_title')} "
             f"{c.get('article') or ''} | 판 {c.get('version_id')} (판 날짜 {c.get('version_date')})"
         )
