@@ -478,6 +478,7 @@ class AuthUser:
     password_hash: str = field(repr=False)
     role: str
     is_active: bool = True
+    groups: tuple[str, ...] = ()
 
 
 class AuthStore(Protocol):
