@@ -34,7 +34,8 @@ services:
 
   loader:
     # 검색 색인(data/index/)을 DB에 한 번 적재한다(backend/rag/retrieve/load_snapshot.py, docs/specs/search.md).
-    # data/index/가 없으면 INDEX_URL·INDEX_SHA256으로 받고, 둘 다 없으면 건너뛴다(색인 없이도 compose가 뜨게).
+    # data/index/가 없으면(새로 clone하면 연결한 폴더가 비어 있다) 커밋한 data/index.tar.gz를 풀어 meta.json sha256과 대조하고,
+    # 압축 파일도 없으면 INDEX_URL·INDEX_SHA256으로 받고, 다 없으면 건너뛴다(색인 없이도 compose가 뜨게).
     # 같은 스냅샷이 이미 적재돼 있으면 몇 초 안에 끝난다
     build: .
     command: ["python", "-m", "backend.rag.retrieve.load_snapshot"]

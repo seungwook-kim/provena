@@ -78,7 +78,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB, 링크를 아직 안 실은 DB는 다시 넣는다). 링크는 `chunks.link_targets bigint[]`, 장부 `index_meta.links_sha256`. 증분(`schedule.py`)도 새 판 청크에 같은 규칙으로 링크를 넣는다. 스냅샷을 새로 만드는 순서는 `index import --from data/index_exp --embedder voyage-4`, `index links`, `load_snapshot`이다. 배치 사이의 커밋을 넘어 임시 표(`chunks_in`)를 쓰므로 Supabase에 적재할 때는 세션 포트(5432)로 접속한다. 2026-11-05에 이 방법으로 23,095청크를 20.7초에 적재했고(generation 1), 트랜잭션 포트(6543)로 적재하는 경우는 시험하지 않았다. 검색 자체는 6543에서 동작을 확인했다 |
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차. `line_start`·`line_end` 추가는 열린 항목 8, 승인 대기) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
-| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 모델을 정하기 전(11/6)까지는 저장소에 넣지 않는다(`.gitignore`). 나눠 주는 방법은 "열린 항목" 6 |
+| `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 압축 한 파일 `data/index.tar.gz`(약 94.5MB)로 저장소에 커밋하고(2026-11-07), 풀린 `data/index/`는 커밋하지 않는다(`.gitignore`). 쓰는 법과 고치는 순서는 `data/data.md`의 "검색 색인 스냅샷 쓰는 법", 정한 내용은 "열린 항목" 6 |
 | `db/2xx_*.sql` | 검색 파트 SQL은 200번대(`db/101_auth_users.sql`이 100번대). 표는 SDD 5장 `docs`·`versions`·`chunks` 정의를 따르고, 벡터 칸 차원은 아래 "열린 항목" 2. `versions`에 `version_date_before boolean NOT NULL DEFAULT false`를 더해 `Chunk.version_date_before`(I-001, "YYYY-MM-DD 이전" 판)를 그대로 싣는다. `chunks`에 원본 줄 범위 `line_start`·`line_end integer`(열린 항목 8, 승인 대기). 번역 저장 표 `query_translations(query_sha256, model, keywords, sentence, created_at)`. 표마다 RLS를 켠다(Supabase Data API 차단, 앱은 표 소유자로 접속) |
 | `tests/test_search.py` | AC 시험 |
 | `backend/rag/retrieve/__init__.py` | `from backend.rag.retrieve import search` 로 계약 함수를 내보낸다(그래프·`services/demo_record.py`가 이렇게 부른다) |
@@ -86,7 +86,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `Dockerfile` | 비교용 로컬 임베딩·리랭커는 서비스 이미지에 넣지 않는다(`SEARCH_*_MODEL` 빌드 인자 기본값 비움). 비교할 때만 `--build-arg`로 모델 이름을 주면 `requirements-local-models.txt`를 설치하고 고정 판으로 받는다(`HF_HOME=/app/.hf`, `HF_HUB_OFFLINE=1`). 코드 복사보다 앞에 두어 코드만 바꾸면 다시 받지 않는다. 폴더 주인 김승욱 리뷰 |
 | `docker-compose.yml` | `loader` 서비스(`load_snapshot`, `./data/index` 연결)를 더하고 api는 `loader`가 성공으로 끝난 뒤 뜬다. 폴더 주인 김승욱 리뷰 |
 | `backend/main.py` | `SEARCH_WARMUP=1`이면 시작할 때 검색 준비를 백그라운드로(`start_search_warmup`). 폴더 주인 김승욱 리뷰 |
-| `.gitignore`, `.dockerignore` | `data/index/`를 저장소·이미지에서 뺀다(이미지는 compose가 연결한 폴더를 읽는다) |
+| `.gitignore`, `.dockerignore` | 풀린 `data/index/`를 저장소·이미지에서 뺀다. 커밋하는 것은 `data/index.tar.gz` 한 파일이고, Docker 빌드가 이미지 안에서 풀며 `loader`는 compose가 연결한 폴더가 비어 있으면 시작할 때 다시 푼다 |
 | `.env.example` | 검색 환경 변수(아래 표) 목록 |
 
 **환경 변수**
@@ -104,7 +104,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
 | `HF_HUB_OFFLINE` | `1` | 로컬 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다. 서비스 이미지에는 넣지 않고, 비교할 때만 Dockerfile `SEARCH_*` 빌드 인자(`--build-arg`, 판 = 명부의 고정 판)로 넣는다 |
-| `INDEX_URL`, `INDEX_SHA256` | 비움 | `data/index/`가 없을 때 `loader`가 받을 색인(tar.gz) 주소와 sha256. sha256이 없거나 다르면 받지 않는다. 둘 다 비우면 적재를 건너뛰고 검색은 준비되지 않은 채 뜬다 |
+| `INDEX_URL`, `INDEX_SHA256` | 비움 | `data/index/`와 `data/index.tar.gz`가 모두 없을 때 `loader`가 받을 색인(tar.gz) 주소와 sha256. sha256이 없거나 다르면 받지 않는다. 둘 다 비우면 적재를 건너뛰고 검색은 준비되지 않은 채 뜬다 |
 | `INDEX_REQUIRED` | 비움 | `1`이면 색인이 없을 때 `loader`가 실패로 끝나 api가 뜨지 않는다(배포용) |
 | `SEARCH_WARMUP` | compose `1` | `1`이면 `main.py`가 시작할 때 검색 준비를 백그라운드로 한다. 실패해도 서버는 뜨고 첫 검색 때 다시 시도한다 |
 | `SEARCH_INDEX_DIR` | `data/index` | `make_search`(비교 입구)가 읽는 스냅샷 폴더 |
@@ -123,7 +123,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 3 | BM25를 메모리(`rank_bm25`)로 할지 Postgres 전문 검색으로 할지 | 메모리. 1차 비교와 같은 토큰화(`experiment_v1.py`의 `_tokens`) | D3 |
 | 4 | 번역에 쓸 LLM | 로컬은 `LLM_PROVIDER=claude_cli`, 운영은 `openrouter`(`anthropic/claude-haiku-5.5`). 번역 저장 키의 모델 이름은 같은 값(`claude-haiku-5-5`)으로 맞추므로 두 제공자가 저장된 번역을 함께 쓴다. 운영 경로를 다시 잴 때는 저장된 번역을 비우고 시작한다 | 정함 |
 | 5 | SDD 11장의 리랭커 속도 기준이 2초로 남아 있다. SPEC 3장은 3초 | SPEC 3초를 따른다. SDD 11장도 3초로 고쳤다 | 이 Spec |
-| 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | 모델을 정하기 전(11/6 전): `data/index/`는 `.gitignore`, 로컬 `data/index/`로 개발하고 받을 주소는 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 둔다(11/2 조장 답). 모델을 정한 뒤: 저장소에 한 번 커밋하고 `meta.json`의 sha256으로 대조한다(이때 `.gitignore` 줄을 뺀다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고 없을 때만 `INDEX_URL`을 본다 | 11/6 뒤 커밋 |
+| 6 | 색인 스냅샷(`data/index/`, 벡터 약 95MB·폴더 약 130MB)을 나눠 주는 방법. CPU로 새로 만들면 수 시간이라 `docker compose up` 10분(G2) 안에 못 만든다. 저장소가 비공개라 Docker 빌드·`loader`가 토큰 없이 Release를 받을 수 없다(11/2 조장) | **정함(2026-11-07, 김승욱):** 원문 스냅샷(`data/corpus.tar.gz`, 결정 0021)과 같은 방식으로 색인을 압축 한 파일(`data/index.tar.gz`)로 만들어 저장소에 한 번 커밋하고, Docker 빌드와 `loader` 시작 때 자동으로 푼 뒤 `meta.json`의 sha256으로 대조한다(풀린 `data/index/`는 `.gitignore`에 둔다. 모델을 바꿔 다시 커밋하면 기록에 쌓인다). `loader`는 `data/index/meta.json`이 있으면 그것을 쓰고, 없으면 압축 파일을 풀고, 압축 파일도 없을 때만 `INDEX_URL`·`INDEX_SHA256` 환경 변수로 받는다 | 정함(2026-11-07), `data/index.tar.gz` 커밋 |
 | 7 | voyage 두 후보는 문서와 질문의 모델이 다르거나 질문에 키가 필요하다 | **닫음(11/5)**: 확정 조합 voyage-4를 기본으로 지원(`embed.py` `VoyageClient`, 문서 벡터는 1차 비교 캐시 `index import --embedder voyage-4`). 질문 모델이 다른 `voyage4-doc+nano-query`는 넣지 않았다. 키 없는 질문은 EC-09(빈 결과), 질문 벡터 장부와 Voyage 학습 사용 거부 설정은 다음 PR | 11/5 |
 | 9 | L1x2를 잰 조건 밖: `k≠5`, 리랭커 켬, `org` 지정, 증분으로 새로 생긴 페이지를 가리키는 옛 청크의 링크(다시 계산하지 않음) | 같은 규칙으로 돌지만 점수는 재지 않았다. 링크 대상은 페이지(rule_seq)라 대상 페이지가 개정돼도 `as_of`에 맞는 판을 고른다 | v2 측정 때 |
 | 8 | Spec에 없던 변경 두 가지: ① 청크 열쇠를 `chunk_id` 하나에서 `(chunk_id, version_id)`로(개정판에서 안 바뀐 섹션은 옛 판과 chunk_id가 같다) — **11/2 조장 승인**(`load_snapshot` upsert 기준도 같이, `Chunk` 계약은 그대로) ② `Chunk`에 `line_start`·`line_end` 추가(평가셋 `#L` 정답 채점용, 출처 링크에도 쓸 수 있다) — 박진형 제안, 김승욱·강경희 승인(11/2, PR #37, SDD 6장) | 둘 다 넣어 두고 PR 본문에 적는다. ②가 거절되면 칸을 빼고 채점기 쪽에서 청크 파일로 줄 범위를 찾는다 | PR 리뷰 |

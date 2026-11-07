@@ -1,6 +1,8 @@
 # 원문 스냅샷은 줄바꿈을 바꾸지 않는다. Windows autocrlf로 바뀌면 sha256이 원본과 달라진다 (I-003)
 # 지금은 압축 파일(data/corpus.tar.gz) 하나로 커밋하므로 그 파일을 바이너리로 둔다. 풀린 data/corpus/는 커밋하지 않는다
 data/corpus.tar.gz binary
+# 검색 색인도 압축 한 파일(data/index.tar.gz)로 커밋한다. 풀린 data/index/는 커밋하지 않는다
+data/index.tar.gz binary
 evals/results/retrieval_v1_round1/results.tar.gz binary
 evals/results/retrieval_v1_round1_frozen/results.tar.gz binary
 # 동결 sha256은 CRLF 파일 기준이다. 어느 운영체제에서 받아도 같은 바이트가 되게 고정한다

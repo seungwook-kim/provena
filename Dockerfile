@@ -23,6 +23,9 @@ COPY backend/ ./backend/
 COPY data/ ./data/
 # 원문 스냅샷은 압축 한 파일로 커밋한다. 이미지를 만들 때 풀고 수집 때 sha256과 같은지 확인한다(다르면 빌드 실패)
 RUN python -m backend.rag.ingest.snapshot unpack
+# 검색 색인도 압축 한 파일(data/index.tar.gz)로 커밋한다. 풀린 data/index/는 .dockerignore로 빼므로 이미지 안에서 풀고
+# meta.json의 sha256과 같은지 확인한다(다르면 빌드 실패). compose의 loader는 ./data/index를 연결하므로 그 폴더가 비어 있으면 시작할 때 다시 푼다
+RUN python -m backend.rag.ingest.snapshot unpack-index
 COPY web/ ./web/
 COPY db/ ./db/
 # 런타임 Skill(SKILL.md). backend/services/skills.py가 /app/skills/<이름>/SKILL.md를 읽는다. 이미지에 없으면 USE_SKILLS가 켜진 정책 질문이 FileNotFoundError로 실패한다

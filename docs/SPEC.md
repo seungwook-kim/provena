@@ -24,7 +24,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 | P-04 | 데모 모드 | `docker compose up` 한 줄, 키 없이 기동, 데모 계정 2개 시드 | 해당 없음 | 이 문서 4장 |
 | 가산 | 자동화, GraphRAG, MCP·Skill | 증분 수집과 정시 실행, 페이지 링크 그래프, FastMCP와 런타임 Skill (가이드 p.20) | 해당 없음 | Spec 예정 |
 
-되면 만드는 것: F-05~F-08. 핵심 기능과 필수 게이트를 끝낸 뒤 11/6 중간 점검에서 넣을지 정한다(PRD 6-3).
+필수 뒤 진행: F-05~F-08. 11/6 중간 점검에서 모두 유지하기로 했고(결정 0066), 핵심 기능과 필수 게이트를 끝낸 뒤 진행한다(PRD 6-3).
 
 ### 2-2. 만들지 않는 것
 
@@ -64,7 +64,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 |---|---|
 | 기동 | `docker compose up`. `.env`가 없어도 뜬다. compose가 `.env.example`을 먼저 읽고 `.env`가 있으면 그 값으로 덮는다 |
 | LLM | `DEMO_MODE=1`이면 키 없이 기록해 둔 응답을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다(`backend/services/llm.py`, `backend/services/demo_replay.py`) |
-| DB | 로컬 pgvector 컨테이너(`db`). 검색 색인은 compose의 `loader` 서비스가 `data/index/` 또는 `INDEX_URL`에서 적재한다(`backend/rag/retrieve/load_snapshot.py`). 색인이 없으면 적재를 건너뛰고 서버는 뜨며, 질문은 거절로 끝난다 |
+| DB | 로컬 pgvector 컨테이너(`db`). 검색 색인은 compose의 `loader` 서비스가 커밋된 `data/index.tar.gz`(없으면 `INDEX_URL`)를 풀어 적재한다(`backend/rag/retrieve/load_snapshot.py`). 색인이 없으면 적재를 건너뛰고 서버는 뜨며, 질문은 거절로 끝난다 |
 | 로그인 | 로컬 데모 계정 2개(user, admin)를 시드한다. `PROVENA_ENV=local`이고 `PROVENA_DEV_MODE=1`일 때만 만들고 그 밖의 모드에서는 만들지 않는다. 아이디·비밀번호는 환경변수(`DEMO_USER_*`, `DEMO_ADMIN_*`)에서 읽고(로컬 데모 값은 `.env.example`) 비밀번호는 8자 이상이다. 코드와 SQL에는 값이 없다 |
 | 평가용 계정 | 제출하는 평가용 계정(G1)은 데모 계정과 다른 값이고 저장소에 적지 않는다 |
 | 서명 키 | `AUTH_SECRET`은 저장소에 두지 않는다. 비어 있으면 로컬 데모 모드에서만 실행마다 무작위로 만들고(재시작하면 다시 로그인), 그 밖의 모드에서는 시작하지 않는다 |
