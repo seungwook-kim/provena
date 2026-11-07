@@ -639,6 +639,40 @@ def test_search_warmup_is_off_by_default_and_failure_does_not_stop_server(monkey
     assert not t.is_alive()                     # 예외가 스레드 밖으로 나가 서버를 멈추지 않는다
 
 
+def test_warmup_failure_closes_the_pool_it_opened(monkeypatch):
+    """색인이 없어 warmup이 실패하면 방금 연 DB 풀을 닫는다. 안 닫으면 search()가 부를 때마다 풀이 하나씩 쌓인다."""
+    class FakePgStore:
+        made = []
+
+        def __init__(self):
+            self.closed = 0
+            FakePgStore.made.append(self)
+
+        def meta(self):
+            return None                         # index_meta 없음 = 적재 전
+
+        def close(self):
+            self.closed += 1
+
+    monkeypatch.setattr(search_mod.PgStore, "from_env", classmethod(lambda cls: FakePgStore()))
+    monkeypatch.setattr(search_mod, "_searcher", None)
+    for _ in range(2):                          # search()마다 warmup을 다시 하므로 두 번
+        with pytest.raises(RuntimeError, match="색인이 준비되지 않았다"):
+            search_mod.warmup()
+    assert [s.closed for s in FakePgStore.made] == [1, 1]
+    assert search_mod._searcher is None
+
+    class FakePool:
+        closed = 0
+
+        def close(self):
+            FakePool.closed += 1
+    pg = object.__new__(search_mod.PgStore)    # DB 없이: 진짜 PgStore.close가 풀을 닫는지
+    pg.pool = FakePool()
+    pg.close()
+    assert FakePool.closed == 1
+
+
 def test_env_example_lists_search_variables():
     text = (ROOT / ".env.example").read_text(encoding="utf-8")
     for k in ("EMBED_MODEL", "SEARCH_MODE", "RERANK_MODEL", "RERANK_TOP", "QUERY_TRANSLATE", "INDEX_URL", "INDEX_SHA256",
