@@ -22,6 +22,13 @@ export default defineConfig({
       '/auth': proxyTarget,
       '/me': proxyTarget,
       '/admin': proxyTarget,
+      '/threads': proxyTarget,
+      '/chat': proxyTarget,
+      '/health': proxyTarget,
+      '/recalls': proxyTarget,
+      '/approvals': proxyTarget,
+      '/decision-tables': proxyTarget,
+      '/maintenance-candidates': proxyTarget,
     },
   },
 })
