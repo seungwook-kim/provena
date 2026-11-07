@@ -1,5 +1,6 @@
-# Spec — FastMCP 읽기 전용 도구 5개 (박진형, 업무 분담 6번 · 가산 MCP·Skill)
+# Spec — FastMCP 읽기 전용 도구 6개 (박진형, 업무 분담 6번 · 가산 MCP·Skill)
 
+> 2026-11-06: 팀장 결정(결정 0062)으로 저장된 답의 근거 판정 기록(`get_grounding`) 도구 1개를 더했다(아래 "도구 6" 절). 도구 수가 강의 실습 목표(워크플로 도구 3~5개, AI Agent 4. MCP_Server 03강·07강)를 하나 넘는다(열린 항목 10). 다른 도구 5개의 약속은 그대로다.
 > 2026-11-05: 조장 요청으로 결정표 실행 결과(`explain_decision`)·체크포인트 실행 단계(`get_agent_trace`) 도구 2개를 더했다(아래 "도구 4·5" 절). 검색 도구 3개의 약속은 그대로다.
 > 2026-11-03판(구현과 같이 고침, 조장 확인 전). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 486줄(시험), 501줄(섹션 조회), 529줄(같은 서비스)과 PRD 319줄(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
 
@@ -17,7 +18,7 @@
 
 - **해결 목표**: 검색·섹션 조회·바뀐 섹션 목록을 읽기 전용 MCP 도구 3개로 연다. 도구는 `backend/rag/` 함수를 감싸기만 하고 검색 로직을 다시 짜지 않는다. 쓰기·실행 도구는 내보내지 않는다.
 - **성공 기준**
-  - 도구는 정확히 5개(검색 `search_handbook`, `get_section`, `list_changed_sections` + `explain_decision`, `get_agent_trace`)이고 이름·입력 이름은 ASCII만 쓴다. 5개는 강의의 도구 수 기준(3~5개) 상한이다 — 더 늘리려면 다른 도구를 줄이거나 합칠지 먼저 본다.
+  - 도구는 정확히 6개(검색 `search_handbook`, `get_section`, `list_changed_sections` + `explain_decision`, `get_agent_trace`, `get_grounding`)이고 이름·입력 이름은 ASCII만 쓴다. 6개는 강의 실습 목표(AI Agent 4. MCP_Server 03강 학습 목표 "도구를 3~5개로 다시 설계했다."·07강 과제 "워크플로 단위 도구 3~5개")를 하나 넘는다. 강의는 도구 수보다 사용자 작업 단위와 같은 조건 A/B 평가로 판단하라고 한다(00강 "좋은 MCP 서버는 도구 수가 아니라, 사용자의 작업과 평가 결과로 판단합니다."·03강 "도구 수 축소가 선택을 개선하는지는 외부 사례가 아니라 같은 조건의 A/B로 확인합니다."). `get_grounding`은 팀장 결정(결정 0062)으로 더했고, 도구 선택이 나빠지는지는 열린 항목 10에서 본다. 더 늘리려면 다른 도구를 줄이거나 합칠지 먼저 본다.
   - MCP로 부른 `search_handbook` 결과 = `search()` 직접 호출 결과(chunk_id 순서까지, v1 30문항 30/30).
   - `get_section`이 되살린 본문은 청크마다 sha256이 `chunks.text_sha256`과 같고, 섹션 3개 이상을 파싱 결과와 글자 단위로 대조해 같다.
   - `list_changed_sections`를 불러도 `changed_articles`가 바뀌지 않는다(호출 전후 표 지문이 같음).
@@ -52,7 +53,7 @@
 | EC-08 | `as_of`가 가장 이른 판보다 앞 | `not_found`(그날 판 없음). 가장 가까운 판으로 바꾸지 않는다 |
 | EC-09 | 토큰 없음·틀림·URL 쿼리로 보냄 | 401. 쿼리 토큰은 받지 않는다 |
 | EC-10 | `MCP_TOKEN` 빈 값 | `/mcp`를 붙이지 않는다(정적 파일 쪽으로 넘어가 404·405). 앱의 나머지는 그대로 뜬다 |
-| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 권한표 칸만 "비공개"로 바꾼다(`parse.py:149`). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다 |
+| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 권한표 칸만 "비공개"로 바꾼다(`parse.py:149`). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
 | EC-12 | 검색이 번역 실패 등으로 내려감 | `status=ok` + `note`에 `fallback_reason` |
 | EC-13 | 쪽 통째 삭제(새 판 없음) | `changed_articles.new_version_date`가 빈 칸이다(`diff.py`). `since`와 비교할 날짜는 그 줄을 적은 날(`created_at`, UTC)로 본다. 안 그러면 사라진 쪽이 목록에 영영 안 나온다 |
 | EC-14 | 긴 요소 하나가 청크 둘 이상으로 쪼개진 섹션 | 조각 경계에 줄바꿈이 하나 더 들어간다(글자는 같고 공백만 다름). DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없다. 스냅샷 15,901섹션 중 438개, 나머지 15,463개는 파싱 결과와 글자까지 같다 |
@@ -117,6 +118,7 @@
 | `extras/mcp_skill/mcp_client/client.py`, `tests/test_mcp_client.py` | 클라이언트(아래 "클라이언트" 절). `requirements.txt`에 `langchain[mcp]==1.4.9` 한 줄 | 박진형 (그래프 연결은 김승욱) |
 | `extras/mcp_skill/mcp_server/decision_tool.py`, `tests/test_mcp_decision_tool.py` | `explain_decision`(아래 "도구 4·5" 절) | 박진형 |
 | `extras/mcp_skill/mcp_server/trace_tool.py`, `tests/test_mcp_trace_tool.py` | `get_agent_trace`(아래 "도구 4·5" 절) | 박진형 |
+| `extras/mcp_skill/mcp_server/grounding_tool.py`, `tests/test_mcp_new_tools.py` | `get_grounding`(아래 "도구 6" 절). 기록은 `backend/graph/answer_store.py`(`save_grounding`·`get_grounding`)와 `backend/graph/grounding.py`(`public_grounding`) | 김승욱 |
 
 **열린 항목**
 
@@ -130,15 +132,16 @@
 7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
 8. `get_agent_trace` 조회 범위(2026-11-05): 토큰 하나만 있으면 아무 thread_id나 조회할 수 있다. 칸을 화이트리스트로 줄여 대화 내용·사람 정보는 나가지 않지만, 그 대화가 있었다는 사실·진행 상태·시각은 드러난다. 사람 로그인과 thread를 묶는 `/chat` 연결 때 MCP 쪽도 사용자 범위를 둘지 정한다(지금 MCP 토큰은 기계 키 하나라 누가 묻는지 모른다)
 9. 비용(2026-11-05): 체크포인트에 비용 칸이 없어 `get_agent_trace`의 `cost_usd`는 null이다. 서비스 경로에서 LLM 호출 비용을 남기려면(`llm_trace.py`를 켜거나 상태에 칸을 더하기) 그래프 쪽 결정이 먼저다
-10. 도구 수: 5개로 강의 기준(3~5개) 상한이다. 더 더하기 전에 같은 문항으로 도구 선택이 나빠지는지 본다
+10. 도구 수: `get_grounding`을 더해 6개가 되어 강의 실습 목표(3~5개, MCP_Server 03강·07강 — 출처는 Goal 성공 기준)를 하나 넘는다(2026-11-06, 결정 0062). 같은 문항으로 도구 선택이 나빠지는지 본다
 
 ## 클라이언트 (그래프 쪽 MCP 호출, 2026-11-05 추가)
 
 가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 서버를 부르는 쪽을 `extras/mcp_skill/mcp_client/client.py`에 둔다. 그래프에 붙이는 일(`SEARCH_VIA_MCP`, SDD 2-3절)은 김승욱이 `backend/graph/build.py`에서 한다 — 이 절은 `build.py`·`search.py`를 고치지 않는다.
 
 - 라이브러리: `langchain[mcp]` 1.4.9(PRD 319줄·SDD 77줄, 베타). `langchain.mcp.MCPAdapter`가 FastMCP `Client` 위에서 MCP 도구를 LangChain `StructuredTool`로 바꾼다(결과의 `structured_content`는 `ToolMessage.artifact`). sandbox에서 `fastmcp==4.1.4`와 같이 설치되는 것을 확인했다(`langchain-core` 1.7.5 이상을 끌어온다). 공식 문서: https://docs.langchain.com/oss/python/langchain/mcp
-- `load_tools(target, token)` → LangChain 도구 5개(서버 도구 전부). 에이전트가 도구를 직접 고르게 할 때.
+- `load_tools(target, token)` → LangChain 도구 6개(서버 도구 전부). 에이전트가 도구를 직접 고르게 할 때.
 - `search_via_mcp(q: SearchQuery, target, token) -> list[Chunk]` → `search(q)`와 같은 모양. 검색 노드가 `search()` 대신 부르면 된다. 이미 이벤트 루프 안이어도 부를 수 있다(새 스레드). 서버 note(`fallback_reason` 등)는 `last_mcp_note()`.
+- `section_via_mcp(rule_seq, article, as_of?, target, token) -> dict | None` → `get_section` 도구를 부른다. 근거 판정이 섹션 읽기를 골랐을 때 그래프(`backend/graph/mcp_retriever.py`)가 쓴다. 섹션이 없으면 None이고, 실패 구분은 `search_via_mcp`와 같다.
 - 상태 → 결과: `ok` = Chunk 목록, `not_found` = 빈 목록, `unavailable`·연결 실패·시간 초과 = `McpUnavailable`(재시도 가능, `ConnectionError` 하위), `invalid`·`error`·`not_ready` = `McpSearchError`(재시도 불가).
 - 주소·토큰: `MCP_URL`(기본 `http://127.0.0.1:8000/mcp/`), `MCP_TOKEN`(Bearer). 문자열 주소는 http(s)만 받는다 — fastmcp는 문자열을 파일 경로로 먼저 읽어 `.py`면 실행하기 때문이다(langchain.mcp도 같은 이유로 막는다). 토큰이 비면 `ValueError`.
 - 클라이언트 쪽 호출 시간 제한 35초(서버 도구 30초보다 길게 — 서버가 먼저 `unavailable`로 답하게).
@@ -160,12 +163,21 @@
 - 내보내지 않음: 질문·답, user_id, 검색 청크, 쟁점표 행, 사람 결정의 comment·decided_by, 팀 결과의 rows·reason, Supervisor 지시 글. 칸을 지우지 않고 고른 칸만 옮긴다(이름은 식별자 모양만, 상태는 코드가 정한 값만).
 - thread_id: 1~200자, 제어 문자 없음. 형식이 정해진 곳이 없어(SDD `/chat` `{thread_id, message}`) 길이만 막는다.
 
+## 도구 6 — `get_grounding` (2026-11-06 추가, 팀장 결정)
+
+**`get_grounding(answer_id)`** (`grounding_tool.py`)
+- 저장된 답 하나의 근거 판정 기록을 읽기만 한다. 판정 코드를 MCP 안에 두지 않는다. 질문 그래프의 저장 노드(`build.py` save)가 `grounding.public_grounding`으로 고른 값만 답 저장소에 남기고(`answer_store.save_grounding`), 도구는 `get_grounding(answer_id)`로 그 기록을 읽는다.
+- 입력: `answer_id` 1~64자.
+- 출력: `results` = [기록 하나](`answer_id`, `grounding`(코드 규칙 건수, 판정 LLM 결과, 다시 쓰기 결과), `skills_used`, `citations`(`chunk_id`, `version_id`)). `source = answers`.
+- 내보내지 않음: 질문, 답 본문, 초안, 뺀 문장, 판정 이유 문장, 질문에서 뽑은 말, 사용자 id, 인용 청크 본문. 거절된 답은 저장되지 않아 이 도구로 볼 수 없다.
+- 저장소: 답 저장소는 앱 lifespan에서 열리므로 `build_server(answer_store_fn=...)`로 호출할 때 저장소를 돌려주는 함수를 받는다(`backend/main.py`는 `app.state.answer_store`를 읽는 함수를 넘긴다). 함수가 없거나 None을 돌려주거나 저장소에 `get_grounding`이 없으면 `not_ready`, 없는 답이면 `not_found`, 저장소 예외는 `error`(예외 글은 내보내지 않음).
+
 ## AC (Given-When-Then)
 
-**AC-01 · 도구는 5개, 읽기 전용**
+**AC-01 · 도구는 6개, 읽기 전용**
 - GIVEN: `MCP_TOKEN`이 있는 앱
 - WHEN: 도구 목록을 받는다
-- THEN: 이름이 정확히 `search_handbook`·`get_section`·`list_changed_sections`·`explain_decision`·`get_agent_trace`이고 모두 ASCII·읽기 전용 표시. 쓰기·실행 도구가 없다(`explain_decision`은 승인된 표의 규칙을 계산만 한다. 표를 만들거나 승인하지 않는다)
+- THEN: 이름이 정확히 `search_handbook`·`get_section`·`list_changed_sections`·`explain_decision`·`get_agent_trace`·`get_grounding`이고 모두 ASCII·읽기 전용 표시. 쓰기·실행 도구가 없다(`explain_decision`은 승인된 표의 규칙을 계산만 한다. 표를 만들거나 승인하지 않는다)
 
 **AC-D1 · 결정표 답 = 실행기 답** (`tests/test_mcp_decision_tool.py`)
 - GIVEN: 2023 권한표 `Approving expense`를 승인한 메모리 저장소
@@ -176,6 +188,11 @@
 - GIVEN: 가짜 모델로 돌린 질문 그래프+합동 검토 하위 그래프 / 합동 검토 단독(팀 실패) / 멀티 그래프, 메모리 체크포인터
 - WHEN: 그 thread_id로 `get_agent_trace`
 - THEN: 돈 노드 순서, 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
+
+**AC-G1 · 근거 판정 기록은 고른 칸만** (`tests/test_mcp_new_tools.py`)
+- GIVEN: 답 하나와 판정 기록(초안·뺀 문장·판정 이유 문장 포함)을 저장한 메모리 답 저장소
+- WHEN: 그 `answer_id`로 `get_grounding` / 없는 id로 / 저장소 없이
+- THEN: 판정 결과·규칙 건수·쓴 Skill·인용 id만 오고 질문·답 본문·사용자 id·초안·판정 문장이 없다 / `not_found` / `not_ready`
 
 **AC-02 · MCP 결과 = 직접 호출 결과**
 - GIVEN: 평가셋 v1 30문항, 같은 검색 설정
@@ -227,10 +244,10 @@
 - WHEN: Claude Code에 `claude mcp add --transport http` 로 `/mcp/`를 등록하고 핸드북 질문을 한다
 - THEN: `search_handbook`이 불리고 청크·출처 URL이 화면에 나온다(시연 영상 캡처)
 
-**AC-C1 · 클라이언트가 도구 5개를 LangChain 도구로 받는다** (`tests/test_mcp_client.py`)
+**AC-C1 · 클라이언트가 도구 6개를 LangChain 도구로 받는다** (`tests/test_mcp_client.py`)
 - GIVEN: 가짜 검색기를 넣은 서버(같은 프로세스)
 - WHEN: `load_tools()`
-- THEN: 이름이 정확히 다섯 개인 `BaseTool`이 오고, `search_handbook` 호출 결과의 `artifact.structured_content.status`가 `ok`다
+- THEN: 이름이 정확히 여섯 개인 `BaseTool`이 오고, `search_handbook` 호출 결과의 `artifact.structured_content.status`가 `ok`다
 
 **AC-C2 · `search_via_mcp` = 직접 `search()`**
 - GIVEN: 같은 가짜 검색기, `query·org·as_of·k`를 채운 `SearchQuery`

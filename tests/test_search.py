@@ -567,13 +567,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_dockerfile_bakes_default_models_at_pinned_revisions():
-    """이미지에 굽는 모델 = 명부의 기본 임베딩·리랭커와 같은 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
+    """비교용 로컬 모델은 서비스 이미지에 넣지 않는다(모델 이름 빌드 인자 기본값이 비어 있음). --build-arg로 이름을 주면 받을
+    판 = 명부의 고정 판. 다르면 오프라인(HF_HUB_OFFLINE=1)에서 판 폴더를 못 찾아 검색이 안 뜬다."""
     args = dict(_re.findall(r"^ARG (SEARCH_\w+)=(\S*)$", (ROOT / "Dockerfile").read_text(encoding="utf-8"), _re.M))
-    # 기본은 API 임베딩(voyage-4)·리랭커 없음이라 내려받을 것이 없다 → 굽는 것은 키 없는 비교용 로컬 모델
+    # 기본은 API 임베딩(voyage-4)·리랭커 없음이라 내려받을 것이 없다 → 로컬 모델은 비교할 때만 --build-arg로
     assert embed.EMBEDDERS[embed.DEFAULT_MODEL].api and rerank.DEFAULT_MODEL == rerank.NONE
+    assert args["SEARCH_EMBED_MODEL"] == "" and args["SEARCH_RERANK_MODEL"] == ""
     e, r = embed.EMBEDDERS[embed.LOCAL_MODEL], rerank.RERANKERS[rerank.BAKED_MODEL]
-    assert (args["SEARCH_EMBED_MODEL"], args["SEARCH_EMBED_REVISION"]) == (e.name, e.revision)
-    assert (args["SEARCH_RERANK_MODEL"], args["SEARCH_RERANK_REVISION"]) == (r.hf, r.revision)
+    assert args["SEARCH_EMBED_REVISION"] == e.revision and args["SEARCH_RERANK_REVISION"] == r.revision
 
 
 def _tarball(tmp_path):
@@ -636,6 +637,40 @@ def test_search_warmup_is_off_by_default_and_failure_does_not_stop_server(monkey
     t = main.start_search_warmup()
     t.join(5)
     assert not t.is_alive()                     # 예외가 스레드 밖으로 나가 서버를 멈추지 않는다
+
+
+def test_warmup_failure_closes_the_pool_it_opened(monkeypatch):
+    """색인이 없어 warmup이 실패하면 방금 연 DB 풀을 닫는다. 안 닫으면 search()가 부를 때마다 풀이 하나씩 쌓인다."""
+    class FakePgStore:
+        made = []
+
+        def __init__(self):
+            self.closed = 0
+            FakePgStore.made.append(self)
+
+        def meta(self):
+            return None                         # index_meta 없음 = 적재 전
+
+        def close(self):
+            self.closed += 1
+
+    monkeypatch.setattr(search_mod.PgStore, "from_env", classmethod(lambda cls: FakePgStore()))
+    monkeypatch.setattr(search_mod, "_searcher", None)
+    for _ in range(2):                          # search()마다 warmup을 다시 하므로 두 번
+        with pytest.raises(RuntimeError, match="색인이 준비되지 않았다"):
+            search_mod.warmup()
+    assert [s.closed for s in FakePgStore.made] == [1, 1]
+    assert search_mod._searcher is None
+
+    class FakePool:
+        closed = 0
+
+        def close(self):
+            FakePool.closed += 1
+    pg = object.__new__(search_mod.PgStore)    # DB 없이: 진짜 PgStore.close가 풀을 닫는지
+    pg.pool = FakePool()
+    pg.close()
+    assert FakePool.closed == 1
 
 
 def test_env_example_lists_search_variables():
