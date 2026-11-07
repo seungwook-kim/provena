@@ -322,7 +322,11 @@ def leaks_internal(text: str) -> bool:
 
 
 def _strip_marks(text: object) -> str:
-    return str(text or "").replace("<<<", "").replace(">>>", "")
+    """구분자 문자열을 지운다. 지운 자리에서 새 구분자가 생길 수 있어(`<<>>>` → `<<`) 더 안 바뀔 때까지 되풀이한다."""
+    s = str(text or "")
+    while "<<<" in s or ">>>" in s:
+        s = s.replace("<<<", "").replace(">>>", "")
+    return s
 
 
 def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
