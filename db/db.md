@@ -13,7 +13,7 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
 `ensure_schema()`는 `bootstrap_local_auth()`에서만 호출되며, `bootstrap_local_auth()` 자체가 `is_local_demo()`가 참인 로컬 데모 조건에서만 실행된다. 따라서 운영 환경에서는 앱 시작 시 인증 테이블이 자동으로 생성되지 않는다. 운영 Supabase에서는 아래 절차로 인증 SQL을 Supabase SQL Editor에서 수동 실행해야 한다.
 
 1. `db/101_auth_users.sql`을 먼저 실행해 `users` 테이블을 만든다.
-2. `db/103_auth_token_revocations.sql`을 두 번째로 실행해 `token_revocations` 테이블과 인덱스를 만든다.
+2. `db/103_auth_token_revocations.sql`을 두 번째로 실행해 `token_revocations` 테이블과 인덱스를 만든다. 이어서 `db/111_threads.sql`을 실행해 사용자별 대화 목록 `threads` 테이블(RLS 포함)을 만든다. 오래 걸리는 스키마 적용은 풀러가 아니라 직접 연결 문자열(`DATABASE_DIRECT_URL`)로 한다. 로컬 compose는 새 볼륨에서만 `db/` 바로 아래 SQL을 자동 적용하므로, 이미 만든 볼륨은 `docker compose down -v` 후 다시 올리거나 같은 SQL을 직접 실행한다(로컬 데모 모드에서는 앱이 시작할 때 `threads` 표를 만든다).
 3. `101_auth_users.sql`을 이미 실행했거나 기존 DB에 `users` 테이블이 이미 있었다면, 다음 문장을 별도로 실행해 기존 테이블에도 RLS를 적용한다.
 
    ```sql
@@ -68,6 +68,7 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-06 | 김승욱 (Claude Code) | `111_threads.sql` 추가: 사용자별 대화 목록 `threads`(PK `(user_id, thread_id)`, 인덱스 `(user_id, updated_at DESC)`, RLS). 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |
 | 2026-11-05 | 강경희 (kyunghee) | 운영 Supabase에서는 `ensure_schema()`가 실행되지 않는 조건과 `101_auth_users.sql` → `103_auth_token_revocations.sql` 수동 적용·RLS·접속 역할·로그인 검증 절차를 문서화했다. 운영 DB는 미적용·미검증으로 기록 | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | `202_sync.sql`: `sync_runs`·`changed_articles`에 RLS 켜기(정책 없음, `201_search.sql` 91~95줄과 같은 방식). 조장 요청 | 이 PR |

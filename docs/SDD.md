@@ -50,7 +50,7 @@ flowchart LR
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
 | `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
-| `extras/mcp_skill/` | 검색을 읽기 전용 MCP 도구 3개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
+| `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
 | `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | Java(Spring Boot) 목업은 크게, Python 예제는 작게 |
 | SDK | 업무시스템이 쓰는 클라이언트 | OpenAPI 명세에서 자동 생성한 Java·Python SDK (생성 도구는 11장) |
@@ -63,16 +63,19 @@ flowchart LR
 
 **MCP 서버 (`extras/mcp_skill/`)**
 
-도구 3개는 모두 읽기 전용이고 멱등(같은 입력이면 같은 결과)이다. `backend/rag/`와 `backend/rag/ingest/`의 함수를 감싸기만 하고, 검색 로직을 MCP 안에 다시 짜지 않는다.
+도구 6개는 모두 읽기 전용이다. 저장소에 아무것도 쓰지 않고, 서버는 6개 모두에 읽기 전용·멱등 표시(`readOnlyHint`, `idempotentHint`)를 단다. 이 표시는 같은 입력으로 다시 불러도 저장소에 더해지는 것이 없다는 뜻이며, 결과 값이 늘 같다는 뜻은 아니다. 검색 3개, `explain_decision`, `get_grounding`은 저장된 자료가 그대로이면 같은 입력에 같은 결과를 돌려준다. `get_agent_trace`는 체크포인트를 읽기만 하지만, 대화가 진행되면 같은 `thread_id`의 결과가 달라진다. 앞 세 도구는 `backend/rag/`와 `backend/rag/ingest/`의 함수를, `explain_decision`은 결정표 실행기(`DecisionExecutor.run`)를, `get_agent_trace`는 LangGraph 체크포인터의 읽기를, `get_grounding`은 답 저장소의 근거 판정 기록 읽기를 감싸기만 하고, 검색·판단 로직을 MCP 안에 다시 짜지 않는다.
 
 | 도구 | 입력 | 출력 | 감싸는 함수 | 쓰는 곳 |
 |---|---|---|---|---|
 | `search_handbook` | 질문, 절(선택, 예: security), 판 날짜 `as_of`(선택), k | 청크 목록 (chunk_id, 절, 페이지 제목, 제목 경로, 판 날짜(커밋 날짜), 본문, 출처 URL, 점수) | `rag.search(SearchQuery)` | 질문 그래프의 검색 노드, 팀 에이전트 |
 | `get_section` | 페이지 id(`rule_seq`), 제목 경로, 판 날짜(선택) | 섹션 원문 한 개와 출처 URL | 섹션 조회 (DB) | 답 작성 시 원문 확인, 인용 검사 |
 | `list_changed_sections` | 기준 시각 | 바뀐 섹션 목록 (`ChangedArticle`) | `ingest` 커밋 비교 결과 | 리콜 그래프 |
+| `explain_decision` | 업무 종류 `task_type`, 금액 `amount_usd`(선택), `table_id`(선택), `band`(선택) | 승인된 결정표를 그 금액으로 실행한 결과(승인 순서, 구간, 근거 `source`). HTTP 실행 응답과 같은 칸이고 승인한 관리자 id는 없다 | 결정표 실행기 `DecisionExecutor.run` | 에이전트가 도구로 직접 고를 때, 외부 MCP 클라이언트 |
+| `get_agent_trace` | 대화 `thread_id` | 마지막 실행의 노드 순서, 단계별 시각·걸린 시간, Supervisor 결정, 합동 검토 팀별 상태, 승인 대기 여부. 질문·답·사용자 id는 없고 비용 `cost_usd`는 기록이 없어 null | LangGraph 체크포인터 `list()` (읽기만) | 에이전트가 도구로 직접 고를 때, 외부 MCP 클라이언트 |
+| `get_grounding` | 답 id `answer_id` | 저장된 답의 근거 판정 기록(판정 결과, 코드 규칙 건수, 다시 쓰기 결과, 쓴 Skill, 인용 `chunk_id`·`version_id`). 질문·답 본문·초안·판정 이유 문장·사용자 id는 없다 | 답 저장소 `get_grounding` (읽기만) | 에이전트가 도구로 직접 고를 때, 외부 MCP 클라이언트 |
 
-- 입출력 형식은 `backend/schemas/`의 `SearchQuery`, `Chunk`, `ChangedArticle`을 그대로 쓴다(6장). 섹션 단위 조회를 `get_section`으로 따로 둘지는 11장에서 정한다.
-- **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 실행, 승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
+- 검색 3개의 입출력 형식은 `backend/schemas/`의 `SearchQuery`, `Chunk`, `ChangedArticle`을 그대로 쓴다(6장). 섹션 단위 조회를 `get_section`으로 따로 둘지는 11장에서 정한다.
+- **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 변환·승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. `explain_decision`은 이미 사람이 승인한 표의 규칙을 계산해 돌려줄 뿐 표를 만들거나 승인하지 않는다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
 - 비공개(`internal.gitlab.com`)로만 연결된 칸·링크는 도구가 근거로 내보내지 않고 "비공개 문서"로 표시한다(9장).
 - 클라이언트는 `langchain[mcp]`(베타)를 쓴다. 서버는 `fastmcp` 4.x로 맞춘다. 옛 `langchain-mcp-adapters`는 보관(archived)되어 쓰지 않는다. 베타가 문제를 일으키면 공식 MCP Python SDK나 FastMCP 클라이언트를 직접 부른다.
 - 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다.
@@ -182,7 +185,10 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │     ├─ citation-rules/  grounding-check/  glossary/   # 공통 Skill 3개
 │     └─ (조건부) report-writing/  chat-tool-guide/  mail-templates/  retrieval-slots/
 ├─ extras/mcp_skill/  mcp_skill.md   # 가산 자리
-│     ├─ mcp_server/server.py     # FastMCP 서버, 읽기 전용 도구 3개: search_handbook, get_section, list_changed_sections
+│     ├─ mcp_server/server.py     # FastMCP 서버, 읽기 전용 도구 6개: search_handbook, get_section, list_changed_sections, explain_decision, get_agent_trace, get_grounding
+│     ├─ mcp_server/decision_tool.py   # explain_decision (결정표 실행기 호출)
+│     ├─ mcp_server/trace_tool.py      # get_agent_trace (체크포인트 읽기)
+│     ├─ mcp_server/grounding_tool.py  # get_grounding (답 저장소의 근거 판정 기록 읽기)
 │     └─ tests/                   # MCP 경로와 직접 호출 경로의 결과 일치 시험
 ├─ web/   web.md   (pages/: login, chat, approvals, recalls, admin)
 ├─ mock_erp/  mock_erp.md   (Spring Boot 업무시스템 목업, python_example/)
@@ -280,9 +286,9 @@ flowchart TD
 | POST | `/auth/login` | 누구나 | 로그인 (방식은 11장) |
 | POST | `/auth/logout` | 로그인 | |
 | GET | `/me` | 로그인 | 사용자 정보, 역할 |
-| POST | `/chat` | 로그인 | `{thread_id, message}` → SSE로 `AgentEvent` 스트림 |
-| GET | `/threads` | 로그인 | 내 대화 목록 |
-| GET, PATCH, DELETE | `/me/memory` | 로그인 | 내 장기 기억 보기·고치기·지우기 (가이드 p.10) |
+| POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
+| GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last` 포함). 남의 thread는 404 `not_found`. 전체 대화 이력은 주지 않는다 (`db/111_threads.sql`) |
+| GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
 | GET | `/recalls` | 로그인 | 내 리콜 알림 (관리자는 전체 + 함께 볼 정책 후보) |
@@ -294,7 +300,56 @@ flowchart TD
 | POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08) |
 | POST, GET | `/webhook-subscriptions` | 관리자 | 업무시스템 웹훅 주소 등록·조회. 리콜 알림이 생기면 등록된 주소로 보내고, 실패하면 재시도하고 기록한다 |
 | GET, POST | `/maintenance-candidates` | 관리자 | 연결 정책 후보 목록, 확인 필요·불필요 판단 |
-| GET | `/health` | 누구나 | 상태 확인 (Supabase 정지 방지 호출 포함) |
+| GET | `/health` | 누구나 | 상태 확인 (Supabase 정지 방지 호출 포함: `DATABASE_URL`이 있으면 10분 간격으로 백그라운드 `SELECT 1`, 실패해도 200) |
+
+**오류 응답 규약.** HTTP 오류 본문은 모두 같은 모양이다: `{"detail": "...", "error": {"code", "message", "request_id"}}`. 검증 오류에는 `error.details`가 더해진다 (`backend/api/errors.py`). 화면과 업무시스템은 HTTP 상태가 아니라 `error.code`로 분기한다.
+
+- `detail`은 `error.message`와 같은 문자열이며, 아직 `detail` 문자열을 읽는 화면과의 호환을 위해 함께 낸다. 본문 검증 오류(422)의 `detail`은 고정 문구 "요청 형식이 올바르지 않습니다."이고 입력값을 담지 않는다.
+- `details`는 항목마다 `loc`, `msg`, `type`만 담고 입력값은 담지 않는다(비밀번호 보호).
+
+**요청 ID와 요청 로그.** 모든 응답에 `X-Request-ID` 헤더가 붙고, 오류 본문의 `request_id`는 이 헤더와 같은 값이다 (`backend/api/middleware.py`).
+
+- 요청이 보낸 `X-Request-ID`가 `^[A-Za-z0-9._-]{8,64}$`에 맞으면 그대로 쓰고, 아니면 서버가 새로 만든다.
+- 서버는 요청마다 요청 ID, 메서드, 경로, 상태, 걸린 시간(ms) 한 줄을 로그에 남긴다. SSE 응답은 스트림이 끝난 뒤의 시간이다. 질의 문자열과 본문은 남기지 않는다.
+- `/chat`은 따로 사용 모델, 입력·출력 토큰, 호출 수, 비용, 걸린 시간 한 줄을 남긴다.
+- 예외 처리기 밖으로 나온 오류는 `internal_error` 500으로 마무리하고 내용은 로그에만 남긴다.
+
+**HTTP 상태별 `code`.** 엔드포인트가 `code`를 직접 정한 오류(`ApiError`, 결정표·승인 라우트의 `reason`)는 그 값을 쓴다. 결정표·승인 라우트는 `backend/graph/decision/rules.py`의 이름을 그대로 `code`로 쓰며, 이름은 바꾸지 않는다(김승욱 결정). `code`를 정하지 않은 `HTTPException`은 상태로 정한다: 400 `bad_request`, 401 `unauthorized`, 403 `forbidden`(CSRF 검사 실패 문구이면 `csrf_failed`), 404 `not_found`, 405 `method_not_allowed`, 409 `conflict`, 413 `payload_too_large`, 422 `validation_error`, 429 `rate_limited`, 500 `internal_error`, 502 `bad_gateway`, 503 `not_configured`. 그 밖의 상태는 500 이상이면 `internal_error`, 아니면 `bad_request`다.
+
+| HTTP | `code` | 언제 |
+|---|---|---|
+| 400 | `bad_request` | 요청 형식·필수 값 오류(결정표·승인 라우트) |
+| 400 | `comment_required`, `approver_missing`, `approval_id_mismatch`, `bad_format` | 승인 재개 값이 틀림 |
+| 401 | `unauthorized` | 로그인 안 됨, 토큰 만료·폐기, 로그인 정보 불일치 |
+| 403 | `forbidden` | 관리자 전용 라우트를 일반 사용자가 호출 |
+| 403 | `csrf_failed` | CSRF 헤더와 쿠키 불일치 |
+| 404 | `not_found` | 없는 자원. 남의 thread도 없는 것으로 본다 |
+| 405 | `method_not_allowed` | 허용하지 않는 메서드 |
+| 409 | `approval_pending` | 승인 대기 중인 thread에 새 질문 |
+| 409 | `conflict` | 지금 상태에서 받을 수 없는 요청(결정표) |
+| 409 | `already_decided` | 이미 끝난 승인 건에 다른 결정 |
+| 409 | `not_approved` | 승인되지 않은 결정표 실행 |
+| 409 | `ambiguous_table` | 업무 종류로 승인된 표가 0개이거나 2개 이상 |
+| 422 | `validation_error` | 본문·경로 검증 오류(`details`에 위치·사유), `/me/memory` PATCH의 빈 본문 |
+| 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
+| 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
+| 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
+| 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
+| 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
+| 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
+
+**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장).
+
+**재시도.** 응답에 `Retry-After` 헤더는 없다. 코드의 안내 문구가 재시도를 말하는 경우는 아래와 같다.
+
+| 상황 | 안내 |
+|---|---|
+| 429 `rate_limited` | 잠시 후 다시 시도한다 |
+| SSE `error` `internal_error` | 잠시 후 다시 시도한다 |
+| 409 `approval_pending` | 관리자 승인이 끝난 뒤 이어 간다 |
+| 503 `save_failed` | 같은 결정을 다시 보내면 이어서 처리한다 |
+
+SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 멈췄다는 것만 알리고 재시도를 말하지 않는다.
 
 리콜 웹훅 형식(수신 경로, 본문, 서명)은 11장 11-1에서 정한다.
 
@@ -426,13 +481,49 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 
 `AgentEvent.data`는 `type`마다 아래 키를 담는다. 화면(SSE)은 이 키만 읽는다.
 
-| type | data 키 |
+**전달 형식.** `/chat`은 SSE(`text/event-stream`)로 응답한다. 이벤트 하나는 `event:` 줄에 `type`을, `data:` 줄에 `AgentEvent` 전체(`{"type", "thread_id", "data"}`)를 JSON 한 줄로 담는다. `thread_id`는 화면이 보낸 값이거나 서버가 만든 `t-` + 12자리이며, 그래프와 체크포인트의 내부 이름 `<user_id>:<thread_id>`는 밖으로 내보내지 않는다. 15초마다 연결 유지용 ping을 보내고, 응답 헤더는 `Cache-Control: no-store`, `X-Accel-Buffering: no`다 (`backend/api/routes.py`).
+
+**이벤트 순서.** 끝나는 방식은 아래 넷 중 하나다 (`backend/graph/stream.py`, `backend/api/routes.py`).
+
+| 경우 | 순서 |
 |---|---|
-| `token` | `text` |
-| `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` |
-| `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름) |
-| `error` | `code`, `message` |
-| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) |
+| 정상 | `token` 0개 이상 → `citation` 0개 이상 → `done` |
+| 검색 색인 미준비 | 안내 문구 `token` 1개 → `done`(`kind=refuse`, `code=no_results`). 원인은 로그에만 남긴다 |
+| 사람 승인 대기 | `approval_request` 1개 이상에서 끝난다. `done`은 없고 thread 상태는 `pending_approval`이 된다 |
+| 실패 | `error` 1개에서 끝난다. `done`은 없다 |
+
+답은 인용 검사를 통과한 뒤에야 나가므로 `token`은 LLM 토큰 단위가 아니라 완성된 답을 공백 기준으로 나눈 조각이다. `citation`은 `done.kind`가 `answer`일 때만 나온다.
+
+| type | 그래프 어댑터가 내는 키 (`backend/graph/stream.py`) | `/chat`이 더하거나 바꾸는 키 (`backend/api/routes.py`) |
+|---|---|---|
+| `token` | `text`. 답이 비면 나오지 않는다 | 없음 |
+| `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
+| `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
+| `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution` |
+
+`done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
+
+| `done.data.code` | 언제 | `kind` |
+|---|---|---|
+| `no_results` | 근거를 찾지 못해 거절한 답. 검색 색인이 적재되지 않아 거절한 경우도 같다(이때 `answer_id`는 `null`, `as_of`는 요청 값) | `refuse` |
+| (없음) | 답, 되묻기. 답이면 `attribution`이 붙고 되묻기에는 더 붙는 키가 없다 | `answer`, `clarify` |
+
+- `done.attribution`은 고정 값이다: `source`(`GitLab Handbook`), `license`(`CC BY-SA 4.0`), `license_url`, `modified`(`true`), `notice`(GitLab Inc.와 제휴·보증 관계가 없다는 문구).
+- `kind`, `as_of`는 그래프의 최종 상태에서 읽는다. 최종 상태를 읽지 못하면 두 값이 `null`일 수 있다.
+
+정상 종료 스트림의 예시다. 값은 형식을 보이기 위한 것이며 실제 값이 아니다.
+
+```text
+event: token
+data: {"type":"token","thread_id":"t-1a2b3c4d5e6f","data":{"text":"Severity "}}
+
+event: citation
+data: {"type":"citation","thread_id":"t-1a2b3c4d5e6f","data":{"chunk_id":"0a1b2c3d4e5f6789","rule_title":"Incident Management","article":"Incident Management > Severities","version_date":"2026-10-12","version_date_before":false,"source_url":"https://handbook.gitlab.com/...","text":"..."}}
+
+event: done
+data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
+```
 
 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.
 

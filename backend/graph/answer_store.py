@@ -34,6 +34,7 @@ class InMemoryAnswerStore:
     def __init__(self) -> None:
         self._answers: dict[str, dict] = {}
         self._citations: dict[str, list[Chunk]] = {}
+        self._grounding: dict[str, dict] = {}
 
     def save(self, answer_id, user_id, thread_id, question, answer, as_of, citations) -> None:
         self._answers[answer_id] = {
@@ -46,6 +47,16 @@ class InMemoryAnswerStore:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         self._citations[answer_id] = list(citations)
+
+    def save_grounding(self, answer_id: str, grounding: dict, skills_used: list[str]) -> None:
+        """밖으로 낼 수 있는 값만 받는다(`grounding.public_grounding`). 없어도 답 저장은 그대로다."""
+        self._grounding[answer_id] = {"grounding": dict(grounding), "skills_used": list(skills_used)}
+
+    def get_grounding(self, answer_id: str) -> dict | None:
+        rec = self._grounding.get(answer_id)
+        if rec is None:
+            return None
+        return {"answer_id": answer_id, **rec, "citations": [{"chunk_id": c.chunk_id, "version_id": c.version_id} for c in self._citations.get(answer_id, [])]}
 
     def get(self, answer_id: str) -> dict | None:
         a = self._answers.get(answer_id)

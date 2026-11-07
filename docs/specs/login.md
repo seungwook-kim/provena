@@ -57,8 +57,8 @@
 ### 로그인 제한과 운영 경계
 
 - `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`는 헤더를 직접 파싱하지 않고 `request.client.host`를 사용하며, 주소가 없으면 `unknown`을 사용한다. 이 값은 ASGI 서버의 프록시 헤더 처리에 따라 달라지므로 항상 직접 peer IP인 것은 아니다. 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
-- 현재 `Dockerfile`의 `--proxy-headers`는 신뢰 대상에서 받은 `X-Forwarded-For`로 ASGI client 주소를, `X-Forwarded-Proto`로 scheme을 반영한다. 함께 지정한 `--forwarded-allow-ips=*`는 접속 peer를 제한하지 않고 모두 신뢰한다는 뜻이다. 이 설정에서 Uvicorn은 `X-Forwarded-For` 목록의 맨 앞 주소를 client 주소로 사용하므로 로그인 IP별 제한에도 그 값이 쓰인다. 헤더가 없으면 접속 peer 주소가 유지된다. `backend/main.py`는 별도의 IP 헤더 검증을 추가하지 않는다.
-- 클라이언트가 넣은 맨 앞 헤더 값이 앞단 프록시에서 제거·교체되지 않고 전달되거나 Uvicorn에 직접 접근할 수 있으면 IP 값을 위조할 수 있다. `*` 설정만으로 실제 원본 IP가 보장되지 않으며, 값을 바꿔 IP별 실패 기록을 분산할 수 있어 IP 제한은 보조 방어다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어다. 실제 배포의 접근 경로와 프록시의 헤더 정제 동작을 확인해야 한다.
+- 현재 `Dockerfile`은 Uvicorn을 `--no-proxy-headers`로 실행한다. 따라서 Uvicorn은 `X-Forwarded-For`, `X-Forwarded-Proto`를 반영하지 않고, `request.client.host`는 접속 peer 주소 그대로다. 이전 설정(`--proxy-headers --forwarded-allow-ips=*`)은 `X-Forwarded-For` 목록의 맨 앞 주소(요청하는 쪽이 임의로 적을 수 있는 값)를 client 주소로 써서 IP별 실패 제한을 피할 수 있었기 때문에 되돌렸다. `backend/main.py`는 별도의 IP 헤더 검증을 추가하지 않는다.
+- 이 설정에서는 헤더로 IP 값을 위조할 수 없다. 다만 Cloud Run처럼 앞단 프록시 뒤에서 실행하면 접속 peer가 프록시 주소일 수 있어, 서로 다른 사용자가 같은 IP 키로 묶여 IP별 한도(60초/30회)를 함께 소진할 수 있다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어이고 IP 제한은 보조 방어다. Cloud Run에서 `request.client.host`가 실제로 어떤 값이 되는지, 실제 접속 IP가 필요하면 프록시가 붙인 값만 믿는 처리를 로그인 코드에 둘지는 후속 검증 사항이다.
 - Uvicorn 동작 참고: [공식 ProxyHeadersMiddleware 구현](https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py).
 - ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.

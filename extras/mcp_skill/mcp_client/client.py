@@ -3,8 +3,9 @@
 가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 이 파일은 부르는 쪽만 만든다.
 그래프 연결(SEARCH_VIA_MCP, SDD 2-3절)은 김승욱 build.py에서 한다 — 여기서 build.py·search.py를 고치지 않는다.
 
-  load_tools()        MCP 도구 5개를 LangChain 도구로 (에이전트가 도구를 직접 고르게 할 때)
+  load_tools()        MCP 도구 6개를 LangChain 도구로 (에이전트가 도구를 직접 고르게 할 때)
   search_via_mcp(q)   search()와 같은 모양(list[Chunk])으로 search_handbook을 부른다 (검색 노드가 search() 대신 부를 때)
+  section_via_mcp()   get_section을 부른다 (근거 판정이 섹션 읽기를 골랐을 때, skills/chat-tool-guide)
 
 라이브러리: langchain[mcp] (PRD 319줄·SDD 77줄, 베타). langchain.mcp는 FastMCP Client 위에서 MCP 도구를 LangChain 도구로 바꾼다.
 search_via_mcp는 결과를 Chunk로 되돌려야 해서 같은 FastMCP Client로 직접 부른다(structured_content를 그대로 읽음).
@@ -27,6 +28,7 @@ from backend.schemas.chunk import Chunk, SearchQuery
 DEFAULT_URL = "http://127.0.0.1:8000/mcp/"
 CALL_TIMEOUT_S = 35.0     # 서버 도구 제한 30초(server.TOOL_TIMEOUT_S)보다 조금 길게 — 서버가 먼저 unavailable로 답하게
 SEARCH_TOOL = "search_handbook"
+SECTION_TOOL = "get_section"
 
 _last_note: contextvars.ContextVar[str | None] = contextvars.ContextVar("mcp_last_note", default=None)
 
@@ -64,7 +66,7 @@ def make_client(target: Any = None, token: str | None = None, timeout: float = C
 
 
 async def load_tools(target: Any = None, token: str | None = None) -> list:
-    """서버의 도구(지금 5개)를 LangChain 도구로. 도구 결과의 structured_content는 ToolMessage.artifact에 담긴다."""
+    """서버의 도구(지금 6개)를 LangChain 도구로. 도구 결과의 structured_content는 ToolMessage.artifact에 담긴다."""
     from langchain_core._api import LangChainBetaWarning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", LangChainBetaWarning)
@@ -145,3 +147,45 @@ def search_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None)
 def last_mcp_note() -> str | None:
     """같은 스레드의 마지막 search_via_mcp가 받은 서버 note(fallback_reason 등). search.last_search_trace()의 짝."""
     return _last_note.get()
+
+
+async def aget_section_via_mcp(rule_seq: int, article: str | None, as_of: str | None = None, target: Any = None, token: str | None = None) -> dict | None:
+    """get_section 도구를 부른다. 섹션 dict, 없으면 None. 실패 구분은 asearch_via_mcp와 같다."""
+    args: dict[str, Any] = {"rule_seq": rule_seq}
+    if article is not None:
+        args["article"] = article
+    if as_of is not None:
+        args["as_of"] = as_of
+    client = make_client(target, token)
+    try:
+        async with client:
+            res = await client.call_tool(SECTION_TOOL, args, raise_on_error=False)
+    except Exception as e:  # noqa: BLE001
+        if isinstance(e, (TimeoutError, asyncio.TimeoutError, ConnectionError, OSError)) or _is_transport(e):
+            raise McpUnavailable(f"MCP 서버에 닿지 못했습니다({type(e).__name__}). 잠시 뒤 다시 부르세요.") from e
+        raise
+    if res.is_error:
+        raise McpSearchError("error", "MCP 도구 실행 오류", retryable=False)
+    content = res.structured_content
+    if not isinstance(content, dict) or "status" not in content:
+        raise McpSearchError("error", "서버 응답 모양이 ToolResponse가 아닙니다.", retryable=False)
+    status, note = content["status"], content.get("note")
+    if status == "ok":
+        return (content.get("results") or [None])[0]
+    if status == "not_found":
+        return None
+    if status == "unavailable" or content.get("retryable") is True:
+        raise McpUnavailable(note)
+    raise McpSearchError(status, note, retryable=False)
+
+
+def section_via_mcp(rule_seq: int, article: str | None, as_of: str | None = None, target: Any = None, token: str | None = None) -> dict | None:
+    """aget_section_via_mcp의 동기판. 이미 이벤트 루프 안이어도 부를 수 있다."""
+    def go():
+        return asyncio.run(aget_section_via_mcp(rule_seq, article, as_of, target, token))
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return go()
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        return ex.submit(go).result()
