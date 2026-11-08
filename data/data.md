@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-`corpus.tar.gz`에 고른 핸드북 원문 스냅샷(압축 한 파일), `manifest.jsonl`에 문서·청크 목록, `chunks_index.jsonl`에 청크 목록을 둔다(형식은 `data/README.md`). 원문 텍스트는 코드와 폴더를 나눈다. 라이선스 고지는 `LICENSES/`.
+`corpus.tar.gz`에 고른 핸드북 원문 스냅샷(압축 한 파일), `index.tar.gz`에 검색 색인 스냅샷(압축 한 파일), `manifest.jsonl`에 문서·청크 목록, `chunks_index.jsonl`에 청크 목록을 둔다(형식은 `data/README.md`). 원문 텍스트는 코드와 폴더를 나눈다. 라이선스 고지는 `LICENSES/`.
 
 - 주인: 박진형 (`LICENSES/`는 팀장)
 - 입력: 수집 결과
@@ -41,6 +41,17 @@
   3. 다시 압축한다: `python -m backend.rag.ingest.snapshot pack` (sha256을 확인한 뒤 `data/corpus.tar.gz`를 새로 만든다. 같은 원문이면 같은 파일이 나와 diff가 없다)
   4. 파싱·청킹·manifest를 다시 돌리고 `data/corpus.tar.gz`, `manifest.jsonl`, `chunks_index.jsonl`을 같은 PR로 커밋한다. 아래 작업 기록에 한 줄 남긴다
 - 평가셋 동결(11/3) 뒤에 원문이 바뀌어 정답이 달라진 문항은 평가셋을 고치지 않고 `evals/exclusions.json`에 적는다(`docs/PRD.md` 341행).
+
+## 검색 색인 스냅샷 쓰는 법
+
+검색 색인(`meta.json`, `chunks.jsonl`, `links.jsonl`, `vectors/voyage-4.npy`, 합계 약 130MB)은 `data/index.tar.gz` 한 파일(약 94.5MB)로 커밋하고, 풀린 `data/index/`는 커밋하지 않는다(`.gitignore`). 압축에는 `meta.json`과 그것이 가리키는 파일만 넣는다.
+
+- **푸는 것은 자동이다.** `docker compose up`(이미지를 만들 때, 그리고 `loader`가 시작할 때 연결한 `./data/index`가 비어 있으면)과 `python -m backend.rag.retrieve.load_snapshot`(시작할 때 `data/index/meta.json`이 없으면)이 풀고, 파일마다 sha256이 `meta.json`과 같은지 확인한다. 압축 파일이 없을 때만 `INDEX_URL`을 본다. 손으로 풀려면 `python -m backend.rag.ingest.snapshot unpack-index`.
+- **색인을 고칠 때는 반드시 아래 순서로 한다.** 압축 파일을 직접 고치지 않는다.
+  1. 색인을 연다: `data/index/`가 없으면 `python -m backend.rag.ingest.snapshot unpack-index`
+  2. 고친다: `python -m backend.rag.retrieve.index`(`build`·`import`·`refresh`·`links`·`translations`)로 다시 만든다. 이 명령이 `meta.json`의 파일별 sha256을 새로 적는다. 파일을 손으로만 고치면 sha256이 맞지 않아 다음 단계에서 멈춘다
+  3. 다시 압축한다: `python -m backend.rag.ingest.snapshot pack-index` (sha256을 확인한 뒤 `data/index.tar.gz`를 새로 만든다. 같은 색인이면 같은 파일이 나와 diff가 없다)
+  4. `data/index.tar.gz`를 색인을 바꾼 코드와 같은 PR로 커밋하고, 아래 작업 기록에 한 줄 남긴다. 다시 커밋할 때마다 저장소 기록에 압축 파일 크기만큼 쌓이므로 모델·청크가 바뀔 때만 다시 만든다
 
 ## 작업 기록 (최신이 위)
 

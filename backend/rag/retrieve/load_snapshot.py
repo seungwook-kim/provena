@@ -2,7 +2,7 @@
 
     python -m backend.rag.retrieve.load_snapshot [--index data/index] [--embedder <EMBED_MODEL>]
 
-색인이 없으면 INDEX_URL·INDEX_SHA256으로 받고, 둘 다 없으면 건너뛴다(ensure_index).
+색인이 없으면 커밋한 압축(data/index.tar.gz)을 풀고, 그것도 없으면 INDEX_URL·INDEX_SHA256으로 받고, 다 없으면 건너뛴다(ensure_index).
 
 순서(설계 D13): ① meta.json sha256으로 파일 대조 ② 같은 스냅샷이 이미 ready면 건너뜀 ③ index_meta=loading
 ④ docs·versions·chunks를 배치마다 커밋((chunk_id, version_id)로 upsert, 멱등) ⑤ 스냅샷 밖 행은 지우지 않음(증분이 넣은 판)
@@ -194,10 +194,12 @@ def load_links(conn, index: Path, lk: dict, rows: list[dict]) -> int:
 
 
 def ensure_index(index: Path, log=print) -> bool:
-    """색인이 있으면 True. 없으면 INDEX_URL(tar.gz)을 받아 INDEX_SHA256과 대조한 뒤 푼다(조장 답 ②: 받을 주소는 환경 변수).
+    """색인이 있으면 True. 없으면 ① 커밋한 압축 `data/index.tar.gz`를 풀어 meta.json sha256과 대조한다(기본 위치일 때만,
+    backend/rag/ingest/snapshot.py). ② 그것도 없으면 INDEX_URL(tar.gz)을 받아 INDEX_SHA256과 대조한 뒤 푼다(조장 답 ②).
     주소도 없으면 False — compose가 색인 없이도 뜨게(팀원 PC·CI) 하고, 검색은 search()가 '색인이 준비되지 않았다'로 멈춘다.
     INDEX_REQUIRED=1이면 색인이 없을 때 실패로 끝내 api가 뜨지 않게 한다(배포용)."""
-    if (index / "meta.json").is_file():
+    from backend.rag.ingest import snapshot
+    if snapshot.ensure_index(index, log=log):
         return True
     url = (os.environ.get("INDEX_URL") or "").strip()
     if not url:

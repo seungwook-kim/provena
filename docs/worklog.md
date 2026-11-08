@@ -2,6 +2,46 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-07 김승욱 (PR #60, D6 API와 오류 규약, G2 이미지 축소, MCP `get_grounding`)
+
+오늘 한 일
+- 질문 그래프를 API로 연결했다. `POST /chat`(SSE, 로그인·CSRF), `GET /threads`, `GET /threads/{thread_id}`, `GET·PATCH·DELETE /me/memory`를 `backend/api/`에 넣었다. 사용자 id는 로그인 쿠키에서만 얻고, 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`이다. 남의 thread는 404 `not_found`, 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다. 대화 목록 표 `db/111_threads.sql`(RLS)을 더했다.
+- 오류 응답 규약을 정했다. 본문은 `{"detail", "error": {"code", "message", "request_id"}}`이고, 모든 응답에 `X-Request-ID`를 붙이며 요청마다 요청 ID·메서드·경로·상태·걸린 시간 한 줄을 남긴다(질의 문자열과 본문은 남기지 않는다). `docs/SDD.md` 4-4절과 6장에 반영했다.
+- 결정표 승인에서 같은 승인 건에 동시에 온 결정 요청이 그래프를 두 번 재개하던 문제(15번 중 10번)를 프로세스 안 잠금으로 막았다. 여러 인스턴스 사이는 막지 못한다.
+- G2: 비교용 로컬 임베딩·리랭커 패키지를 서비스 이미지에서 분리했다(`backend/requirements-local-models.txt`, Dockerfile 모델 ARG 기본값 비움). 검색 색인이 없는 새 환경에서는 질문이 오류 없이 안내 문구와 거절(`done`의 `code=no_results`)로 끝난다.
+- MCP 읽기 전용 도구 `get_grounding`을 더했다(결정 0062, 도구 6개). 답 id로 인용 근거와 판정 결과를 돌려준다.
+- 확인: 이 PR에 들어가는 파일만으로 만든 트리에서 pytest 1199 통과, 68 건너뜀, 실패 0(`tests/test_decision_approval.py`는 로컬 컨테이너 이름 충돌로 제외). 캐시 없는 `docker compose` 빌드 107.1초에 기동(PR 본문 기록). 오류 응답에 `detail` 병기, CSRF 403, 검증 오류 422, 남의 thread 404, 두 사용자의 기억 격리를 확인했다. Supabase에 표 6개를 적용했다.
+
+막힌 것
+- 이 PR 시점에는 새 clone에 `data/index`가 없고 `INDEX_URL`도 비어 있어 서버는 뜨지만 질문이 모두 거절로 끝났다. 색인 배포 방법을 11/7에 압축 한 파일 커밋 후 자동 풀기로 정했고(`docs/specs/search.md` 열린 항목 6), `data/index.tar.gz`와 자동 풀기는 이후 작업으로 넣었다(`data/data.md`의 "검색 색인 스냅샷 쓰는 법").
+- Cloud Run 재배포 전 확인이 필요하다: 프록시 뒤의 IP(`--no-proxy-headers`), 쿠키 `Secure` 설정, 화면 배포 방식(CORS), 컨테이너 포트 8000, `DATABASE_URL`로 체크포인트 표를 만드는 단계(강경희 확인 요청).
+
+다음
+- 측정 스위치 변경(`backend/graph/answer_fixes.py`, `backend/graph/build.py` 등)은 이 PR에 넣지 않았다. 별도 PR로 올린다.
+- `docs/GATES.md` G2 행과 이 기록에 캐시 없는 기동 107초를 반영.
+
+## 2026-11-06 강경희 (PR #59, React 프런트엔드 화면)
+
+오늘 한 일
+- Vite + React + Tailwind로 프런트엔드를 `web/react-app/`에 구성하고 기존 Provena CSS 디자인을 살려 로그인·회원가입·채팅·승인함·리콜·운영 현황 등 주요 화면을 만들었다.
+- 첫 로그인 뒤 회원정보를 등록·수정하는 화면과 관리자 권한 관리 화면을 더하고, 사용자 상태와 권한(일반 사용자, 관리자, 최고 관리자)에 따라 화면 이동과 메뉴를 나누었다.
+- 이 PR은 `web/react-app/`만 바꿨다. 백엔드와 DB 스키마는 바꾸지 않았다.
+- 확인: React production 빌드 성공, Vitest 35개 통과, 데모 권한 관리 화면 정상 표시.
+
+막힌 것
+- 화면의 데모 동작은 가짜 응답 기반이다. 채팅·회원정보 화면의 전체 브라우저 상호작용은 추가 검증이 필요하고, 실제 로그인·회원정보 DB 저장·관리자 권한 변경 API는 별도 연동과 검증이 필요하다.
+
+다음
+- 화면과 백엔드 API 연결(PR #61, 채팅 API 어댑터와 SSE 스트리밍 처리).
+
+## 2026-11-05 박진형 (사전 등록 #26, #27 오프라인 측정, PR #57)
+
+오늘 한 일
+- `link_keep_per_sub` 0→2와 전수→HNSW를 사전 등록한 뒤 저장된 벡터와 로컬 pgvector로 쟀다. v1 30건 Recall@5는 네 칸 모두 0.967이고, HNSW와 전수의 상위 5는 30/30 같다. 필터(`as_of`, `org`)를 건 경우는 재지 않았다. 코드 변경은 없다.
+
+다음
+- `EVAL_REPORT.md` 3장과 8장 기입.
+
 ## 2026-11-05 김승욱 (D5 결과 기입)
 
 오늘 한 일
