@@ -31,7 +31,7 @@ describe('createApiChatAdapter event handling', () => {
     expect(answer.text).toBe('근거 없음')
   })
 
-  it('adds done attributions without duplicating citations', async () => {
+  it('keeps done attributions separate from citations', async () => {
     const citation = { chunk_id: 'c1', title: '출처' }
     const { snapshots, service } = setup([
       { type: 'citation', thread_id: 't1', data: citation },
@@ -40,7 +40,8 @@ describe('createApiChatAdapter event handling', () => {
     await service.sendMessage({ threadId: 't1', message: '질문' })
     const answer = snapshots.at(-1)[0].messages.at(-1)
     expect(answer.state).toBe('done')
-    expect(answer.citations.map(item => item.chunk_id)).toEqual(['c1', 'c2'])
+    expect(answer.citations.map(item => item.chunk_id)).toEqual(['c1'])
+    expect(answer.attribution).toEqual(expect.anything())
   })
 })
 

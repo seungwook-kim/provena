@@ -77,14 +77,14 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
           const current = threads.find(thread => thread.id === id); const messages = [...(current?.messages ?? [])]
           const draft = messages[messages.length - 1]?.role === 'assistant' ? messages[messages.length - 1] : answer
           if (event.type === 'token') draft.text += event.data?.text ?? ''
-          if (event.type === 'citation' || event.type === 'attribution') addCitations(draft, event.data)
+          if (event.type === 'citation') addCitations(draft, event.data)
           if (event.type === 'no_results') { draft.state = 'no-evidence'; draft.text = event.data?.message ?? draft.text }
           if (event.type === 'approval_request') draft.state = 'approval'
           if (event.type === 'error') { draft.state = 'error'; draft.error = event.data?.message ?? '채팅 처리 중 오류가 발생했습니다.' }
           if (event.type === 'done') draft.state = 'done'
           if (event.type === 'error') draft.errorCode = event.data?.code
           if (event.type === 'done') {
-            addCitations(draft, event.data?.attribution)
+            if (event.data?.attribution) draft.attribution = event.data.attribution
             if (event.data?.code === 'no_results') {
               draft.state = 'no-evidence'
               draft.text = event.data?.message ?? draft.text

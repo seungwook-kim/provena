@@ -9,6 +9,12 @@ function CitationButtons({ citations, selectedCitation, onSelect }) {
   return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => onSelect(citation)}>[{index + 1}] {citation.title}</button>)}</div>
 }
 
+function AttributionNotice({ attribution }) {
+  const items = (Array.isArray(attribution) ? attribution : [attribution]).filter(Boolean)
+  if (!items.length) return null
+  return <div className="demo-attribution" role="note"><strong>출처·라이선스 안내</strong>{items.map((item, index) => <div key={index}>{item.source && <span>{item.source}</span>}{item.license && <span>{item.license}</span>}{item.license_url && <a href={item.license_url} target="_blank" rel="noreferrer">라이선스 보기</a>}{item.notice && <p>{item.notice}</p>}</div>)}</div>
+}
+
 function timestampValue(value) {
   if (!value) return null
   const date = new Date(value)
@@ -67,6 +73,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
         {message.state === 'generating' && <p className="demo-answer-progress">답변을 생성하고 있습니다.</p>}
         {message.text && <p>{message.text}</p>}
         {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} onSelect={onSelectCitation} />}
+        <AttributionNotice attribution={message.attribution} />
         {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}
       </article>}
     </Fragment>
