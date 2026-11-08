@@ -83,8 +83,3 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 ## 7. 데이터와 이용 조건
 
 핸드북 본문은 CC BY-SA 4.0이다. 답에 원문을 보일 때는 페이지 URL, 라이선스 링크, 수정 여부를 함께 표시한다. 원문 텍스트는 코드와 폴더를 나누고 `data/LICENSES/`에 고지와 출처를 적는다. 로고를 쓰지 않으며 README와 발표에 "GitLab Inc.와 제휴·보증 관계 없음"을 적는다(SDD 8장).
-### D6 React 채팅 API 어댑터
-
-React 채팅 화면은 기존 프리뷰 어댑터와 실제 `/chat` SSE 어댑터를 같은 서비스 경계로 사용한다. 실제 어댑터는 `GET /threads`로 대화를 불러오고 `POST /chat`의 `text/event-stream`을 `token`, `citation`, `approval_request`, `error`, `done` 이벤트로 파싱한다. 회원정보·관리자·Google OAuth·Langfuse 영역은 이 변경 범위에 포함하지 않는다.
-
-세부 구현 범위와 미확정 백엔드 계약은 [D6 채팅 프론트엔드 및 API 어댑터 Spec](./specs/d6-chat-frontend.md)을 참조한다. 실제 API 통합 검증은 아직 완료되지 않았으며 PR #60 반영 후 검증 예정이다.
