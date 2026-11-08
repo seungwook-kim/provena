@@ -20,27 +20,31 @@ export class ApiError extends Error {
 
 export async function apiRequest(path, options = {}) {
   const requestEpoch = authEpoch
+  const { suppressUnauthorized = false, ...requestOptions } = options
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
-    ...options,
+    ...requestOptions,
     headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
+      ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
+      ...requestOptions.headers,
     },
   })
 
   if (!response.ok) {
-    if (requestEpoch === authEpoch && response.status === 401 && !['/me', '/auth/login', '/auth/logout'].includes(path)) {
+    if (requestEpoch === authEpoch && response.status === 401 && !suppressUnauthorized && !['/me', '/auth/login', '/auth/logout'].includes(path)) {
       for (const listener of unauthorizedListeners) listener()
     }
     let detail = response.status === 401 ? '로그인이 필요합니다.' : response.status === 403 ? '이 작업을 수행할 권한이 없습니다.' : response.status >= 500 ? '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' : '요청을 처리할 수 없습니다.'
     try {
+      var errorCode
       const body = await response.json()
-      if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
+      if (typeof body.error?.message === 'string' && body.error.message.length < 160) detail = body.error.message
+      else if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
+      if (typeof body.error?.code === 'string' && body.error.code) errorCode = body.error.code
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }
-    throw new ApiError(detail, response.status, response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed')
+    throw new ApiError(detail, response.status, errorCode ?? (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed'))
   }
 
   return response
@@ -114,7 +118,18 @@ export async function changeAdminRole(loginId, action) {
     headers: { 'X-CSRF-Token': decodeURIComponent(token) },
   })
 }
-export function getThreads() { return apiJson('/threads') }
+export function getThreads() { return apiJson('/threads', { suppressUnauthorized: true }) }
+export function getThread(threadId) { return apiJson(`/threads/${encodeURIComponent(threadId)}`) }
+export function getMemory() { return apiJson('/me/memory', { suppressUnauthorized: true }) }
+async function csrfHeaders() {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable. Please try again.', 0, 'csrf_unavailable')
+  return { 'X-CSRF-Token': decodeURIComponent(token) }
+}
+
+export async function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, headers: await csrfHeaders(), body: JSON.stringify(value) }) }
+export async function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true, headers: await csrfHeaders() }) }
 export function getRecalls() { return apiJson('/recalls') }
 export function getApprovals() { return apiJson('/approvals') }
 export function getDecisionTables() { return apiJson('/decision-tables') }
@@ -132,4 +147,35 @@ export async function sendChatMessage(threadId, message) {
     method: 'POST',
     body: JSON.stringify({ thread_id: threadId, message }),
   })
+}
+
+export async function streamChatMessage(threadId, message, { signal, onEvent } = {}) {
+  const payload = { message }
+  if (threadId !== null) payload.thread_id = threadId
+  const response = await apiRequest('/chat', { method: 'POST', signal, headers: await csrfHeaders(), body: JSON.stringify(payload) })
+  if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('text/event-stream')) throw new ApiError('채팅 서버가 스트리밍 응답을 반환하지 않았습니다.', response.status, 'invalid_stream')
+  if (!response.body) throw new ApiError('채팅 스트림을 읽을 수 없습니다.', response.status, 'stream_unavailable')
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  const emit = block => {
+    const lines = block.split(/\r?\n/)
+    const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trimStart() ?? ''
+    const data = lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
+    const callback = onEvent
+    onEvent = payload => callback?.(eventName && payload && typeof payload === 'object' && !Array.isArray(payload) && !payload.type ? { ...payload, type: eventName } : payload)
+    if (!data || data === '[DONE]') return
+    try { onEvent?.(JSON.parse(data)) } catch { throw new ApiError('채팅 스트림 이벤트 형식이 올바르지 않습니다.', response.status, 'invalid_event') }
+  }
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+      const blocks = buffer.split(/\r?\n\r?\n/)
+      buffer = blocks.pop() ?? ''
+      blocks.forEach(emit)
+      if (done) break
+    }
+    if (buffer.trim()) emit(buffer)
+  } finally { reader.releaseLock() }
 }

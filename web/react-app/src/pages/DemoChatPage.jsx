@@ -2,11 +2,17 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
-import { createChatService } from '../lib/chat-service'
+import { createApiChatAdapter, createChatService } from '../lib/chat-service'
 import { useSession } from '../lib/session'
 
 function CitationButtons({ citations, selectedCitation, onSelect }) {
   return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => onSelect(citation)}>[{index + 1}] {citation.title}</button>)}</div>
+}
+
+function AttributionNotice({ attribution }) {
+  const items = (Array.isArray(attribution) ? attribution : [attribution]).filter(Boolean)
+  if (!items.length) return null
+  return <div className="demo-attribution" role="note"><strong>출처·라이선스 안내</strong>{items.map((item, index) => <div key={index}>{item.source && <span>{item.source}</span>}{item.license && <span>{item.license}</span>}{item.license_url && <a href={item.license_url} target="_blank" rel="noreferrer">라이선스 보기</a>}{item.notice && <p>{item.notice}</p>}</div>)}</div>
 }
 
 function timestampValue(value) {
@@ -24,6 +30,10 @@ function threadTimestamp(thread) {
   const directDate = timestampValue(direct)
   if (directDate) return directDate
   return (thread?.messages ?? []).map(messageTimestamp).filter(Boolean).sort((left, right) => right - left)[0] ?? null
+}
+
+export function isApprovalPending(thread) {
+  return Boolean(thread?.messages?.some(message => message.role === 'assistant' && message.state === 'approval'))
 }
 
 function formatActivity(value) {
@@ -58,17 +68,19 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
     return <Fragment key={index}>
       {showDivider && <div className="demo-message-date"><span>{formatDateDivider(timestamp)}</span></div>}
       {message.role === 'user' ? <div className="demo-user-message" title={messageTime} tabIndex={messageTime ? 0 : undefined}>{message.text}</div> : <article className={`demo-answer ${message.state}`} title={messageTime} tabIndex={messageTime ? 0 : undefined}>
+        {message.state === 'approval' && <p>승인 대기 중</p>}
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
         {message.state === 'generating' && <p className="demo-answer-progress">답변을 생성하고 있습니다.</p>}
         {message.text && <p>{message.text}</p>}
         {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} onSelect={onSelectCitation} />}
+        <AttributionNotice attribution={message.attribution} />
         {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}
       </article>}
     </Fragment>
   })}</>
 }
 
-export default function DemoChatPage() {
+export default function DemoChatPage({ api = false }) {
   const location = useLocation()
   const serviceRef = useRef(null)
   const citationPanelRef = useRef(null)
@@ -101,17 +113,27 @@ export default function DemoChatPage() {
   const activeCitation = citationOptions.find(citation => citation.id === selectedCitation?.id) ?? null
   const activeCitationId = activeCitation?.id ?? null
   const processing = processingId !== null
+  const approvalPending = isApprovalPending(current)
+  const composerDisabled = loading || processing || approvalPending
 
   useEffect(() => {
     if (activeCitationId && typeof citationPanelRef.current?.scrollTo === 'function') citationPanelRef.current.scrollTo({ top: 0, behavior: 'auto' })
   }, [activeCitationId])
 
   useEffect(() => {
-    const adapter = createPreviewChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId })
+    const composer = document.querySelector('.demo-composer')
+    composer?.querySelector('textarea')?.toggleAttribute('disabled', composerDisabled)
+    composer?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', composerDisabled || !input.trim())
+  }, [composerDisabled, input])
+
+  useEffect(() => {
+    const adapter = api ? createApiChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId }) : createPreviewChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId })
     const service = createChatService(adapter)
     serviceRef.current = service
     service.listThreads().then(items => {
       setThreads(items)
+    }).catch(() => {
+      setThreads([])
     }).finally(() => setLoading(false))
     return () => service.dispose()
   }, [])
@@ -130,7 +152,7 @@ export default function DemoChatPage() {
 
   async function ask(value) {
     const message = value.trim()
-    if (!message || processing || !serviceRef.current) return
+    if (!message || processing || approvalPending || !serviceRef.current) return
     const result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
     if (!result) return
     setSelectedId(result.threadId)
@@ -179,7 +201,7 @@ export function DemoOnlyChat() {
   const previewMode = import.meta.env.DEV && (location.pathname.startsWith('/demo/') || params.get('demo') === '1')
   if (previewMode) return <DemoChatPage />
   if (!user) return <Navigate to="/login" replace />
-  return <ChatUnavailable />
+  return <DemoChatPage api />
 }
 
 export function DemoAdminBlocked() {
