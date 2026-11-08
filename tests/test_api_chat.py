@@ -178,3 +178,15 @@ def test_chat_is_503_when_the_runtime_did_not_open(monkeypatch):
         for r in (c.post("/chat", json={"message": Q}), c.get("/threads"), c.get("/me/memory")):
             assert r.status_code == 503 and r.json()["error"]["code"] == "not_configured"
         assert c.get("/health").status_code == 200
+
+
+def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch):
+    with Env(monkeypatch) as env:
+        client = env.client(env.alice)
+        unknown = client.post("/does-not-exist", json={})
+        assert unknown.status_code == 404
+        assert unknown.json()["error"]["code"] == "not_found"
+
+        wrong_method = client.post("/threads")
+        assert wrong_method.status_code == 405
+        assert wrong_method.json()["error"]["code"] == "method_not_allowed"

@@ -10,6 +10,10 @@ const runningInDocker = fs.existsSync('/.dockerenv')
 const proxyTarget = process.env.VITE_API_PROXY_TARGET
   ?? (runningInDocker ? 'http://host.docker.internal:8000' : 'http://127.0.0.1:8000')
 
+export function chatProxyBypass(request) {
+  return request.method === 'GET' ? '/index.html' : undefined
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Keep browser cookies same-origin in local development. Production uses
@@ -23,7 +27,7 @@ export default defineConfig({
       '/me': proxyTarget,
       '/admin': proxyTarget,
       '/threads': proxyTarget,
-      '/chat': proxyTarget,
+      '/chat': { target: proxyTarget, bypass: chatProxyBypass },
       '/health': proxyTarget,
       '/recalls': proxyTarget,
       '/approvals': proxyTarget,

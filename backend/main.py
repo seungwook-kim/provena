@@ -30,10 +30,11 @@ from contextlib import asynccontextmanager, contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
-from fastapi import BackgroundTasks, FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.api.errors import ApiError
 from backend.api.errors import install_error_handlers
 from backend.api.middleware import RequestContextMiddleware
 from backend.api.routes import create_api_router
@@ -228,19 +229,44 @@ def create_app(
         app.include_router(create_auth_router(store=store, secret=auth_secret))
         app.include_router(create_decision_router(store=store, secret=auth_secret))
         app.include_router(create_api_router(store=store, secret=auth_secret))   # /chat, /threads, /me/memory
-
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 
     # 도메인 엔드포인트는 여기(아래 정적 파일 마운트보다 위)에 추가합니다.
 
-    if (WEB_DIR / "login.html").is_file():
+    web_root = WEB_DIR / "react-app" / "dist" if (WEB_DIR / "react-app" / "dist" / "index.html").is_file() else WEB_DIR
+    if (web_root / "index.html").is_file() or (WEB_DIR / "login.html").is_file():
 
         @app.get("/", include_in_schema=False)
-        def index() -> RedirectResponse:
-            return RedirectResponse("/login.html")
+        def index() -> FileResponse:
+            return FileResponse(web_root / "index.html")
 
-        app.mount("/", StaticFiles(directory=WEB_DIR), name="web")
+        if web_root != WEB_DIR:
+            app.add_api_route("/login.html", lambda: FileResponse(web_root / "index.html"), methods=["GET"], include_in_schema=False)
+
+            web_root_resolved = web_root.resolve()
+            api_prefixes = ("auth", "api", "me", "health", "threads", "approvals", "mcp")
+            spa_prefixes = ("login", "signup", "chat", "onboarding", "myinfo", "admin", "recalls", "changes", "demo")
+
+            @app.get("/{path:path}", include_in_schema=False)
+            def spa_fallback(path: str) -> FileResponse:
+                first_segment = path.partition("/")[0]
+                if first_segment in api_prefixes:
+                    raise HTTPException(status_code=404, detail="Not Found")
+                candidate = (web_root / path).resolve()
+                if web_root_resolved in candidate.parents and candidate.is_file():
+                    return FileResponse(candidate)
+                if first_segment in spa_prefixes:
+                    return FileResponse(web_root / "index.html")
+                raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
+
+            @app.post("/threads", include_in_schema=False)
+            def threads_wrong_method() -> None:
+                raise HTTPException(status_code=405, detail="Method Not Allowed")
+            @app.post("/{path:path}", include_in_schema=False)
+            def unknown_post(path: str) -> None:
+                raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
+        app.mount("/", StaticFiles(directory=web_root), name="web")
 
     return app
 

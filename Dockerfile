@@ -1,4 +1,12 @@
 # G2: 평가자가 `docker compose up` 한 줄로 띄울 수 있어야 합니다.
+FROM node:22-alpine AS web-build
+
+WORKDIR /web
+COPY web/react-app/package.json web/react-app/package-lock.json ./
+RUN npm ci
+COPY web/react-app/ ./
+RUN npm run build
+
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -27,6 +35,9 @@ RUN python -m backend.rag.ingest.snapshot unpack
 # meta.json의 sha256과 같은지 확인한다(다르면 빌드 실패). compose의 loader는 ./data/index를 연결하므로 그 폴더가 비어 있으면 시작할 때 다시 푼다
 RUN python -m backend.rag.ingest.snapshot unpack-index
 COPY web/ ./web/
+COPY --from=web-build /web/dist/ ./web/react-app/dist/
+RUN cp web/react-app/dist/index.html web/index.html
+RUN cp web/react-app/dist/index.html web/login.html
 COPY db/ ./db/
 # 런타임 Skill(SKILL.md). backend/services/skills.py가 /app/skills/<이름>/SKILL.md를 읽는다. 이미지에 없으면 USE_SKILLS가 켜진 정책 질문이 FileNotFoundError로 실패한다
 COPY skills/ ./skills/

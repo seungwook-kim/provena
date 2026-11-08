@@ -462,3 +462,4 @@
 .demo-admin-grid .demo-field p{font-size:20px;line-height:1.45;font-weight:500}
 @media(max-width:620px){.demo-admin-grid .demo-field{min-height:108px}}
 .account-menu-links a{display:flex;align-items:center;gap:8px}.account-menu-links a svg{flex:none;color:var(--muted)}
+.demo-attribution{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:10px 12px;color:var(--muted);font-size:13px;line-height:1.65}.demo-attribution strong{display:block;margin-bottom:7px;color:var(--ink-soft);font-size:13px;font-weight:700}.demo-attribution div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.demo-attribution span,.demo-attribution a{overflow-wrap:anywhere}.demo-attribution a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}.demo-attribution p{flex-basis:100%;margin:5px 0 0;line-height:1.65}
