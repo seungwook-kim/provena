@@ -62,12 +62,13 @@ WHERE nsp.nspname = 'public'
   AND cls.relname IN ('users', 'token_revocations');
 ```
 
-운영 Supabase에 위 SQL을 아직 적용하지 않았으므로, 운영 DB의 테이블 존재·RLS·접속 역할·실제 로그인은 미적용·미검증 상태이다.
+운영 Supabase는 2026-11-09에 풀러 접속으로 읽기 전용 조회해 확인했다. public 스키마에 `users`, `threads`, `token_revocations`, `approvals`, `decision_tables`, `issue_tables`, `issue_table_rejections`, `docs`(1,512행), `chunks`(23,095행), `versions`, `index_meta`, `query_translations` 표가 있다. 따라서 인증 표(`users`, `token_revocations`)와 대화 표(`threads`, `111_threads.sql`)는 적용돼 있다. 같은 날 데모 계정 2개(일반 사용자 1개, 관리자 1개)를 `backend/services/auth_store.py`의 `upsert_user()`로 등록하고 다시 조회해 확인했다(비밀번호는 bcrypt 해시로만 저장). `threads`는 0행이어서 운영 경로로 대화한 적은 아직 없다. LangGraph 체크포인트·Store 표는 아직 없으며, `backend/graph/checkpoint.py`의 `setup()`이 앱 첫 기동 때 만든다. 위 SQL로 보는 RLS 활성화 상태, 앱 접속 역할의 소유 여부와 `rolbypassrls`, 운영 계정으로 한 실제 로그인은 확인하지 못했다(미확인).
 
 ## 작업 기록 (최신이 위)
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | 운영 Supabase를 풀러 접속으로 읽기 전용 조회해 표 목록과 행 수(`docs` 1,512행, `chunks` 23,095행, `threads` 0행)를 확인하고, 데모 계정 2개 등록 뒤 `users` 2행을 확인하고, "운영 Supabase 인증 스키마 적용" 절의 미적용·미검증 서술을 확인 결과로 고쳤다. SQL은 실행하지 않았다 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | `111_threads.sql` 추가: 사용자별 대화 목록 `threads`(PK `(user_id, thread_id)`, 인덱스 `(user_id, updated_at DESC)`, RLS). 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |
 | 2026-11-05 | 강경희 (kyunghee) | 운영 Supabase에서는 `ensure_schema()`가 실행되지 않는 조건과 `101_auth_users.sql` → `103_auth_token_revocations.sql` 수동 적용·RLS·접속 역할·로그인 검증 절차를 문서화했다. 운영 DB는 미적용·미검증으로 기록 | 미정 |

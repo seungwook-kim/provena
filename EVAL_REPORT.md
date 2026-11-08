@@ -491,12 +491,14 @@ PR #48 머지 커밋 `e847c88`에서 저장소만 `MemoryStore`를 Supabase의 `
 
 | 항목 | 상태 |
 |---|---|
-| 트레이스에 입출력, 모델, 토큰, 지연, 비용이 남는가 | |
-| 평가 점수가 트레이스에 연결되어 있는가 | |
-| `user_id`, `session_id`를 붙였는가 | |
-| 느림의 원인을 트레이스로 가려낸 사례 | |
+| 트레이스에 입출력, 모델, 토큰, 지연, 비용이 남는가 | Langfuse Cloud(일본 리전)의 프로젝트 `Provena`에 2026-11-07 관측(observation) 기록이 다수 있고(15:58~17:38 UTC 구간) 호출별 `cost_usd`가 남아 있다. 입출력, 모델, 토큰, 지연이 각 기록에 들어 있는지는 미확인(캡처 첨부 예정) |
+| 평가 점수가 트레이스에 연결되어 있는가 | 평가 점수 `eval/citation_accuracy`, `eval/cited_correct_rate`, `eval/correct_refusal_rate`, `eval/over_refusal_rate`, `eval/latency_p95_s`, `eval/cost_usd`, `eval/judge_score` 등이 같은 프로젝트에 있다. 점수와 개별 트레이스의 연결 화면은 미확인(캡처 첨부 예정) |
+| `user_id`, `session_id`를 붙였는가 | 코드는 `run_config`가 `session_id`(없으면 `thread_id`)와 `user_id`를 Langfuse 메타데이터로 붙인다(`backend/services/llm.py`, `backend/services/tracing.py`). 2026-11-07 기록에 값이 들어 있는지는 미확인(캡처 첨부 예정) |
+| 느림의 원인을 트레이스로 가려낸 사례 | 기록된 사례 없음 |
 
-<!-- 대시보드 스크린샷 3장 이상. 트레이스 상세 1장 포함 -->
+확인: 2026-11-09, 읽기 전용. 기록은 `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` 두 키가 있을 때 켜지고 주소는 `LANGFUSE_HOST` 또는 `LANGFUSE_BASE_URL`로 정한다(`backend/services/tracing.py`). 배포 환경의 호출이 트레이스로 남는지는 미확인이다.
+
+대시보드 화면 캡처(3장 이상, 트레이스 상세 1장 포함): 캡처 첨부 예정.
 
 ## 8. 비용과 응답 시간 (현재 코드로 단계별 실측)
 
