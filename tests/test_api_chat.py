@@ -180,7 +180,12 @@ def test_chat_is_503_when_the_runtime_did_not_open(monkeypatch):
         assert c.get("/health").status_code == 200
 
 
-def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch):
+def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch, tmp_path):
+    # CI의 Python-only 실행처럼 React dist가 없는 legacy 정적 화면도 확인한다.
+    web_dir = tmp_path / "web"
+    web_dir.mkdir()
+    (web_dir / "login.html").write_text("legacy", encoding="utf-8")
+    monkeypatch.setattr("backend.main.WEB_DIR", web_dir)
     with Env(monkeypatch) as env:
         client = env.client(env.alice)
         unknown = client.post("/does-not-exist", json={})
