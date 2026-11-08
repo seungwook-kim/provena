@@ -248,6 +248,14 @@ def create_app(
             api_prefixes = ("auth", "api", "me", "health", "threads", "approvals", "mcp")
             spa_prefixes = ("login", "signup", "chat", "onboarding", "myinfo", "admin", "recalls", "changes", "demo")
 
+            @app.post("/threads", include_in_schema=False)
+            def threads_wrong_method() -> None:
+                raise HTTPException(status_code=405, detail="Method Not Allowed")
+
+            @app.post("/{path:path}", include_in_schema=False)
+            def unknown_post(path: str) -> None:
+                raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
+
             @app.get("/{path:path}", include_in_schema=False)
             def spa_fallback(path: str) -> FileResponse:
                 first_segment = path.partition("/")[0]
@@ -258,13 +266,6 @@ def create_app(
                     return FileResponse(candidate)
                 if first_segment in spa_prefixes:
                     return FileResponse(web_root / "index.html")
-                raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
-
-            @app.post("/threads", include_in_schema=False)
-            def threads_wrong_method() -> None:
-                raise HTTPException(status_code=405, detail="Method Not Allowed")
-            @app.post("/{path:path}", include_in_schema=False)
-            def unknown_post(path: str) -> None:
                 raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
         app.mount("/", StaticFiles(directory=web_root), name="web")
 
