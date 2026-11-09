@@ -22,14 +22,20 @@ function validateUser(user) {
   }
 }
 
+function sameUser(left, right) {
+  return Boolean(left && right) && ['user_id', 'role', 'profile_completed', 'is_owner'].every(key => left[key] === right[key])
+}
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState({ status: 'checking', user: null, error: '' })
   const sequence = useRef(0)
   const mutating = useRef(false)
+  const confirmedUser = useRef(null) // The user currently shown as authenticated, or null.
 
   const accept = useCallback(user => {
     invalidateAuthRequests()
     selectMemoryOwner(user.user_id)
+    confirmedUser.current = user
     setSession({ status: 'authenticated', user, error: '' })
   }, [])
 
@@ -37,24 +43,30 @@ export function SessionProvider({ children }) {
     invalidateAuthRequests()
     sequence.current += 1
     clearSessionMemory()
+    confirmedUser.current = null
     setSession({ status: 'anonymous', user: null, error: '' })
   }, [])
 
   const refresh = useCallback(async () => {
     if (mutating.current) return
     const request = ++sequence.current
+    // With a confirmed user this is a background re-check (focus, navigation, profile save):
+    // keep the page mounted and only change state when the server says something different.
+    const background = confirmedUser.current !== null
+    const acceptChanged = user => { if (!sameUser(confirmedUser.current, user)) accept(user) }
     if (isMockSessionEnabled()) {
-      accept(MOCK_USER)
+      acceptChanged(MOCK_USER)
       return
     }
-    setSession({ status: 'checking', user: null, error: '' })
+    if (!background) setSession({ status: 'checking', user: null, error: '' })
     try {
       const user = validateUser(await getCurrentUser())
-      if (request === sequence.current) accept(user)
+      if (request === sequence.current) acceptChanged(user)
     } catch (error) {
       if (request !== sequence.current) return
       if (error.status === 401) expire()
-      else setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
+      else if (!background) setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
+      // A failed background check (offline, 5xx, bad payload) keeps the confirmed session; the next focus retries.
     }
   }, [accept, expire])
 

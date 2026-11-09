@@ -158,6 +158,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       return true
     },
     async searchThreads(query) { const q = query.trim().toLowerCase(); return threads.filter(thread => thread.title.toLowerCase().includes(q)) },
-    dispose() { controllers.forEach(controller => controller.abort()); controllers.clear() },
+    // controllers 값은 AbortController가 아니라 요청 기록 { controller, activeThreadId, cancelled }다.
+    // 예전 코드는 기록에 abort()를 불러 TypeError → 답을 받는 중 화면이 내려가면 React가 화면 전체를 지웠다(배포 실측 11/9).
+    dispose() { controllers.forEach(request => { request.cancelled = true; request.controller.abort() }); controllers.clear() },
   }
 }
