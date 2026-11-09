@@ -14,6 +14,7 @@ import uuid
 from collections import defaultdict
 
 from backend.graph.citations import check_citations
+from backend.rag.retrieve.privacy import PRIVATE_MARK
 
 STANCES = ("allow", "condition", "block")
 CONFIDENCES = ("high", "medium", "low")
@@ -30,7 +31,8 @@ _MARK = re.compile(r"\[\[task:|<<<|>>>")
 
 def is_private(chunk: dict) -> bool:
     """근거 주소가 비공개 문서(internal.gitlab.com)인가. 이런 청크는 근거로 쓰지 않는다(EC-09, AGENTS.md)."""
-    return PRIVATE_HOST in str(chunk.get("source_url") or "")
+    url = str(chunk.get("source_url") or "")
+    return PRIVATE_HOST in url or PRIVATE_MARK in url  # MCP를 거치면 주소가 표시로 바뀌어 있다
 
 
 def section_path(chunk: dict) -> str:

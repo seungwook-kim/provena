@@ -110,7 +110,10 @@ def translate(query: str, kind: str, store: TranslationStore, call=_call) -> Res
             reason = "error"
             continue
         if valid_english(text):
-            store.put_translation(qsha, model, kind, text)
+            try:
+                store.put_translation(qsha, model, kind, text)
+            except Exception as e:  # noqa: BLE001  번역은 이미 끝났다. 장부에 못 적어도 검색은 이어 간다(다음 번에 다시 번역한다)
+                log.warning("번역 장부 저장 실패: %s", type(e).__name__)
             return Result(text, "llm")
         reason = "demo_no_record" if demo else "invalid"
     return Result(None, reason)

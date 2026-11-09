@@ -25,13 +25,30 @@ class AgentState(TypedDict, total=False):
     chunks: list[dict]  # 검색 결과. 인용 검사는 이 목록과 대조한다
     retries: int  # 재검색 횟수
     judge_reason: str
+    section_reads: int  # 판정이 고른 섹션 읽기 횟수. 재검색 상한에 넣지 않는다
+    next_section: dict | None  # 근거 판정이 고른 섹션 읽기 {chunk_id, rule_seq, article}. 없으면 재검색이다(`chat-tool-guide`)
     judge_partial: bool  # 근거 판단의 결과: 근거가 모자라지만 묻는 사실 중 일부에는 자료가 직접 답한다. 재검색이 다 끝나도 이 값이면 그 부분만 답한다
+    judge_missing: list[str]  # 근거 판단의 결과: 자료가 답하지 못한 사실. 재검색어를 그 사실에 맞추는 데 쓴다
+    judge_query: str  # 근거 판단의 결과: 판정이 낸 재검색어(`GRAPH_JUDGE_QUERY=1`일 때). 있으면 재작성 LLM을 부르지 않는다
+    judge_scope: str  # 근거 판단의 결과: 자료의 규칙이 질문의 범위와 다르다는 메모. 일부만 답할 때 답 작성에 넘긴다
+    sub_research: str  # 빠진 하위 질문 한 번 더 찾기(`GRAPH_SUB_RESEARCH`, `GRAPH_PAGE_RESEARCH`)의 대상 하위 질문
+    sub_research_phase: str  # ""(안 함), "due"(판정이 정함), "search"(재작성이 넘김), "done"(찾음)
+    judge_none: bool  # `GRAPH_REFUSE_ON_NONE=1`일 때 첫 판정이 전무(충분도 부분도 아니고 되묻기도 없음)였는지. 참이면 재검색 없이 거절한다
+    query_targets: list[str]  # 첫 검색이 대상별로 나눈 대상 이름(`GRAPH_QUERY_BRANCHES=1`일 때만 생긴다). 답 작성이 대상마다 답했는지 코드로 검사한다
     clarify_question: str | None
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
-    search_cache: dict  # 이번 실행 안의 검색 결과 기억
+    search_cache: dict  # 이번 실행 안의 검색 결과 기억. `GRAPH_PARALLEL_INTAKE`를 켜면 첫 재작성과 첫 검색에서 쓸 때까지 미리 받은 LLM 응답도 잠깐 담긴다
     search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수}
     sub_queries: list[str]  # 첫 검색 전에 나눈 한국어 하위 질문(나누지 않았거나 분해를 끄면 빈 목록)
-    decompose_source: str  # 분해 결과의 출처: llm | invalid | error | skipped(분해를 끄면 빈 문자열)
+    started_at: float  # `GRAPH_ANSWER_BUDGET_S`를 켰을 때 질문을 받은 시각(time.monotonic). 첫 답의 추론 대기를 남은 시간으로 줄인다
+    judge_checks_log: list[dict]  # FL(`GRAPH_FACTS_LOG=1`, 진단): 판정마다 대표 표의 checks, sufficient, partial, 표 수
+    answer_facts: dict  # FL(`GRAPH_FACTS_LOG=1`, 진단): 첫 답 초안의 asked와 picks
+    judge_quote_ids: list[str]  # BO2(`GRAPH_ANSWER_BEST2=1`): 마지막 판정의 구절이 든 문맥 청크
+    best2_log: dict  # BO2: 두 답 후보의 인용, S 안/밖 수, 고른 쪽과 이유
+    early_answer: dict  # `GRAPH_JUDGE_ANSWER`를 켰을 때 판정과 같이 받은 답(`write_answer`가 낼 칸들). 충분 판정일 때만 있다
+    judged_chunks: int  # `GRAPH_STOP_STALLED_SEARCH`를 켰을 때 마지막 판정이 본 근거 수
+    search_stalled: bool  # `GRAPH_STOP_STALLED_SEARCH`를 켰을 때 재검색이 근거를 더하지 못했는지
+    decompose_source: str  # 분해 결과의 출처: llm | invalid | error | skipped | capped(`GRAPH_DECOMPOSE_CAP_S` 초과, 분해를 끄면 빈 문자열)
     search_error: str  # 검색을 쓸 수 없어 끝낸 이유: unavailable(임베딩 API 일시 오류) | no_key(키 없음). 정상이면 빈 문자열
     # --- 출력 ---
     kind: str  # answer | clarify | refuse

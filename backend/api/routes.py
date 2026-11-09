@@ -1,7 +1,7 @@
 """채팅(SSE), 대화 목록, 장기 기억 라우터 (SDD 4-4, G4).
 
 - `POST /chat`: 로그인과 CSRF. `{thread_id?, message, as_of?, org?}` -> SSE로 `AgentEvent`(token, citation, approval_request, error, done).
-- `GET /threads`, `GET /threads/{thread_id}`: 로그인. 내 대화 목록과 마지막 답. 남의 것은 404 `not_found`.
+- `GET /threads`, `GET /threads/{thread_id}`: 로그인. 내 대화 목록과 상세(마지막 답 `last`, 체크포인트에서 되살린 대화 이력 `messages`: 질문·답·근거). 남의 것은 404 `not_found`.
 - `GET /me/memory`: 로그인. `PATCH`, `DELETE /me/memory`: 로그인과 CSRF. 소속(affiliation)·직급(rank) 두 칸만 다룬다.
 
 규칙
@@ -35,7 +35,7 @@ from sse_starlette.sse import EventSourceResponse
 from backend.api.errors import ApiError
 from backend.api.middleware import current_request_id, log_llm_usage
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, require_csrf
-from backend.graph.stream import stream_events
+from backend.graph.stream import CITATION_KEYS, stream_events
 from backend.memory.profile import ALLOWED_FIELDS, delete_profile, get_profile, put_profile
 from backend.schemas import AgentEvent
 from backend.services.llm import DEFAULT_ANTHROPIC_MODEL, finish_run, is_demo_mode, run_config
@@ -112,6 +112,53 @@ def _final_values(graph: Any, internal: str) -> dict:
     except Exception as exc:  # noqa: BLE001 - 체크포인트를 못 읽어도 스트림은 이어 간다(추가 키만 비는다)
         log.warning("최종 상태를 읽지 못함: %s", type(exc).__name__)
         return {}
+
+
+def _messages(graph: Any, internal: str) -> list[dict]:
+    """체크포인트 이력에서 대화 이력(질문·답·근거)을 오래된 순으로 되살린다. 화면이 새로고침 뒤 대화를 다시 그릴 때 쓴다.
+
+    질문마다 그래프는 입력 체크포인트(`metadata.source == "input"`) 하나와 단계별 체크포인트를 남긴다. 승인 뒤 재개(`Command(resume=...)`)는
+    입력 체크포인트 없이 같은 질문의 단계를 잇는다. 그래서 입력 체크포인트로 질문을 나누고 질문마다 마지막 체크포인트만 읽는다.
+    입력 체크포인트의 값은 앞 질문의 상태라 질문 시각만 쓴다.
+    - 끝난 질문(`next` 없음): 질문과 답 한 쌍. 거절(`kind == "refuse"`, `/chat`의 `no_results`)은 `no-evidence`. 인용은 답일 때만 `/chat`의 citation과 같은 키로 준다.
+    - 승인을 기다리는 질문(interrupt): 질문과 빈 답(`approval`).
+    - 오류로 멈췄거나 아직 도는 질문: 질문만. 남은 값이 앞 질문의 답일 수 있어 답으로 쓰지 않는다.
+    못 읽으면 빈 목록이다(예외 종류만 로그에 남긴다).
+    """
+    try:
+        turns: list[list] = []
+        for snap in reversed(list(graph.get_state_history({"configurable": {"thread_id": internal}}))):  # 최신이 앞으로 온다
+            if (snap.metadata or {}).get("source") == "input":
+                turns.append([snap])
+            elif turns:
+                turns[-1].append(snap)
+        out: list[dict] = []
+        for first, *steps in turns:
+            if not steps:   # 입력만 받고 아직 시작하지 않았다
+                continue
+            last = steps[-1]
+            values = last.values or {}
+            out.append({"role": "user", "text": values.get("question") or "", "timestamp": first.created_at})
+            waiting = bool(last.next) and any(t.interrupts for t in last.tasks)
+            if last.next and not waiting:
+                continue
+            kind = None if waiting else values.get("kind")
+            cites = (values.get("citations") or []) if kind == "answer" else []
+            out.append({
+                "role": "assistant",
+                "text": "" if waiting else values.get("answer") or "",
+                "state": "approval" if waiting else "no-evidence" if kind == "refuse" else "done",
+                "kind": kind,
+                "answer_id": values.get("answer_id"),
+                "as_of": values.get("as_of"),
+                "citations": [{"id": c.get("chunk_id"), **{k: c.get(k) for k in CITATION_KEYS}, "text": c.get("text")}
+                              for c in cites if isinstance(c, dict)],
+                "timestamp": last.created_at,
+            })
+        return out
+    except Exception as exc:  # noqa: BLE001 - 이력을 못 읽어도 상세 조회는 이어 간다(이력만 빈다)
+        log.warning("대화 이력을 읽지 못함: %s", type(exc).__name__)
+        return []
 
 
 async def iterate_in_one_thread(make: Callable[[], Iterator[dict]]) -> AsyncIterator[dict]:
@@ -282,7 +329,9 @@ def create_api_router(
         rec = threads.thread_get(user_id, thread_id)
         if rec is None:
             raise ApiError(404, "not_found", "대화를 찾을 수 없습니다.")
-        return _settle(request, user_id, rec)
+        graph = getattr(request.app.state, "question_graph", None)
+        messages = _messages(graph, internal_thread(user_id, thread_id)) if graph is not None else []
+        return {**_settle(request, user_id, rec), "messages": messages}
 
     @router.get("/me/memory")
     def memory_get(request: Request, user: AuthUser = Depends(current_user)) -> dict:

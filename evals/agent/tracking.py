@@ -47,14 +47,20 @@ def handler_of(config: dict | None) -> Any | None:
     return None
 
 
+def record_item_scores(config: dict | None, scores: dict[str, float | None]) -> int:
+    """그 문항 트레이스(config의 핸들러가 마지막으로 만든 trace)에 점수를 붙인다. None 값은 건너뛴다. 붙인 수를 돌려준다(키가 없으면 0)."""
+    try:
+        return tracing.record_scores(handler_of(config), scores, prefix=SCORE_PREFIX)
+    except Exception as e:  # noqa: BLE001
+        log.warning("문항 점수 기록 실패: %s", e)
+        return 0
+
+
 def finish_item(config: dict | None, scores: dict[str, float | None] | None = None) -> dict:
-    """문항 하나가 끝난 뒤: 비용 점수를 남기고(`finish_run`), 문항 지표를 점수로 붙인다. 비용·토큰 합계를 돌려준다."""
+    """문항 하나가 끝난 뒤: 비용 점수를 남기고(`finish_run`), 문항 지표를 점수로 붙인다. 비용·토큰 합계와 `trace_id`를 돌려준다."""
     summary = finish_run(config)
     if scores:
-        try:
-            tracing.record_scores(handler_of(config), scores, prefix=SCORE_PREFIX)
-        except Exception as e:  # noqa: BLE001
-            log.warning("문항 점수 기록 실패: %s", e)
+        record_item_scores(config, scores)
     return summary
 
 

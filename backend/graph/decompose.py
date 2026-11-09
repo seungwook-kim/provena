@@ -67,10 +67,44 @@ def normalize(question: str, obj: dict) -> list[str]:
     return subs if ok else []
 
 
+# `GRAPH_KEEP_PRODUCT_NAME=1`(기본 꺼짐): 조사 없이 바로 제품의 대상(계정, 그룹, 프로젝트 등)을 꾸미는 "GitLab"은 회사가 아니라 제품을 가리키므로 떼지 않는다.
+# 예: "GitLab 계정"은 GitLab.com 계정이다. "GitLab 정기 릴리스"(v1 3번)처럼 대상 말이 아닌 경우와 조사가 붙은 경우는 그대로 뗀다
+_PRODUCT_TARGET = re.compile(
+    r"^GitLab\s+(?:계정|account|그룹|group|프로젝트|project|저장소|repository|repo|인스턴스|instance|구독|subscription|"
+    r"라이선스|license|사용자|user|네임스페이스|namespace|러너|runner)", re.I)
+
+
+def keep_product_name_enabled() -> bool:
+    """`GRAPH_KEEP_PRODUCT_NAME`이 1, true, yes, on이면 켬. 기본 꺼짐(#44 측정 구성)."""
+    return (os.environ.get("GRAPH_KEEP_PRODUCT_NAME") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def drop_company_prefix(subs: list[str]) -> list[str]:
-    """하위 질문 맨 앞의 회사 이름을 뗀다. 모든 문서가 GitLab 핸드북이라 찾는 데 도움이 안 되고, 붙으면 개요 문서로 끌린다(평가셋 v1 3번)."""
-    out = [_COMPANY_PREFIX.sub("", s, count=1).strip() for s in subs]
+    """하위 질문 맨 앞의 회사 이름을 뗀다. 모든 문서가 GitLab 핸드북이라 찾는 데 도움이 안 되고, 붙으면 개요 문서로 끌린다(평가셋 v1 3번).
+    `GRAPH_KEEP_PRODUCT_NAME=1`이면 제품의 대상을 가리키는 "GitLab 계정" 같은 말은 남긴다."""
+    keep = keep_product_name_enabled()
+    out = [s.strip() if keep and _PRODUCT_TARGET.match(s.strip()) else _COMPANY_PREFIX.sub("", s, count=1).strip() for s in subs]
     return out if all(out) else subs
+
+
+GATE_TASK = "decompose_gate"
+SYSTEM_GATE = f"[[task:{GATE_TASK}]]\n{SYSTEM}"  # SP 예비 분해: 같은 프롬프트, 다른 표지(단계별 추론 수준을 따로 둘 수 있다. 기본은 전체 수준)
+
+
+def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
+    """SP(`GRAPH_SPECULATE_FIRST`)의 예비 분해. 한 번만 부른다. 나누면 True, 나누지 않으면 False, 형식 오류·호출 오류면 None(미리 돌리지 않는다).
+    결과는 검색에 쓰지 않는다. 미리 판정을 시작할지 고르는 데만 쓴다."""
+    if not question or not question.strip():
+        return None
+    try:
+        text = ask(SYSTEM_GATE, question)
+    except Exception as e:  # noqa: BLE001  예비 분해가 실패하면 미리 돌리지 않을 뿐이다. 비용 상한은 그대로 올린다
+        if type(e).__name__ == "CostCapExceeded":
+            raise
+        log.warning("예비 분해 호출 실패: %s", type(e).__name__)
+        return None
+    obj = parse_split(text)
+    return None if obj is None else bool(normalize(question, obj))
 
 
 def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:

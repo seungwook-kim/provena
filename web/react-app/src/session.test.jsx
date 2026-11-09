@@ -17,7 +17,7 @@ beforeEach(() => {
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   window.history.replaceState({}, '', '/chat')
   calls = []
-  server = { user: null, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null, memory: {} }
+  server = { user: null, profile: null, savedProfile: null, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
   vi.stubGlobal('fetch', vi.fn(async (path, options) => {
     calls.push({ path, options })
     if (path === '/me') {
@@ -36,16 +36,16 @@ beforeEach(() => {
       server.user = body.login_id === 'B' ? B : A
       return json(server.user)
     }
-    if (path === '/me/memory' && options.method === 'PATCH') {
-      const memoryOwner = server.user?.user_id ?? 'anonymous'
-      server.memory[memoryOwner] = JSON.parse(options.body)
-      return json(server.memory[memoryOwner])
-    }
-    if (path === '/me/memory') return json(server.memory[server.user?.user_id ?? 'anonymous'] ?? {})
     if (path === '/auth/logout') {
       if (server.logoutStatus !== 204) return json({}, server.logoutStatus)
       server.user = null
       return new Response(null, { status: 204 })
+    }
+    if (path === '/me/profile?view=edit') return server.profile ? json(server.profile) : json({ detail: '내 정보가 아직 없습니다.' }, 404)
+    if (path === '/me/profile' && options?.method === 'PUT') {
+      server.savedProfile = JSON.parse(options.body)
+      if (server.user) server.user = { ...server.user, profile_completed: true }
+      return json({ name: server.savedProfile.name, dept: server.savedProfile.dept, phone_masked: '010-****-5678', address: server.savedProfile.address })
     }
     return json({ detail: '인증이 필요합니다.' }, 401)
   }))
@@ -121,6 +121,89 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByRole('button', { name: '내 계정' })).toBeNull()
     await screen.findByLabelText('아이디')
     expect(window.location.pathname).toBe('/login')
+  })
+
+  it('forces an incomplete user from every protected URL into the first registration step', async () => {
+    server.user = { ...A, profile_completed: false }
+    window.history.replaceState({}, '', '/admin')
+    render(<App />)
+    await screen.findByRole('heading', { name: '어느 팀에서 일하시나요?' })
+    expect(window.location.pathname).toBe('/myinfo')
+    expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).toBeNull()
+  })
+
+  it('shows all six fields on the completed-user profile edit screen and saves only the profile API fields', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    expect(await screen.findByLabelText('소속 팀 *')).toBeTruthy()
+    await userEvent.selectOptions(screen.getByLabelText('업무 역할 * (저장 연동 준비 중)'), '개발자')
+    const service = screen.getByLabelText('담당 서비스 * (저장 연동 준비 중)')
+    await userEvent.type(service, '결제 API')
+    expect(screen.getByLabelText('이름 *')).toBeTruthy()
+    const phone = screen.getByLabelText('전화번호 *')
+    expect(phone.getAttribute('placeholder')).toBe('예시) 010-1234-5678')
+    const address = screen.getByLabelText('근무지 주소 (선택)')
+    expect(address.className).toBe('profile-address-field')
+    await userEvent.clear(service)
+    expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(true)
+    await userEvent.type(service, '결제 API')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '' })
+  })
+
+  it('keeps all five registration steps and saves the profile before entering chat', async () => {
+    server.user = { ...A, profile_completed: false }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '어느 팀에서 일하시나요?' })
+    expect(screen.getByText('소속된 팀을 선택해 주세요.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '이전' })).toBeNull()
+    await userEvent.click(await screen.findByRole('button', { name: '보안' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
+    expect(screen.getByText('주로 담당하는 업무 역할을 선택해 주세요.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '이전' })).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: '개발자' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 서비스를 담당하시나요?' })).toBeTruthy()
+    expect(screen.getByText('담당하는 서비스를 등록해 주세요.')).toBeTruthy()
+    await userEvent.type(await screen.findByLabelText('담당 서비스'), '결제 API')
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '기본 정보를 입력해 주세요.' })).toBeTruthy()
+    expect(screen.getByText('이름과 전화번호는 필수이며, 근무지 주소는 선택 사항입니다.')).toBeTruthy()
+    const nameInput = screen.getByRole('textbox', { name: '이름' })
+    const phoneInput = screen.getByRole('textbox', { name: '전화번호' })
+    const addressInput = screen.getByRole('textbox', { name: '근무지 주소 (선택)' })
+    expect(phoneInput.getAttribute('placeholder')).toBe('예시) 010-1234-5678')
+    expect(addressInput.className).toBe('profile-address-field')
+    expect(nameInput.closest('label').textContent).toContain('*')
+    expect(addressInput.closest('label').textContent).toContain('(선택)')
+    await userEvent.type(nameInput, '홍길동')
+    await userEvent.type(phoneInput, '01112345678')
+    expect(phoneInput.value).toBe('011-1234-5678')
+    expect(screen.getByRole('button', { name: /다음/ }).disabled).toBe(true)
+    await userEvent.clear(phoneInput)
+    await userEvent.type(phoneInput, '0101234567')
+    expect(screen.getByRole('button', { name: /다음/ }).disabled).toBe(true)
+    await userEvent.clear(phoneInput)
+    await userEvent.type(phoneInput, '01012345678999')
+    expect(phoneInput.value).toBe('010-1234-5678')
+    expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '입력한 정보를 확인해 주세요.' })).toBeTruthy()
+    expect(screen.getByText('등록 정보를 확인한 후 완료 버튼을 눌러 주세요.')).toBeTruthy()
+    expect(await screen.findByText('결제 API')).toBeTruthy()
+    expect(screen.getByText('010-1234-5678')).toBeTruthy()
+    expect(screen.getByText('설정하지 않음')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '' })
+    await screen.findByRole('button', { name: '내 계정' })
+    expect(window.location.pathname).toBe('/chat')
   })
 
   it('keeps protected UI hidden while the first /me is pending', async () => {
@@ -276,7 +359,7 @@ describe('React authentication and session isolation', () => {
     server.logoutStatus = status
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
     expect((await screen.findByRole('alert')).textContent).toContain('종료를 확인')
-    await screen.findByRole('button', { name: '내 계정' })
+    expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
     expect(window.location.pathname).toBe('/chat')
     server.logoutStatus = 204
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))

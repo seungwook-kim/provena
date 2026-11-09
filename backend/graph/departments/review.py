@@ -37,8 +37,10 @@ from backend.graph.departments import issue_table as IT
 from backend.graph.departments import teams as T
 from backend.graph.decision.repo import TEAM_FAILED_KIND
 from backend.graph.departments.store import InMemoryIssueTableStore, IssueTableStore
+from backend.graph.mcp_retriever import default_retriever
 from backend.graph.parsing import parse_json_obj
 from backend.prompts import question as P
+from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
 from backend.schemas.chunk import DEFAULT_K
 from backend.services.llm import get_chat_model
@@ -85,6 +87,8 @@ class ReviewState(TypedDict, total=False):
 
 def _text(msg: Any) -> str:
     c = getattr(msg, "content", msg)
+    if isinstance(c, list):  # 블록 목록(Anthropic API가 생각 블록과 함께 돌려줄 때): 글 블록만 잇는다
+        return "".join(b if isinstance(b, str) else str(b.get("text") or "") for b in c if isinstance(b, str) or (isinstance(b, dict) and b.get("type") == "text"))
     return c if isinstance(c, str) else str(c)
 
 
@@ -131,13 +135,7 @@ def build_review_graph(
     - use_skills: None이면 환경변수 USE_SKILLS를 따른다.
     - approvals: 승인함 저장소(`DecisionRepo`). 서버는 반드시 넘긴다. None이면 승인함에 올리지 않는다(그래프만 도는 시험용).
     """
-    if retriever is None:
-        def retrieve(q: SearchQuery) -> list[Chunk]:
-            from backend.rag.retrieve import search
-
-            return search(q)
-    else:
-        retrieve = retriever
+    retrieve = retriever if retriever is not None else default_retriever
     llm = llm if llm is not None else get_chat_model()
     store = store if store is not None else InMemoryIssueTableStore()
 
@@ -177,7 +175,7 @@ def build_review_graph(
 
     def review_team(team: T.Team, state: ReviewState) -> dict:
         request = state["question"].strip()
-        skill_body = T.load_team_skill(team, enabled=use_skills)  # 설정 오류는 다시 해도 같다. 바깥에서 "검토하지 못함"이 된다
+        skill_body = T.team_skills(team, enabled=use_skills)  # 설정 오류는 다시 해도 같다. 바깥에서 "검토하지 못함"이 된다
         query = SearchQuery(query=T.search_text(team, request), org=team.org, as_of=state.get("as_of"), k=SEARCH_K)
         found: list[dict] | None = None  # 검색이 한 번 되면 그 결과로 모델만 다시 돌린다. 인용 검사도 같은 자료와 맞댄다
         failure: dict = {}
@@ -185,7 +183,7 @@ def build_review_graph(
         for attempt in range(1, TEAM_ATTEMPTS + 1):
             try:
                 if found is None:
-                    found = [c.model_dump() for c in retrieve(query)]
+                    found = [redact_chunk(c.model_dump()) for c in retrieve(query)]
                 private = [c for c in found if IT.is_private(c)]
                 public = [c for c in found if not IT.is_private(c)]
                 if not public:  # 근거가 없는 것은 실패가 아니라 결과다. 다시 찾아도 같다
@@ -216,6 +214,7 @@ def build_review_graph(
 
     def team_node(team: T.Team):
         def run(state: ReviewState) -> dict:
+            started = time.perf_counter()
             try:
                 res = review_team(team, state)
             except Exception as e:  # noqa: BLE001 - 한 팀의 실패가 전체를 멈추거나 조용히 빠지지 않게 한다. 비용 상한만 그대로 올린다
@@ -223,7 +222,7 @@ def build_review_graph(
                     raise
                 log.warning("팀 에이전트 실패 %s: %s", team.team_id, type(e).__name__)
                 res = not_reviewed(team, f"검토 중 오류가 나 검토하지 못했습니다 ({type(e).__name__}).")
-            return {"team_results": {team.team_id: res}}
+            return {"team_results": {team.team_id: {**res, "seconds": round(time.perf_counter() - started, 3)}}}  # 표 해시와 승인 id에 들어가지 않는 칸이다
 
         return run
 

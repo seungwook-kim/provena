@@ -1,15 +1,16 @@
 fastapi>=0.115
+sse-starlette>=2.1
 uvicorn[standard]>=0.32
-sse-starlette>=3.0                    # POST /chat의 SSE 응답(backend/api/routes.py). 3.6.0으로 시험
 pydantic>=2.9
 python-dotenv>=1.0
 bcrypt>=4.2,<5
 PyJWT>=2.9,<3
+cryptography>=42
 openai>=1.60                          # OpenRouter도 이 SDK로 부릅니다(base_url만 교체)
 langfuse>=4                           # G6, langfuse.langchain.CallbackHandler(v3 이상 API)
 langchain-openai>=1.7                 # LLM_PROVIDER=openrouter·openai (backend/services/llm.py)
 langchain-anthropic>=1.7              # LLM_PROVIDER=anthropic
-langgraph>=1.0,<1.3                   # G4. backend/graph/multi.py가 컴파일된 그래프의 내부 구조(builder)를 읽는다. 1.2.18로 시험
+langgraph>=1.0                        # G4
 langgraph-checkpoint-postgres>=3.0    # 체크포인트를 DB에 (G4)
 psycopg[binary,pool]>=3.2
 pgvector>=0.3
@@ -17,7 +18,13 @@ rank-bm25>=0.2                        # 하이브리드의 키워드 쪽 (형태
 markdown-it-py>=4.0                   # 핸드북 Markdown 파싱, 원본 줄 번호(token.map). 표본 20쪽 파서 비교로 선택 (B-2)
 beautifulsoup4>=4.12                  # 권한표 CSS grid·본문 HTML 표 파싱 (B-2)
 lxml>=6.1                             # beautifulsoup4 의 HTML 엔진 (PRD 9장 라이브러리 표)
-# 검색(backend/rag/retrieve/, docs/specs/search.md). 로컬 모델용 torch·sentence-transformers·transformers·huggingface-hub는 requirements-local-models.txt로 옮겼다(서비스 이미지에는 넣지 않음)
+# 검색(backend/rag/retrieve/, docs/specs/search.md). torch는 CPU판만 받는다 — Linux에서 PyPI 기본판은 CUDA가 딸려와 1GB+.
+# 아래 주소에서 받은 CPU판(+cpu)이 같은 번호의 기본판보다 먼저 골라진다(PEP 440 로컬 버전).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.5                            # 임베딩·리랭커 실행(sandbox 2.15.0+cpu로 확인)
+sentence-transformers>=5.4            # 임베딩·CrossEncoder 리랭커. 5.4+는 Qwen3-Reranker 판을 CrossEncoder로 읽는다(sandbox 6.2.0)
+transformers>=5.0                     # Qwen3 리랭커(yes/no 확률), 모델 판 폴더 직접 읽기(sandbox 5.21.0)
+huggingface-hub>=1.0                  # 고정 판(커밋) 모델 받기·오프라인 확인(sandbox 2.3.0)
 numpy>=2.0
 fastmcp==4.1.4                        # 읽기 전용 MCP 도구 3개(extras/mcp_skill, docs/specs/mcp.md). PRD 319줄 4.x, 판 고정
 langchain[mcp]==1.4.9                 # MCP 클라이언트(extras/mcp_skill/mcp_client). PRD 319줄 langchain[mcp](베타), 판 고정

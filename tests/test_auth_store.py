@@ -19,6 +19,8 @@ from backend.services.auth_store import REVOCATION_SCHEMA_FILE, SCHEMA_FILE, Pos
 from backend.services.demo_seed import seed_demo_accounts
 
 LOCAL = {"PROVENA_ENV": "local", "PROVENA_DEV_MODE": "1"}
+# Test-only AES-256 key. This is deliberately not a production or developer secret.
+TEST_PROFILE_ENC_KEYS = "1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 
 # ---- 가짜 연결 -------------------------------------------------------------
@@ -43,6 +45,27 @@ class FakeConn:
     def execute(self, sql, params=None):
         self.log.append((sql, params))
         return FakeCursor(self.row)
+
+
+class Transaction:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class ApprovalConn(FakeConn):
+    def transaction(self):
+        return Transaction()
+
+    def execute(self, sql, params=None):
+        self.log.append((sql, params))
+        if "INSERT INTO users" in sql:
+            return FakeCursor((uuid4(), params[0], params[1], "user", False))
+        if "SELECT r.request_id" in sql:
+            return FakeCursor((7, "pending"))
+        return FakeCursor(None)
 
 
 def fake_store(row=None):
@@ -79,6 +102,27 @@ def test_get_by_user_id_accepts_str_and_uuid_and_rejects_garbage_without_query()
 def test_missing_user_returns_none():
     store, _, _ = fake_store(None)
     assert store.get_by_login_id("nobody") is None
+
+
+def test_pending_signup_is_created_inactive_and_review_updates_account_gate():
+    log, conns = [], []
+
+    def connect():
+        conns.append(ApprovalConn(log, None))
+        return conns[-1]
+
+    store = PostgresAuthStore(connect=connect)
+    store.create_pending_user("new-user", "bcrypt-hash")
+    store.review_signup_request("new-user", "approved", uuid4())
+
+    assert "is_active) VALUES (%s, %s, 'user', false)" in log[0][0]
+    assert any("UPDATE users SET is_active = %s" in sql and params[0] is True for sql, params in log)
+
+
+def test_password_change_does_not_reactivate_account():
+    store, log, _ = fake_store((uuid4(), "pending-user", "new-hash", "user", False))
+    store.set_password("pending-user", "new-hash")
+    assert "is_active = true" not in log[0][0]
 
 
 def test_upsert_user_rejects_unknown_role_and_uses_conflict_update():
@@ -156,8 +200,9 @@ def test_seed_skips_account_with_empty_password():
 
 # ---- main.py 연결 ----------------------------------------------------------
 def _app(monkeypatch, **env):
-    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE"):
+    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE", "PROFILE_ENC_KEYS"):
         monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("PROFILE_ENC_KEYS", TEST_PROFILE_ENC_KEYS)
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     from backend.main import create_app
@@ -215,6 +260,17 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     uid, password = uuid4(), secrets.token_urlsafe(12)
     row = (uid, "demo-user", hash_password(password), "user", True)
     monkeypatch.setattr("backend.main.PostgresAuthStore", lambda dsn: fake_store(row)[0])
+    class FakeProfileStore:
+        def __init__(self, _dsn):
+            pass
+
+        def ensure_schema(self):
+            pass
+
+        def exists(self, _user_id):
+            return False
+
+    monkeypatch.setattr("backend.main.PostgresProfileStore", FakeProfileStore)
     app = _app(monkeypatch, DATABASE_URL="postgresql://u:p@db/x", AUTH_SECRET=secrets.token_urlsafe(32), **LOCAL)
     client = TestClient(app)
     assert client.get("/auth/csrf").status_code == 204
@@ -224,7 +280,9 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     ok = client.post("/auth/login", json={"login_id": "demo-user", "password": password}, headers=headers)
     assert ok.status_code == 200 and ok.json() == {"user_id": str(uid), "role": "user"}
     assert client.cookies.get(AUTH_COOKIE_NAME)
-    assert client.get("/me").json() == {"user_id": str(uid), "role": "user"}
+    assert client.get("/me").json() == {
+        "user_id": str(uid), "role": "user", "profile_completed": False, "is_owner": False
+    }
     assert client.post("/auth/logout", headers=headers).status_code == 204
     assert client.get("/me").status_code == 401
 
@@ -244,9 +302,6 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         def ensure_schema(self):
             pass
 
-        def upsert_user(self, login_id, password_hash, role):
-            pass
-
         def get_by_login_id(self, login_id):
             return self.user if login_id == self.user.login_id else None
 
@@ -263,10 +318,22 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         def revoke(self, jti, _expires_at):
             revocations.add(jti)
 
+    class FakeProfileStore:
+        def __init__(self, _dsn):
+            pass
+
+        def ensure_schema(self):
+            pass
+
+        def exists(self, _user_id):
+            return False
+
     for key, value in {"DATABASE_URL": "postgresql://test", "AUTH_SECRET": secrets.token_urlsafe(32), **LOCAL}.items():
         monkeypatch.setenv(key, value)
+    monkeypatch.setenv("PROFILE_ENC_KEYS", TEST_PROFILE_ENC_KEYS)
     monkeypatch.setattr("backend.main.PostgresAuthStore", FakeAuthStore)
     monkeypatch.setattr("backend.main.PostgresTokenRevocationStore", FakeRevocationStore)
+    monkeypatch.setattr("backend.main.PostgresProfileStore", FakeProfileStore)
 
     app = create_app()
     assert isinstance(app.state.token_revocation_store, FakeRevocationStore)
@@ -281,15 +348,12 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         assert client.get("/me").status_code == 401
 
 
-@pytest.mark.skipif(not (WEB_DIR / "react-app" / "dist" / "index.html").is_file(), reason="React production build 없음")
-def test_react_entry_and_spa_fallback_do_not_shadow_api(monkeypatch):
+@pytest.mark.skipif(not (WEB_DIR / "login.html").is_file(), reason="web/login.html 없음 (로그인 화면 PR 전)")
+def test_root_redirects_to_login_page_and_static_files_do_not_shadow_api(monkeypatch):
     client = TestClient(_app(monkeypatch))
-    root = client.get("/")
-    assert root.status_code == 200 and '<div id="root"></div>' in root.text
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code in (302, 307) and root.headers["location"] == "/login.html"
     assert client.get("/login.html").status_code == 200
-    assert client.get("/chat").status_code == 200
-    assert client.get("/admin").status_code == 200
-    assert client.get("/api/not-found").status_code == 404
     assert client.get("/health").json() == {"status": "ok"}
 
 

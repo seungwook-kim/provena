@@ -132,6 +132,36 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 - 데모 계정 값은 내 PC용 공개 데모 값이다. 서명 키(`AUTH_SECRET`)는 저장소에 두지 않고, 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만든다(재시작하면 다시 로그인). 배포(Cloud Run)와 제출하는 평가용 계정은 이 값과 다르고 저장소에 적지 않는다.
 - 실제 모델로 호출하려면 `.env`에 키를 넣고 `DEMO_MODE=0`으로 바꾼다. 키는 `.env`에만 둔다(커밋 금지).
 
+### Cloud Run 재배포
+
+배포 서비스는 Google Cloud Run의 `provena-api`이다. 프로젝트는 `provena-team`, 리전은 `asia-northeast3`, 컨테이너 포트는 8000이고 소스 배포로 올린다. 배포 담당 조원이 알려 준 재배포 명령은 다음과 같다.
+
+```bash
+gcloud run deploy provena-api --source . --project provena-team --region asia-northeast3 --port 8000 --allow-unauthenticated --max-instances 1
+```
+
+- `--allow-unauthenticated`는 서비스 주소를 인증 없이 열어 두는 설정이다. 사용자 구분은 앱의 로그인(`/auth/login`)이 한다.
+- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다.
+- `.gcloudignore`가 없어 소스 업로드 대상은 `.gitignore`를 따른다. `.env`는 `.gitignore`에 있어 올라가지 않으므로 값은 서비스의 환경변수로 따로 넣는다.
+- `PROVENA_ENV`, `PROVENA_DEV_MODE`는 배포에서 설정하지 않는다(로컬 데모 전용 스위치, `.env.example`).
+- 운영 DB(Supabase)의 스키마와 2026-11-09 확인 결과는 [db/db.md](./db/db.md)를 따른다. LangGraph 체크포인트·Store 표는 앱 첫 기동 때 만들어진다.
+
+배포에 필요한 환경변수 이름은 다음과 같다. 값은 이 저장소에 적지 않는다.
+
+| 이름 | 용도 |
+|---|---|
+| `AUTH_SECRET` | 로그인 토큰 서명 키(32바이트 이상). 없으면 배포 모드에서는 서버가 시작하지 않는다 |
+| `DATABASE_URL` | 운영 Supabase 풀러 연결 문자열. 이 값이 있어야 로그인, `/chat`, `/threads`, `/me/memory`가 붙는다 |
+| `DATABASE_DIRECT_URL` | 직접 연결 문자열. 스키마 적용처럼 오래 걸리는 작업에만 쓰고 앱은 읽지 않는다 |
+| `LLM_PROVIDER`, `LLM_API_KEY` | LLM 호출 방식과 키. 키가 없으면 가짜 모델을 쓴다 |
+| `VOYAGE_API_KEY` | 질문 임베딩 키. 없으면 검색은 빈 결과(`no_key`)로 끝난다 |
+| `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
+| `PROFILE_ENC_KEYS` | 배포 담당이 알려 준 이름이다. 저장소 코드에서 읽는 곳을 찾지 못했다(미확인) |
+
+비밀값(`AUTH_SECRET`, `DATABASE_URL`, `DATABASE_DIRECT_URL`, `LLM_API_KEY`, `VOYAGE_API_KEY`, `GOOGLE_CLIENT_SECRET`, `LANGFUSE_SECRET_KEY`)은 Secret Manager에 두고 서비스에 연결하는 방식을 권장한다. 권장 사항이며, 현재 배포 서비스가 그렇게 설정돼 있는지와 서비스의 현재 상태(환경변수 설정, 최신 `main` 반영 여부)는 2026-11-09에 확인하지 못했다(미확인).
+
 ### 테스트
 
 ```bash
