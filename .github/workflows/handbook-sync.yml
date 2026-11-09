@@ -1,7 +1,7 @@
 # 증분 수집 정시 실행 (가산 자동화, docs/specs/incremental.md). 강사 템플릿(rag 3주차 fixtures/nb_agent11_workflow.json) 방식.
 # 정시 실행(schedule)은 기본 브랜치(main)에 있는 이 파일만 돈다. 멈출 때는 Actions 화면의 "Disable workflow".
-# 필요한 값: secrets.DATABASE_URL(운영 DB, 직접 연결 또는 session mode), secrets.SYNC_ALERT_WEBHOOK(디스코드, 없으면 알림 꺼짐을 로그에),
-#           vars.EMBED_MODEL(색인 장부와 같은 모델. 비우면 코드 기본값)
+# 필요한 값: secrets.DATABASE_URL(운영 DB, 직접 연결 또는 session mode), secrets.VOYAGE_API_KEY(새 글이 있을 때 Voyage로 임베딩),
+#           secrets.SYNC_ALERT_WEBHOOK(디스코드, 없으면 알림 꺼짐을 로그에), vars.EMBED_MODEL(색인 장부와 같은 모델. 비우면 코드 기본값 voyage-4)
 name: handbook-sync
 
 on:
@@ -43,8 +43,9 @@ jobs:
         run: python -m backend.rag.ingest.schedule --once
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}   # 기본 모델 voyage-4는 API라 새 글이 있는 날 이 키가 없으면 임베딩이 실패한다
           EMBED_MODEL: ${{ vars.EMBED_MODEL }}
-          HF_HUB_OFFLINE: "0"         # 새 글이 있을 때만 모델을 받는다(고정 판)
+          HF_HUB_OFFLINE: "0"         # 로컬 모델 후보를 쓸 때만 의미가 있다(voyage-4는 내려받지 않음)
       - name: 삭제 보류 알림
         if: success() && steps.sync.outputs.held != ''   # 성공이지만 목록이 불완전해 삭제를 미룬 날(실패 아님)
         env:
