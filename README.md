@@ -269,6 +269,7 @@ Dockerfile, docker-compose.yml   `docker compose up` 한 줄 실행
 - 서비스(`/chat`)가 쓰는 그래프는 단일 질문 그래프(`backend/graph/build.py`의 `build_graph`) 하나다. 질의 분석(`classify`)이 질문을 정책 질문, 결정표, 팀 합동 검토, 도메인 밖 거절로 갈라 보낸다(`backend/main.py`의 `build_question_graph`).
 - Supervisor와 서브에이전트 3개(검색·작성·검증)로 나눈 멀티 그래프(`backend/graph/multi.py`)는 정책 질문 경로에서 **단일 그래프와 같은 노드와 프롬프트를 Supervisor 아래에 다시 연결한 형태**다. 노드를 복사하지 않고 단일 그래프에서 꺼내 쓰며, 같은 입력에서 최종 상태·LLM 입력·검색 호출이 단일과 같은지 시험이 확인한다(`tests/test_multi_graph.py`의 `test_multi_ends_exactly_like_single`, `test_agents_use_the_single_graph_nodes_not_copies`). 그래서 이 경로에서 역할을 나눈 것이 답을 바꾸도록 설계된 것은 아니며, 단일 대 멀티 측정에서도 차이는 같은 조건 3회의 흔들림 안이었다([EVAL_REPORT.md](./EVAL_REPORT.md) 4장). `backend/` 안에서 `build_multi_graph`를 부르는 코드는 없고 측정 실행기와 시험이 쓴다.
 - 역할이 실제로 나뉜 경로는 **팀 합동 검토**다. 보안·인프라·IT 운영·재무 팀 에이전트 4개가 팀마다 다른 프롬프트와 검색어로 쟁점을 내고 한 표로 합친다(`backend/graph/departments/`). 이 경로는 단일 그래프 대비 측정이 없다.
+- 왜 그래프로 만들었는지와 질문 종류 판정이 틀리는 한계(측정한 오분류 사례와 측정하지 못한 경우)는 [EVAL_REPORT.md](./EVAL_REPORT.md) 4장 "왜 그래프인가"와 5장 5-2절의 "분류 오류" 행에 있다.
 
 ## 시크릿 규칙 (위반 시 전원에게 노출됩니다)
 
