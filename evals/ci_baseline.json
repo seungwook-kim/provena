@@ -1,0 +1,29 @@
+{
+  "source": "EVAL_REPORT.md 4장 최종 두 행 (단일 최종, Supervisor + 서브에이전트 최종): evals/results/agent_v2_q_d6151_r1_bo2sda2_api, _r2_, _r3_ 의 3회 평균. 평가셋 dataset_v2.jsonl 현재 동결 해시로 잰 값. 이 값보다 나빠진 결과는 CI 비교 단계가 실패시킨다. 새 측정으로 기준을 올릴 때만 이 파일을 고친다.",
+  "dataset": "dataset_v2.jsonl",
+  "runs": [
+    "agent_v2_q_d6151_r1_bo2sda2_api",
+    "agent_v2_q_d6151_r2_bo2sda2_api",
+    "agent_v2_q_d6151_r3_bo2sda2_api"
+  ],
+  "arms": {
+    "single": {
+      "cited_correct_rate": 0.996,
+      "citation_accuracy": 1.0,
+      "correct_refusal_rate": 1.0,
+      "over_refusal_rate": 0.0,
+      "hallucination_risk_rate": 0.0,
+      "wrong_citation_rate": 0.0,
+      "latency_p95_s": 9.806
+    },
+    "multi": {
+      "cited_correct_rate": 0.991,
+      "citation_accuracy": 0.992,
+      "correct_refusal_rate": 1.0,
+      "over_refusal_rate": 0.0,
+      "hallucination_risk_rate": 0.0,
+      "wrong_citation_rate": 0.027,
+      "latency_p95_s": 9.695
+    }
+  }
+}

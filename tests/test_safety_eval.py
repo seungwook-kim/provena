@@ -26,6 +26,15 @@ def case_of(case_id: str) -> dict:
     return next(c for c in load_cases() if c["id"] == case_id)
 
 
+@pytest.fixture(autouse=True)
+def _only_the_older_code_defenses(monkeypatch):
+    """이 파일은 이전부터 있던 코드 방어(인용 대조, 유출 검사, 승인 전 실행 금지 등)를 하나씩 빼 보는 시험이다.
+    새 방어(입력 정화, 출력 검사, PREREGISTER 62.1, 서비스 기본값은 켬)는 같은 지시문을 먼저 빼 버려 그 시험이 보려는 줄에 닿기 전에 막으므로 여기서는 끈다.
+    새 방어의 시험은 `tests/test_untrusted.py`에 있다."""
+    monkeypatch.setenv("GRAPH_SANITIZE_INPUT", "0")
+    monkeypatch.setenv("GRAPH_SCRUB_OUTPUT", "0")
+
+
 @pytest.fixture(scope="module")
 def default_mode():
     return rs.Mode("default")

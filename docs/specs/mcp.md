@@ -2,7 +2,7 @@
 
 > 2026-11-06: 팀장 결정(결정 0062)으로 저장된 답의 근거 판정 기록(`get_grounding`) 도구 1개를 더했다(아래 "도구 6" 절). 도구 수가 강의 실습 목표(워크플로 도구 3~5개, AI Agent 4. MCP_Server 03강·07강)를 하나 넘는다(열린 항목 10). 다른 도구 5개의 약속은 그대로다.
 > 2026-11-05: 조장 요청으로 결정표 실행 결과(`explain_decision`)·체크포인트 실행 단계(`get_agent_trace`) 도구 2개를 더했다(아래 "도구 4·5" 절). 검색 도구 3개의 약속은 그대로다.
-> 2026-11-03판(구현과 같이 고침, 조장 확인 전). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 486줄(시험), 501줄(섹션 조회), 529줄(같은 서비스)과 PRD 319줄(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
+> 2026-11-03판(구현과 같이 고침, 조장 확인 전, 당시 검색 도구 3개 기준이며 현재 도구는 6개). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 486줄(시험), 501줄(섹션 조회), 529줄(같은 서비스)과 PRD 319줄(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
 
 ## Why
 
@@ -16,7 +16,7 @@
 
 ## Goal
 
-- **해결 목표**: 검색·섹션 조회·바뀐 섹션 목록을 읽기 전용 MCP 도구 3개로 연다. 도구는 `backend/rag/` 함수를 감싸기만 하고 검색 로직을 다시 짜지 않는다. 쓰기·실행 도구는 내보내지 않는다.
+- **해결 목표**: 검색·섹션 조회·바뀐 섹션 목록을 읽기 전용 MCP 도구로 연다(검색 3개로 시작해 현재 6개, 아래 "도구 4·5"·"도구 6" 절). 도구는 `backend/rag/` 함수를 감싸기만 하고 검색 로직을 다시 짜지 않는다. 쓰기·실행 도구는 내보내지 않는다.
 - **성공 기준**
   - 도구는 정확히 6개(검색 `search_handbook`, `get_section`, `list_changed_sections` + `explain_decision`, `get_agent_trace`, `get_grounding`)이고 이름·입력 이름은 ASCII만 쓴다. 6개는 강의 실습 목표(AI Agent 4. MCP_Server 03강 학습 목표 "도구를 3~5개로 다시 설계했다."·07강 과제 "워크플로 단위 도구 3~5개")를 하나 넘는다. 강의는 도구 수보다 사용자 작업 단위와 같은 조건 A/B 평가로 판단하라고 한다(00강 "좋은 MCP 서버는 도구 수가 아니라, 사용자의 작업과 평가 결과로 판단합니다."·03강 "도구 수 축소가 선택을 개선하는지는 외부 사례가 아니라 같은 조건의 A/B로 확인합니다."). `get_grounding`은 팀장 결정(결정 0062)으로 더했고, 도구 선택이 나빠지는지는 열린 항목 10에서 본다. 더 늘리려면 다른 도구를 줄이거나 합칠지 먼저 본다.
   - MCP로 부른 `search_handbook` 결과 = `search()` 직접 호출 결과(chunk_id 순서까지, v1 30문항 30/30).
@@ -111,7 +111,7 @@
 | `docs/specs/mcp.md` | 이 Spec | 박진형 |
 | `backend/rag/retrieve/section.py`, `tests/test_retrieve_section.py` | `get_section`·`section_names` | 박진형 |
 | `backend/rag/ingest/changes.py`, `tests/test_ingest_changes.py` | `list_changed` | 박진형 |
-| `extras/mcp_skill/mcp_server/server.py`, `tests/test_mcp_server.py`, `NOT_BUILT.md`, `mcp_skill.md` | 도구 3개(시험은 CI가 도는 `tests/`에 둔다, `pytest.ini` testpaths) | 박진형 |
+| `extras/mcp_skill/mcp_server/server.py`, `tests/test_mcp_server.py`, `NOT_BUILT.md`, `mcp_skill.md` | 도구 6개(시험은 CI가 도는 `tests/`에 둔다, `pytest.ini` testpaths) | 박진형 |
 | `backend/main.py` | `/mcp` 붙이기 | 김승욱 리뷰 |
 | `Dockerfile` | `COPY extras/ ./extras/` 한 줄(지금 이미지에 `extras/`가 없다) | 김승욱 리뷰 |
 | `backend/requirements.txt`, `.env.example` | `fastmcp==4.1.4`, `MCP_TOKEN=` | 내 줄만 |

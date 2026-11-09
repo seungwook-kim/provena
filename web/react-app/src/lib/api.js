@@ -111,6 +111,16 @@ export async function saveProfile(profile) {
 }
 
 export function listAdminUsers() { return apiJson('/admin/users') }
+export function listSignupRequests() { return apiJson('/admin/signup-requests') }
+
+export async function reviewSignupRequest(loginId, action) {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/${encodeURIComponent(loginId)}/${action}`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
 
 export async function changeAdminRole(loginId, action) {
   await apiRequest('/auth/csrf')
@@ -143,6 +153,9 @@ export async function sendRecallFeedback(noticeId, useful, reason = null) {
   return apiJson(`/recalls/${encodeURIComponent(noticeId)}/feedback`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ useful, reason }) })
 }
 export function getApprovals() { return apiJson('/approvals') }
+export async function postApprovalDecision(approvalId, body) {
+  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(body) })
+}
 export function getDecisionTables() { return apiJson('/decision-tables') }
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }
 export async function decideMaintenanceCandidate(candidateId, status) {

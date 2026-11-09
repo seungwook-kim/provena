@@ -44,6 +44,7 @@ from backend.graph.parsing import parse_json_obj
 from backend.graph.state import AgentState
 from backend.memory.profile import get_profile
 from backend.prompts import question as P
+from backend.graph import untrusted as U
 from backend.prompts.question import leaks_internal
 from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
@@ -1102,6 +1103,12 @@ def build_graph(
     def verify(state: AgentState) -> dict:
         if leaks_internal(state.get("answer", "")):
             return {"kind": "refuse", "answer": MSG_REFUSE_LEAK, "citations": [], "dropped_citations": []}
+        if U.scrub_enabled():  # 출력 검사(GRAPH_SCRUB_OUTPUT, 기본 꺼짐): 검색 원문의 지시 문장에서 온 표식·문장을 옮긴 답 문장을 뺀다. 남는 문장이 없으면 거절한다
+            scrubbed, removed = U.scrub_answer(state.get("answer", ""), state.get("chunks", []), state["question"])
+            if removed:
+                if not scrubbed.strip():
+                    return {"kind": "refuse", "answer": MSG_REFUSE_LEAK, "citations": [], "dropped_citations": []}
+                state = {**state, "answer": scrubbed}
         missing = G.period_missing(state["question"], state.get("answer", ""), state.get("period_covered"))
         if missing:  # 요청한 기간의 자료가 없다고 스스로 밝힌 답은 가까운 기간 값을 인용했어도 답으로 내지 않는다
             info = {"rules": "skipped(period_missing)", "llm": "off", "reason": G.OUT_OF_PERIOD, "detail": missing}
@@ -1160,7 +1167,7 @@ def build_graph(
         cited_ids = {c["chunk_id"] for c in cited}
         raw = [{"chunk_id": i} for i in dict.fromkeys(_MARK.findall(pruned.answer)) if i in cited_ids]
         valid, dropped, cleaned = check_citations(raw, chunks, pruned.answer)
-        if not valid or not cleaned or dropped or leaks_internal(cleaned):
+        if not valid or not cleaned or dropped or leaks_internal(cleaned) or U.leaks_instruction(cleaned, chunks, question):
             rec["result"] = "citation_check_failed"
             return None
         again = G.check_rules(question, valid, chunks)
@@ -1201,7 +1208,7 @@ def build_graph(
             rec["result"] = "empty"
         elif G.same_text(text, state.get("answer", "")):  # 그대로면 판정 결과도 같다
             rec["result"] = "unchanged"
-        elif leaks_internal(text) or G.period_missing(question, text, obj.get("period_covered")):
+        elif leaks_internal(text) or U.leaks_instruction(text, chunks, question) or G.period_missing(question, text, obj.get("period_covered")):
             rec["result"] = "answer_check_failed"
         if rec["result"] == "unchanged" and unchanged_rejudge:
             # UR: 판정 사유를 받고도 다시 쓰는 답이 처음 답을 그대로 냈다(두 호출의 의견이 갈림). 처음 답을 같은 입력으로 한 번 더 판정하고 받쳐지면 그대로 낸다

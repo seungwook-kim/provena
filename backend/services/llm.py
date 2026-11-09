@@ -505,14 +505,18 @@ def run_config(
     meta: dict[str, Any] = {"run_mode": mode, "graph": graph_name}
     if thread_id:
         meta["thread_id"] = str(thread_id)
-    meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name))
-    meta.update(metadata or {})
+    # Evaluation traces are explicitly opted into; ordinary requests remain
+    # fail-closed unless content capture is enabled by the operator.
+    evaluation_mode = bool(metadata and metadata.get("eval"))
+    meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name,
+                                      allow_evaluation=evaluation_mode))
+    meta.update(tracing.sanitize_metadata(metadata))
     tracker = CostTracker(
         cost_cap_usd if cost_cap_usd is not None else cost_cap_from_env(),
         default_model=os.environ.get("LLM_MODEL") or DEFAULT_ANTHROPIC_MODEL,
     )
     callbacks: list[Any] = [tracker]
-    handler = tracing.get_handler()
+    handler = tracing.get_handler(allow_evaluation=evaluation_mode)
     if handler is not None:
         callbacks.append(handler)
     recorder = llm_trace.handler()  # `llm_trace.capture()` 안에서만 있다. 평소에는 None

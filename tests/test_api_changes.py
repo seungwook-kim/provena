@@ -27,7 +27,7 @@ def env(monkeypatch):
 
 def test_empty_db_returns_empty_list_not_500(env):
     r = env.client(env.alice).get("/changes")
-    assert r.status_code == 200 and r.json() == {"items": [], "last_run": None, "more": False, "monitoring": "active"}
+    assert r.status_code == 200 and r.json() == {"items": [], "last_run": None, "more": False, "monitoring": "active", "total": 0, "counts": {}}
 
 
 def test_list_shape_order_and_impacted_count(env):
@@ -57,6 +57,27 @@ def test_since_limit_offset(env):
     assert [i["article"] for i in c.get("/changes", params={"since": "2026-10-21"}).json()["items"]] == ["S2", "S1"]
     assert c.get("/changes", params={"since": "2026/10/01"}).status_code == 422
     assert c.get("/changes", params={"limit": 0}).status_code == 422
+
+
+def test_total_and_counts_cover_all_rows_not_just_the_page(env):
+    for i in range(3):
+        env.changes.add(changed(article=f"M{i}", new=f"2026-10-2{i}"))
+    env.changes.add(changed("added", article="A0", new="2026-10-25"))
+    env.changes.add(changed("removed", article="R0", new="2026-10-26"))
+    env.changes.add(changed(article="Old", new="2020-01-01"))                    # since 이전은 세지 않는다
+    c = env.client(env.alice)
+    body = c.get("/changes", params={"since": "2026-10-01", "limit": 2}).json()
+    assert len(body["items"]) == 2 and body["more"] is True
+    assert body["total"] == 5 and body["counts"] == {"modified": 3, "added": 1, "removed": 1}
+    later = c.get("/changes", params={"since": "2026-10-01", "limit": 2, "offset": 4}).json()
+    assert later["total"] == 5 and later["counts"] == body["counts"]             # 쪽을 넘겨도 합계는 같다
+
+
+def test_totals_are_null_when_store_cannot_count(env):
+    env.changes.add(changed())
+    env.changes.count_by_type = lambda since: (_ for _ in ()).throw(RuntimeError("boom"))
+    body = env.client(env.alice).get("/changes", params={"since": "2020-01-01"}).json()
+    assert len(body["items"]) == 1 and body["total"] is None and body["counts"] is None
 
 
 def test_default_since_is_30_days(env):

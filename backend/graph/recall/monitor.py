@@ -66,6 +66,15 @@ class InMemoryChangeStore:
         page = rows[offset: offset + limit + 1]
         return [dict(r) for r in page[:limit]], len(page) > limit
 
+    def count_by_type(self, since: str) -> dict[str, int]:
+        """since 이후 전체 바뀐 섹션 수를 종류(change_type)별로 센다. 목록 쪽수(limit)와 무관한 전체 기준이다."""
+        with self._lock:
+            out: dict[str, int] = {}
+            for r in self.rows.values():
+                if day_of(r) >= since:
+                    out[r["change_type"]] = out.get(r["change_type"], 0) + 1
+            return out
+
     def get(self, event_id_: str) -> dict | None:
         with self._lock:
             r = self.rows.get(event_id_)
@@ -141,6 +150,13 @@ class PgChangeStore:
         rows = self._q(f"{_SELECT} WHERE {_DAY} >= %(since)s::date ORDER BY {_DAY} DESC, ca.created_at DESC, ca.event_id DESC "
                        "LIMIT %(limit)s OFFSET %(offset)s", {"since": since, "limit": limit + 1, "offset": offset})
         return rows[:limit], len(rows) > limit
+
+    def count_by_type(self, since):
+        if not self._has("changed_articles"):
+            return {}
+        rows = self._q(f"SELECT ca.change_type, COUNT(*) AS n FROM changed_articles ca WHERE {_DAY} >= %(since)s::date GROUP BY ca.change_type",
+                       {"since": since})
+        return {r["change_type"]: int(r["n"]) for r in rows}
 
     def get(self, event_id_):
         if not self._has("changed_articles"):

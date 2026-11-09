@@ -20,5 +20,5 @@ beautifulsoup4>=4.12                  # 권한표 CSS grid·본문 HTML 표 파�
 lxml>=6.1                             # beautifulsoup4 의 HTML 엔진 (PRD 9장 라이브러리 표)
 # 검색(backend/rag/retrieve/, docs/specs/search.md). 로컬 모델용 torch·sentence-transformers·transformers·huggingface-hub는 requirements-local-models.txt로 옮겼다(서비스 이미지에는 넣지 않음)
 numpy>=2.0
-fastmcp==4.1.4                        # 읽기 전용 MCP 도구 3개(extras/mcp_skill, docs/specs/mcp.md). PRD 319줄 4.x, 판 고정
+fastmcp==4.1.4                        # 읽기 전용 MCP 도구 6개(extras/mcp_skill, docs/specs/mcp.md). PRD 319줄 4.x, 판 고정
 langchain[mcp]==1.4.9                 # MCP 클라이언트(extras/mcp_skill/mcp_client). PRD 319줄 langchain[mcp](베타), 판 고정

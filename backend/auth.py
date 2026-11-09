@@ -495,6 +495,12 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SignupRequest(BaseModel):
+    login_id: str
+    password: str
+    password_confirmation: str
+
+
 class UserResponse(BaseModel):
     user_id: str
     role: str
@@ -741,6 +747,11 @@ def create_auth_router(
             raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
         password_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
         password_valid = verify_password(payload.password, password_hash)
+        get_status = getattr(store, "get_signup_status", None)
+        if callable(get_status) and user is not None and password_valid:
+            approval_status = get_status(user.user_id)
+            if approval_status in {"pending", "rejected"}:
+                raise HTTPException(status_code=403, detail="account approval is pending or rejected")
         if (user is None or not user.is_active or user.role not in {"user", "admin"}
                 or not password_valid):
             limiter.record_failure(payload.login_id, client_ip)
@@ -758,6 +769,28 @@ def create_auth_router(
         set_auth_cookie(response, token, secure=cookie_secure)
         response.headers["Cache-Control"] = "no-store"
         return UserResponse(user_id=str(user.user_id), role=user.role)
+
+    @router.post("/auth/signup", status_code=201)
+    def signup(request: Request, payload: SignupRequest) -> dict[str, str]:
+        require_csrf(request)
+        login_id = payload.login_id.strip()
+        if (not login_id or len(login_id) > 64 or any(char.isspace() for char in login_id)
+                or payload.password != payload.password_confirmation):
+            raise HTTPException(status_code=422, detail="회원가입 입력값을 확인해 주세요.")
+        try:
+            password_hash = hash_password(payload.password)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="비밀번호는 8자 이상 72바이트 이하이어야 합니다.") from None
+        create_pending = getattr(store, "create_pending_user", None)
+        if not callable(create_pending):
+            raise HTTPException(status_code=503, detail="signup approval storage is unavailable")
+        try:
+            create_pending(login_id, password_hash)
+        except Exception as exc:
+            if type(exc).__name__ == "AccountExistsError":
+                raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
+            raise HTTPException(status_code=503, detail="회원가입을 처리할 수 없습니다.") from None
+        return {"message": "회원가입이 완료되었습니다. 로그인해 주세요."}
 
     @router.get("/auth/google/start", status_code=303)
     def google_start() -> Response:
