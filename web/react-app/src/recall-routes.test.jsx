@@ -277,6 +277,18 @@ describe('live change monitoring route', () => {
     expect(window.location.pathname).toBe('/recalls')
   })
 
+  it('draws the distribution from server totals, not from the loaded page', async () => {
+    server.changes = { ...server.changes, more: true, total: 318, counts: { modified: 280, added: 28, removed: 10 } }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    const card = screen.getByLabelText('변경 유형 분포')
+    await waitFor(() => expect(card.textContent).toContain('총 318건'))
+    expect(card.textContent).toContain('수정280건')
+    expect(card.textContent).toContain('추가28건')
+    expect(card.textContent).toContain('삭제10건')
+    expect(card.textContent).toContain('조회 기간 전체 기준')
+  })
+
   it('does not offer a recall link when no answers are impacted', async () => {
     open('/changes')
     await userEvent.click(await screen.findByRole('button', { name: /Vendor guide/ }))
