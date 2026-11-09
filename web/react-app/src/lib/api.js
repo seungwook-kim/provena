@@ -140,6 +140,9 @@ export async function sendRecallFeedback(noticeId, useful, reason = null) {
   return apiJson(`/recalls/${encodeURIComponent(noticeId)}/feedback`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ useful, reason }) })
 }
 export function getApprovals() { return apiJson('/approvals') }
+export async function postApprovalDecision(approvalId, body) {
+  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(body) })
+}
 export function getDecisionTables() { return apiJson('/decision-tables') }
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }
 export async function decideMaintenanceCandidate(candidateId, status) {
