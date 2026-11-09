@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { SessionProvider } from './components/SessionProvider'
+import DemoLayout from './components/DemoLayout'
 import { useSession } from './lib/session'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -11,7 +12,7 @@ import { DemoAdminBlocked, DemoOnlyChat } from './pages/DemoChatPage'
 import { AdminRouteGuard, DemoRouteGuard } from './pages/DemoPages'
 import MemorySettingsPage from './pages/MemorySettingsPage'
 import ChangeMonitoringPage from './pages/ChangeMonitoringPage'
-import ApprovalsPage, { ApprovalsLivePage } from './pages/ApprovalsPage'
+import ApprovalsPage from './pages/ApprovalsPage'
 import AdminPage, { AdminLivePage } from './pages/AdminPage'
 import RecallPage from './pages/RecallPage'
 import { DevAdminUsersPreview, DevProfilePreview } from './pages/DevPreviewPages'
@@ -30,6 +31,10 @@ function Protected({ children, admin = false }) {
   if (user.profile_completed === false && location.pathname !== '/myinfo') return <Navigate to="/myinfo" replace />
   if (admin && user.role !== 'admin') return <main role="alert" className="status-page">접근 권한이 없습니다. <Link to="/chat">채팅으로 돌아가기</Link></main>
   return children
+}
+
+function FeatureUnavailable({ active, title }) {
+  return <DemoLayout active={active}><main className="status-page"><p role="alert">{title}의 실제 업무 API는 아직 연결되지 않았습니다.</p><p>개발용 화면은 <Link to={`/demo/${active}`}>데모 경로</Link>에서 확인할 수 있습니다.</p></main></DemoLayout>
 }
 
 function LiveRecallRoute() {
@@ -75,7 +80,7 @@ function SessionRoutes() {
     <Route path="/chat" element={<ChatRoute />} />
     <Route path="/recalls" element={<Protected><LiveRecallRoute /></Protected>} />
     <Route path="/changes" element={<Protected><LiveChangeRoute /></Protected>} />
-    <Route path="/approvals" element={<Protected admin><ApprovalsLivePage /></Protected>} />
+    <Route path="/approvals" element={<Protected admin><FeatureUnavailable active="approvals" title="승인함" /></Protected>} />
     <Route path="/admin" element={<Protected admin><AdminLivePage /></Protected>} />
     <Route path="/onboarding" element={<Protected><MemorySettingsPage /></Protected>} />
     <Route path="/demo/chat" element={<DemoRouteGuard><DemoOnlyChat /></DemoRouteGuard>} />

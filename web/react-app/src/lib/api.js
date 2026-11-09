@@ -165,12 +165,10 @@ export async function putChangeMonitoring(status) {
   return apiJson('/changes/monitoring', { method: 'PUT', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
 }
 
-// 결정표·쟁점표는 {approve, comment}, 팀 실패 알림은 {action: 'retry' | 'mark_unreviewed', comment}. 관리자와 CSRF가 필요하다.
-export async function submitApproval(approvalId, decision) {
-  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, {
+export async function submitApproval(approvalId, approve, comment = '') {
+  await apiRequest(`/approvals/${approvalId}`, {
     method: 'POST',
-    headers: await csrfHeaders(),
-    body: JSON.stringify({ approval_id: approvalId, ...decision }),
+    body: JSON.stringify({ approval_id: approvalId, approve, comment }),
   })
 }
 

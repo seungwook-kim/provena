@@ -33,10 +33,3 @@ export const previewAdminService = createAdminService({
   getSnapshot: () => getPreviewAdminSnapshot(),
   subscribe: listener => subscribePreviewAdmin(listener),
 })
-
-// 서버 시각(ISO)을 서울 시간으로 보인다. 승인함(ApprovalsLivePage)이 쓴다.
-export function formatServerTime(value) {
-  const date = new Date(value)
-  if (!value || Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
-}
