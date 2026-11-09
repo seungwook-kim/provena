@@ -39,14 +39,10 @@ from backend.api.middleware import RequestContextMiddleware
 from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
 from backend.auth import AuthStore, TokenRevocationStore, create_auth_router
-from backend.admin_api import check_owner, create_admin_router, owner_check_for
-from backend.profile_api import create_profile_router
 from backend.graph.checkpoint import is_restart_safe
 from backend.graph.decision.routes import create_decision_router, open_decision_runtime
 from backend.services.auth_store import PostgresAuthStore, PostgresTokenRevocationStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
-from backend.services.profile_crypto import ProfileCipher
-from backend.services.profile_store import PostgresProfileStore
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +52,7 @@ BOOTSTRAP_WAIT_SECONDS = 2.0
 KEEPALIVE_SECONDS = 600   # Supabase 무료 플랜 정지 방지: /health가 불릴 때 이 간격으로 DB에 SELECT 1
 
 
-def bootstrap_local_auth(store: PostgresAuthStore, profile_store: PostgresProfileStore | None = None) -> None:
+def bootstrap_local_auth(store: PostgresAuthStore) -> None:
     """로컬 데모에서만: users 테이블을 만들고 데모 계정을 시드한다. DB가 막 뜬 경우를 위해 몇 번 다시 시도한다."""
     for attempt in range(1, BOOTSTRAP_TRIES + 1):
         try:
@@ -68,8 +64,6 @@ def bootstrap_local_auth(store: PostgresAuthStore, profile_store: PostgresProfil
             log.warning("DB 준비 대기 (%d/%d): %s", attempt, BOOTSTRAP_TRIES, type(exc).__name__)
             time.sleep(BOOTSTRAP_WAIT_SECONDS)
     seed_demo_accounts(store)
-    if profile_store is not None:
-        profile_store.ensure_schema()
 
 
 def resolve_auth_secret() -> str | None:
@@ -188,8 +182,6 @@ def create_app(
     가짜 모델로 질문 그래프를 만드는 함수(`graph_factory(app.state)`)를 꽂는다. 비우면 환경변수대로 만든다."""
     database_url = os.getenv("DATABASE_URL")
     store = auth_store if auth_store is not None else (PostgresAuthStore(database_url) if database_url else None)
-    profile_store = PostgresProfileStore(database_url) if database_url else None
-    owner_login_id = os.getenv("PROVENA_OWNER_LOGIN_ID", "").strip()
     if revocation_store is None and database_url:
         revocation_store = PostgresTokenRevocationStore(database_url)
     auth_secret = resolve_auth_secret() if store is not None else None   # 로컬 데모의 무작위 키도 라우터끼리 같아야 한다
@@ -205,9 +197,7 @@ def create_app(
         from backend.graph.service_profile import service_profile
         with service_profile(enabled=graph_factory is None):   # 서비스 기본 설정(61.51)을 환경 변수로 채운다. 시험이 그래프를 꽂으면 바꾸지 않는다
             if store is not None and is_local_demo():
-                bootstrap_local_auth(store, profile_store)
-            if store is not None:
-                check_owner(store, owner_login_id)
+                bootstrap_local_auth(store)
             start_search_warmup()
             with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
                 with open_question_runtime(app_, make_graph, database_url) if store is not None else nullcontext():   # 질문 그래프·대화 목록
@@ -241,27 +231,7 @@ def create_app(
         return {"status": "ok"}
 
     if store is not None:
-        cipher = ProfileCipher.from_env()
-        app.include_router(create_auth_router(
-            store=store,
-            secret=auth_secret,
-            profile_completed=profile_store.exists if profile_store is not None else None,
-            owner_check=owner_check_for(owner_login_id),
-        ))
-        if profile_store is not None:
-            app.include_router(create_profile_router(
-                auth_store=store,
-                profile_store=profile_store,
-                cipher=cipher,
-                secret=auth_secret,
-                revocation_store=revocation_store,
-            ))
-            app.include_router(create_admin_router(
-                store=store,
-                owner_login_id=owner_login_id,
-                secret=auth_secret,
-                revocation_store=revocation_store,
-            ))
+        app.include_router(create_auth_router(store=store, secret=auth_secret))
         app.include_router(create_decision_router(store=store, secret=auth_secret))
         app.include_router(create_api_router(store=store, secret=auth_secret))   # /chat, /threads, /me/memory
     if mcp_app is not None:

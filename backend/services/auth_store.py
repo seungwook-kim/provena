@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -18,28 +17,8 @@ from backend.auth import AuthUser
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "101_auth_users.sql"
 REVOCATION_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "103_auth_token_revocations.sql"
-ADMIN_LOG_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "105_admin_role_log.sql"
-ROLES = frozenset({"user", "admin"})
 
 _COLUMNS = "user_id, login_id, password_hash, role, is_active"
-
-
-class AccountExistsError(Exception):
-    pass
-
-
-@dataclass(frozen=True)
-class UserListRow:
-    login_id: str
-    role: str
-    created_at: datetime
-
-
-@dataclass(frozen=True)
-class SignupRequestRow:
-    login_id: str
-    requested_at: datetime
-    status: str
 
 
 def _default_connect(dsn: str) -> Callable[[], Any]:
@@ -103,134 +82,10 @@ class PostgresAuthStore:
             raise RuntimeError("upsert returned no row")
         return user
 
-    def create_user(self, login_id: str, password_hash: str, role: str) -> AuthUser:
-        if role not in ROLES:
-            raise ValueError("role must be 'user' or 'admin'")
-        user = self._fetch_one(
-            "INSERT INTO users (login_id, password_hash, role) VALUES (%s, %s, %s) "
-            f"ON CONFLICT (login_id) DO NOTHING RETURNING {_COLUMNS}",
-            (login_id, password_hash, role),
-        )
-        if user is None:
-            raise AccountExistsError("login_id already exists")
-        return user
-
-    def create_pending_user(self, login_id: str, password_hash: str) -> AuthUser:
-        """Create a user and its pending approval record in one transaction.
-
-        The table is intentionally not created by application startup. Until the
-        separately approved proposal is applied, this fails closed instead of
-        creating an account that can log in without review.
-        """
-        with self._connect() as conn:
-            with conn.transaction():
-                row = conn.execute(
-                    # A signup request must not be usable before an owner review.
-                    # Keep the approval state in signup_requests, but also create
-                    # the account inactive so older login paths cannot bypass it.
-                    f"INSERT INTO users (login_id, password_hash, role, is_active) VALUES (%s, %s, 'user', false) "
-                    f"RETURNING {_COLUMNS}", (login_id, password_hash)
-                ).fetchone()
-                user = _to_user(row)
-                if user is None:
-                    raise RuntimeError("pending user insert returned no row")
-                conn.execute(
-                    "INSERT INTO signup_requests (user_id, status) VALUES (%s, 'pending')",
-                    (user.user_id,),
-                )
-        return user
-
-    def get_signup_status(self, user_id: UUID | str) -> str | None:
-        try:
-            with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT status FROM signup_requests WHERE user_id = %s", (UUID(str(user_id)),)
-                ).fetchone()
-        except Exception as exc:
-            # Existing databases predating approval have no request table. Such
-            # accounts remain compatible; signup itself still fails closed.
-            if type(exc).__name__ == "UndefinedTable":
-                return None
-            raise
-        return None if row is None else str(row[0])
-
-    def list_signup_requests(self) -> list[SignupRequestRow]:
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT u.login_id, r.requested_at, r.status "
-                "FROM signup_requests r JOIN users u ON u.user_id = r.user_id "
-                "ORDER BY r.requested_at, u.login_id"
-            ).fetchall()
-        return [SignupRequestRow(row[0], row[1], row[2]) for row in rows]
-
-    def review_signup_request(self, login_id: str, status: str, by_user_id: UUID | str) -> str:
-        if status not in {"approved", "rejected"}:
-            raise ValueError("invalid signup status")
-        with self._connect() as conn:
-            with conn.transaction():
-                row = conn.execute(
-                    "SELECT r.request_id, r.status FROM signup_requests r "
-                    "JOIN users u ON u.user_id = r.user_id WHERE u.login_id = %s FOR UPDATE",
-                    (login_id,),
-                ).fetchone()
-                if row is None:
-                    return "missing"
-                if row[1] != "pending":
-                    return "unchanged"
-                conn.execute(
-                    "UPDATE signup_requests SET status = %s, reviewed_at = now(), reviewed_by = %s "
-                    "WHERE request_id = %s",
-                    (status, UUID(str(by_user_id)), row[0]),
-                )
-                # Keep the legacy account gate consistent with the authoritative
-                # signup request state in the same transaction.
-                conn.execute(
-                    "UPDATE users SET is_active = %s WHERE login_id = %s",
-                    (status == "approved", login_id),
-                )
-        return "changed"
-
-    def set_password(self, login_id: str, password_hash: str) -> AuthUser | None:
-        return self._fetch_one(
-            # Password changes must not approve or reactivate an account.
-            f"UPDATE users SET password_hash = %s WHERE login_id = %s RETURNING {_COLUMNS}",
-            (password_hash, login_id),
-        )
-
-    def list_users(self) -> list[UserListRow]:
-        with self._connect() as conn:
-            rows = conn.execute("SELECT login_id, role, created_at FROM users ORDER BY created_at, login_id").fetchall()
-        return [UserListRow(login_id=row[0], role=row[1], created_at=row[2]) for row in rows]
-
-    def set_role(self, target_login_id: str, new_role: str, by_user_id: UUID | str) -> str:
-        if new_role not in ROLES:
-            raise ValueError("role must be 'user' or 'admin'")
-        action = "promote" if new_role == "admin" else "revoke"
-        by = UUID(str(by_user_id))
-        with self._connect() as conn:
-            with conn.transaction():
-                row = conn.execute(
-                    "SELECT user_id, role, is_active FROM users WHERE login_id = %s FOR UPDATE",
-                    (target_login_id,),
-                ).fetchone()
-                if row is None:
-                    return "missing"
-                target_id, role, is_active = row
-                if not is_active:
-                    return "inactive"
-                if role == new_role:
-                    return "unchanged"
-                conn.execute("UPDATE users SET role = %s WHERE user_id = %s", (new_role, target_id))
-                conn.execute(
-                    "INSERT INTO admin_role_log (by_user_id, target_user_id, action) VALUES (%s, %s, %s)",
-                    (by, target_id, action),
-                )
-        return "changed"
-
     def ensure_schema(self) -> None:
         """Additive auth schemas for fresh and existing local databases."""
         with self._connect() as conn:
-            for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE, ADMIN_LOG_SCHEMA_FILE):
+            for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE):
                 conn.execute(schema_file.read_text(encoding="utf-8"))
 
 
