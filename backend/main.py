@@ -267,8 +267,8 @@ def create_app(
             cipher = ProfileCipher.from_env(allow_ephemeral=is_local_demo())
             app.include_router(create_profile_router(auth_store=store, profile_store=profile_store, cipher=cipher, secret=auth_secret))
             # 화면 주소도 /admin/users라 브라우저가 직접 열면(새로고침) React 화면을 내준다(app.state.react_index, 빌드 없으면 API 그대로)
-            app.include_router(create_admin_router(store=store, owner_login_id=owner_login_id, secret=auth_secret,
-                                                   html_page=lambda: app.state.react_index))
+        app.include_router(create_admin_router(store=store, owner_login_id=owner_login_id, secret=auth_secret,
+                                               html_page=lambda: app.state.react_index))
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 

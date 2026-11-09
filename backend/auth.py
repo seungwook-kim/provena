@@ -53,6 +53,8 @@ MIN_AUTH_SECRET_BYTES = 32
 # Pre-generated bcrypt hash used only to keep the missing-ID path comparable.
 # The plaintext used to create it is intentionally not stored.
 DUMMY_PASSWORD_HASH = "$2b$12$ZYMeUhjatrYhfQ9q1eu/1O7J2e6cMOK79Dh5mAMj3ra4MwL67h1oO"
+SIGNUP_PENDING_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다."
+SIGNUP_REJECTED_MESSAGE = "가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요."
 
 
 class AuthError(Exception):
@@ -745,13 +747,26 @@ def create_auth_router(
             user = store.get_by_login_id(payload.login_id)
         except Exception:
             raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
-        password_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+        signup = None
+        if user is None:
+            get_signup = getattr(store, "get_signup_by_login_id", None)
+            if callable(get_signup):
+                signup = get_signup(payload.login_id)
+        password_hash = user.password_hash if user is not None else (signup[1] if signup else DUMMY_PASSWORD_HASH)
         password_valid = verify_password(payload.password, password_hash)
         get_status = getattr(store, "get_signup_status", None)
         if callable(get_status) and user is not None and password_valid:
             approval_status = get_status(user.user_id)
-            if approval_status in {"pending", "rejected"}:
-                raise HTTPException(status_code=403, detail="account approval is pending or rejected")
+            if approval_status == "pending":
+                raise HTTPException(status_code=403, detail=SIGNUP_PENDING_MESSAGE)
+            if approval_status == "rejected":
+                raise HTTPException(status_code=403, detail=SIGNUP_REJECTED_MESSAGE)
+        elif signup is not None and password_valid:
+            approval_status = signup[0]
+            if approval_status == "pending":
+                raise HTTPException(status_code=403, detail=SIGNUP_PENDING_MESSAGE)
+            if approval_status == "rejected":
+                raise HTTPException(status_code=403, detail=SIGNUP_REJECTED_MESSAGE)
         if (user is None or not user.is_active or user.role not in {"user", "admin"}
                 or not password_valid):
             limiter.record_failure(payload.login_id, client_ip)
