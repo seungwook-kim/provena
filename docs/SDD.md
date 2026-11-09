@@ -287,7 +287,7 @@ flowchart TD
 | POST | `/auth/logout` | 로그인 | |
 | GET | `/me` | 로그인 | 사용자 정보, 역할 |
 | POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
-| GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last` 포함). 남의 thread는 404 `not_found`. 전체 대화 이력은 주지 않는다 (`db/111_threads.sql`) |
+| GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |

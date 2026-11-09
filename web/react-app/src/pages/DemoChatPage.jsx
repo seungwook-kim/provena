@@ -91,6 +91,8 @@ export default function DemoChatPage({ api = false }) {
   const [selectedCitation, setSelectedCitation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)
+  const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
+  const threadRequestRef = useRef(null)
 
   const current = useMemo(() => threads.find(thread => thread.id === selectedId) ?? null, [selectedId, threads])
   const threadRecords = useMemo(() => threads.map(thread => ({ thread, activity: threadTimestamp(thread) })), [threads])
@@ -114,7 +116,9 @@ export default function DemoChatPage({ api = false }) {
   const activeCitationId = activeCitation?.id ?? null
   const processing = processingId !== null
   const approvalPending = isApprovalPending(current)
-  const composerDisabled = loading || processing || approvalPending
+  const threadLoading = threadLoad.id === selectedId && threadLoad.status === 'loading' && !current?.messages?.length
+  const threadError = threadLoad.id === selectedId && threadLoad.status === 'error'
+  const composerDisabled = loading || processing || approvalPending || threadLoading
 
   useEffect(() => {
     if (activeCitationId && typeof citationPanelRef.current?.scrollTo === 'function') citationPanelRef.current.scrollTo({ top: 0, behavior: 'auto' })
@@ -141,6 +145,24 @@ export default function DemoChatPage({ api = false }) {
   useEffect(() => {
     if (typeof location.state?.question === 'string') setInput(location.state.question)
   }, [location.state])
+
+  const firstCitation = thread => thread?.messages?.findLast(message => message.role === 'assistant')?.citations?.[0] ?? null
+
+  async function selectThread(thread) {
+    setSelectedId(thread.id)
+    setSelectedCitation(firstCitation(thread))
+    if (!serviceRef.current) return
+    threadRequestRef.current = thread.id
+    setThreadLoad({ id: thread.id, status: 'loading' })
+    try {
+      const loaded = await serviceRef.current.getThread(thread.id)
+      if (threadRequestRef.current !== thread.id) return
+      if (loaded) setSelectedCitation(firstCitation(loaded))
+      setThreadLoad({ id: thread.id, status: 'idle' })
+    } catch {
+      if (threadRequestRef.current === thread.id) setThreadLoad({ id: thread.id, status: 'error' })
+    }
+  }
 
   async function newConversation() {
     if (processing) return
@@ -177,16 +199,16 @@ export default function DemoChatPage({ api = false }) {
       <p className="demo-thread-list-heading"><span>대화 목록</span>{canSortByActivity && <small>최근 활동순</small>}</p>
       {loading && <div className="demo-thread-state">대화를 불러오는 중입니다.</div>}
       {!loading && visibleThreads.length === 0 && <div className="demo-thread-state">{threads.length ? '검색 결과가 없습니다.' : <>아직 대화가 없습니다.<br />새 대화를 시작해 보세요.</>}</div>}
-      {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => { setSelectedId(thread.id); const answer = thread.messages.findLast(message => message.role === 'assistant'); setSelectedCitation(answer?.citations?.[0] ?? null) }}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
+      {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => selectThread(thread)}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
     </aside>
     <main className="demo-chat-main">
       <div className="demo-chat-status">{processing && <span className="demo-generating">답변을 생성하고 있습니다.</span>}</div>
       <div className="demo-messages">
-        {loading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack"><MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{PREVIEW_SUGGESTIONS.map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
+        {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{PREVIEW_SUGGESTIONS.map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
       <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
     </main>
-    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation(citation)}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd><dt>최종 수정일</dt><dd>{activeCitation.version}</dd></dl><a href="https://handbook.gitlab.com/handbook/finance/procurement/" target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
+    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation(citation)}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd><dt>최종 수정일</dt><dd>{activeCitation.version}</dd></dl><a href={activeCitation.source_url || 'https://handbook.gitlab.com/handbook/'} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
   </div></div></DemoLayout>
 }
 
