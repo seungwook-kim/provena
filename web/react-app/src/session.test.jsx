@@ -507,6 +507,36 @@ describe('React authentication and session isolation', () => {
     })
   })
 
+  it('moves between protected pages without the session checking screen or a remount after /me', async () => {
+    const baseFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn(async (path, options) => {
+      if (String(path).startsWith('/recalls')) return json([])
+      if (String(path).startsWith('/changes')) return json({ items: [] })
+      return baseFetch(path, options)
+    }))
+    await authenticated(A, '/recalls')
+    await screen.findByRole('heading', { name: '리콜 알림' })
+    let sawChecking = false
+    const observer = new MutationObserver(() => { if (document.body.textContent.includes('세션을 확인하고 있습니다.')) sawChecking = true })
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+    try {
+      let resolve
+      server.meHook = () => new Promise(done => { resolve = done })
+      const meBefore = calls.filter(call => call.path === '/me').length
+      act(() => {
+        window.history.pushState({}, '', '/changes')
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+      const heading = await screen.findByRole('heading', { name: '정책 변경 감시' })
+      await waitFor(() => expect(calls.filter(call => call.path === '/me').length).toBe(meBefore + 1))
+      expect(screen.queryByText('세션을 확인하고 있습니다.')).toBeNull()
+      await act(async () => { resolve(json(A)) })
+      expect(screen.getByRole('heading', { name: '정책 변경 감시' })).toBe(heading)
+      expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
+      expect(sawChecking).toBe(false)
+    } finally { observer.disconnect() }
+  })
+
   it('preserves the signup route and its API-unavailable behavior', async () => {
     window.history.replaceState({}, '', '/signup')
     render(<App />)
