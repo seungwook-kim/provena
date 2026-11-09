@@ -46,8 +46,8 @@ flowchart LR
 | 구성 요소 | 하는 일 | 기술 |
 |---|---|---|
 | `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
-| `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜과 웹훅 라우트는 설계됨, 미구현, 11/16까지, 결정 0066) | FastAPI, OpenAPI 자동 문서 |
-| `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프의 연결과 F-05, F-08은 설계됨, 미구현, 11/16까지(결정 0066) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
+| `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜·웹훅·변경 감시 라우트는 `api/recalls.py`, `api/changes.py`) | FastAPI, OpenAPI 자동 문서 |
+| `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
 | `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
@@ -166,7 +166,8 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
-│  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지 (가산: 자동화)
+│  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지, 변경 감시를 멈췄으면 건너뜀 (가산: 자동화)
+│  │  │     snapshot_diff.py      # git 없는 변경 감지(F-07): 두 시점 문서 묶음을 섹션 단위로 비교해 같은 형식의 바뀐 섹션 목록을 만든다
 │  │  └─ retrieve/  retrieve.md
 │  │        embed.py              # 다국어 로컬 임베딩
 │  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
@@ -175,7 +176,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
-│  │  └─ recall/    recall.md     # 리콜 판정 (F-02)
+│  │  └─ recall/    recall.md     # 리콜 판정·알림·웹훅·검토함·요약·영향 미리보기 (F-02, F-05, F-08)
 │  ├─ memory/       memory.md     # Store 장기 기억 (팀·역할·담당 서비스)
 │  └─ prompts/      prompts.md
 │
@@ -275,7 +276,7 @@ flowchart TD
 
 **결정표 변환 (F-04, 관리자 흐름):** 권한표 행 선택 → LLM이 결정표를 처음 작성 → 원문과 셀 대조표 생성 → 사람 승인(interrupt) → 승인되면 `decision_tables`에 저장하고 실행 가능 상태가 된다. 계약 `DecisionRule`(업무 종류 × 금액 구간 → 승인자, 협조 부서)과 권한표 모양이 같다. 권한표는 "업무 승인(Functional)"과 "재무 승인(Financial)"이 따로 있어, 재무 승인자를 `DecisionRule`에 별도 칸으로 둘지 `cooperating_depts`에 담을지 11장에서 정한다. 변환 정확도는 셀 단위로 측정해 공개한다.
 
-**리콜 (F-02, 별도 그래프):** `ChangedArticle` 수신 → 그 섹션을 인용한 과거 답 찾기(코드, `citations` 테이블) → 개정 전후 섹션으로 결론이 바뀌었는지 판정(LLM) → 바뀐 답만 `RecallNotice` 생성. 링크로 연결된 다른 정책은 참조 그래프로 찾아 관리자에게 "함께 볼 정책" 후보로 만든다.
+**리콜 (F-02, 별도 그래프):** `ChangedArticle` 수신 → 그 섹션을 인용한 과거 답 찾기(코드, `citations` 테이블) → 개정 전후 섹션으로 결론이 바뀌었는지 판정(LLM) → 바뀐 답만 `RecallNotice` 생성. 링크로 연결된 다른 정책은 참조 그래프로 찾아 관리자에게 "함께 볼 정책" 후보로 만든다. 판정은 답마다 따로 부르고(사용자 사이 내용이 섞이지 않는다), 판정 설명은 저장 전에 검사한다. 설명이 판정 지시문(20자 이상 겹침)이나 `CANARY-` 같은 표지를 담거나 다른 사용자의 id·질문을 담으면 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다. 확신도가 `RECALL_MIN_CONFIDENCE`(기본 0.5)보다 낮은 알림은 관리자 검토함으로 가고 사용자에게 보이지 않는다. 판정이 "결론 그대로"라 해도 코드 규칙이 금액·승인자·기한·권한 변경이나 섹션 신설·삭제라고 보면 알림을 버리지 않고 같은 검토함에 둔다(`judge_disagrees_with_rule`).
 
 동작 기본값(판정 응답이 깨질 때, 기준일이 신판보다 늦을 때, 쟁점이 0건일 때, 결정표를 지정하지 않을 때, 절·기준일이 없을 때)은 11장 11-2에 모았다.
 
@@ -291,18 +292,24 @@ flowchart TD
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
-| GET | `/recalls` | 로그인 | 내 리콜 알림 (관리자는 전체 + 함께 볼 정책 후보) **설계됨, 미구현, 11/16까지(결정 0066).** |
-| POST | `/recalls/{id}/ack` | 로그인 | 확인 표시 **설계됨, 미구현, 11/16까지(결정 0066).** |
+| GET | `/recalls` | 로그인 | `{items, unread}`. 일반 사용자는 자기 알림 중 볼 수 있는 섹션의 것만, 관리자는 전체와 `review_queue`(관리자 검토함), `candidates`(함께 볼 정책 후보), `judge_failures`(판정이 깨진 알림)를 더 받는다 |
+| GET | `/recalls/{id}` | 로그인 | 알림 한 건. 남의 알림과 검토함·폐기된 알림은 404 `not_found`(관리자는 모두 봄) |
+| POST | `/recalls/{id}/ack` | 로그인, CSRF | 확인 표시. 본인만(남의 알림은 404). 갱신된 알림을 돌려준다 |
+| POST | `/recalls/{id}/review` | 관리자, CSRF | 검토함의 알림을 풀어 주거나(`release`) 폐기(`dismiss`). 검토함에 없으면 409 |
+| GET | `/recalls/feedback-stats`, `/recalls/digests` | 로그인(통계는 관리자) | 의견 집계(유형별 정밀도), 하루 요약 목록(본인 것, 관리자는 전체) |
+| POST | `/recalls/digest/flush`, `/recalls/process-pending` | 관리자, CSRF | 하루 요약 보내기, 쌓인 변경 처리(스위치와 무관하게 한 번 실행) |
+| GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
+| GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 업무시스템의 "승인권자 확인" 호출 |
-| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지) **설계됨, 미구현, 11/16까지(결정 0066).** |
-| POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음 **설계됨, 미구현, 11/16까지(결정 0066).** |
-| POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08) **설계됨, 미구현, 11/16까지(결정 0066).** |
-| POST, GET | `/webhook-subscriptions` | 관리자 | 업무시스템 웹훅 주소 등록·조회. 리콜 알림이 생기면 등록된 주소로 보내고, 실패하면 재시도하고 기록한다 **설계됨, 미구현, 11/16까지(결정 0066).** |
-| GET, POST | `/maintenance-candidates` | 관리자 | 연결 정책 후보 목록, 확인 필요·불필요 판단 **설계됨, 미구현, 11/16까지(결정 0066).** |
+| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
+| POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음. 입력은 `changes`(본문 포함 가능) 또는 `pages` 중 하나 |
+| POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08). 알림 한 건에 의견은 하나(다시 보내면 덮어씀) |
+| POST, GET | `/webhook-subscriptions` | 관리자 | 업무시스템 웹훅 주소 등록·조회. 리콜 알림이 생기면 등록된 주소로 보내고, 실패하면 재시도하고 기록한다. 등록은 201이고 주소와 `secret_ref`를 검사해 틀리면 400, 응답에 비밀값은 없다. 전송 기록은 `GET /webhook-deliveries`(관리자) |
+| GET, POST | `/maintenance-candidates`, `/maintenance-candidates/{id}` | 관리자(POST는 CSRF) | 연결 정책 후보 목록(`status` 거름), 확인 필요(`needed`)·불필요(`not_needed`) 판단 |
 | GET | `/health` | 누구나 | 상태 확인 (Supabase 정지 방지 호출 포함: `DATABASE_URL`이 있으면 10분 간격으로 백그라운드 `SELECT 1`, 실패해도 200) |
 
-"설계됨, 미구현"으로 표시한 행은 `backend/`에 라우트가 아직 없다(2026-11-07 확인). F-02 리콜, F-05, F-08의 라우트이며 11/16 코드 동결까지 구현한다(결정 0066).
+리콜·변경 감시 경로(`/recalls*`, `/changes*`)는 브라우저 주소 이동(`Accept: text/html` 또는 `Sec-Fetch-Mode: navigate`)이면 로그인 확인보다 먼저 화면 파일(`index.html`)을 주고, 그 밖의 요청은 API로 처리한다. `/recalls/feedback-stats`, `/recalls/digests`, `/changes/monitoring`은 `/{id}` 경로보다 먼저 등록한다.
 
 **오류 응답 규약.** HTTP 오류 본문은 모두 같은 모양이다: `{"detail": "...", "error": {"code", "message", "request_id"}}`. 검증 오류에는 `error.details`가 더해진다 (`backend/api/errors.py`). 화면과 업무시스템은 HTTP 상태가 아니라 `error.code`로 분기한다.
 
@@ -380,11 +387,15 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | `citations` | answer_id, chunk_id, version_id | graph, recall |
 | `decision_tables` | table_id, rule_seq, version_id, cells(json), status(draft, approved, rejected), approved_by | graph, api |
 | `approvals` | approval_id, kind, thread_id, status, decided_by | graph, api |
-| `recall_notices` | notice_id, answer_id, user_id, changed(json), conclusion_changed, confidence, severity(high, low), acked | graph, api |
-| `recall_feedback` | notice_id, user_id, useful, reason, created_at. 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다 | api, recall |
+| `answer_grounding` | answer_id, grounding(json), skills_used | graph |
+| `recall_events` | event_key(= 수집이 정한 event_id), changed(json), status(running, done, failed), 건수. 같은 개정은 한 번만 처리한다 | recall |
+| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked. UNIQUE (answer_id, event_key) | graph, api |
+| `recall_feedback` | notice_id, user_id, rule_seq, article, pattern, useful, reason. 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다 | api, recall |
+| `recall_digests` | digest_id, user_id, day, count, notice_ids, payload. 하루 요약(`RECALL_DIGEST=daily`) | recall |
+| `change_monitoring` | id(1), status(active, paused), updated_by. 변경 감시 스위치 | api, ingest |
 | `maintenance_candidates` | candidate_id, upper_rule(바뀐 정책), upper_version_id, rule_seq(연결된 정책), article, status, decided_by | graph, api |
 | `webhook_subscriptions` | sub_id, url, secret_ref, active | api |
-| `webhook_deliveries` | delivery_id, sub_id, notice_id, status, tries | api |
+| `webhook_deliveries` | delivery_id, sub_id, notice_id, kind(notice, digest), status(pending, success, failed), tries, attempts(시도별 상태 코드·오류 종류·시각) | api |
 | LangGraph 체크포인트·Store | 라이브러리가 만든다 | graph |
 
 - 대화는 `thread_id`, 장기 기억은 Store namespace `(user_id, ...)`로 사용자마다 나눈다(P-01, G4).
@@ -558,8 +569,8 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 
 | 위험 | 대응 |
 |---|---|
-| 문서 속 간접 인젝션 | 검색된 원문은 지시가 아닌 자료로만 다룬다. 결정표 실행은 관리자 승인(interrupt)을 거쳐야만 되고, 인용은 코드로 원문과 대조한다. MCP에는 쓰기·실행 도구를 내보내지 않는다. 시험 최소 30건(`evals/safety/`), 공격문은 핸드북 문서(런북·정책) 안에 심는다. 상세는 인젝션 시험 계획 |
-| 출처 유출 | 다른 사용자 대화와 기억이 섞이지 않는지 시험. 평가자는 평가용 계정 A·B로 직접 확인한다(가이드 p.21) |
+| 문서 속 간접 인젝션 | 검색된 원문은 지시가 아닌 자료로만 다룬다. 결정표 실행은 관리자 승인(interrupt)을 거쳐야만 되고, 인용은 코드로 원문과 대조한다. MCP에는 쓰기·실행 도구를 내보내지 않는다. 시험 최소 30건(`evals/safety/`), 공격문은 핸드북 문서(런북·정책) 안에 심는다. 모델이 낸 글도 믿지 않고 코드로 다시 확인한다(답과 되묻기의 내부 표식·시스템 프롬프트 유출 검사, 결정표 질문에서 모델이 고른 업무 종류는 승인된 목록 안의 값만). 설계 약속은 결정표 기준 변경·승인 우회·기억·시스템 프롬프트·다른 사용자 유출 뚫림 0건이고, 그 밖의 경로는 공격 성공률을 공개한다. 통과는 "아는 방법으로 깨지지 않았다"는 뜻이다. 상세는 `evals/safety/safety.md` |
+| 출처 유출 | 다른 사용자 대화와 기억이 섞이지 않는지 시험(`evals/safety/run_safety.py`의 L1~L4, 로컬 시험 앱의 `tests/test_api_isolation.py`). 평가자는 평가용 계정 A·B로 직접 확인한다(가이드 p.21). 같은 확인(남의 대화 404, 비로그인 401, 관리자 경로 403, 오류 본문, 보안 헤더)을 `evals/safety/deploy_check.py`가 환경 변수로 받은 두 계정으로 배포 주소에 돌린다 |
 | 권한 | 결정표 승인·반려, 전체 리콜, 변경 전 영향 미리보기는 관리자만. 문서는 사용자 그룹으로 검색 단계에서 거르고(F-06), 리콜 알림도 볼 수 있는 섹션만 인용한다 |
 | 비밀값 | `.env`에만. 평가 계정 비밀번호는 저장소에 없음 |
 | 결정표 오류 | 승인 전 실행 금지. 셀 대조표를 승인 화면에 보여 준다 |
@@ -597,7 +608,8 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 3-5 | 바뀐 섹션의 종류 | `ChangedArticle`에 추가·삭제·수정 칸 추가 / 두지 않기 | 칸 추가 | 삭제된 섹션을 인용한 답은 수정과 판정이 다르다 |
 | 3-6 | 청크 본문 해시 | `Chunk`에 본문 sha256 칸 추가 / 매번 계산 | 칸 추가 | G3 "서로 다른 청크 수"를 셀 때와 중복 제거에 쓴다 |
 | 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`, 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
-| 3-8 | 웹훅 비밀값이 비었을 때 | 서명 검사 건너뜀 / 항상 필수 | 배포 주소는 필수, 로컬 데모만 건너뜀 | 배포 주소에서 서명 없는 웹훅을 받지 않는다 |
+| 3-8 | 웹훅 비밀값이 비었을 때 | 서명 검사 건너뜀 / 항상 필수 | 배포 주소는 필수, 로컬 데모만 건너뜀 | 배포 주소에서 서명 없는 웹훅을 받지 않는다. 비밀값이 비면 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서만 서명 없이 보내고, 그 밖에서는 보내지 않고 전송 기록에 `failed`(`secret_missing`)로 남긴다 |
+| 3-9 | 웹훅 재시도 | 횟수·간격 정하기 / 한 번만 | 최대 3번(`RECALL_WEBHOOK_MAX_TRIES`), 1초(`RECALL_WEBHOOK_BACKOFF_S`)부터 두 배씩 기다림, 시도 제한 시간 5초 | 일시 오류를 넘기되 응답을 오래 붙잡지 않는다. 시도마다 `webhook_deliveries.attempts`에 남긴다 |
 | - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분 |
 
 ### 11-2. 동작 기본값

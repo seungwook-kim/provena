@@ -12,6 +12,7 @@ import hmac
 import time
 import base64
 import hashlib
+import ipaddress
 import json
 from dataclasses import dataclass, field
 from typing import Protocol, cast
@@ -542,10 +543,40 @@ class LoginRateLimiter:
         self._failures_by_login_id.pop(login_id, None)
 
 
-def _client_ip(request: Request) -> str:
-    """Return the direct peer address until a trusted proxy policy is defined."""
+def _trusted_proxy_hops() -> int:
+    """TRUSTED_PROXY_HOPS: proxies in front of the app that append to X-Forwarded-For (0 = trust none)."""
 
-    return request.client.host if request.client and request.client.host else "unknown"
+    try:
+        hops = int(os.getenv("TRUSTED_PROXY_HOPS", "0").strip() or "0")
+    except ValueError:
+        return 0
+    return max(hops, 0)
+
+
+def _client_ip(request: Request) -> str:
+    """Return the client address used for the IP failure budget.
+
+    With TRUSTED_PROXY_HOPS=0 (default) only the direct peer address is used and
+    X-Forwarded-For is ignored. With N > 0 the N-th entry from the right of
+    X-Forwarded-For is used: each trusted proxy appends the address it saw, so
+    entries left of that one may be written by the client and are never trusted
+    (Cloud Run appends the real client address as the last entry, so N = 1).
+    A missing, too short or malformed header falls back to the peer address.
+    """
+
+    peer = request.client.host if request.client and request.client.host else "unknown"
+    hops = _trusted_proxy_hops()
+    if hops == 0:
+        return peer
+    values = request.headers.getlist("x-forwarded-for")
+    entries = [entry.strip() for value in values for entry in value.split(",")]
+    if len(entries) < hops:
+        return peer
+    candidate = entries[-hops]
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return peer
 
 
 class AuthRoute(APIRoute):

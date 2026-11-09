@@ -463,3 +463,58 @@
 @media(max-width:620px){.demo-admin-grid .demo-field{min-height:108px}}
 .account-menu-links a{display:flex;align-items:center;gap:8px}.account-menu-links a svg{flex:none;color:var(--muted)}
 .demo-attribution{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:10px 12px;color:var(--muted);font-size:13px;line-height:1.65}.demo-attribution strong{display:block;margin-bottom:7px;color:var(--ink-soft);font-size:13px;font-weight:700}.demo-attribution div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.demo-attribution span,.demo-attribution a{overflow-wrap:anywhere}.demo-attribution a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}.demo-attribution p{flex-basis:100%;margin:5px 0 0;line-height:1.65}
+/* Live recall and change-monitoring additions: severity, confirmation, feedback and admin panels. */
+.recall-detail-badges,.recall-item-badges{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;margin-left:6px;vertical-align:middle}
+.recall-item-badges{margin:6px 0 0}
+.recall-severity,.recall-confidence,.recall-confirm-badge,.recall-candidate-status,.change-monitoring-status{display:inline-flex;align-items:center;border:1px solid #E3EAF4;border-radius:6px;background:#F7F9FD;padding:3px 8px;color:var(--ink-soft);font-size:12px;font-weight:600;font-style:normal;line-height:1.4}
+.recall-severity.high{border-color:#a4443a40;background:var(--danger-soft);color:var(--danger)}
+.recall-severity.low{color:var(--muted)}
+.recall-confirm-badge{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.recall-service-item.needs-confirmation{border-left:3px solid var(--change)}
+.recall-confirm-needed{margin:14px 0 0;border:1px solid #a8701c55;border-left:4px solid var(--change);border-radius:9px;background:var(--change-soft);padding:12px 16px;color:#6e4a12;font-size:14px;line-height:1.6}
+.recall-action-error{margin:12px 0 0;border-radius:9px;background:var(--danger-soft);padding:10px 14px;color:var(--danger);font-size:13px;line-height:1.6}
+.recall-action-error button,.recall-scope-note button{margin-left:6px;border:1px solid currentColor;border-radius:6px;background:transparent;padding:3px 9px;color:inherit;font-size:12px}
+.recall-scope-note{margin:10px 0 0;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:10px 14px;color:var(--ink-soft);font-size:13px}
+.recall-load-error{display:grid;gap:10px;justify-items:start}
+.recall-load-error p{margin:0}
+.recall-question{margin-top:16px}
+.recall-service-detail .recall-question+.recall-answer{margin-top:10px}
+.recall-explanation{margin-top:12px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:16px 18px}
+.recall-explanation small,.recall-feedback small,.impact-preview-result small{color:var(--ink-soft);font-weight:600;letter-spacing:.02em}
+.recall-explanation p{margin:8px 0 0;line-height:1.7;white-space:pre-line}
+.recall-feedback{display:grid;gap:10px;margin-top:16px;border-top:1px solid #E3EAF4;padding-top:16px}
+.recall-feedback p{margin:0;color:var(--muted);font-size:13px}
+.recall-feedback-actions,.recall-feedback-reason>div,.recall-admin-actions{display:flex;flex-wrap:wrap;gap:8px}
+.recall-feedback-reason{display:grid;gap:10px}
+.recall-feedback-reason label{display:grid;gap:6px;color:var(--ink-soft);font-size:13px}
+.recall-feedback-reason textarea,.impact-preview-form textarea{width:100%;min-height:72px;border:1px solid #E3EAF4;border-radius:8px;background:#FFFFFF;padding:10px 12px;font:inherit;font-size:13px;resize:vertical}
+.recall-admin-section{margin-top:16px;border:1px solid #E3EAF4;border-radius:12px;background:var(--surface);padding:20px 24px;box-shadow:0 12px 28px -26px #273B5333}
+.recall-admin-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.recall-admin-heading h2{margin:0;font-size:17px;letter-spacing:-.02em}
+.recall-admin-heading span{color:var(--muted);font-size:12px;font-weight:600}
+.recall-admin-lede{margin:6px 0 14px;color:var(--muted);font-size:13px}
+.recall-admin-message{margin:0 0 10px;color:var(--ok);font-size:13px}
+.recall-admin-list{display:grid;gap:10px}
+.recall-admin-card{display:grid;gap:6px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:14px 16px}
+.recall-admin-card.needs-confirmation{border-left:3px solid var(--change)}
+.recall-admin-card-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.recall-admin-card small{color:var(--muted);font-size:12px}
+.recall-admin-card p{margin:0;font-size:13px;line-height:1.65}
+.recall-admin-card p b{margin-right:6px;color:var(--ink-soft);font-weight:600}
+.recall-admin-card .recall-detail-badges{margin-left:0}
+.recall-admin-actions{justify-content:flex-end;margin-top:6px}
+.recall-candidate-status.needed{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.recall-candidate-status.not_needed{border-color:#2f6b4f40;background:var(--ok-soft);color:var(--ok)}
+.recall-digest ul{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.recall-digest li{display:flex;flex-wrap:wrap;gap:4px 12px;border-bottom:1px solid #E3EAF4;padding:8px 0;font-size:13px}
+.recall-digest li:last-child{border-bottom:0}
+.recall-digest li span{color:var(--muted)}
+.impact-preview-form{display:grid;gap:10px}
+.impact-preview-form textarea{min-height:150px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.impact-preview-result{margin-top:14px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:14px 16px}
+.impact-preview-result pre{margin:8px 0 0;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:12px/1.65 'JetBrains Mono',monospace}
+.change-monitoring-control{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.change-monitoring-status.active{border-color:#2f6b4f40;background:var(--ok-soft);color:var(--ok)}
+.change-monitoring-status.paused{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.change-load-more{width:100%;margin-top:8px}
+@media(max-width:760px){.recall-admin-section{padding:16px}.recall-admin-actions{justify-content:stretch}.recall-admin-actions button{flex:1}.change-monitoring-control{justify-content:flex-start}}

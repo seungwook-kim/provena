@@ -16,6 +16,8 @@
   로그 한 줄을 남깁니다(`backend/api/middleware.py`).
 - 로그인 라우터가 붙을 때 `/chat`(SSE), `/threads`, `/me/memory`도 붙습니다(`backend/api/routes.py`). 질문 그래프는 앱 시작에서
   결정표·합동 검토와 같은 체크포인터·Store로 한 번 만들고, 합동 검토는 질문 그래프의 하위 그래프로 돌립니다.
+- 로그인 라우터가 붙을 때 리콜(`/recalls`, `/webhooks/regulation-updated`, `/impact-preview` 등, `backend/api/recalls.py`)과 변경 감시(`/changes`,
+  `backend/api/changes.py`)도 붙는다. 저장소는 `backend/graph/recall/runtime.py`가 환경변수(`RECALL_STORE`, `DATABASE_URL`)대로 연다.
 - `/health`가 불리면 10분(600초) 간격으로 DB에 `SELECT 1`을 백그라운드로 보냅니다(Supabase 무료 플랜 정지 방지). 실패해도 응답은 200입니다.
 """
 from __future__ import annotations
@@ -36,11 +38,14 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.api.errors import ApiError, install_error_handlers
 from backend.api.middleware import RequestContextMiddleware
+from backend.api.changes import create_changes_router
+from backend.api.recalls import create_recall_router
 from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
 from backend.auth import AuthStore, TokenRevocationStore, create_auth_router
 from backend.graph.checkpoint import is_restart_safe
 from backend.graph.decision.routes import create_decision_router, open_decision_runtime
+from backend.graph.recall.runtime import open_recall_runtime
 from backend.services.auth_store import PostgresAuthStore, PostgresTokenRevocationStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
 
@@ -126,7 +131,7 @@ def build_question_graph(state: Any) -> Any:
     """질문 그래프. 체크포인터·Store·결정표 저장소·쟁점표 저장소는 `open_decision_runtime()`이 연 것을 나눠 쓴다.
 
     합동 검토는 체크포인터 없이 이 그래프의 하위 그래프로 붙인다(승인함 재개도 이 그래프로 한다, routes.py 안내문).
-    모델은 처음 부를 때 만든다(키 없이도 서버가 뜬다). 답 저장소는 메모리 구현이다(Postgres 구현은 아직 없다)."""
+    모델은 처음 부를 때 만든다(키 없이도 서버가 뜬다). 답 저장소는 `RECALL_STORE=postgres`면 Postgres, 아니면 메모리 구현이다."""
     from backend.graph.build import build_graph
     from backend.graph.departments.review import build_review_graph
     from backend.graph.service_profile import SharedChatModel, service_searches
@@ -142,7 +147,7 @@ def open_question_runtime(app: FastAPI, graph_factory: Callable[[Any], Any], dat
     """`open_decision_runtime()` 안에서 부른다. 질문 그래프, 대화 목록 저장소, 답 저장소를 `app.state`에 둔다.
 
     체크포인터가 열리지 않았으면(DB 연결 실패) 아무것도 두지 않는다. `/chat`, `/threads`, `/me/memory`는 503 `not_configured`다."""
-    from backend.graph.answer_store import InMemoryAnswerStore
+    from backend.graph.recall.runtime import make_answer_store
 
     state = app.state
     if getattr(state, "checkpointer", None) is None:
@@ -157,7 +162,7 @@ def open_question_runtime(app: FastAPI, graph_factory: Callable[[Any], Any], dat
             except Exception as exc:  # noqa: BLE001 - 접속 문자열이 섞일 수 있어 종류만 남긴다
                 log.warning("threads 표를 만들지 못함: %s", type(exc).__name__)
         state.thread_store = threads
-        state.answer_store = InMemoryAnswerStore()
+        state.answer_store = make_answer_store(database_url)   # 리콜이 지난 답을 찾는 저장소(backend/graph/recall/runtime.py)
         try:
             state.question_graph = graph_factory(state)
         except ValueError:      # 환경변수 값이 틀린 설정 오류는 시작을 막는다
@@ -201,8 +206,9 @@ def create_app(
             start_search_warmup()
             with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
                 with open_question_runtime(app_, make_graph, database_url) if store is not None else nullcontext():   # 질문 그래프·대화 목록
-                    async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
-                        yield
+                    with open_recall_runtime(app_, database_url) if store is not None else nullcontext():   # 리콜·변경 감시
+                        async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
+                            yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
     app.add_middleware(RequestContextMiddleware)     # 요청 ID와 요청 로그(순수 ASGI, SSE를 버퍼링하지 않는다)
@@ -234,6 +240,8 @@ def create_app(
         app.include_router(create_auth_router(store=store, secret=auth_secret))
         app.include_router(create_decision_router(store=store, secret=auth_secret))
         app.include_router(create_api_router(store=store, secret=auth_secret))   # /chat, /threads, /me/memory
+        app.include_router(create_recall_router(store=store, secret=auth_secret))   # /recalls, /webhooks/regulation-updated 등(F-02)
+        app.include_router(create_changes_router(store=store, secret=auth_secret))  # /changes(변경 감시)
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 

@@ -14,6 +14,13 @@ export function chatProxyBypass(request) {
   return request.method === 'GET' ? '/index.html' : undefined
 }
 
+// /recalls and /changes are both SPA page paths and API paths. Browser page loads ask
+// for HTML and get the SPA entry; fetch() calls from the app go to the API.
+export function pageOrApiProxyBypass(request) {
+  const accept = request.headers?.accept ?? ''
+  return request.method === 'GET' && accept.includes('text/html') ? '/index.html' : undefined
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Keep browser cookies same-origin in local development. Production uses
@@ -29,10 +36,12 @@ export default defineConfig({
       '/threads': proxyTarget,
       '/chat': { target: proxyTarget, bypass: chatProxyBypass },
       '/health': proxyTarget,
-      '/recalls': proxyTarget,
+      '/recalls': { target: proxyTarget, bypass: pageOrApiProxyBypass },
+      '/changes': { target: proxyTarget, bypass: pageOrApiProxyBypass },
       '/approvals': proxyTarget,
       '/decision-tables': proxyTarget,
       '/maintenance-candidates': proxyTarget,
+      '/impact-preview': proxyTarget,
     },
   },
 })
