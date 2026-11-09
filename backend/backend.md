@@ -12,6 +12,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 박진형 (Claude Code) | 새로고침·목록 클릭 뒤 대화가 빈 화면이던 문제의 서버 쪽. `GET /threads/{thread_id}`에 체크포인트 이력(`get_state_history`)에서 되살린 `messages`(질문·답·근거, 오래된 순)를 더했다(`api/routes.py`의 `_messages`). 못 읽으면 빈 목록. 시험 `tests/test_api_thread_messages.py` | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | D6 서비스화: 오류 응답 규약(`api/errors.py`), 요청 ID·요청 로그 순수 ASGI 미들웨어(`api/middleware.py`), `/chat`(SSE)·`/threads`·`/me/memory`(`api/routes.py`), 대화 목록 저장소(`api/threads.py`)를 `main.py`에 연결. 질문 그래프는 앱 시작에서 결정표·합동 검토와 같은 체크포인터·Store로 만들고 합동 검토 승인 재개도 질문 그래프로 한다. `/health`는 10분 간격으로 `SELECT 1`. 같은 승인 건의 동시 요청이 그래프를 두 번 재개하던 문제를 프로세스 안 잠금으로 막았다(`graph/decision/routes.py`). 시험은 가짜 모델·메모리 체크포인터·메모리 Store로 도는 `tests/test_api_*.py` | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `requirements.txt`의 langgraph에 상한 `<1.3`을 둠. `graph/multi.py`가 컴파일된 그래프의 내부 구조를 읽어, 시험한 1.2.18과 같은 1.2 판까지만 받는다 | 미정 |
 | 2026-11-02 | kkh-hue | Google OAuth Authorization Code + PKCE 시작·콜백, state/nonce 요청 쿠키 검증, Google JWK ID 토큰 검증, 주입형 OAuth 사용자 저장소·토큰 교환기 경계와 기존 JWT 쿠키 발급을 `auth.py`에 추가했다. 저장소 또는 RS256 검증 의존성이 없으면 503으로 차단하며 실제 DB·Cloud Run 검증은 하지 않았다. OAuth·기존 인증 관련 테스트와 전체 Python 테스트는 각각 53 passed, 214 passed·1 skipped였다. | #43 |
