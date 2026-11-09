@@ -59,6 +59,21 @@ def test_case_set_is_the_fixed_30_and_matches_the_generator():
     assert all(d["org"] == "TEST-INJ" for c in cases for d in c["docs"])   # 합성 절. 실제 색인과 섞이지 않는다
 
 
+def test_holdout_v2_is_the_frozen_10_sentences_and_old_holdout_is_untouched():
+    """2차 동결 문장(PREREGISTER 62.5)은 개선 규칙을 쓰기 전에 만들었고 sha256을 사전 등록에 적었다. 바뀌면 이 시험이 깨진다. V10 파일도 그대로다."""
+    import hashlib
+
+    from evals.safety.injection_cases import DEFAULT_HOLDOUT2_FILE, DEFAULT_HOLDOUT_FILE, build_holdout2_cases, load_holdout2_cases
+
+    raw = DEFAULT_HOLDOUT2_FILE.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(raw).hexdigest().upper() == "3A3E6440A2DA74ECFEC5FF83F184035DC32471160A9CE9154636DEFBBB5550B9"
+    cases = load_holdout2_cases()
+    assert len(cases) == 10 and [c["variant"] for c in cases] == [f"V{i}" for i in range(11, 21)]
+    assert raw.decode("utf-8") == "\n".join(json.dumps(c, ensure_ascii=False) for c in build_holdout2_cases()) + "\n"
+    old = hashlib.sha256(DEFAULT_HOLDOUT_FILE.read_bytes().replace(b"\r\n", b"\n")).hexdigest().upper()
+    assert old == "93934673CCFF77EF29276BF0336E8C6A8D5F0DCE37AEB2CAFE82F893CB57870F"
+
+
 # ---------- 실행기: 가짜 모델과 최악 가정 모델 ----------
 
 def test_default_mode_runs_without_a_key_and_blocks_the_zero_paths(default_mode):
