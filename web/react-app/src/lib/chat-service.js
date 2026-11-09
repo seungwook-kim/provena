@@ -12,13 +12,26 @@ export function createChatService(adapter) {
   }
 }
 
+// Server citations (SSE `citation` and GET /threads/{id}) use rule_title/article/version_date; the panel reads title/path/version.
+export function normalizeCitation(citation, index = 0) {
+  return { ...citation, id: citation.id ?? citation.chunk_id ?? `citation-${index}`, title: citation.title ?? citation.rule_title ?? '', path: citation.path ?? citation.article ?? '', version: citation.version ?? citation.version_date ?? '' }
+}
+
+// GET /threads/{id} sends `messages` (user/assistant pairs); older servers only send `last` ({kind, answer, ...}).
+function mapMessage(message, fallbackState = 'done') {
+  if (message.role === 'user') return { ...message, text: message.text ?? '' }
+  const citations = (Array.isArray(message.citations) ? message.citations : []).filter(citation => citation && typeof citation === 'object').map(normalizeCitation)
+  return { ...message, role: 'assistant', text: message.text ?? message.answer ?? '', state: message.state ?? fallbackState, citations }
+}
+
 export function mapThreadRecord(record = {}) {
   const last = record.last
+  const lastState = record.status === 'pending_approval' || last?.kind === 'approval' ? 'approval' : last?.kind === 'refuse' ? 'no-evidence' : 'done'
   const messages = Array.isArray(record.messages)
-    ? record.messages
+    ? record.messages.filter(message => message && typeof message === 'object').map(message => mapMessage(message))
     : last == null
       ? []
-      : [typeof last === 'object' ? { role: 'assistant', ...last } : { role: 'assistant', text: String(last) }]
+      : [mapMessage(typeof last === 'object' ? last : { text: String(last) }, lastState)]
   const lastText = typeof last === 'string' ? last : last?.text ?? last?.answer ?? ''
   return {
     ...record,
@@ -51,7 +64,7 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     const citations = [...(draft.citations ?? [])]
     const seen = new Set(citations.map(citationKey))
     for (const citation of additions) {
-      const normalized = { id: citation.id ?? citation.chunk_id ?? `citation-${citations.length}`, ...citation }
+      const normalized = normalizeCitation(citation, citations.length)
       const key = citationKey(normalized)
       if (!seen.has(key)) { citations.push(normalized); seen.add(key) }
     }
@@ -59,11 +72,18 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
   }
   return {
     async listThreads() { const { getThreads } = await import('./api'); threads = mapThreadResponse(await getThreads()); notify(); return structuredClone(threads) },
+    // Server copy unless the local one is fresher: streaming now, or already holding a user turn (fetched or sent this session).
     async getThread(id) {
+      const streaming = () => [...controllers.values()].some(request => request.activeThreadId === id)
       const local = threads.find(thread => thread.id === id)
-      if (local) return structuredClone(local)
+      if (local && (streaming() || local.messages?.some(message => message.role === 'user'))) return structuredClone(local)
       const { getThread } = await import('./api')
-      return mapThreadRecord(await getThread(id))
+      const thread = mapThreadRecord(await getThread(id))
+      const latest = threads.find(item => item.id === id)
+      if (latest && streaming()) return structuredClone(latest)
+      threads = latest ? threads.map(item => item.id === id ? { ...item, ...thread } : item) : [thread, ...threads]
+      notify()
+      return structuredClone(thread)
     },
     async createConversation() { return { id: null, title: '', messages: [] } },
     async sendMessage({ threadId, message }) {
