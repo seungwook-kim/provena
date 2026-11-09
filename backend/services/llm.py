@@ -506,7 +506,7 @@ def run_config(
     if thread_id:
         meta["thread_id"] = str(thread_id)
     meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name))
-    meta.update(metadata or {})
+    meta.update(tracing.sanitize_metadata(metadata))
     tracker = CostTracker(
         cost_cap_usd if cost_cap_usd is not None else cost_cap_from_env(),
         default_model=os.environ.get("LLM_MODEL") or DEFAULT_ANTHROPIC_MODEL,
