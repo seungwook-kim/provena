@@ -154,7 +154,11 @@ export async function sendRecallFeedback(noticeId, useful, reason = null) {
 }
 export function getApprovals() { return apiJson('/approvals') }
 export async function postApprovalDecision(approvalId, body) {
-  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(body) })
+  const response = await apiRequest(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ approval_id: approvalId, ...body }) })
+  if (response.status === 204) return null
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) throw new ApiError('서버 응답 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.', response.status, 'invalid_response')
+  return response.json()
 }
 export function getDecisionTables() { return apiJson('/decision-tables') }
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }

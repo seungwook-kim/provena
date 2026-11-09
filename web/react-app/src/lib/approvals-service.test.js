@@ -131,7 +131,7 @@ describe('request body', () => {
   })
 
   it('rejects an action the backend does not know, such as a revision request', () => {
-    expect(() => toApprovalRequestBody('revision', '보완')).toThrow('지원하지 않는 처리입니다.')
+    expect(() => toApprovalRequestBody('revision', '보완')).toThrow('보완 요청 API가 아직 연결되지 않았습니다.')
   })
 })
 
@@ -180,7 +180,7 @@ describe('API approvals service', () => {
 
   it('does not call the API for an unsupported action', async () => {
     const api = fakeApi()
-    await expect(createApiApprovalsService(api).decideApproval('dec-1', { action: 'revision', reason: 'x' })).rejects.toThrow('지원하지 않는 처리입니다.')
+    await expect(createApiApprovalsService(api).decideApproval('dec-1', { action: 'revision', reason: 'x' })).rejects.toThrow('보완 요청 API가 아직 연결되지 않았습니다.')
     expect(api.postApprovalDecision).not.toHaveBeenCalled()
   })
 

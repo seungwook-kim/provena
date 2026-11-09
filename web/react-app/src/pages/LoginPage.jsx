@@ -47,6 +47,6 @@ export default function LoginPage() {
       <div className="login-divider"><span />또는<span /></div>
       <a href="/auth/google/start" className="button google-button">Google로 로그인</a>
       <p className="signup-link">아직 계정이 없으신가요? <Link to="/signup">회원가입</Link></p>
-      {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') && <div className="demo-login-area"><span>로컬 데모 전용 · 실제 계정/API와 분리</span><Link to="/chat?demo=1" className="demo-login-link">로그인 없이 둘러보기</Link></div>}
+      {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') && <div className="demo-login-area"><span>로컬 데모 전용 · 실제 계정/API와 분리</span><Link to="/demo/chat" className="demo-login-link">로그인 없이 둘러보기</Link></div>}
     </main></div><AuthIllustration /></div>
 }
