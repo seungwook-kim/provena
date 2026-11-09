@@ -1,7 +1,8 @@
 """변경 감시 라우터 (PRD 6-4 자동화, F-07). 증분 수집이 쌓은 바뀐 섹션과 실행 기록을 보여 주고, 감시를 멈추거나 다시 켠다.
 
 - `GET /changes?since=YYYY-MM-DD&limit=&offset=`: 로그인. since를 비우면 30일 전(UTC). 최근 것이 앞이다.
-  `{"items": [바뀐 섹션], "last_run": {run_id, status, finished_at, to_commit, list_complete} | null, "more": bool, "monitoring": "active"|"paused"}`.
+  `{"items": [바뀐 섹션], "last_run": {run_id, status, finished_at, to_commit, list_complete} | null, "more": bool, "monitoring": "active"|"paused",`
+  `"total": int | null, "counts": {change_type: int} | null}`. `total`·`counts`는 limit·offset과 무관하게 since 이후 전체 건수와 종류별(added·removed·modified) 건수다(화면 분포 카드용).
   `last_run`이 null이면 수집이 한 번도 성공하지 않았다는 뜻이다("바뀐 것 없음"인 빈 목록과 구분한다).
 - `GET /changes/monitoring`: 로그인. `{"status"}`. `PUT /changes/monitoring`: 관리자, CSRF. `{"status": "active"|"paused"}`.
   paused면 정해진 시각의 증분 수집(`backend/rag/ingest/schedule.py`)과 명령줄 리콜 처리기가 아무것도 하지 않는다.
@@ -58,6 +59,17 @@ def change_json(row: dict, count: int = 0) -> dict:
     return out
 
 
+def _totals(st: Any, since: str) -> dict[str, int] | None:
+    """since 이후 전체 건수를 종류별로 센다. 저장소가 못 세면 None(화면은 불러온 목록으로 세는 옛 방식으로 돌아간다)."""
+    counter = getattr(st, "count_by_type", None)
+    if counter is None:
+        return None
+    try:
+        return {str(k): int(v) for k, v in counter(since).items()}
+    except Exception:  # noqa: BLE001 - 합계를 못 세도 목록은 보여 준다
+        return None
+
+
 def _monitoring(st: Any) -> str:
     try:
         return st.monitoring_get().get("status") or "active"
@@ -85,11 +97,14 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
         rows, more = st.changes(since, limit, offset)
         counts = _counts(request, rows)
         run = st.last_run()
+        totals = _totals(st, since)
         return {
             "items": [change_json(r, counts.get((int(r["rule_seq"]), r["article"]), 0)) for r in rows],
             "last_run": {k: run.get(k) for k in ("run_id", "status", "finished_at", "to_commit", "list_complete")} if run else None,
             "more": bool(more),
             "monitoring": _monitoring(st),
+            "total": sum(totals.values()) if totals is not None else None,
+            "counts": totals,
         }
 
     @router.get("/changes/monitoring")

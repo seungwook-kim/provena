@@ -17,10 +17,10 @@ function Marked({ text, mark }) {
   return <>{before}<mark>{mark}</mark>{after}<span className="changed-text-legend"><i aria-hidden="true" />변경된 부분</span></>
 }
 
-function ChangeDistribution({ counts }) {
+function ChangeDistribution({ counts, scope }) {
   const total = counts.reduce((sum, item) => sum + item.count, 0)
   return <section className="change-distribution" aria-label="변경 유형 분포">
-    <div className="change-distribution-heading"><div><h2>변경 유형 분포</h2><small>현재 목록 기준</small></div><span>총 {total}건</span></div>
+    <div className="change-distribution-heading"><div><h2>변경 유형 분포</h2><small>{scope}</small></div><span>총 {total}건</span></div>
     <div className="change-distribution-track" role="img" aria-label={total ? `총 ${total}건의 변경 유형 분포` : '변경 기록이 없습니다.'}>{counts.map(item => <span key={item.type} className={`change-distribution-segment ${item.type.toLowerCase()}`} style={{ width: `${total ? (item.count / total) * 100 : 0}%` }} title={`${CHANGE_LABELS[item.type]} ${item.count}건`} />)}</div>
     <div className="change-distribution-legend">{counts.map(item => <div className="change-distribution-legend-item" key={item.type}><span className={`change-distribution-dot ${item.type.toLowerCase()}`} aria-hidden="true" /><span>{CHANGE_LABELS[item.type]}</span><b>{item.count}건</b></div>)}</div>
   </section>
@@ -69,7 +69,9 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
   const [detailError, setDetailError] = useState({ id: null, message: '' })
   const visible = useMemo(() => service.filterChanges(records, { query, types: enabled }), [enabled, query, records, service])
   const selected = visible.find(record => record.id === selectedId) ?? visible[0] ?? null
-  const typeCounts = useMemo(() => CHANGE_TYPES.map(type => ({ type, count: records.filter(record => record.type === type).length })), [records])
+  // 실서버는 목록을 쪽으로 나눠 받으므로 분포·합계는 서버가 센 전체 건수를 쓴다(없으면 불러온 목록으로 센다). 동결 보류는 목록 맨 앞 알림 한 줄이다.
+  const serverCounts = live ? snapshot.typeCounts ?? null : null
+  const typeCounts = useMemo(() => CHANGE_TYPES.map(type => ({ type, count: serverCounts && type !== 'HELD' ? serverCounts[type] ?? 0 : records.filter(record => record.type === type).length })), [records, serverCounts])
   const selectedNeedsDetail = live && selected && !selected.detailLoaded
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
     <header className="change-service-heading"><div><h1>정책 변경 감시</h1>{live && lastRun && <p>마지막 수집 {lastRun.finishedAt || '시각 미기록'}{lastRun.status ? ` · ${lastRun.status}` : ''}</p>}</div>{live && <MonitoringControl service={service} status={snapshot.monitoring?.status ?? null} isAdmin={isAdmin} />}</header>
     <section className="change-service-tools"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="정책 문서 검색" aria-label="정책 문서 검색" /><div>{CHANGE_TYPES.map(kind => <button type="button" key={kind} className={enabled[kind] ? 'selected' : ''} onClick={() => setEnabled(current => ({ ...current, [kind]: !current[kind] }))}>{CHANGE_LABELS[kind]}</button>)}</div></section>
     {status === 'error' && records.length > 0 && <p className="recall-action-error" role="alert">{listErrorMessage(snapshot.error)} <button type="button" onClick={() => service.listChanges().catch(() => {})}>다시 시도</button></p>}
-    <ChangeDistribution counts={typeCounts} />
+    <ChangeDistribution counts={typeCounts} scope={serverCounts ? '조회 기간 전체 기준' : '현재 목록 기준'} />
     <section className="change-service-layout"><aside className="change-service-list"><h2>정책 변경 목록</h2>
       {loadingFirst ? <p className="change-service-empty" role="status">변경 기록을 불러오고 있습니다.</p>
         : failedFirst ? <div className="change-service-empty recall-load-error" role="alert"><p>{listErrorMessage(snapshot.error)}</p><button type="button" className="demo-outline-button" onClick={() => service.listChanges().catch(() => {})}>다시 시도</button></div>

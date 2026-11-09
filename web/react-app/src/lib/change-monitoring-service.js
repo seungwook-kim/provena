@@ -51,12 +51,27 @@ export function buildRecallLink({ ruleSeq, article }) {
   return `/recalls${query ? `?${query}` : ''}`
 }
 
+// 판 날짜 표기. 삭제는 새 판이, 추가는 옛 판이 없으므로 있는 쪽 날짜만 "판에서 삭제/추가"로 말한다(리콜 화면도 같은 말을 쓴다).
+export function versionText(oldDate, newDate) {
+  const before = textOrNull(oldDate)
+  const after = textOrNull(newDate)
+  if (before && after) return `${before} 판 → ${after} 판`
+  if (before) return `${before} 판에서 삭제`
+  if (after) return `${after} 판에서 추가`
+  return ''
+}
+
+export function describeVersions(oldDate, newDate) {
+  const text = versionText(oldDate, newDate)
+  return text ? ` (${text})` : ''
+}
+
 export function mapChange(change = {}) {
   const type = mapChangeType(change?.change_type)
   const ruleSeq = change?.rule_seq == null || change.rule_seq === '' ? null : String(change.rule_seq)
   const article = textOrNull(change?.article)
   const impacted = Number.isInteger(change?.impacted_answer_count) ? change.impacted_answer_count : null
-  const versions = change?.old_version_date || change?.new_version_date ? ` (판 ${change?.old_version_date ?? '없음'} → ${change?.new_version_date ?? '없음'})` : ''
+  const versions = describeVersions(change?.old_version_date, change?.new_version_date)
   const hasDetail = Object.prototype.hasOwnProperty.call(change ?? {}, 'old_text') || Object.prototype.hasOwnProperty.call(change ?? {}, 'new_text')
   return {
     id: change?.event_id == null ? '' : String(change.event_id),
@@ -106,6 +121,16 @@ export function heldRecordFor(lastRun) {
   }
 }
 
+// 서버가 센 전체 건수(`counts`: change_type별)를 화면 종류(MODIFIED·ADDED·REMOVED)별로 합친다. 없으면 null(불러온 목록으로 센다).
+export function mapTypeCounts(counts) {
+  if (!counts || typeof counts !== 'object' || Array.isArray(counts)) return null
+  const out = { MODIFIED: 0, ADDED: 0, REMOVED: 0 }
+  for (const [key, value] of Object.entries(counts)) {
+    if (Number.isInteger(value) && value > 0) out[mapChangeType(key)] += value
+  }
+  return out
+}
+
 export function mapChangesResponse(payload = {}) {
   const items = Array.isArray(payload) ? payload : Array.isArray(payload?.items) ? payload.items : []
   return {
@@ -113,6 +138,7 @@ export function mapChangesResponse(payload = {}) {
     lastRun: mapLastRun(payload?.last_run),
     more: payload?.more === true,
     monitoring: payload?.monitoring === 'paused' ? 'paused' : payload?.monitoring === 'active' ? 'active' : null,
+    typeCounts: mapTypeCounts(payload?.counts),
   }
 }
 
@@ -122,7 +148,7 @@ export function filterChangeRecords(records, { query = '', types = {} } = {}) {
 }
 
 const PAGE_SIZE = 50
-const INITIAL_STATE = Object.freeze({ status: 'idle', records: [], lastRun: null, more: false, monitoring: { status: null }, error: null })
+const INITIAL_STATE = Object.freeze({ status: 'idle', records: [], lastRun: null, more: false, monitoring: { status: null }, typeCounts: null, error: null })
 
 export function createApiChangeMonitoringAdapter(api = apiClient, { pageSize = PAGE_SIZE } = {}) {
   let snapshot = INITIAL_STATE
@@ -146,7 +172,7 @@ export function createApiChangeMonitoringAdapter(api = apiClient, { pageSize = P
       if (request !== sequence) return snapshot.records
       const known = new Set(changes.map(record => record.id))
       changes = append ? [...changes, ...mapped.records.filter(record => !known.has(record.id))] : mapped.records
-      update({ status: 'ready', records: withHeld(changes, mapped.lastRun), lastRun: mapped.lastRun, more: mapped.more, monitoring: { status: mapped.monitoring ?? snapshot.monitoring.status }, error: null })
+      update({ status: 'ready', records: withHeld(changes, mapped.lastRun), lastRun: mapped.lastRun, more: mapped.more, typeCounts: mapped.typeCounts, monitoring: { status: mapped.monitoring ?? snapshot.monitoring.status }, error: null })
       return snapshot.records
     } catch (error) {
       if (request !== sequence) return snapshot.records
