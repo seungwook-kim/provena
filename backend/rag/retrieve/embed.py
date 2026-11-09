@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,11 +47,12 @@ EMBEDDERS: dict[str, EmbedderSpec] = {s.name: s for s in (
     EmbedderSpec("voyage-4", "voyage-4", "api:voyage-4", 1024, api=True),
 )}
 DEFAULT_MODEL = "voyage-4"
-LOCAL_MODEL = "Snowflake/snowflake-arctic-embed-l-v2.0"     # 이미지에 구워 두는 내려받는 모델(Dockerfile, 키 없는 비교용)
+LOCAL_MODEL = "Snowflake/snowflake-arctic-embed-l-v2.0"     # 키 없는 비교용 로컬 모델. 서비스 이미지에는 넣지 않음 — Dockerfile --build-arg와 requirements-local-models.txt로
 
 VOYAGE_URL = "https://api.voyageai.com/v1/embeddings"
 VOYAGE_TIMEOUT_S = 10.0
 VOYAGE_BATCH = 128
+VOYAGE_PARALLEL_QUERIES = 8  # 질문 여러 개를 동시에 보내는 상한(`EMBED_KEEPALIVE=1`일 때)
 
 
 class EmbedUnavailable(ConnectionError):
@@ -70,6 +73,45 @@ class VoyageClient:
     def __init__(self, s: "EmbedderSpec", timeout: float = VOYAGE_TIMEOUT_S):
         self.spec, self.timeout = s, timeout
         self.pinned_name, self.pinned_revision = s.name, s.revision
+        self._http = None
+        self._http_lock = threading.Lock()
+
+    def _reused(self):
+        """연결을 재사용하는 클라이언트. 질문마다 새로 잇는 TLS 왕복을 없앤다."""
+        with self._http_lock:
+            if self._http is None:
+                import httpx
+                self._http = httpx.Client(timeout=self.timeout, limits=httpx.Limits(max_keepalive_connections=VOYAGE_PARALLEL_QUERIES, keepalive_expiry=120.0))
+            return self._http
+
+    def _post_reused(self, texts: list[str], role: str, key: str) -> list[list[float]]:
+        import httpx
+        try:
+            r = self._reused().post(VOYAGE_URL, json={"input": texts, "model": self.spec.name, "input_type": role},
+                                    headers={"Authorization": f"Bearer {key}"})
+        except httpx.HTTPError as e:
+            raise EmbedUnavailable(f"Voyage API 연결 실패: {type(e).__name__}") from None
+        if r.status_code == 429 or r.status_code >= 500:
+            raise EmbedUnavailable(f"Voyage API {r.status_code}")
+        if r.status_code >= 400:
+            raise EmbedConfigError(f"Voyage API {r.status_code}")
+        try:
+            got = [x["embedding"] for x in sorted(r.json()["data"], key=lambda x: x["index"])]
+        except (ValueError, KeyError, TypeError):
+            raise EmbedUnavailable("Voyage API 응답 형식 오류") from None
+        if len(got) != len(texts):
+            raise EmbedUnavailable(f"Voyage API 응답 개수 {len(got)} ≠ 요청 {len(texts)}")
+        return got
+
+    def _embed_reused(self, texts: list[str], role: str, key: str) -> np.ndarray:
+        """질문이 여럿이면 하나씩 동시에 보낸다. 측정에서 3개 묶음은 1~3초, 1개는 0.35초였다. 순서는 입력과 같다."""
+        if role == "query" and 1 < len(texts) <= VOYAGE_PARALLEL_QUERIES:
+            with ThreadPoolExecutor(max_workers=len(texts), thread_name_prefix="voyage") as pool:
+                out = list(pool.map(lambda t: self._post_reused([t], role, key)[0], texts))
+        else:
+            out = [v for i in range(0, len(texts), VOYAGE_BATCH) for v in self._post_reused(texts[i:i + VOYAGE_BATCH], role, key)]
+        m = np.asarray(out, dtype=np.float32)
+        return m / np.linalg.norm(m, axis=1, keepdims=True)
 
     def embed(self, texts: list[str], role: str) -> np.ndarray:
         import http.client
@@ -80,6 +122,8 @@ class VoyageClient:
         key = os.environ.get("VOYAGE_API_KEY")
         if not key:
             raise EmbedNoKey("VOYAGE_API_KEY가 없다")
+        if os.environ.get("EMBED_KEEPALIVE") == "1":
+            return self._embed_reused(texts, role, key)
         out: list[list[float]] = []
         for i in range(0, len(texts), VOYAGE_BATCH):
             body = json.dumps({"input": texts[i:i + VOYAGE_BATCH], "model": self.spec.name,

@@ -81,6 +81,36 @@ def build_searcher(embedder=None, translator=None):
                       "config": dataclasses.asdict(cfg)}
 
 
+def mcp_server_for(rec, use_pg: bool):
+    """같은 프로세스의 FastMCP 서버. 앱과 네트워크를 쓰지 않는다. 기록기(`rec`)가 서버 안쪽에 있어 검색 기록을 그대로 남긴다.
+    서버는 `org`를 DB에서 확인하는데 측정은 DB 주소를 `.env` 파일에서 읽으므로 저장소를 직접 넘긴다."""
+    if not use_pg:
+        raise SystemExit("--via-mcp는 --store pg로만 돈다")
+    from backend.rag.retrieve.section import PgSectionStore
+    from extras.mcp_skill.mcp_server.server import build_server
+
+    return build_server(search_fn=rec, section_store=PgSectionStore(database_url_from_env_file()))
+
+
+def section_reader_for(server, use_pg: bool):
+    """측정의 섹션 읽기. 측정은 DB 주소를 `.env` 파일에서 읽어 그래프 기본값(환경 변수)으로는 열리지 않는다. 메모리 저장소면 읽지 않는다."""
+    if server is not None:
+        from backend.graph.mcp_retriever import make_mcp_section_reader
+        return make_mcp_section_reader(server)
+    if not use_pg:
+        return lambda rule_seq, article, as_of: None
+    from backend.rag.retrieve.privacy import redact_chunk
+    from backend.rag.retrieve.section import PgSectionStore, get_section
+
+    store = PgSectionStore(database_url_from_env_file())
+
+    def read(rule_seq, article, as_of):
+        found = get_section(rule_seq, article, as_of, store)
+        return redact_chunk(found.model_dump()) if found else None
+
+    return read
+
+
 class RecordingSearch:
     """`Searcher.search`를 그대로 부르고 호출마다 입력과 돌려준 청크, 검색 기록(`last_search_trace`)을 남긴다. 결과는 바꾸지 않는다."""
 
@@ -131,7 +161,12 @@ def run_cmd(args) -> int:
     use_pg = args.store == "pg"
     searcher, setup = build_pg_searcher() if use_pg else build_searcher()
     rec = RecordingSearch(searcher)
-    graph = X.RecordingGraph(build_graph(rec, decompose=True))
+    server = mcp_server_for(rec, use_pg) if args.via_mcp else None
+    retriever = rec
+    if server is not None:
+        from backend.graph.mcp_retriever import make_mcp_retriever
+        retriever = make_mcp_retriever(server)
+    graph = X.RecordingGraph(build_graph(retriever, decompose=True, section_reader=section_reader_for(server, use_pg)))
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     run_id = tracking.new_run_id("question")
@@ -186,6 +221,7 @@ def main(argv=None) -> int:
     p.add_argument("--store", choices=("memory", "pg"), default="memory", help="검색 저장소. pg는 .env의 DATABASE_URL로 운영 DB를 읽는다")
     p.add_argument("--dataset", help="평가셋 경로. 기본은 동결 v1이고, 동결된 파일만 돈다")
     p.add_argument("--ids", help="쉼표로 고른 문항만 돈다(partial, 점수로 쓰지 않는다)")
+    p.add_argument("--via-mcp", action="store_true", help="검색을 같은 프로세스 MCP 서버로 부른다")
     p.add_argument("--out", required=True, help="summary.json과 rows.jsonl을 쓸 폴더")
     p.set_defaults(fn=run_cmd)
     args = ap.parse_args(argv)

@@ -8,7 +8,11 @@ import os
 from pathlib import Path
 
 SKILLS_ROOT = Path(__file__).resolve().parents[2] / "skills"
-SKILL_NAMES = ("citation-rules", "grounding-check", "glossary")
+SKILL_NAMES = (
+    "citation-rules", "grounding-check", "glossary",
+    "delegation", "report-writing", "chat-tool-guide", "mail-templates", "retrieval-slots",
+    "search-terms",  # 재검색어 용어표. `GRAPH_REQUERY_TERMS=1`일 때만 판정에 붙는다(기본 꺼짐)
+)
 _OFF_VALUES = {"0", "false", "no", "off", "끔"}
 
 

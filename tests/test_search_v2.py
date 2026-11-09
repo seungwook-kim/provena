@@ -405,3 +405,130 @@ def test_db_links_load_and_pg_search_equals_memory(tmp_path):
         b = ids(mem.search(q))
         assert a == b, (q, a, b)
     assert max(n_link) >= 1                                  # 링크 확장이 실제로 일어난 질의가 있다(빈 시험이 아님)
+
+
+# ---------- 하위 질문 동시 검색과 DB 시간 ----------
+def test_parallel_sub_questions_give_the_same_order(monkeypatch):
+    query = SearchQuery(query=Q, sub_queries=[S1, S2])
+    monkeypatch.delenv("SEARCH_PARALLEL_SUBS", raising=False)
+    before = ids(make(link_keep_per_sub=0).search(query))
+    monkeypatch.setenv("SEARCH_PARALLEL_SUBS", "1")
+    assert ids(make(link_keep_per_sub=0).search(query)) == before
+
+
+def test_parallel_sub_questions_run_at_the_same_time(monkeypatch):
+    import threading
+
+    monkeypatch.setenv("SEARCH_PARALLEL_SUBS", "1")
+    s = make()
+    both = threading.Barrier(2, timeout=5)
+    real = s.store.vector_top
+
+    def meet(*a, **k):
+        both.wait()  # 순차면 두 번째가 오지 않아 시간이 다 되어 실패한다
+        return real(*a, **k)
+
+    s.store.vector_top = meet
+    assert ids(s.search(SearchQuery(query=Q, sub_queries=[S1, S2])))
+
+
+def test_db_time_is_only_noted_inside_a_search():
+    import importlib
+
+    S = importlib.import_module("backend.rag.retrieve.search")
+
+    S._note_db(0.1, 0.2)  # 검색 밖이면 아무 일도 없다
+    ms: dict = {}
+    token = S._db_ms.set(ms)
+    try:
+        S._note_db(0.1, 0.2)
+        S._note_db(0.1, 0.2)
+    finally:
+        S._db_ms.reset(token)
+    assert ms == {"db_wait": 200.0, "db_query": 400.0}
+
+
+def _reused_client(handler, monkeypatch):
+    import httpx
+    monkeypatch.setenv("VOYAGE_API_KEY", "test-key-123")
+    monkeypatch.setenv("EMBED_KEEPALIVE", "1")
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **k: pytest.fail("연결 재사용이면 urllib을 쓰지 않는다"))
+    c = _client()
+    c._http = httpx.Client(transport=httpx.MockTransport(handler))
+    return c
+
+
+def test_voyage_reused_connection_sends_queries_one_by_one_in_order(monkeypatch):
+    import httpx
+    bodies = []
+
+    def handler(req):
+        body = json.loads(req.content)
+        bodies.append(body)
+        v = {"a": [3.0, 4.0], "b": [0.0, 2.0], "c": [1.0, 0.0]}[body["input"][0]] + [0.0] * 1022
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": v}]})
+
+    out = embed.encode_queries(_reused_client(handler, monkeypatch), ["a", "b", "c"])
+    assert sorted(b["input"][0] for b in bodies) == ["a", "b", "c"] and all(len(b["input"]) == 1 and b["input_type"] == "query" for b in bodies)
+    assert np.allclose(out[0][:2], [0.6, 0.8]) and np.allclose(out[1][:2], [0, 1]) and np.allclose(out[2][:2], [1, 0])
+
+
+@pytest.mark.parametrize("code,exc", [(429, EmbedUnavailable), (503, EmbedUnavailable), (401, EmbedConfigError), (400, EmbedConfigError)])
+def test_voyage_reused_connection_maps_errors_like_before(monkeypatch, code, exc):
+    import httpx
+    c = _reused_client(lambda req: httpx.Response(code), monkeypatch)
+    with pytest.raises(exc) as e:
+        embed.encode_queries(c, ["a"])
+    assert "test-key-123" not in str(e.value)
+
+
+def test_voyage_reused_connection_failure_is_unavailable(monkeypatch):
+    import httpx
+
+    def handler(req):
+        raise httpx.ConnectError("끊김")
+
+    with pytest.raises(EmbedUnavailable):
+        embed.encode_queries(_reused_client(handler, monkeypatch), ["a", "b"])
+
+
+
+# ---------- 분해 검색 개편 SEARCH_SUB_MERGE(기본 꺼짐, 조사 해법 Ammann 2025) ----------
+
+def test_merge_by_score_one_place_per_sub_then_score():
+    from backend.rag.retrieve.search import merge_by_score
+    lists = [["q1", "q2"], ["a1", "a2", "a3"], ["c1", "c2"]]
+    sc = {"q1": 0.9, "q2": 0.5, "a1": 0.8, "a2": 0.7, "a3": 0.2, "c1": 0.3, "c2": 0.1}
+    assert merge_by_score(lists, sc, 5) == ["a1", "c1", "q1", "a2", "q2"]   # 하위 질문마다 한 자리, 나머지는 점수 순(전체 질문 후보 포함)
+    assert merge_by_score([["x"], ["x", "y"], ["x", "z"]], {}, 5) == ["x", "z", "y"]  # 겹치면 다음 청크가 그 하위 질문의 자리다
+    assert merge_by_score(lists, sc, 1) == ["a1"]
+
+
+def test_sub_merge_off_is_unchanged(monkeypatch):
+    monkeypatch.delenv("SEARCH_SUB_MERGE", raising=False)
+    assert ids(make().search(SearchQuery(query=Q, sub_queries=[S1, S2]))) == ["a1", "c1", "a2", "c2", "b2"]
+
+
+def test_sub_merge_adds_full_query_and_fills_by_score(monkeypatch):
+    monkeypatch.setenv("SEARCH_SUB_MERGE", "1")
+    calls = []
+    got = make(calls=calls, link_n=0).search(SearchQuery(query=Q, sub_queries=[S1, S2]))
+    # 하위 1의 a1, 하위 2의 c1을 먼저, 나머지 3자리는 점수 순: c2 .98, c3 .97, c4 .96이 a2 .8(하위 1과 전체 질문)보다 앞
+    assert ids(got) == ["a1", "c1", "c2", "c3", "c4"]
+    assert calls == [[Q, S1, S2]] and last_search_trace().n_sub == 2   # 임베딩 요청은 그대로 한 번, k는 5
+    assert len(got) == 5
+
+# ---------- (나) 형제 절 sibling_firsts(그래프에는 아직 잇지 않음, 오프라인 확인용) ----------
+
+def test_sibling_firsts_picks_first_chunk_of_sibling_sections_by_score():
+    from backend.rag.retrieve.search import sibling_firsts
+
+    def r(cid, art, line, seq=1):
+        return {"chunk_id": cid, "version_id": "v", "rule_seq": seq, "article": art, "line_start": line}
+    ctx = [r("c1", "A > B", 10)]
+    rows = [r("c1", "A > B", 10), r("s1", "A > C", 30), r("s1b", "A > C", 20), r("s2", "A > D", 40), r("deep", "A > C > E", 25),
+            r("top", "A", 1), r("other", "A > C", 5, seq=2)]
+    sc = {("s1", "v"): 0.2, ("s1b", "v"): 0.1, ("s2", "v"): 0.9}
+    assert sibling_firsts(ctx, rows, sc, 2) == [("s2", "v"), ("s1b", "v")]   # 절마다 첫 청크(s1b), 같은 깊이만, 다른 페이지는 뺀다
+    assert sibling_firsts(ctx, rows, sc, 1) == [("s2", "v")]
+    assert sibling_firsts([r("t", "", 1)], rows, sc, 2) == []                 # 제목 경로 없는 문맥은 형제를 만들지 않는다

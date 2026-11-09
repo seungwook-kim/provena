@@ -1,0 +1,225 @@
+"""서비스 질문 그래프의 기본 설정 (결정 0078, 사전 등록 61.51).
+
+측정 실행기(`evals/agent/exp_multi_v2.py run`)는 설정을 인자로 받아 환경 변수와 `build_graph` 인자로 넘긴다. 서비스(`/chat`)에는 인자가 없으므로
+같은 값을 이 파일 한 곳(`SERVICE_ENV`)에 두고, 앱이 뜰 때(`backend/main.py`의 lifespan) 환경 변수로 채운 뒤 질문 그래프를 만든다.
+그래프, 프롬프트, 검색, LLM 코드는 지금처럼 환경 변수를 읽는다. 코드 기본값(모두 꺼짐)은 그대로라 시험과 측정 실행기는 바뀌지 않는다.
+
+- 덮어쓰기: 환경 변수에 값이 있으면 그 값을 쓴다. 비어 있거나 없으면 `SERVICE_ENV`의 값을 넣는다. `off`면 그 설정을 쓰지 않는다(빈 값 = 코드 기본값).
+- 묶음 끄기: `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(값을 직접 준 변수만 쓴다, 61.51 이전 동작). 비우거나 `61.51`이면 채운다. 다른 값은 ValueError.
+- 앱이 내려가면 채운 값을 되돌린다(같은 프로세스에서 앱을 여러 번 띄우는 시험이 서로 섞이지 않게).
+- `--via-mcp`: 측정은 같은 프로세스의 MCP 서버로 검색과 섹션 읽기를 불렀다. 서비스는 `MCP_TOKEN`이 있을 때만 `SEARCH_VIA_MCP=1`을 채운다.
+  토큰이 없으면 앱이 /mcp를 붙이지 않아 부를 곳이 없다(그때는 직접 호출이고 결과는 같다, tests/test_mcp_parity.py).
+- `--connected`: 서비스는 원래 결정표 저장소와 합동 검토 그래프를 질문 그래프에 연결한다(`backend/main.py`의 `build_question_graph`).
+- 추론 수준: anthropic 공급자는 `LLM_EFFORT*`, openrouter 공급자는 `LLM_REASONING*`를 읽는다(`backend/services/llm.py`). 둘 다 같은 수준으로 둔다.
+  claude_cli(로컬 개발)는 `CLAUDE_CLI_EFFORT*`를 읽고 시간 제한을 쓰지 않는다.
+- 측정 전용 인자는 넣지 않는다: `--llm`, `--store`, `--out`, `--arms`, `--ids`, `--repeat`, `--dataset*`, `--trace-detail`(호출 기록에 응답 원문),
+  `--facts-log`(진단 기록), `--warm`(서비스는 `SEARCH_WARMUP=1`의 시작 준비가 `SEARCH_HNSW=1`일 때 같은 색인 미리 읽기를 한다).
+- 측정 실행기가 그래프에 따로 넘긴 페이지 안 검색, 제목 경로 검색, 도입부 채우기는 서비스 검색기(`backend.rag.retrieve.search`)로 같은 일을 하는 함수를 넘긴다(`service_searches`).
+"""
+from __future__ import annotations
+
+import logging
+import os
+import threading
+from collections.abc import Iterator, MutableMapping
+from contextlib import contextmanager
+from typing import Any
+
+log = logging.getLogger(__name__)
+
+PROFILE_ENV = "SERVICE_PROFILE"
+PROFILE_NAME = "61.51"
+OFF = "off"
+
+# 사전 등록 61.51에서 고른 설정(bo2sd-a2)을 잰 측정 실행기 인자. 서비스 값(`SERVICE_ENV`)과 같은지 시험이 대조한다(tests/test_service_profile.py).
+# 측정 전용 인자(`--llm`, `--store`, `--warm`, `--trace-detail`, `--facts-log`, `--out`)는 뺐다
+MEASURED_ARGS = (
+    "--via-mcp", "--connected", "--structured", "judge,answer,grounding", "--section-keeps-research", "--parallel-intake", "--skip-first-rewrite",
+    "--stop-stalled-search", "--judge-answer", "parallel_all", "--judge-query", "--embed-keepalive", "--brief-output", "--max-research", "1",
+    "--json-reminder", "--parallel-subs", "--query-terms", "--query-branches",
+    "--cite-expand", "--team-last", "--unknown-name", "--refuse-on-none", "--research-same-page", "--cite-phrase", "--heading-terms", "--grounding-quote",
+    "--drop-scoped-cites", "--heading-mark", "--intro-fill", "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus",
+    "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--judge-vote",
+    "--effort", "none", "--effort-by-task", "decompose=low,answer=low,judge=low", "--llm-deadline", "8", "--llm-hedge", "3.5", "--llm-retries", "2",
+    "--answer-wait", "5.5", "--answer-budget", "8.0",
+    "--judge-quote", "--answer-best2", "--best2-samedoc",
+)
+
+EFFORT_BY_TASK = "decompose=low,answer=low,judge=low"  # 질문 분해, 답 작성, 근거 충분 판정만 낮은 추론. 나머지 단계는 끔
+
+SERVICE_ENV: dict[str, str] = {
+    # 그래프 흐름(측정 실행기는 build_graph 인자로 넘긴다)
+    "GRAPH_PARALLEL_INTAKE": "1",       # --parallel-intake
+    "LLM_BRIEF_OUTPUT": "1",            # --brief-output
+    "SEARCH_MAX_RESEARCH": "1",         # --max-research 1
+    "GRAPH_JUDGE_ANSWER": "parallel_all",  # --judge-answer parallel_all
+    "GRAPH_SKIP_FIRST_REWRITE": "1",    # --skip-first-rewrite
+    "GRAPH_STOP_STALLED_SEARCH": "1",   # --stop-stalled-search
+    # 프롬프트와 판정
+    "LLM_STRUCTURED": "judge,answer,grounding",  # --structured
+    "GRAPH_JUDGE_QUERY": "1",           # --judge-query
+    "LLM_JSON_REMINDER": "1",           # --json-reminder
+    "GRAPH_SECTION_KEEPS_RESEARCH": "1",  # --section-keeps-research
+    # 검색
+    "EMBED_KEEPALIVE": "1",             # --embed-keepalive
+    "SEARCH_PARALLEL_SUBS": "1",        # --parallel-subs
+    "SEARCH_HNSW": "1",                 # 측정 환경 SEARCH_HNSW=1(운영 DB의 HNSW 색인, db/manual/chunks_hnsw_voyage4.sql)
+    "GRAPH_QUERY_TERMS": "1",           # --query-terms
+    "GRAPH_QUERY_BRANCHES": "1",        # --query-branches
+    # 문항 수정 스위치(#44 이후)
+    "GRAPH_CITE_EXPAND": "1",           # --cite-expand
+    "GRAPH_TEAM_LAST": "1",             # --team-last
+    "GRAPH_UNKNOWN_NAME": "1",          # --unknown-name
+    "GRAPH_REFUSE_ON_NONE": "1",        # --refuse-on-none
+    "GRAPH_RESEARCH_SAME_PAGE": "1",    # --research-same-page (page_search가 필요하다)
+    "GRAPH_CITE_PHRASE": "1",           # --cite-phrase
+    "GRAPH_HEADING_TERMS": "1",         # --heading-terms (heading_search가 필요하다)
+    "GRAPH_GROUNDING_QUOTE": "1",       # --grounding-quote
+    "GRAPH_DROP_SCOPED_CITES": "1",     # --drop-scoped-cites
+    "GRAPH_HEADING_MARK": "1",          # --heading-mark
+    "GRAPH_INTRO_FILL": "1",            # --intro-fill (intro_search가 필요하다)
+    "GRAPH_HEADING_HEADS": "1",         # --heading-heads
+    "GRAPH_SCOPE_NOTE_REFUSE": "1",     # --scope-note-refuse
+    "GRAPH_CITE_PICK": "1",             # --cite-pick
+    "GRAPH_REQUERY_SKIP_SEEN": "1",     # --requery-skip-seen
+    "GRAPH_CITE_CONSENSUS": "1",        # --cite-consensus
+    "GRAPH_POINTER_REFUSE": "1",        # --pointer-refuse
+    "GRAPH_SPECULATE_FIRST": "1",       # --speculate-first
+    "GRAPH_UNCHANGED_REJUDGE": "1",     # --unchanged-rejudge
+    "GRAPH_JUDGE_VOTE": "1",            # --judge-vote
+    # 답 고르기
+    "GRAPH_JUDGE_QUOTE": "1",           # --judge-quote
+    "GRAPH_ANSWER_BEST2": "1",          # --answer-best2
+    "GRAPH_BEST2_SAMEDOC": "1",         # --best2-samedoc
+    # 추론과 시간
+    "LLM_EFFORT": "none",               # --effort none (anthropic)
+    "LLM_EFFORT_BY_TASK": EFFORT_BY_TASK,  # --effort-by-task (anthropic)
+    "LLM_REASONING": "none",            # openrouter에서 같은 수준
+    "LLM_REASONING_BY_TASK": EFFORT_BY_TASK,  # openrouter에서 같은 수준
+    "LLM_DEADLINE_S": "8",              # --llm-deadline 8
+    "LLM_HEDGE_S": "3.5",               # --llm-hedge 3.5
+    # 측정 인자에는 없다. 질문 그래프 밖의 긴 호출은 위 상한과 hedge를 걸지 않는다: 결정표 변환 초안(convert.py TASK_DRAFT),
+    # 합동 검토 감독과 팀 에이전트(teams.py). 질문 그래프 단계(classify, rewrite, judge, answer, answer_fast, grounding, decompose 등)는 넣지 않는다
+    "LLM_DEADLINE_SKIP_TASKS": "decision_draft,supervisor,team_*",
+    "LLM_MAX_RETRIES": "2",             # --llm-retries 2
+    "GRAPH_ANSWER_WAIT_S": "5.5",       # --answer-wait 5.5
+    "GRAPH_ANSWER_BUDGET_S": "8.0",     # --answer-budget 8.0
+}
+
+
+def profile_values(environ: MutableMapping[str, str] | None = None) -> dict[str, str]:
+    """이번 실행에 채울 값. `SERVICE_ENV`에 `MCP_TOKEN`이 있을 때만 `SEARCH_VIA_MCP=1`을 더한다(--via-mcp)."""
+    env = os.environ if environ is None else environ
+    values = dict(SERVICE_ENV)
+    if (env.get("MCP_TOKEN") or "").strip():
+        values["SEARCH_VIA_MCP"] = "1"
+    return values
+
+
+def profile_enabled(environ: MutableMapping[str, str] | None = None) -> bool:
+    """`SERVICE_PROFILE`이 비었거나 `61.51`이면 켬, `off`면 끔. 다른 값은 ValueError(앱이 뜨지 않는다)."""
+    env = os.environ if environ is None else environ
+    raw = (env.get(PROFILE_ENV) or "").strip().lower()
+    if raw in ("", PROFILE_NAME):
+        return True
+    if raw == OFF:
+        return False
+    raise ValueError(f"{PROFILE_ENV}는 {PROFILE_NAME} 또는 {OFF}이다: {raw!r}")
+
+
+def apply_service_profile(environ: MutableMapping[str, str] | None = None) -> dict[str, str | None]:
+    """환경 변수를 채운다. 돌려주는 값은 바꾼 변수 -> 원래 값(없었으면 None)이고 `restore_env`에 넘긴다.
+
+    값이 있으면 그대로 두고, `off`면 빈 값으로 바꾸고(묶음을 꺼도 같다), 비었거나 없으면 서비스 값을 넣는다(묶음을 켰을 때만)."""
+    env = os.environ if environ is None else environ
+    enabled = profile_enabled(env)
+    before: dict[str, str | None] = {}
+    for name, default in profile_values(env).items():
+        raw = env.get(name)
+        current = (raw or "").strip()
+        if current.lower() == OFF:
+            new = ""
+        elif not current and enabled:
+            new = default
+        else:
+            continue
+        if raw != new:
+            before[name] = raw
+            env[name] = new
+    kept = sorted(n for n in profile_values(env) if n not in before and (env.get(n) or "").strip())
+    log.info("서비스 설정 %s: %s, 채움 %d개, 끔 %d개, 직접 준 값 %d개(%s)", PROFILE_NAME, "켬" if enabled else "끔",
+             sum(1 for n in before if env.get(n)), sum(1 for n in before if not env.get(n)), len(kept), ", ".join(kept))
+    return before
+
+
+def restore_env(before: dict[str, str | None], environ: MutableMapping[str, str] | None = None) -> None:
+    env = os.environ if environ is None else environ
+    for name, raw in before.items():
+        if raw is None:
+            env.pop(name, None)
+        else:
+            env[name] = raw
+
+
+@contextmanager
+def service_profile(enabled: bool = True, environ: MutableMapping[str, str] | None = None) -> Iterator[dict[str, str | None]]:
+    """앱이 떠 있는 동안 서비스 설정을 환경 변수로 둔다. `enabled=False`(시험이 그래프를 직접 꽂을 때)면 아무것도 바꾸지 않는다."""
+    before = apply_service_profile(environ) if enabled else {}
+    try:
+        yield before
+    finally:
+        restore_env(before, environ)
+
+
+class SharedChatModel:
+    """채팅 모델을 처음 부를 때 한 번 만들고 다시 쓴다. 측정 실행기가 모델 하나로 문항을 돌린 것과 같게 HTTP 연결을 재사용한다.
+    키 없이도 앱이 떠야 하므로 만들 때까지 미룬다. 환경 변수는 앱이 뜰 때 정해지고 바뀌지 않는다."""
+
+    def __init__(self) -> None:
+        self._model: Any = None
+        self._lock = threading.Lock()
+
+    def model(self) -> Any:
+        if self._model is None:
+            with self._lock:
+                if self._model is None:
+                    from backend.services.llm import get_chat_model
+
+                    self._model = get_chat_model()
+        return self._model
+
+    def invoke(self, *args: Any, **kwargs: Any) -> Any:
+        return self.model().invoke(*args, **kwargs)
+
+
+def _searcher():
+    """서비스 검색기(`search()`가 쓰는 것과 같은 객체). `backend.rag.retrieve`는 같은 이름의 함수 `search`를 내보내므로 모듈은 이름으로 연다."""
+    import importlib
+
+    S = importlib.import_module("backend.rag.retrieve.search")
+    return S._searcher or S.warmup()
+
+
+def page_search(query: str, rule_seqs: list[int], org: str | None, as_of: str | None, k: int) -> list:
+    """페이지 안 재검색(`GRAPH_RESEARCH_SAME_PAGE`, `GRAPH_PAGE_RESEARCH`). 측정 실행기의 `PageSearch`와 같은 `Searcher.search_pages`다."""
+    return _searcher().search_pages(query, rule_seqs, org, as_of, k)
+
+
+class HeadingSearch:
+    """제목 경로 검색(`GRAPH_HEADING_TERMS`). 측정 실행기의 `HeadingSearch`와 같은 `Searcher.search_headings`, 순위는 `closest_to_query`다."""
+
+    def __call__(self, phrase: str, org: str | None, as_of: str | None, n: int) -> list:
+        return _searcher().search_headings(phrase, org, as_of, n)
+
+    def rank(self, query: str, chunks: list, org: str | None, as_of: str | None) -> list:
+        return list(_searcher().closest_to_query(query, chunks, org, as_of) or [])
+
+
+def intro_search(chunks: list, query: str, org: str | None, as_of: str | None) -> list:
+    """도입부 채우기(`GRAPH_INTRO_FILL`). 측정 실행기의 `IntroSearch`와 같은 `Searcher.intro_fill`이다."""
+    return _searcher().intro_fill(chunks, query, org, as_of)
+
+
+def service_searches() -> dict[str, Any]:
+    """`build_graph`에 넘길 페이지·제목 경로·도입부 검색. 그래프는 해당 스위치가 켜졌을 때만 부른다."""
+    return {"page_search": page_search, "heading_search": HeadingSearch(), "intro_search": intro_search}

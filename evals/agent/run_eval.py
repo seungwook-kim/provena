@@ -75,9 +75,11 @@ def run_item(graph, item: dict, *, run_id: str, judge_llm: Any = None) -> dict:
     row["llm_trace"] = list(llm_calls)
     cost = tracking.finish_item(config, _item_scores(row))
     row["cost_usd"] = cost.get("cost_usd", 0.0)
+    row["trace_id"] = cost.get("trace_id")  # Langfuse 트레이스(키가 없으면 None). rows.jsonl에서 그 문항 화면을 찾는다
     if judge_llm is not None and row["answered"] and item["kind"] == "relevant":
         evidence = [c.get("text", "") for c in out.get("chunks", []) if _hits(item, c)]
         row["judge"] = judge_answer(question=item["input"], answer=row["answer"], gold_evidence=evidence, judge_llm=judge_llm).to_dict()
+        tracking.record_item_scores(config, {"judge_score": row["judge"]["score"]})  # 채점 실패(None)는 붙이지 않는다
     return row
 
 
@@ -119,12 +121,19 @@ def _row(item: dict, out: dict, seconds: float) -> dict:
 
 
 def _item_scores(r: dict) -> dict[str, float | None]:
+    """문항 트레이스에 붙일 점수. 이름은 집계 지표에서 `_rate`를 뺀 것이고, 집계(`compute_metrics`)의 분자·분모 정의와 같다.
+    분모에 들지 않는 문항은 None(붙이지 않음). `error`는 그래프 실행이 예외로 끝난 문항(거절로 세지만 거절과 구별한다)."""
+    common = {
+        "hallucination_risk": (1.0 if r["dropped"] or (r["answered"] and r["expect_refusal"]) else 0.0) if r["drafted"] else None,
+        "error": 1.0 if r.get("result") == "error" else 0.0,
+    }
     if r["expect_refusal"]:
-        return {"correct_refusal": 0.0 if r["answered"] else 1.0}
+        return {"correct_refusal": 0.0 if r["answered"] else 1.0, **common}
     return {
         "cited_correct": r["gold_hit"] / r["gold_total"] if r["answered"] and r["gold_total"] else 0.0,
         "over_refusal": 0.0 if r["answered"] else 1.0,
         "wrong_citation": (1.0 if r["cited_on_gold"] < len(r["cited"]) else 0.0) if r["answered"] else None,
+        **common,
     }
 
 
@@ -171,7 +180,7 @@ def run_eval(graph, items: list[dict], *, judge_llm: Any = None, run_id: str | N
     rows = [run_item(graph, it, run_id=run_id, judge_llm=judge_llm) for it in items]
     metrics = compute_metrics(rows)
     tracking.record_run_scores(run_id, {k: v for k, v in metrics.items() if k != "n"})
-    return {"metrics": metrics, "rows": rows}
+    return {"metrics": metrics, "rows": rows, "run_id": run_id}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -207,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
         "search": {"embedder": a.embedder, "mode": a.mode, "reranker": a.reranker, "rerank_top": a.rerank_top} if a.embedder else "service",
         "excluded": sorted(excluded),
         "partial": bool(a.ids),
+        "run_id": report["run_id"],  # Langfuse 세션 id. 문항 트레이스는 rows.jsonl의 trace_id
     }
     print(json.dumps(report["metrics"], ensure_ascii=False, indent=2))
     if a.out:

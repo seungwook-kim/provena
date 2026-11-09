@@ -41,7 +41,7 @@ RERANKERS: dict[str, RerankerSpec] = {s.name: s for s in (
 )}
 NONE = "none"
 DEFAULT_MODEL = NONE   # 확정 조합(retrieval_fix_v1)은 리랭커 없음. 켜려면 RERANK_MODEL
-BAKED_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"   # 이미지에 구워 두는 리랭커(Dockerfile, 비교용)
+BAKED_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"   # 비교용 리랭커. 서비스 이미지에는 넣지 않음 — Dockerfile --build-arg와 requirements-local-models.txt로
 
 QWEN_PREFIX = ("<|im_start|>system\nJudge whether the Document meets the requirements based on the Query and the Instruct provided. "
                "Note that the answer can only be \"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n")
