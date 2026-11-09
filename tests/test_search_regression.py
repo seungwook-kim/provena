@@ -8,7 +8,7 @@
 정답 청크 일부만 float16으로 떼어 낸 것이고, 떼어 낸 자료의 상위 5가 전체 색인·로컬 Postgres(PgStore 전수)와 40/40 같음을 만들 때 확인했다.
 
 문항: 동결 v1 30건(관련 15·비관련 15) + v2 관련 중 v1에 없는 10건(31~40) = 40건. 채점은 v2 관련 25건(정답은 동결 평가셋 파일에서 읽는다).
-검색을 일부러 바꿨다면 PREREGISTER에 먼저 적고 자료·기대값을 다시 만든다(입력 파일은 저장소 밖):
+검색을 일부러 바꿨다면 PREREGISTER에 먼저 적고 자료·기대값을 다시 만든다(입력 파일은 저장소 밖, 받는 곳은 evals/retrieval/retrieval.md "재현 자료"):
     REPRO_DIR=<voyage-4 재현 zip 푼 폴더> REPRO_DATA=<data/chunks·data/parsed가 있는 폴더> python -m evals.retrieval.regress_fixture --n 10
 """
 from __future__ import annotations
