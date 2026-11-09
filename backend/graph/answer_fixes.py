@@ -42,6 +42,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from backend.graph.untrusted import drop_suspect_tokens, strip_instructions
+
 
 def _flag(name: str) -> bool:
     return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
@@ -595,7 +597,17 @@ def unknown_phrases(question: str, corpus: str) -> list[str]:
     return [p for p in english_phrases(question) if _squash(p.strip(" .,?!()")) not in corpus]
 
 
+def quotable_phrases(question: str, corpus: str) -> list[str]:
+    """되묻기 문장에 따옴표로 인용해도 되는 모르는 영문 구. 질문을 입력 정화와 같은 지시 문장 판정(`untrusted.strip_instructions`)으로 나눠
+    지시로 판정된 절·문장·묶음 괄호를 뺀 글에서만 뽑고, 의심 문장(표식 꼴 토큰 가까이에 출력 자리나 목적 이름표)의 토큰도 뺀다.
+    지시도 의심 문장도 없으면 글자 하나도 바뀌지 않으므로 `unknown_phrases`와 같은 목록이다."""
+    return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "")[0]), corpus)
+
+
 def unknown_name_message(phrases: list[str]) -> str:
+    """phrases가 비면(모르는 구가 지시 절에만 있었다) 문자열을 인용하지 않는 일반 문구로 되묻는다."""
+    if not phrases:
+        return "질문에 핸드북 자료에서 찾지 못한 표현이 있습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
     names = ", ".join(f"'{p}'" for p in phrases[:3])
     return f"질문의 {names}은(는) 핸드북 자료에서 찾지 못했습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
 

@@ -832,7 +832,7 @@ def build_graph(
         if unknown_name and not state.get("retries", 0):  # `GRAPH_UNKNOWN_NAME=1`: 코퍼스 어디에도 없는 영문 구를 묻는 질문은 검색 없이 되묻는다
             unknown = AF.unknown_phrases(state["question"], corpus)
             if unknown:
-                return {"kind": "clarify", "answer": AF.unknown_name_message(unknown), "citations": [], "search_error": "unknown_name"}
+                return {"kind": "clarify", "answer": AF.unknown_name_message(AF.quotable_phrases(state["question"], corpus)), "citations": [], "search_error": "unknown_name"}
         # 질문 분해는 첫 검색에서만, 사용자가 쓴 한국어 원 질문으로 한다(측정과 같다). 하위 질문은 검색에 넘기고 검색은 질문을 LLM으로 나누지 않는다.
         # 재검색은 재작성 검색어 하나로 분해 없이 찾는다.
         first = state.get("retries", 0) == 0
