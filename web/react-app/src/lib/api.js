@@ -40,7 +40,10 @@ export async function apiRequest(path, options = {}) {
       const body = await response.json()
       if (typeof body.error?.message === 'string' && body.error.message.length < 160) detail = body.error.message
       else if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
+      // 결정표·승인 API는 detail을 {reason, message}로 낸다 (backend/graph/decision/routes.py `_http`).
+      else if (response.status < 500 && typeof body.detail?.message === 'string' && body.detail.message.length < 160) detail = body.detail.message
       if (typeof body.error?.code === 'string' && body.error.code) errorCode = body.error.code
+      else if (typeof body.detail?.reason === 'string' && body.detail.reason) errorCode = body.detail.reason
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }
@@ -162,10 +165,12 @@ export async function putChangeMonitoring(status) {
   return apiJson('/changes/monitoring', { method: 'PUT', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
 }
 
-export async function submitApproval(approvalId, approve, comment = '') {
-  await apiRequest(`/approvals/${approvalId}`, {
+// 결정표·쟁점표는 {approve, comment}, 팀 실패 알림은 {action: 'retry' | 'mark_unreviewed', comment}. 관리자와 CSRF가 필요하다.
+export async function submitApproval(approvalId, decision) {
+  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, {
     method: 'POST',
-    body: JSON.stringify({ approval_id: approvalId, approve, comment }),
+    headers: await csrfHeaders(),
+    body: JSON.stringify({ approval_id: approvalId, ...decision }),
   })
 }
 

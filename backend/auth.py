@@ -500,6 +500,13 @@ class UserResponse(BaseModel):
     role: str
 
 
+class MeResponse(UserResponse):
+    # 내 정보(요청 1번): /me에만 "있다/없다"를 더한다. 로그인 응답(UserResponse)은 그대로 두려고 따로 뺐다.
+    profile_completed: bool | None = None
+    # 사용자 관리(요청 2번): 최고 관리자면 true. 화면이 메뉴를 숨기는 데만 쓰고, 서버는 요청마다 다시 확인한다
+    is_owner: bool | None = None
+
+
 class LoginRateLimiter:
     """MVP process-local limiter; replace with shared storage before deployment."""
 
@@ -681,6 +688,8 @@ def create_auth_router(
     google_config: GoogleOAuthConfig | None = None,
     google_token_exchanger: GoogleTokenExchanger | None = None,
     google_id_token_verifier: GoogleIdTokenVerifier | None = None,
+    profile_completed: Callable[[str], bool] | None = None,
+    owner_check: Callable[[AuthUser], bool] | None = None,
 ) -> APIRouter:
     """Explicit repository only: no account seed, in-memory or DB fallback.
 
@@ -846,9 +855,19 @@ def create_auth_router(
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    @router.get("/me", response_model=UserResponse)
-    def me(response: Response, user: AuthUser = Depends(current_user)) -> UserResponse:
+    # profile_completed: 내 정보(요청 1번) 첫 로그인 막기용. 콜백을 안 넘기면 /me 응답은 예전과 같다(None은 빼고 보냄).
+    @router.get("/me", response_model=MeResponse, response_model_exclude_none=True)
+    def me(response: Response, user: AuthUser = Depends(current_user)) -> MeResponse:
         response.headers["Cache-Control"] = "no-store"
-        return UserResponse(user_id=str(user.user_id), role=user.role)
+        completed = None
+        if profile_completed is not None:
+            try:
+                completed = profile_completed(str(user.user_id))
+            except Exception:
+                completed = None
+            if type(completed) is not bool:   # 저장소 오류·이상한 값은 막힘/열림을 추측하지 않고 503
+                raise HTTPException(status_code=503, detail="내 정보 저장소를 사용할 수 없습니다.")
+        owner = None if owner_check is None else owner_check(user) is True   # backend/admin_api.py is_owner (DB 조회 없음)
+        return MeResponse(user_id=str(user.user_id), role=user.role, profile_completed=completed, is_owner=owner)
 
     return router

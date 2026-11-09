@@ -158,9 +158,12 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
-| `PROFILE_ENC_KEYS` | 배포 담당이 알려 준 이름이다. 저장소 코드에서 읽는 곳을 찾지 못했다(미확인) |
+| `PROFILE_ENC_KEYS` | 내 정보(`/me/profile`) AES-256-GCM 키(`backend/services/profile_crypto.py`). 형식 `번호:base64(32바이트)`, 쉼표로 여러 개. 없거나 형식이 틀리면 배포 모드에서는 서버가 시작하지 않는다 |
+| `PROVENA_OWNER_LOGIN_ID` | 최고 관리자 로그인 아이디(`/admin/users`, `docs/specs/admin-roles.md`). 비었거나 그 계정이 admin·활성이 아니면 사용자 관리만 403이고 나머지는 정상 |
 
-비밀값(`AUTH_SECRET`, `DATABASE_URL`, `DATABASE_DIRECT_URL`, `LLM_API_KEY`, `VOYAGE_API_KEY`, `GOOGLE_CLIENT_SECRET`, `LANGFUSE_SECRET_KEY`)은 Secret Manager에 두고 서비스에 연결하는 방식을 권장한다. 권장 사항이며, 현재 배포 서비스가 그렇게 설정돼 있는지와 서비스의 현재 상태(환경변수 설정, 최신 `main` 반영 여부)는 2026-11-09에 확인하지 못했다(미확인).
+내 정보·사용자 관리를 쓰려면 배포 전에 운영 DB에 `db/104_user_profiles.sql`, `db/105_admin_role_log.sql`을 적용한다. `user_profiles` 표가 없으면 `/me`가 503이 되어 로그인 뒤 화면이 열리지 않는다.
+
+비밀값(`AUTH_SECRET`, `DATABASE_URL`, `DATABASE_DIRECT_URL`, `LLM_API_KEY`, `VOYAGE_API_KEY`, `GOOGLE_CLIENT_SECRET`, `LANGFUSE_SECRET_KEY`, `PROFILE_ENC_KEYS`)은 Secret Manager에 두고 서비스에 연결하는 방식을 권장한다. 권장 사항이며, 현재 배포 서비스가 그렇게 설정돼 있는지와 서비스의 현재 상태(환경변수 설정, 최신 `main` 반영 여부)는 2026-11-09에 확인하지 못했다(미확인).
 
 ### 테스트
 
