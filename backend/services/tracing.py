@@ -65,12 +65,12 @@ def _make_handler(public_key: str) -> Any:
     return CallbackHandler(public_key=public_key)
 
 
-def get_handler() -> Any | None:
+def get_handler(*, allow_evaluation: bool = False) -> Any | None:
     """실행 한 번에 쓸 Langfuse 콜백 핸들러. 꺼져 있거나 만들지 못하면 None(트레이스만 없고 실행은 그대로)."""
     cfg = langfuse_settings()
     if cfg is None or cfg in _failed:
         return None
-    if _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
+    if not allow_evaluation and _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
         return None
     try:
         with _lock:
@@ -84,10 +84,11 @@ def get_handler() -> Any | None:
 
 
 def trace_metadata(
-    *, session_id: str | None = None, user_id: str | None = None, name: str | None = None
+    *, session_id: str | None = None, user_id: str | None = None, name: str | None = None,
+    allow_evaluation: bool = False,
 ) -> dict[str, str]:
     """Langfuse 핸들러가 트레이스 속성으로 읽는 metadata 키."""
-    if _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
+    if not allow_evaluation and _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
         return {}
     out: dict[str, str] = {}
     if session_id:
