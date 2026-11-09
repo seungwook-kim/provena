@@ -103,7 +103,10 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
-| `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 아직 운영 기본값이 아니다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다 |
+| `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 서비스 설정(61.51, `backend/graph/service_profile.py`)이 켠다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다. 색인이 없는 DB(로컬 compose 등)에서는 `SEARCH_HNSW=off`로 끈다 |
+| `SEARCH_SUB_MERGE` | 꺼짐 | `1`이면 분해 검색에서 전체 질문도 후보에 넣고, 하위 질문 목록을 번갈아 합치는 대신 질의별 점수 중 가장 높은 값(`merge_by_score`)으로 합친다. 서비스 설정은 켜지 않는다 |
+| `SEARCH_PARALLEL_SUBS` | 꺼짐 | `1`이면 하위 질문을 동시에 찾는다. 합치는 순서는 하위 질문 순서 그대로라 순위는 같다. 벡터만 쓰는 방식이고 리랭커가 없을 때만 동시에 한다(BM25·리랭커는 프로세스 안 계산이라 빨라지지 않는다). 서비스 설정이 켠다 |
+| `EMBED_KEEPALIVE` | 꺼짐 | `1`이면 voyage-4 질문 임베딩이 HTTP 연결을 다시 쓰고(httpx), 질문이 2~8개면 하나씩 동시에 보낸다(`VOYAGE_PARALLEL_QUERIES`). 순서는 입력과 같다. 서비스 설정이 켠다 |
 | `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(비교용, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
@@ -115,6 +118,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
 - 고정값: RRF k=60, 임베딩 `max_seq_length` 512, 정규화한 벡터의 내적. 1차 비교와 같게 둔다.
+- 그래프 전용 보조 검색(#67, 각각 그래프 `GRAPH_*` 스위치로 켜고 기본 검색 `search()`의 결과는 바꾸지 않는다): `search_pages`(페이지 범위 재검색), `sibling_sections`(형제 절), `intro_fill`(도입부 채우기, 같은 페이지 청크 `INTRO_MIN`=3개 이상일 때), `closest_to_query`(질문 벡터와 가까운 순, 캐시된 질문 벡터만 씀), `search_headings`(제목 경로에 문구가 그대로 든 청크, 임베딩·LLM 호출 없음). 저장소가 `heading_top`·`page_chunks`를 모르면 빈 목록이다.
+- 질문 벡터 기억: 검색기 하나가 (방식, 질문) → 벡터를 최대 `QVEC_CACHE`=512개 프로세스 안에 기억해, 같은 질문을 보조 검색에서 다시 임베딩하지 않는다. 프로세스를 다시 띄우면 비워진다(질문 벡터 장부와는 별개).
 - 번역 프롬프트는 1차 비교의 `keywords`·`sentence` 두 가지를 그대로 쓴다(`experiment_v1.py`의 `PROMPTS`). 데모 모드는 `llm.py`가 입력 해시로 기록을 재생한다.
 - 응답 시간 참고(노트북 CPU, 후보 10): 질문 임베딩 86~215ms, 리랭킹 bge 5.3초·int8 2.3초·Qwen3 12.2초·mMiniLM 0.42초. CPU에서 3초를 지키는 조합은 11/6에 정한다. 측정 스크립트와 결과는 평가셋 v1 동결 뒤 올린다.
 
