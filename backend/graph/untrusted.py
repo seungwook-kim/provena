@@ -218,6 +218,18 @@ def sanitize_text(text: str) -> str:
     return strip_instructions(text)[0]
 
 
+def drop_suspect_tokens(text: str) -> str:
+    """지시 문장 판정(`strip_instructions`)이 놓친 의심 문장(`is_suspect`: 표식 꼴 토큰 가까이에 출력 자리나 목적 이름표)에서 그 토큰만 뺀다.
+    되묻기가 질문 속 문자열을 인용하기 전에 쓴다. 의심 문장이 없으면 글자 하나도 바꾸지 않는다."""
+    pieces = _SENT.split(text or "")
+    changed = False
+    for i, piece in enumerate(pieces):
+        if i % 2 == 0 and piece.strip() and is_suspect(piece):
+            pieces[i] = _P_TOKEN.sub(" ", piece)
+            changed = changed or pieces[i] != piece
+    return "".join(pieces) if changed else (text or "")
+
+
 def sanitize_heading(text: str | None) -> str:
     return strip_instructions(text or "", cut_tail=True)[0]
 
