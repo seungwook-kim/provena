@@ -67,10 +67,15 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      # 새 DB의 첫 기동에서는 공식 이미지가 db/ 초기화 스크립트를 돌리는 동안(약 15~40초) 임시 서버를 띄운다.
+      # 이 서버는 유닉스 소켓만 열고 TCP는 받지 않으므로, 소켓 검사(-h 생략)는 이때 healthy로 잘못 판정한다.
+      # 다른 컨테이너는 TCP로 접속하니 같은 방식(-h 127.0.0.1)으로 검사해야 초기화가 끝난 진짜 서버만 healthy가 된다
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U app -d app"]
       interval: 3s
       timeout: 3s
-      retries: 20
+      # 초기화(최대 약 40초)와 느린 PC를 감안해 약 2분까지 기다린다
+      retries: 40
+      start_period: 10s
 
 volumes:
   pgdata:

@@ -232,6 +232,20 @@ def ensure_index(index: Path, log=print) -> bool:
     return True
 
 
+def _connect(url: str, wait_s: float = 60.0, step_s: float = 2.0):
+    """DB가 아직 접속을 받지 않으면(첫 기동의 초기화 직후 등) 최대 wait_s초 동안 다시 시도한다."""
+    import psycopg
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            return psycopg.connect(url, prepare_threshold=None)
+        except psycopg.OperationalError as e:
+            if time.monotonic() >= deadline:
+                raise
+            print(f"DB 접속 재시도: {e}".strip(), flush=True)
+            time.sleep(step_s)
+
+
 def main(argv: list[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(prog="python -m backend.rag.retrieve.load_snapshot")
@@ -246,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise SystemExit("DATABASE_URL이 없다")
-    with psycopg.connect(url, prepare_threshold=None) as conn:
+    with _connect(url) as conn:
         conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         conn.commit()
         register_vector(conn)
