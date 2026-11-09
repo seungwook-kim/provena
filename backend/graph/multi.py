@@ -103,7 +103,7 @@ AGENTS = {a.name: a for a in (RETRIEVER, WRITER, VERIFIER)}
 DECISION = AgentSpec(
     "decision",
     ("decision_params", "decision_run", "decision_answer"),
-    reads=frozenset({"question"}),
+    reads=frozenset({"question", "decision_query"}),   # 분류 단계가 미리 뽑은 값이 있으면 값 뽑기가 다시 부르지 않는다
     writes=frozenset({"decision_query", "decision_result", "decision_error", "kind", "answer", "citations"}),
 )
 REVIEW = AgentSpec(
