@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, changeAdminRole, listAdminUsers } from '../lib/api'
 import { useSession } from '../lib/session'
 import DemoLayout from '../components/DemoLayout'
+import AdminUsersTabs from '../components/AdminUsersTabs'
 import AdminRoleDialog from '../components/AdminRoleDialog'
 import AdminUsersTable from '../components/AdminUsersTable'
 import '../admin-users.css'
@@ -27,7 +28,6 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => { if (user?.is_owner) load(); else setLoading(false) }, [user?.is_owner])
-
   async function applyChange() {
     if (!confirm || busy) return
     setBusy(confirm.login_id)
@@ -49,7 +49,13 @@ export default function AdminUsersPage() {
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="profile-success" role="status">{message}</p>}
+    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="roles" />
+    {false && <div>
+    <header><h1>권한 관리</h1></header>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {message && <p className="profile-success" role="status">{message}</p>}
     {loading ? <p role="status">사용자 목록을 불러오는 중입니다.</p> : <AdminUsersTable users={users} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} />}
     <AdminRoleDialog confirm={confirm} busy={Boolean(busy)} onCancel={() => setConfirm(null)} onConfirm={applyChange} />
+    </div>}
   </main></DemoLayout>
 }

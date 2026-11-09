@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_HOST = "https://cloud.langfuse.com"
 DEFAULT_TIMEOUT_S = 2
+CONTENT_CAPTURE_ENABLED_DEFAULT = False
 
 _lock = threading.Lock()
 _clients: dict[tuple[str, str, str], Any] = {}
@@ -28,6 +29,12 @@ _failed: set[tuple[str, str, str]] = set()
 
 def _env(name: str) -> str:
     return (os.environ.get(name) or "").strip()
+
+
+def _content_capture_enabled() -> bool:
+    """Content capture is opt-in; ordinary tracing stays fail-closed by default."""
+    value = _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower()
+    return value in {"1", "true", "yes", "on"} if value else CONTENT_CAPTURE_ENABLED_DEFAULT
 
 
 def langfuse_settings() -> tuple[str, str, str] | None:
@@ -65,10 +72,12 @@ def _make_handler(public_key: str) -> Any:
     return CallbackHandler(public_key=public_key)
 
 
-def get_handler() -> Any | None:
+def get_handler(*, allow_evaluation: bool = False) -> Any | None:
     """실행 한 번에 쓸 Langfuse 콜백 핸들러. 꺼져 있거나 만들지 못하면 None(트레이스만 없고 실행은 그대로)."""
     cfg = langfuse_settings()
     if cfg is None or cfg in _failed:
+        return None
+    if not allow_evaluation and not _content_capture_enabled():
         return None
     try:
         with _lock:
@@ -82,9 +91,12 @@ def get_handler() -> Any | None:
 
 
 def trace_metadata(
-    *, session_id: str | None = None, user_id: str | None = None, name: str | None = None
+    *, session_id: str | None = None, user_id: str | None = None, name: str | None = None,
+    allow_evaluation: bool = False,
 ) -> dict[str, str]:
     """Langfuse 핸들러가 트레이스 속성으로 읽는 metadata 키."""
+    if not allow_evaluation and not _content_capture_enabled():
+        return {}
     out: dict[str, str] = {}
     if session_id:
         out["langfuse_session_id"] = str(session_id)[:200]
@@ -93,6 +105,37 @@ def trace_metadata(
     if name:
         out["langfuse_trace_name"] = name
     return out
+
+
+def sanitize_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if _content_capture_enabled():
+        return dict(metadata or {})
+    blocked = {"prompt", "response", "input", "output", "user_id", "session_id", "thread_id"}
+    return {key: value for key, value in (metadata or {}).items() if key not in blocked}
+
+
+def create_safe_event(*, name: str, metadata: dict[str, Any] | None = None) -> bool:
+    """Record aggregate-only telemetry without content or user identifiers."""
+    if _env("LANGFUSE_SAFE_EVENTS_ENABLED").lower() not in {"1", "true", "yes", "on"}:
+        return False
+    cfg = langfuse_settings()
+    if cfg is None:
+        return False
+    allowed = {"graph", "calls", "status", "result", "duration_ms"}
+    safe_metadata = {
+        key: value for key, value in (metadata or {}).items()
+        if key in allowed and isinstance(value, (str, int, float, bool))
+    }
+    try:
+        with _lock:
+            if cfg not in _clients:
+                _clients[cfg] = _make_client(*cfg)
+            client = _clients[cfg]
+        client.create_event(name=name, input=None, output=None, metadata=safe_metadata)
+        return True
+    except Exception as exc:  # noqa: BLE001 - tracing must never affect application work
+        log.warning("Langfuse safe event failed: %s", type(exc).__name__)
+        return False
 
 
 def record_score(handler: Any, name: str, value: float, *, comment: str | None = None) -> bool:

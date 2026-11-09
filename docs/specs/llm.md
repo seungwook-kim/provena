@@ -59,6 +59,19 @@
 
 **제공자 전환**: 로컬 개발은 Claude Code CLI(`LLM_PROVIDER=claude_cli`, `claude-haiku-5-5`, 키 불필요, 컨테이너 안에서는 동작하지 않음), 운영 배포는 OpenRouter 키(`LLM_PROVIDER=openrouter`, `anthropic/claude-haiku-5.5`)로 같은 모델을 쓴다. 환경 변수만 바꾸고 코드는 그대로다. 비용 단가는 OpenRouter 이름도 같은 단가표 항목으로 찾는다(`cost.normalize_model_id`).
 
+## Langfuse privacy and production configuration
+
+The Langfuse integration has two independent gates:
+
+- `LANGFUSE_TRACING_ENABLED=false` disables Langfuse completely.
+- `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are both required. `LANGFUSE_HOST` is optional and defaults to `https://cloud.langfuse.com`.
+- `LANGFUSE_CONTENT_CAPTURE_ENABLED` defaults to `false`. Without it, ordinary requests do not create a Langfuse callback or attach user/session identifiers; application execution continues with cost tracking only.
+- Set `LANGFUSE_CONTENT_CAPTURE_ENABLED=true` only in an approved environment. The Langfuse callback may record model inputs, outputs, and trace metadata, so this setting requires the operator's privacy and retention approval.
+- Evaluation runs are explicitly marked with `metadata["eval"]` and may record evaluation traces and scores without changing the ordinary-request fail-closed policy.
+- `LANGFUSE_SAFE_EVENTS_ENABLED=true` enables aggregate-only events. These events contain only the allowlisted aggregate fields and never include prompt, response, user, session, or thread identifiers.
+
+For production, configure the keys and these flags through the deployment secret/environment configuration. Do not add them to `.env.example`, commit them, or place them in source files. If the keys or content-capture flag are absent, the service remains operational without Langfuse content tracing.
+
 ## AC (Given-When-Then)
 
 **AC-01 · 키 없이 동작**
