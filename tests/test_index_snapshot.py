@@ -112,6 +112,59 @@ def test_loader_unpacks_committed_archive_before_index_url(tmp_path, monkeypatch
     assert (tmp_path / "data" / "index" / "vectors" / "m.npy").is_file()
 
 
+def _fake_clock(monkeypatch, load_snapshot):
+    """load_snapshot 안의 time만 바꾼다(sleep은 시계를 앞으로 돌림). pytest의 time은 그대로."""
+    import types
+    now = [0.0]
+    monkeypatch.setattr(load_snapshot, "time", types.SimpleNamespace(
+        monotonic=lambda: now[0], sleep=lambda s: now.__setitem__(0, now[0] + s)))
+    return now
+
+
+def test_loader_connect_retries_until_db_accepts(monkeypatch):
+    """#95: 새 DB 첫 기동처럼 아직 접속을 받지 않으면 step_s 간격으로 다시 시도해 붙는다."""
+    psycopg = pytest.importorskip("psycopg")
+    from backend.rag.retrieve import load_snapshot
+    now = _fake_clock(monkeypatch, load_snapshot)
+    calls = []
+
+    def connect(url, **kw):
+        calls.append(kw)
+        if len(calls) < 3:
+            raise psycopg.OperationalError("the database system is starting up")
+        return "conn"
+    monkeypatch.setattr(psycopg, "connect", connect)
+    assert load_snapshot._connect("postgresql://x", wait_s=60, step_s=2) == "conn"
+    assert len(calls) == 3 and now[0] == 4
+    assert calls[0] == {"prepare_threshold": None}            # 풀러(Supabase)에서도 준비된 문장을 쓰지 않는다
+
+
+def test_loader_connect_gives_up_after_wait_and_does_not_retry_other_errors(monkeypatch):
+    """#95: wait_s가 지나면 마지막 OperationalError를 그대로 올린다. 접속 오류가 아닌 예외는 바로 올린다."""
+    psycopg = pytest.importorskip("psycopg")
+    from backend.rag.retrieve import load_snapshot
+    _fake_clock(monkeypatch, load_snapshot)
+    calls = []
+
+    def down(url, **kw):
+        calls.append(url)
+        raise psycopg.OperationalError("connection refused")
+    monkeypatch.setattr(psycopg, "connect", down)
+    with pytest.raises(psycopg.OperationalError):
+        load_snapshot._connect("postgresql://x", wait_s=6, step_s=2)
+    assert len(calls) == 4                                    # 0·2·4·6초, 6초에 마감
+
+    calls.clear()
+
+    def bad(url, **kw):
+        calls.append(url)
+        raise ValueError("bad url")
+    monkeypatch.setattr(psycopg, "connect", bad)
+    with pytest.raises(ValueError):
+        load_snapshot._connect("postgresql://x", wait_s=60, step_s=2)
+    assert len(calls) == 1
+
+
 def test_committed_index_archive_matches_meta():
     """저장소에 커밋한 색인 압축 파일 안의 파일이 meta.json sha256 그대로인지(clone 직후 상태)."""
     if not snapshot.INDEX_ARCHIVE.is_file():
