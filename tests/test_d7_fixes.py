@@ -594,8 +594,12 @@ def test_best2_samedoc_switch_reaches_the_graph(monkeypatch, multi, mode, samedo
     out = run(graph(multi, lambda q: [ESC, IMOC, OTHER], m, judge_answer=mode), Q_ESC)
     log = out["best2_log"]
     assert m.count("answer") == 2 and log["quote_ids"] == [ESC.chunk_id]
-    if samedoc:  # 다른 문서(OTHER)를 인용한 첫 답 대신 같은 문서 이웃 절(IMOC)을 인용한 둘째 답
-        assert log["rule"] == "s_in,s_out_otherdoc" and log["pick"] == 1 and log["why"] == "S 밖 다른 문서 인용 수"
+    # 두 답은 두 스레드가 동시에 쓰므로 가짜 모델의 답 목록 중 어느 것이 첫 후보가 될지는 스레드 순서에 달렸다(CI에서 뒤바뀐다).
+    # 그래서 몇 번째를 골랐는지가 아니라 고른 후보가 무엇을 인용했는지 본다
+    assert sorted(OTHER.chunk_id in c["cited"] for c in log["cands"]) == [False, True]
+    if samedoc:  # 다른 문서(OTHER)를 인용한 답 대신 같은 문서 이웃 절(IMOC)을 인용한 답
+        assert log["rule"] == "s_in,s_out_otherdoc" and log["why"] == "S 밖 다른 문서 인용 수"
+        assert log["cands"][log["pick"]]["cited"] == [ESC.chunk_id, IMOC.chunk_id]
         assert OTHER.chunk_id not in [c["chunk_id"] for c in out["citations"]]
     else:
         assert log["rule"] == "s_in,s_out" and log["pick"] == 0 and log["why"] == "동점, 첫 후보"

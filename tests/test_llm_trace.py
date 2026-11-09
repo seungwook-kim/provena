@@ -363,10 +363,16 @@ def test_block_list_content_reads_only_the_text_blocks():
     from backend.graph import build as B
     from backend.graph.decision import convert
     from backend.graph.departments import review
-    from backend.graph.recall import notice
+    import importlib
+    import importlib.util
+
+    # 회수 알림(`backend.graph.recall.notice`)은 아직 저장소에 없을 수 있다. 있으면 같이 본다
+    mods = [B, review, convert]
+    if importlib.util.find_spec("backend.graph.recall.notice") is not None:
+        mods.append(importlib.import_module("backend.graph.recall.notice"))
 
     blocks = [{"type": "thinking", "thinking": "{\"x\": 1} 생각"}, {"type": "text", "text": "{\"split\": false}"}]
-    for mod in (B, review, convert, notice):
+    for mod in mods:
         assert mod._text(AIMessage(content=blocks)) == "{\"split\": false}"
         assert mod._text(AIMessage(content="그대로")) == "그대로"
     assert T._json_ok(blocks) is True and T._json_ok([{"type": "thinking", "thinking": "{}"}]) is False
