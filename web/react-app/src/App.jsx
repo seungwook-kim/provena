@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { SessionProvider } from './components/SessionProvider'
+import AppErrorBoundary from './components/AppErrorBoundary'
 import DemoLayout from './components/DemoLayout'
 import { useSession } from './lib/session'
 import LandingPage from './pages/LandingPage'
@@ -19,7 +20,7 @@ import { DevAdminUsersPreview, DevProfilePreview } from './pages/DevPreviewPages
 import { getLiveServices, resetLiveServices } from './lib/live-services'
 
 export default function App() {
-  return <BrowserRouter><SessionProvider><SessionRoutes /></SessionProvider></BrowserRouter>
+  return <AppErrorBoundary><BrowserRouter><SessionProvider><SessionRoutes /></SessionProvider></BrowserRouter></AppErrorBoundary>
 }
 
 function Protected({ children, admin = false }) {
