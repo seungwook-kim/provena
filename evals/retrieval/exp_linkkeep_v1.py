@@ -11,7 +11,7 @@
 
 한 줄 재현(로컬 DB에 스냅샷 적재와 `db/manual/chunks_hnsw_voyage4.sql`이 끝난 뒤):
     REPRO_DIR=<voyage-4 zip 푼 폴더> REPRO_DATA=<data/chunks·data/parsed가 있는 폴더> DATABASE_URL=<127.0.0.1:54331 로컬 DB> python -m evals.retrieval.exp_linkkeep_v1 grid --out evals/results/linkkeep_v1
-입력 파일은 `tests/test_search_v2_repro.py`와 같다. `.env`는 읽지 않고 접속 주소와 비밀번호는 출력하지 않는다.
+입력 파일은 `tests/test_search_v2_repro.py`와 같다(이름·sha256·받는 곳은 `evals/retrieval/retrieval.md` "재현 자료"). `.env`는 읽지 않고 접속 주소와 비밀번호는 출력하지 않는다.
 """
 from __future__ import annotations
 

@@ -8,7 +8,7 @@
 정답 청크 일부만 float16으로 떼어 낸 것이고, 떼어 낸 자료의 상위 5가 전체 색인·로컬 Postgres(PgStore 전수)와 40/40 같음을 만들 때 확인했다.
 
 문항: 동결 v1 30건(관련 15·비관련 15) + v2 관련 중 v1에 없는 10건(31~40) = 40건. 채점은 v2 관련 25건(정답은 동결 평가셋 파일에서 읽는다).
-검색을 일부러 바꿨다면 PREREGISTER에 먼저 적고 자료·기대값을 다시 만든다(입력 파일은 저장소 밖):
+검색을 일부러 바꿨다면 PREREGISTER에 먼저 적고 자료·기대값을 다시 만든다(입력 파일은 저장소 밖, 받는 곳은 evals/retrieval/retrieval.md "재현 자료"):
     REPRO_DIR=<voyage-4 재현 zip 푼 폴더> REPRO_DATA=<data/chunks·data/parsed가 있는 폴더> python -m evals.retrieval.regress_fixture --n 10
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ from evals.retrieval.run import load_dataset, load_exclusions
 FIX = Path(__file__).resolve().parent / "fixtures" / "search_regression"
 REC = f"recall@{DEFAULT_K}"
 SEARCH_ENV = ("EMBED_MODEL", "EMBED_REVISION", "SEARCH_MODE", "SEARCH_POOL", "RERANK_MODEL", "RERANK_TOP", "QUERY_TRANSLATE",
-              "SEARCH_LINK_N")
+              "SEARCH_LINK_N", "SEARCH_RANGE_N")
 
 
 @pytest.fixture(scope="module")
@@ -63,6 +63,9 @@ def test_config_is_confirmed_combination(got):
     c, want = got["cfg"], got["exp"]["config"]
     assert (c.embed_model, c.mode, c.rerank_model, DEFAULT_K, c.link_n, c.link_keep_per_sub) == (
         want["embed_model"], want["mode"], want["rerank_model"], want["k"], want["link_n"], want["link_keep_per_sub"])
+    # 금액 구간 조회(사전 등록 62.7)는 기대값 파일에 칸이 없어 서비스 기본값 2를 글자로 비교한다(상수끼리 비교하면 기본값을 바꿔도 통과).
+    # 지금 40문항에는 금액 질문이 없어 이 값이 결과를 바꾸지 않는다. 금액 질문 문항을 더할 때 기대값에도 range_n을 넣는다(#94 리뷰).
+    assert c.range_n == 2
 
 
 def test_recall_not_worse(got):
