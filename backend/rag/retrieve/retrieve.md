@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | 금액 구간 조회(사전 등록 62.7): 데모 녹화 1번 구간에서 5만 달러만 구간 행(`>$25K up to $50K`)이 근거로 들고 3만·10만 달러는 충분 판정이 NOTHING FOUND가 된 원인을 확인. 구간 행 일곱 개가 청크 하나씩이고 제목과 역할 줄뿐이라 벡터가 비슷하고(청킹과 표 머리는 정상), voyage-4 벡터가 "$30,000"이 어느 구간인지 몰라 "$50,000"과 "$50K"처럼 글자가 겹친 경우만 상위에 들었음. `ranges.py`(금액·구간 읽기, 순수 함수)와 `Searcher._range_expand`(금액이 있을 때 구간 행으로 뒤 자리 최대 2개 교체, `SEARCH_RANGE_N=0`이면 끔), 저장소 `band_headings`·`key_scores`. 검색만 재현(LLM 없음): 데모 15칸 정답 구간 행이 문맥에 든 칸 1 → 14, v2 50·검증 20의 첫 검색 문맥 회귀 나빠진 문항 0. 시험 `tests/test_range_search.py` | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | "이 폴더가 하는 일"을 현재 파일에 맞춤: 없는 `link_graph.py` 대신 `links.py`와 `search.py`의 `_link_expand`, 임베딩 기본 voyage-4 API, 리랭커 기본 없음. 동작 변경 없음 | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `search.py` 주석의 HNSW SQL 위치를 `db/manual/chunks_hnsw_voyage4.sql`로 고침. 동작 변경 없음 | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | 검색 v2 = 확정 조합(조장 요청 5건): 기본값 voyage-4(API, `VoyageClient`, 실패 분류 EmbedUnavailable·EmbedConfigError·EmbedNoKey)·`dense_en`·리랭커 없음·k=5(`DEFAULT_K`, 그래프·MCP 같은 상수). `SearchQuery.sub_queries`(하위 질문마다 상위 k → 번갈아 합침), 링크 확장 L1x2(`links.py`, `chunks.link_targets`, 적재·증분 반영, 링크 후보도 org·as_of 필터). 재현 시험: 측정과 같은 벡터로 v1 30문항 청크 집합 30/30·Recall@5 0.9667, 링크 대상 23,095청크 일치. 변이 9/9 | 이번 PR |
@@ -25,6 +26,7 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| I-014 | 2026-11-09 | 김승욱 (Claude Code) | 금액 구간 표(권한표의 `>$25K up to $50K` 등)에서 질문의 금액이 속한 구간 행이 검색 상위에 들지 않는다 | 데모 녹화 1번 구간: 5만 달러만 구간 행이 근거로 들었고 3만·10만 달러는 충분 판정 NOTHING FOUND로 거절 | 김승욱 | 해결(검색 단계) | 2026-11-09 | `Searcher._range_expand`, 검색만 재현 데모 15칸 구간 행 문맥 1 → 14, 시험 `tests/test_range_search.py`. 답변까지는 LLM 3회 측정 전이라 미확인(62.7). 남은 한계: 금액이 들어맞는 표가 여럿이면(1만 달러) 질문 벡터 점수로 2개만 고르므로 지출 승인 표를 놓칠 수 있음(데모 C 1만 달러 칸) |
 | I-013 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | bge int8 리랭커(동적 양자화) 점수가 한 번에 계산하는 묶음 크기·구성에 따라 바뀜(같은 5문서 batch 16과 1의 순위가 다름, mMiniLM은 같음) | 1차 비교의 int8 결과는 점수 캐시(안 계산한 쌍만 묶음) 상태에 따라 달라 재현되지 않음(동결본 대비 int8 4조합 26~29문항 다름, 1조합 R@5 0.767→0.833). 11/6 비교의 int8 숫자에 흔들림 | 김승욱 | 열림 | | 원인 확인 스크립트·결과는 PR 본문 |
 | I-012 | 2026-11-01 | 박진형 (jinyeong-731, Claude Code) | chunk_id = sha(rule_seq:seq:본문)에 판이 없어 개정판의 안 바뀐 섹션은 옛 판과 id가 같다 | chunk_id 하나로 upsert하면 새 판이 옛 판 행을 덮어 as_of 검색이 깨진다 | 박진형 | 해결(sandbox) | 2026-11-01 | chunks 열쇠 (chunk_id, version_id), versions 열쇠 (rule_seq, version_id) |
 | I-011 | 2026-11-01 | 박진형 (jinyeong-731, Claude Code) | 판 날짜(%cs)가 커밋한 사람 시간대의 날짜 — infrastructure-security(19청크)가 10/28로 찍힘(UTC 10/27) | v1 as_of=2026-10-27 검색에서 그 쪽이 빠짐, UTC와 하루 다른 쪽 68개(청크 있는 쪽. 본문 없는 쪽까지 72쪽) | 박진형 | 해결 | 2026-11-02 | 조장 답 ⑥(별도 수집 PR). 판 날짜를 UTC로(`handbook.utc_day`), 다시 수집해 as_of 10/27 청크 23,076 → 23,095, 청크 id 그대로(`ingest.md` 작업 기록). 색인 청크 파일도 `index.py refresh`로 바꿔 DB 사본 다시 적재 → as_of 10/27 23,095(이 파일 작업 기록) |
