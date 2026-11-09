@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_HOST = "https://cloud.langfuse.com"
 DEFAULT_TIMEOUT_S = 2
+CONTENT_CAPTURE_ENABLED_DEFAULT = False
 
 _lock = threading.Lock()
 _clients: dict[tuple[str, str, str], Any] = {}
@@ -28,6 +29,12 @@ _failed: set[tuple[str, str, str]] = set()
 
 def _env(name: str) -> str:
     return (os.environ.get(name) or "").strip()
+
+
+def _content_capture_enabled() -> bool:
+    """Content capture is opt-in; ordinary tracing stays fail-closed by default."""
+    value = _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower()
+    return value in {"1", "true", "yes", "on"} if value else CONTENT_CAPTURE_ENABLED_DEFAULT
 
 
 def langfuse_settings() -> tuple[str, str, str] | None:
@@ -70,7 +77,7 @@ def get_handler(*, allow_evaluation: bool = False) -> Any | None:
     cfg = langfuse_settings()
     if cfg is None or cfg in _failed:
         return None
-    if not allow_evaluation and _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
+    if not allow_evaluation and not _content_capture_enabled():
         return None
     try:
         with _lock:
@@ -88,7 +95,7 @@ def trace_metadata(
     allow_evaluation: bool = False,
 ) -> dict[str, str]:
     """Langfuse 핸들러가 트레이스 속성으로 읽는 metadata 키."""
-    if not allow_evaluation and _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() not in {"1", "true", "yes", "on"}:
+    if not allow_evaluation and not _content_capture_enabled():
         return {}
     out: dict[str, str] = {}
     if session_id:
@@ -101,7 +108,7 @@ def trace_metadata(
 
 
 def sanitize_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
-    if _env("LANGFUSE_CONTENT_CAPTURE_ENABLED").lower() in {"1", "true", "yes", "on"}:
+    if _content_capture_enabled():
         return dict(metadata or {})
     blocked = {"prompt", "response", "input", "output", "user_id", "session_id", "thread_id"}
     return {key: value for key, value in (metadata or {}).items() if key not in blocked}

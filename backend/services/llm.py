@@ -505,6 +505,8 @@ def run_config(
     meta: dict[str, Any] = {"run_mode": mode, "graph": graph_name}
     if thread_id:
         meta["thread_id"] = str(thread_id)
+    # Evaluation traces are explicitly opted into; ordinary requests remain
+    # fail-closed unless content capture is enabled by the operator.
     evaluation_mode = bool(metadata and metadata.get("eval"))
     meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name,
                                       allow_evaluation=evaluation_mode))

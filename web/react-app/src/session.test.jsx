@@ -17,7 +17,7 @@ beforeEach(() => {
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   window.history.replaceState({}, '', '/chat')
   calls = []
-  server = { user: null, profile: null, savedProfile: null, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
+  server = { user: null, profile: null, savedProfile: null, memory: {}, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
   vi.stubGlobal('fetch', vi.fn(async (path, options) => {
     calls.push({ path, options })
     if (path === '/me') {
@@ -35,6 +35,19 @@ beforeEach(() => {
       if (body.password !== 'test-password') return json({ detail: '로그인 정보가 올바르지 않습니다.' }, 401)
       server.user = body.login_id === 'B' ? B : A
       return json(server.user)
+    }
+    if (path === '/me/memory' && options?.method === 'PATCH') {
+      const memoryOwner = server.user?.user_id ?? 'anonymous'
+      server.memory[memoryOwner] = JSON.parse(options.body)
+      return json({ profile: server.memory[memoryOwner] })
+    }
+    if (path === '/me/memory' && options?.method === 'DELETE') {
+      const memoryOwner = server.user?.user_id ?? 'anonymous'
+      delete server.memory[memoryOwner]
+      return new Response(null, { status: 204 })
+    }
+    if (path === '/me/memory') {
+      return json({ profile: server.memory[server.user?.user_id ?? 'anonymous'] ?? {} })
     }
     if (path === '/auth/logout') {
       if (server.logoutStatus !== 204) return json({}, server.logoutStatus)
@@ -359,7 +372,7 @@ describe('React authentication and session isolation', () => {
     server.logoutStatus = status
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
     expect((await screen.findByRole('alert')).textContent).toContain('종료를 확인')
-    expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
+    await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
     server.logoutStatus = 204
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
