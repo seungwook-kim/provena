@@ -1,0 +1,11 @@
+# 기본 규칙을 그대로 쓰고, 키 없는 데모 녹화(data/demo_replay/*.jsonl)의 요청 키만 예외로 둔다.
+# 녹화 줄의 "key"는 요청 내용의 sha256(64자리 16진수)이라 비밀값이 아니지만 generic-api-key 규칙에 걸린다.
+# 경로와 64자리 16진수 형태가 둘 다 맞을 때만 예외이고, 이 폴더의 다른 값(진짜 키 등)은 계속 검사한다.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "데모 녹화의 요청 키(sha256)"
+condition = "AND"
+paths = ['''^data/demo_replay/[^/]+\.jsonl$''']
+regexes = ['''^[0-9a-f]{64}$''']
