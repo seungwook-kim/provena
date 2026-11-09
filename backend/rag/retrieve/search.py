@@ -7,7 +7,7 @@
 하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
-금액 구간 조회(SEARCH_RANGE_N=n, 기본 3, 0이면 끔, 사전 등록 62.7·62.8): 질문에 달러 금액이 있으면 상위 k가 든 페이지의 구간 행(제목 경로 끝이
+금액 구간 조회(SEARCH_RANGE_N=n, 기본 3, 0이면 끔, 사전 등록 62.7·62.13): 질문에 달러 금액이 있으면 상위 k가 든 페이지의 구간 행(제목 경로 끝이
 '>$25K up to $50K' 같은 금액 구간) 중 그 금액이 속한 행을 표마다 하나씩 골라 전체 질문 벡터와 가까운 순으로 n개까지 뒤 자리를 바꾼다(ranges.py).
 
 1차 비교(evals/retrieval/experiment_v1.py)와 같은 점수가 나오게 둔 것:
@@ -62,7 +62,7 @@ class SearchConfig:
     translate: bool = True
     link_n: int = 2          # 링크 확장으로 바꿀 뒤 자리 수(확정 조합 L1x2 = 2, PREREGISTER #8). 0이면 끔
     link_keep_per_sub: int = 2  # 나뉜 질문은 하위 질문마다 이만큼 자리를 지키고 남은 자리만 링크로 바꾼다. 0이면 지키지 않는다(#9 측정과 같음)
-    range_n: int = 3         # 금액 구간 조회로 채울 뒤 자리 수 상한(사전 등록 62.7, 62.8에서 2→3). 질문에 금액이 없으면 쓰지 않는다. 0이면 끔(SEARCH_RANGE_N=0)
+    range_n: int = 3         # 금액 구간 조회로 채울 뒤 자리 수 상한(사전 등록 62.7, 62.13에서 2→3). 질문에 금액이 없으면 쓰지 않는다. 0이면 끔(SEARCH_RANGE_N=0)
 
     @classmethod
     def from_env(cls) -> "SearchConfig":

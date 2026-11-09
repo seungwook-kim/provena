@@ -63,7 +63,7 @@ def test_config_is_confirmed_combination(got):
     c, want = got["cfg"], got["exp"]["config"]
     assert (c.embed_model, c.mode, c.rerank_model, DEFAULT_K, c.link_n, c.link_keep_per_sub) == (
         want["embed_model"], want["mode"], want["rerank_model"], want["k"], want["link_n"], want["link_keep_per_sub"])
-    # 금액 구간 조회(사전 등록 62.7, 상한은 62.8에서 2→3)는 기대값 파일에 칸이 없어 서비스 기본값 3을 글자로 비교한다(상수끼리 비교하면 기본값을 바꿔도 통과).
+    # 금액 구간 조회(사전 등록 62.7, 상한은 62.13에서 2→3)는 기대값 파일에 칸이 없어 서비스 기본값 3을 글자로 비교한다(상수끼리 비교하면 기본값을 바꿔도 통과).
     # 지금 40문항에는 금액 질문이 없어 이 값이 결과를 바꾸지 않는다. 금액 질문 문항을 더할 때 기대값에도 range_n을 넣는다(#94 리뷰).
     assert c.range_n == 3
 
