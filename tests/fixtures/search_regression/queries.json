@@ -1,0 +1,415 @@
+{
+ "texts": [
+  "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?",
+  "온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?",
+  "슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?",
+  "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?",
+  "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?",
+  "IMOC도 호출에 응답이 없으면 어떻게 에스컬레이션돼?",
+  "GitLab 정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?",
+  "GitLab 정기(monthly) 릴리스는 언제 나가?",
+  "패치 릴리스는 한 달에 몇 번 나가?",
+  "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?",
+  "자동 배포 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해?",
+  "프로덕션 카나리에서 본 프로덕션으로의 승격은 자동이야 수동이야?",
+  "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?",
+  "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?",
+  "revert MR 승인은 몇 명 필요해?",
+  "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?",
+  "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해?",
+  "flaky 테스트를 못 고치면 어떻게 돼?",
+  "격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?",
+  "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?",
+  "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?",
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?",
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)해야 해?",
+  "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 수정(remediate)해야 해?",
+  "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?",
+  "Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?",
+  "SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?",
+  "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?",
+  "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?",
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?",
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 해줄 때 기간 제한과 연장 한도는?",
+  "영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?",
+  "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?",
+  "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?",
+  "한국에서 야근시키면 법적으로 주 몇 시간까지 일하게 할 수 있어?",
+  "프리랜서로 받은 수입 종합소득세 신고는 어떻게 해?",
+  "파이썬에서 리스트 중복 제거하는 제일 빠른 방법 뭐야?",
+  "React에서 useEffect 의존성 배열에 뭘 넣어야 해?",
+  "육아휴직은 최대 몇 개월까지 쓸 수 있어?",
+  "시니어 개발자 연봉 밴드가 어떻게 돼?",
+  "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?",
+  "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?",
+  "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?",
+  "Hard PCL보다 더 강한 Critical PCL은 언제 선언하고 누가 승인해?",
+  "Critical PCL은 언제 선언해?",
+  "Critical PCL은 누가 승인해?",
+  "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?",
+  "변경 심의 위원회(CAB)는 얼마나 자주 열려?",
+  "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?",
+  "2020년 3월 GitLab.com 가용률은 얼마였어?",
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?",
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받아?",
+  "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 시작해?",
+  "Severity 1 인시던트가 해결된 뒤 공개 RCA는 얼마 안에 나와야 하고, 인시던트 리뷰는 며칠 안에 닫아야 해?",
+  "How soon after resolution must the public RCA be published for a Severity 1 incident?",
+  "How many days do we have to close the incident review for a Severity 1 incident?",
+  "주말에 S3/S4 알림이 울리면 EOC는 주말에도 바로 대응해야 해?",
+  "패치 릴리스 기간에는 post-deploy migration(PDM)을 왜 돌리지 않아?",
+  "정규 일정 밖의 패치(out-of-band patch)를 내려면 어떤 절차가 필수야?",
+  "DevEx 팀에서 MR에 AI를 얼마나 썼는지는 어떻게 표시해야 해? 척도는 어떻게 돼?",
+  "How should AI usage be labeled in merge requests for the DevEx team?",
+  "What is the scale used to indicate the amount of AI usage in DevEx team merge requests?",
+  "외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효하고, 만료되면 어떻게 돼?",
+  "How long is a third-party SaaS vendor security assessment (TPRM) valid?",
+  "What happens when a third-party SaaS vendor security assessment (TPRM) expires?",
+  "사내 비밀번호 표준에서 최소 길이는 몇 자고, 로그인 몇 번 실패하면 계정을 잠가야 해? 특수문자나 주기적 변경도 요구해?",
+  "What is the minimum password length required by the company password standard?",
+  "How many failed login attempts trigger an account lockout under the company policy?",
+  "Does the company password standard require special characters or periodic password changes?",
+  "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?",
+  "Where does a request to adopt a new SaaS tool start?",
+  "When is a TPRM security review required before adopting a new SaaS tool?",
+  "GitLab 계정 2FA 초기화 요청은 어떻게 처리해?",
+  "같은 벤더와 계약을 한 번 승인받은 뒤 60일 안에 추가 계약이 또 나오면 승인 금액 기준은 어떻게 계산해? 계약을 쪼개서 결재받아도 돼?",
+  "How is the approval amount threshold calculated when additional contracts with the same vendor are signed within 60 days of a previously approved contract?",
+  "Is it allowed to split a contract into smaller contracts so that each one gets a separate approval?"
+ ],
+ "items": [
+  {
+   "id": 1,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?",
+   "sub_queries": [
+    "온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?",
+    "슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?"
+   ]
+  },
+  {
+   "id": 2,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?",
+   "sub_queries": [
+    "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?",
+    "IMOC도 호출에 응답이 없으면 어떻게 에스컬레이션돼?"
+   ]
+  },
+  {
+   "id": 3,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "GitLab 정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?",
+   "sub_queries": [
+    "GitLab 정기(monthly) 릴리스는 언제 나가?",
+    "패치 릴리스는 한 달에 몇 번 나가?"
+   ]
+  },
+  {
+   "id": 4,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?",
+   "sub_queries": [
+    "자동 배포 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해?",
+    "프로덕션 카나리에서 본 프로덕션으로의 승격은 자동이야 수동이야?"
+   ]
+  },
+  {
+   "id": 5,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?",
+   "sub_queries": [
+    "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?",
+    "revert MR 승인은 몇 명 필요해?"
+   ]
+  },
+  {
+   "id": 6,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?",
+   "sub_queries": [
+    "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해?",
+    "flaky 테스트를 못 고치면 어떻게 돼?",
+    "격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?"
+   ]
+  },
+  {
+   "id": 7,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 8,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 9,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?",
+   "sub_queries": [
+    "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)해야 해?",
+    "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 수정(remediate)해야 해?"
+   ]
+  },
+  {
+   "id": 10,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?",
+   "sub_queries": [
+    "Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?",
+    "SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?"
+   ]
+  },
+  {
+   "id": 11,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 12,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 13,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?",
+   "sub_queries": [
+    "영업팀이 잠재 고객(prospect)에게 무상 지원을 해줄 때 기간 제한과 연장 한도는?",
+    "영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?"
+   ]
+  },
+  {
+   "id": 14,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?",
+   "sub_queries": null
+  },
+  {
+   "id": 15,
+   "set": "v1",
+   "kind": "relevant",
+   "input": "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?",
+   "sub_queries": null
+  },
+  {
+   "id": 16,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "한국에서 야근시키면 법적으로 주 몇 시간까지 일하게 할 수 있어?",
+   "sub_queries": null
+  },
+  {
+   "id": 17,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "프리랜서로 받은 수입 종합소득세 신고는 어떻게 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 18,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "파이썬에서 리스트 중복 제거하는 제일 빠른 방법 뭐야?",
+   "sub_queries": null
+  },
+  {
+   "id": 19,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "React에서 useEffect 의존성 배열에 뭘 넣어야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 20,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "육아휴직은 최대 몇 개월까지 쓸 수 있어?",
+   "sub_queries": null
+  },
+  {
+   "id": 21,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "시니어 개발자 연봉 밴드가 어떻게 돼?",
+   "sub_queries": null
+  },
+  {
+   "id": 22,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?",
+   "sub_queries": null
+  },
+  {
+   "id": 23,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?",
+   "sub_queries": null
+  },
+  {
+   "id": 24,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?",
+   "sub_queries": null
+  },
+  {
+   "id": 25,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "Hard PCL보다 더 강한 Critical PCL은 언제 선언하고 누가 승인해?",
+   "sub_queries": [
+    "Critical PCL은 언제 선언해?",
+    "Critical PCL은 누가 승인해?"
+   ]
+  },
+  {
+   "id": 26,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 27,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "변경 심의 위원회(CAB)는 얼마나 자주 열려?",
+   "sub_queries": null
+  },
+  {
+   "id": 28,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?",
+   "sub_queries": null
+  },
+  {
+   "id": 29,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "2020년 3월 GitLab.com 가용률은 얼마였어?",
+   "sub_queries": null
+  },
+  {
+   "id": 30,
+   "set": "v1",
+   "kind": "irrelevant",
+   "input": "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?",
+   "sub_queries": [
+    "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받아?",
+    "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 시작해?"
+   ]
+  },
+  {
+   "id": 31,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "Severity 1 인시던트가 해결된 뒤 공개 RCA는 얼마 안에 나와야 하고, 인시던트 리뷰는 며칠 안에 닫아야 해?",
+   "sub_queries": [
+    "How soon after resolution must the public RCA be published for a Severity 1 incident?",
+    "How many days do we have to close the incident review for a Severity 1 incident?"
+   ]
+  },
+  {
+   "id": 32,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "주말에 S3/S4 알림이 울리면 EOC는 주말에도 바로 대응해야 해?",
+   "sub_queries": null
+  },
+  {
+   "id": 33,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "패치 릴리스 기간에는 post-deploy migration(PDM)을 왜 돌리지 않아?",
+   "sub_queries": null
+  },
+  {
+   "id": 34,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "정규 일정 밖의 패치(out-of-band patch)를 내려면 어떤 절차가 필수야?",
+   "sub_queries": null
+  },
+  {
+   "id": 35,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "DevEx 팀에서 MR에 AI를 얼마나 썼는지는 어떻게 표시해야 해? 척도는 어떻게 돼?",
+   "sub_queries": [
+    "How should AI usage be labeled in merge requests for the DevEx team?",
+    "What is the scale used to indicate the amount of AI usage in DevEx team merge requests?"
+   ]
+  },
+  {
+   "id": 36,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효하고, 만료되면 어떻게 돼?",
+   "sub_queries": [
+    "How long is a third-party SaaS vendor security assessment (TPRM) valid?",
+    "What happens when a third-party SaaS vendor security assessment (TPRM) expires?"
+   ]
+  },
+  {
+   "id": 37,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "사내 비밀번호 표준에서 최소 길이는 몇 자고, 로그인 몇 번 실패하면 계정을 잠가야 해? 특수문자나 주기적 변경도 요구해?",
+   "sub_queries": [
+    "What is the minimum password length required by the company password standard?",
+    "How many failed login attempts trigger an account lockout under the company policy?",
+    "Does the company password standard require special characters or periodic password changes?"
+   ]
+  },
+  {
+   "id": 38,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?",
+   "sub_queries": [
+    "Where does a request to adopt a new SaaS tool start?",
+    "When is a TPRM security review required before adopting a new SaaS tool?"
+   ]
+  },
+  {
+   "id": 39,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "GitLab 계정 2FA 초기화 요청은 어떻게 처리해?",
+   "sub_queries": null
+  },
+  {
+   "id": 40,
+   "set": "v2",
+   "kind": "relevant",
+   "input": "같은 벤더와 계약을 한 번 승인받은 뒤 60일 안에 추가 계약이 또 나오면 승인 금액 기준은 어떻게 계산해? 계약을 쪼개서 결재받아도 돼?",
+   "sub_queries": [
+    "How is the approval amount threshold calculated when additional contracts with the same vendor are signed within 60 days of a previously approved contract?",
+    "Is it allowed to split a contract into smaller contracts so that each one gets a separate approval?"
+   ]
+  }
+ ]
+}
