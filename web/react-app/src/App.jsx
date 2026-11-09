@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { SessionProvider } from './components/SessionProvider'
+import DemoLayout from './components/DemoLayout'
 import { useSession } from './lib/session'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -32,6 +33,10 @@ function Protected({ children, admin = false }) {
   return children
 }
 
+function FeatureUnavailable({ active, title }) {
+  return <DemoLayout active={active}><main className="status-page"><p role="alert">{title}의 실제 업무 API는 아직 연결되지 않았습니다.</p><p>개발용 화면은 <Link to={`/demo/${active}`}>데모 경로</Link>에서 확인할 수 있습니다.</p></main></DemoLayout>
+}
+
 function LiveRecallRoute() {
   const { user } = useSession()
   return <RecallPage service={getLiveServices(user.user_id).recalls} isAdmin={user.role === 'admin'} />
@@ -40,11 +45,6 @@ function LiveRecallRoute() {
 function LiveChangeRoute() {
   const { user } = useSession()
   return <ChangeMonitoringPage service={getLiveServices(user.user_id).changes} isAdmin={user.role === 'admin'} />
-}
-
-function LiveApprovalsRoute() {
-  const { user } = useSession()
-  return <ApprovalsPage service={getLiveServices(user.user_id).approvals} />
 }
 
 function ChatRoute() {
@@ -80,7 +80,7 @@ function SessionRoutes() {
     <Route path="/chat" element={<ChatRoute />} />
     <Route path="/recalls" element={<Protected><LiveRecallRoute /></Protected>} />
     <Route path="/changes" element={<Protected><LiveChangeRoute /></Protected>} />
-    <Route path="/approvals" element={<Protected admin><LiveApprovalsRoute /></Protected>} />
+    <Route path="/approvals" element={<Protected admin><FeatureUnavailable active="approvals" title="승인함" /></Protected>} />
     <Route path="/admin" element={<Protected admin><AdminLivePage /></Protected>} />
     <Route path="/onboarding" element={<Protected><MemorySettingsPage /></Protected>} />
     <Route path="/demo/chat" element={<DemoRouteGuard><DemoOnlyChat /></DemoRouteGuard>} />
