@@ -244,6 +244,9 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         def ensure_schema(self):
             pass
 
+        def upsert_user(self, login_id, password_hash, role):
+            pass
+
         def get_by_login_id(self, login_id):
             return self.user if login_id == self.user.login_id else None
 
@@ -278,12 +281,15 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         assert client.get("/me").status_code == 401
 
 
-@pytest.mark.skipif(not (WEB_DIR / "login.html").is_file(), reason="web/login.html 없음 (로그인 화면 PR 전)")
-def test_root_redirects_to_login_page_and_static_files_do_not_shadow_api(monkeypatch):
+@pytest.mark.skipif(not (WEB_DIR / "react-app" / "dist" / "index.html").is_file(), reason="React production build 없음")
+def test_react_entry_and_spa_fallback_do_not_shadow_api(monkeypatch):
     client = TestClient(_app(monkeypatch))
-    root = client.get("/", follow_redirects=False)
-    assert root.status_code in (302, 307) and root.headers["location"] == "/login.html"
+    root = client.get("/")
+    assert root.status_code == 200 and '<div id="root"></div>' in root.text
     assert client.get("/login.html").status_code == 200
+    assert client.get("/chat").status_code == 200
+    assert client.get("/admin").status_code == 200
+    assert client.get("/api/not-found").status_code == 404
     assert client.get("/health").json() == {"status": "ok"}
 
 

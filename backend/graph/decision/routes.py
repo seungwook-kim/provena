@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from langgraph.types import Command
 from pydantic import BaseModel, model_serializer
 from starlette.requests import Request
@@ -382,8 +383,13 @@ def create_decision_router(
             log.warning("결정표 변환 실패: %s", type(exc).__name__)
             raise HTTPException(status_code=503, detail={"reason": "convert_failed", "message": "결정표 초안을 만들지 못했다"}) from None
 
-    @router.get("/approvals", response_model=list[ApprovalView])
-    def list_approvals(request: Request, _admin: AuthUser = Depends(require_admin)) -> list[ApprovalView]:
+    @router.get("/approvals", response_model=None)
+    def list_approvals(request: Request) -> list[ApprovalView] | FileResponse:
+        if "text/html" in request.headers.get("accept", ""):
+            react_index = getattr(request.app.state, "react_index", None)
+            if react_index is not None:
+                return FileResponse(react_index)
+        require_admin(request)
         repo = _state(request, "decision_repo")
         review = getattr(request.app.state, "review_graph", None)
         graphs = {KIND: _state(request, "decision_graph"), ISSUE_KIND: review, TEAM_FAILED_KIND: review}

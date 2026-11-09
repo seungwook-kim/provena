@@ -24,6 +24,16 @@ describe('streamChatMessage', () => {
     expect(events[0].data.text).toBe('안')
   })
 
+  it('parses an approval_request SSE event', async () => {
+    document.cookie = 'provena_csrf=csrf-token'
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(sseResponse('event: approval_request\ndata: {"thread_id":"t1","data":{"code":"approval_pending"}}\n\n')))
+    const events = []
+    await streamChatMessage('t1', 'question', { onEvent: event => events.push(event) })
+    expect(events).toEqual([{ type: 'approval_request', thread_id: 't1', data: { code: 'approval_pending' } }])
+  })
+
   it('fetches CSRF and sends the token on the SSE request', async () => {
     document.cookie = 'provena_csrf=csrf-token'
     const fetchMock = vi.fn()

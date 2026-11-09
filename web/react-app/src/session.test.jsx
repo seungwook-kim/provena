@@ -17,7 +17,7 @@ beforeEach(() => {
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   window.history.replaceState({}, '', '/chat')
   calls = []
-  server = { user: null, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
+  server = { user: null, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null, memory: {} }
   vi.stubGlobal('fetch', vi.fn(async (path, options) => {
     calls.push({ path, options })
     if (path === '/me') {
@@ -36,6 +36,12 @@ beforeEach(() => {
       server.user = body.login_id === 'B' ? B : A
       return json(server.user)
     }
+    if (path === '/me/memory' && options.method === 'PATCH') {
+      const memoryOwner = server.user?.user_id ?? 'anonymous'
+      server.memory[memoryOwner] = JSON.parse(options.body)
+      return json(server.memory[memoryOwner])
+    }
+    if (path === '/me/memory') return json(server.memory[server.user?.user_id ?? 'anonymous'] ?? {})
     if (path === '/auth/logout') {
       if (server.logoutStatus !== 204) return json({}, server.logoutStatus)
       server.user = null
