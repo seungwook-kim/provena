@@ -20,7 +20,9 @@ describe('actual approvals service', () => {
   })
 
   it('maps approve and reject to the existing API contract', async () => {
+    document.cookie = 'provena_csrf=test-token; path=/'
     const fetchMock = vi.fn(async (_path, options) => {
+      if (_path === '/auth/csrf') return new Response(null, { status: 204 })
       expect(JSON.parse(options.body)).toEqual({ approval_id: 'a-1', approve: true, comment: 'ok' })
       return new Response(null, { status: 204 })
     })

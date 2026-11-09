@@ -120,12 +120,12 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByLabelText('아이디')).toBeNull()
   })
 
-  it('redirects the legacy demo query to the unprotected demo route in development', async () => {
+  it('does not let the legacy demo query bypass the protected chat route', async () => {
     window.history.replaceState({}, '', '/chat?demo=1')
     render(<App />)
-    await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    expect(window.location.pathname).toBe('/demo/chat')
-    expect(screen.queryByLabelText('아이디')).toBeNull()
+    await screen.findByRole('heading', { name: '로그인' })
+    expect(window.location.pathname).toBe('/login')
+    expect(screen.getByLabelText('아이디')).toBeTruthy()
   })
 
   it.each(['/chat', '/recalls', '/approvals', '/admin'])('rejects anonymous direct URL %s before rendering protected UI', async path => {

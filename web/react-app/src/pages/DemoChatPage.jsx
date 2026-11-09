@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
 import { createApiChatAdapter, createChatService, citationHref } from '../lib/chat-service'
@@ -217,17 +217,16 @@ function ChatUnavailable() {
 }
 
 export function DemoOnlyChat() {
-  const [params] = useSearchParams()
   const location = useLocation()
   const { user } = useSession()
-  const previewMode = (import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') && (location.pathname.startsWith('/demo/') || params.get('demo') === '1')
+  const previewMode = (import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') && location.pathname.startsWith('/demo/')
   if (previewMode) return <DemoChatPage />
   if (!user) return <Navigate to="/login" replace />
   return <DemoChatPage api />
 }
 
 export function DemoAdminBlocked() {
-  const [params] = useSearchParams()
-  if (!(import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') || params.get('demo') !== '1') return <Navigate to="/login" replace />
+  const location = useLocation()
+  if (!(import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') || !location.pathname.startsWith('/demo/')) return <Navigate to="/login" replace />
   return <main className="status-page"><p role="alert">현재 이 기능을 사용할 수 없습니다.</p><Link className="button button-dark" to="/demo/chat">채팅으로 돌아가기</Link></main>
 }

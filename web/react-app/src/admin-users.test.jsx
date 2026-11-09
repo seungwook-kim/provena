@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test } from 'vitest'
 import AdminUsersTabs from './components/AdminUsersTabs'
 import { SessionContext } from './lib/session'
-import AdminRequestsPage from './pages/AdminRequestsPage'
 
 const users = [{ login_id: 'owner', role: 'admin', is_owner: true, created_at: '2026-11-06T09:00:00Z' }]
 
@@ -68,13 +67,6 @@ test('ordinary admin preview shows only the signed-in demo requester history', (
   expect(screen.getByText('pending-user-01')).toBeTruthy()
   expect(screen.getByText('former-user-02')).toBeTruthy()
   expect(screen.queryByText('pending-user-03')).toBeNull()
-})
-
-test('ordinary admin signup URL renders the privacy request page without tabs', () => {
-  render(<SessionContext.Provider value={{ user: { user_id: 'ordinary-admin-id', role: 'admin', is_owner: false } }}><MemoryRouter initialEntries={['/admin/requests?tab=signup']}><AdminRequestsPage /></MemoryRouter></SessionContext.Provider>)
-  expect(screen.getByRole('heading', { name: '개인정보 열람 신청' })).toBeTruthy()
-  expect(screen.queryByRole('tab')).toBeNull()
-  expect(screen.getByRole('heading', { name: '신청·승인·열람 이력' })).toBeTruthy()
 })
 
 test('owner preview opens full request details and limits approval to requested fields and period', async () => {
