@@ -1,11 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DemoLayout from '../components/DemoLayout'
-import { previewApprovalsService, reviewDepartments } from '../lib/approvals-service'
+import { STALE_APPROVAL_ERROR_CODES, previewApprovalsService, reviewDepartments } from '../lib/approvals-service'
 
 const label = { all: '전체', pending: '승인 대기', approved: '승인 완료', rejected: '반려' }
-const kindLabel = { decision: '결정표', issue: '쟁점표' }
+const kindLabel = { decision: '결정표', issue: '쟁점표', team_failed: '팀 검토 실패', unknown: '승인 요청' }
+const roleLabel = { approver: '업무 승인', financial: '재무 승인', cooperating: '협조(승인 아님)', none: '없음' }
+const stanceLabel = { allow: '가능', condition: '조건부 가능', block: '불가' }
+const confidenceLabel = { high: '높음', medium: '보통', low: '낮음' }
+const actionByConfirm = { approved: 'approve', rejected: 'reject', revision: 'revision', retry: 'retry', mark_unreviewed: 'mark_unreviewed' }
+const doneMessage = {
+  approved: '승인했습니다.',
+  rejected: '반려했습니다.',
+  retry: '실패한 팀의 검토를 다시 요청했습니다.',
+  mark_unreviewed: '실패한 팀을 검토하지 못한 팀으로 표시하고 다음 단계로 넘겼습니다.',
+}
+const LOAD_ERROR = '승인 요청을 불러오지 못했습니다.'
 
-export default function ApprovalsPage() {
+export default function ApprovalsPage({ service = previewApprovalsService }) {
+  const live = service.live === true
   const [items, setItems] = useState([])
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(null)
@@ -20,33 +32,49 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
+  const requestRef = useRef(0)
+
+  const loadList = useCallback(async () => {
+    const request = ++requestRef.current
+    setLoadError('')
+    try {
+      const data = await service.listApprovals()
+      if (request !== requestRef.current) return
+      setItems(data)
+      setSelectedId(current => data.some(item => item.id === current) ? current : data[0]?.id ?? null)
+    } catch (error) {
+      if (request === requestRef.current) setLoadError(service.live === true && error?.message ? error.message : LOAD_ERROR)
+    } finally {
+      if (request === requestRef.current) setLoading(false)
+    }
+  }, [service])
 
   useEffect(() => {
-    let active = true
-    previewApprovalsService.listApprovals()
-      .then(data => { if (active) { setItems(data); setSelectedId(data[0]?.id ?? null) } })
-      .catch(() => { if (active) setLoadError('승인 요청을 불러오지 못했습니다.') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [])
+    loadList()
+    return () => { requestRef.current += 1 }
+  }, [loadList])
 
   useEffect(() => {
-    if (!selectedId) { setReviews({}); return undefined }
+    if (live || !selectedId) { setReviews({}); return undefined }
     let active = true
-    previewApprovalsService.getDepartmentReviews(selectedId)
+    service.getDepartmentReviews(selectedId)
       .then(data => { if (active) setReviews(data) })
       .catch(() => { if (active) setActionError('부서별 검토 정보를 불러오지 못했습니다.') })
     return () => { active = false }
-  }, [selectedId])
+  }, [live, selectedId, service])
 
   const visible = useMemo(() => items.filter(item => filter === 'all' || item.status === filter), [filter, items])
   const selected = items.find(item => item.id === selectedId) ?? visible[0] ?? null
   const reviewed = Object.keys(reviews).length
   const allReviewed = reviewed === reviewDepartments.length
-  const canDecide = selected?.status === 'pending'
+  const canDecide = selected?.status === 'pending' && (!live || selected.hasDetail)
+  const approveNeedsReason = live && Boolean(selected?.decision?.comparison.needsReason)
 
   function decide(status) {
-    if (!selected || !canDecide || (status !== 'approved' && !reason.trim()) || (selected.kind === 'issue' && status === 'approved' && !allReviewed)) return
+    if (!selected || !canDecide) return
+    if ((status === 'rejected' || status === 'revision') && !reason.trim()) return
+    if (status === 'approved' && ((approveNeedsReason && !reason.trim()) || (!live && selected.kind === 'issue' && !allReviewed))) return
     setActionError('')
     setConfirm(status)
   }
@@ -56,11 +84,23 @@ export default function ApprovalsPage() {
     setBusy(true)
     setActionError('')
     try {
-      const updated = await previewApprovalsService.decideApproval(selected.id, { action: confirm === 'approved' ? 'approve' : confirm === 'revision' ? 'revision' : 'reject', reason })
-      setItems(current => current.map(item => item.id === updated.id ? updated : item))
-      setConfirm(null)
+      const updated = await service.decideApproval(selected.id, { action: actionByConfirm[confirm] ?? 'reject', reason })
+      if (live) {
+        setNotice(`${doneMessage[confirm] ?? '처리했습니다.'}${updated?.nextApproval ? ' 다음 승인 요청이 올라왔습니다.' : ''}`)
+        setReason('')
+        setConfirm(null)
+        await loadList()
+      } else {
+        setItems(current => current.map(item => item.id === updated.id ? updated : item))
+        setConfirm(null)
+      }
     } catch (error) {
       setActionError(error?.message || '승인 요청을 처리하지 못했습니다.')
+      if (live) {
+        setNotice('')
+        setConfirm(null)
+        if (STALE_APPROVAL_ERROR_CODES.includes(error?.code)) await loadList()
+      }
     } finally {
       setBusy(false)
     }
@@ -71,7 +111,7 @@ export default function ApprovalsPage() {
     setBusy(true)
     setActionError('')
     try {
-      setReviews(await previewApprovalsService.submitDepartmentReview(selected.id, { departmentId: department, result, opinion, evidence }))
+      setReviews(await service.submitDepartmentReview(selected.id, { departmentId: department, result, opinion, evidence }))
       setOpinion('')
       setEvidence('')
     } catch (error) {
@@ -81,5 +121,141 @@ export default function ApprovalsPage() {
     }
   }
 
-  return <DemoLayout active="approvals"><main className="approval-service-page"><header><h1>승인함</h1></header><div className="approval-filters">{Object.entries(label).map(([key, value]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => setFilter(key)}>{value}</button>)}</div><section className="approval-service-layout"><aside><h2>승인 요청</h2>{loading ? <p>승인 요청을 불러오는 중입니다.</p> : loadError ? <p role="alert">{loadError}</p> : visible.length ? visible.map(item => <button key={item.id} className={item.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(item.id)}><strong>{item.title}</strong><span>{kindLabel[item.kind]} · {item.at}</span><small>{label[item.status] ?? '보완 요청'}</small></button>) : <p>처리할 승인 요청이 없습니다.</p>}</aside><article>{selected ? <><div className="approval-detail-head"><div><span>{kindLabel[selected.kind]}</span><h2>{selected.title}</h2><p>{selected.source}</p></div><a href={selected.url} target="_blank" rel="noreferrer">원문 보기</a></div><h3>원문 대조</h3><div className="approval-compare"><section><small>원본 정책 문서</small><p>{selected.original}</p></section><section><small>{selected.kind === 'decision' ? '변환된 결정표' : '제안된 쟁점표'}</small><p>{selected.proposed}</p></section></div><div className="approval-mismatch"><strong>불일치 항목 · 검토 필요</strong><p>{selected.mismatch}</p></div>{selected.kind === 'issue' && <section className="department-review"><div className="department-review-head"><h3>부서별 검토</h3><span>{allReviewed ? '최종 승인 대기' : `검토 완료 ${reviewed}/${reviewDepartments.length}`}</span></div>{reviewDepartments.map(item => <div className="department-item" key={item.id}><div><strong>{item.name}</strong><small>{item.question}</small></div>{reviews[item.id] ? <p><b>검토 완료 · {reviews[item.id].result}</b><br />{reviews[item.id].opinion}</p> : <span className="department-pending">검토 대기</span>}</div>)}<div className="review-form"><label>담당 부서<select value={department} onChange={event => setDepartment(event.target.value)} disabled={busy}>{reviewDepartments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>검토 결과<select value={result} onChange={event => setResult(event.target.value)} disabled={busy}><option value="possible">가능</option><option value="conditional">조건부 가능</option><option value="blocked">불가</option></select></label><label>검토 의견<textarea value={opinion} onChange={event => setOpinion(event.target.value)} disabled={busy} /></label><button disabled={busy || !opinion.trim() || Boolean(reviews[department])} onClick={submitReview}>검토 의견 제출</button></div></section>}<label className="approval-reason">반려 또는 보완 요청 사유<textarea value={reason} onChange={event => setReason(event.target.value)} disabled={busy || !canDecide} /></label><div className="approval-actions"><button disabled={busy || !canDecide || !reason.trim()} onClick={() => decide('rejected')}>반려하기</button>{selected.kind === 'issue' && <button disabled={busy || !canDecide || !reason.trim()} onClick={() => decide('revision')}>보완 요청</button>}<button disabled={busy || !canDecide || (selected.kind === 'issue' && !allReviewed)} onClick={() => decide('approved')}>승인하기</button></div>{actionError && <p className="approval-complete" role="alert">{actionError}</p>}</> : <p>{loading ? '상세 정보를 불러오는 중입니다.' : '상세 정보를 불러오지 못했습니다.'}</p>}</article></section>{confirm && <div className="approval-dialog" role="dialog" aria-modal="true"><section><h2>처리하시겠습니까?</h2><p>{selected?.title}</p><div><button type="button" disabled={busy} onClick={() => setConfirm(null)}>취소</button><button type="button" disabled={busy} onClick={confirmDecision}>확인</button></div></section></div>}</main></DemoLayout>
+  const reasonLabel = !live ? '반려 또는 보완 요청 사유' : selected?.kind === 'team_failed' ? '메모 (선택)' : approveNeedsReason ? '사유 (반려와, 원문과 다른 칸이 있는 초안의 승인에는 필수)' : '사유 (반려에는 필수)'
+
+  return <DemoLayout active="approvals"><main className="approval-service-page">
+    <header><h1>승인함</h1></header>
+    {!live && <div className="approval-filters">{Object.entries(label).map(([key, value]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => setFilter(key)}>{value}</button>)}</div>}
+    {live && notice && <p className="approval-complete" role="status">{notice}</p>}
+    <section className="approval-service-layout">
+      <aside>
+        <h2>승인 요청</h2>
+        {loading ? <p>승인 요청을 불러오는 중입니다.</p>
+          : loadError ? <><p role="alert">{loadError}</p>{live && <button type="button" onClick={() => { setLoading(true); loadList() }}>다시 시도</button>}</>
+          : visible.length ? visible.map(item => <button key={item.id} className={item.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(item.id)}>
+            <strong>{item.title}</strong>
+            <span>{kindLabel[item.kind]} · {item.at}</span>
+            <small>{item.saveFailed ? '저장 재시도 필요' : label[item.status] ?? '보완 요청'}</small>
+          </button>)
+          : <p>{live ? '처리할 승인 요청이 없습니다. 새 요청이 올라오면 이곳에 표시됩니다.' : '처리할 승인 요청이 없습니다.'}</p>}
+      </aside>
+      <article>
+        {selected ? <>
+          <div className="approval-detail-head">
+            <div>
+              <span>{kindLabel[selected.kind]}</span>
+              <h2>{selected.title}</h2>
+              <p>{live ? `승인 번호 ${selected.id}${selected.tableId ? ` · 결정표 ${selected.tableId}` : ''}` : selected.source}</p>
+            </div>
+            {!live && selected.url && <a href={selected.url} target="_blank" rel="noreferrer">원문 보기</a>}
+          </div>
+          {live ? <LiveDetail item={selected} /> : <>
+            <h3>원문 대조</h3>
+            <div className="approval-compare">
+              <section><small>원본 정책 문서</small><p>{selected.original}</p></section>
+              <section><small>{selected.kind === 'decision' ? '변환된 결정표' : '제안된 쟁점표'}</small><p>{selected.proposed}</p></section>
+            </div>
+            <div className="approval-mismatch"><strong>불일치 항목 · 검토 필요</strong><p>{selected.mismatch}</p></div>
+            {selected.kind === 'issue' && <section className="department-review">
+              <div className="department-review-head"><h3>부서별 검토</h3><span>{allReviewed ? '최종 승인 대기' : `검토 완료 ${reviewed}/${reviewDepartments.length}`}</span></div>
+              {reviewDepartments.map(item => <div className="department-item" key={item.id}>
+                <div><strong>{item.name}</strong><small>{item.question}</small></div>
+                {reviews[item.id] ? <p><b>검토 완료 · {reviews[item.id].result}</b><br />{reviews[item.id].opinion}</p> : <span className="department-pending">검토 대기</span>}
+              </div>)}
+              <div className="review-form">
+                <label>담당 부서<select value={department} onChange={event => setDepartment(event.target.value)} disabled={busy}>{reviewDepartments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                <label>검토 결과<select value={result} onChange={event => setResult(event.target.value)} disabled={busy}><option value="possible">가능</option><option value="conditional">조건부 가능</option><option value="blocked">불가</option></select></label>
+                <label>검토 의견<textarea value={opinion} onChange={event => setOpinion(event.target.value)} disabled={busy} /></label>
+                <button disabled={busy || !opinion.trim() || Boolean(reviews[department])} onClick={submitReview}>검토 의견 제출</button>
+              </div>
+            </section>}
+          </>}
+          {live && selected.saveFailed && <p className="approval-complete" role="status">이전에 받은 결정을 저장하지 못했습니다. 같은 결정을 다시 보내면 이어서 처리합니다.</p>}
+          <label className="approval-reason">{reasonLabel}<textarea value={reason} onChange={event => setReason(event.target.value)} disabled={busy || !canDecide} /></label>
+          <div className="approval-actions">
+            {live && selected.kind === 'team_failed' ? <>
+              <button disabled={busy || !canDecide} onClick={() => decide('mark_unreviewed')}>검토하지 못한 팀으로 표시</button>
+              <button disabled={busy || !canDecide} onClick={() => decide('retry')}>실패한 팀 다시 검토</button>
+            </> : <>
+              <button disabled={busy || !canDecide || !reason.trim()} onClick={() => decide('rejected')}>반려하기</button>
+              {!live && selected.kind === 'issue' && <button disabled={busy || !canDecide || !reason.trim()} onClick={() => decide('revision')}>보완 요청</button>}
+              <button disabled={busy || !canDecide || (approveNeedsReason && !reason.trim()) || (!live && selected.kind === 'issue' && !allReviewed)} onClick={() => decide('approved')}>승인하기</button>
+            </>}
+          </div>
+          {actionError && <p className="approval-complete" role="alert">{actionError}</p>}
+        </> : <p>{loading ? '상세 정보를 불러오는 중입니다.' : live && !loadError ? '왼쪽 목록에서 승인 요청을 선택하면 상세 내용이 표시됩니다.' : '상세 정보를 불러오지 못했습니다.'}</p>}
+      </article>
+    </section>
+    {confirm && <div className="approval-dialog" role="dialog" aria-modal="true">
+      <section>
+        <h2>처리하시겠습니까?</h2>
+        <p>{selected?.title}</p>
+        <div>
+          <button type="button" disabled={busy} onClick={() => setConfirm(null)}>취소</button>
+          <button type="button" disabled={busy} onClick={confirmDecision}>확인</button>
+        </div>
+      </section>
+    </div>}
+  </main></DemoLayout>
+}
+
+function LiveDetail({ item }) {
+  if (item.kind === 'decision' && item.decision) return <DecisionDetail detail={item.decision} />
+  if (item.kind === 'issue' && item.issue) return <IssueDetail table={item.issue} />
+  if (item.kind === 'team_failed' && item.failedTeams.length) return <TeamFailedDetail teams={item.failedTeams} />
+  return <div className="approval-mismatch"><strong>상세 정보 없음</strong><p>서버가 이 승인 요청의 상세 내용을 내려주지 않아 처리할 수 없습니다. 목록을 새로 불러온 뒤에도 같으면 관리자에게 확인해 주세요.</p></div>
+}
+
+function DecisionDetail({ detail }) {
+  const { comparison, draft } = detail
+  const extra = comparison.extraBands.length ? `, 원문에 없는 구간 ${comparison.extraBands.join(', ')}` : ''
+  return <>
+    <h3>원문 대조</h3>
+    {comparison.needsReason
+      ? <div className="approval-mismatch"><strong>불일치 항목 · 검토 필요</strong><p>원문과 다른 칸 {comparison.mismatchCount}개{extra}. 승인하려면 사유를 입력해야 합니다.</p></div>
+      : <div className="approval-compare"><section><small>대조 결과</small><p>원문과 다른 칸이 없습니다. (원문 칸 {comparison.sourceCells}개)</p></section></div>}
+    {comparison.rows.length ? <div className="approval-table-wrap"><table className="approval-table">
+      <thead><tr><th scope="col">구간</th><th scope="col">역할</th><th scope="col">원문 값</th><th scope="col">원문 기준</th><th scope="col">초안</th><th scope="col">결과</th></tr></thead>
+      <tbody>{comparison.rows.map((row, index) => <tr key={`${row.band}-${row.role}-${index}`} className={row.match ? '' : 'mismatch'}>
+        <td>{row.bandLabel}</td><td>{row.role}</td><td>{row.sourceValue || '없음'}</td><td>{roleLabel[row.expected] ?? row.expected}</td><td>{roleLabel[row.draft] ?? row.draft}</td><td>{row.match ? '일치' : '불일치'}</td>
+      </tr>)}</tbody>
+    </table></div> : <p>대조할 칸이 없습니다.</p>}
+    <h3>변환된 결정표 초안</h3>
+    {draft.length ? <div className="approval-table-wrap"><table className="approval-table">
+      <thead><tr><th scope="col">구간</th><th scope="col">업무 승인</th><th scope="col">재무 승인</th><th scope="col">협조</th></tr></thead>
+      <tbody>{draft.map((rule, index) => <tr key={`${rule.band}-${index}`}>
+        <td>{rule.bandLabel}</td><td>{rule.approvers.join(', ') || '없음'}</td><td>{rule.financialApprovers.join(', ') || '없음'}</td><td>{rule.cooperating.join(', ') || '없음'}</td>
+      </tr>)}</tbody>
+    </table></div> : <p>초안에 구간이 없습니다.</p>}
+  </>
+}
+
+function IssueDetail({ table }) {
+  return <>
+    <h3>합동 검토 요청</h3>
+    <div className="approval-compare"><section><small>요청{table.asOf ? ` · 기준일 ${table.asOf}` : ''}</small><p>{table.request || '없음'}</p></section></div>
+    <h3>쟁점표</h3>
+    {table.rows.length ? <div className="approval-table-wrap"><table className="approval-table">
+      <thead><tr><th scope="col">팀</th><th scope="col">쟁점</th><th scope="col">입장</th><th scope="col">확신도</th><th scope="col">근거</th></tr></thead>
+      <tbody>{table.rows.map((row, index) => <tr key={`${row.team}-${index}`}>
+        <td>{row.teamLabel}</td>
+        <td>{row.issue}{row.conflict && <><br /><b>팀 입장 충돌</b></>}</td>
+        <td>{stanceLabel[row.stance] ?? '없음'}</td>
+        <td>{confidenceLabel[row.confidence] ?? '없음'}</td>
+        <td>{row.sectionPath || '없음'}{row.versionDate ? ` · ${row.versionDate}` : ''}{row.sourceUrl && <><br /><a href={row.sourceUrl} target="_blank" rel="noreferrer">원문 보기</a></>}</td>
+      </tr>)}</tbody>
+    </table></div> : <p>쟁점 행이 없습니다.</p>}
+    {table.unreviewed.length > 0 && <div className="approval-mismatch"><strong>검토하지 못한 팀</strong>{table.unreviewed.map((team, index) => <p key={`${team.team}-${index}`}>{team.teamLabel}: {team.reason}</p>)}</div>}
+  </>
+}
+
+function TeamFailedDetail({ teams }) {
+  return <>
+    <h3>검토하지 못한 팀</h3>
+    <div className="approval-table-wrap"><table className="approval-table">
+      <thead><tr><th scope="col">팀</th><th scope="col">이유</th><th scope="col">시도 횟수</th></tr></thead>
+      <tbody>{teams.map((team, index) => <tr key={`${team.team}-${index}`}><td>{team.team}</td><td>{team.reason || '없음'}</td><td>{team.attempts ?? '없음'}</td></tr>)}</tbody>
+    </table></div>
+    <div className="approval-compare"><section><small>선택할 수 있는 처리</small><p>다시 검토를 고르면 실패한 팀만 다시 실행합니다. 검토하지 못한 팀으로 표시를 고르면 그 팀의 쟁점 없이 쟁점표 승인 단계로 넘어갑니다.</p></section></div>
+  </>
 }
