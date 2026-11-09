@@ -4,7 +4,8 @@
 - 데모 모드(`LLM_API_KEY` 없음, 또는 `DEMO_MODE=1`)의 `get_chat_model()`은 `ReplayChatModel`을 돌려준다.
   호출마다 요청 키로 `data/demo_replay/*.jsonl`에서 녹화한 응답을 찾는다. 없으면 결정적 가짜 응답(`demo_fallback`)으로 대신하고, 처음 한 번만 로그를 남긴다.
 - 녹화 모드(`LLM_RECORD=1` + 실제 키 + 데모 아님)의 `get_chat_model()`은 `RecordingChatModel`로 실제 모델을 감싸 요청 키 -> 응답을 같은 폴더에 덧붙인다.
-  녹화는 `python -m backend.services.demo_record --questions <파일>`이 한다.
+  녹화는 `python -m backend.services.demo_record --questions <파일>`이 한다. 이 CLI는 서비스 설정(61.51)을 적용하지 않아 서버와 프롬프트가 다를 수 있으니,
+  데모 서버가 재생할 녹화는 서버를 `LLM_RECORD=1`·`DEMO_MODE=0`으로 띄워 `/chat`에 질문을 보내 만든다(2026-11-09 data/demo_replay/ 녹화가 이 방법이다).
 
 요청 키(`request_key`): sha256(역할 + 정규화한 메시지). 역할은 시스템 프롬프트 첫 줄의 `[[task:...]]` 표지(없으면 `generic`).
 공급자·모델 이름은 키에 넣지 않는다(녹화한 모델과 재생하는 쪽의 모델 설정이 달라도 같은 요청이면 같은 응답을 찾으려는 것이고, 모델 이름은 녹화 줄에 정보로만 남긴다).
@@ -12,9 +13,13 @@
 
 환경변수
 - `DEMO_MODE`: 1/true/yes/on이면 키가 있어도 데모(재생). 키가 없으면 이 값과 무관하게 데모.
-- `DEMO_REPLAY_DIR`: 녹화 폴더(기본 `<repo>/data/demo_replay`). 읽기: 폴더의 `*.jsonl` 전부(이름 순, 뒤의 줄이 앞을 덮는다). 쓰기: 같은 폴더의 `recorded.jsonl`.
+- `DEMO_REPLAY_DIR`: 녹화 폴더(기본 `<repo>/data/demo_replay`). 읽기: 폴더의 `*.jsonl` 전부(이름 순, 뒤 파일의 같은 키가 앞 파일을 덮는다). 쓰기: 같은 폴더의 `recorded.jsonl`.
+  같은 파일에 같은 키가 여러 줄이면 응답 변형이다: 그래프가 같은 요청을 여러 번 부르고 매번 다른 응답을 받은 것(답 두 번 써서 고르기, 판정 투표, 근거 판정)이라 재생도 부를 때마다 차례로 돌려가며 낸다.
+  다시 녹화해 바꾸려면 `recorded.jsonl`을 지우고 녹화한다(남아 있으면 새 응답이 변형으로 섞인다).
 - `LLM_RECORD`: 1/true/yes/on이면 녹화 모드(실제 키가 있고 데모가 아닐 때만).
 녹화 줄: {"key", "role", "model", "user_preview", "response", "recorded_at"}. 비밀키는 쓰지 않는다.
+질문 임베딩(voyage-4 API)도 같은 폴더에 녹화·재생한다(`backend/rag/retrieve/embed.py`): 역할 `query_embedding`, 응답은 벡터(JSON 목록)다.
+키 없는 데모는 녹화에 있는 질문만 검색할 수 있다(질문 벡터를 만들 수 없으면 검색은 빈 결과 `no_key`로 끝나고 질문은 거절된다).
 """
 from __future__ import annotations
 
@@ -71,6 +76,12 @@ def message_role(messages: list[BaseMessage]) -> str:
     return GENERIC_ROLE
 
 
+def request_key_for(role: str, parts: list[str]) -> str:
+    """LLM 메시지가 아닌 요청(질문 임베딩 등)의 키: sha256(역할 + 정규화한 글 조각들). 녹화 줄의 `role`은 이 역할이다."""
+    payload = {"v": 1, "role": role, "parts": [_normalize(p) for p in parts]}
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 def request_key(messages: list[BaseMessage]) -> str:
     payload = {"v": 1, "role": message_role(messages), "messages": [[m.type, _normalize(_content_text(m))] for m in messages]}
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
@@ -85,31 +96,50 @@ class ReplayStore:
         self._lock = threading.Lock()
         self._sig: tuple | None = None
         self._rows: dict[str, dict] = {}
+        self._variants: dict[str, list[dict]] = {}
+        self._turn: dict[str, int] = {}
 
     def _files(self) -> list[Path]:
         return sorted(self.directory.glob("*.jsonl")) if self.directory.is_dir() else []
 
     def _refresh(self) -> None:
+        """같은 키의 줄이 한 파일에 여러 개면 그 요청을 여러 번 불렀을 때 응답이 달랐던 것(답을 두 번 써서 고르기, 판정 투표, 근거 판정 여러 번)이라
+        모두 남긴다(`pick`이 돌려가며 낸다). 뒤 파일(이름 순)에 같은 키가 있으면 앞 파일의 줄 전체를 덮는다."""
         files = self._files()
         sig = tuple((f.name, f.stat().st_mtime_ns, f.stat().st_size) for f in files)
         if sig == self._sig:
             return
-        rows: dict[str, dict] = {}
+        variants: dict[str, list[dict]] = {}
         for f in files:
+            per_file: dict[str, list[dict]] = {}
             for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
                 if not line.strip():
                     continue
                 try:
                     row = json.loads(line)
-                    rows[row["key"]] = row
+                    per_file.setdefault(row["key"], []).append(row)
                 except (ValueError, KeyError, TypeError):
                     log.warning("녹화 줄을 읽지 못해 건너뜁니다: %s:%d", f.name, n)
-        self._rows, self._sig = rows, sig
+            variants.update(per_file)
+        rows = {k: v[-1] for k, v in variants.items()}
+        self._rows, self._variants, self._sig = rows, variants, sig
 
     def get(self, key: str) -> dict | None:
+        """그 키의 가장 나중 녹화 줄(변형이 여럿이어도 하나)."""
         with self._lock:
             self._refresh()
             return self._rows.get(key)
+
+    def pick(self, key: str) -> dict | None:
+        """그 키의 녹화 줄. 응답 변형이 여럿이면 부를 때마다 차례로 돌려가며 낸다(재생이 녹화 때처럼 여러 답을 섞어 쓰게)."""
+        with self._lock:
+            self._refresh()
+            rows = self._variants.get(key)
+            if not rows:
+                return None
+            n = self._turn.get(key, 0)
+            self._turn[key] = n + 1
+            return rows[n % len(rows)]
 
     def __len__(self) -> int:
         with self._lock:
@@ -120,8 +150,7 @@ class ReplayStore:
         """녹화 한 줄을 `recorded.jsonl`에 덧붙인다. 같은 키에 같은 응답이 이미 있으면 쓰지 않고 False."""
         with self._lock:
             self._refresh()
-            prev = self._rows.get(key)
-            if prev is not None and prev.get("response") == response:
+            if any(r.get("response") == response for r in self._variants.get(key, ())):
                 return False
             self.directory.mkdir(parents=True, exist_ok=True)
             row = {
@@ -240,7 +269,7 @@ class ReplayChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         store = self.store if self.store is not None else get_store()
-        row = store.get(request_key(messages))
+        row = store.pick(request_key(messages))
         if row is not None:
             self.hits += 1
             text = str(row["response"])
