@@ -39,6 +39,23 @@ export const APPROVAL_KIND_MAP = { decision_table: 'decision', issue_table: 'iss
 // After these errors the item was already handled or is gone, so the screen reloads the list.
 export const STALE_APPROVAL_ERROR_CODES = ['already_decided', 'conflict', 'not_found']
 
+// Compatibility boundary for existing live-service tests and callers. Keep the
+// richer main adapter below as the canonical implementation, while exposing the
+// historical name without reintroducing preview fallback behavior.
+export const actualApprovalsService = {
+  live: true,
+  async listApprovals() {
+    const response = await apiClient.getApprovals()
+    const rows = Array.isArray(response) ? response : response?.approvals
+    if (!Array.isArray(rows)) throw new Error('승인 API 응답 형식이 올바르지 않습니다.')
+    return rows.map(mapApproval)
+  },
+  async decideApproval(id, { action, reason = '' } = {}) {
+    if (action === 'revision') throw new Error('보완 요청 API가 아직 연결되지 않았습니다.')
+    await apiClient.submitApproval(id, action === 'approve', reason)
+    return { id, status: action === 'approve' ? 'approved' : 'rejected' }
+  },
+}
 const list = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
 const textOrNull = value => typeof value === 'string' && value.trim() ? value : null
@@ -207,3 +224,4 @@ export function createApiApprovalsAdapter(api = apiClient) {
 export function createApiApprovalsService(api = apiClient) {
   return createApprovalsService(createApiApprovalsAdapter(api))
 }
+

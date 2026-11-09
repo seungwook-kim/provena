@@ -111,6 +111,16 @@ export async function saveProfile(profile) {
 }
 
 export function listAdminUsers() { return apiJson('/admin/users') }
+export function listSignupRequests() { return apiJson('/admin/signup-requests') }
+
+export async function reviewSignupRequest(loginId, action) {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/${encodeURIComponent(loginId)}/${action}`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
 
 export async function changeAdminRole(loginId, action) {
   await apiRequest('/auth/csrf')

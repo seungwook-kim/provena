@@ -220,7 +220,7 @@ export function DemoOnlyChat() {
   const [params] = useSearchParams()
   const location = useLocation()
   const { user } = useSession()
-  const previewMode = import.meta.env.DEV && (location.pathname.startsWith('/demo/') || params.get('demo') === '1')
+  const previewMode = (import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') && (location.pathname.startsWith('/demo/') || params.get('demo') === '1')
   if (previewMode) return <DemoChatPage />
   if (!user) return <Navigate to="/login" replace />
   return <DemoChatPage api />
@@ -228,6 +228,6 @@ export function DemoOnlyChat() {
 
 export function DemoAdminBlocked() {
   const [params] = useSearchParams()
-  if (!import.meta.env.DEV || params.get('demo') !== '1') return <Navigate to="/login" replace />
+  if (!(import.meta.env.DEV || import.meta.env.VITE_ENABLE_LOCAL_DEMO === 'true') || params.get('demo') !== '1') return <Navigate to="/login" replace />
   return <main className="status-page"><p role="alert">현재 이 기능을 사용할 수 없습니다.</p><Link className="button button-dark" to="/demo/chat">채팅으로 돌아가기</Link></main>
 }
