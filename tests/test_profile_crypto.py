@@ -93,13 +93,19 @@ def test_error_message_has_no_key_material():
     assert secret_part not in str(info.value)
 
 
-def test_from_env_without_key_always_raises():
+def test_from_env_without_key_raises_unless_ephemeral_allowed():
     with pytest.raises(ProfileCryptoError):
         ProfileCipher.from_env({})
+    one = ProfileCipher.from_env({}, allow_ephemeral=True)
+    two = ProfileCipher.from_env({}, allow_ephemeral=True)
+    blob = one.encrypt(UID_A, "name", "김민수")
+    assert one.decrypt(UID_A, "name", blob, 1) == "김민수"
+    with pytest.raises(ProfileCryptoError):
+        two.decrypt(UID_A, "name", blob, 1)   # 실행마다 다른 무작위 키
 
 
-def test_configured_key_is_used():
+def test_configured_key_wins_over_ephemeral():
     key = os.urandom(32)
-    configured = ProfileCipher.from_env({KEY_ENV: _key_text(3, key)})
+    configured = ProfileCipher.from_env({KEY_ENV: _key_text(3, key)}, allow_ephemeral=True)
     assert configured.current_version == 3
     assert ProfileCipher({3: key}).decrypt(UID_A, "name", configured.encrypt(UID_A, "name", "김민수"), 3) == "김민수"

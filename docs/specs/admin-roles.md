@@ -1,6 +1,8 @@
 # 관리자 역할 관리(최고 관리자) API 명세서
 
-상태: 초안 (2026-11-05, 박진형 작성, 조장 확인 전). **sandbox 구현 있음(11/5, 아래 "구현 (sandbox)" 절)** — 팀 main에는 아직 없음. 화면 시안은 `repos/class-3-design/provena-ivory-1105/ADMIN_SPEC.md`(3판).
+상태: 구현 (2026-11-09 팀 레포로 옮김, 박진형). 11/5 로컬 구현을 그대로 옮겼고 달라진 점은 아래 "11/9 팀 레포로 옮기며 바꾼 것". 화면은 `web/react-app/src/pages/AdminUsersPage.jsx`(이미 main에 있음).
+
+- 11/9 팀 레포로 옮기며 바꾼 것: ① 화면 주소와 API 주소가 같은 문제("처음 계획과 달라진 것" 4번)를 서버에서 풀었다. 브라우저가 `/admin/users`를 직접 열면(`Accept`에 `text/html`) React `index.html`을 내주고, 화면의 fetch(`Accept: */*`)에는 API가 답한다(`backend/admin_api.py` `html_page`, 시험 `tests/test_admin_api.py` 끝 2개). ② `db/104_user_profiles.sql`에 RLS를 켰다(다른 표와 같게). ③ 아래 "선행 조건"의 토큰 폐기 저장소는 main에서 이미 연결됐다(`backend/main.py` `app.state.token_revocation_store`).
 
 - 11/5 번호 변경: 기록 표 SQL은 **`db/105_admin_role_log.sql`**, 내 정보는 `db/104_user_profiles.sql`. 102는 결정표(PR #54), 103은 PR #53이 쓴다(PR #54 조장 답).
 
@@ -93,7 +95,7 @@
 
 ### 최고 관리자 확인
 
-- (구현: `backend/auth.py`가 아니라 새 파일 `backend/admin_api.py`의 `owner_guard`·`is_owner`에 뒀다. auth.py 변경을 `/me` 칸 1개 + 콜백 인자 1개로 줄이려고. 아래 "구현 (sandbox)" 절.) 처음 계획: `backend/auth.py`에 `create_require_owner_dependency(*, store, owner_login_id, secret=None, revocation_store=None)`를 더한다. 안에서 기존 `require_admin`(`backend/auth.py:610-623`)을 먼저 부르고, `owner_login_id`가 비어 있지 않고 `hmac.compare_digest(user.login_id, owner_login_id)`일 때만 통과시킨다. 아니면 403.
+- (구현: `backend/auth.py`가 아니라 새 파일 `backend/admin_api.py`의 `owner_guard`·`is_owner`에 뒀다. auth.py 변경을 `/me` 칸 1개 + 콜백 인자 1개로 줄이려고. 아래 "구현 (로컬, 2026-11-05)" 절.) 처음 계획: `backend/auth.py`에 `create_require_owner_dependency(*, store, owner_login_id, secret=None, revocation_store=None)`를 더한다. 안에서 기존 `require_admin`(`backend/auth.py:610-623`)을 먼저 부르고, `owner_login_id`가 비어 있지 않고 `hmac.compare_digest(user.login_id, owner_login_id)`일 때만 통과시킨다. 아니면 403.
 - 설정값은 `main.py`가 시작할 때 한 번 읽어 넘긴다(요청마다 환경변수를 읽지 않음, 시험에서 값을 넣기 쉽게). 최고 관리자를 바꾸려면 Cloud Run 새 리비전이 필요하고, 그래야 화면에서 못 바꾼다는 결정과 맞는다.
 - **`login_id`로 정하는 이유**: `user_id`(UUID)는 DB가 만들 때 정해져(`db/101_auth_users.sql:7`) 계정을 만들기 전에 설정할 수 없다. `login_id`는 UNIQUE이고(`:8`) 바꾸는 API가 없다(로그인 Spec 범위 밖, `docs/specs/login.md:18`). 대신 기록 표에는 바뀌지 않는 `user_id`를 쓴다. 남는 위험: DB에서 누가 아이디를 바꾸거나 같은 아이디로 다시 만들면 그 계정이 최고 관리자가 된다 → DB 접속 권한이 있는 사람만 가능하고, 그래도 role admin이어야 한다.
 
@@ -127,7 +129,7 @@ ALTER TABLE admin_role_log ENABLE ROW LEVEL SECURITY;
 
 - 번호: `db/101_auth_users.sql:2`가 100번대를 김승욱 파트(로그인·사용자)로 정했다. 102는 결정표(PR #54), 103은 PR #53 → 내 정보 104(`db/104_user_profiles.sql`), 기록 표 105.
 - 기록 칸은 누가·누구를·무엇을·언제만. 아이디 문자열·IP·브라우저 정보는 넣지 않는다.
-- 로컬: `ensure_schema()`가 101 파일만 읽었다 → 101 다음에 105도 읽게 고쳤다(sandbox `backend/services/auth_store.py:159-165`). 배포: 스키마는 미리 적용해야 한다(`backend/main.py:10`).
+- 로컬: `ensure_schema()`가 101 파일만 읽었다 → 101 다음에 105도 읽게 고쳤다(`backend/services/auth_store.py`). 배포: 스키마는 미리 적용해야 한다(`backend/main.py:10`).
 - `users` 표에는 RLS가 없다(`db/101_auth_users.sql` 전체에 `ROW LEVEL` 0건). 비밀번호 해시가 있는 표라 105에 `ALTER TABLE users ENABLE ROW LEVEL SECURITY;`를 같이 넣을지 열린 항목 3.
 
 ### 첫 계정 만들기: `create_account` 명령
@@ -256,9 +258,9 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 | 14 비밀번호 잃음 | 최고 관리자 → 배포 담당 | `create_account --login-id <아이디> --reset-password` | 해시만 바뀜, 역할 admin 유지. 새 비밀번호로 로그인 200 |
 | 15 최고 관리자 바꾸기 | 조장 결정 → 배포 담당 | 새 사람을 admin으로 만든 뒤(6단계 또는 2단계) Cloud Run 설정값을 바꿔 새 리비전 배포 | 새 사람 `is_owner:true`. 예전 최고 관리자는 일반 관리자로 남고, 새 최고 관리자가 해제할 수 있다 |
 
-## 구현 (sandbox, 2026-11-05)
+## 구현 (로컬, 2026-11-05)
 
-팀 레포(`class-3-main`)는 바꾸지 않았다. 진형 실습 폴더 `repos/class-3-sandbox`에만 있다. 커밋·PR 전.
+11/5에는 박진형 로컬에서만 만들었고 11/9 이 PR로 팀 레포에 옮겼다.
 
 ### 만든·바꾼 파일
 
@@ -292,4 +294,4 @@ TEST_DATABASE_URL=<로컬 시험 DB> .venv/Scripts/python.exe -m pytest -q tests
 ### 알아 둘 것
 
 - 윈도우에서 `create_account`를 `< NUL`로 돌리면 `isatty()`가 참이라 숨김 입력을 기다리며 멈춘다. 터미널 없이 돌릴 때는 빈 파이프(예: PowerShell `'' | python -m backend.services.create_account ...`)와 `PROVENA_NEW_ACCOUNT_PASSWORD`를 쓴다.
-- 로그인 503(토큰 폐기 저장소 미연결, 위 "선행 조건")은 고치지 않았다. 로컬 확인 실행기만 메모리 저장소로 피해 갔다(저장소 밖 scratchpad).
+- 로그인 503(토큰 폐기 저장소 미연결, 위 "선행 조건")은 고치지 않았다. 로컬 확인은 메모리 저장소로 했다.

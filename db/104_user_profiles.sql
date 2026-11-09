@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     key_version  smallint NOT NULL CHECK (key_version > 0),   -- 어느 키로 잠갔나 (키 교체용, PROFILE_ENC_KEYS)
     updated_at   timestamptz NOT NULL DEFAULT now()
 );
+-- Supabase는 public 표를 Data API로 내보낸다(db/201_search.sql:90 설명과 같은 이유). 다른 표(101·103·105·111)와 같게 RLS를 켠다.
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;

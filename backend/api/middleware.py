@@ -6,6 +6,10 @@
 - 순수 ASGI 미들웨어다. `BaseHTTPMiddleware`는 응답 본문을 감싸 SSE를 버퍼링할 수 있어 쓰지 않는다.
 - 예외 처리기 밖으로 나온 오류는 `internal_error` 500으로 마무리하고, 내용은 로그에만 남긴다.
 - 사용 모델, 토큰 수, 비용은 LLM을 부르는 엔드포인트가 `log_llm_usage`로 따로 남긴다.
+- 모든 응답에 보안 헤더를 붙인다: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`. `Strict-Transport-Security`는 https 요청에만 붙인다
+  (요청 scheme 또는 프록시가 붙인 `X-Forwarded-Proto`의 첫 값). 응답이 이미 같은 헤더를 정했으면 그 값을 둔다.
+  화면(`/`)과 `/docs`를 깨뜨릴 수 있어 Content-Security-Policy는 붙이지 않는다.
 """
 from __future__ import annotations
 
@@ -24,6 +28,26 @@ HEADER = "X-Request-ID"
 _HEADER_KEY = HEADER.lower().encode("latin-1")
 _VALID_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _request_id: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+)
+HSTS_HEADER: tuple[bytes, bytes] = (b"strict-transport-security", b"max-age=31536000")
+
+
+def _is_https(scope: Scope) -> bool:
+    """요청 scheme이 https이거나 프록시가 붙인 X-Forwarded-Proto의 첫 값이 https면 참."""
+    if scope.get("scheme") == "https":
+        return True
+    proto = next((v.decode("latin-1") for k, v in scope.get("headers", []) if k == b"x-forwarded-proto"), "")
+    return proto.split(",")[0].strip().lower() == "https"
+
+
+def _with_security_headers(headers: list[tuple[bytes, bytes]], https: bool) -> list[tuple[bytes, bytes]]:
+    present = {k.lower() for k, _ in headers}
+    extra = [*SECURITY_HEADERS, HSTS_HEADER] if https else list(SECURITY_HEADERS)
+    return [*headers, *((k, v) for k, v in extra if k not in present)]
 
 
 def current_request_id() -> str:
@@ -41,6 +65,7 @@ class RequestContextMiddleware:
             return
         incoming = next((v.decode("latin-1") for k, v in scope.get("headers", []) if k == _HEADER_KEY), "")
         rid = incoming if _VALID_ID.match(incoming) else uuid.uuid4().hex
+        https = _is_https(scope)
         token = _request_id.set(rid)
         started = time.perf_counter()
         status = 500
@@ -51,6 +76,7 @@ class RequestContextMiddleware:
             if message["type"] == "http.response.start":
                 status, began = message["status"], True
                 headers = [(k, v) for k, v in message.get("headers", []) if k.lower() != _HEADER_KEY]
+                headers = _with_security_headers(headers, https)
                 message = {**message, "headers": [*headers, (_HEADER_KEY, rid.encode("latin-1"))]}
             await send(message)
 

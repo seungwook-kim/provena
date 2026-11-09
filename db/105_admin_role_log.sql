@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS admin_role_log (
     action         text NOT NULL CHECK (action IN ('promote', 'revoke'))
 );
 CREATE INDEX IF NOT EXISTS admin_role_log_at ON admin_role_log (at);
--- Supabase는 public 표를 Data API로 내보낸다(db/201_search.sql:89 설명과 같은 이유).
+-- Supabase는 public 표를 Data API로 내보낸다(db/201_search.sql:90 설명과 같은 이유).
 ALTER TABLE admin_role_log ENABLE ROW LEVEL SECURITY;

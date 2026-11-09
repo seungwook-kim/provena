@@ -1,6 +1,7 @@
 """질문 그래프의 결정표 경로, 승인 요청 이벤트, 앱 등록 시험. d5_patch_approval.diff를 적용한 뒤에만 돈다. 적용 전에는 건너뛴다."""
 from __future__ import annotations
 
+import base64
 import inspect
 import secrets
 
@@ -63,8 +64,11 @@ def test_missing_amount_is_refused():
 # --- 승인 요청 이벤트와 앱 등록 ------------------------------------------------------------------
 
 def _app(monkeypatch, **env):
-    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE", "CHECKPOINTER", "MCP_TOKEN", "SEARCH_WARMUP"):
+    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE", "CHECKPOINTER", "MCP_TOKEN", "SEARCH_WARMUP",
+                "PROVENA_OWNER_LOGIN_ID"):
         monkeypatch.delenv(key, raising=False)
+    # DATABASE_URL이 있으면 내 정보 라우터도 붙고, 배포 모드에선 키가 없으면 시작하지 않는다(backend/main.py). AUTH_SECRET처럼 시험마다 새로 만든다
+    monkeypatch.setenv("PROFILE_ENC_KEYS", "1:" + base64.b64encode(secrets.token_bytes(32)).decode())
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     monkeypatch.setattr("backend.main.create_auth_router", create_test_auth_router)

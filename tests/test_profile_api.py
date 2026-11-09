@@ -101,7 +101,7 @@ def test_invalid_input_is_422_with_fields_and_no_echo(env):
 
 def test_empty_body_reports_every_field(env):
     r = put(env["client"]("A"), {})
-    assert r.status_code == 422 and set(r.json()["detail"]["fields"]) == {"name", "dept", "phone"}
+    assert r.status_code == 422 and set(r.json()["detail"]["fields"]) == {"name", "dept", "phone", "address"}
 
 
 @pytest.mark.parametrize("raw", [b"not json 01055556666", b"[1, 2]", b'"01055556666"', b'{"name": 12345678}'])
@@ -126,12 +126,13 @@ def test_bad_view_value_is_422_without_echo(env):
 
 
 @pytest.mark.parametrize("raw, expected", [
-    ("01012345678", "010-1234-5678"), ("010-1234-5678", "010-1234-5678"),
-    ("0101234567", None), ("010123456789", None), ("01112345678", None),
-    ("010 1234 5678", None), ("010-1234-567a", None), ("070-1234-5678", None),
-    ("０１０１２３４５６７８", None), ("٠١٠١٢٣٤٥٦٧٨", None), ("1234", None),
+    ("01012345678", "010-1234-5678"), ("010-1234-5678", "010-1234-5678"), (" 011 123 4567 ", "011-123-4567"),
+    ("0212345678", "02-1234-5678"), ("021234567", "02-123-4567"), ("0517771234", "051-777-1234"),
+    ("06412345678", "064-1234-5678"),
+    ("1234", None), ("01212345678", None), ("070-1234-5678", None), ("0661234567", None), ("010-1234-567a", None),
+    ("０１０１２３４５６７８", None), ("٠١٠١٢٣٤٥٦٧٨", None), ("010123456789", None),
 ])
-def test_normalize_phone_matches_strict_rules(raw, expected):
+def test_normalize_phone_matches_mockup_rules(raw, expected):
     assert normalize_phone(raw) == expected
 
 
@@ -145,7 +146,6 @@ def test_name_rule(name, ok):
 def test_dept_and_address_length_rules():
     assert "dept" not in validate_profile({**GOOD, "dept": "가" * 40})[0]
     assert "dept" in validate_profile({**GOOD, "dept": "가" * 41})[0]
-    assert "address" not in validate_profile({**GOOD, "address": ""})[0]
     assert "address" in validate_profile({**GOOD, "address": "가" * 4})[0]
     assert "address" not in validate_profile({**GOOD, "address": "가" * 100})[0]
     assert "address" in validate_profile({**GOOD, "address": "가" * 101})[0]
@@ -266,20 +266,6 @@ def test_main_app_refuses_start_without_key_outside_local(monkeypatch):
 
     for key in ("PROVENA_ENV", "PROVENA_DEV_MODE", KEY_ENV):
         monkeypatch.delenv(key, raising=False)
-    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:1/x")
-    monkeypatch.setenv("AUTH_SECRET", secrets.token_urlsafe(48))
-    from backend.main import create_app
-
-    with pytest.raises(ProfileCryptoError):
-        create_app()
-
-
-def test_main_app_refuses_start_without_key_in_local_demo(monkeypatch):
-    from backend.services.profile_crypto import ProfileCryptoError
-
-    monkeypatch.setenv("PROVENA_ENV", "local")
-    monkeypatch.setenv("PROVENA_DEV_MODE", "1")
-    monkeypatch.delenv(KEY_ENV, raising=False)
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:1/x")
     monkeypatch.setenv("AUTH_SECRET", secrets.token_urlsafe(48))
     from backend.main import create_app

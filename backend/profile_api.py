@@ -34,8 +34,10 @@ UNAVAILABLE_MESSAGE = "내 정보 저장소를 사용할 수 없습니다."
 NOT_FOUND_MESSAGE = "내 정보가 아직 없습니다."
 MAX_BODY_BYTES = 8192   # 네 칸 최대 길이를 다 채워도 1KB 안팎. 큰 본문은 읽기 전에 거절한다
 
-_PHONE_DIGITS = re.compile(r"^010\d{8}$")
-_PHONE_FORMATTED = re.compile(r"^010-\d{4}-\d{4}$")
+_MOBILE = re.compile(r"01[016789][0-9]{7,8}")
+_SEOUL = re.compile(r"02[0-9]{7,8}")
+_AREA = re.compile(r"0[3-6][1-5][0-9]{7,8}")
+_SPACE_OR_HYPHEN = re.compile(r"[\s-]")
 
 
 def _invalid(fields: dict[str, str] | None = None) -> HTTPException:
@@ -60,7 +62,7 @@ class ProfileRoute(APIRoute):
         return handler
 
 
-def _legacy_normalize_phone(raw: str) -> str | None:
+def normalize_phone(raw: str) -> str | None:
     """시안 normalizePhone과 같다. 숫자(0-9)만 남겨 휴대폰 01[016789] 10~11자리, 02, 031~064면 하이픈을 다시 붙인다."""
     d = _SPACE_OR_HYPHEN.sub("", raw)
     if not re.fullmatch(r"[0-9]+", d):   # \d 는 유니코드 숫자(예: ٣)도 받으므로 쓰지 않는다
@@ -72,21 +74,6 @@ def _legacy_normalize_phone(raw: str) -> str | None:
     if _AREA.fullmatch(d):
         return f"{d[:3]}-{d[3:-4]}-{d[-4:]}"
     return None
-
-
-def normalize_phone(raw: str) -> str | None:
-    """010으로 시작하는 ASCII 숫자 11자리만 받아 표준 하이픈 형식으로 반환한다."""
-    if not isinstance(raw, str):
-        return None
-    if _PHONE_FORMATTED.fullmatch(raw):
-        digits = raw.replace("-", "")
-    elif raw.isascii() and raw.isdigit():
-        digits = raw
-    else:
-        return None
-    if not _PHONE_DIGITS.fullmatch(digits):
-        return None
-    return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
 
 
 def mask_phone(phone: str) -> str:
@@ -140,7 +127,9 @@ def validate_profile(body: Any) -> tuple[dict[str, str], dict[str, str]]:
             values["phone"] = normalized
     address = values.get("address")
     if address is not None:
-        if address and (len(address) < 5 or len(address) > 100):
+        if not address:
+            errors["address"] = "주소를 입력해 주세요."
+        elif len(address) < 5 or len(address) > 100:
             errors["address"] = "주소는 5~100자로 입력해 주세요."
     return errors, values
 

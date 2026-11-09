@@ -183,25 +183,6 @@
 .approval-service-page .approval-dialog section{border-radius:10px;padding:24px;box-shadow:0 18px 44px -28px #1d1c1acc}
 @media(max-width:900px){.approval-service-page{padding:26px 18px 56px}.approval-service-layout{grid-template-columns:280px minmax(0,1fr)}.approval-service-layout article{padding:24px}.review-form{grid-template-columns:1fr 1fr}.review-form label:nth-child(3){grid-column:1/-1}.review-form button{grid-column:2}}
 @media(max-width:760px){.approval-service-page>header{align-items:start;flex-direction:column;gap:8px}.approval-service-layout{grid-template-columns:1fr}.approval-service-layout aside{border-right:0;border-bottom:1px solid var(--line);max-height:310px;overflow:auto}.approval-service-layout article{padding:22px 18px}.approval-compare{grid-template-columns:1fr}.department-item{align-items:start;flex-direction:column;gap:8px}.department-item>p{text-align:left}.review-form{grid-template-columns:1fr}.review-form label:nth-child(3),.review-form button{grid-column:auto}}
-.approval-service-page .department-review .department-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 82px; box-sizing: border-box; gap: 20px; }
-.approval-service-page .department-review .department-item > div { min-width: 0; }
-.approval-service-page .department-review .department-item strong { font-size: 13px; }
-.approval-service-page .department-review .department-item small { max-width: 62ch; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
-.approval-service-page .department-review .department-item > p,
-.approval-service-page .department-review .department-item > .department-pending { min-width: 96px; margin: 0; text-align: right; white-space: nowrap; }
-.approval-service-page .review-form { grid-template-columns: 140px 140px minmax(220px, 1fr); align-items: start; gap: 12px; }
-.approval-service-page .review-form label { min-width: 0; align-content: start; }
-.approval-service-page .review-form select,
-.approval-service-page .review-form textarea { box-sizing: border-box; }
-.approval-service-page .review-form textarea,
-.approval-service-page .approval-reason textarea { height: 100px; min-height: 100px; max-height: 100px; resize: none; overflow-y: auto; overflow-wrap: anywhere; box-sizing: border-box; }
-.approval-service-page .review-form button { grid-column: 1 / -1; justify-self: end; white-space: nowrap; }
-.approval-service-page .approval-reason { margin-top: 24px; }
-.approval-service-page .approval-reason textarea { width: 100%; }
-.approval-service-page .approval-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px; }
-.approval-service-page .approval-actions button { min-height: 40px; height: 40px; white-space: nowrap; }
-@media(max-width:900px){.approval-service-page .review-form{grid-template-columns:1fr 1fr}.approval-service-page .review-form label:nth-child(3),.approval-service-page .review-form button{grid-column:1/-1}}
-@media(max-width:760px){.approval-service-page .department-review .department-item{grid-template-columns:1fr;align-items:start;gap:8px}.approval-service-page .department-review .department-item > p,.approval-service-page .department-review .department-item > .department-pending{text-align:left}.approval-service-page .review-form{grid-template-columns:1fr}.approval-service-page .review-form label:nth-child(3),.approval-service-page .review-form button{grid-column:auto}.approval-service-page .review-form button{justify-self:end}}
 @media(max-width:480px){.approval-service-page{padding-inline:14px}.approval-filters{width:100%;overflow:auto}.approval-filters button{flex:1;white-space:nowrap}.approval-detail-head a{align-self:flex-start}.approval-service-layout article{padding-inline:15px}}
 .admin-summary .admin-summary-grid{margin-top:0}
 .admin-status-distribution{margin-top:18px;border-top:1px solid var(--line);padding-top:18px}
@@ -319,8 +300,8 @@
 /* Chat usability refinements: scoped to the chat screen only. */
 .demo-chat-page .demo-thread-list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .demo-chat-page .demo-thread-list-heading small{color:var(--muted);font-size:10px}
-.demo-chat-page .demo-thread{display:flex;min-height:42px;flex-direction:column;align-items:stretch;gap:4px}
-.demo-chat-page .demo-thread-title{display:-webkit-box;min-width:0;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;text-overflow:ellipsis;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal}
+.demo-chat-page .demo-thread{display:flex;min-height:42px;flex:0 0 auto;flex-direction:column;align-items:stretch;gap:4px}
+.demo-chat-page .demo-thread-title{display:block;flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.45}
 .demo-chat-page .demo-thread time{color:var(--faint);font:10px 'JetBrains Mono',monospace}
 .demo-chat-page .demo-message-stack{align-items:stretch;min-width:0}
 .demo-chat-page .demo-user-message,.demo-chat-page .demo-answer{overflow-wrap:anywhere;word-break:break-word}
@@ -481,29 +462,59 @@
 .demo-admin-grid .demo-field p{font-size:20px;line-height:1.45;font-weight:500}
 @media(max-width:620px){.demo-admin-grid .demo-field{min-height:108px}}
 .account-menu-links a{display:flex;align-items:center;gap:8px}.account-menu-links a svg{flex:none;color:var(--muted)}
-.approval-service-page .department-review-list { display: grid; gap: 8px; }
-.approval-service-page .department-review-list .department-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 78px; box-sizing: border-box; gap: 20px; margin: 0; padding: 13px 16px; border: 1px solid var(--line); border-radius: 10px; }
-.approval-service-page .department-review-list .department-item > div { min-width: 0; }
-.approval-service-page .department-review-list .department-item strong { display: block; font-size: 14px; }
-.approval-service-page .department-review-list .department-item small { display: block; max-width: 62ch; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.approval-service-page .department-status { display: inline-flex; align-items: center; justify-content: center; min-width: 92px; min-height: 30px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; }
-.approval-service-page .department-status.pending { background: var(--paper); color: var(--ink-soft); }
-.approval-service-page .department-status.complete { background: var(--ok-soft); border-color: #2f6b4f66; color: var(--ok); }
-.approval-service-page .department-review-status { display: grid; justify-items: end; gap: 5px; min-width: 96px; text-align: right; }
-.approval-service-page .department-review-status p { max-width: 190px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
-.approval-service-page .review-form { display: block !important; margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
-.approval-service-page .review-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.approval-service-page .review-form label { display: grid; min-width: 0; gap: 6px; color: var(--muted); font-size: 11px; }
-.approval-service-page .review-form select { width: 100%; height: 40px; box-sizing: border-box; }
-.approval-service-page .review-form-opinion { margin-top: 14px; }
-.approval-service-page .review-form textarea,
-.approval-service-page .approval-reason textarea { width: 100%; height: 100px; min-height: 100px; max-height: 100px; resize: none; overflow-y: auto; overflow-wrap: anywhere; box-sizing: border-box; }
-.approval-service-page .review-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-.approval-service-page .review-form-actions button { min-height: 40px; height: 40px; white-space: nowrap; }
-.approval-service-page .approval-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px; }
-.approval-service-page .approval-actions button { min-height: 40px; height: 40px; white-space: nowrap; }
-@media(max-width:760px){.approval-service-page .department-review-list .department-item{grid-template-columns:1fr;align-items:start;gap:8px}.approval-service-page .department-review-status{justify-items:start;text-align:left}.approval-service-page .review-form-fields{grid-template-columns:1fr}}
-
-/* Keep long account identifiers inside the existing account popover grid. */
-.account-menu-info,.account-menu-info dl{min-width:0}
-.account-menu-info dd{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+.demo-attribution{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:10px 12px;color:var(--muted);font-size:13px;line-height:1.65}.demo-attribution strong{display:block;margin-bottom:7px;color:var(--ink-soft);font-size:13px;font-weight:700}.demo-attribution div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.demo-attribution span,.demo-attribution a{overflow-wrap:anywhere}.demo-attribution a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}.demo-attribution p{flex-basis:100%;margin:5px 0 0;line-height:1.65}
+/* Live recall and change-monitoring additions: severity, confirmation, feedback and admin panels. */
+.recall-detail-badges,.recall-item-badges{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;margin-left:6px;vertical-align:middle}
+.recall-item-badges{margin:6px 0 0}
+.recall-severity,.recall-confidence,.recall-confirm-badge,.recall-candidate-status,.change-monitoring-status{display:inline-flex;align-items:center;border:1px solid #E3EAF4;border-radius:6px;background:#F7F9FD;padding:3px 8px;color:var(--ink-soft);font-size:12px;font-weight:600;font-style:normal;line-height:1.4}
+.recall-severity.high{border-color:#a4443a40;background:var(--danger-soft);color:var(--danger)}
+.recall-severity.low{color:var(--muted)}
+.recall-confirm-badge{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.recall-service-item.needs-confirmation{border-left:3px solid var(--change)}
+.recall-confirm-needed{margin:14px 0 0;border:1px solid #a8701c55;border-left:4px solid var(--change);border-radius:9px;background:var(--change-soft);padding:12px 16px;color:#6e4a12;font-size:14px;line-height:1.6}
+.recall-action-error{margin:12px 0 0;border-radius:9px;background:var(--danger-soft);padding:10px 14px;color:var(--danger);font-size:13px;line-height:1.6}
+.recall-action-error button,.recall-scope-note button{margin-left:6px;border:1px solid currentColor;border-radius:6px;background:transparent;padding:3px 9px;color:inherit;font-size:12px}
+.recall-scope-note{margin:10px 0 0;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:10px 14px;color:var(--ink-soft);font-size:13px}
+.recall-load-error{display:grid;gap:10px;justify-items:start}
+.recall-load-error p{margin:0}
+.recall-question{margin-top:16px}
+.recall-service-detail .recall-question+.recall-answer{margin-top:10px}
+.recall-explanation{margin-top:12px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:16px 18px}
+.recall-explanation small,.recall-feedback small,.impact-preview-result small{color:var(--ink-soft);font-weight:600;letter-spacing:.02em}
+.recall-explanation p{margin:8px 0 0;line-height:1.7;white-space:pre-line}
+.recall-feedback{display:grid;gap:10px;margin-top:16px;border-top:1px solid #E3EAF4;padding-top:16px}
+.recall-feedback p{margin:0;color:var(--muted);font-size:13px}
+.recall-feedback-actions,.recall-feedback-reason>div,.recall-admin-actions{display:flex;flex-wrap:wrap;gap:8px}
+.recall-feedback-reason{display:grid;gap:10px}
+.recall-feedback-reason label{display:grid;gap:6px;color:var(--ink-soft);font-size:13px}
+.recall-feedback-reason textarea,.impact-preview-form textarea{width:100%;min-height:72px;border:1px solid #E3EAF4;border-radius:8px;background:#FFFFFF;padding:10px 12px;font:inherit;font-size:13px;resize:vertical}
+.recall-admin-section{margin-top:16px;border:1px solid #E3EAF4;border-radius:12px;background:var(--surface);padding:20px 24px;box-shadow:0 12px 28px -26px #273B5333}
+.recall-admin-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.recall-admin-heading h2{margin:0;font-size:17px;letter-spacing:-.02em}
+.recall-admin-heading span{color:var(--muted);font-size:12px;font-weight:600}
+.recall-admin-lede{margin:6px 0 14px;color:var(--muted);font-size:13px}
+.recall-admin-message{margin:0 0 10px;color:var(--ok);font-size:13px}
+.recall-admin-list{display:grid;gap:10px}
+.recall-admin-card{display:grid;gap:6px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:14px 16px}
+.recall-admin-card.needs-confirmation{border-left:3px solid var(--change)}
+.recall-admin-card-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.recall-admin-card small{color:var(--muted);font-size:12px}
+.recall-admin-card p{margin:0;font-size:13px;line-height:1.65}
+.recall-admin-card p b{margin-right:6px;color:var(--ink-soft);font-weight:600}
+.recall-admin-card .recall-detail-badges{margin-left:0}
+.recall-admin-actions{justify-content:flex-end;margin-top:6px}
+.recall-candidate-status.needed{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.recall-candidate-status.not_needed{border-color:#2f6b4f40;background:var(--ok-soft);color:var(--ok)}
+.recall-digest ul{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.recall-digest li{display:flex;flex-wrap:wrap;gap:4px 12px;border-bottom:1px solid #E3EAF4;padding:8px 0;font-size:13px}
+.recall-digest li:last-child{border-bottom:0}
+.recall-digest li span{color:var(--muted)}
+.impact-preview-form{display:grid;gap:10px}
+.impact-preview-form textarea{min-height:150px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.impact-preview-result{margin-top:14px;border:1px solid #E3EAF4;border-radius:9px;background:#FFFFFF;padding:14px 16px}
+.impact-preview-result pre{margin:8px 0 0;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:12px/1.65 'JetBrains Mono',monospace}
+.change-monitoring-control{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.change-monitoring-status.active{border-color:#2f6b4f40;background:var(--ok-soft);color:var(--ok)}
+.change-monitoring-status.paused{border-color:#a8701c55;background:var(--change-soft);color:var(--change)}
+.change-load-more{width:100%;margin-top:8px}
+@media(max-width:760px){.recall-admin-section{padding:16px}.recall-admin-actions{justify-content:stretch}.recall-admin-actions button{flex:1}.change-monitoring-control{justify-content:flex-start}}

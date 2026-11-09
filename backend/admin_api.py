@@ -14,12 +14,13 @@ import hmac
 import logging
 from collections.abc import Callable, Iterable
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Protocol
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import FileResponse, Response
 
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_require_admin_dependency, require_csrf
 
@@ -41,10 +42,6 @@ class AdminUserStore(AuthStore, Protocol):
     def list_users(self) -> Iterable[Any]: ...   # 각 줄에 login_id, role, created_at 속성
 
     def set_role(self, target_login_id: str, new_role: str, by_user_id: UUID | str) -> str: ...
-
-    def list_signup_requests(self) -> Iterable[Any]: ...
-
-    def review_signup_request(self, login_id: str, status: str, by_user_id: UUID | str) -> str: ...
 
 
 def owner_configured(owner_login_id: str | None) -> bool:
@@ -98,8 +95,14 @@ def create_admin_router(
     owner_login_id: str | None,
     secret: str | None = None,
     revocation_store: TokenRevocationStore | None = None,
+    html_page: Callable[[], Path | None] | None = None,
 ) -> APIRouter:
-    """`secret`·`revocation_store` 는 로그인 라우터와 같은 값을 넘긴다(로컬 데모의 무작위 서명 키 포함)."""
+    """`secret`·`revocation_store` 는 로그인 라우터와 같은 값을 넘긴다(로컬 데모의 무작위 서명 키 포함).
+
+    `html_page`: React 화면 주소도 `/admin/users`(web/react-app/src/App.jsx)라서, 브라우저가 그 주소를 직접 열면
+    (`Accept`에 text/html) 이 함수가 돌려준 index.html 을 내준다. 화면의 fetch 는 `Accept: */*` 라 API 가 답한다.
+    index.html 에는 사용자 정보가 없고, 권한 확인은 화면이 부르는 API 가 한다.
+    """
     if store is None:
         raise ValueError("store 가 필요합니다")
     router = APIRouter()
@@ -111,8 +114,12 @@ def create_admin_router(
             raise HTTPException(status_code=403, detail=OWNER_REQUIRED, headers=NO_STORE)
         return user
 
-    @router.get("/admin/users")
-    def list_users(response: Response, owner: AuthUser = Depends(owner_guard)) -> dict[str, list[dict[str, Any]]]:
+    @router.get("/admin/users", response_model=None)
+    def list_users(request: Request, response: Response) -> dict[str, list[dict[str, Any]]] | FileResponse:
+        page = html_page() if html_page is not None else None
+        if page is not None and "text/html" in request.headers.get("accept", "").lower():
+            return FileResponse(page)   # 화면 새로고침·주소 직접 입력
+        owner_guard(request)   # 401·403·503. 화면 요청이 아닐 때만(위) 권한을 본다
         response.headers["Cache-Control"] = "no-store"
         try:
             rows = list(store.list_users())
@@ -129,46 +136,6 @@ def create_admin_router(
             }
             for row in rows
         ]}
-
-    @router.get("/admin/signup-requests")
-    def list_signup_requests(response: Response, owner: AuthUser = Depends(owner_guard)) -> dict[str, list[dict[str, Any]]]:
-        response.headers["Cache-Control"] = "no-store"
-        method = getattr(store, "list_signup_requests", None)
-        if not callable(method):
-            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
-        try:
-            rows = list(method())
-        except Exception:
-            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
-        return {"requests": [{
-            "login_id": row.login_id,
-            "requested_at": _iso(row.requested_at),
-            "status": row.status,
-        } for row in rows]}
-
-    def review_signup(request: Request, response: Response, owner: AuthUser, login_id: str, status: str) -> dict[str, Any]:
-        require_csrf(request)
-        response.headers["Cache-Control"] = "no-store"
-        method = getattr(store, "review_signup_request", None)
-        if not callable(method):
-            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
-        try:
-            result = method(login_id, status, owner.user_id)
-        except Exception:
-            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
-        if result == "missing":
-            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
-        return {"login_id": login_id, "status": status, "changed": result == "changed"}
-
-    @router.post("/admin/signup-requests/{login_id}/approve")
-    def approve_signup(login_id: str, request: Request, response: Response,
-                       owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
-        return review_signup(request, response, owner, login_id, "approved")
-
-    @router.post("/admin/signup-requests/{login_id}/reject")
-    def reject_signup(login_id: str, request: Request, response: Response,
-                      owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
-        return review_signup(request, response, owner, login_id, "rejected")
 
     def change(request: Request, response: Response, owner: AuthUser, login_id: str, new_role: str) -> dict[str, Any]:
         require_csrf(request)   # 최고 관리자 확인 다음, 대상 조회·쓰기 전에

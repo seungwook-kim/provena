@@ -694,7 +694,7 @@ def build_graph(
         """결정표 질문에서 업무 종류와 금액을 뽑는다(LLM 1회). 실행은 다음 노드(LLM 없음)."""
         cats = sorted({t.cells[0]["category"] for t in decision_repo.list_approved() if t.cells})
         obj, _ = ask_json(DECISION_PARAMS_SYSTEM, params_user(state["question"], cats))
-        return {"decision_query": params_from_obj(obj)}
+        return {"decision_query": params_from_obj(obj, cats)}   # 업무 종류는 승인된 목록 안의 값만(목록 밖 모델 글이 거절 문구로 나가지 않게)
 
     run_decision = make_execute_node(DecisionExecutor(decision_repo)) if decision_repo is not None else None
 

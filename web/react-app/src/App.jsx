@@ -8,16 +8,15 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ProfileRequiredPage from './pages/ProfileRequiredPage'
 import AdminUsersPage from './pages/AdminUsersPage'
-import AdminRequestsPage from './pages/AdminRequestsPage'
 import { DemoAdminBlocked, DemoOnlyChat } from './pages/DemoChatPage'
 import { AdminRouteGuard, DemoRouteGuard } from './pages/DemoPages'
 import MemorySettingsPage from './pages/MemorySettingsPage'
 import ChangeMonitoringPage from './pages/ChangeMonitoringPage'
 import ApprovalsPage from './pages/ApprovalsPage'
-import { actualApprovalsService } from './lib/approvals-service'
 import AdminPage, { AdminLivePage } from './pages/AdminPage'
 import RecallPage from './pages/RecallPage'
 import { DevAdminUsersPreview, DevProfilePreview } from './pages/DevPreviewPages'
+import { getLiveServices, resetLiveServices } from './lib/live-services'
 
 export default function App() {
   return <BrowserRouter><SessionProvider><SessionRoutes /></SessionProvider></BrowserRouter>
@@ -38,6 +37,16 @@ function FeatureUnavailable({ active, title }) {
   return <DemoLayout active={active}><main className="status-page"><p role="alert">{title}의 실제 업무 API는 아직 연결되지 않았습니다.</p><p>개발용 화면은 <Link to={`/demo/${active}`}>데모 경로</Link>에서 확인할 수 있습니다.</p></main></DemoLayout>
 }
 
+function LiveRecallRoute() {
+  const { user } = useSession()
+  return <RecallPage service={getLiveServices(user.user_id).recalls} isAdmin={user.role === 'admin'} />
+}
+
+function LiveChangeRoute() {
+  const { user } = useSession()
+  return <ChangeMonitoringPage service={getLiveServices(user.user_id).changes} isAdmin={user.role === 'admin'} />
+}
+
 function ChatRoute() {
   const [params] = useSearchParams()
   if (import.meta.env.DEV && params.get('demo') === '1') return <Navigate to="/demo/chat" replace />
@@ -52,6 +61,10 @@ function SessionRoutes() {
   const previousPath = useRef(pathname)
 
   useEffect(() => {
+    if (status === 'anonymous') resetLiveServices()
+  }, [status])
+
+  useEffect(() => {
     if (previousPath.current !== pathname) {
       previousPath.current = pathname
       if (status === 'authenticated') refresh()
@@ -61,14 +74,13 @@ function SessionRoutes() {
   return <Routes>
     <Route path="/" element={logoutPending ? <LandingPage /> : user && import.meta.env.VITE_ENABLE_MOCK_SESSION !== 'true' ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <LandingPage />} />
     <Route path="/login" element={user ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <LoginPage />} />
-    <Route path="/signup" element={user ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <SignupPage />} />
+    <Route path="/signup" element={user ? <Navigate to="/chat" replace /> : <SignupPage />} />
     <Route path="/myinfo" element={<Protected><ProfileRequiredPage /></Protected>} />
           <Route path="/admin/users" element={<Protected admin><AdminUsersPage /></Protected>} />
-    <Route path="/admin/requests" element={<Protected admin><AdminRequestsPage /></Protected>} />
     <Route path="/chat" element={<ChatRoute />} />
-    <Route path="/recalls" element={<Protected><FeatureUnavailable active="recalls" title="리콜 알림" /></Protected>} />
-    <Route path="/changes" element={<Protected><FeatureUnavailable active="changes" title="변경 감시" /></Protected>} />
-    <Route path="/approvals" element={<Protected admin><ApprovalsPage service={actualApprovalsService} /></Protected>} />
+    <Route path="/recalls" element={<Protected><LiveRecallRoute /></Protected>} />
+    <Route path="/changes" element={<Protected><LiveChangeRoute /></Protected>} />
+    <Route path="/approvals" element={<Protected admin><FeatureUnavailable active="approvals" title="승인함" /></Protected>} />
     <Route path="/admin" element={<Protected admin><AdminLivePage /></Protected>} />
     <Route path="/onboarding" element={<Protected><MemorySettingsPage /></Protected>} />
     <Route path="/demo/chat" element={<DemoRouteGuard><DemoOnlyChat /></DemoRouteGuard>} />
@@ -80,7 +92,6 @@ function SessionRoutes() {
     <Route path="/demo/myinfo" element={<DemoRouteGuard><DevProfilePreview key="create" mode="create" /></DemoRouteGuard>} />
     <Route path="/demo/myinfo/edit" element={<DemoRouteGuard><DevProfilePreview key="edit" mode="edit" /></DemoRouteGuard>} />
     <Route path="/demo/admin-users" element={<DemoRouteGuard><DevAdminUsersPreview /></DemoRouteGuard>} />
-    <Route path="/demo/admin-requests" element={<DemoRouteGuard><AdminRequestsPage isPreview /></DemoRouteGuard>} />
     <Route path="/demo/blocked" element={<AdminRouteGuard><DemoAdminBlocked /></AdminRouteGuard>} />
     <Route path="/dev-preview/myinfo" element={import.meta.env.DEV ? <DevProfilePreview /> : <Navigate to="/login" replace />} />
     <Route path="/dev-preview/admin-users" element={import.meta.env.DEV ? <DevAdminUsersPreview /> : <Navigate to="/login" replace />} />

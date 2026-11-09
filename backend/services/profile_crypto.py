@@ -3,12 +3,14 @@
 - 키는 환경변수 `PROFILE_ENC_KEYS` 에서만 읽는다: `"1:<base64 32바이트>,2:<base64 32바이트>"`. 저장소·코드에 두지 않는다
   (AUTH_SECRET 과 같은 규칙). 새로 잠글 때는 가장 큰 번호를 쓰고, 풀 때는 줄에 적힌 `key_version` 의 키를 쓴다(키 교체).
 - 칸마다, 저장할 때마다 nonce 12바이트를 새로 만든다. AAD = "user_id|칸 이름" 이라 다른 사람·다른 칸에 옮겨 붙이면 풀리지 않는다.
-- 키가 없거나 형식이 틀리면 모든 환경에서 시작을 거부한다. 실행 중 임시 키를 만들지 않는다.
+- 키가 없으면: 로컬 데모 모드(PROVENA_ENV=local, PROVENA_DEV_MODE=1)만 실행마다 무작위 키를 만든다(재시작하면 내 정보를 다시
+  입력해야 한다). 그 밖의 모드는 시작하지 않는다.
 - 오류 메시지에 키·평문·암호문을 쓰지 않는다.
 """
 from __future__ import annotations
 
 import base64
+import logging
 import os
 from collections.abc import Mapping
 
@@ -17,6 +19,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 KEY_ENV = "PROFILE_ENC_KEYS"
 NONCE_BYTES = 12
+log = logging.getLogger(__name__)
 
 
 class ProfileCryptoError(Exception):
@@ -58,11 +61,14 @@ class ProfileCipher:
         self.current_version = max(self._keys)
 
     @classmethod
-    def from_env(cls, environ: Mapping[str, str] | None = None) -> "ProfileCipher":
+    def from_env(cls, environ: Mapping[str, str] | None = None, *, allow_ephemeral: bool = False) -> "ProfileCipher":
         env = os.environ if environ is None else environ
         raw = (env.get(KEY_ENV) or "").strip()
         if raw:
             return cls(parse_keys(raw))
+        if allow_ephemeral:
+            log.warning("%s 가 없어 이번 실행만 쓰는 무작위 키를 만들었다(로컬 데모 전용, 재시작하면 내 정보를 다시 입력)", KEY_ENV)
+            return cls({1: AESGCM.generate_key(bit_length=256)})
         raise ProfileCryptoError(f"{KEY_ENV} 가 없어 내 정보를 저장할 수 없습니다")
 
     def encrypt(self, user_id: str, field: str, plaintext: str) -> bytes:
@@ -79,5 +85,5 @@ class ProfileCipher:
             raise ProfileCryptoError("저장된 내 정보가 손상되었습니다")
         try:
             return AESGCM(key).decrypt(blob[:NONCE_BYTES], blob[NONCE_BYTES:], _aad(user_id, field)).decode("utf-8")
-        except (InvalidTag, UnicodeDecodeError):
+        except InvalidTag:
             raise ProfileCryptoError("저장된 내 정보를 풀 수 없습니다") from None

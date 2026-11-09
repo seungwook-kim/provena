@@ -26,6 +26,8 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
    ALTER TABLE token_revocations ENABLE ROW LEVEL SECURITY;
    ```
 
+5. 내 정보·사용자 관리(`docs/specs/admin-roles.md`)를 쓰는 앱을 배포하기 전에 `db/104_user_profiles.sql`, `db/105_admin_role_log.sql`을 이 순서로 실행한다(둘 다 `users` 외래키, RLS 포함). `user_profiles`가 없으면 그 앱의 `/me`가 503이다.
+
 적용 뒤에는 두 테이블의 존재 여부와 RLS 활성화 상태를 아래 SQL로 확인한다.
 
 ```sql
@@ -68,6 +70,8 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 박진형 (Claude Code) | `104_user_profiles.sql`(내 정보 암호문 표 `user_profiles`, `users` 외래키, RLS)과 `105_admin_role_log.sql`(관리자 등록·해제 기록 `admin_role_log`, RLS) 추가. 둘 다 `IF NOT EXISTS`라 다시 돌려도 된다. 운영 Supabase에는 적용하지 않았다(미적용) — `101` 다음에 104·105를 앱 재배포 전에 적용해야 한다(104가 없으면 `/me`가 503) | 미정 |
+| 2026-11-09 | 김승욱 (Claude Code) | `120_answers_recall.sql` 추가: `answers`, `citations`, `answer_grounding`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_feedback`, `recall_digests`, `change_monitoring`(모두 `IF NOT EXISTS`, RLS). 로컬 pgvector 컨테이너에 `01_init`, 1xx, 201, 202, 120 순으로 적용하고 120을 한 번 더 적용해 확인했고, `tests/test_recall_pg.py`가 저장소 SQL을 그 DB에서 시험한다. 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | 운영 Supabase를 풀러 접속으로 읽기 전용 조회해 표 목록과 행 수(`docs` 1,512행, `chunks` 23,095행, `threads` 0행)를 확인하고, 데모 계정 2개 등록 뒤 `users` 2행을 확인하고, "운영 Supabase 인증 스키마 적용" 절의 미적용·미검증 서술을 확인 결과로 고쳤다. SQL은 실행하지 않았다 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | `111_threads.sql` 추가: 사용자별 대화 목록 `threads`(PK `(user_id, thread_id)`, 인덱스 `(user_id, updated_at DESC)`, RLS). 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |

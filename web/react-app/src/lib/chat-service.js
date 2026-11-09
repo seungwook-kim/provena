@@ -13,6 +13,13 @@ export function createChatService(adapter) {
 }
 
 // Server citations (SSE `citation` and GET /threads/{id}) use rule_title/article/version_date; the panel reads title/path/version.
+// 원문 보기 링크는 https 주소일 때만 근거의 source_url을 쓴다(그 밖은 핸드북 첫 화면, #71 리뷰).
+export const DEFAULT_SOURCE_URL = 'https://handbook.gitlab.com/handbook/'
+export function citationHref(citation) {
+  const url = citation?.source_url
+  return typeof url === 'string' && url.startsWith('https://') ? url : DEFAULT_SOURCE_URL
+}
+
 export function normalizeCitation(citation, index = 0) {
   return { ...citation, id: citation.id ?? citation.chunk_id ?? `citation-${index}`, title: citation.title ?? citation.rule_title ?? '', path: citation.path ?? citation.article ?? '', version: citation.version ?? citation.version_date ?? '' }
 }

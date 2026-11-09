@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { History, UserRound, UserRoundPen } from 'lucide-react'
 import { useSession } from '../lib/session'
-import { usePreviewRecalls } from '../lib/use-preview-recalls'
+import { previewRecallService } from '../lib/recall-service'
+import { getLiveServices, useServiceSnapshot } from '../lib/live-services'
 import Logo from './Logo'
+
+const UNREAD_LOAD_DELAY_MS = 300
 
 const links = [
   ['chat', '/demo/chat', '채팅'],
@@ -43,20 +46,25 @@ export default function DemoLayout({ active, children }) {
   const { user } = useSession()
   const [accountOpen, setAccountOpen] = useState(false)
   const accountMenuRef = useRef(null)
-  const { unread } = usePreviewRecalls()
   const demoMode = location.pathname.startsWith('/demo/') || params.get('demo') === '1'
-  const demoAdminRequestMode = location.pathname === '/demo/admin-requests' && params.get('role') !== 'owner'
+  const liveRecalls = !demoMode && user ? getLiveServices(user.user_id).recalls : null
+  const { unread } = useServiceSnapshot(liveRecalls ?? previewRecallService)
+  const showUnread = demoMode || Boolean(liveRecalls)
   const logoTo = demoMode ? '/demo/chat' : '/chat'
   const isAdmin = user?.role === 'admin' || demoMode
-  const isOwner = user?.is_owner === true || (demoMode && !demoAdminRequestMode)
-  const isOrdinaryAdmin = (user?.role === 'admin' && user?.is_owner === false) || (demoAdminRequestMode && params.get('role') !== 'owner')
-  const actualPaths = { chat: '/chat', recalls: '/recalls', changes: '/changes', approvals: '/approvals', admin: '/admin', 'signup-approval': '/admin/requests?tab=signup', 'privacy-access': '/admin/requests?tab=privacy' }
-  const ordinaryAdminLinks = [['chat', '/demo/chat', '채팅'], ['recalls', '/demo/recalls', '리콜 알림'], ['changes', '/demo/changes', '변경 감시'], ['approvals', '/demo/approvals', '승인함'], ['admin', '/demo/admin', '운영 현황'], ['privacy-access', '/demo/admin-requests?role=admin&tab=privacy', '개인정보 열람 신청']]
-  const visibleLinks = isOrdinaryAdmin ? ordinaryAdminLinks : links.filter(([key]) => key !== 'approvals' || isAdmin)
-  const requestLinks = []
+  const isOwner = user?.is_owner === true || demoMode
+  const actualPaths = { chat: '/chat', recalls: '/recalls', changes: '/changes', approvals: '/approvals' }
+  const visibleLinks = links.filter(([key]) => key !== 'approvals' || isAdmin)
   const accountId = user?.email || user?.name || user?.user_id || 'demo-user'
   const roleLabel = user?.role === 'admin' ? '관리자' : user ? '일반 사용자' : '데모 사용자'
   const conversationLink = demoMode ? '/demo/chat' : '/chat'
+
+  useEffect(() => {
+    if (!liveRecalls) return undefined
+    // The badge waits until the screen has settled; every navigation re-checks the session first.
+    const timer = setTimeout(() => { liveRecalls.loadUnread()?.catch(() => {}) }, UNREAD_LOAD_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [liveRecalls])
 
   useEffect(() => {
     if (!accountOpen) return undefined
@@ -78,10 +86,9 @@ export default function DemoLayout({ active, children }) {
     <header className="demo-app-nav">
       <Link to={logoTo} className="nav-brand"><Logo /></Link>
       <nav aria-label={isAdmin && !demoMode ? '관리자 메뉴' : '주요 메뉴'}>
-        {visibleLinks.map(([key, to, label]) => <Link key={key} to={demoMode ? to : actualPaths[key]} className={active === key ? 'active' : ''}>{label}{key === 'recalls' && demoMode && unread > 0 && <b>{unread}</b>}</Link>)}
-        {isAdmin && !isOrdinaryAdmin && <Link to={demoMode ? '/demo/admin' : '/admin'} className={active === 'admin' ? 'active' : ''}>운영 현황</Link>}
+        {visibleLinks.map(([key, to, label]) => <Link key={key} to={demoMode ? to : actualPaths[key]} className={active === key ? 'active' : ''}>{label}{key === 'recalls' && showUnread && unread > 0 && <b>{unread}</b>}</Link>)}
+        {isAdmin && <Link to={demoMode ? '/demo/admin' : '/admin'} className={active === 'admin' ? 'active' : ''}>운영 현황</Link>}
         {isOwner && <Link to={demoMode ? '/demo/admin-users' : '/admin/users'} className={active === 'admin-users' ? 'active' : ''}>권한 관리</Link>}
-        {requestLinks.map(([key, to, label]) => <Link key={key} to={to} className={active === key ? 'active' : ''}>{label}</Link>)}
       </nav>
       <div className="demo-nav-actions">
         {demoMode && <span className="demo-badge">데모 모드</span>}

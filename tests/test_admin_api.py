@@ -368,3 +368,41 @@ def test_main_app_mounts_admin_router_and_health_survives_bad_owner(monkeypatch,
             assert client.get("/admin/users").status_code == 401
     assert "사용자 관리를 닫았다" in caplog.text and "typo-owner-id" not in caplog.text
     assert {"/admin/users", "/admin/users/{login_id}/promote", "/admin/users/{login_id}/revoke"} <= set(app.openapi()["paths"])
+    assert {"/me/profile"} <= set(app.openapi()["paths"])
+
+
+# ---- 화면 주소와 API 주소가 같다 (/admin/users, web/react-app/src/App.jsx) ---------
+NAVIGATE = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}   # 브라우저 주소창·새로고침
+
+
+def test_browser_navigation_gets_react_page_and_fetch_gets_api(env, tmp_path):
+    app, store = env
+    page = tmp_path / "index.html"
+    page.write_text('<!doctype html><div id="root"></div>', encoding="utf-8")
+    secret = secrets.token_urlsafe(48)
+    app = FastAPI()
+    app.state.token_revocation_store = revocations_for(store)
+    app.include_router(create_test_auth_router(store=store, secret=secret, cookie_secure=False,
+                                               owner_check=owner_check_for(OWNER)))
+    app.include_router(create_admin_router(store=store, owner_login_id=OWNER, secret=secret, html_page=lambda: page))
+    anon = TestClient(app)
+    html = anon.get("/admin/users", headers=NAVIGATE)
+    assert html.status_code == 200 and '<div id="root"></div>' in html.text   # 화면이 뜨고, 화면이 /me·API로 권한을 본다
+    assert anon.get("/admin/users").status_code == 401                        # fetch 기본 Accept(*/*)는 API
+    assert anon.get("/admin/users", headers={"Accept": "application/json"}).status_code == 401
+    member = login(app, "member")
+    assert member.get("/admin/users").status_code == 403
+    assert "users" not in member.get("/admin/users", headers=NAVIGATE).text     # 화면 HTML에는 목록이 없다
+    owner = login(app, OWNER)
+    r = owner.get("/admin/users", headers={"Accept": "*/*"})
+    assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+    assert {row["login_id"] for row in r.json()["users"]} >= {OWNER, "member"}
+
+
+def test_without_react_build_navigation_still_gets_api(env):
+    app, store = env
+    app = FastAPI()
+    app.state.token_revocation_store = revocations_for(store)
+    app.include_router(create_admin_router(store=store, owner_login_id=OWNER, secret=secrets.token_urlsafe(48),
+                                           html_page=lambda: None))
+    assert TestClient(app).get("/admin/users", headers=NAVIGATE).status_code == 401
