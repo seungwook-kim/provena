@@ -2,6 +2,18 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-09 박진형 (PR #94 리뷰 반영, 검색 회귀 시험 기록)
+
+오늘 한 일
+- 검색 회귀 시험 `tests/test_search_regression.py`([PR #94](https://github.com/aihuman-7th/proj3-c/pull/94))가 CI에 있다는 것과 "검색 결과를 바꾸는 PR은 `python -m evals.retrieval.regress_fixture`로 `tests/fixtures/search_regression/`을 다시 만들어 같은 PR에 넣는다(기대값이 바뀐 문항이 diff에 보이게)"는 규칙을 `docs/PRD.md` 11장 D8 행과 `docs/GATES.md` G5 행에 적었다.
+- 같은 시험이 `SEARCH_RANGE_N`(금액 구간 조회)도 비운 기본값으로 읽고 그 값이 2인지 확인하게 했다. `search.py`의 기본값을 0으로 바꾸면 설정 확인 시험이 실패하고, 바꾸기 전 시험은 통과하는 것을 확인했다. 지금 40문항에는 금액이 든 질문이 없다.
+
+막힌 것
+- 없음.
+
+다음
+- 금액 질문 문항을 더할 때 기대값 파일에도 `range_n`을 넣는다.
+
 ## 2026-11-09 김승욱 (승인 결정 잠금의 여러 인스턴스 보강)
 
 오늘 한 일
