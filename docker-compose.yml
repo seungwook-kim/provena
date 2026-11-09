@@ -21,8 +21,9 @@ services:
       # 로컬 데모 모드: 이 둘이 모두 켜져 있을 때만 users 테이블을 만들고 데모 계정 2개를 시드하며, 쿠키 Secure를 끕니다(http://localhost)
       PROVENA_ENV: ${PROVENA_ENV:-local}
       PROVENA_DEV_MODE: ${PROVENA_DEV_MODE:-1}
-      # 검색 모델·BM25를 시작할 때 백그라운드로 올린다(backend/main.py). 색인이 없으면 경고만 남고 서버는 뜬다
-      SEARCH_WARMUP: ${SEARCH_WARMUP:-1}
+      # 검색 모델·BM25를 시작할 때 백그라운드로 올린다(backend/main.py). 색인이 없으면 경고만 남고 서버는 뜬다.
+      # 로컬 데모는 기다리지 않는다(G2 시작 시간). 운영의 기본값(비우면 시작 때 기다려 끝냄)과 다르다
+      SEARCH_WARMUP: ${SEARCH_WARMUP:-background}
     depends_on:
       db:
         condition: service_healthy

@@ -85,7 +85,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/requirements.txt` | 검색 의존성: numpy. 로컬 모델용 torch(CPU판, `--extra-index-url .../whl/cpu`), sentence-transformers, transformers, huggingface-hub는 비교용이라 `backend/requirements-local-models.txt`에 두고 서비스 이미지에는 넣지 않는다. 팀 규칙대로 한 파일에 자기 파트 줄만 더한다(TEAM_GUIDE 213) |
 | `Dockerfile` | 비교용 로컬 임베딩·리랭커는 서비스 이미지에 넣지 않는다(`SEARCH_*_MODEL` 빌드 인자 기본값 비움). 비교할 때만 `--build-arg`로 모델 이름을 주면 `requirements-local-models.txt`를 설치하고 고정 판으로 받는다(`HF_HOME=/app/.hf`, `HF_HUB_OFFLINE=1`). 코드 복사보다 앞에 두어 코드만 바꾸면 다시 받지 않는다. 폴더 주인 김승욱 리뷰 |
 | `docker-compose.yml` | `loader` 서비스(`load_snapshot`, `./data/index` 연결)를 더하고 api는 `loader`가 성공으로 끝난 뒤 뜬다. 폴더 주인 김승욱 리뷰 |
-| `backend/main.py` | `SEARCH_WARMUP=1`이면 시작할 때 검색 준비를 백그라운드로(`start_search_warmup`). 폴더 주인 김승욱 리뷰 |
+| `backend/main.py` | 시작할 때 검색 준비를 기다려 끝낸다(`run_startup_warmup`, 운영 기본). `SEARCH_WARMUP=background`는 스레드로(`start_search_warmup`). 폴더 주인 김승욱 리뷰 |
 | `.gitignore`, `.dockerignore` | 풀린 `data/index/`를 저장소·이미지에서 뺀다. 커밋하는 것은 `data/index.tar.gz` 한 파일이고, Docker 빌드가 이미지 안에서 풀며 `loader`는 compose가 연결한 폴더가 비어 있으면 시작할 때 다시 푼다 |
 | `.env.example` | 검색 환경 변수(아래 표) 목록 |
 
@@ -106,7 +106,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `HF_HUB_OFFLINE` | `1` | 로컬 모델은 이미지 빌드 때 받고 실행 중에는 받지 않는다. 서비스 이미지에는 넣지 않고, 비교할 때만 Dockerfile `SEARCH_*` 빌드 인자(`--build-arg`, 판 = 명부의 고정 판)로 넣는다 |
 | `INDEX_URL`, `INDEX_SHA256` | 비움 | `data/index/`와 `data/index.tar.gz`가 모두 없을 때 `loader`가 받을 색인(tar.gz) 주소와 sha256. sha256이 없거나 다르면 받지 않는다. 둘 다 비우면 적재를 건너뛰고 검색은 준비되지 않은 채 뜬다 |
 | `INDEX_REQUIRED` | 비움 | `1`이면 색인이 없을 때 `loader`가 실패로 끝나 api가 뜨지 않는다(배포용) |
-| `SEARCH_WARMUP` | compose `1` | `1`이면 `main.py`가 시작할 때 검색 준비를 백그라운드로 한다. 실패해도 서버는 뜨고 첫 검색 때 다시 시도한다 |
+| `SEARCH_WARMUP` | 운영 `1`(비우면), compose `background` | `1`이면 `main.py`가 시작할 때 검색 준비를 끝날 때까지 기다린다(최대 60초). `0`은 끔, `background`는 기다리지 않고 스레드로 한다. 비우면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서만 `1`이고 로컬 데모·키 없는 데모·DB 없음에서는 끈다. 넘거나 실패해도 서버는 뜨고 첫 검색 때 다시 시도한다 |
 | `SEARCH_INDEX_DIR` | `data/index` | `make_search`(비교 입구)가 읽는 스냅샷 폴더 |
 | `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
