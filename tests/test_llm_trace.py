@@ -338,6 +338,52 @@ def test_openrouter_path_gives_the_same_record_without_cli_values(monkeypatch):
     assert SECRET_PROMPT not in json.dumps(calls, ensure_ascii=False) and "dummy-key" not in json.dumps(calls, ensure_ascii=False)
 
 
+def test_each_call_records_its_cost_from_the_report_or_the_price_table(monkeypatch):
+    """호출별 비용: claude_cli는 CLI가 보고한 값, API 경로는 단가표(`cost.cost_usd`)로 토큰을 환산한 값."""
+    from backend.services import cost
+
+    fake_cli(monkeypatch, [(0, cli_output())])
+    with T.capture() as calls:
+        cli_model().invoke(MSGS, config=L.run_config("test"))
+    reported = json.loads(cli_output())["total_cost_usd"]
+    assert calls[0]["cost_usd"] == round(float(reported), 8)
+    import langchain_openai
+
+    client = httpx.Client(transport=httpx.MockTransport(openrouter_reply))
+    monkeypatch.setattr(langchain_openai, "ChatOpenAI", functools.partial(langchain_openai.ChatOpenAI, http_client=client))
+    monkeypatch.setenv("LLM_BASE_URL", "http://fake.invalid/v1")
+    with T.capture() as calls:
+        L._provider_model("openrouter", "", "dummy-key").invoke(MSGS, config=L.run_config("test"))
+    assert calls[0]["cost_usd"] == round(cost.cost_usd("anthropic/claude-haiku-5.5", 21, 4), 8) > 0
+    assert T._call_cost("m", {}, {}) is None
+
+
+def test_block_list_content_reads_only_the_text_blocks():
+    """Anthropic API는 생각 블록과 글 블록을 목록으로 돌려준다. 그래프와 기록은 글 블록만 읽는다."""
+    from backend.graph import build as B
+    from backend.graph.decision import convert
+    from backend.graph.departments import review
+    from backend.graph.recall import notice
+
+    blocks = [{"type": "thinking", "thinking": "{\"x\": 1} 생각"}, {"type": "text", "text": "{\"split\": false}"}]
+    for mod in (B, review, convert, notice):
+        assert mod._text(AIMessage(content=blocks)) == "{\"split\": false}"
+        assert mod._text(AIMessage(content="그대로")) == "그대로"
+    assert T._json_ok(blocks) is True and T._json_ok([{"type": "thinking", "thinking": "{}"}]) is False
+
+
+def test_trace_counts_thinking_blocks_of_block_list_replies():
+    """블록 목록 응답이면 생각 블록 수(`thinking_blocks`)를 남긴다(생각을 껐는지 확인용). 글 응답에는 칸이 없다."""
+    from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+
+    blocks = [{"type": "thinking", "thinking": "생각"}, {"type": "text", "text": "{\"split\": false}"}]
+    model = GenericFakeChatModel(messages=iter([AIMessage(content=blocks), AIMessage(content=[{"type": "text", "text": "{}"}]), AIMessage(content="{}")]))
+    with T.capture() as calls:
+        for _ in range(3):
+            model.invoke(MSGS, config=L.run_config("test"))
+    assert [c.get("thinking_blocks") for c in calls] == [1, 0, None]
+
+
 def test_fallback_wrapper_is_not_counted_twice_inside_a_node_and_is_kept_outside():
     class Down(ChatScripted):
         def _generate(self, messages, stop=None, run_manager=None, **kwargs):

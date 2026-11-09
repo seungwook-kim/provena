@@ -382,7 +382,7 @@ def test_clarify_about_section_or_period_is_kept():
         assert not clarify_has_number(text), text
         out = run(graph(llm=normal_llm(judge=j(sufficient=False, reason="시점 불명", clarify=text))))
         assert out["kind"] == "clarify" and out["answer"] == text
-    assert clarify_has_number("99.74%") and clarify_has_number("SEV2") and clarify_has_number("30분 이내") and not clarify_has_number("")
+    assert clarify_has_number("99.74%") and not clarify_has_number("SEV2") and clarify_has_number("30분 이내") and not clarify_has_number("")
 
 
 def test_judge_prompt_limits_clarify_to_missing_section_or_period():
@@ -926,6 +926,36 @@ def test_empty_or_broken_or_unchanged_rewrite_is_refused_without_another_judgeme
         out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
         assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["grounding"]["redraft"]["result"] == result
         assert llm.count("grounding") == 1
+
+
+def test_unchanged_rewrite_gets_one_more_judgement_when_ur_is_on(monkeypatch):
+    """UR: 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정한다. 받쳐지면 그 답을 내고, 아니면(PT 안내뿐 포함) 지금처럼 거절한다."""
+    monkeypatch.setenv("GRAPH_UNCHANGED_REJUDGE", "1")
+    monkeypatch.setenv("GRAPH_POINTER_REFUSE", "1")
+    paging = _by_article("Incident Response > Paging")
+    same = _sentences_answer(("SEV2 장애 최초 대응은 2시간 이내이다", paging.chunk_id))
+    bad = j(grounded=False, reason_code="unsupported", reason="적용 대상이 자료에 없음", unsupported_sentences=["SEV2 장애 최초 대응은 2시간 이내이다"])
+    pointer = j(grounded=True, claims=[{"claim": "안내", "quote": "For more information, please refer to the following links.", "scope": None}])
+    for name, second, state in (("grounded", j(grounded=True), "grounded"), ("ungrounded", bad, "ungrounded"), ("pointer", pointer, "grounded")):
+        llm, _, chunks = _redraft_setup(same, verdicts=[bad, second])
+        out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+        assert llm.count("grounding") == 2, name  # 판정 +1. 다시 판정이 거절하면 문장 빼기 뒤 남는 답이 없어 더 부르지 않는다
+        g = out["grounding"]
+        assert g["redraft"]["result"] == "unchanged" and g["redraft"]["rejudge"] == state, name
+        if name == "grounded":
+            assert out["kind"] == "answer" and "2시간" in out["answer"] and g["rejudged_unchanged"] is True
+            assert [c["chunk_id"] for c in out["citations"]] == [paging.chunk_id]
+        else:
+            assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and "rejudged_unchanged" not in g, name
+
+
+def test_unchanged_rewrite_is_not_rejudged_when_ur_is_off(monkeypatch):
+    monkeypatch.delenv("GRAPH_UNCHANGED_REJUDGE", raising=False)
+    paging = _by_article("Incident Response > Paging")
+    same = _sentences_answer(("SEV2 장애 최초 대응은 2시간 이내이다", paging.chunk_id))
+    llm, _, chunks = _redraft_setup(same)
+    out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and llm.count("grounding") == 1 and "rejudge" not in out["grounding"]["redraft"]
 
 
 def test_rewrite_that_says_the_period_is_missing_is_refused():

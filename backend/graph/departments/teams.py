@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from backend.graph.departments.issue_table import MAX_ISSUES_PER_TEAM
-from backend.services.skills import SKILLS_ROOT, skills_enabled
+from backend.services.skills import SKILLS_ROOT, load_skill, skills_enabled
 
 
 @dataclass(frozen=True)
@@ -81,3 +81,10 @@ def load_team_skill(team: Team, *, enabled: bool | None = None) -> str:
         if len(parts) == 3:
             return parts[2].strip()
     return raw.strip()
+
+
+def team_skills(team: Team, *, enabled: bool | None = None) -> str:
+    """팀 Skill에 쟁점표 양식 Skill을 더한 본문. 꺼져 있으면 ""."""
+    body = load_team_skill(team, enabled=enabled)
+    form = load_skill("report-writing", enabled=enabled)
+    return f"{body}\n\n[쟁점표 양식 Skill]\n{form}" if body and form else body

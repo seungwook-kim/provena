@@ -211,9 +211,86 @@ def prune_answer(answer: str, claims: list[str]) -> Pruned:
     return Pruned(True, "\n".join(out), [sentences[i] for i in sorted(drop)])
 
 
+# ---------- 값이 인용 청크에 있는지 (`GROUND_SKIP_BACKED`) ----------
+_KO_COUNT = re.compile(r"(?:[한두세네]|다섯|여섯|일곱|여덟|아홉|열)\s*(?:번|명|개|시간|주|달|개월|차례|회|분|일)|하루|이틀|사흘|나흘|일주일|보름")  # 숫자 없이 쓴 값은 대조할 수 없다
+_KO_UNIT = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*(달러|시간|분|일|주|개월|달|년|%|퍼센트)")
+_UNIT_EN = {"시간": r"(?:hours?|hrs?|h)\b", "분": r"(?:minutes?|mins?|m)\b", "일": r"(?:days?|d)\b", "주": r"weeks?\b", "개월": r"months?\b", "달": r"months?\b",
+            "년": r"years?\b", "%": r"(?:%|percent)", "퍼센트": r"(?:%|percent)"}
+_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+_LATIN = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+
+
+def _plain_number(text: str) -> str:
+    return text.replace(",", "")
+
+
+def _value_in_source(number: str, unit: str, source: str) -> bool:
+    """숫자와 단위가 같이 자료에 있는지. 달러는 $나 USD, dollar와 함께 있어야 한다. 표에 없는 단위는 숫자만 본다."""
+    num = re.escape(number)
+    if unit == "달러":
+        return bool(re.search(rf"(?:\$|USD\s*)\s*{num}(?![\d.])|(?<![\d.]){num}\s*(?:USD|dollars?)\b", source, re.I))
+    tail = rf"[\s-]*{_UNIT_EN[unit]}" if unit in _UNIT_EN else r"(?![\d.])"
+    return bool(re.search(rf"(?<![\d.]){num}{tail}", source, re.I))
+
+
+def values_backed(answer: str, cited: list[dict]) -> bool:
+    """답의 모든 문장이 값(숫자, 영문 용어)을 하나 이상 갖고, 그 값이 그 문장이 표시한 청크에 있으면 True. 근거 판정 LLM을 건너뛸지 정할 때만 쓴다.
+
+    한국어 문장과 영어 원문은 낱말로 대조할 수 없어 값만 본다. 대조할 값이 없는 문장, 표시가 없는 문장, 숫자 없이 쓴 값(이틀, 세 번)이 있으면 False이고 LLM이 판정한다.
+    값이 맞아도 주체나 조건이 틀린 문장은 여기서 잡지 못한다."""
+    by_id = {c["chunk_id"]: _plain_number(" ".join(str(c.get(k) or "") for k in ("rule_title", "article", "text"))) for c in cited}
+    sentences = [s for ln in (answer or "").splitlines() for s in split_sentences(ln)]
+    if not sentences:
+        return False
+    for sentence in sentences:
+        marks = _ANY_MARK.findall(sentence)
+        source = "\n".join(by_id.get(m[1:-1], "") for m in marks)
+        body = _plain_number(_ANY_MARK.sub("", sentence))
+        if not source.strip() or _KO_COUNT.search(body):
+            return False
+        units = _KO_UNIT.findall(body)
+        numbers = _NUMBER.findall(body)
+        words = _LATIN.findall(body)
+        if not numbers and not words:
+            return False
+        have_words = {w.lower() for w in _LATIN.findall(source)}
+        if any(w.lower() not in have_words for w in words):
+            return False
+        pairs = [*units, *((n, "") for n in numbers if n not in {x for x, _ in units})]
+        if not all(_value_in_source(n, u, source) for n, u in pairs):
+            return False
+    return True
+
+
+# ---------- "자료에 없다"고 밝힌 문장의 인용 ----------
+# 없다는 말은 어느 청크로도 받쳐지지 않는다. 표시가 남으면 그 청크가 인용으로 나간다.
+# 원문이 없다고 적은 사실("응답 기한이 없다")은 자료를 주어로 쓰지 않아 걸리지 않는다. 쉼표로 이은 문장은 앞쪽 사실의 표시일 수 있어 두고, 원문 규칙일 수 있는 "확인이 필요"는 자료를 말할 때만 본다
+_META_ABSENCE = re.compile(r"자료(?:에는|에서는|에서|에|로는)(?!\s*따르)[^.!?\n]{0,30}?(?:없(?!다고|음을)|찾을 수|확인되지|확인할 수|나와 있지|언급되어 있지)|확인 필요")
+_ID_MARK = re.compile(r"\s*\[[0-9a-f]{16}\]")
+
+
+def unmark_absence(answer: str) -> str:
+    """자료에 없다고 밝힌 문장에서 근거 표시만 뺀다. 문장은 그대로 둔다."""
+
+    def fix(m: re.Match) -> str:
+        sentence = m.group(0)
+        if "," in _ID_MARK.sub("", sentence) or not _META_ABSENCE.search(sentence):
+            return sentence
+        return _ID_MARK.sub("", sentence)
+
+    return "\n".join(_SENTENCE.sub(fix, line) for line in (answer or "").split("\n"))
+
+
+def says_only_absence(answer: str) -> bool:
+    """답의 모든 문장이 자료에 없다는 말인지."""
+    sentences = [s for line in (answer or "").splitlines() for s in split_sentences(line)]
+    return bool(sentences) and all(_META_ABSENCE.search(s) for s in sentences)
+
+
 # ---------- 요청한 기간의 자료가 없는 답 (수정 3) ----------
 # 질문에 연도, 연월, 월이 있어야 적용한다. 공백은 지우고 비교한다("2026년 9월" -> "2026년9월")
-_PERIOD_EXPR = re.compile(r"(?:(?:19|20)\d{2}\s*년\s*)?\d{1,2}\s*월|(?:19|20)\d{2}\s*년|(?:19|20)\d{2}-\d{2}(?!\d)")
+_PERIOD_EXPR = re.compile(r"(?:(?:19|20)\d{2}\s*년\s*)?\d{1,2}\s*월|(?:19|20)\d{2}\s*년|(?:19|20)\d{2}-\d{2}(?!\d)|[1-4]\s*분기|\bQ[1-4]\b|\bFY\s?\d{2,4}\b")
+_SAME_PERIOD = ("해당기간", "그기간", "해당월", "그달", "해당분기", "그분기")  # 답이 기간을 다시 적지 않고 가리키는 말
 _ABSENCE = ("없", "확인 필요", "찾을 수 없", "제공되지")  # 답이 그 기간의 자료가 없다고 밝히는 말
 
 
@@ -233,6 +310,7 @@ def period_missing(question: str, answer: str, period_covered: object) -> str:
     for line in (answer or "").splitlines():
         for sentence in split_sentences(line):
             flat = re.sub(r"\s+", "", sentence)
-            if any(p in flat for p in periods) and any(w in sentence for w in _ABSENCE):
+            names = {*periods, *(re.sub(r"^(?:19|20)\d{2}년", "", p) for p in periods), *_SAME_PERIOD}  # "2026년 9월"을 물으면 답의 "9월"도 같은 기간이다
+            if any(p and p in flat for p in names) and any(w in sentence for w in _ABSENCE):
                 return "answer says the period is missing: " + sentence[:120]
     return ""

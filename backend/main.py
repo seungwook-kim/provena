@@ -40,7 +40,7 @@ from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
 from backend.auth import AuthStore, TokenRevocationStore, create_auth_router
 from backend.graph.checkpoint import is_restart_safe
-from backend.graph.decision.routes import _LazyChatModel, create_decision_router, open_decision_runtime
+from backend.graph.decision.routes import create_decision_router, open_decision_runtime
 from backend.services.auth_store import PostgresAuthStore, PostgresTokenRevocationStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
 
@@ -129,11 +129,12 @@ def build_question_graph(state: Any) -> Any:
     모델은 처음 부를 때 만든다(키 없이도 서버가 뜬다). 답 저장소는 메모리 구현이다(Postgres 구현은 아직 없다)."""
     from backend.graph.build import build_graph
     from backend.graph.departments.review import build_review_graph
+    from backend.graph.service_profile import SharedChatModel, service_searches
 
-    llm = _LazyChatModel()
+    llm = SharedChatModel()
     review = build_review_graph(None, None, llm=llm, store=state.issue_store, approvals=state.decision_repo)
     return build_graph(None, state.checkpointer, llm=llm, store=state.store, answer_store=state.answer_store,
-                       decision_repo=state.decision_repo, review_graph=review)
+                       decision_repo=state.decision_repo, review_graph=review, **service_searches())   # 서비스 설정 61.51(backend/graph/service_profile.py)
 
 
 @contextmanager
@@ -193,13 +194,15 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
-        if store is not None and is_local_demo():
-            bootstrap_local_auth(store)
-        start_search_warmup()
-        with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
-            with open_question_runtime(app_, make_graph, database_url) if store is not None else nullcontext():   # 질문 그래프·대화 목록
-                async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
-                    yield
+        from backend.graph.service_profile import service_profile
+        with service_profile(enabled=graph_factory is None):   # 서비스 기본 설정(61.51)을 환경 변수로 채운다. 시험이 그래프를 꽂으면 바꾸지 않는다
+            if store is not None and is_local_demo():
+                bootstrap_local_auth(store)
+            start_search_warmup()
+            with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
+                with open_question_runtime(app_, make_graph, database_url) if store is not None else nullcontext():   # 질문 그래프·대화 목록
+                    async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
+                        yield
 
     app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
     app.add_middleware(RequestContextMiddleware)     # 요청 ID와 요청 로그(순수 ASGI, SSE를 버퍼링하지 않는다)

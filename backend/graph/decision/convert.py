@@ -70,6 +70,8 @@ class ConvertState(TypedDict, total=False):
 
 def _text(msg: Any) -> str:
     c = getattr(msg, "content", msg)
+    if isinstance(c, list):  # 블록 목록(Anthropic API가 생각 블록과 함께 돌려줄 때): 글 블록만 잇는다
+        return "".join(b if isinstance(b, str) else str(b.get("text") or "") for b in c if isinstance(b, str) or (isinstance(b, dict) and b.get("type") == "text"))
     return c if isinstance(c, str) else str(c)
 
 

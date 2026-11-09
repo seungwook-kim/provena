@@ -26,6 +26,7 @@ import os
 import re
 import threading
 import time
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,7 +35,7 @@ from typing import Protocol
 import numpy as np
 
 from backend.rag.retrieve.embed import EmbedNoKey
-from backend.schemas.chunk import Chunk, SearchQuery
+from backend.schemas.chunk import DEFAULT_K, Chunk, SearchQuery
 from backend.services import llm_trace
 
 log = logging.getLogger(__name__)
@@ -148,6 +149,11 @@ def valid_mask(meta: RowMeta, org: str | None, as_of: str | None) -> np.ndarray:
     return m
 
 
+def heading_text(row: dict) -> str:
+    """청크의 제목 경로: 페이지 제목 > 절 제목(article). 제목 경로 검색(`heading_top`)이 보는 문자열이다."""
+    return f"{row.get('rule_title') or row.get('title') or ''} > {row.get('article') or ''}"
+
+
 class MemoryStore:
     """numpy 저장소: 테스트와 DB 대조(V2)용. 필터·동점 규칙은 PgStore와 같다."""
 
@@ -200,6 +206,22 @@ class MemoryStore:
         s = self.vectors[pos] @ np.asarray(qvec, dtype=np.float32)
         order = sorted(range(len(pos)), key=lambda j: (-s[j], self._rm.keys[pos[j]][0]))[:n]
         return [(self._rm.keys[pos[j]], float(s[j])) for j in order]
+
+    def heading_top(self, phrase, org, as_of, n):
+        """제목 경로('페이지 제목 > 절 제목')에 phrase(소문자 비교)가 그대로 든 청크(필터 안) n개. 순서는 ord(없으면 행 순서), chunk_id(PgStore와 같다)."""
+        p = (phrase or "").strip().lower()
+        if not p or n <= 0:
+            return []
+        m = valid_mask(self._rm, org, as_of)
+        pos = [i for i in np.flatnonzero(m) if p in heading_text(self.rows[i]).lower()]
+        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))  # 스냅샷 행에는 ord가 없고 파일 순서가 곧 ord다(load_snapshot)
+        return [self._rm.keys[i] for i in pos[:n]]
+
+    def page_chunks(self, rule_seq, version_id):
+        """한 페이지 판의 청크 (키, 절 제목) 목록, ord 순(없으면 행 순서). R3 도입부 채우기(`Searcher.intro_fill`)가 쓴다."""
+        pos = [i for i, r in enumerate(self.rows) if int(r["rule_seq"]) == int(rule_seq) and r["version_id"] == version_id]
+        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))
+        return [(self._rm.keys[i], self.rows[i].get("article")) for i in pos]
 
     def fetch(self, keys):
         return {k: self.rows[self._idx[k]] for k in keys if k in self._idx}
@@ -297,10 +319,13 @@ SELECT c.chunk_id, c.version_id, c.embedding::{t} <#> %(q)s::{t} AS dist {_JOIN}
 WHERE c.embedder = %(embedder)s AND {_FILTER}
 ORDER BY dist LIMIT %(n)s) s
 ORDER BY dist, chunk_id"""
+            acquired = time.perf_counter()
             with self.pool.connection() as conn:     # 이 블록 하나가 트랜잭션(풀 기본. `_all`이 autocommit을 되돌려 둔다): 끝나면 COMMIT, 설정은 거기서 사라진다
                 conn.execute("SELECT set_config('hnsw.ef_search', %(ef)s, true), set_config('hnsw.iterative_scan', %(it)s, true)",
                              {"ef": str(HNSW_EF_SEARCH), "it": HNSW_ITERATIVE})
+                ran = time.perf_counter()
                 rows = conn.execute(sql, params).fetchall()
+                _note_db(ran - acquired, time.perf_counter() - ran)
             return [((r[0], r[1]), float(r[2])) for r in rows]
         sql = f"""SELECT chunk_id, version_id, -dist AS score FROM (
 SELECT c.chunk_id, c.version_id, c.embedding <#> %(q)s::vector AS dist {_JOIN}
@@ -309,6 +334,17 @@ ORDER BY dist, c.chunk_id LIMIT %(n)s) s
 ORDER BY dist, chunk_id"""
         rows = self._all(sql, params)
         return [((r[0], r[1]), float(r[2])) for r in rows]
+
+    def warm(self, embedder: str, as_of: str | None = None, n: int = 150) -> dict:
+        """색인 페이지를 미리 읽는다. 표에 있는 벡터로 묻고 결과는 버린다(읽기 전용, 임베딩 API를 부르지 않는다). 첫 질의가 찬 캐시를 만나 몇 초 걸리는 것을 줄이고, 연결도 미리 연다."""
+        if not self.hnsw:
+            return {"queries": 0, "seconds": 0.0}
+        t = time.perf_counter()
+        rows = self._all("SELECT embedding::text FROM chunks WHERE embedder = %(e)s AND ord %% 211 = 3 LIMIT %(n)s", {"e": embedder, "n": n})
+        vectors = [np.asarray(json.loads(r[0]), dtype=np.float32) for r in rows]
+        with ThreadPoolExecutor(max_workers=3, thread_name_prefix="warm") as pool:
+            list(pool.map(lambda v: self.vector_top(v, embedder, None, as_of, 5), vectors))
+        return {"queries": len(vectors), "seconds": round(time.perf_counter() - t, 2)}
 
     def page_vector_top(self, qvec, embedder, rule_seqs, org, as_of, exclude, n):
         """링크 확장 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 exclude에 없는 것, 거리순·동점 chunk_id."""
@@ -325,6 +361,21 @@ ORDER BY dist, chunk_id"""
                                "seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of,
                                "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
         return [((r[0], r[1]), float(r[2])) for r in rows]
+
+    def heading_top(self, phrase, org, as_of, n):
+        """제목 경로(페이지 제목 > 절 제목)에 phrase(소문자 비교)가 그대로 든 청크 n개, 같은 필터(_FILTER), ord·chunk_id 순(MemoryStore와 같다)."""
+        p = (phrase or "").strip().lower()
+        if not p or n <= 0:
+            return []
+        sql = f"""SELECT c.chunk_id, c.version_id {_JOIN}
+WHERE strpos(lower(d.title || ' > ' || coalesce(c.article, '')), %(p)s) > 0 AND {_FILTER}
+ORDER BY c.ord, c.chunk_id LIMIT %(n)s"""
+        return [(r[0], r[1]) for r in self._all(sql, {"p": p, "org": org, "as_of": as_of, "n": n})]
+
+    def page_chunks(self, rule_seq, version_id):
+        """한 페이지 판의 청크 (키, 절 제목) 목록, ord·chunk_id 순(MemoryStore와 같다)."""
+        sql = "SELECT c.chunk_id, c.version_id, c.article FROM chunks c WHERE c.rule_seq = %(s)s AND c.version_id = %(v)s ORDER BY c.ord, c.chunk_id"
+        return [((r[0], r[1]), r[2]) for r in self._all(sql, {"s": int(rule_seq), "v": version_id})]
 
     def fetch(self, keys):
         if not keys:
@@ -394,6 +445,55 @@ def roundrobin(lists: list[list[Key]], k: int) -> list[Key]:
     return out
 
 
+def sub_merge_enabled() -> bool:
+    """`SEARCH_SUB_MERGE=1`일 때만 분해 검색 합치기를 바꾼다(조사 해법, Ammann 2025). 기본 꺼짐이고 끄면 하위 질문만 번갈아 합친다."""
+    return (os.environ.get("SEARCH_SUB_MERGE") or "").strip() == "1"
+
+
+def merge_by_score(lists: list[list[Key]], scores: dict[Key, float], k: int) -> list[Key]:
+    """lists[0]은 전체 질문, lists[1:]은 하위 질문의 상위 목록이다. 하위 질문마다 아직 안 든 첫 청크로 한 자리씩 먼저 채우고,
+    남은 자리는 모든 목록(전체 질문 포함)의 후보를 점수(질의 벡터와의 유사도 중 큰 값) 순으로 채운다. 점수가 없는 후보는 뒤에, 같은 점수는 먼저 나온 순이다."""
+    out: list[Key] = []
+    for sub in lists[1:]:
+        first = next((x for x in sub if x not in out), None)
+        if first is not None and len(out) < k:
+            out.append(first)
+    pool: list[Key] = []
+    for x in roundrobin(lists, sum(len(x) for x in lists)):
+        if x not in out:
+            pool.append(x)
+    pool.sort(key=lambda x: -scores.get(x, float("-inf")))  # 안정 정렬이라 같은 점수는 번갈아 나온 순서를 지킨다
+    return (out + pool)[:k]
+
+
+SIBLING_POOL = 300  # 형제 절 후보를 고를 때 그 페이지들에서 질문과 가까운 순으로 볼 청크 수
+
+
+def _path(row: dict) -> tuple[str, ...]:
+    return tuple(p.strip() for p in (row.get("article") or "").split(" > ") if p.strip())
+
+
+def sibling_firsts(context: list[dict], rows: list[dict], scores: dict[Key, float], n: int) -> list[Key]:
+    """(나) 형제 절(parent-document 방식): 문맥 청크와 같은 페이지, 같은 상위 제목 아래, 같은 깊이의 다른 절마다 첫 청크(가장 앞 줄) 하나를 후보로 하고,
+    질의 유사도가 높은 순으로 n개를 고른다. 문맥에 이미 든 절과 청크는 빼고, 제목 경로가 없는 청크(페이지 첫머리)는 형제를 만들지 않는다."""
+    have = {(c["chunk_id"], c["version_id"]) for c in context}
+    have_sec = {(c["rule_seq"], _path(c)) for c in context}
+    want = {(c["rule_seq"], _path(c)[:-1], len(_path(c))) for c in context if _path(c)}
+    first: dict[tuple, dict] = {}
+    for r in rows:
+        p = _path(r)
+        sec = (r["rule_seq"], p)
+        if not p or sec in have_sec or (r["rule_seq"], p[:-1], len(p)) not in want:
+            continue
+        cur = first.get(sec)
+        if cur is None or (r.get("line_start") or 0) < (cur.get("line_start") or 0):
+            first[sec] = r
+    keys = [(r["chunk_id"], r["version_id"]) for r in first.values()]
+    keys = [k for k in keys if k not in have]
+    keys.sort(key=lambda k: -scores.get(k, float("-inf")))
+    return keys[:n]
+
+
 def check_query(q: SearchQuery) -> None:
     if not q.query or not q.query.strip():
         raise ValueError("빈 질문")
@@ -452,6 +552,7 @@ class Searcher:
             translator = lambda query, kind: translate.translate(query, kind, store)  # noqa: E731
         self.translator = translator
         self._lock = threading.Lock()
+        self._qvecs: OrderedDict[tuple[str, str], np.ndarray] = OrderedDict()  # (방식, 질문) -> 벡터. R3가 같은 질문을 다시 임베딩하지 않게 한다
         if bm25 is None:
             self._build_bm25()
         else:
@@ -514,16 +615,19 @@ class Searcher:
         return [t for t, _, _ in got]
 
     def _ranked(self, text: str, trans: str | None, qvec, mode: str, q: SearchQuery, mask: np.ndarray, n: int,
-                tr: SearchTrace) -> tuple[list[Key], dict[Key, dict]]:
+                tr: SearchTrace, scores: dict[Key, float] | None = None) -> tuple[list[Key], dict[Key, dict]]:
         """질문 하나의 상위 k(벡터·BM25 → RRF → 리랭킹). 하위 질문마다 같은 과정을 돈다."""
         cfg, rm, bm25 = self.cfg, self._rm, self._bm25
         dense: list[Key] = []
         if mode != "bm25_kw":
             t = time.perf_counter()
-            dense = [k for k, _ in self.store.vector_top(qvec, cfg.embed_model, q.org, q.as_of,
-                                                         cfg.pool if mode == "hybrid_ko_kw" else n)]
-            tr.ms["vector"] = round(tr.ms.get("vector", 0) + _ms(t), 1)
-            tr.n_dense += len(dense)
+            hits = self.store.vector_top(qvec, cfg.embed_model, q.org, q.as_of, cfg.pool if mode == "hybrid_ko_kw" else n)
+            dense = [k for k, _ in hits]
+            if scores is not None:                               # SEARCH_SUB_MERGE에서만 쓴다(질의마다 따로 된 dict)
+                scores.update({k: float(s) for k, s in hits})
+            with _TRACE_LOCK:
+                tr.ms["vector"] = round(tr.ms.get("vector", 0) + _ms(t), 1)
+                tr.n_dense += len(dense)
 
         bm: list[Key] = []
         if mode in ("hybrid_ko_kw", "bm25_kw"):
@@ -600,20 +704,220 @@ class Searcher:
                 _last.set(tr)
                 return []
             tr.ms["embed"] = _ms(t)
+            for i, text in enumerate(texts):
+                self._remember(mode, text, qvecs[i])
 
-        idx = range(1, len(texts)) if len(texts) > 1 else range(1)   # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음)
+        merge = sub_merge_enabled() and len(texts) > 1
+        # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣는다
+        idx = range(len(texts)) if merge else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
-        for i in idx:
-            got, r = self._ranked(texts[i], trans[i], None if qvecs is None else qvecs[i], mode, q, mask, n, tr)
+        score_maps: dict[int, dict[Key, float]] = {i: {} for i in idx}
+        def one(i: int):
+            return self._ranked(texts[i], trans[i], None if qvecs is None else qvecs[i], mode, q, mask, n, tr,
+                                score_maps[i] if merge else None)
+
+        token = _db_ms.set(tr.ms)
+        try:
+            # 하위 질문은 서로 독립이다. 결과는 하위 질문 순서대로 합치므로 동시에 찾아도 순위가 같다. 벡터만 쓰는 방식에서만 켠다(BM25와 리랭커는 프로세스 안 계산이라 빨라지지 않는다)
+            if parallel_subs_enabled() and len(idx) >= 2 and mode in VECTOR_ONLY_MODES and self.reranker is None:
+                with ThreadPoolExecutor(max_workers=len(idx), thread_name_prefix="subq") as pool:
+                    done = list(pool.map(lambda i, ctx: ctx.run(one, i), idx, [contextvars.copy_context() for _ in idx]))
+            else:
+                done = [one(i) for i in idx]
+        finally:
+            _db_ms.reset(token)
+        for got, r in done:
             lists.append(got)
             rows.update(r)
-        top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
+        if merge:
+            best: dict[Key, float] = {}
+            for m in score_maps.values():
+                for key, s in m.items():
+                    best[key] = max(s, best.get(key, float("-inf")))
+            top = merge_by_score(lists, best, q.k)
+        else:
+            top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
         top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
         out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)
         _last.set(tr)
         return out
+
+    def sibling_sections(self, query: str, chunk_ids: list[str], org: str | None = None, as_of: str | None = None, n: int = 2) -> list[Chunk]:
+        """(나) `GRAPH_SIBLING_SECTIONS=1`(기본 꺼짐) 전용. 문맥 청크(chunk_ids)가 든 페이지에서 형제 절의 첫 청크를 질문과 가까운 순으로 n개 돌려준다.
+        기본 검색(`search`)의 k, 합치기, 링크 확장은 그대로다. 벡터를 쓰지 않는 방식이거나 번역이 없으면 빈 목록이다."""
+        self._refresh()
+        cfg = self.cfg
+        if not chunk_ids or n <= 0 or not (query or "").strip() or cfg.mode not in VECTOR_ONLY_MODES:
+            return []
+        qvec = self.query_vector(query)
+        if qvec is None:
+            return []
+        ids = set(chunk_ids)
+        seqs = sorted({int(r["rule_seq"]) for r in self._rows_by_id(ids, org, as_of)})
+        if not seqs:
+            return []
+        hits = self.store.page_vector_top(qvec, cfg.embed_model, seqs, org, as_of, [], SIBLING_POOL)
+        rows = self.store.fetch([k for k, _ in hits])
+        context = [r for r in rows.values() if r["chunk_id"] in ids]
+        keys = sibling_firsts(context, list(rows.values()), dict(hits), n)
+        return [to_chunk(rows[k]) for k in keys]
+
+    def _rows_by_id(self, ids: set[str], org, as_of) -> list[dict]:
+        """chunk_id로 페이지 번호를 찾는다(판 번호를 모를 때). 메모리 저장소는 행 목록에서, 운영 DB는 chunks 표에서 읽는다."""
+        if isinstance(self.store, PgStore):
+            got = self.store._all("SELECT DISTINCT rule_seq FROM chunks WHERE chunk_id = ANY(%(ids)s::text[])", {"ids": sorted(ids)})
+            return [{"rule_seq": r[0]} for r in got]
+        return [r for r in getattr(self.store, "rows", []) if r.get("chunk_id") in ids]
+
+    def search_pages(self, query: str, rule_seqs: list[int], org: str | None = None, as_of: str | None = None, k: int = DEFAULT_K) -> list[Chunk]:
+        """페이지 범위 재검색(그래프 `GRAPH_PAGE_RESEARCH=1`, 기본 꺼짐) 전용. 주어진 페이지(rule_seq) 안의 청크 중 질문과 가까운 k개다.
+        링크 확장과 같은 페이지 벡터 질의(`page_vector_top`, 같은 필터)를 쓰고, 기본 검색(`search`)의 후보, 합치기, 링크 확장은 거치지 않는다.
+        벡터를 쓰지 않는 방식이거나 번역이 없으면 빈 목록이다."""
+        self._refresh()
+        cfg = self.cfg
+        if not rule_seqs or not (query or "").strip() or cfg.mode not in VECTOR_ONLY_MODES:
+            return []
+        text: str | None = query
+        if cfg.mode == "dense_en":
+            text, _, _ = self._translate_one(query, "sentence")
+            if not text:
+                return []
+        qvec = self.embed([text])[0]
+        self._remember(cfg.mode, query, qvec)
+        keys = [key for key, _ in self.store.page_vector_top(qvec, cfg.embed_model, [int(s) for s in rule_seqs], org, as_of, [], k)]
+        rows = self.store.fetch(keys) if keys else {}
+        return [to_chunk(rows[key]) for key in keys if key in rows]
+
+    def _remember(self, mode: str, text: str, vec) -> None:
+        with self._lock:
+            self._qvecs[(mode, text)] = np.asarray(vec, dtype=np.float32)
+            self._qvecs.move_to_end((mode, text))
+            while len(self._qvecs) > QVEC_CACHE:
+                self._qvecs.popitem(last=False)
+
+    def query_vector(self, query: str):
+        """질문 벡터. 이 검색기가 방금 찾은 질문이면 다시 임베딩하지 않는다. 벡터를 쓰지 않는 방식이거나 번역이 없으면 None."""
+        mode = self.cfg.mode
+        if mode not in VECTOR_ONLY_MODES or not (query or "").strip():
+            return None
+        with self._lock:
+            got = self._qvecs.get((mode, query))
+        if got is not None:
+            return got
+        text: str | None = query
+        if mode == "dense_en":
+            text, _, _ = self._translate_one(query, "sentence")
+            if not text:
+                return None
+        vec = self.embed([text])[0]
+        self._remember(mode, query, vec)
+        return np.asarray(vec, dtype=np.float32)
+
+    def intro_fill(self, chunks: list, query: str, org: str | None = None, as_of: str | None = None) -> list[Chunk]:
+        """R3 도입부 채우기(그래프 `GRAPH_INTRO_FILL=1`, 기본 꺼짐) 전용. 문맥(`chunks`)에 같은 페이지 판(rule_seq, version_id)의 청크가 `INTRO_MIN`개 이상이면
+        그 페이지 첫 청크의 첫 절(h2, 절 제목의 첫 ' > ' 앞) 청크 중 질문 벡터와 가장 가까운 1개를 돌려준다. 그 절이 청크 `INTRO_WHOLE`개 이하면 절 전체(ord 순)다.
+        그 절의 청크가 이미 문맥에 있으면 그 페이지는 건너뛴다.
+        기본 검색(`search`)은 바꾸지 않는다. 문항 id나 페이지 이름은 쓰지 않는다."""
+        self._refresh()
+        pages: dict[tuple[int, str], list[dict]] = {}
+        for c in chunks or []:
+            d = c.model_dump() if hasattr(c, "model_dump") else dict(c)
+            if d.get("rule_seq") is None or not d.get("version_id"):
+                continue
+            pages.setdefault((int(d["rule_seq"]), d["version_id"]), []).append(d)
+        want = [(pk, mem) for pk, mem in pages.items() if len(mem) >= INTRO_MIN]
+        top = getattr(self.store, "page_chunks", None)
+        if not want or top is None:
+            return []
+        have = {(d["chunk_id"], d["version_id"]) for mem in pages.values() for d in mem}
+        picks: list[Key] = []
+        qvec = None
+        for (seq, ver), mem in want:
+            page = top(seq, ver)
+            if not page:
+                continue
+            first = _h2(page[0][1])
+            if any(_h2(d.get("article")) == first for d in mem):
+                continue
+            section = [k for k, a in page if _h2(a) == first]
+            cand = {k for k in section if k not in have and k not in picks}
+            if not cand:
+                continue
+            if len(section) <= INTRO_WHOLE:  # 도입부 절이 청크 2개 이하면 한 문단이 나뉜 것이라 절 전체를 ord 순으로 더한다(벡터 순위를 쓰지 않는다)
+                picks += [k for k in section if k in cand]
+                continue
+            if qvec is None:
+                qvec = self.query_vector(query)
+                if qvec is None:
+                    return []
+            ranked = self.store.page_vector_top(qvec, self.cfg.embed_model, [seq], org, as_of, list(have), len(page))
+            best = next((k for k, _ in ranked if k in cand), None)
+            if best is not None:
+                picks.append(best)
+        rows = self.store.fetch(picks) if picks else {}
+        return [to_chunk(rows[k]) for k in picks if k in rows]
+
+    def cached_query_vector(self, query: str):
+        """이 검색기가 이미 만든 질문 벡터(캐시)만 돌려준다. 없으면 None(번역 LLM이나 임베딩을 새로 부르지 않는다)."""
+        with self._lock:
+            got = self._qvecs.get((self.cfg.mode, query))
+        return None if got is None else np.asarray(got, dtype=np.float32)
+
+    def closest_to_query(self, query: str, chunks: list, org: str | None = None, as_of: str | None = None) -> list | None:
+        """HB(그래프 `GRAPH_HEADING_BEST=1`, 기본 꺼짐) 전용. chunks(Chunk 또는 dict)를 질문 벡터와 가까운 순으로 돌려준다(그 청크들의 페이지 안 벡터 순위).
+        질문 벡터는 이 검색기가 첫 검색에서 이미 만든 것(캐시)만 쓴다. 캐시에 없거나 순위를 매길 수 없으면 None(부르는 쪽이 HB를 건너뛴다).
+        기본 검색(`search`)은 바꾸지 않는다."""
+        ds = [c.model_dump() if hasattr(c, "model_dump") else dict(c) for c in chunks or []]
+        top = getattr(self.store, "page_vector_top", None)
+        seqs = sorted({int(d["rule_seq"]) for d in ds if d.get("rule_seq") is not None})
+        if not ds or top is None or not seqs:
+            return None
+        qvec = self.cached_query_vector(query)
+        if qvec is None:
+            return None
+        order = {k: i for i, (k, _) in enumerate(top(qvec, self.cfg.embed_model, seqs, org, as_of, [], HEADING_BEST_POOL))}
+        idx = sorted(range(len(ds)), key=lambda i: (order.get((ds[i].get("chunk_id"), ds[i].get("version_id")), len(order) + i)))
+        return [chunks[i] for i in idx]
+
+    def search_headings(self, phrase: str, org: str | None = None, as_of: str | None = None, n: int = 1) -> list[Chunk]:
+        """제목 경로 검색(그래프 `GRAPH_HEADING_TERMS=1`, 기본 꺼짐) 전용. 제목 경로(페이지 제목 > 절 제목)에 phrase가 그대로 든 청크를 ord 순으로 n개.
+        벡터와 번역을 쓰지 않는다(임베딩·LLM 호출 없음). 기본 검색(`search`)은 바꾸지 않는다. 저장소가 이 질의를 모르면 빈 목록이다."""
+        self._refresh()
+        top = getattr(self.store, "heading_top", None)
+        keys = top(phrase, org, as_of, n) if top else []
+        rows = self.store.fetch(keys) if keys else {}
+        return [to_chunk(rows[key]) for key in keys if key in rows]
+
+
+_TRACE_LOCK = threading.Lock()
+QVEC_CACHE = 512   # 질문 벡터 기억 상한(R3용)
+HEADING_BEST_POOL = 500  # HB: 제목 경로 후보의 페이지에서 벡터 순위를 볼 청크 수
+INTRO_MIN = 3      # R3: 같은 페이지 판의 청크가 이만큼 문맥에 있어야 도입부를 채운다
+INTRO_WHOLE = 2    # R3: 도입부 절의 청크가 이 수 이하면 절 전체를 더한다
+
+
+def _h2(article) -> str:
+    """절 제목의 첫 단계(h2). 'A > B'면 'a'."""
+    return str(article or "").split(" > ")[0].strip().lower()
+
+_db_ms: contextvars.ContextVar[dict | None] = contextvars.ContextVar("search_db_ms", default=None)
+VECTOR_ONLY_MODES = ("dense_en", "dense_ko")
+
+
+def parallel_subs_enabled() -> bool:
+    """`SEARCH_PARALLEL_SUBS=1`일 때만 하위 질문을 동시에 찾는다. 기본 꺼짐."""
+    return (os.environ.get("SEARCH_PARALLEL_SUBS") or "").strip() == "1"
+
+
+def _note_db(acquire_s: float, query_s: float) -> None:
+    """벡터 질의의 시간 나누기. `db_wait`는 연결 받기와 색인 설정 왕복, `db_query`는 질의 왕복이다. 질의 왕복 안의 네트워크와 실행은 나누지 못한다."""
+    ms = _db_ms.get()
+    if ms is not None:
+        with _TRACE_LOCK:
+            ms["db_wait"] = round(ms.get("db_wait", 0) + acquire_s * 1000, 1)
+            ms["db_query"] = round(ms.get("db_query", 0) + query_s * 1000, 1)
 
 
 def _ms(t: float) -> float:
@@ -636,6 +940,8 @@ def warmup() -> Searcher:
             store = PgStore.from_env()
             try:
                 s = Searcher(cfg, store)
+                if isinstance(s.store, PgStore):                # 색인 페이지와 연결을 미리 연다. HNSW를 쓸 때만 하고 임베딩 API는 부르지 않는다
+                    s.store.warm(s.cfg.embed_model)
                 if not embed.spec(s.cfg.embed_model).api:           # API 모델은 미리 부를 것이 없고, 부르면 돈이 든다
                     s.embed(["warm-up"])
             except BaseException:
