@@ -94,7 +94,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
 
   const loadingFirst = status === 'loading' && records.length === 0
   const failedFirst = status === 'error' && records.length === 0
-  const chatLink = live ? { pathname: '/chat' } : { pathname: '/chat', search: '?demo=1' }
+  const chatLink = live ? { pathname: '/chat' } : { pathname: '/demo/chat' }
 
   return <DemoLayout active="recalls"><main className="recall-service-page">
     <header className="recall-service-heading"><div><h1>리콜 알림</h1></div><span className="recall-unread">미확인 {unread}건</span></header>

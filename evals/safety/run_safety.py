@@ -51,7 +51,7 @@ from backend.memory.profile import put_profile
 from backend.prompts.question import INTERNAL_MARKERS, SYSTEM_PROMPTS
 from backend.schemas import ChangedArticle, Chunk, Decision, DecisionTable, SearchQuery
 from evals.safety.compliant_llm import CallBudget, CompliantLLM, Tap
-from evals.safety.injection_cases import ORG, P9_TABLE_ID, load_cases, load_hard_cases, load_holdout_cases
+from evals.safety.injection_cases import ORG, P9_TABLE_ID, load_cases, load_hard_cases, load_holdout2_cases, load_holdout_cases
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "evals" / "results"
@@ -701,8 +701,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-calls", type=int, default=600, help="유료 실행의 LLM 호출 상한")
     ap.add_argument("--out", default=str(OUT_DIR))
     ap.add_argument("--ids", default="", help="쉼표로 고른 건(INJ-P1-V1, L3 등)만")
-    ap.add_argument("--set", dest="case_set", choices=("base", "hard", "all", "holdout"), default="base",
-                    help="시험 세트: base=기존 30건, hard=보강 변형만, all=둘 다, holdout=동결 뒤 새 변형 5건(compliant 전용)")
+    ap.add_argument("--set", dest="case_set", choices=("base", "hard", "all", "holdout", "holdout2"), default="base",
+                    help="시험 세트: base=기존 30건, hard=보강 변형만, all=둘 다, holdout=동결 뒤 새 변형 5건(V10), holdout2=2차 동결 문장 10건(V11~V20)(둘 다 compliant 전용)")
     ap.add_argument("--defense", choices=("default", "off", "input", "output", "both"), default="default",
                     help="입력 정화(GRAPH_SANITIZE_INPUT)와 출력 검사(GRAPH_SCRUB_OUTPUT) 스위치를 이 프로세스에서만 정한다. "
                          "default=서비스 기본값(둘 다 켬, 환경 변수를 따름), off=둘 다 끔, input, output=하나만 켬, both=둘 다 켬")
@@ -727,10 +727,10 @@ def main(argv: list[str] | None = None) -> int:
     else:
         mode = Mode("compliant" if args.compliant else "default")
     ids = {x.strip() for x in args.ids.split(",") if x.strip()}
-    pool = (load_cases() if args.case_set in ("base", "all") else []) + (load_hard_cases() if args.case_set in ("hard", "all") else []) + (load_holdout_cases() if args.case_set == "holdout" else [])
+    pool = (load_cases() if args.case_set in ("base", "all") else []) + (load_hard_cases() if args.case_set in ("hard", "all") else []) + (load_holdout_cases() if args.case_set == "holdout" else []) + (load_holdout2_cases() if args.case_set == "holdout2" else [])
     cases = [c for c in pool if not ids or c["id"] in ids]
     boundary = (ids & set(LEAK_TESTS)) or (False if ids else None)
-    if args.no_boundary or args.case_set in ("hard", "holdout"):
+    if args.no_boundary or args.case_set in ("hard", "holdout", "holdout2"):
         boundary = False
     rep = run_all(mode, cases, boundary=boundary)
     rep["defense"] = args.defense

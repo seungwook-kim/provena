@@ -300,9 +300,9 @@
 /* Chat usability refinements: scoped to the chat screen only. */
 .demo-chat-page .demo-thread-list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .demo-chat-page .demo-thread-list-heading small{color:var(--muted);font-size:10px}
-.demo-chat-page .demo-thread{display:flex;min-height:42px;flex:0 0 auto;flex-direction:column;align-items:stretch;gap:4px}
-.demo-chat-page .demo-thread-title{display:block;flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.45}
-.demo-chat-page .demo-thread time{color:var(--faint);font:10px 'JetBrains Mono',monospace}
+.demo-chat-page .demo-thread{display:flex;min-height:42px;height:auto;flex:0 0 auto;box-sizing:border-box;flex-direction:column;align-items:stretch;gap:4px;overflow:hidden}
+.demo-chat-page .demo-thread-title{display:-webkit-box;flex:0 0 auto;max-height:2.9em;overflow:hidden;overflow-wrap:anywhere;line-height:1.45;text-overflow:ellipsis;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.demo-chat-page .demo-thread time{flex:0 0 auto;color:var(--faint);font:10px/1.2 'JetBrains Mono',monospace}
 .demo-chat-page .demo-message-stack{align-items:stretch;min-width:0}
 .demo-chat-page .demo-user-message,.demo-chat-page .demo-answer{overflow-wrap:anywhere;word-break:break-word}
 .demo-chat-page .demo-user-message{align-self:flex-end;max-width:min(80%,736px)}

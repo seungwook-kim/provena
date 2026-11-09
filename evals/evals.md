@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | `EVAL_REPORT.md` 두 곳 보강: 3장에 사전 등록 #10 이후 107개 항목의 커밋 순서를 git 이력으로 센 값(별도 커밋이 먼저인 항목 #26, #27 두 개, 결과와 같은 커밋 104개, 결과 없음 1개)과 한계를 적고, 8장 단계 표의 리랭킹 행을 `사용하지 않음`으로, 마지막 `왜 이 모델과 이 구성인가`를 4장·결정 기록 근거로 썼다. 검색·생성 단계 시간은 배포본 Langfuse 트레이스(리비전 00020, 세션 74개)에서 다시 계산해 8장에 채우고, 계산 도구 vals/latency/stage_times.py와 세션별 값 vals/results/deploy_latency_v2/stage_times.json을 올렸다. 62.1 행 복구(#82·#83 병합 충돌 해소 때 누락) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | CI 평가 점수 비교 단계 추가(강사 지적): `evals/ci_compare.py`가 커밋된 최종 결과(`agent_v2_q_d6151_r{1,2,3}_bo2sda2_api` single·multi 3회 평균)를 통과선(인용 정확도·정답 근거 0.85, 거절 0.90, p95 10초)과 `evals/ci_baseline.json`(EVAL_REPORT 4장 최종 행)에 견주고, `FROZEN.json` 해시와 다른 옛 결과는 뺀다. 표는 `$GITHUB_STEP_SUMMARY`에 쓰고, 시험은 `tests/test_ci_compare.py`, `ci.yml` test 잡에 단계 1개 추가. 키·네트워크 없음 | 없음 |
 | 2026-11-09 | 김승욱 (Claude Code) | `PREREGISTER.md` 62.3 Skill 유무 비교 사전 등록(`USE_SKILLS` 켬/끔, 4장 최종 측정과 같은 조건, 끔만 새로 1회). 끔 1회를 시작했으나 `.env`의 Anthropic 키가 인증 거절되어 점수가 없고 폴더는 지움(비용 0달러). 측정은 보류 | 미정 |
 | 2026-11-01 | 김승욱(팀장) | 동결 검사 변이 확인: 저장소 사본에서 `dataset_v1.jsonl` 한 글자를 바꾸자 `python evals/freeze.py --check`가 바뀐 파일로 `dataset_v1.jsonl`을 보이며 종료 코드 1, `pytest tests/test_frozen_evals.py`가 실패(가이드 p.17, 체크포인트 Pitfalls 3). 코퍼스가 바뀔 때 문항을 지표에서만 빼는 `evals/exclusions.json`을 빈 목록으로 둠(가이드 p.16) | 이 PR |

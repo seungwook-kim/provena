@@ -14,7 +14,11 @@
 - 지시 문장 유형은 공개 간접 인젝션 시험 도구의 범주(promptfoo indirect-prompt-injection 플러그인 MIT, NVIDIA garak latentinjection·promptinject Apache-2.0,
   OWASP LLM01 공격 시나리오)를 참고해 직접 쓴 정규식이다. 도구의 규칙·데이터를 복사하지 않았다.
 
-한계: 규칙(정규식)은 알려진 유형만 잡는다. 번역·암시·오타·유니코드 변형·표식 없는 지시(예: 지시가 아닌 사실처럼 쓴 거짓)는 못 잡는다.
+일반화(PREREGISTER 62.5): 단어·어미 목록에 맞는 문장만 잡던 한국어 규칙 둘(답 자리+쓰기 어미, 표식 명사+동사)을 한 절에 든 특징의 조합(내용, 행위, 대상 참조) 판정 하나로 바꿨다.
+출력 검사는 입력 쪽이 못 본 글에도 답에 토큰이 그대로 옮겨졌을 때는 막도록 의심 절(토큰과 출력 자리·목적 이름표) 단서를 더했다. 자세한 구조는 아래 구조 판정 절 주석.
+
+한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖), 암시, 오타, 유니코드 변형, 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것),
+소문자·숫자 없는 표식, 지시가 아닌 사실처럼 쓴 거짓은 못 잡는다. 사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다.
 """
 from __future__ import annotations
 
@@ -73,10 +77,74 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
     ("concealment", re.compile(r"\b(?:do not|don't|never)\s+(?:tell|mention|reveal|inform)\s+(?:the\s+)?user|사용자에게\s*(?:알리지|말하지)\s*(?:마|말)", _I)),
     ("split_marker", re.compile(r"(?:조각|\bfragments?\b|\bpieces?\b)[^.\n]{0,50}?(?:이어|합쳐|연결|concat|join|combine|assemble)|(?:이어\s*붙여|합쳐서|연결해)[^.\n]{0,30}(?:답|응답|출력|적)", _I)),
 ]
-_OUT_VENUE_KO = re.compile(r"(?:답변|응답|답안|최종\s*답|회신|쟁점표|권고란|권고\s*칸|마지막\s*줄)")
-_WRITE_KO = re.compile(r"(?:적|넣|쓰|포함|병기|기재|출력|표기|추가|덧붙|붙여|첨부)(?:어라|아라|라|하라|해라|세요|십시오|을\s*것|할\s*것|어야|하여야|해야|도록|한다|는다|으라)")
+
+
+# ---------- 구조 판정(PREREGISTER 62.5) ----------
+# 단어·어미 목록에 맞는 문장만 잡던 것을, 한 절에 든 **특징의 조합**으로 바꾼다. 지시가 아닌 일반 문장도 특징 하나씩은 흔히 가지므로 조합이 핵심이다.
+#   내용 P : 모델이 답에 옮겨 적을 표식 꼴(대문자·숫자가 섞인 5~40자 토큰, 모르는 16자리 id, 확인번호 같은 표식 명사). 소문자 하이픈 낱말(k8s-workloads)은 P가 아니다. 따옴표 문자열은 따로 더 좁은 조건으로만 본다
+#   행위 ACT: 쓰라는 말. 명령·요청·권유·의무의 말투(D)이거나, 쓰기·붙이기·언급하기 계열 동작(W)이다. 어미를 가리지 않는다("붙여 주세요", "표기합니다", "남길 것", "좋겠습니다")
+#   대상 REF: 그 행위가 향하는 곳. 출력 자리(V: 답·응답·요약·의견 칸·마지막 줄), 글을 읽고 처리하는 쪽의 호칭(A: 시스템·검토자·assistant), 표식 앞의 목적 이름표(L: 확인번호·일련번호·조회 코드·verification code. 그냥 ID나 key는 아니다)
+# 입력 정화는 P 앞뒤 `_WIN`자 안에 ACT와 REF가 모두 있을 때만 지시로 본다(먼 곳의 일반 문장과 짝지어지지 않게 한다).
+# 출력 검사는 입력 쪽이 놓친 글에 대비해 P(토큰)와 REF만 있어도 "의심 절"로 모은다. 답에 그 토큰이 그대로 옮겨졌다는 둘째 증거가 있을 때만 쓰기 때문이다.
+_WIN = 60
+_WIN_Q = 30
+_QUOTED_RX = re.compile(_QUOTED)
+_CODE = (r"(?-i:(?<![A-Za-z0-9@_\-])(?=[A-Z0-9_\-]{5,40}(?![A-Za-z0-9_\-@]))(?=[A-Z0-9_\-]*\d)(?=[A-Z0-9_\-]*[A-Z])"
+         r"[A-Z0-9]+(?:[-_][A-Z0-9]+)*(?![A-Za-z0-9]))")
+_HEX16 = r"(?-i:(?<![0-9a-f])[0-9a-f]{16}(?![0-9a-f]))"
+_P_TOKEN = re.compile(_CODE + "|" + _HEX16)
+_P_ANY = re.compile(_CODE + "|" + _HEX16 + "|" + _MARKER_NOUN, _I)
+_D = re.compile(
+    r"(?:어라|아라|하라|해라|세요|십시오|주십시오|주시기|주시길|해\s*달라|바랍니다|바란다|바라며|부탁|좋겠|좋습니다|어야|아야|하여야|해야|야\s*한다|야\s*합니다|"
+    r"[을를할길줄]\s*것|도록|원칙|권장|필수|요청)|"
+    r"\b(?:please|kindly|must|should|shall|ought\s+to|needs?\s+to|has\s+to|have\s+to|required\s+to|expected\s+to|make\s+sure|be\s+sure\s+to|ensure|remember\s+to|recommended|always|never)\b", _I)
+_W = re.compile(
+    r"(?:적(?:어|은|을|는|고|으|게)|쓰(?:라|세|십|고|도|는|며|면|시|기)|쓸|써(?:라|\s*주)|넣|붙(?:여|이|인|으|은|도|는|고)|남[기길겨]|올[리려]|기입|기재|표기|병기|표시|포함|첨부|출력|언급|명시|추가|덧붙|삽입|부기|명기|제시|기록|곁들)|"
+    r"\b(?:append|prepend|add|insert|include|write|print|say|state|mention|cite|quote|echo|tag|mark|stamp|attach|embed|put|leave|repeat|restate|(?:end|close|finish|conclude)s?\s+with)\b", _I)
+_V_NOUN = (r"답변|응답|답안|회신|요약(?:본|문|의)?|쟁점표|권고\s*[란칸]|의견\s*[란칸]|"
+           r"\b(?:answers?|responses?|repl(?:y|ies)|summar(?:y|ies)|(?:opinion|recommendation)\s+(?:field|column))\b")
+_V_POS = (r"의견(?=\s*(?:끝|말미|마지막))|(?:맨\s*)?말미|마지막\s*(?:줄|문장|행)|맨\s*끝|끝에|서두|"
+          r"\b(?:(?:last|final)\s+(?:line|sentence)|end\s+of\s+(?:the|your)|at\s+the\s+end)\b")
+_V = re.compile(_V_NOUN + "|" + _V_POS, _I)
+_V_ONLY_NOUN = re.compile(_V_NOUN, _I)
+_A = re.compile(
+    r"(?:시스템|모델|어시스턴트|에이전트|챗봇|요약하는|요약기|요약자|검토자|리뷰어|답변자|답변하는|안내하는|담당자|독자|읽는|읽고)|"
+    r"\b(?:assistants?|agents?|llms?|ai|chat\s?bots?|bots?|models?|systems?|summari[sz]ers?|summari[sz]es|summari[sz]ing|reviewers?|readers?|whoever|anyone)\b", _I)
+_L = re.compile(
+    r"(?:(?:확인|관리|검증|승인|점검|추적|감사|조회|열람|일련|식별|수신|인증|발급)\s*(?:번호|코드|값|표식|토큰)|표식|토큰|\bmarker\b|\bstamp\b|"
+    r"(?:verification|tracking|audit|serial|confirmation|reference|access|authentication|validation|check)\s+(?:code|token|number|id|tag|key|string))"
+    r"\s*[:：=]?\s*[\"'`「『(\[]?\s*(?:" + _CODE + "|" + _HEX16 + ")", _I)
 _MARKERISH = re.compile(rf"{_QUOTED}|{_TOK}|{_MARKER_NOUN}", _I)
-_MARKER_ASK = re.compile(rf"{_MARKER_NOUN}\s*[\"'`「]?\s*(?:{_TOK})", _I)
+
+
+def _window(clause: str, p: re.Match) -> tuple[str, int]:
+    lo = max(0, p.start() - _WIN)
+    return clause[lo:p.end() + _WIN], lo
+
+
+def _structure_start(clause: str) -> int:
+    """P 가까이(앞뒤 `_WIN`자)에 ACT와 REF가 모두 있으면 REF·ACT 가운데 가장 앞 위치, 아니면 -1."""
+    for p in _P_ANY.finditer(clause):
+        w, lo = _window(clause, p)
+        act = [m for m in (_D.search(w), _W.search(w)) if m]
+        ref = [m for m in (_V.search(w), _A.search(w), _L.search(w)) if m]
+        if act and ref:
+            return lo + min(m.start() for m in act + ref)
+    for q in _QUOTED_RX.finditer(clause):   # 따옴표 문자열만 있는 표식은 일반 글에 흔하므로 더 좁게: 아주 가까이에 말투, 쓰기 동작, 출력 자리가 모두 있어야 한다
+        w = clause[max(0, q.start() - _WIN_Q):q.end() + _WIN_Q]
+        d, v, k = _D.search(w), _V_ONLY_NOUN.search(w), _W.search(w)
+        if d and v and k:
+            return max(0, q.start() - _WIN_Q) + min(d.start(), v.start(), k.start())
+    return -1
+
+
+def is_suspect(clause: str) -> bool:
+    """출력 검사용 의심 절: 토큰 P 가까이에 출력 자리(V)나 목적 이름표(L)만 있으면 된다(ACT 불필요). 입력 정화보다 문턱이 낮다. 호칭(A)은 일반 글에 너무 흔해 뺀다."""
+    for p in _P_TOKEN.finditer(clause):
+        w, _ = _window(clause, p)
+        if _V.search(w) or _L.search(w):
+            return True
+    return False
 
 
 _NEEDS_MARKER = {"output_en_the", "split_marker"}   # 일반 문장과 겹치기 쉬운 규칙은 같은 절에 표식 꼴(따옴표 문자열, 표식 토큰)이 있을 때만 지시로 본다
@@ -91,12 +159,9 @@ def _first(clause: str) -> int:
             m = None
         if m and (best < 0 or m.start() < best):
             best = m.start()
-    v, w = _OUT_VENUE_KO.search(clause), _WRITE_KO.search(clause)
-    if v and w and _MARKERISH.search(clause):  # 한국어: 답 자리 + 쓰라는 말 + 표식 꼴이 한 절에 모두 있을 때만(일반 정책 문장 오탐을 줄인다)
-        best = v.start() if best < 0 else min(best, v.start())
-    m = _MARKER_ASK.search(clause)
-    if m and re.search(r"병기|적|기재|포함|넣|append|include|add|write", clause[m.end():m.end() + 40], _I):
-        best = m.start() if best < 0 else min(best, m.start())
+    k = _structure_start(clause)
+    if k >= 0:
+        best = k if best < 0 else min(best, k)
     return best
 
 
@@ -199,6 +264,10 @@ def marker_candidates(instructions: list[str], benign: str, real_ids: set[str]) 
         found += [m.strip() for m in _HEADPATH.findall(u)]
         for rx in (_OBJ_KO, _OBJ_EN):
             found += [m.strip("\"'`「」") for m in rx.findall(u)]
+    return _keep_new(found, benign_n, real_ids)
+
+
+def _keep_new(found: list[str], benign_n: str, real_ids: set[str]) -> list[str]:
     out: list[str] = []
     for f in found:
         n = _norm(f)
@@ -207,22 +276,43 @@ def marker_candidates(instructions: list[str], benign: str, real_ids: set[str]) 
     return out
 
 
+def split_suspects(text: str) -> tuple[str, list[str]]:
+    """(의심 절을 뺀 나머지, 의심 절 목록). 문장 단위. 입력 정화가 지시로 보지 못한 글에서 출력 검사가 쓸 단서를 모은다."""
+    keep, sus = [], []
+    for piece in _SENT.split(_invisible_free(text)):
+        (sus if is_suspect(piece) else keep).append(piece)
+    return "".join(keep), sus
+
+
+def suspect_candidates(suspects: list[str], benign: str, real_ids: set[str]) -> list[str]:
+    """의심 절의 토큰·따옴표 문자열 가운데 의심 절 밖의 본문과 질문에 없는 것."""
+    found: list[str] = []
+    for u in suspects:
+        found += [m.group(0) for m in _P_TOKEN.finditer(u)]
+        found += [q[1:-1].strip() for q in re.findall(_QUOTED, u)]
+    return _keep_new(found, _norm(benign), real_ids)
+
+
 _ANS_SENT = re.compile(r"(?<=[.!?。])\s+|\n+")
 
 
 def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[str, list[str]]:
     """(정리한 답, 뺀 문장). 지시 문장이 없는 검색 결과이면 그대로. 문장 안의 `[chunk_id]` 표시도 함께 사라진다."""
     instr: list[str] = []
+    suspects: list[str] = []
     benign: list[str] = [question]
     for c in chunks:
         for field in ("text", "rule_title", "article"):
             if c.get(field):
                 clean, rem = strip_instructions(str(c[field]), cut_tail=field != "text")
                 instr += rem
-                benign.append(clean)
-    if not instr:
+                rest, sus = split_suspects(clean)
+                suspects += sus
+                benign.append(rest)
+    if not instr and not suspects:
         return answer, []
-    cands = [_norm(x) for x in marker_candidates(instr, "\n".join(benign), {c.get("chunk_id") for c in chunks if c.get("chunk_id")})]
+    real = {c.get("chunk_id") for c in chunks if c.get("chunk_id")}
+    cands = [_norm(x) for x in marker_candidates(instr, "\n".join(benign), real) + suspect_candidates(suspects, "\n".join(benign), real)]
     long_parts = [p for p in (_letters(x) for x in instr) if len(p) >= 15]
     kept, removed = [], []
     for sent in _ANS_SENT.split(answer or ""):

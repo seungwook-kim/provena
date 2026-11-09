@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './components/SessionProvider'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import { useSession } from './lib/session'
@@ -49,8 +49,6 @@ function LiveApprovalsRoute() {
 }
 
 function ChatRoute() {
-  const [params] = useSearchParams()
-  if (import.meta.env.DEV && params.get('demo') === '1') return <Navigate to="/demo/chat" replace />
   return <Protected><DemoOnlyChat /></Protected>
 }
 

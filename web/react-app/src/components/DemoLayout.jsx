@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { History, UserRound, UserRoundPen } from 'lucide-react'
 import { useSession } from '../lib/session'
 import { previewRecallService } from '../lib/recall-service'
@@ -42,11 +42,10 @@ function SessionExitControl({ demoMode }) {
 
 export default function DemoLayout({ active, children }) {
   const location = useLocation()
-  const [params] = useSearchParams()
   const { user } = useSession()
   const [accountOpen, setAccountOpen] = useState(false)
   const accountMenuRef = useRef(null)
-  const demoMode = location.pathname.startsWith('/demo/') || params.get('demo') === '1'
+  const demoMode = location.pathname.startsWith('/demo/')
   const liveRecalls = !demoMode && user ? getLiveServices(user.user_id).recalls : null
   const { unread } = useServiceSnapshot(liveRecalls ?? previewRecallService)
   const showUnread = demoMode || Boolean(liveRecalls)

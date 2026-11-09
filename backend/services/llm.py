@@ -35,6 +35,7 @@ from concurrent.futures import TimeoutError as FutureTimeout
 
 import httpx
 
+import importlib
 import logging
 import json
 import re
@@ -153,6 +154,11 @@ class DeadlineTransport(httpx.BaseTransport):
         response.read()
         return response
 
+    def _log_event(self, message: str, request: httpx.Request, task: str | None, elapsed: float, attempt: int) -> None:
+        """운영에서 보이게 WARNING으로 남긴다. 요청 ID, 단계(`[[task:...]]` 표지 이름), 걸린 시간, 시도 번호만 쓴다. 프롬프트·키·주소는 쓰지 않는다."""
+        stage = task if task is not None else (self._task_of(request) or "-")
+        log.warning("%s request_id=%s stage=%s elapsed_s=%.1f attempt=%d", message, _current_request_id(), stage, elapsed, attempt)
+
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         try:
             attempt = int(request.headers.get("x-stainless-retry-count") or 0)
@@ -168,12 +174,13 @@ class DeadlineTransport(httpx.BaseTransport):
             try:
                 return future.result(timeout=limit)
             except FutureTimeout:
+                self._log_event("LLM 시간 상한 초과(SDK가 재시도)", request, task, limit, attempt)
                 raise self.timeout_exc(f"attempt over {limit}s", request=request) from None
         try:
             return future.result(timeout=hedge)
         except FutureTimeout:
             pass
-        log.info("LLM 요청 %.1f초 무응답: 같은 요청을 하나 더 보낸다", hedge)
+        self._log_event("LLM 무응답: 같은 요청을 하나 더 보냄", request, task, hedge, attempt)
         pending = {future, self.pool.submit(self._fetch, request)}
         left = limit - hedge
         error: BaseException | None = None
@@ -187,6 +194,7 @@ class DeadlineTransport(httpx.BaseTransport):
                 error = f.exception()
         if error is not None and not pending:
             raise error
+        self._log_event("LLM 시간 상한 초과(SDK가 재시도)", request, task, limit, attempt)
         raise self.timeout_exc(f"attempt over {limit}s", request=request)
 
     def close(self) -> None:
@@ -195,6 +203,15 @@ class DeadlineTransport(httpx.BaseTransport):
 
 
 _TASK_MARK = re.compile(r"\[\[task:([a-z_]+)\]\]")
+
+
+def _current_request_id() -> str:
+    """지금 처리 중인 /chat 요청의 ID(`backend.api.middleware`). 요청 밖이거나 못 읽으면 "-"."""
+    try:
+        from backend.api.middleware import current_request_id
+        return current_request_id()
+    except Exception:  # noqa: BLE001 - 로그 한 줄 때문에 LLM 호출이 실패하면 안 된다
+        return "-"
 
 
 def deadline_skip_tasks() -> tuple[str, ...]:
@@ -432,6 +449,27 @@ def _tuned_anthropic() -> Any:
 
         _tuned_anthropic_cls = TaskEffortAnthropic
     return _tuned_anthropic_cls
+
+
+def preload_provider_modules() -> list[str]:
+    """현재 `LLM_PROVIDER`가 첫 호출에 쓰는 무거운 모듈을 미리 올린다(서버 시작 때). 안 올리면 첫 `/chat`이 import 시간(1 vCPU에서 수 초~십수 초)을 떠안는다.
+
+    데모 모드와 claude_cli는 올릴 것이 없다. 제공자에 필요한 것만 올린다(anthropic은 anthropic·langchain_anthropic, openai·openrouter는 langchain_openai).
+    모델 객체나 HTTP 연결은 만들지 않는다(키를 쓰지 않는다). 올린 모듈 이름을 돌려준다."""
+    if is_demo_mode():
+        return []
+    provider = (os.environ.get("LLM_PROVIDER") or "anthropic").strip().lower()
+    if provider == "anthropic":
+        names = ["anthropic", "langchain_anthropic"]
+    elif provider in ("openai", "openrouter"):
+        names = ["langchain_openai"]
+    else:
+        return []
+    for name in names:
+        importlib.import_module(name)
+    if provider == "anthropic":
+        _tuned_anthropic()   # ChatAnthropic 서브클래스 정의와 claude_cli_model import까지(처음 만들 때 한 번)
+    return names
 
 
 def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel:

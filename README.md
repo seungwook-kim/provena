@@ -150,7 +150,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 ```
 
 - `--allow-unauthenticated`는 서비스 주소를 인증 없이 열어 두는 설정이다. 사용자 구분은 앱의 로그인(`/auth/login`)이 한다.
-- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다.
+- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다. 승인 결정(`POST /approvals/{approval_id}`)의 동시 요청 잠금은 Postgres 자문 잠금이라 인스턴스가 여럿이어도 막힌다(로컬에서 같은 DB를 보는 서버 프로세스 2개로 시험, `tests/test_decision_multi_instance.py`). 다만 배포 서비스에서 2개 이상으로 시험한 적은 없고, 로그인 실패 제한 같은 프로세스 안 기록은 인스턴스 사이에서 공유되지 않으므로([docs/specs/login.md](./docs/specs/login.md)) 이 값을 올리기 전에 그 부분을 따로 확인한다.
 - `.gcloudignore`가 없어 소스 업로드 대상은 `.gitignore`를 따른다. `.env`는 `.gitignore`에 있어 올라가지 않으므로 값은 서비스의 환경변수로 따로 넣는다.
 - `PROVENA_ENV`, `PROVENA_DEV_MODE`는 배포에서 설정하지 않는다(로컬 데모 전용 스위치, `.env.example`).
 - 운영 DB(Supabase)의 스키마와 2026-11-09 확인 결과는 [db/db.md](./db/db.md)를 따른다. LangGraph 체크포인트·Store 표는 앱 첫 기동 때 만들어진다.
@@ -164,6 +164,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `DATABASE_DIRECT_URL` | 직접 연결 문자열. 스키마 적용처럼 오래 걸리는 작업에만 쓰고 앱은 읽지 않는다 |
 | `LLM_PROVIDER`, `LLM_API_KEY` | LLM 호출 방식과 키. 키가 없으면 가짜 모델을 쓴다 |
 | `VOYAGE_API_KEY` | 질문 임베딩 키. 없으면 검색은 빈 결과(`no_key`)로 끝난다 |
+| `SEARCH_WARMUP` | 시작할 때 검색 준비를 끝날 때까지 기다릴지(`1` 기다림, `0` 끔, `background` 기다리지 않고 스레드로). 비우면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서는 `1`, 로컬 데모·키 없는 데모·DB 없음에서는 꺼짐. 기다리는 시간은 최대 60초이고 넘거나 실패해도 서버는 뜬다. 기다릴 때는 현재 `LLM_PROVIDER`의 첫 호출용 모듈도 미리 올린다. compose는 비우면 `background` |
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
