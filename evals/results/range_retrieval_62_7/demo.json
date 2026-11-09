@@ -1,0 +1,538 @@
+{
+ "kind": "demo",
+ "k": 5,
+ "range_n_after": 2,
+ "embed_calls": 50,
+ "rows": [
+  {
+   "variant": "A",
+   "amount": "10K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 1만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "외부 SaaS 도입 계약 금액이 1만 달러라면 업무 승인자는 누구야? (procurement, purchase request, new vendor)",
+    "외부 SaaS 도입 계약 금액이 1만 달러라면 재무 승인자는 누구야? (procurement, purchase request, new vendor)"
+   ],
+   "expected_title": "Approving expense > >$0K to $25K",
+   "expected_chunk": "72b09f608ddee143",
+   "before": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "What is Procurement? > Procurement Team Alignment",
+     "Zip - Getting Started > Legal approval / redlines"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 10
+   },
+   "after": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Non Billable Expenses > >$5K",
+     "Approving expense > >$0K to $25K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 12
+   }
+  },
+  {
+   "variant": "A",
+   "amount": "30K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "외부 SaaS 도입 계약 금액이 3만 달러라면 업무 승인자는 누구야? (procurement, purchase request, new vendor)",
+    "외부 SaaS 도입 계약 금액이 3만 달러라면 재무 승인자는 누구야? (procurement, purchase request, new vendor)"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > NDA - Third Party",
+     "What is Procurement? > Procurement Team Alignment"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 10
+   },
+   "after": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving expense > >$25K up to $50K",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": 4,
+    "context_rank": 4,
+    "context_size": 12
+   }
+  },
+  {
+   "variant": "A",
+   "amount": "50K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "외부 SaaS 도입 계약 금액이 5만 달러라면 업무 승인자는 누구야? (procurement, purchase request, new vendor)",
+    "외부 SaaS 도입 계약 금액이 5만 달러라면 재무 승인자는 누구야? (procurement, purchase request, new vendor)"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > Non standard terms > $500k annual revenue"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 12
+   },
+   "after": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 12
+   }
+  },
+  {
+   "variant": "A",
+   "amount": "100K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 10만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "외부 SaaS 도입 계약 금액이 10만 달러라면 업무 승인자는 누구야? (procurement, purchase request, new vendor)",
+    "외부 SaaS 도입 계약 금액이 10만 달러라면 재무 승인자는 누구야? (procurement, purchase request, new vendor)"
+   ],
+   "expected_title": "Approving expense > >$50K up to $250K",
+   "expected_chunk": "96eff1a8c833ff33",
+   "before": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Zip - Getting Started > Legal approval / redlines",
+     "What is Procurement? > Procurement Team Alignment",
+     "How Long Does it take to get my New Software Purchase Approved?"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 10
+   },
+   "after": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Zip - Getting Started > Legal approval / redlines",
+     "Approving expense > >$50K up to $250K",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": 4,
+    "context_rank": 4,
+    "context_size": 12
+   }
+  },
+  {
+   "variant": "A",
+   "amount": "300K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 30만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "외부 SaaS 도입 계약 금액이 30만 달러라면 업무 승인자는 누구야? (procurement, purchase request, new vendor)",
+    "외부 SaaS 도입 계약 금액이 30만 달러라면 재무 승인자는 누구야? (procurement, purchase request, new vendor)"
+   ],
+   "expected_title": "Approving expense > >$250K up to $500K",
+   "expected_chunk": "fdde953c7bca6352",
+   "before": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > NDA - Third Party",
+     "Legal Contracts > Non standard terms > $500k annual revenue"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 12
+   },
+   "after": {
+    "search": [
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving expense > >$250K up to $500K",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": 4,
+    "context_rank": 4,
+    "context_size": 12
+   }
+  },
+  {
+   "variant": "B",
+   "amount": "10K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 1만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "계약 금액이 1만 달러라면 업무 승인자는 누구야?",
+    "계약 금액이 1만 달러라면 재무 승인자는 누구야?"
+   ],
+   "expected_title": "Approving expense > >$0K to $25K",
+   "expected_chunk": "72b09f608ddee143",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Authorization Matrix > Policy Scope",
+     "Legal Contracts > NDA - Third Party"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 8
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$0K to $25K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 8
+   }
+  },
+  {
+   "variant": "B",
+   "amount": "30K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "계약 금액이 3만 달러라면 업무 승인자는 누구야?",
+    "계약 금액이 3만 달러라면 재무 승인자는 누구야?"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Legal Contracts > NDA - Third Party",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 8
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Legal Contracts > NDA - Third Party",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 8
+   }
+  },
+  {
+   "variant": "B",
+   "amount": "50K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "계약 금액이 5만 달러라면 업무 승인자는 누구야?",
+    "계약 금액이 5만 달러라면 재무 승인자는 누구야?"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$0k up to $500k",
+     "Non Billable Expenses > >$50K",
+     "Approving Payment > >$500K and above",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 8
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$0k up to $500k",
+     "Non Billable Expenses > >$50K",
+     "Approving Payment > >$500K and above",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 8
+   }
+  },
+  {
+   "variant": "B",
+   "amount": "100K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 10만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "계약 금액이 10만 달러라면 업무 승인자는 누구야?",
+    "계약 금액이 10만 달러라면 재무 승인자는 누구야?"
+   ],
+   "expected_title": "Approving expense > >$50K up to $250K",
+   "expected_chunk": "96eff1a8c833ff33",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$500K and above",
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 8
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$500K and above",
+     "Legal Contracts > Standard Terms",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$50K up to $250K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 8
+   }
+  },
+  {
+   "variant": "B",
+   "amount": "300K",
+   "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 30만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "sub_queries": [
+    "계약 금액이 30만 달러라면 업무 승인자는 누구야?",
+    "계약 금액이 30만 달러라면 재무 승인자는 누구야?"
+   ],
+   "expected_title": "Approving expense > >$250K up to $500K",
+   "expected_chunk": "fdde953c7bca6352",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$500K and above",
+     "Legal Contracts > Standard Terms",
+     "Legal Contracts > NDA - Third Party",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 8
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "Approving Payment > >$500K and above",
+     "Legal Contracts > Standard Terms",
+     "Approving expense > >$250K up to $500K",
+     "Approving Payment > >$0k up to $500k"
+    ],
+    "search_rank": 4,
+    "context_rank": 4,
+    "context_size": 8
+   }
+  },
+  {
+   "variant": "C",
+   "amount": "10K",
+   "question": "외부 SaaS 계약 금액이 1만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+   "sub_queries": [
+    "외부 SaaS 계약 금액이 1만 달러일 때 승인 권한자는 누구야?",
+    "외부 SaaS 계약 금액이 1만 달러일 때 근거 섹션은 무엇이야?",
+    "외부 SaaS 계약 금액이 1만 달러일 때 근거 섹션의 판 날짜는 언제야?"
+   ],
+   "expected_title": "Approving expense > >$0K to $25K",
+   "expected_chunk": "72b09f608ddee143",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Billing > How can a customer pay via wire transfer for a direct order?"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 5
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving Payment > >$0k up to $500k",
+     "Bad debt write off > Up to $10K"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 7
+   }
+  },
+  {
+   "variant": "C",
+   "amount": "30K",
+   "question": "외부 SaaS 계약 금액이 3만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+   "sub_queries": [
+    "외부 SaaS 계약 금액이 3만 달러일 때 승인 권한자는 누구야?",
+    "외부 SaaS 계약 금액이 3만 달러일 때 근거 섹션은 무엇이야?",
+    "외부 SaaS 계약 금액이 3만 달러일 때 근거 섹션의 판 날짜는 언제야?"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > NDA - Third Party"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 7
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 7
+   }
+  },
+  {
+   "variant": "C",
+   "amount": "50K",
+   "question": "외부 SaaS 계약 금액이 5만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+   "sub_queries": [
+    "외부 SaaS 계약 금액이 5만 달러일 때 승인 권한자는 누구야?",
+    "외부 SaaS 계약 금액이 5만 달러일 때 근거 섹션은 무엇이야?",
+    "외부 SaaS 계약 금액이 5만 달러일 때 근거 섹션의 판 날짜는 언제야?"
+   ],
+   "expected_title": "Approving expense > >$25K up to $50K",
+   "expected_chunk": "9b386ea93519a5a3",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$0k up to $500k",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving Payment > >$500K and above"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 7
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$0k up to $500k",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Approving expense > >$25K up to $50K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 7
+   }
+  },
+  {
+   "variant": "C",
+   "amount": "100K",
+   "question": "외부 SaaS 계약 금액이 10만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+   "sub_queries": [
+    "외부 SaaS 계약 금액이 10만 달러일 때 승인 권한자는 누구야?",
+    "외부 SaaS 계약 금액이 10만 달러일 때 근거 섹션은 무엇이야?",
+    "외부 SaaS 계약 금액이 10만 달러일 때 근거 섹션의 판 날짜는 언제야?"
+   ],
+   "expected_title": "Approving expense > >$50K up to $250K",
+   "expected_chunk": "96eff1a8c833ff33",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$500K and above",
+     "Zip - Getting Started > Legal approval / redlines",
+     "How Long Does it take to get my New Software Purchase Approved?"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 5
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$500K and above",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$50K up to $250K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 7
+   }
+  },
+  {
+   "variant": "C",
+   "amount": "300K",
+   "question": "외부 SaaS 계약 금액이 30만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+   "sub_queries": [
+    "외부 SaaS 계약 금액이 30만 달러일 때 승인 권한자는 누구야?",
+    "외부 SaaS 계약 금액이 30만 달러일 때 근거 섹션은 무엇이야?",
+    "외부 SaaS 계약 금액이 30만 달러일 때 근거 섹션의 판 날짜는 언제야?"
+   ],
+   "expected_title": "Approving expense > >$250K up to $500K",
+   "expected_chunk": "fdde953c7bca6352",
+   "before": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$500K and above",
+     "How Long Does it take to get my New Software Purchase Approved?",
+     "Legal Contracts > Changes to Standard Terms and Vendor Contracts"
+    ],
+    "search_rank": null,
+    "context_rank": null,
+    "context_size": 7
+   },
+   "after": {
+    "search": [
+     "Legal Contracts > Non standard terms > $500k annual revenue",
+     "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+     "Approving Payment > >$500K and above",
+     "Approving Payment > >$0k up to $500k",
+     "Approving expense > >$250K up to $500K"
+    ],
+    "search_rank": 5,
+    "context_rank": 5,
+    "context_size": 7
+   }
+  }
+ ]
+}
