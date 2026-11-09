@@ -8,6 +8,7 @@ CI에는 voyage-4 문서 벡터(23,095 × 1024, 약 95MB)와 Voyage 키가 없�
 하위 질문: v1은 확정 조합 측정의 저장 분해(retrieval_fix_v1/decompose, 11건 나뉨), v2 새 10건은 실험 B의 저장 하위 검색어
 (retrieval_v2_improve/B/subqueries.json, 2~3개인 6건만. 1개면 나누지 않음). 질문 벡터는 모두 저장된 것만 쓴다(Voyage를 부르지 않는다).
 조합: SearchConfig 기본값(voyage-4 · dense_en · 리랭커 없음 · k=5 · L1x2 · 하위 질문마다 2자리 지킴), 필터 없음(as_of·org 비움, #9 측정과 같음).
+입력 파일(재현 zip의 이름·sha256·받는 곳, REPRO_DATA 만드는 법)은 evals/retrieval/retrieval.md "재현 자료"에 있다.
 
     REPRO_DIR=<voyage-4 재현 zip 푼 폴더> REPRO_DATA=<data/chunks·data/parsed가 있는 폴더> \
       python -m evals.retrieval.regress_fixture --n 10 --out tests/fixtures/search_regression
