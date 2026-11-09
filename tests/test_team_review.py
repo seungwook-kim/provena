@@ -297,7 +297,8 @@ def test_same_stance_on_the_same_topic_is_not_a_conflict():
 
 
 # ---------- EC-07 원문 속 지시는 따르지 않는다 ----------
-def test_ec07_injected_text_is_data_and_saving_still_needs_the_interrupt():
+def test_ec07_injected_text_is_data_and_saving_still_needs_the_interrupt(monkeypatch):
+    monkeypatch.setenv("GRAPH_SANITIZE_INPUT", "0")  # 입력 정화(PREREGISTER 62.1, 기본 켬)를 끄고 본다: 지시가 모델까지 가도 저장은 interrupt 뒤에만 된다는 코드 경로 시험
     seen = {}
 
     def finance(u):
