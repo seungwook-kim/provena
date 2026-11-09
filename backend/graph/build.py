@@ -527,7 +527,15 @@ def build_graph(
         has_amount = bool(_AMOUNT_WORD.search(question or "")) or clarify_has_number(question or "")  # 날짜와 이름 속 숫자(2025년, SEV2)는 금액이 아니다
         return has_amount and bool(decision_repo.list_approved() or decision_repo.list_pending())
 
+    def extract_decision_query(question: str) -> dict:
+        """결정표 질문에서 업무 종류와 금액을 뽑는다(LLM 1회). 업무 종류는 승인된 목록 안의 값만(목록 밖 모델 글이 거절 문구로 나가지 않게)."""
+        cats = sorted({t.cells[0]["category"] for t in decision_repo.list_approved() if t.cells})
+        obj, _ = ask_json(DECISION_PARAMS_SYSTEM, params_user(question, cats))
+        return params_from_obj(obj, cats)
+
     def classify(state: AgentState) -> dict:
+        picked: dict = {}   # 결정표 경로로 가기로 한 질문에서 분류 단계가 미리 뽑은 값. `decision_params`가 같은 값을 다시 뽑지 않고 쓴다
+
         def once() -> str:
             obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
             route = (obj or {}).get("route")
@@ -537,6 +545,11 @@ def build_graph(
             route = once()
             if route == "decision" and not decision_ready(state["question"]):  # 결정표를 실행할 수 없는 질문을 거절로 끝내지 않고 핸드북에서 찾는다
                 return "rule"
+            if route == "decision" and decision_repo is not None:
+                query = extract_decision_query(state["question"])
+                if query["task_type"] is None:  # 승인된 표 중 질문이 묻는 업무 종류가 없다(외부 SaaS 도입처럼 표 이름과 바로 맞지 않는 질문). 거절하지 않고 핸드북(금액 구간 검색 포함)에서 찾는다
+                    return "rule"
+                picked.update(query)
             if route == "review" and review_graph is not None and _ASKS_FACT.search(state["question"] or "") and not _REVIEW_WORD.search(state["question"] or ""):  # 사실을 묻는 질문을 승인 대기로 멈추지 않는다
                 return "rule"
             # 도메인 밖은 검색 없이 끝나 뒤 단계가 되돌릴 수 없다. 두 번 다 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다
@@ -545,7 +558,8 @@ def build_graph(
             return route
 
         if not run_parallel:
-            return {"route": decide()}
+            route = decide()
+            return {"route": route, **({"decision_query": picked} if route == "decision" else {})}
 
         # 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
         # 분해 상한을 켜면 분해는 접수 일꾼 밖에서 돈다: 상한을 넘긴 분해가 끝날 때까지 접수가 기다리지 않는다
@@ -567,7 +581,7 @@ def build_graph(
                 capped[1].shutdown(wait=False, cancel_futures=True)
             if spec is not None:  # SP: 예비 분해만 돌았다(판정 전에 경로를 본다). 끝날 때까지 기다려 늦은 호출을 남기지 않는다
                 drain_speculation(spec["future"])
-            return {"route": route}
+            return {"route": route, **({"decision_query": picked} if route == "decision" else {})}
         early = {"rewrite": rewriting.result()} if rewriting is not None else {}  # 순차와 같은 순서로 오류를 올린다: 분류, 재작성, 분해
         if splitting is not None:
             early["decompose"] = list(splitting.result())
@@ -692,10 +706,10 @@ def build_graph(
         return out
 
     def decision_params(state: AgentState) -> dict:
-        """결정표 질문에서 업무 종류와 금액을 뽑는다(LLM 1회). 실행은 다음 노드(LLM 없음)."""
-        cats = sorted({t.cells[0]["category"] for t in decision_repo.list_approved() if t.cells})
-        obj, _ = ask_json(DECISION_PARAMS_SYSTEM, params_user(state["question"], cats))
-        return {"decision_query": params_from_obj(obj, cats)}   # 업무 종류는 승인된 목록 안의 값만(목록 밖 모델 글이 거절 문구로 나가지 않게)
+        """결정표 질문에서 업무 종류와 금액을 뽑는다(LLM 1회). 분류 단계가 이미 뽑았으면(`decision_query`) 그 값을 쓴다. 실행은 다음 노드(LLM 없음)."""
+        if state.get("decision_query"):   # 새 질문마다 `load_memory`가 비우므로 앞 질문의 값이 아니다
+            return {}
+        return {"decision_query": extract_decision_query(state["question"])}
 
     run_decision = make_execute_node(DecisionExecutor(decision_repo)) if decision_repo is not None else None
 
