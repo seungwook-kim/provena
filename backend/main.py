@@ -31,11 +31,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.api.errors import ApiError
-from backend.api.errors import install_error_handlers
+from backend.api.errors import ApiError, install_error_handlers
 from backend.api.middleware import RequestContextMiddleware
 from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
@@ -206,6 +205,9 @@ def create_app(
     app.add_middleware(RequestContextMiddleware)     # 요청 ID와 요청 로그(순수 ASGI, SSE를 버퍼링하지 않는다)
     install_error_handlers(app)                      # 오류 응답 규약
 
+    react_index = WEB_DIR / "react-app" / "dist" / "index.html"
+    app.state.react_index = react_index if react_index.is_file() else None
+
     if revocation_store is not None:
         app.state.token_revocation_store = revocation_store
 
@@ -234,12 +236,14 @@ def create_app(
 
     # 도메인 엔드포인트는 여기(아래 정적 파일 마운트보다 위)에 추가합니다.
 
-    web_root = WEB_DIR / "react-app" / "dist" if (WEB_DIR / "react-app" / "dist" / "index.html").is_file() else WEB_DIR
+    web_root = react_index.parent if app.state.react_index is not None else WEB_DIR
     if (web_root / "index.html").is_file() or (WEB_DIR / "login.html").is_file():
 
-        @app.get("/", include_in_schema=False)
-        def index() -> FileResponse:
-            return FileResponse(web_root / "index.html")
+        @app.get("/", include_in_schema=False, response_model=None)
+        def index() -> FileResponse | RedirectResponse:
+            if app.state.react_index is not None:
+                return FileResponse(app.state.react_index)
+            return RedirectResponse("/login.html")
 
         if web_root != WEB_DIR:
             app.add_api_route("/login.html", lambda: FileResponse(web_root / "index.html"), methods=["GET"], include_in_schema=False)
