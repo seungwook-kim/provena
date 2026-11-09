@@ -628,8 +628,9 @@ def test_search_warmup_is_off_by_default_and_failure_does_not_stop_server(monkey
     pytest.importorskip("fastapi")
     from backend import main
     monkeypatch.delenv("SEARCH_WARMUP", raising=False)
-    assert main.start_search_warmup() is None
-    monkeypatch.setenv("SEARCH_WARMUP", "1")
+    assert main.search_warmup_mode(default_on=False) == "off"       # 기본값이 꺼진 곳(데모·DB 없음)은 건너뛴다. 운영 기본값은 tests/test_startup_warmup.py
+    monkeypatch.setenv("SEARCH_WARMUP", "background")
+    assert main.search_warmup_mode(default_on=False) == "background"
 
     def broken():
         raise RuntimeError("색인이 준비되지 않았다")
