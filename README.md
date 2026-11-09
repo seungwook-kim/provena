@@ -164,6 +164,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `DATABASE_DIRECT_URL` | 직접 연결 문자열. 스키마 적용처럼 오래 걸리는 작업에만 쓰고 앱은 읽지 않는다 |
 | `LLM_PROVIDER`, `LLM_API_KEY` | LLM 호출 방식과 키. 키가 없으면 가짜 모델을 쓴다 |
 | `VOYAGE_API_KEY` | 질문 임베딩 키. 없으면 검색은 빈 결과(`no_key`)로 끝난다 |
+| `SEARCH_WARMUP` | 시작할 때 검색 준비를 끝날 때까지 기다릴지(`1` 기다림, `0` 끔, `background` 기다리지 않고 스레드로). 비우면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서는 `1`, 로컬 데모·키 없는 데모·DB 없음에서는 꺼짐. 기다리는 시간은 최대 60초이고 넘거나 실패해도 서버는 뜬다. 기다릴 때는 현재 `LLM_PROVIDER`의 첫 호출용 모듈도 미리 올린다. compose는 비우면 `background` |
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
