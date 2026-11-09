@@ -10,6 +10,7 @@ Spec: docs/specs/incremental.md. 한 번의 실행:
 (실패 알림은 workflow의 if: failure() 단계가 보낸다 — 파이썬이 중간에 죽어도 알림이 간다).
 목록이 불완전한 날(빈 폴더)은 삭제만 보류하고 성공으로 끝내되 보류 알림을 보내고, 다음 완전한 실행이 보류한 쪽을 다시 확인한다.
 두 커밋을 비교하지 못한 날(커밋 없음·ls-tree 실패)은 실패다.
+관리자가 변경 감시를 멈췄으면(`change_monitoring.status = paused`) 슬롯을 차지하지 않고 noop(reason paused)으로 끝낸다.
 """
 from __future__ import annotations
 
@@ -303,12 +304,25 @@ def finish(conn, run_id: int, status: str, now: datetime, to_commit: str | None,
                   error.kind if error else None, error.detail[:2000] if error else None, run_id))
 
 
+def monitoring_paused(conn) -> bool:
+    """관리자가 변경 감시를 멈췄는가(`PUT /changes/monitoring`, 표는 db/120_answers_recall.sql). 표가 없으면 멈추지 않은 것으로 본다.
+    멈춘 날은 슬롯을 차지하지 않는다 — 다시 켠 뒤 같은 날 실행하면 그대로 돈다."""
+    row = conn.execute("SELECT to_regclass('change_monitoring') IS NOT NULL").fetchone()
+    if not row or not row[0]:
+        return False
+    row = conn.execute("SELECT status FROM change_monitoring WHERE id = 1").fetchone()
+    return bool(row) and row[0] == "paused"
+
+
 def run(conn, *, trigger: str, now: datetime, slot: str | None, model: str, dim: int,
         source: Callable[[str], Source], embed_fn: Callable[[list[str]], np.ndarray], log=print) -> dict:
     """실행 한 번. 반환 {status, run_id, ...}. 실패면 기록을 남기고 SyncError를 다시 던진다(종료 코드 1 → 알림)."""
     conn.execute(SQL.read_text(encoding="utf-8"))
     conn.commit()
     slot = slot or slot_of(now)
+    if monitoring_paused(conn):
+        log("변경 감시가 멈춰 있다(change_monitoring.status = paused) — 아무것도 하지 않는다")
+        return {"status": "noop", "reason": "paused", "slot": slot}
     run_id = claim(conn, slot, trigger, now)
     if run_id is None:
         log(f"슬롯 {slot} 은 이미 시작됨 — 아무것도 하지 않는다")

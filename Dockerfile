@@ -9,6 +9,10 @@ RUN npm run build
 
 FROM python:3.12-slim
 
+# 서버는 root가 아닌 사용자(app, uid 10001)로 돈다. 코드·패키지는 root 소유(읽기 전용)로 두고,
+# 실행 중에 쓰는 곳(data/ 아래 색인 다시 풀기·녹화, HF 캐시, 홈의 ~/.cache)만 app 소유로 둔다
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 WORKDIR /app
 
 COPY backend/requirements.txt backend/requirements-local-models.txt backend/
@@ -24,16 +28,22 @@ ARG SEARCH_EMBED_MODEL=
 ARG SEARCH_EMBED_REVISION=ac6544c8a46e00af67e330e85a9028c66b8cfd9a
 ARG SEARCH_RERANK_MODEL=
 ARG SEARCH_RERANK_REVISION=1427fd652930e4ba29e8149678df786c240d8825
-RUN [ -z "$SEARCH_EMBED_MODEL$SEARCH_RERANK_MODEL" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt \
-    && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; }
+# 받은 모델(HF_HOME)은 같은 단계에서 app 소유로 바꾼다(층이 두 번 쌓이지 않게). 모델이 없으면 빈 폴더만 만든다
+RUN ( [ -z "$SEARCH_EMBED_MODEL$SEARCH_RERANK_MODEL" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt \
+    && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; } ) \
+    && mkdir -p "$HF_HOME" && chown -R app:app "$HF_HOME"
 
 COPY backend/ ./backend/
-COPY data/ ./data/
+# data/는 app 소유로 복사하고 압축 풀기도 app으로 돌려, 풀린 파일(data/corpus, data/index)과 실행 중에 쓰는 임시 폴더
+# (data/index.tmp, 녹화 data/demo_replay)가 모두 app 소유가 되게 한다(chown -R로 큰 층을 다시 쌓지 않는다)
+COPY --chown=app:app data/ ./data/
+USER app
 # 원문 스냅샷은 압축 한 파일로 커밋한다. 이미지를 만들 때 풀고 수집 때 sha256과 같은지 확인한다(다르면 빌드 실패)
 RUN python -m backend.rag.ingest.snapshot unpack
 # 검색 색인도 압축 한 파일(data/index.tar.gz)로 커밋한다. 풀린 data/index/는 .dockerignore로 빼므로 이미지 안에서 풀고
 # meta.json의 sha256과 같은지 확인한다(다르면 빌드 실패). compose의 loader는 ./data/index를 연결하므로 그 폴더가 비어 있으면 시작할 때 다시 푼다
 RUN python -m backend.rag.ingest.snapshot unpack-index
+USER root
 COPY web/ ./web/
 COPY --from=web-build /web/dist/ ./web/react-app/dist/
 RUN cp web/react-app/dist/index.html web/index.html
@@ -44,8 +54,10 @@ COPY skills/ ./skills/
 # MCP 도구(MCP_TOKEN이 있을 때만 /mcp/에 붙음, docs/specs/mcp.md)
 COPY extras/ ./extras/
 
+USER app
 EXPOSE 8000
 # --no-proxy-headers: X-Forwarded-For로 client IP를 바꾸지 않는다. --forwarded-allow-ips=*이면 uvicorn이 맨 앞 값
-# (요청하는 쪽이 마음대로 적을 수 있음)을 IP로 써서 IP별 로그인 실패 제한을 피할 수 있다. 로그인 Spec(직접 peer IP만 씀)과 같게 둔다.
-# Cloud Run에서 실제 접속 IP를 쓰려면 프록시가 붙인 값만 믿는 처리를 로그인 코드에 따로 둔다(docs/specs/login.md 후속 검증 사항)
+# (요청하는 쪽이 마음대로 적을 수 있음)을 IP로 써서 IP별 로그인 실패 제한을 피할 수 있다.
+# 프록시 뒤(Cloud Run)의 실제 접속 IP는 로그인 코드가 TRUSTED_PROXY_HOPS로 X-Forwarded-For 오른쪽에서 N번째 값만 믿어 얻는다
+# (backend/auth.py `_client_ip`, Cloud Run은 1). 기본값 0은 직접 peer IP만 쓴다
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

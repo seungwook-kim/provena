@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | `answer_store.py`에 `PgAnswerStore`(`db/120_answers_recall.sql`)와 `count_by_articles`를 더하고, `find_by_article` 결과에 `thread_id`, `version_date`, `source_url`을 붙였다(리콜이 쓴다). 리콜 구현은 `recall/recall.md` | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `build_graph` 설명의 `SEARCH_DECOMPOSE` 문구를 코드(기본 켬, `decompose_enabled()`)에 맞춤. 동작 변경 없음 | 미정 |
 | 2026-11-02 | 김승욱 (Claude Code) | 단일 에이전트 그래프 v1: `build_graph`, 노드 10개, 재검색 2회 상한, 인용 검사, 근거 판정, 저장, `AgentEvent` 흐름 | 이번 PR |
 

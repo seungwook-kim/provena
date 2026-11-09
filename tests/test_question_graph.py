@@ -53,7 +53,7 @@ def test_normal_answer_with_citation_and_saved():
     assert isinstance(st, AnswerStore)
     found = st.find_by_article(90002, "Incident Response > Paging")
     assert len(found) == 1
-    assert set(found[0]) == {"answer_id", "user_id", "question", "answer", "as_of", "version_id"}
+    assert set(found[0]) >= {"answer_id", "user_id", "question", "answer", "as_of", "version_id"}      # 리콜이 쓰는 thread_id, version_date, source_url이 더 붙는다
     assert found[0]["version_id"] == c.version_id and found[0]["user_id"] == "u1"
     assert st.find_by_article(90002, "Incident Response > Escalation") == []
 

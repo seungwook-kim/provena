@@ -16,6 +16,7 @@ import ApprovalsPage from './pages/ApprovalsPage'
 import AdminPage, { AdminLivePage } from './pages/AdminPage'
 import RecallPage from './pages/RecallPage'
 import { DevAdminUsersPreview, DevProfilePreview } from './pages/DevPreviewPages'
+import { getLiveServices, resetLiveServices } from './lib/live-services'
 
 export default function App() {
   return <BrowserRouter><SessionProvider><SessionRoutes /></SessionProvider></BrowserRouter>
@@ -36,6 +37,16 @@ function FeatureUnavailable({ active, title }) {
   return <DemoLayout active={active}><main className="status-page"><p role="alert">{title}의 실제 업무 API는 아직 연결되지 않았습니다.</p><p>개발용 화면은 <Link to={`/demo/${active}`}>데모 경로</Link>에서 확인할 수 있습니다.</p></main></DemoLayout>
 }
 
+function LiveRecallRoute() {
+  const { user } = useSession()
+  return <RecallPage service={getLiveServices(user.user_id).recalls} isAdmin={user.role === 'admin'} />
+}
+
+function LiveChangeRoute() {
+  const { user } = useSession()
+  return <ChangeMonitoringPage service={getLiveServices(user.user_id).changes} isAdmin={user.role === 'admin'} />
+}
+
 function ChatRoute() {
   const [params] = useSearchParams()
   if (import.meta.env.DEV && params.get('demo') === '1') return <Navigate to="/demo/chat" replace />
@@ -48,6 +59,10 @@ function SessionRoutes() {
   const { pathname, state } = location
   const logoutPending = state?.logoutPending === true
   const previousPath = useRef(pathname)
+
+  useEffect(() => {
+    if (status === 'anonymous') resetLiveServices()
+  }, [status])
 
   useEffect(() => {
     if (previousPath.current !== pathname) {
@@ -63,8 +78,8 @@ function SessionRoutes() {
     <Route path="/myinfo" element={<Protected><ProfileRequiredPage /></Protected>} />
           <Route path="/admin/users" element={<Protected admin><AdminUsersPage /></Protected>} />
     <Route path="/chat" element={<ChatRoute />} />
-    <Route path="/recalls" element={<Protected><FeatureUnavailable active="recalls" title="리콜 알림" /></Protected>} />
-    <Route path="/changes" element={<Protected><FeatureUnavailable active="changes" title="변경 감시" /></Protected>} />
+    <Route path="/recalls" element={<Protected><LiveRecallRoute /></Protected>} />
+    <Route path="/changes" element={<Protected><LiveChangeRoute /></Protected>} />
     <Route path="/approvals" element={<Protected admin><FeatureUnavailable active="approvals" title="승인함" /></Protected>} />
     <Route path="/admin" element={<Protected admin><AdminLivePage /></Protected>} />
     <Route path="/onboarding" element={<Protected><MemorySettingsPage /></Protected>} />

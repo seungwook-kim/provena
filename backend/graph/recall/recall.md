@@ -1,17 +1,70 @@
-# backend/graph/recall/ : 답변 리콜 (F-02)
+# backend/graph/recall/ : 답변 리콜과 변경 감시 (F-02, F-05, F-07, F-08)
 
 ## 이 폴더가 하는 일
 
-바뀐 섹션을 인용한 예전 답을 찾아 결론이 바뀌었는지 판정하고, 받은 사람과 업무시스템(웹훅)에 알린다. 판정 실패는 "확인 필요"로 알린다.
+바뀐 섹션을 인용한 예전 답을 찾아 결론이 바뀌었는지 판정하고, 받은 사람과 업무시스템(웹훅)에 알린다. 판정 실패는 "확인 필요"로 알린다. 링크로 연결된 다른 정책은 관리자에게 "함께 볼 정책" 후보로 만든다. 판정은 답 하나마다 따로 한다(사용자 사이 내용이 섞이지 않는다).
 
 - 주인: 김승욱
-- 입력: 바뀐 섹션 목록(`ChangedArticle`)
-- 출력: 리콜 알림(`RecallNotice`), 함께 볼 정책 후보
+- 입력: 바뀐 섹션 목록(`ChangedArticle`). 증분 수집이 `changed_articles`에 쌓은 줄, 또는 `POST /webhooks/regulation-updated`
+- 출력: 리콜 알림(`RecallNotice` + 화면용 칸), 함께 볼 정책 후보, 웹훅 전송 기록, 하루 요약
+- 요구사항: `docs/PRD.md` F-02, F-05, F-06, F-07, F-08, 6-4 자동화 / `docs/specs/recall.md`
+
+## 모듈
+
+| 파일 | 하는 일 |
+|---|---|
+| `graph.py` | 리콜 그래프(`find_answers` -> `judge` -> `notify`). 기준일이나 인용한 판이 새 판 날짜 이후인 답은 판정하지 않는다. 설명 검사(`guard_explanation`)도 여기서 건다 |
+| `notice.py` | 판정 프롬프트(`recall_explain`, `mail-templates` Skill), `is_affected`, `judge_answer`, `guard_explanation` |
+| `judge.py` | `LLMJudge`(LLM 키가 있을 때), `RuleJudge`(키가 없거나 데모 모드, 섹션 낱말 차이 규칙), `default_judge` |
+| `severity.py` | 중요도(high, low)와 확신도(0~1). 금액·승인자·기한·권한이 바뀌면 high, 문구만 바뀌면 low이고 확신도에 상한을 둔다 |
+| `service.py` | `RecallService`: 개정 한 건 처리(중복 방지, 저장, 후보 만들기, 웹훅 보내기), 알림 JSON 모양(`notice_json`) |
+| `store.py` | 리콜 저장소. `InMemoryRecallStore`(기본), `PgRecallStore`(`db/120_answers_recall.sql`) |
+| `webhook.py` | 업무시스템으로 보내는 웹훅: 서명, 재시도, 전송 기록, 주소 검사 |
+| `feedback.py`, `digest.py` | 사용자 의견("필요 없음")으로 같은 유형의 알림 줄이기, 하루 요약 |
+| `maintenance.py` | 링크 그래프로 "함께 볼 정책" 후보 만들기(개정 하나에 최대 50개) |
+| `monitor.py` | 변경 감시 목록·실행 기록·감시 켜기/멈추기(`InMemoryChangeStore`, `PgChangeStore`) |
+| `acl.py` | 문서 권한 연결 지점(F-06). 기본은 모두 공개이고, DB가 있으면 `chunks.acl`을 읽는다 |
+| `impact.py` | 변경 전 영향 미리보기(F-05). 저장·알림·웹훅 없는 드라이런 |
+| `process_pending.py` | `changed_articles.status = pending` 줄을 리콜에 넘기는 처리기(명령줄) |
+| `runtime.py` | 앱 시작에서 저장소와 서비스를 만든다(`make_answer_store`, `open_recall_runtime`) |
+
+`backend/api/recalls.py`, `backend/api/changes.py`가 이 모듈들을 HTTP로 내보낸다(경로는 `docs/specs/recall.md`). git 없는 변경 감지(F-07)는 `backend/rag/ingest/snapshot_diff.py`다.
+
+## 환경변수
+
+| 이름 | 기본값 / 동작 |
+|---|---|
+| `SERVICE_API_KEY` | `/webhooks/regulation-updated`의 서비스 키. 비면 그 경로는 항상 401 |
+| `RECALL_STORE` | `postgres`이고 `DATABASE_URL`이 있으면 Postgres 저장소. 비우면 메모리(서버를 다시 띄우면 사라짐) |
+| `RECALL_MIN_CONFIDENCE` | 0.5. 확신도가 이보다 낮은 알림은 관리자 검토함으로 가고 사용자에게 보이지 않으며 웹훅도 나가지 않는다 |
+| `RECALL_DIGEST` | 비움 또는 `immediate`면 알림마다 바로 웹훅, `daily`면 하루 요약 한 건으로 묶는다 |
+| `RECALL_FEEDBACK_THRESHOLD` | 2. 같은 사용자·섹션·변경 유형에서 "필요 없음"이 "도움 됨"보다 이 수만큼 많으면 중요도를 한 단계 낮추고, 두 배면 검토함으로 보낸다. 0이면 끈다 |
+| `RECALL_WEBHOOK_SECRET`, `RECALL_WEBHOOK_SECRET_<이름>` | 웹훅 서명 키. 비면 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서만 서명 없이 보내고, 그 밖에서는 보내지 않고 전송 기록에 `failed`(`secret_missing`)로 남긴다 |
+| `RECALL_WEBHOOK_MAX_TRIES`, `RECALL_WEBHOOK_BACKOFF_S`, `RECALL_WEBHOOK_TIMEOUT_S` | 3번, 1.0초(이후 두 배씩), 5초 |
+
+## 처리기 실행
+
+```
+python -m backend.graph.recall.process_pending [--limit 50] [--force]
+```
+
+`changed_articles`에서 `pending`인 줄을 오래된 순으로 처리하고 `sent`(또는 실패하면 `failed`)로 바꾼다. 이미 처리한 개정은 다시 판정하지 않는다. 변경 감시가 `paused`이면 아무것도 하지 않는다(`--force`는 무시). 관리자 `POST /recalls/process-pending`은 감시 스위치와 무관하게 한 번 처리한다. 스냅샷 비교 결과를 넣으려면 `python -m backend.rag.ingest.snapshot_diff --feed`를 쓴다.
+
+## 한계
+
+- 규칙 판정(`RuleJudge`)은 재현율을 앞세워 정밀도가 LLM 판정보다 낮을 수 있다. 문구만 달라진 개정은 낮은 확신도로 검토함에 간다.
+- 판정 설명은 저장 전에 검사한다. 설명이 판정 지시문(20자 이상 겹침)이나 `CANARY-` 표지를 담거나 다른 사용자의 id·질문을 담으면 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다.
+- 판정이 "결론 그대로"라고 해도 코드 규칙(`severity.py`)이 금액·승인자·기한·권한 변경이나 섹션 신설·삭제라고 보면(개정 본문에 심어 둔 "영향 없음" 문장에 판정이 따랐을 수 있다) 알림을 버리지 않는다. `needs_review`, `review_reason="judge_disagrees_with_rule"`, 설명 맨 앞 "[판정 실패, 확인 필요]"로 관리자 검토함에 두고 실패 목록에 남기며, 사용자 목록과 웹훅에는 나가지 않는다. 문구만 바뀐 개정은 이전처럼 알림이 없다.
+- 문서 권한(F-06)은 연결 지점만 있다. 지금 `chunks.acl`이 모두 비어 있어 모두 공개로 동작하고, 권한 확인에 실패하면 그 알림은 숨긴다.
+- 함께 볼 정책 후보의 이유는 코드로만 만든다(LLM 초안 없음). 판정 비용 집계는 답마다 따로 한다.
+- 영향 미리보기의 입력은 바뀐 섹션 목록(`changes`)과 두 판(`pages`)이다. git 커밋이나 unified diff를 직접 받지는 않는다.
+- 메모리 저장소는 프로세스가 끝나면 사라진다. 운영은 `RECALL_STORE=postgres`와 `db/120_answers_recall.sql` 적용이 필요하다.
 
 ## 작업 기록 (최신이 위)
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | 리콜 그래프·판정기·저장소·웹훅·검토함·하루 요약·의견·함께 볼 정책 후보·변경 감시·영향 미리보기와 라우터를 구현하고 `db/120_answers_recall.sql`을 더했다. 판정 설명 검사(지시문·표지·다른 사용자 값)와 판정·코드 규칙 불일치 교차 검사를 넣었다. 시험은 `tests/test_recall_*.py`, `test_api_recalls.py`, `test_api_changes.py`, `test_snapshot_diff.py`와 실제 Postgres용 `test_recall_pg.py`(`PROVENA_TEST_DATABASE_URL`이 있을 때만) | 미정 |
 
 ## 문제 기록 (최신이 위)
 

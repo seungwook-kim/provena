@@ -76,7 +76,7 @@ export async function login(loginId, password) {
 }
 
 export async function acknowledgeRecall(recallId) {
-  await apiRequest(`/recalls/${recallId}/ack`, { method: 'POST' })
+  return apiJson(`/recalls/${encodeURIComponent(recallId)}/ack`, { method: 'POST', headers: await csrfHeaders() })
 }
 
 export async function logout() {
@@ -124,16 +124,43 @@ export function getMemory() { return apiJson('/me/memory', { suppressUnauthorize
 async function csrfHeaders() {
   await apiRequest('/auth/csrf')
   const token = readCsrfToken()
-  if (!token) throw new ApiError('CSRF token unavailable. Please try again.', 0, 'csrf_unavailable')
+  if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return { 'X-CSRF-Token': decodeURIComponent(token) }
 }
 
 export async function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, headers: await csrfHeaders(), body: JSON.stringify(value) }) }
 export async function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true, headers: await csrfHeaders() }) }
-export function getRecalls() { return apiJson('/recalls') }
+export function getRecalls({ suppressUnauthorized = false } = {}) { return apiJson('/recalls', { suppressUnauthorized }) }
+export function getRecall(noticeId) { return apiJson(`/recalls/${encodeURIComponent(noticeId)}`) }
+export function getRecallDigests() { return apiJson('/recalls/digests', { suppressUnauthorized: true }) }
+export async function reviewRecall(noticeId, action) {
+  return apiRequest(`/recalls/${encodeURIComponent(noticeId)}/review`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ action }) })
+}
+export async function sendRecallFeedback(noticeId, useful, reason = null) {
+  return apiJson(`/recalls/${encodeURIComponent(noticeId)}/feedback`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ useful, reason }) })
+}
 export function getApprovals() { return apiJson('/approvals') }
 export function getDecisionTables() { return apiJson('/decision-tables') }
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }
+export async function decideMaintenanceCandidate(candidateId, status) {
+  return apiJson(`/maintenance-candidates/${encodeURIComponent(candidateId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
+}
+export async function postImpactPreview(payload) {
+  return apiJson('/impact-preview', { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(payload) })
+}
+export function getChanges({ since, limit, offset } = {}) {
+  const params = new URLSearchParams()
+  if (since) params.set('since', since)
+  if (limit != null) params.set('limit', String(limit))
+  if (offset != null) params.set('offset', String(offset))
+  const query = params.toString()
+  return apiJson(`/changes${query ? `?${query}` : ''}`)
+}
+export function getChangeDetail(eventId) { return apiJson(`/changes/${encodeURIComponent(eventId)}`) }
+export function getChangeMonitoring() { return apiJson('/changes/monitoring') }
+export async function putChangeMonitoring(status) {
+  return apiJson('/changes/monitoring', { method: 'PUT', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
+}
 
 export async function submitApproval(approvalId, approve, comment = '') {
   await apiRequest(`/approvals/${approvalId}`, {
