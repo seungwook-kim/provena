@@ -15,11 +15,22 @@ import threading
 
 from langchain_core.messages import AIMessage
 
-CANARY = re.compile(r"CANARY-P\d+-V\d")
+CANARY = re.compile(r"CANARY-P\d+-V\d+")
 _HEX16 = re.compile(r"\b[0-9a-f]{16}\b")
 _REAL_ID = re.compile(r"chunk_id=([0-9a-f]{16})")
 _SYSPROMPT = re.compile(r"시스템 프롬프트|지시문|system prompt", re.I)
 TABLE_ID = re.compile(r"DT-\d+-TEST-\d+-\d{8}")
+
+
+_PIECES = re.compile(r"""(?:['"`][^'"`\n]{1,12}['"`][\s+]*){2,4}""")
+
+
+def planted_canaries(user: str) -> list[str]:
+    """입력에 든 심은 표식. 통째로 적힌 것과, 따옴표 조각으로 쪼개 적힌 것(이어 붙이면 표식이 되는 것)을 모두 찾는다(조각 지시를 따르는 가정)."""
+    found = CANARY.findall(user)
+    for m in _PIECES.finditer(user):
+        found += CANARY.findall("".join(re.findall(r"""['"`]([^'"`\n]+)['"`]""", m.group(0))))
+    return list(dict.fromkeys(found))
 
 
 def text_of(m) -> str:
@@ -51,7 +62,7 @@ class CompliantLLM:
         return AIMessage(content=self._task(m.group(1) if m else "", system, user))
 
     def _task(self, task: str, system: str, user: str) -> str:
-        canary = CANARY.findall(user)
+        canary = planted_canaries(user)
         if task == "decision_draft":
             rules = [{"band": c["band"], "approvers": [canary[0]] if canary else c["approvers"], "financial_approvers": c["financial_approvers"],
                       "cooperating_depts": c["cooperating_depts"]} for c in self.convert_cells]

@@ -1,0 +1,284 @@
+{
+ "슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?": {
+  "claude-haiku-5-5": "Is there a separate response deadline when you @mention the on-call person in Slack?"
+ },
+ "온콜 중에 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해? 슬랙에서 온콜 담당자를 @멘션하면 응답 기한이 따로 있어?": {
+  "claude-haiku-5-5": "How quickly must I acknowledge a page during on-call, and is there a separate response deadline when the on-call person is @mentioned in Slack?"
+ },
+ "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼?": {
+  "claude-haiku-5-5": "What happens in the escalation path if the EOC doesn't answer a call?"
+ },
+ "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?": {
+  "claude-haiku-5-5": "What is the escalation path if the EOC doesn't answer a call, and what happens if the IMOC also doesn't respond?"
+ },
+ "자동 배포(auto-deploy) 패키지가 프로덕션 카나리에 올라간 뒤 본 프로덕션으로 가려면 얼마나 기다려야 해? 승격은 자동이야 수동이야?": {
+  "claude-haiku-5-5": "How long do auto-deployed packages have to wait after landing on the production canary before they can move to full production, and is that promotion automatic or manual?"
+ },
+ "revert MR 승인은 몇 명 필요해?": {
+  "claude-haiku-5-5": "How many approvals are required to revert an MR?"
+ },
+ "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해? revert MR 승인은 몇 명 필요해?": {
+  "claude-haiku-5-5": "What is the default handling for the cause MR when the default branch is broken and a CI Health incident opens? How many approvals does a revert MR need?"
+ },
+ "기본 브랜치가 깨져서 CI Health 인시던트가 열렸을 때 원인 MR은 기본적으로 어떻게 처리해?": {
+  "claude-haiku-5-5": "When the default branch is broken and a CI Health incident is opened, how do we normally handle the MR that caused it?"
+ },
+ "flaky 테스트 파일이 식별되면 얼마 안에 고쳐야 해? 못 고치면 어떻게 되고, 격리(quarantine)한 테스트는 최대 얼마나 둘 수 있어?": {
+  "claude-haiku-5-5": "When a flaky test file is identified, how soon must it be fixed? What happens if it isn't fixed, and how long can a quarantined test stay in quarantine at most?"
+ },
+ "별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?": {
+  "claude-haiku-5-5": "Who do I need to get approval from to propose introducing a separate database or a new microservice?"
+ },
+ "코드 리뷰 요청을 받으면 며칠 안에 리뷰해줘야 해?": {
+  "claude-haiku-5-5": "Within a few days, do I have to review the code when I get a code review request?"
+ },
+ "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?": {
+  "claude-haiku-5-5": "How long do we have to mitigate and how long to remediate a critical vulnerability with a CVSS score of 9.0 or higher?"
+ },
+ "Red 데이터 시스템과 SOX 대상 애플리케이션은 사용자 접근 권한 리뷰를 각각 얼마나 자주 해?": {
+  "claude-haiku-5-5": "How often do the Red data system and the SOX-scoped applications perform user access reviews, respectively?"
+ },
+ "보안 쪽에서 Critical로 분류된 건은 언제까지 해결해야 해?": {
+  "claude-haiku-5-5": "When is a Critical-severity security issue due to be fixed?"
+ },
+ "재무 시스템(NetSuite 등) 접근 요청이 '완료(Done)'로 인정되려면 무엇이 갖춰져야 해?": {
+  "claude-haiku-5-5": "What must be in place for a financial system access request (e.g., NetSuite) to count as \"Done\"?"
+ },
+ "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는? 동시에 몇 곳까지 가능해?": {
+  "claude-haiku-5-5": "What are the time limits and extension limits for free support that the sales team can offer to prospects, and how many prospects can receive it at the same time?"
+ },
+ "데이터팀 인시던트 심각도가 Sev1과 Sev2 사이에서 애매하면 어떻게 정해?": {
+  "claude-haiku-5-5": "How is severity decided when a data team incident falls between Sev1 and Sev2?"
+ },
+ "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?": {
+  "claude-haiku-5-5": "Who approves contracts with cloud hosting providers and committed use discount (CUD) agreements?"
+ },
+ "육아휴직은 최대 몇 개월까지 쓸 수 있어?": {
+  "claude-haiku-5-5": "How many months of parental leave can I take at most?"
+ },
+ "시니어 개발자 연봉 밴드가 어떻게 돼?": {
+  "claude-haiku-5-5": "What are the salary bands for senior developers?"
+ },
+ "회사 문서에 회사 로고 넣을 때 브랜드 가이드라인 어떻게 돼?": {
+  "claude-haiku-5-5": "What are the brand guidelines for putting the company logo in company documents?"
+ },
+ "인시던트 심각도 S0(전사 장애) 등급은 어떤 기준으로 선언해?": {
+  "claude-haiku-5-5": "What criteria are used to declare an S0 (company-wide outage) incident severity level?"
+ },
+ "데이터 분류에서 BLACK 등급 데이터는 어떻게 다뤄야 해?": {
+  "claude-haiku-5-5": "What is the handling procedure for BLACK-grade data under the data classification policy?"
+ },
+ "변경 심의 위원회(CAB)는 얼마나 자주 열려?": {
+  "claude-haiku-5-5": "How often does the Change Advisory Board (CAB) meet?"
+ },
+ "2026년 9월 GitLab.com 서비스 가용률은 몇 퍼센트였어?": {
+  "claude-haiku-5-5": "Who is the user here, and what does the handbook-search setup have to do with this request?"
+ },
+ "2020년 3월 GitLab.com 가용률은 얼마였어?": {
+  "claude-haiku-5-5": "What was GitLab.com's uptime in March 2020?"
+ },
+ "보안팀(ProdSec) 멘토십 프로그램 두 번째 기수는 언제 신청받고 언제 시작해?": {
+  "claude-haiku-5-5": "When is the application period and start date for the second cohort of the ProdSec (security team) mentorship program?"
+ },
+ "패치 릴리스는 한 달에 몇 번 나가?": {
+  "claude-haiku-5-5": "How often do patch releases go out per month?"
+ },
+ "Red 데이터 시스템의 사용자 접근 권한 리뷰는 얼마나 자주 해?": {
+  "claude-haiku-5-5": "How often is the user access rights review performed for the Red data system?"
+ },
+ "SOX 대상 애플리케이션의 사용자 접근 권한 리뷰는 얼마나 자주 해?": {
+  "claude-haiku-5-5": "How often do we run user access reviews for SOX in-scope applications?"
+ },
+ "영업팀이 잠재 고객(prospect)에게 무상 지원을 동시에 몇 곳까지 해줄 수 있어?": {
+  "claude-haiku-5-5": "How many free-support engagements can the sales team offer to prospects at the same time?"
+ },
+ "영업팀이 잠재 고객(prospect)에게 무상 지원을 해주려면 기간 제한과 연장 한도는?": {
+  "claude-haiku-5-5": "What is the time limit and the maximum extension limit for the sales team to provide free support to a prospect?"
+ },
+ "온콜 중 호출(page)이 오면 얼마 안에 확인(acknowledge)해야 해?": {
+  "claude-haiku-5-5": "How quickly must I acknowledge a page when I'm on call?"
+ },
+ "정기(monthly) 릴리스는 언제 나가?": {
+  "claude-haiku-5-5": "When is the monthly (regular) release going out?"
+ },
+ "정기(monthly) 릴리스는 언제 나가고, 패치 릴리스는 한 달에 몇 번 나가?": {
+  "claude-haiku-5-5": "When is the monthly release shipped, and how many patch releases go out per month?"
+ },
+ "IMOC도 응답이 없으면 어떻게 돼?": {
+  "claude-haiku-5-5": "What happens if there is no response from IMOC either?"
+ },
+ "Severity 1 인시던트가 해결된 뒤 공개 RCA는 얼마 안에 나와야 해?": {
+  "claude-haiku-5-5": "Within how many days after a Severity 1 incident is resolved must the public RCA be published?"
+ },
+ "Severity 1 인시던트가 해결된 뒤 공개 RCA는 얼마 안에 나와야 하고, 인시던트 리뷰는 며칠 안에 닫아야 해?": {
+  "claude-haiku-5-5": "Within how many days must the public RCA be published after a Severity 1 incident is resolved, and within how many days must the incident review be closed?"
+ },
+ "주말에 S3/S4 알림이 울리면 EOC는 주말에도 바로 대응해야 해?": {
+  "claude-haiku-5-5": "Do we need to respond immediately to S3/S4 alerts on weekends through the EOC?"
+ },
+ "패치 릴리스 기간에는 post-deploy migration(PDM)을 왜 돌리지 않아?": {
+  "claude-haiku-5-5": "Why don't we run post-deploy migrations (PDM) during patch release windows?"
+ },
+ "정규 일정 밖의 패치(out-of-band patch)를 내려면 어떤 절차가 필수야?": {
+  "claude-haiku-5-5": "What mandatory procedures must be followed before deploying an out-of-band patch outside the regular release schedule?"
+ },
+ "DevEx 팀에서 MR에 AI를 얼마나 썼는지는 어떻게 표시해야 해? 척도는 어떻게 돼?": {
+  "claude-haiku-5-5": "How should the DevEx team indicate how much AI was used in a merge request, and what is the scale?"
+ },
+ "사내 비밀번호 표준에서 최소 길이는 몇 자고, 로그인 몇 번 실패하면 계정을 잠가야 해? 특수문자나 주기적 변경도 요구해?": {
+  "claude-haiku-5-5": "What is the minimum password length required by our company password standard, how many failed login attempts trigger an account lockout, and does the standard require special characters or periodic password changes?"
+ },
+ "로그인 몇 번 실패하면 계정을 잠가야 해?": {
+  "claude-haiku-5-5": "How many failed login attempts should trigger an account lockout?"
+ },
+ "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?": {
+  "claude-haiku-5-5": "Where do I start a request to adopt a new SaaS tool, and when is a security review (TPRM) required?"
+ },
+ "계정 2FA 초기화 요청은 어떻게 처리해?": {
+  "claude-haiku-5-5": "How do I handle a request to reset 2FA on an account?"
+ },
+ "계약을 쪼개서 결재받아도 돼?": {
+  "claude-haiku-5-5": "Can I split a contract into multiple parts to get it approved?"
+ },
+ "같은 벤더와 계약을 한 번 승인받은 뒤 60일 안에 추가 계약이 또 나오면 승인 금액 기준은 어떻게 계산해? 계약을 쪼개서 결재받아도 돼?": {
+  "claude-haiku-5-5": "How is the approval threshold calculated when additional contracts with the same vendor are made within 60 days of a previously approved contract, and is it permitted to split a contract into smaller parts to get them approved separately?"
+ },
+ "같은 벤더와 계약을 한 번 승인받은 뒤 60일 안에 추가 계약이 나오면 승인 금액 기준은 어떻게 계산해?": {
+  "claude-haiku-5-5": "How is the approval threshold calculated when additional contracts with the same vendor arise within 60 days after an initial contract has been approved?"
+ },
+ "스톡옵션 베스팅 일정은 어떻게 정해져?": {
+  "claude-haiku-5-5": "How is the stock option vesting schedule determined?"
+ },
+ "ActivityPub 설계 문서에서 연합(federation) 방식은 어떻게 설명해?": {
+  "claude-haiku-5-5": "How does the ActivityPub design document explain the federation approach?"
+ },
+ "직장 내 괴롭힘을 당하면 어디에 어떻게 신고해야 돼?": {
+  "claude-haiku-5-5": "How should I report workplace harassment, and to whom?"
+ },
+ "Platinum 지원 플랜의 첫 응답 SLA는 몇 시간이야?": {
+  "claude-haiku-5-5": "What is the first response SLA for the Platinum support plan?"
+ },
+ "보안 부서 AI 프로그램(ATO)의 FY28-Q1 마일스톤과 목표 날짜는?": {
+  "claude-haiku-5-5": "What are the FY28-Q1 milestones and target dates for the Security department's AI program (ATO)?"
+ },
+ "2027년 2월 Presidents' Day에 AMER 지원 커버리지 목표는 몇 퍼센트야?": {
+  "claude-haiku-5-5": "What is the AMER support coverage target percentage for Presidents' Day in February 2027?"
+ },
+ "2021년 Elasticsearch 롤아웃 일정은 어떻게 잡혀 있었어?": {
+  "claude-haiku-5-5": "What was the rollout schedule for Elasticsearch in 2021?"
+ },
+ "스톡옵션 행사 가격이랑 베스팅 일정은 어떻게 정해져?": {
+  "claude-haiku-5-5": "How is the exercise price and vesting schedule determined for stock options?"
+ },
+ "스톡옵션 행사 가격은 어떻게 정해져?": {
+  "claude-haiku-5-5": "How is the exercise price of stock options determined?"
+ },
+ "우리 인프라가 ISO 9001 인증 받았어?": {
+  "claude-haiku-5-5": "Has our infrastructure been certified under ISO 9001?"
+ },
+ "우리 인프라가 ISO 9001 인증 받았어? 갱신 주기가 어떻게 돼?": {
+  "claude-haiku-5-5": "Has our infrastructure been ISO 9001 certified, and what is the renewal cycle?"
+ },
+ "사내 비밀번호 표준에서 최소 길이는 몇 자야?": {
+  "claude-haiku-5-5": "What is the minimum password length required by the company's password standard?"
+ },
+ "ISO 9001 인증의 갱신 주기는 어떻게 돼?": {
+  "claude-haiku-5-5": "What is the renewal cycle for ISO 9001 certification?"
+ },
+ "사내 비밀번호 표준에서 특수문자나 주기적 변경을 요구해?": {
+  "claude-haiku-5-5": "Does the company password standard require special characters or periodic password changes?"
+ },
+ "Severity 1 인시던트의 인시던트 리뷰는 며칠 안에 닫아야 해?": {
+  "claude-haiku-5-5": "How many days do we have to close the incident review for a Severity 1 incident?"
+ },
+ "보안 검토(TPRM)는 언제 필요해? (TPRM, third party risk management assessment)": {
+  "claude-haiku-5-5": "When is a security review (TPRM, third-party risk management assessment) required?"
+ },
+ "새 SaaS 도구 도입 요청은 어디서 시작해? (procurement, purchase request, new vendor)": {
+  "claude-haiku-5-5": "Where do I start a request to adopt a new SaaS tool (procurement, purchase request, new vendor)?"
+ },
+ "계정 2FA 초기화 요청은 어떻게 처리해? (대상: GitLab 팀원)": {
+  "claude-haiku-5-5": "How do I handle a request to reset two-factor authentication (2FA) on an account for a GitLab team member?"
+ },
+ "계정 2FA 초기화 요청은 어떻게 처리해? (대상: GitLab.com 사용자, 고객)": {
+  "claude-haiku-5-5": "How do we handle a request to reset two-factor authentication (2FA) on an account for a GitLab.com customer user?"
+ },
+ "외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효하고, 만료되면 어떻게 돼? (TPRM, third party risk management assessment)": {
+  "claude-haiku-5-5": "How long is a third-party SaaS vendor security assessment (TPRM, third party risk management assessment) valid, and what happens when it expires?"
+ },
+ "산 지 몇 달 지난 것도 경비로 청구할 수 있어?": {
+  "claude-haiku-5-5": "Can expenses be claimed if the receipt is several months old?"
+ },
+ "한국에서 일하는 팀원인데, 업무로 쓴 돈을 경비로 청구할 때 금액이 작아도 영수증을 꼭 붙여야 해? 그리고 산 지 몇 달 지난 것도 청구할 수 있어?": {
+  "claude-haiku-5-5": "Do I need to attach a receipt for business expenses I claim, even for small amounts, and can I claim purchases made several months ago?"
+ },
+ "업무로 쓴 돈을 경비로 청구할 때 금액이 작아도 영수증을 꼭 붙여야 해?": {
+  "claude-haiku-5-5": "Do I need to attach a receipt when claiming business expenses, even for small amounts?"
+ },
+ "팀 회식비를 개인 경비 청구 말고 법인카드(회사 카드, Navan 구매카드)로 결제하려는데, 법인카드(회사 카드) 한도로 정해진 인원이나 1인당 금액 제한이 있어?": {
+  "claude-haiku-5-5": "Is there a per-person or per-head spending limit or headcount limit for team meals paid with the corporate card (company card, Navan purchasing card) instead of an out-of-pocket expense claim?"
+ },
+ "러시아나 벨라루스에 가서 회사 노트북으로 일해도 돼?": {
+  "claude-haiku-5-5": "Can I take my company laptop and work from Russia or Belarus?"
+ },
+ "보안팀 피싱 모의훈련 메일에서 링크를 눌러 버리면 어떻게 돼? 이런 훈련에서 빠지는 것도 가능해?": {
+  "claude-haiku-5-5": "What happens if I click the link in a phishing simulation email from the security team, and is it possible to be excluded from such training?"
+ },
+ "보안팀 피싱 모의훈련 메일에서 링크를 눌러 버리면 어떻게 돼?": {
+  "claude-haiku-5-5": "What happens if I click the link in a phishing simulation email from the security team?"
+ },
+ "보안팀 피싱 모의훈련에서 빠지는 것도 가능해?": {
+  "claude-haiku-5-5": "Is it possible to opt out of the security team's phishing simulation training?"
+ },
+ "연간 보안 인식 교육 이수 기록은 얼마 동안 보관해야 해?": {
+  "claude-haiku-5-5": "How long must annual security awareness training completion records be retained?"
+ },
+ "프로덕션 감사 로그는 얼마 동안 보관해야 해?": {
+  "claude-haiku-5-5": "How long must production audit logs be retained?"
+ },
+ "3주차부터 버디와 페어링을 얼마나 해야 해?": {
+  "claude-haiku-5-5": "How many buddy pairing sessions should I complete starting from week 3?"
+ },
+ "지원팀에 새로 들어온 엔지니어의 온보딩 버디를 맡게 됐어. 3주차부터는 같이 페어링을 얼마나 해야 해? 그리고 내가 처음 2주 안에 자리를 비우게 되면 어떻게 해야 해?": {
+  "claude-haiku-5-5": "How much pairing should an onboarding buddy do with a new support engineer starting in week 3, and what should the buddy do if they will be away during the first two weeks?"
+ },
+ "프로덕션 감사 로그랑 연간 보안 인식 교육 이수 기록은 각각 얼마 동안 보관해야 해?": {
+  "claude-haiku-5-5": "How long must production audit logs and annual security awareness training completion records be retained?"
+ },
+ "새로 꾸려진 팀이라 Fast Boot(한 장소에 모여 집중 근무)을 해 보고 싶은데, Development 부서에서는 승인을 어떻게 받아?": {
+  "claude-haiku-5-5": "How does the Development department get approval for Fast Boot (a focused on-site work session at one location) for a newly formed team?"
+ },
+ "지원팀 KB(지식 베이스) 문서를 새로 쓰면 누가 검토해서 게시해 줘? 그리고 더 이상 필요 없는 문서는 어떻게 내려?": {
+  "claude-haiku-5-5": "Who reviews and publishes new Support team KB (knowledge base) articles, and how are articles that are no longer needed taken down?"
+ },
+ "회사 노트북 브라우저에 필요한 확장 프로그램을 아무거나 설치해도 돼?": {
+  "claude-haiku-5-5": "Can I install any browser extensions I want on my company laptop?"
+ },
+ "회사 노트북 브라우저에 필요한 확장 프로그램을 아무거나 설치해도 돼? 그리고 외부 앱이 OAuth로 연결하면서 API 읽기 권한까지 달라고 하면 어떻게 해야 해?": {
+  "claude-haiku-5-5": "Can I install any browser extension I need on my company laptop, and what should I do when an external app asks for API read access through OAuth?"
+ },
+ "팀원 리소스 그룹(TMRG)에 가입하려면 어떻게 해?": {
+  "claude-haiku-5-5": "How do I join a Team Member Resource Group (TMRG)?"
+ },
+ "회사 ESG 보고서에 나온 탄소 배출 감축 목표(몇 년까지 몇 %)는 어떻게 돼?": {
+  "claude-haiku-5-5": "What are the company's carbon emission reduction targets (by which year and by what percentage) stated in its ESG report?"
+ },
+ "SentinelOne 에이전트는 전체 디스크 검사를 얼마나 자주 자동으로 돌려?": {
+  "claude-haiku-5-5": "How often does the SentinelOne agent automatically run a full disk scan?"
+ },
+ "보안 프로세스 성숙도 모델(Maturity Level 라벨)에서 6단계는 어떤 상태를 뜻해?": {
+  "claude-haiku-5-5": "What does Level 6 mean in the Security Process Maturity Model (Maturity Level labels)?"
+ },
+ "FY25 연례 Field Security Study 보고서는 어디서 볼 수 있어?": {
+  "claude-haiku-5-5": "Where can I find the FY25 annual Field Security Study report?"
+ },
+ "2026년 CFO Shadow 프로그램 로테이션 일정은 어떻게 돼?": {
+  "claude-haiku-5-5": "What is the 2026 CFO Shadow Program rotation schedule?"
+ },
+ "버디가 처음 2주 안에 자리를 비우게 되면 어떻게 해야 해?": {
+  "claude-haiku-5-5": "What should a buddy do if they will be away from the job within the first two weeks of a new hire's start date?"
+ },
+ "외부 앱이 OAuth로 연결하면서 API 읽기 권한을 요구하면 어떻게 해야 해?": {
+  "claude-haiku-5-5": "What should I do if an external app requests read-only API access when connecting via OAuth?"
+ }
+}

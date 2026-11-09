@@ -56,3 +56,43 @@ describe('DemoChatPage thread selection after reload', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('대화를 불러오지 못했습니다.')
   })
 })
+
+// 배포 화면 빈 화면(11/9 실측): 답을 받는 도중 다른 메뉴로 가면 채팅 화면 정리 코드가 오류를 내 화면 전체가 하얗게 됐다.
+describe('DemoChatPage leaving while an answer is streaming', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+  it('keeps the app on screen when the user moves to another menu mid-answer', async () => {
+    window.history.replaceState({}, '', '/chat')
+    document.cookie = 'provena_csrf=test-token'
+    let chatSignal
+    vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([])
+      if (path === '/auth/csrf') return new Response(null, { status: 204 })
+      if (path === '/chat') {
+        chatSignal = options.signal
+        const body = new ReadableStream({ start(controller) {
+          controller.enqueue(new TextEncoder().encode('event: token\ndata: {"type":"token","thread_id":"t2","data":{"text":"답변 앞부분"}}\n\n'))
+          options.signal?.addEventListener('abort', () => controller.error(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+        } })
+        return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      }
+      return json({ items: [], threads: [] })
+    }))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { container } = render(<App />)
+    fireEvent.change(await screen.findByRole('textbox', { name: '질문' }), { target: { value: '연차는 며칠인가요?' } })
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    // 새 대화는 답이 끝나야 본문에 열린다 → 받는 중임은 목록에 생긴 대화와 '답변 중지' 버튼으로 확인
+    expect(await screen.findByRole('button', { name: '연차는 며칠인가요?' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '답변 중지' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('link', { name: /변경 감시/ }))
+
+    await vi.waitFor(() => expect(window.location.pathname).toBe('/changes'))
+    expect(chatSignal.aborted).toBe(true)
+    expect(container.textContent.trim().length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: /채팅/ })).toBeTruthy()
+    expect(consoleError.mock.calls.flat().join(' ')).not.toContain('abort is not a function')
+  })
+})

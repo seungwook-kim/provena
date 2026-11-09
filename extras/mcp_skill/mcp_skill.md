@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-검색을 읽기 전용 MCP 도구 3개(`search_handbook`, `get_section`, `list_changed_sections`)로 연다. 도구는 `backend/rag/`의 함수를 감싸기만 한다. 가산은 MCP와 Skill을 둘 다 해야 인정된다(가이드 p.20).
+검색을 읽기 전용 MCP 도구 6개(검색 3개 `search_handbook`, `get_section`, `list_changed_sections`와 `explain_decision`, `get_agent_trace`, `get_grounding`)로 연다. 도구는 `backend/rag/`의 함수를 감싸기만 한다. 가산은 MCP와 Skill을 둘 다 해야 인정된다(가이드 p.20).
 더해서 승인된 결정표 실행 결과(`explain_decision`, 결정표 실행기 그대로), 대화의 에이전트 실행 단계(`get_agent_trace`, 체크포인트 읽기), 저장된 답의 근거 판정 기록(`get_grounding`, 답 저장소 읽기)을 읽기 전용으로 연다. 모두 6개.
 
 - 주인: 박진형 (`get_grounding`은 김승욱)
@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-09 | 김승욱 (Claude Code) | 개요의 "도구 3개"를 현재 도구 6개로 고침(`docs/specs/mcp.md`, `backend/requirements.txt` 주석도 같이). 동작 변경 없음 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | 읽기 전용 도구 `get_grounding` 추가(팀장 결정, 결정 0062, 도구 6개): `grounding_tool.py`, `register()` 방식. 답 저장소의 `get_grounding`을 읽기만 하고 판정 결과·규칙 건수·쓴 Skill·인용 id만 내보냄. 비공개 주소 가리기를 그래프와 같은 `backend/rag/retrieve/privacy.py`로 옮김, 클라이언트에 `section_via_mcp` 추가. 시험 `tests/test_mcp_new_tools.py` | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | 읽기 전용 도구 2개 추가(조장 요청, 도구 5개): `explain_decision`(`decision_tool.py`, 그래프·HTTP와 같은 `DecisionExecutor.run`을 그대로 부르고 HTTP `RunResponse` 칸만 내보냄, 승인자 id 없음, 실행기 오류 → 상태)·`get_agent_trace`(`trace_tool.py`, thread_id로 체크포인트를 읽기만 해 노드 순서·단계 시간·Supervisor 결정·합동 검토 팀 상태·승인 대기, 비용은 기록이 없어 null). 저장소는 `DATABASE_URL`로 처음 부를 때 연다(`server.pg_pool`). 시험 `test_mcp_decision_tool.py` 32개·`test_mcp_trace_tool.py` 17개(실제 그래프·메모리 체크포인터), 변이 6/6. `build.py`·`search.py`·조장 파일은 안 건드림 | 이 PR |
 | 2026-11-05 | 박진형 (jinyeong-731, Claude Code) | #51 리뷰 반영: 서버 `search_handbook`에 `sub_queries`(선택, 2~3개, 개수·길이가 틀리면 `invalid`) 칸, 클라이언트는 그대로 보냄(열린 항목 7 닫음). `.env.example`에 `MCP_URL` | 이 PR |

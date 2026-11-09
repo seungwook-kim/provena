@@ -34,6 +34,39 @@ class MonitoringBody(BaseModel):
     status: Literal["active", "paused"]
 
 
+class ChangeItem(BaseModel):
+    """`GET /changes`의 `items` 한 건(`change_json`의 반환과 같은 칸). 명세용이며 응답을 걸러내지 않는다."""
+    event_id: str | None = None
+    rule_seq: int
+    article: str | None = None
+    page_title: str | None = None
+    old_version_date: str | None = None
+    new_version_date: str | None = None
+    change_type: str | None = None
+    status: str | None = None
+    created_at: str
+    source_url: str | None = None
+    impacted_answer_count: int
+
+
+class ChangeLastRun(BaseModel):
+    run_id: str | int | None = None
+    status: str | None = None
+    finished_at: str | None = None
+    to_commit: str | None = None
+    list_complete: bool | None = None
+
+
+class ChangesResponse(BaseModel):
+    """`GET /changes` 응답 칸(명세용). `total`·`counts`는 저장소가 못 세면 null이다."""
+    items: list[ChangeItem]
+    last_run: ChangeLastRun | None
+    more: bool
+    monitoring: Literal["active", "paused"]
+    total: int | None
+    counts: dict[str, int] | None
+
+
 def _store(request: Request) -> Any:
     st = getattr(request.app.state, "change_store", None)
     if st is None:
@@ -82,7 +115,7 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
     current_user = create_current_user_dependency(store=store, secret=secret, revocation_store=revocation_store)
     admin_user = create_require_admin_dependency(store=store, secret=secret, revocation_store=revocation_store)
 
-    @router.get("/changes", response_model=None)
+    @router.get("/changes", response_model=None, responses={200: {"model": ChangesResponse, "description": "화면 주소를 직접 열면 HTML이 온다."}})
     def list_changes(request: Request, since: str | None = Query(None, max_length=10),
                      limit: int = Query(50, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0, le=1_000_000)):
         if (page := spa_page(request)) is not None:   # 화면 주소를 직접 열면 로그인 확인 전에 화면을 준다(/approvals와 같은 규칙)

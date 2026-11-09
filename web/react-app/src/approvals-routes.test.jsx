@@ -152,6 +152,20 @@ describe('live approvals route', () => {
     expect(requestsTo('GET', '/approvals')).toHaveLength(2)
   })
 
+  it('does not carry a reason typed for one item over to another item', async () => {
+    open('/approvals')
+    await screen.findByRole('heading', { name: '원문 대조' })
+    await userEvent.type(screen.getByLabelText(/^사유/), 'A건에 쓴 사유')
+    await userEvent.click(screen.getByRole('button', { name: /결정표 승인 요청: Travel/ }))
+    await screen.findByText('원문과 다른 칸이 없습니다. (원문 칸 3개)')
+    expect(screen.getByLabelText(/^사유/).value).toBe('')
+    expect(screen.getByRole('button', { name: '반려하기' }).disabled).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
+    await screen.findByText('승인했습니다.')
+    expect(JSON.parse(requestsTo('POST', '/approvals/dec-2')[0].options.body)).toEqual({ approval_id: 'dec-2', approve: true, comment: '' })
+  })
+
   it('shows the issue table by team with its unreviewed teams and no department review form', async () => {
     open('/approvals')
     await userEvent.click(await screen.findByRole('button', { name: /합동 검토 쟁점표/ }))

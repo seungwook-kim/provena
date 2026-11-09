@@ -127,6 +127,15 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 ### 키 없이 뜨는 데모 모드
 
 - `DEMO_MODE=1`(기본)이면 LLM 키 없이 기록해 둔 응답(`data/demo_replay/`)을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다. 검색 색인은 위 절차대로 `loader`가 `data/index.tar.gz`(없으면 `INDEX_URL`)를 풀어 적재하며, 색인이 없으면 질문은 거절로 끝난다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
+- 녹화는 LLM 응답과 질문 임베딩(voyage-4 벡터) 두 가지다. 키가 없으면 새 질문의 벡터를 만들 수 없으므로, **녹화한 질문만 키 없이 답이 나온다.** 녹화에 없는 질문은 "검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다."라는 거절로 끝난다. 다른 질문을 시험하려면 `.env`에 `LLM_API_KEY`와 `VOYAGE_API_KEY`를 넣고 `DEMO_MODE=0`으로 바꾼다.
+- 키 없이 인용 답이 나오는 질문(녹화 2026-11-09, `data/demo_replay/recorded.jsonl`). 글자가 같아야 재생된다(공백 차이는 무시).
+  - 제3자가 프로덕션 데이터에 접근하거나 영향을 줄 수 있다면 보안 검토가 필요한가요?
+  - CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?
+  - 클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?
+  - EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?
+  - 외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요? (데모 구간 01, 승인 권한표 2023-05판 인용)
+- 키 없이 거절이 나오는 질문(녹화에도 거절): "구매 승인에는 어떤 승인자가 필요한가요?"(핸드북에 승인자 근거가 없다), "오늘 점심 메뉴 추천해줘"(범위 밖). 구간 01의 금액만 바꾼 질문(3만 달러, 10만 달러)도 녹화했으나 근거를 찾지 못해 거절로 끝난다.
+- 재생하는 답은 같은 색인(`data/index.tar.gz`)에서 녹화한 것이다. 색인이나 프롬프트를 바꾸면 다시 녹화한다: 새 DB(`docker compose down -v` 뒤)에서 키를 넣은 `.env`에 `DEMO_MODE=0`, `LLM_RECORD=1`을 적고 서버를 띄워 같은 질문을 `/chat`으로 보낸다(서버가 쓰는 프롬프트 그대로 `data/demo_replay/recorded.jsonl`에 쌓인다. 이미 있으면 지우고 시작한다).
 - DB는 compose가 띄우는 로컬 pgvector 컨테이너이고 Supabase 계정이 필요 없다.
 - 로그인은 필수이므로 데모 모드에는 **데모 전용 계정 2개**(user, admin)가 들어 있다. `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1`이 모두 켜진 로컬 실행에서만 시작할 때 만들어지고, 그 밖의 모드(배포)에서는 만들지 않는다.
 - 데모 계정 값은 내 PC용 공개 데모 값이다. 서명 키(`AUTH_SECRET`)는 저장소에 두지 않고, 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만든다(재시작하면 다시 로그인). 배포(Cloud Run)와 제출하는 평가용 계정은 이 값과 다르고 저장소에 적지 않는다.
@@ -141,7 +150,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 ```
 
 - `--allow-unauthenticated`는 서비스 주소를 인증 없이 열어 두는 설정이다. 사용자 구분은 앱의 로그인(`/auth/login`)이 한다.
-- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다.
+- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다. 승인 결정(`POST /approvals/{approval_id}`)의 동시 요청 잠금은 Postgres 자문 잠금이라 인스턴스가 여럿이어도 막힌다(로컬에서 같은 DB를 보는 서버 프로세스 2개로 시험, `tests/test_decision_multi_instance.py`). 다만 배포 서비스에서 2개 이상으로 시험한 적은 없고, 로그인 실패 제한 같은 프로세스 안 기록은 인스턴스 사이에서 공유되지 않으므로([docs/specs/login.md](./docs/specs/login.md)) 이 값을 올리기 전에 그 부분을 따로 확인한다.
 - `.gcloudignore`가 없어 소스 업로드 대상은 `.gitignore`를 따른다. `.env`는 `.gitignore`에 있어 올라가지 않으므로 값은 서비스의 환경변수로 따로 넣는다.
 - `PROVENA_ENV`, `PROVENA_DEV_MODE`는 배포에서 설정하지 않는다(로컬 데모 전용 스위치, `.env.example`).
 - 운영 DB(Supabase)의 스키마와 2026-11-09 확인 결과는 [db/db.md](./db/db.md)를 따른다. LangGraph 체크포인트·Store 표는 앱 첫 기동 때 만들어진다.
@@ -155,6 +164,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `DATABASE_DIRECT_URL` | 직접 연결 문자열. 스키마 적용처럼 오래 걸리는 작업에만 쓰고 앱은 읽지 않는다 |
 | `LLM_PROVIDER`, `LLM_API_KEY` | LLM 호출 방식과 키. 키가 없으면 가짜 모델을 쓴다 |
 | `VOYAGE_API_KEY` | 질문 임베딩 키. 없으면 검색은 빈 결과(`no_key`)로 끝난다 |
+| `SEARCH_WARMUP` | 시작할 때 검색 준비를 끝날 때까지 기다릴지(`1` 기다림, `0` 끔, `background` 기다리지 않고 스레드로). 비우면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서는 `1`, 로컬 데모·키 없는 데모·DB 없음에서는 꺼짐. 기다리는 시간은 최대 60초이고 넘거나 실패해도 서버는 뜬다. 기다릴 때는 현재 `LLM_PROVIDER`의 첫 호출용 모듈도 미리 올린다. compose는 비우면 `background` |
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
@@ -259,6 +269,7 @@ Dockerfile, docker-compose.yml   `docker compose up` 한 줄 실행
 - 서비스(`/chat`)가 쓰는 그래프는 단일 질문 그래프(`backend/graph/build.py`의 `build_graph`) 하나다. 질의 분석(`classify`)이 질문을 정책 질문, 결정표, 팀 합동 검토, 도메인 밖 거절로 갈라 보낸다(`backend/main.py`의 `build_question_graph`).
 - Supervisor와 서브에이전트 3개(검색·작성·검증)로 나눈 멀티 그래프(`backend/graph/multi.py`)는 정책 질문 경로에서 **단일 그래프와 같은 노드와 프롬프트를 Supervisor 아래에 다시 연결한 형태**다. 노드를 복사하지 않고 단일 그래프에서 꺼내 쓰며, 같은 입력에서 최종 상태·LLM 입력·검색 호출이 단일과 같은지 시험이 확인한다(`tests/test_multi_graph.py`의 `test_multi_ends_exactly_like_single`, `test_agents_use_the_single_graph_nodes_not_copies`). 그래서 이 경로에서 역할을 나눈 것이 답을 바꾸도록 설계된 것은 아니며, 단일 대 멀티 측정에서도 차이는 같은 조건 3회의 흔들림 안이었다([EVAL_REPORT.md](./EVAL_REPORT.md) 4장). `backend/` 안에서 `build_multi_graph`를 부르는 코드는 없고 측정 실행기와 시험이 쓴다.
 - 역할이 실제로 나뉜 경로는 **팀 합동 검토**다. 보안·인프라·IT 운영·재무 팀 에이전트 4개가 팀마다 다른 프롬프트와 검색어로 쟁점을 내고 한 표로 합친다(`backend/graph/departments/`). 이 경로는 단일 그래프 대비 측정이 없다.
+- 왜 그래프로 만들었는지와 질문 종류 판정이 틀리는 한계(측정한 오분류 사례와 측정하지 못한 경우)는 [EVAL_REPORT.md](./EVAL_REPORT.md) 4장 "왜 그래프인가"와 5장 5-2절의 "분류 오류" 행에 있다.
 
 ## 시크릿 규칙 (위반 시 전원에게 노출됩니다)
 

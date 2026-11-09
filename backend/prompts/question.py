@@ -364,8 +364,12 @@ def _strip_marks(text: object) -> str:
 
 def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
     """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다. 머리(제목·절)도 문서 front matter에서 오므로 같이 지운다."""
+    from backend.graph import untrusted as U  # 입력 정화(GRAPH_SANITIZE_INPUT, 기본 꺼짐): 원문의 모델 상대 지시 문장을 입력에서 뺀다. 꺼져 있으면 바뀌는 것이 없다
+
     parts = []
     for c in chunks:
+        if U.sanitize_enabled():
+            c = U.sanitize_chunk(c)
         text = _strip_marks(c.get("text", ""))
         head = _strip_marks(
             f"chunk_id={c.get('chunk_id')} | {c.get('org')} {c.get('rule_title')} "

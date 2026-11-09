@@ -7,7 +7,7 @@
 점수가 거의 같은 청크는 순서만 바뀔 수 있어 측정 코드(check_stored)처럼 집합으로 비교한다.
 측정은 필터 없이 전체 청크에서 찾았으므로(exp_decompose_v1 make_search) as_of·org를 비운다.
 
-입력 파일이 없는 환경(CI·팀원 PC)에서는 실패하지 않고 건너뛴다(조장 지시). 저장소에 올리지 않는 파일:
+입력 파일이 없는 환경(CI·팀원 PC)에서는 실패하지 않고 건너뛴다(조장 지시). 저장소에 올리지 않는 파일(받는 곳은 evals/retrieval/retrieval.md "재현 자료"):
   REPRO_DIR(기본 data/index_exp): voyage-4.npy, chunk_ids.json, voyage-4.queries.json  ← 조장이 준 zip
   REPRO_DATA(기본 저장소 루트): data/chunks/chunks.jsonl, data/parsed/document_ir.jsonl  ← 수집·파싱·청킹 결과
     REPRO_DIR=<zip 푼 폴더> REPRO_DATA=<data가 있는 폴더> pytest tests/test_search_v2_repro.py -v
