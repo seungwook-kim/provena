@@ -150,7 +150,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 ```
 
 - `--allow-unauthenticated`는 서비스 주소를 인증 없이 열어 두는 설정이다. 사용자 구분은 앱의 로그인(`/auth/login`)이 한다.
-- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다.
+- `--max-instances 1`은 인스턴스를 최대 1개로 제한한다. 승인 결정(`POST /approvals/{approval_id}`)의 동시 요청 잠금은 Postgres 자문 잠금이라 인스턴스가 여럿이어도 막힌다(로컬에서 같은 DB를 보는 서버 프로세스 2개로 시험, `tests/test_decision_multi_instance.py`). 다만 배포 서비스에서 2개 이상으로 시험한 적은 없고, 로그인 실패 제한 같은 프로세스 안 기록은 인스턴스 사이에서 공유되지 않으므로([docs/specs/login.md](./docs/specs/login.md)) 이 값을 올리기 전에 그 부분을 따로 확인한다.
 - `.gcloudignore`가 없어 소스 업로드 대상은 `.gitignore`를 따른다. `.env`는 `.gitignore`에 있어 올라가지 않으므로 값은 서비스의 환경변수로 따로 넣는다.
 - `PROVENA_ENV`, `PROVENA_DEV_MODE`는 배포에서 설정하지 않는다(로컬 데모 전용 스위치, `.env.example`).
 - 운영 DB(Supabase)의 스키마와 2026-11-09 확인 결과는 [db/db.md](./db/db.md)를 따른다. LangGraph 체크포인트·Store 표는 앱 첫 기동 때 만들어진다.

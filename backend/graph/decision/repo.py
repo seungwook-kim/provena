@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Literal, Protocol
 
@@ -33,7 +35,8 @@ KIND = "decision_table"
 ISSUE_KIND = "issue_table"
 TEAM_FAILED_KIND = "team_review_failed"
 REVIEW_KINDS = (ISSUE_KIND, TEAM_FAILED_KIND)
-SUPERSEDED_COMMENT = "같은 대화의 합동 검토가 다음 단계로 넘어가 이 승인 건은 더 재개할 수 없다."
+LOCK_WAIT_SECONDS = 120   # 같은 승인 건의 앞 요청이 끝나기를 기다리는 최대 시간(`PostgresDecisionRepo.decision_lock`)
+SUPERSEDED_COMMENT ="같은 대화의 합동 검토가 다음 단계로 넘어가 이 승인 건은 더 재개할 수 없다."
 Status = Literal["pending", "approved", "rejected"]
 
 
@@ -224,6 +227,23 @@ class PostgresDecisionRepo:
     def _table(r: dict) -> DecisionTable:
         return DecisionTable(table_id=r["table_id"], rule_seq=r["rule_seq"], version_id=r["version_id"], cells=r["cells"],
                              status=r["status"], approved_by=r["approved_by"])
+
+    @contextmanager
+    def decision_lock(self, approval_id: str) -> Iterator[None]:
+        """같은 승인 건의 결정 처리(그래프 재개 포함)를 인스턴스 사이에서도 하나씩 하게 하는 DB 잠금. 블록이 끝나면 풀린다.
+
+        `approvals` 행 잠금(`FOR UPDATE`)은 결정을 적는 짧은 순간만 지켜서, 두 인스턴스가 둘 다 `pending`을 본 채 그래프를 두 번 재개하는 것은 못 막는다.
+        그래서 행이 아닌 자문 잠금 하나를 요청 전체에 건다. 행 잠금을 쓰면 재개 중 `decide()`가 같은 행을 기다려 스스로 막힌다.
+        - 연결은 풀과 따로 연다: 풀(최대 4개)에서 잠금용 연결을 잡으면 동시 요청이 몰릴 때 그래프가 쓸 연결이 없어 서로 기다린다.
+        - 세션 잠금이 아닌 트랜잭션 잠금(`pg_advisory_xact_lock`)이다: 트랜잭션 모드 풀러(Supabase)는 요청마다 서버 연결이 바뀌어 세션 잠금을 보장하지 못한다.
+        - 기다림은 `LOCK_WAIT_SECONDS`까지다. 넘으면 오류로 올라와 호출한 쪽이 503으로 돌려준다."""
+        import psycopg
+
+        kwargs = {**self.pool.kwargs, "autocommit": False, "connect_timeout": 5}
+        with psycopg.connect(self.pool.conninfo, **kwargs) as conn:
+            conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT_SECONDS}s'")
+            conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"approval-decision:{approval_id}",))
+            yield
 
     def queue_draft(self, thread_id: str, table: DecisionTable, summary: str) -> ApprovalRecord:
         from psycopg.rows import dict_row

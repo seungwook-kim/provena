@@ -15,7 +15,8 @@
   합동 검토를 질문 그래프의 하위 그래프로 돌리면 `app.state.review_graph`에는 그 질문 그래프를 둔다. 같은 체크포인터에서 대화를 시작한 그래프로 재개해야 한다.
 - 재개 뒤 저장 실패: 사람 결정은 체크포인트에 남고 승인 건은 `pending`인 채 그래프가 `finalize` 앞에 멈춘다. 503(`save_failed`)으로 알리고, 승인함에는 `save_failed: true`로 보인다.
   같은 결정을 다시 보내면 그 노드만 다시 돈다(저장은 같은 번호로 두 번 돌아도 한 건). 다른 결정은 409다. 이미 접수된 결정을 말없이 바꾸지 않는다.
-- 같은 승인 건에 동시에 온 요청은 프로세스 안에서 하나씩 처리한다(`_decision_lock`). 뒤 요청은 끝난 건의 재전송으로 처리되어 그래프를 다시 재개하지 않는다.
+- 같은 승인 건에 동시에 온 요청은 하나씩 처리한다(`_decision_lock`). 프로세스 안은 스레드 잠금, 인스턴스 사이는 Postgres 자문 잠금(`pg_advisory_xact_lock`)이 막는다.
+  뒤 요청은 끝난 건의 재전송으로 처리되어 그래프를 다시 재개하지 않는다. 잠금을 못 잡으면(대기 시간 초과, DB 오류) 503(`save_failed`)이다.
 - 팀 실패 알림의 결정 뒤에는 그래프가 다음 단계로 이어져 응답의 `next_approval`에 다음 승인 건이 온다. 다음 단계에서 실패하면 같은 503이고 같은 결정을 다시 보내면 이어서 돈다.
 """
 from __future__ import annotations
@@ -26,7 +27,7 @@ import os
 import threading
 import weakref
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -401,7 +402,7 @@ def create_decision_router(
         _csrf: None = Depends(require_csrf), body: Any = Depends(_json_body),
     ) -> DecisionResult:
         repo = _state(request, "decision_repo")
-        with _decision_lock(approval_id), _decide_errors(approval_id):   # 같은 승인 건의 동시 요청은 차례로: 뒤 요청은 끝난 건으로 보고 재개하지 않는다
+        with _decide_errors(approval_id), _decision_lock(approval_id, repo):   # 같은 승인 건의 동시 요청은 인스턴스가 달라도 차례로: 뒤 요청은 끝난 건으로 보고 재개하지 않는다
             rec = repo.get_approval(approval_id)
             if rec.kind == TEAM_FAILED_KIND:
                 value = _parse_team_action(approval_id, body, admin)
@@ -427,15 +428,19 @@ _DECISION_LOCKS: "weakref.WeakValueDictionary[str, threading.Lock]" = weakref.We
 
 
 @contextmanager
-def _decision_lock(approval_id: str) -> Iterator[None]:
-    """같은 승인 건의 결정 요청을 이 프로세스 안에서 하나씩 처리한다. 없으면 동시에 온 같은 결정 두 건이 둘 다 `pending`을 보고
-    그래프를 두 번 재개했다(저장은 승인 건 번호로 한 건이지만 재개 노드가 두 번 돈다). 여러 인스턴스 사이는 막지 못한다."""
+def _decision_lock(approval_id: str, repo: Any = None) -> Iterator[None]:
+    """같은 승인 건의 결정 요청을 하나씩 처리한다. 없으면 동시에 온 같은 결정 두 건이 둘 다 `pending`을 보고
+    그래프를 두 번 재개했다(저장은 승인 건 번호로 한 건이지만 재개 노드가 두 번 돈다).
+    프로세스 안은 스레드 잠금이 막고, 저장소가 Postgres면 DB 자문 잠금(`PostgresDecisionRepo.decision_lock`)이 인스턴스 사이도 막는다.
+    메모리 저장소는 프로세스 하나뿐이므로 스레드 잠금만 쓴다."""
     with _LOCKS_GUARD:
         lock = _DECISION_LOCKS.get(approval_id)
         if lock is None:
             lock = _DECISION_LOCKS[approval_id] = threading.Lock()
     with lock:
-        yield
+        db_lock = getattr(repo, "decision_lock", None)
+        with db_lock(approval_id) if db_lock is not None else nullcontext():
+            yield
 
 
 @contextmanager
