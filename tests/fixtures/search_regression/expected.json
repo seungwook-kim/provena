@@ -1,6 +1,6 @@
 {
  "made_by": "python -m evals.retrieval.regress_fixture --n 10 --gold-per-ref 2 --dtype float16",
- "made_at": "2026-11-07T19:50:02",
+ "made_at": "2026-11-09T21:22:59",
  "checked_with": {
   "corpus_version": [
    "129243bc"
@@ -23,8 +23,8 @@
   "n": 10,
   "gold_per_ref": 2,
   "dtype": "float16",
-  "n_rows": 598,
-  "n_gold_added": 7,
+  "n_rows": 596,
+  "n_gold_added": 5,
   "n_query_texts": 76,
   "sub_queries_from": {
    "v1": "retrieval_fix_v1/decompose/decomposition.json",
@@ -37,16 +37,16 @@
   "voyage-4.queries.json": "a3ae85faaa1d22db962e44d1d84beae354a38c498c4bb2bce95d510bfb074845",
   "chunks.jsonl": "0244da138fc9a8c1f04fd4a56ff6244e2dc4cdc28392482e3a196a9435498c38",
   "dataset_v1.jsonl": "174996b9b499da38f739f700854e919bf7f122c3bbffb6c73021d31a1e9f4332",
-  "dataset_v2.jsonl": "c0d55f99677bc3dd86f99ee6c2845c3afb58b06a82516b448b6f7e6d36338c76"
+  "dataset_v2.jsonl": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f"
  },
  "files_sha256": {
-  "rows.jsonl": "fbee2e42595387d6ddbb89b5038bab0b5cf38160186cce96bf01ed54d301795e",
-  "doc_vecs.npy": "90de6e74f5f70eabcda8c2dd4372a5145e64db9e1a5118059e8c0545e4292400",
+  "rows.jsonl": "e58c95e2b8ac5e60c96ff46c6b2fad9c6d89cae2be543379eadf54828cd61b66",
+  "doc_vecs.npy": "20f29c92234769b2cf11a324a0968f02137be2dccda660a4c20c79972805585a",
   "query_vecs.npy": "4216928c43c6e3897edcdc9ea44a03ced4e6ac68e324ae47a3bb39ae8b2fccaa",
   "queries.json": "192df765ae19f89be70503817006dcb9b62847fc6234074cbd828cf15e5da87d"
  },
  "summary": {
-  "recall@5": 0.9233333333333333,
+  "recall@5": 0.9133333333333333,
   "n_scored": 25
  },
  "rows": [
@@ -728,8 +728,8 @@
     "96259aa02a1a1ea6"
    ],
    "scored": true,
-   "recall@5": 0.25,
-   "first_hit_rank": 2,
+   "recall@5": 0.0,
+   "first_hit_rank": null,
    "n_sub": 2,
    "n_link": 0,
    "mode": "dense_en"
