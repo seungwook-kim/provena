@@ -91,12 +91,14 @@ def open_persistence(
     from psycopg.rows import dict_row
     from psycopg_pool import ConnectionPool
 
-    # autocommit: setup()의 마이그레이션이 필요로 한다. prepare_threshold=0: Supabase 풀러(트랜잭션 모드)가 준비된 문장을 못 쓴다
+    # autocommit: setup()의 마이그레이션이 필요로 한다.
+    # prepare_threshold=None: 준비된 문장을 쓰지 않는다. Supabase 풀러(트랜잭션 모드)는 요청마다 서버 연결이 바뀌어
+    # 준비된 문장을 찾지 못한다("prepared statement ... does not exist"). 0은 "처음부터 준비"라 반대 동작이다.
     pool = ConnectionPool(
         url,
         min_size=POOL_MIN,
         max_size=POOL_MAX,
-        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row},
         open=False,
     )
     pool.open(wait=True, timeout=15)
