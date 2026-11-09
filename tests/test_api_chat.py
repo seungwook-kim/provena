@@ -178,3 +178,44 @@ def test_chat_is_503_when_the_runtime_did_not_open(monkeypatch):
         for r in (c.post("/chat", json={"message": Q}), c.get("/threads"), c.get("/me/memory")):
             assert r.status_code == 503 and r.json()["error"]["code"] == "not_configured"
         assert c.get("/health").status_code == 200
+
+
+def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch, tmp_path):
+    # CI의 Python-only 실행처럼 React dist가 없는 legacy 정적 화면도 확인한다.
+    web_dir = tmp_path / "web"
+    web_dir.mkdir()
+    (web_dir / "login.html").write_text("legacy", encoding="utf-8")
+    monkeypatch.setattr("backend.main.WEB_DIR", web_dir)
+    with Env(monkeypatch) as env:
+        client = env.client(env.alice)
+        unknown = client.post("/does-not-exist", json={})
+        assert unknown.status_code == 404
+        assert unknown.json()["error"]["code"] == "not_found"
+
+        wrong_method = client.post("/threads")
+        assert wrong_method.status_code == 405
+        assert wrong_method.json()["error"]["code"] == "method_not_allowed"
+
+
+def test_legacy_root_redirects_when_react_dist_is_missing(monkeypatch, tmp_path):
+    web_dir = tmp_path / "web"
+    web_dir.mkdir()
+    (web_dir / "login.html").write_text("legacy", encoding="utf-8")
+    monkeypatch.setattr("backend.main.WEB_DIR", web_dir)
+    with Env(monkeypatch) as env:
+        response = env.client(env.alice).get("/", follow_redirects=False)
+    assert response.status_code == 307 and response.headers["location"] == "/login.html"
+
+
+def test_react_root_and_approvals_accept_headers_are_separated(monkeypatch, tmp_path):
+    web_dir = tmp_path / "web"
+    index = web_dir / "react-app" / "dist" / "index.html"
+    index.parent.mkdir(parents=True)
+    index.write_text("<div id=\"root\">react</div>", encoding="utf-8")
+    monkeypatch.setattr("backend.main.WEB_DIR", web_dir)
+    with Env(monkeypatch) as env:
+        client = env.client(env.alice)
+        assert client.get("/").status_code == 200
+        assert client.get("/", headers={"Accept": "text/html"}).text == index.read_text(encoding="utf-8")
+        assert client.get("/approvals", headers={"Accept": "text/html"}).text == index.read_text(encoding="utf-8")
+        assert client.get("/approvals", headers={"Accept": "application/json"}).status_code == 403

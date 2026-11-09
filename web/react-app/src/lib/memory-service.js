@@ -25,3 +25,30 @@ export const previewMemoryService = createMemoryService({
     return { ...DEFAULT_SETTINGS }
   },
 })
+
+export function mapApiMemoryResponse(value = {}, fallback = DEFAULT_SETTINGS) {
+  const profile = value.profile && typeof value.profile === 'object' ? value.profile : value
+  return {
+    ...DEFAULT_SETTINGS,
+    ...fallback,
+    team: typeof profile.affiliation === 'string' ? profile.affiliation : fallback.team,
+    role: typeof profile.rank === 'string' ? profile.rank : fallback.role,
+  }
+}
+
+export const apiMemoryService = createMemoryService({
+  getMemorySettings: async () => {
+    const { getMemory } = await import('./api')
+    return mapApiMemoryResponse(await getMemory())
+  },
+  saveMemorySettings: async (_ownerId, settings) => {
+    const { patchMemory } = await import('./api')
+    const response = await patchMemory({ affiliation: settings.team, rank: settings.role })
+    return mapApiMemoryResponse(response, settings)
+  },
+  resetMemorySettings: async () => {
+    const { deleteMemory } = await import('./api')
+    await deleteMemory()
+    return { ...DEFAULT_SETTINGS }
+  },
+})
