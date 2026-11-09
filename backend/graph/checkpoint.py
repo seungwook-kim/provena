@@ -3,7 +3,7 @@
 - 배포·시연은 Postgres 체크포인터다. 사람 승인(interrupt)에서 멈춘 그래프는 서버를 다시 띄운 뒤에도 같은 `thread_id`로 이어진다.
 - 메모리 체크포인터는 시험과 로컬 개발용이다. 프로세스가 끝나면 사라지므로 "재시작해도 된다"의 근거로 쓰지 않는다
   (`is_restart_safe()`가 거짓이다).
-- `open_persistence()`가 체크포인트 표와 Store 표를 만든다(`.setup()`, 여러 번 돌려도 된다). 접속 문자열은 로그에 쓰지 않는다.
+- `open_persistence()`가 체크포인트 표와 Store 표를 만든다(`.setup()`, 여러 번 돌려도 된다). 인스턴스 여러 개가 빈 DB에서 동시에 떠서 부딪히면 `setup_tables`가 부딪힌 오류만 다시 해서 끝낸다. 접속 문자열은 로그에 쓰지 않는다.
 - 그 표에는 대화 내용이 들어가므로 만든 직후 RLS를 켠다(`enable_rls`). 정책은 두지 않는다(`db/201_search.sql`과 같은 방식): 공개 키 역할은 막히고, 표 소유자인 앱은 그대로 쓴다.
 - Postgres 쪽 패키지(`langgraph-checkpoint-postgres`, `psycopg`)는 Postgres를 고를 때만 불러온다.
 
@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import logging
 import os
+import random
+import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any
@@ -23,6 +25,8 @@ log = logging.getLogger(__name__)
 KINDS = ("memory", "postgres")
 POOL_MIN = 1
 POOL_MAX = 4
+SETUP_ATTEMPTS = 6
+SETUP_RACE_ERROR_NAMES = ("UniqueViolation", "DuplicateTable", "DuplicateObject", "DuplicateColumn", "DeadlockDetected", "SerializationFailure")   # psycopg.errors
 LANGGRAPH_TABLES = ("checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations", "store", "store_migrations")
 
 
@@ -54,6 +58,32 @@ def enable_rls(pool: Any) -> None:
                 raise RuntimeError(f"RLS를 켤 표가 없습니다: {table}. langgraph-checkpoint-postgres 버전이 바뀌었는지 확인하세요")
             if not row["relrowsecurity"]:
                 conn.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+
+
+def setup_tables(pool: Any, saver: Any, store: Any, *, sleep: Any = time.sleep) -> None:
+    """표 만들기(`saver.setup()`, `store.setup()`, `enable_rls()`)를 하고, 다른 인스턴스와 부딪히면 다시 한다.
+
+    빈 DB에서 인스턴스 둘이 동시에 뜨면 `CREATE TABLE IF NOT EXISTS`와 마이그레이션 기록이 서로 부딪혀 한쪽이 UniqueViolation 등으로 죽었고,
+    `open_decision_runtime()`은 그 인스턴스를 "저장소 없음"(503) 상태로 띄웠다. 세 단계 모두 여러 번 돌려도 되므로, 부딪힌 오류(`SETUP_RACE_ERROR_NAMES`)만
+    `SETUP_ATTEMPTS`번까지 다시 한다. 다시 돌면 먼저 끝낸 쪽이 만든 것을 보고 지나간다. 다른 오류는 그대로 올린다.
+
+    DB 자문 잠금으로 줄 세우지 않은 이유: LangGraph 마이그레이션에 `CREATE INDEX CONCURRENTLY`가 있어, 잠금을 쥔 열린 트랜잭션이 그 인덱스 만들기를 기다리게 하고
+    (같은 DB의 모든 열린 트랜잭션이 끝나야 끝난다) 그 트랜잭션은 setup이 끝나야 닫혀 서로 영원히 기다린다(시험에서 재현). 세션 잠금은 열린 트랜잭션이 없지만,
+    트랜잭션 모드 풀러(Supabase)에서는 잠금을 건 서버 연결과 푸는 서버 연결이 달라져 잠금이 남을 수 있다."""
+    from psycopg import errors as pg_errors   # 지연 import: Postgres를 고를 때만 부른다
+
+    race_errors = tuple(getattr(pg_errors, n) for n in SETUP_RACE_ERROR_NAMES)
+    for attempt in range(1, SETUP_ATTEMPTS + 1):
+        try:
+            saver.setup()
+            store.setup()
+            enable_rls(pool)
+            return
+        except race_errors as exc:
+            if attempt == SETUP_ATTEMPTS:
+                raise
+            log.warning("체크포인트 표 만들기가 다른 인스턴스와 부딪힘(%s): %d번째 다시 한다", type(exc).__name__, attempt)
+            sleep(random.uniform(0.2, 1.0) * attempt)
 
 
 @contextmanager
@@ -106,9 +136,7 @@ def open_persistence(
         saver = PostgresSaver(pool)
         store = PostgresStore(pool)
         if setup:
-            saver.setup()
-            store.setup()
-            enable_rls(pool)
+            setup_tables(pool, saver, store)   # 인스턴스 여러 개가 빈 DB에서 동시에 떠도 부딪힌 만큼 다시 해서 끝낸다
         yield saver, store
     finally:
         pool.close()
