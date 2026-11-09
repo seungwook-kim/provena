@@ -40,7 +40,10 @@ export async function apiRequest(path, options = {}) {
       const body = await response.json()
       if (typeof body.error?.message === 'string' && body.error.message.length < 160) detail = body.error.message
       else if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
+      // 결정표·승인 API는 detail을 {reason, message}로 낸다 (backend/graph/decision/routes.py `_http`).
+      else if (response.status < 500 && typeof body.detail?.message === 'string' && body.detail.message.length < 160) detail = body.detail.message
       if (typeof body.error?.code === 'string' && body.error.code) errorCode = body.error.code
+      else if (typeof body.detail?.reason === 'string' && body.detail.reason) errorCode = body.detail.reason
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }

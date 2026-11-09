@@ -6,8 +6,16 @@
 - `/health`는 항상 있습니다(DB 없이도).
 - `DATABASE_URL`이 있으면 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`)와 결정표 실행·승인 라우터를 붙입니다.
   이때 `AUTH_SECRET`(32바이트 이상)이 없으면 시작하지 않습니다. 로컬 데모 모드에서만 비어 있으면 실행마다 무작위로 만듭니다.
-- `PROVENA_ENV=local` 이고 `PROVENA_DEV_MODE=1` 일 때만 시작할 때 users 테이블을 만들고 데모 계정 2개를 시드합니다
-  (backend/services/demo_seed.py). 그 밖의 모드에서는 스키마(db/101_auth_users.sql)가 미리 적용돼 있어야 합니다.
+- 같은 조건에서 내 정보 라우터(`GET/PUT /me/profile`, backend/profile_api.py)도 붙이고, `/me`에 `profile_completed`를 더합니다.
+  `PROFILE_ENC_KEYS`(AES-256 키, backend/services/profile_crypto.py)가 없거나 형식이 틀리면 시작하지 않습니다. 로컬 데모 모드에서만
+  비어 있으면 실행마다 무작위 키를 만듭니다(재시작하면 내 정보를 다시 입력).
+- 같은 조건에서 사용자 관리 라우터(`GET /admin/users`, `POST /admin/users/{login_id}/promote|revoke`, backend/admin_api.py)도 붙이고,
+  `/me`에 `is_owner`를 더합니다. 최고 관리자는 `PROVENA_OWNER_LOGIN_ID`(시작할 때 한 번 읽음). 비었거나 계정과 맞지 않으면
+  시작 로그 1줄(값은 쓰지 않음)을 남기고 사용자 관리만 닫습니다(모두 403). 서버는 멈추지 않습니다.
+  화면 주소도 `/admin/users`라서, 브라우저가 그 주소를 직접 열면(`Accept: text/html`) API 대신 React 화면을 내줍니다.
+- `PROVENA_ENV=local` 이고 `PROVENA_DEV_MODE=1` 일 때만 시작할 때 users·admin_role_log·user_profiles 테이블을 만들고 데모 계정 2개를 시드합니다
+  (backend/services/demo_seed.py). 그 밖의 모드에서는 스키마(db/101_auth_users.sql, db/104_user_profiles.sql, db/105_admin_role_log.sql)가
+  미리 적용돼 있어야 합니다(104가 없으면 `/me`가 503). 배포판 첫 계정은 `python -m backend.services.create_account` 로 만듭니다.
 - `web/`의 정적 파일(현재 로그인 화면)을 `/`에서 내줍니다. API 경로가 먼저 잡히도록 마지막에 붙입니다.
 - `SEARCH_WARMUP=1`이면 시작할 때 검색 모델·BM25를 백그라운드로 올립니다(docs/specs/search.md). 실패해도 서버는 뜨고,
   검색은 첫 요청 때 다시 준비를 시도합니다. compose의 `loader`가 색인을 적재한 뒤 api가 뜹니다.
@@ -42,12 +50,16 @@ from backend.api.changes import create_changes_router
 from backend.api.recalls import create_recall_router
 from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
+from backend.admin_api import check_owner, create_admin_router, owner_check_for
 from backend.auth import AuthStore, TokenRevocationStore, create_auth_router
 from backend.graph.checkpoint import is_restart_safe
 from backend.graph.decision.routes import create_decision_router, open_decision_runtime
 from backend.graph.recall.runtime import open_recall_runtime
+from backend.profile_api import create_profile_router
 from backend.services.auth_store import PostgresAuthStore, PostgresTokenRevocationStore
 from backend.services.demo_seed import is_local_demo, seed_demo_accounts
+from backend.services.profile_crypto import ProfileCipher
+from backend.services.profile_store import PostgresProfileStore
 
 log = logging.getLogger(__name__)
 
@@ -57,8 +69,8 @@ BOOTSTRAP_WAIT_SECONDS = 2.0
 KEEPALIVE_SECONDS = 600   # Supabase 무료 플랜 정지 방지: /health가 불릴 때 이 간격으로 DB에 SELECT 1
 
 
-def bootstrap_local_auth(store: PostgresAuthStore) -> None:
-    """로컬 데모에서만: users 테이블을 만들고 데모 계정을 시드한다. DB가 막 뜬 경우를 위해 몇 번 다시 시도한다."""
+def bootstrap_local_auth(store: PostgresAuthStore, profile_store: PostgresProfileStore | None = None) -> None:
+    """로컬 데모에서만: users(·user_profiles) 테이블을 만들고 데모 계정을 시드한다. DB가 막 뜬 경우를 위해 몇 번 다시 시도한다."""
     for attempt in range(1, BOOTSTRAP_TRIES + 1):
         try:
             store.ensure_schema()
@@ -68,6 +80,8 @@ def bootstrap_local_auth(store: PostgresAuthStore) -> None:
                 raise
             log.warning("DB 준비 대기 (%d/%d): %s", attempt, BOOTSTRAP_TRIES, type(exc).__name__)
             time.sleep(BOOTSTRAP_WAIT_SECONDS)
+    if profile_store is not None:
+        profile_store.ensure_schema()   # users 다음(외래키). DB는 위에서 이미 준비됐다
     seed_demo_accounts(store)
 
 
@@ -190,6 +204,9 @@ def create_app(
     if revocation_store is None and database_url:
         revocation_store = PostgresTokenRevocationStore(database_url)
     auth_secret = resolve_auth_secret() if store is not None else None   # 로컬 데모의 무작위 키도 라우터끼리 같아야 한다
+    # 내 정보 저장소는 실제 사용자 저장소(users 외래키)와 짝. 시험이 가짜 사용자 저장소를 꽂으면 열지 않는다
+    profile_store = PostgresProfileStore(database_url) if database_url and auth_store is None else None
+    owner_login_id = os.getenv("PROVENA_OWNER_LOGIN_ID", "").strip()   # 시작할 때 한 번만 읽는다(바꾸려면 새 리비전)
     make_graph = graph_factory or build_question_graph
 
     def answer_store_fn():
@@ -202,7 +219,9 @@ def create_app(
         from backend.graph.service_profile import service_profile
         with service_profile(enabled=graph_factory is None):   # 서비스 기본 설정(61.51)을 환경 변수로 채운다. 시험이 그래프를 꽂으면 바꾸지 않는다
             if store is not None and is_local_demo():
-                bootstrap_local_auth(store)
+                bootstrap_local_auth(store, profile_store)
+            if store is not None:
+                check_owner(store, owner_login_id)   # 알림만. 막는 곳은 요청마다 도는 최고 관리자 확인
             start_search_warmup()
             with open_decision_runtime(app_) if store is not None else nullcontext():      # 체크포인터·결정표 저장소·승인 그래프
                 with open_question_runtime(app_, make_graph, database_url) if store is not None else nullcontext():   # 질문 그래프·대화 목록
@@ -237,11 +256,19 @@ def create_app(
         return {"status": "ok"}
 
     if store is not None:
-        app.include_router(create_auth_router(store=store, secret=auth_secret))
+        app.include_router(create_auth_router(store=store, secret=auth_secret, profile_completed=profile_store.exists if profile_store is not None else None,
+                                              owner_check=owner_check_for(owner_login_id)))
         app.include_router(create_decision_router(store=store, secret=auth_secret))
         app.include_router(create_api_router(store=store, secret=auth_secret))   # /chat, /threads, /me/memory
         app.include_router(create_recall_router(store=store, secret=auth_secret))   # /recalls, /webhooks/regulation-updated 등(F-02)
         app.include_router(create_changes_router(store=store, secret=auth_secret))  # /changes(변경 감시)
+        if profile_store is not None:   # 시험의 가짜 사용자 저장소일 땐 내 정보·사용자 관리를 열지 않는다
+            # 로그인·내 정보·사용자 관리 라우터가 같은 서명 키(auth_secret)를 쓴다(로컬 데모의 무작위 키 포함)
+            cipher = ProfileCipher.from_env(allow_ephemeral=is_local_demo())
+            app.include_router(create_profile_router(auth_store=store, profile_store=profile_store, cipher=cipher, secret=auth_secret))
+            # 화면 주소도 /admin/users라 브라우저가 직접 열면(새로고침) React 화면을 내준다(app.state.react_index, 빌드 없으면 API 그대로)
+            app.include_router(create_admin_router(store=store, owner_login_id=owner_login_id, secret=auth_secret,
+                                                   html_page=lambda: app.state.react_index))
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 

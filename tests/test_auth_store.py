@@ -156,7 +156,7 @@ def test_seed_skips_account_with_empty_password():
 
 # ---- main.py 연결 ----------------------------------------------------------
 def _app(monkeypatch, **env):
-    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE"):
+    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE", "PROVENA_OWNER_LOGIN_ID"):
         monkeypatch.delenv(key, raising=False)
     for key, value in env.items():
         monkeypatch.setenv(key, value)
@@ -215,6 +215,9 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     uid, password = uuid4(), secrets.token_urlsafe(12)
     row = (uid, "demo-user", hash_password(password), "user", True)
     monkeypatch.setattr("backend.main.PostgresAuthStore", lambda dsn: fake_store(row)[0])
+    # 내 정보(요청 1번): main.py가 /me에 profile_completed를 더하므로 내 정보 저장소도 가짜로 둔다(DB 연결 안 함)
+    from profile_test_support import MemoryProfileStore
+    monkeypatch.setattr("backend.main.PostgresProfileStore", lambda dsn: MemoryProfileStore())
     app = _app(monkeypatch, DATABASE_URL="postgresql://u:p@db/x", AUTH_SECRET=secrets.token_urlsafe(32), **LOCAL)
     client = TestClient(app)
     assert client.get("/auth/csrf").status_code == 204
@@ -224,7 +227,8 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     ok = client.post("/auth/login", json={"login_id": "demo-user", "password": password}, headers=headers)
     assert ok.status_code == 200 and ok.json() == {"user_id": str(uid), "role": "user"}
     assert client.cookies.get(AUTH_COOKIE_NAME)
-    assert client.get("/me").json() == {"user_id": str(uid), "role": "user"}
+    # 사용자 관리(요청 2번): main.py가 /me에 is_owner를 더한다. PROVENA_OWNER_LOGIN_ID가 없으면 false(닫힘)
+    assert client.get("/me").json() == {"user_id": str(uid), "role": "user", "profile_completed": False, "is_owner": False}
     assert client.post("/auth/logout", headers=headers).status_code == 204
     assert client.get("/me").status_code == 401
 
@@ -267,6 +271,14 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         monkeypatch.setenv(key, value)
     monkeypatch.setattr("backend.main.PostgresAuthStore", FakeAuthStore)
     monkeypatch.setattr("backend.main.PostgresTokenRevocationStore", FakeRevocationStore)
+    # 내 정보(요청 1번): main.py가 /me에 profile_completed를 더하므로 내 정보 저장소도 가짜로 둔다(DB 연결 안 함)
+    from profile_test_support import MemoryProfileStore
+
+    class FakeProfileStore(MemoryProfileStore):
+        def ensure_schema(self):   # 로컬 데모 시작(bootstrap_local_auth)이 부른다
+            pass
+
+    monkeypatch.setattr("backend.main.PostgresProfileStore", lambda dsn: FakeProfileStore())
 
     app = create_app()
     assert isinstance(app.state.token_revocation_store, FakeRevocationStore)

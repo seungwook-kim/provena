@@ -286,12 +286,16 @@ flowchart TD
 |---|---|---|---|
 | POST | `/auth/login` | 누구나 | 로그인 (방식은 11장) |
 | POST | `/auth/logout` | 로그인 | |
-| GET | `/me` | 로그인 | 사용자 정보, 역할 |
+| GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, profile_completed, is_owner}`. `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
+| GET, PUT | `/me/profile` | 로그인 (PUT은 CSRF) | 내 정보(이름 `name`, 부서 `dept`, 전화 `phone`, 주소 `address`, 칸마다 암호화 저장). GET은 전화번호를 가린 `{name, dept, phone_masked, address, updated_at}`(아직 없으면 404), `?view=edit`일 때만 원래 `phone`. PUT은 네 칸 전부를 받아 검사하고(틀리면 422 `{message, fields}`, 입력값은 되풀이하지 않음) GET과 같은 모양으로 답한다. 남의 내 정보를 주는 경로는 없다 (`backend/profile_api.py`, `db/104_user_profiles.sql`) |
 | POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
 | GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
+| GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
+| POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
+| POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
 | GET | `/recalls` | 로그인 | `{items, unread}`. 일반 사용자는 자기 알림 중 볼 수 있는 섹션의 것만, 관리자는 전체와 `review_queue`(관리자 검토함), `candidates`(함께 볼 정책 후보), `judge_failures`(판정이 깨진 알림)를 더 받는다 |
 | GET | `/recalls/{id}` | 로그인 | 알림 한 건. 남의 알림과 검토함·폐기된 알림은 404 `not_found`(관리자는 모두 봄) |
 | POST | `/recalls/{id}/ack` | 로그인, CSRF | 확인 표시. 본인만(남의 알림은 404). 갱신된 알림을 돌려준다 |
@@ -310,6 +314,8 @@ flowchart TD
 | GET | `/health` | 누구나 | 상태 확인 (Supabase 정지 방지 호출 포함: `DATABASE_URL`이 있으면 10분 간격으로 백그라운드 `SELECT 1`, 실패해도 200) |
 
 리콜·변경 감시 경로(`/recalls*`, `/changes*`)는 브라우저 주소 이동(`Accept: text/html` 또는 `Sec-Fetch-Mode: navigate`)이면 로그인 확인보다 먼저 화면 파일(`index.html`)을 주고, 그 밖의 요청은 API로 처리한다. `/recalls/feedback-stats`, `/recalls/digests`, `/changes/monitoring`은 `/{id}` 경로보다 먼저 등록한다.
+
+`/approvals`와 `/admin/users`는 화면 주소이기도 해서, GET에 `Accept: text/html`이 오면(브라우저 새로고침·주소 직접 입력) API 대신 React `index.html`을 내준다(빌드가 없으면 API 그대로). 화면의 fetch(`Accept: */*`)에는 API가 답한다.
 
 **오류 응답 규약.** HTTP 오류 본문은 모두 같은 모양이다: `{"detail": "...", "error": {"code", "message", "request_id"}}`. 검증 오류에는 `error.details`가 더해진다 (`backend/api/errors.py`). 화면과 업무시스템은 HTTP 상태가 아니라 `error.code`로 분기한다.
 

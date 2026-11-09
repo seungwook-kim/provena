@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import secrets
@@ -204,6 +205,9 @@ def _app(monkeypatch, **kw):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:1/x")
     monkeypatch.setenv("AUTH_SECRET", secrets.token_urlsafe(32))
+    # 배포 모드에선 내 정보 키가 없으면 시작하지 않는다(backend/main.py). AUTH_SECRET처럼 시험마다 새로 만든다
+    monkeypatch.setenv("PROFILE_ENC_KEYS", "1:" + base64.b64encode(secrets.token_bytes(32)).decode())
+    monkeypatch.delenv("PROVENA_OWNER_LOGIN_ID", raising=False)
     monkeypatch.setenv("CHECKPOINTER", "memory")
     monkeypatch.setattr("backend.main.create_auth_router", create_test_auth_router)
     return create_app(**kw)

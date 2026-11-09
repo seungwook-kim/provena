@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { streamChatMessage } from './api'
-import { createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation } from './chat-service'
+import { createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation, citationHref, DEFAULT_SOURCE_URL } from './chat-service'
 
 vi.mock('./api', () => ({ getThread: vi.fn(), getThreads: vi.fn(), streamChatMessage: vi.fn() }))
 
@@ -180,5 +180,11 @@ describe('thread detail after reload', () => {
     expect(normalizeCitation({ id: 'p', title: '미리보기', path: '절', version: '2026-10-27' })).toMatchObject({ id: 'p', title: '미리보기', path: '절', version: '2026-10-27' })
     const record = mapThreadRecord({ thread_id: 't', messages: [{ role: 'assistant', text: 'a', citations: [server] }] })
     expect(record.messages[0].citations[0]).toMatchObject({ title: '장애 대응 런북', version: '2025-01-01' })
+  })
+
+  it('uses source_url for the original link only when it is https', () => {
+    expect(citationHref({ source_url: 'https://handbook.gitlab.com/handbook/x/' })).toBe('https://handbook.gitlab.com/handbook/x/')
+    for (const bad of ['http://example.com', 'javascript:alert(1)', '/relative', '', null, undefined, 42]) expect(citationHref({ source_url: bad })).toBe(DEFAULT_SOURCE_URL)
+    expect(citationHref(null)).toBe(DEFAULT_SOURCE_URL)
   })
 })
