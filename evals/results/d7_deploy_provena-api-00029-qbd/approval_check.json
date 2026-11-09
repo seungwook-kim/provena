@@ -1,0 +1,95 @@
+{
+  "row": 21,
+  "revision": "provena-api-00029-qbd",
+  "commit": "339bcb3",
+  "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+  "started_at": "2026-11-09T23:00:54+09:00",
+  "finished_at": "2026-11-09T23:01:00+09:00",
+  "elapsed_s": 5.9,
+  "health": {
+    "code": 200,
+    "body": "{\"status\":\"ok\"}"
+  },
+  "summary": {
+    "row": 21,
+    "passed": 6,
+    "total": 6,
+    "setup_ok": true
+  },
+  "meta": {
+    "cost_note": "초안 LLM 호출 1번(convert)",
+    "cleanup": "필요 없음",
+    "not_observable": "그래프 재개 횟수와 결과 행 수는 API로 볼 수 없다(서버 로그·DB 필요). 응답 코드와 최종 상태로만 판정",
+    "before": {
+      "approved_tables": 0,
+      "pending_approvals": 1
+    },
+    "category": "Approving expense",
+    "convert_tries": [
+      "Approving expense: 201"
+    ],
+    "approval_id_prefix": "ap_c57f9",
+    "after": {
+      "approved_tables": 0,
+      "pending_approvals": 1
+    }
+  },
+  "cases": [
+    {
+      "id": "S1",
+      "desc": "준비: 시험용 승인 대기 건 만들기(결정표 초안)",
+      "expect": "201, 대기 목록에 새 건 있음",
+      "actual": "201, 대기 목록에 있음",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D1",
+      "desc": "일반 계정(B)이 대기 중인 건에 결정(반려)",
+      "expect": "403, 건은 그대로 대기",
+      "actual": "403, 건은 그대로 대기",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D2",
+      "desc": "관리자 두 요청이 같은 건에 반려를 동시에(comment 서로 다름)",
+      "expect": "둘 다 200/rejected, 두 응답의 comment 같음",
+      "actual": "응답 200/rejected + 200/rejected, comment 같음(먼저 처리된 둘째 요청 것)",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D3",
+      "desc": "같은 건에 반려를 연속으로 한 번 더",
+      "expect": "200/rejected, 저장된 comment 그대로",
+      "actual": "200/rejected, 저장된 comment 그대로",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D4",
+      "desc": "승인으로 번복",
+      "expect": "409",
+      "actual": "409/already_decided",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D5",
+      "desc": "일반 계정(B)이 끝난 건에 결정",
+      "expect": "403",
+      "actual": "403/forbidden",
+      "passed": true,
+      "extra": {}
+    },
+    {
+      "id": "D6",
+      "desc": "마지막 상태(대기 목록과 승인된 결정표)",
+      "expect": "시험 건은 대기에서 빠지고 나머지는 시작과 같음",
+      "actual": "시험 건 대기에서 빠짐, 대기 건 1개 그대로, 승인된 결정표 0->0",
+      "passed": true,
+      "extra": {}
+    }
+  ]
+}
