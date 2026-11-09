@@ -17,3 +17,5 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r backend/requirements-dev.txt
       - run: python -m pytest -q
+      - name: 평가 점수 비교 (커밋된 결과 파일만, 키·네트워크 없음)
+        run: python evals/ci_compare.py
