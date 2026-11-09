@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { apiRequest } from './lib/api'
@@ -349,6 +349,66 @@ describe('React authentication and session isolation', () => {
     server.user = A
     render(<StrictMode><App /></StrictMode>)
     await screen.findByRole('button', { name: '내 계정' })
+  })
+
+  describe('background re-check on window focus', () => {
+    const meCalls = () => calls.filter(call => call.path === '/me').length
+    const focus = () => act(() => window.dispatchEvent(new Event('focus')))
+
+    async function chatWithDraft(user = A) {
+      await authenticated(user)
+      const composer = await screen.findByRole('textbox', { name: '질문' })
+      await waitFor(() => expect(composer.disabled).toBe(false))
+      await userEvent.type(composer, '작성 중인 질문')
+      return composer
+    }
+
+    it('keeps the page mounted and shows no loading screen while /me is re-checked', async () => {
+      const composer = await chatWithDraft()
+      const before = meCalls()
+      let resolve
+      server.meHook = () => new Promise(done => { resolve = done })
+      focus()
+      await waitFor(() => expect(meCalls()).toBe(before + 1))
+      expect(screen.queryByText('세션을 확인하고 있습니다.')).toBeNull()
+      expect(screen.getByRole('textbox', { name: '질문' })).toBe(composer)
+      await act(async () => { resolve(json(A)) })
+      expect(screen.getByRole('textbox', { name: '질문' })).toBe(composer)
+      expect(composer.value).toBe('작성 중인 질문')
+    })
+
+    it('logs out when the focus check returns 401', async () => {
+      await chatWithDraft()
+      sessionStorage.setItem(`provena-memory:${A.user_id}`, 'private A')
+      server.user = null
+      focus()
+      await screen.findByLabelText('아이디')
+      expect(sessionStorage.getItem(`provena-memory:${A.user_id}`)).toBeNull()
+    })
+
+    it.each([
+      ['a network error', () => Promise.reject(new TypeError('offline'))],
+      ['HTTP 503', () => Promise.resolve(json({ detail: 'unavailable' }, 503))],
+    ])('stays logged in when the focus check fails with %s', async (_, meHook) => {
+      const composer = await chatWithDraft()
+      const before = meCalls()
+      server.meHook = meHook
+      focus()
+      await waitFor(() => expect(meCalls()).toBe(before + 1))
+      await act(async () => {})
+      expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
+      expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
+      expect(screen.getByRole('textbox', { name: '질문' })).toBe(composer)
+      expect(composer.value).toBe('작성 중인 질문')
+    })
+
+    it('applies a changed role from the focus check', async () => {
+      await chatWithDraft()
+      expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).toBeNull()
+      server.user = { ...A, role: 'admin' }
+      focus()
+      await screen.findByRole('navigation', { name: '관리자 메뉴' })
+    })
   })
 
   it('preserves the signup route and its API-unavailable behavior', async () => {
