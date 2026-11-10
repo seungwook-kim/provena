@@ -53,3 +53,5 @@
 .profile-wizard-actions.first-step { justify-content: flex-end; }
 .profile-step-description { margin: 10px 0 0; color: var(--muted, #6b665c); line-height: 1.6; }
 @media (max-width: 520px) { .profile-card { padding: 28px 22px; } .profile-choice-grid { grid-template-columns: 1fr; } .profile-summary { grid-template-columns: 100px 1fr; } }
+
+.profile-field-error { margin: -10px 0 0; color: var(--danger, #a4443a); font-size: 12px; }

@@ -17,7 +17,7 @@ beforeEach(() => {
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   window.history.replaceState({}, '', '/chat')
   calls = []
-  server = { user: null, profile: null, savedProfile: null, memory: {}, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
+  server = { user: null, profile: null, savedProfile: null, putFields: null, memory: {}, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
   vi.stubGlobal('fetch', vi.fn(async (path, options) => {
     calls.push({ path, options })
     if (path === '/me') {
@@ -54,8 +54,16 @@ beforeEach(() => {
       server.user = null
       return new Response(null, { status: 204 })
     }
+    // 운영 현황(/admin)이 부르는 실제 API. 응답 모양은 백엔드와 같다(목록, 목록, {items}). 없으면 아래 401로 떨어져 세션 만료로 처리된다.
+    if (path === '/decision-tables' || path === '/approvals') return json([])
+    if (path === '/maintenance-candidates') return json({ items: [] })
     if (path === '/me/profile?view=edit') return server.profile ? json(server.profile) : json({ detail: '내 정보가 아직 없습니다.' }, 404)
     if (path === '/me/profile' && options?.method === 'PUT') {
+      if (server.putFields) {
+        const fields = server.putFields
+        server.putFields = null
+        return json({ detail: { message: '입력한 내용을 확인해 주세요.', fields } }, 422)
+      }
       server.savedProfile = JSON.parse(options.body)
       if (server.user) server.user = { ...server.user, profile_completed: true }
       return json({ name: server.savedProfile.name, dept: server.savedProfile.dept, phone_masked: '010-****-5678', address: server.savedProfile.address })
@@ -145,28 +153,72 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).toBeNull()
   })
 
-  it('shows all six fields on the completed-user profile edit screen and saves only the profile API fields', async () => {
+  it('shows all six fields on the completed-user profile edit screen, keeps role and service optional, and saves only the profile API fields', async () => {
     server.user = { ...A, profile_completed: true }
-    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '' }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
     window.history.replaceState({}, '', '/myinfo')
     render(<App />)
     await screen.findByRole('heading', { name: '회원정보 수정' })
     expect(await screen.findByLabelText('소속 팀 *')).toBeTruthy()
-    await userEvent.selectOptions(screen.getByLabelText('업무 역할 * (저장 연동 준비 중)'), '개발자')
-    const service = screen.getByLabelText('담당 서비스 * (저장 연동 준비 중)')
+    await userEvent.selectOptions(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)'), '개발자')
+    const service = screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)')
     await userEvent.type(service, '결제 API')
     expect(screen.getByLabelText('이름 *')).toBeTruthy()
     const phone = screen.getByLabelText('전화번호 *')
     expect(phone.getAttribute('placeholder')).toBe('예시) 010-1234-5678')
-    const address = screen.getByLabelText('근무지 주소 (선택)')
+    const address = screen.getByLabelText('근무지 주소 * (5~100자)')
     expect(address.className).toBe('profile-address-field')
     await userEvent.clear(service)
-    expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(true)
+    // 담당 서비스는 저장되지 않는 선택 칸이라 비워도 저장을 막지 않는다(새로고침하면 늘 비어 있다).
+    expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(false)
     await userEvent.type(service, '결제 API')
     await userEvent.clear(phone)
     await userEvent.type(phone, '01098765432')
     await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
-    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '' })
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '부산광역시 해운대구 우동 1' })
+  })
+
+  it('lets a returning user save basic info while role and service stay empty', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    const phone = await screen.findByLabelText('전화번호 *')
+    expect(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)').value).toBe('')
+    expect(screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)').value).toBe('')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    const save = screen.getByRole('button', { name: '변경사항 저장' })
+    expect(save.disabled).toBe(false)
+    await userEvent.click(save)
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '부산광역시 해운대구 우동 1' })
+    expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
+  })
+
+  it('lets registration finish without choosing a role or a service', async () => {
+    server.user = { ...A, profile_completed: false }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: '보안' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
+    expect(screen.getByText('선택 항목입니다. 저장되지 않으므로 고르지 않고 넘어가도 됩니다.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 서비스를 담당하시나요?' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.type(screen.getByRole('textbox', { name: '이름' }), '홍길동')
+    await userEvent.type(screen.getByRole('textbox', { name: '전화번호' }), '01012345678')
+    await userEvent.type(screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' }), '부산광역시 해운대구 우동 1')
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '입력한 정보를 확인해 주세요.' })).toBeTruthy()
+    expect(screen.getAllByText('설정하지 않음')).toHaveLength(2)   // 업무 역할, 담당 서비스
+    await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
+    await screen.findByRole('button', { name: '내 계정' })
+    expect(window.location.pathname).toBe('/chat')
   })
 
   it('keeps all five registration steps and saves the profile before entering chat', async () => {
@@ -188,14 +240,14 @@ describe('React authentication and session isolation', () => {
     await userEvent.type(await screen.findByLabelText('담당 서비스'), '결제 API')
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '기본 정보를 입력해 주세요.' })).toBeTruthy()
-    expect(screen.getByText('이름과 전화번호는 필수이며, 근무지 주소는 선택 사항입니다.')).toBeTruthy()
+    expect(screen.getByText('이름·전화번호·근무지 주소는 필수입니다. 주소는 5~100자로 입력해 주세요.')).toBeTruthy()
     const nameInput = screen.getByRole('textbox', { name: '이름' })
     const phoneInput = screen.getByRole('textbox', { name: '전화번호' })
-    const addressInput = screen.getByRole('textbox', { name: '근무지 주소 (선택)' })
+    const addressInput = screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' })
     expect(phoneInput.getAttribute('placeholder')).toBe('예시) 010-1234-5678')
     expect(addressInput.className).toBe('profile-address-field')
     expect(nameInput.closest('label').textContent).toContain('*')
-    expect(addressInput.closest('label').textContent).toContain('(선택)')
+    expect(addressInput.closest('label').textContent).not.toContain('(선택)')
     await userEvent.type(nameInput, '홍길동')
     await userEvent.type(phoneInput, '01112345678')
     expect(phoneInput.value).toBe('011-1234-5678')
@@ -208,15 +260,78 @@ describe('React authentication and session isolation', () => {
     expect(phoneInput.value).toBe('010-1234-5678')
     expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    // 주소가 비어 있으면 서버와 같은 문장으로 막고 다음 단계로 가지 않는다.
+    expect(screen.getByText('주소는 5~100자로 입력해 주세요.')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '기본 정보를 입력해 주세요.' })).toBeTruthy()
+    await userEvent.type(addressInput, '부산광역시 해운대구 우동 1')
+    expect(screen.queryByText('주소는 5~100자로 입력해 주세요.')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '입력한 정보를 확인해 주세요.' })).toBeTruthy()
     expect(screen.getByText('등록 정보를 확인한 후 완료 버튼을 눌러 주세요.')).toBeTruthy()
     expect(await screen.findByText('결제 API')).toBeTruthy()
     expect(screen.getByText('010-1234-5678')).toBeTruthy()
-    expect(screen.getByText('설정하지 않음')).toBeTruthy()
+    expect(screen.getByText('부산광역시 해운대구 우동 1')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
-    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '' })
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
+  })
+
+  it('shows the server reason under the address field on the edit screen, drops "(선택)", and clears it when the field is edited', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '김동영', dept: '개발', phone: '010-5253-6422', address: '너거집' }
+    server.putFields = { address: '주소는 5~100자로 입력해 주세요.', phone: '전화번호 형식이 맞지 않습니다. 예: 010-1234-5678' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    const address = await screen.findByLabelText('근무지 주소 * (5~100자)')
+    expect(address.closest('label').textContent).not.toContain('(선택)')
+    // 화면에서도 같은 기준으로 먼저 막는다(서버 호출 없음).
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    expect(server.savedProfile).toBeNull()
+    expect(calls.some(call => call.path === '/me/profile' && call.options?.method === 'PUT')).toBe(false)
+    expect((await screen.findAllByText('주소는 5~100자로 입력해 주세요.'))).toHaveLength(1)
+    await userEvent.clear(address)
+    await userEvent.type(address, '부산광역시 해운대구 우동 1')
+    expect(screen.queryByText('주소는 5~100자로 입력해 주세요.')).toBeNull()
+    // 서버가 칸별 422를 주면 그 칸 아래에 이유가 나온다.
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    const addressReason = await screen.findByText('주소는 5~100자로 입력해 주세요.')
+    expect(addressReason.id).toBe('profile-error-address')
+    expect(address.getAttribute('aria-invalid')).toBe('true')
+    expect(address.getAttribute('aria-describedby')).toBe('profile-error-address')
+    const phone = screen.getByLabelText('전화번호 *')
+    expect(phone.getAttribute('aria-describedby')).toBe('profile-error-phone')
+    expect(screen.getByText('전화번호 형식이 맞지 않습니다. 예: 010-1234-5678').id).toBe('profile-error-phone')
+    expect(screen.getByText('입력한 내용을 확인해 주세요.')).toBeTruthy()
+    // 그 칸을 다시 고치면 그 칸 오류만 지워진다.
+    await userEvent.type(address, '호')
+    expect(screen.queryByText('주소는 5~100자로 입력해 주세요.')).toBeNull()
+    expect(address.getAttribute('aria-invalid')).toBeNull()
+    expect(screen.getByText('전화번호 형식이 맞지 않습니다. 예: 010-1234-5678')).toBeTruthy()
+  })
+
+  it('sends the registration wizard back to the step with the failing field and shows the server reason there', async () => {
+    server.user = { ...A, profile_completed: false }
+    server.putFields = { address: '주소는 5~100자로 입력해 주세요.' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: '보안' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.type(screen.getByRole('textbox', { name: '이름' }), '김동영')
+    await userEvent.type(screen.getByRole('textbox', { name: '전화번호' }), '01052536422')
+    const address = screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' })
+    await userEvent.type(address, '부산광역시 해운대구 우동 1')
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
+    expect(await screen.findByRole('heading', { name: '기본 정보를 입력해 주세요.' })).toBeTruthy()
+    const reason = screen.getByText('주소는 5~100자로 입력해 주세요.')
+    expect(reason.id).toBe('profile-error-address')
+    expect(screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' }).getAttribute('aria-invalid')).toBe('true')
+    await userEvent.type(screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' }), '호')
+    expect(screen.queryByText('주소는 5~100자로 입력해 주세요.')).toBeNull()
   })
 
   it('keeps protected UI hidden while the first /me is pending', async () => {
@@ -367,11 +482,14 @@ describe('React authentication and session isolation', () => {
     expect(sessionStorage.getItem('unrelated')).toBe('keep')
   })
 
-  it.each([403, 500, 200])('does not claim logout success for HTTP %s; allows retry', async status => {
+  it.each([[403, '로그아웃하지 못했습니다. 이 작업을 수행할 권한이 없습니다.'], [500, '로그아웃하지 못했습니다. 서버 오류'], [200, '로그아웃 완료를 확인하지 못했습니다. 다시 시도해 주세요.']])('does not claim logout success for HTTP %s; allows retry', async (status, expected) => {
     await authenticated()
     server.logoutStatus = status
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
-    expect((await screen.findByRole('alert')).textContent).toContain('종료를 확인')
+    const text = (await screen.findByRole('alert')).textContent
+    expect(text).toContain(expected)
+    expect(text).toContain('로그아웃')
+    expect((text.match(/확인하지 못했습니다/g) || []).length).toBeLessThanOrEqual(1)
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
     server.logoutStatus = 204
