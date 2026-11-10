@@ -8,7 +8,7 @@
 - 코드 위치는 `파일:줄` 또는 `파일:함수`이며 2026-11-10 작업 트리에서 `grep`으로 확인했다. 찾지 못한 것은 "코드에서 찾지 못함"이라고 적었다.
 - 칼럼 표의 "키" 칸은 PK(기본키), FK(외래 키), UK(고유 제약)이다. "NULL" 칸의 `NO`는 NOT NULL이다.
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
-- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:105-128)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
+- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:120-143)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
 - 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`을 적용한 DB에는 여기에 옛 표 3개가 `db/manual/109_purge_old.sql` 실행 전까지 더 남는다(2-3).
 
 ## 2. 요약
@@ -116,6 +116,10 @@
 | 삭제 | `issue_tables_thread_idx` | `issue_tables (thread_id)` | 세 열 색인 하나로 대체 |
 | 삭제 | `issue_tables_user_idx` | `issue_tables (user_id, approved_at DESC)` | 세 열 색인 하나로 대체 |
 | 삭제 | `admin_role_log_at` | `admin_role_log (at)` | 이 표를 읽는 질의가 코드에 없다(`db/105_admin_role_log.sql:12`) |
+| 삭제 | `token_revocations_expires_at` | `token_revocations (expires_at)` | 만료 행을 지우는 코드가 없고 조회는 `jti` 기본키로 한다(`auth_store.py:402`). 정리 작업을 만들 때 다시 만든다 |
+| 삭제 | `signup_requests_status_requested_at` | `signup_requests (status, requested_at)` | `status`로 거르는 질의가 없다. 목록(`auth_store.py:298`)은 조건 없이 전체를 읽는다 |
+| 삭제 | `recall_notices_review_idx` | `recall_notices (created_at DESC) WHERE review_status = 'pending'` | 검토함은 `notices_all()`로 전부 읽어 앱에서 거른다(`recalls.py:181-185`). 쓰는 질의가 없다 |
+| 추가 | `chunks_link_targets_gin` | `chunks USING gin (link_targets)` | 함께 볼 정책 찾기 `maintenance.py:62-69`가 `link_targets @> ARRAY[대상]`로 찾는다. 로컬 합성 데이터(chunks 30,171행)에서 chunks 전체 훑기 8.969 ms, 버퍼 26,159에서 GIN 비트맵 스캔 버퍼 56으로 줄었다(`db_explain_local.md`) |
 | 추가 | `issue_tables_thread_user_idx` | `issue_tables (thread_id, user_id, approved_at DESC)` | 유일한 조회 `PgIssueTableStore.get_by_thread`의 조건과 정렬을 받는다(`backend/graph/departments/store.py:89-90`) |
 | 추가 | `recall_notices_feedback_idx` | `recall_notices (user_id, change_pattern, (changed ->> 'article'), ((changed ->> 'rule_seq')::bigint)) WHERE feedback_useful IS NOT NULL` | 의견 집계 질의 `feedback_counts`(`backend/graph/recall/store.py:357-362`). 의견이 있는 알림만 색인한다 |
 
@@ -123,8 +127,8 @@
 
 ### 3-3. 권한 회수
 
-- `db/109_realign.sql` 단계 5(109:105-128)가 `public`의 표, 파티션 표, 뷰, 구체화 뷰, 시퀀스에서 `anon`과 `authenticated`의 권한을 모두 회수하고, 이후 만들어지는 표와 시퀀스의 기본 권한도 회수한다. 두 역할이 없는 일반 PostgreSQL에서는 건너뛴다.
-- 회수한 이유는 109:105-106에 적혀 있다. 운영 Supabase가 `public`의 모든 표에 두 역할 권한을 열어 두었고(RLS가 막고 있었다), RLS에 더해 권한도 거두어 이중으로 잠그는 것이다. 앱은 소유자 역할로 접속하므로 영향이 없다(109:10).
+- `db/109_realign.sql` 단계 5(109:120-143)가 `public`의 표, 파티션 표, 뷰, 구체화 뷰, 시퀀스에서 `anon`과 `authenticated`의 권한을 모두 회수하고, 이후 만들어지는 표와 시퀀스의 기본 권한도 회수한다. 두 역할이 없는 일반 PostgreSQL에서는 건너뛴다.
+- 회수한 이유는 109:120-121에 적혀 있다. 운영 Supabase가 `public`의 모든 표에 두 역할 권한을 열어 두었고(RLS가 막고 있었다), RLS에 더해 권한도 거두어 이중으로 잠그는 것이다. 앱은 소유자 역할로 접속하므로 영향이 없다(109:10).
 - `ALTER DEFAULT PRIVILEGES`는 그 문장을 실행한 역할이 이후 만드는 객체에 적용되는 PostgreSQL 규칙이다. LangGraph 표를 만드는 앱 접속 역할이 109를 실행한 역할과 같은지는 코드에서 알 수 없다.
 - `signup_requests`는 비밀번호 해시를 담아서 106이 먼저 `PUBLIC`, `anon`, `authenticated`의 권한을 회수한다(`db/106_signup_approval.sql:14-28`).
 
@@ -179,7 +183,6 @@
 | `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:329`(`WHERE request_id = %s`), `225`, `313`(`ORDER BY request_id DESC`) |
 | `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:290`(`WHERE user_id = %s AND status = 'approved'`) |
 | `signup_requests_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:225`, `312-313`, `270-275`(중복 아이디를 UNIQUE 위반으로 감지) |
-| `signup_requests_status_requested_at` | `(status, requested_at)` | 코드에서 찾지 못함. `list_signup_requests`(295-302)는 `status` 조건 없이 `requested_at` 순으로 전체를 읽는다 |
 
 #### 4-1-3. `user_profiles`
 
@@ -239,7 +242,6 @@
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
 | `token_revocations_pkey` | `PRIMARY KEY (jti)` | `auth_store.py:402`(`WHERE jti = %s AND expires_at > now()`), `410-411`(`ON CONFLICT (jti)`) |
-| `token_revocations_expires_at` | `(expires_at)` | 코드에서 찾지 못함. 이 표의 만료 행을 지우는 `DELETE`도 `backend/`에서 찾지 못했다 |
 
 ### 4-2. 승인
 
@@ -463,7 +465,6 @@
 | `recall_notices_pkey` | `PRIMARY KEY (notice_id)` | `store.py:336`, `344`, `354-355` |
 | `recall_notices_answer_id_event_key_key` | `UNIQUE (answer_id, event_key)` | `store.py:328`(`ON CONFLICT (answer_id, event_key)`), `331-332` |
 | `recall_notices_user_idx` | `(user_id, created_at DESC)` | `store.py:340-341`(`WHERE user_id = ... ORDER BY created_at DESC`) |
-| `recall_notices_review_idx` | `(created_at DESC) WHERE review_status = 'pending'` | 코드에서 찾지 못함. 검토함 목록은 `recalls.py:181-185`에서 `notices_all()`로 전체를 읽은 뒤 앱에서 거른다 |
 | `recall_notices_digest_idx` | `(created_at) WHERE digest_status = 'pending'` | `store.py:348-349`(`WHERE digest_status = 'pending' ... ORDER BY created_at`) |
 | `recall_notices_feedback_idx` | `(user_id, change_pattern, (changed ->> 'article'), ((changed ->> 'rule_seq')::bigint)) WHERE feedback_useful IS NOT NULL` | `store.py:359-360`(`feedback_counts`, 식이 색인 식과 같아야 색인을 탄다), `365-368`(`feedback_list`의 `WHERE feedback_useful IS NOT NULL`) |
 
@@ -660,6 +661,7 @@
 |---|---|---|
 | `chunks_pkey` | `PRIMARY KEY (chunk_id, version_id)` | `load_snapshot.py:134-135`(`ON CONFLICT (chunk_id, version_id)`), `search.py:422`(`JOIN unnest(ids, vers) AS k(chunk_id, version_id)`) |
 | `chunks_page` | `(rule_seq, version_id)` | `section.py:182-183, 189-190`(`WHERE rule_seq = ... AND version_id = ...`), `schedule.py:256-257`, `search.py:431` |
+| `chunks_link_targets_gin` | `USING gin (link_targets)` | `maintenance.py:62-69`(`WHERE c.link_targets @> ARRAY[%s]::bigint[]`). `db/201_search.sql`이 만들고 `db/109_realign.sql`이 옛 DB에 더한다 |
 | `chunks_emb_hnsw_half` | `USING hnsw ((embedding::halfvec(1024)) halfvec_ip_ops) WITH (m = 16, ef_construction = 128) WHERE embedder = 'voyage-4'` (수동, `db/manual/chunks_hnsw_voyage4.sql`) | `search.py:350-354`(`ORDER BY dist LIMIT`, `SEARCH_HNSW=1`일 때만) |
 
 #### 4-5-4. `index_meta`
