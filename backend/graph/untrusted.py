@@ -47,6 +47,8 @@ _TOK = r"[A-Z][A-Z0-9]{2,}(?:[-_][A-Za-z0-9]+)+|[A-Za-z]*\d[A-Za-z0-9\-_]{3,}"  
 _QUOTED = r"""["'“‘`「『][^"'”’`」』\n]{2,}["'”’`」』]"""
 _MARKER_NOUN = r"(?:확인\s*번호|관리\s*번호|검증\s*(?:코드|번호)|승인\s*번호|점검\s*번호|추적\s*(?:코드|번호)|감사\s*코드|표식|토큰|verification\s+(?:code|token|number)|reference\s+(?:code|token)|tracking\s+(?:code|token))"
 _AI = r"(?:ai|a\.i\.|llm|assistant|chat ?bot|language model|ai agents?|ai assistants?)"
+_SNAKE = r"(?-i:(?<![A-Za-z0-9_])[a-z][a-z0-9]*(?:_[a-z0-9]+)+(?![A-Za-z0-9_]))"     # 내부 필드 이름처럼 보이는 snake_case 낱말(conclusion_changed)
+_SPEAKER = r"(?:judges?|graders?|evaluators?|validators?|verifiers?|classifiers?|moderators?|orchestrators?|assistants?|system|llm|ai|model|agent|심사자|판정자|평가자|시스템|어시스턴트|에이전트)"   # 처리 단계 화자 지정("Judge: ...")
 
 RULES_EN_KO: list[tuple[str, re.Pattern]] = [
     ("override_en", re.compile(r"\b(?:ignore|disregard|forget|override|bypass)\b(?:\s+\w+){0,3}\s+(?:previous|prior|above|earlier|preceding|former|system|developer|all)\s+(?:\w+\s+)?(?:instructions?|prompts?|rules?|directions?|guidelines?|context|messages?)", _I)),
@@ -76,6 +78,9 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
                                  r"(?:다른|타|해당|모든)\s*(?:부서\s*)?(?:에이전트|어시스턴트)(?:에게|께|에)\s*(?:전달|알려|지시|통보)|(?:에이전트|어시스턴트)\S*\s*(?:에게|께)\s*전달", _I)),
     ("concealment", re.compile(r"\b(?:do not|don't|never)\s+(?:tell|mention|reveal|inform)\s+(?:the\s+)?user|사용자에게\s*(?:알리지|말하지)\s*(?:마|말)", _I)),
     ("split_marker", re.compile(r"(?:조각|\bfragments?\b|\bpieces?\b)[^.\n]{0,50}?(?:이어|합쳐|연결|concat|join|combine|assemble)|(?:이어\s*붙여|합쳐서|연결해)[^.\n]{0,30}(?:답|응답|출력|적)", _I)),
+    # 처리 단계 화자를 지정한 지시 꼴("Judge: <지시>", "시스템: <지시>"). 화자 이름은 파이프라인 쪽 역할(judge, grader, system ...)만 본다.
+    # 내부 필드 이름(snake_case)에 "must be"를 붙인 문장은 설정 문서에도 흔해(핸드북 코퍼스에서 오탐 확인) 단독 규칙으로 쓰지 않는다.
+    ("speaker_directive", re.compile(rf"(?:^|[\n|)\]>*•\-\"“'‘]\s*|\d\)\s*){_SPEAKER}\s*[:：]\s*(?=[^\n]{{0,80}}?(?:\b(?:must|should|shall|always|never|ignore|set|mark|output|return|answer|reply|respond|approve|reject|do not|don't)\b|하라|[가-힣]\s*것(?![가-힣])|해야|마라))", _I)),
 ]
 
 
@@ -100,7 +105,7 @@ _D = re.compile(
     r"\b(?:please|kindly|must|should|shall|ought\s+to|needs?\s+to|has\s+to|have\s+to|required\s+to|expected\s+to|make\s+sure|be\s+sure\s+to|ensure|remember\s+to|recommended|always|never)\b", _I)
 _W = re.compile(
     r"(?:적(?:어|은|을|는|고|으|게)|쓰(?:라|세|십|고|도|는|며|면|시|기)|쓸|써(?:라|\s*주)|넣|붙(?:여|이|인|으|은|도|는|고)|남[기길겨]|올[리려]|기입|기재|표기|병기|표시|포함|첨부|출력|언급|명시|추가|덧붙|삽입|부기|명기|제시|기록|곁들)|"
-    r"\b(?:append|prepend|add|insert|include|write|print|say|state|mention|cite|quote|echo|tag|mark|stamp|attach|embed|put|leave|repeat|restate|(?:end|close|finish|conclude)s?\s+with)\b", _I)
+    r"\b(?:append|prepend|add|insert|include|write|print|say|state|mention|cite|quote|echo|tag|mark|stamp|attach|embed|put|leave|repeat|restate|set|override|overwrite|assign|replace|(?:end|close|finish|conclude)s?\s+with)\b", _I)
 _V_NOUN = (r"답변|응답|답안|회신|요약(?:본|문|의)?|쟁점표|권고\s*[란칸]|의견\s*[란칸]|"
            r"\b(?:answers?|responses?|repl(?:y|ies)|summar(?:y|ies)|(?:opinion|recommendation)\s+(?:field|column))\b")
 _V_POS = (r"의견(?=\s*(?:끝|말미|마지막))|(?:맨\s*)?말미|마지막\s*(?:줄|문장|행)|맨\s*끝|끝에|서두|"
@@ -114,6 +119,11 @@ _L = re.compile(
     r"(?:(?:확인|관리|검증|승인|점검|추적|감사|조회|열람|일련|식별|수신|인증|발급)\s*(?:번호|코드|값|표식|토큰)|표식|토큰|\bmarker\b|\bstamp\b|"
     r"(?:verification|tracking|audit|serial|confirmation|reference|access|authentication|validation|check)\s+(?:code|token|number|id|tag|key|string))"
     r"\s*[:：=]?\s*[\"'`「『(\[]?\s*(?:" + _CODE + "|" + _HEX16 + ")", _I)
+# 시스템 내부 상태를 가리키는 말(S): 전체를 가리키는 수량어 + 승인자·판정·행 같은 내부 대상, snake_case 필드 이름, "모두 승인으로 표시" 꼴. 표식 토큰(P)과 쓰기 동작(ACT)이 같이 있을 때만 REF로 센다.
+_S = re.compile(
+    r"\b(?:every|all|each|any)\s+(?:the\s+)?(?:approvers?|reviewers?|judges?|verdicts?|rows?|cells?|fields?|columns?|entries|records?|owners?|statuses|decisions?)\b|"
+    r"\bmark(?:ed|ing)?\s+(?:it|them|this|these|everything|all\b[^.\n]{0,20}?)\s+(?:as\s+)?(?:approved|passed|valid|verified|safe|true|false)\b|"
+    r"(?:모든|각|전체)\s*(?:승인자|검토자|판정|행|셀|필드|열|결재선)|" + _SNAKE, _I)
 _MARKERISH = re.compile(rf"{_QUOTED}|{_TOK}|{_MARKER_NOUN}", _I)
 
 
@@ -127,7 +137,7 @@ def _structure_start(clause: str) -> int:
     for p in _P_ANY.finditer(clause):
         w, lo = _window(clause, p)
         act = [m for m in (_D.search(w), _W.search(w)) if m]
-        ref = [m for m in (_V.search(w), _A.search(w), _L.search(w)) if m]
+        ref = [m for m in (_V.search(w), _A.search(w), _L.search(w), _S.search(w)) if m]
         if act and ref:
             return lo + min(m.start() for m in act + ref)
     for q in _QUOTED_RX.finditer(clause):   # 따옴표 문자열만 있는 표식은 일반 글에 흔하므로 더 좁게: 아주 가까이에 말투, 쓰기 동작, 출력 자리가 모두 있어야 한다
