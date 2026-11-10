@@ -232,6 +232,11 @@ def speculate_enabled() -> bool:
     return _flag("GRAPH_SPECULATE_FIRST")
 
 
+def speculate_ground_enabled() -> bool:
+    """SG `GRAPH_SPECULATE_GROUND=1`: 답 후보가 나오는 대로 그 답의 근거 판정을 미리 부르고, 나중에 같은 입력의 판정이 필요하면 그 결과를 쓴다(입력과 판정 기준은 그대로)."""
+    return _flag("GRAPH_SPECULATE_GROUND")
+
+
 def unchanged_rejudge_enabled() -> bool:
     """UR `GRAPH_UNCHANGED_REJUDGE=1`: 근거 판정이 받쳐지지 않는다고 하고, 사유를 받은 다시 쓰기가 처음 답을 그대로 내면 처음 답을 같은 입력으로 한 번 더 판정한다.
     받쳐지면 그 답을 내고, 아니면 지금처럼 문장 빼기와 거절로 간다(그 행에만 판정 호출 +1). 근거: 기존 agent_v2 행에서 이 경로(다시 쓰기 unchanged)는 5행이고
