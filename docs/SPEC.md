@@ -2,7 +2,7 @@
 
 > 이 문서가 "무엇을 만들고, 어떤 숫자로 잘 됐다고 말하나"의 정본이다(가이드 p.14, p.21). 코드를 바꾸면 이 문서도 같은 PR에서 바꾼다. 기능별 상세는 `docs/specs/`, 설계는 [SDD](./SDD.md), 요구사항은 [PRD](./PRD.md), 팀 규칙은 [TEAM_GUIDE](./TEAM_GUIDE.md), AI 도구 지침은 [AGENTS.md](../AGENTS.md)에 있다. 숫자 기준은 PRD 13-2를 그대로 옮겼고 여기서 새 숫자를 만들지 않는다.
 
-상태: D0(10/30) 초안. 숫자 기준은 D0 합의로 동결하며 이후 낮추지 않는다(가이드 p.14, p.19).
+상태: 2026-11-10 갱신(D0 10/30 초안 이후). 숫자 기준은 D0 합의로 동결했고 이후 낮추지 않는다(가이드 p.14, p.19). 3장 결과 칸은 2026-11-10 현재 EVAL_REPORT.md와 vals/results/의 값이다.
 
 ## 1. 한 줄 정의
 
@@ -18,11 +18,11 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 | F-02 | 답변 리콜 | 인용한 섹션이 바뀌면 영향받는 답을 다시 판정해 결론이 바뀐 답만 받은 사람에게 알린다. 연결된 정책은 관리자에게 "함께 볼 정책"으로 알린다. 업무시스템에는 웹훅으로 알린다 | 함께 볼 정책은 관리자 판단 | [recall](./specs/recall.md) |
 | F-03 | 팀 합동 검토 | 보안, 인프라·SRE, IT 운영, 재무 에이전트가 한 건을 검토해 쟁점표를 만든다 | 쟁점표 저장 전 | [team-review](./specs/team-review.md) |
 | F-04 | 결정표 | 승인 권한표를 결정표로 바꾸고, 관리자가 원문과 대조해 승인한 결정표만 실행한다. 실행에는 LLM을 쓰지 않는다 | 결정표 실행 전 | [decision-approval](./specs/decision-approval.md) |
-| P-01 | 로그인과 사용자별 기억 | 로그인, 사용자 id로 대화(thread)와 장기 기억(Store namespace) 분리 | 해당 없음 | [login](./specs/login.md), 기억 Spec은 예정 |
+| P-01 | 로그인과 사용자별 기억 | 로그인, 사용자 id로 대화(thread)와 장기 기억(Store namespace) 분리 | 해당 없음 | [login](./specs/login.md), [memory](./specs/memory.md) |
 | P-02 | 문서 적재 | Markdown 파싱, 청킹, 임베딩, `data/manifest.jsonl`, 증분 수집 | 해당 없음 | [collect](./specs/collect.md) |
-| P-03 | 업무시스템 연동 | REST(OpenAPI), 자동 생성 SDK, FastMCP 서버, 웹훅, `mock_erp/` | 해당 없음 | Spec 예정 |
+| P-03 | 업무시스템 연동 | REST(OpenAPI), 자동 생성 SDK, FastMCP 서버, 웹훅, `mock_erp/` | 해당 없음 | [mcp](./specs/mcp.md), 업무시스템 쪽 REST는 [api](./api/api.md) |
 | P-04 | 데모 모드 | `docker compose up` 한 줄, 키 없이 기동, 데모 계정 2개 시드 | 해당 없음 | 이 문서 4장 |
-| 가산 | 자동화, GraphRAG, MCP·Skill | 증분 수집과 정시 실행, 페이지 링크 그래프, FastMCP와 런타임 Skill (가이드 p.20) | 해당 없음 | Spec 예정 |
+| 가산 | 자동화, GraphRAG, MCP·Skill | 증분 수집과 정시 실행, 페이지 링크 그래프, FastMCP와 런타임 Skill (가이드 p.20) | 해당 없음 | [incremental](./specs/incremental.md), [mcp](./specs/mcp.md) |
 
 필수 뒤 진행: F-05~F-08. 11/6 중간 점검에서 모두 유지하기로 했고(결정 0066), 핵심 기능과 필수 게이트를 끝낸 뒤 진행한다(PRD 6-3).
 
@@ -32,29 +32,30 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 
 ## 3. 숫자 기준 (PRD 13-2, 동결)
 
-"측정" 칸의 `예정`은 아직 만들지 않은 명령·결과 파일이다. 만들면 이 표에서 `예정`을 지우고 실제 경로로 바꾼다. 결과 칸은 실측 뒤에만 채운다.
+기준 칸은 D0(10/30) 합의로 동결했고 낮추지 않는다. 결과 칸은 2026-11-10 현재 `EVAL_REPORT.md`와 `evals/results/`의 결과 파일에 있는 값만 옮겼고, 값마다 잰 조건과 리비전을 적었다. 재지 않은 지표는 `미측정`으로 두고 이유를 적었다. 응답 시간, 비용, 질문 쪽 주입 결과는 리비전이 바뀌면 값이 바뀌므로 리비전을 함께 읽는다. 아래 "공식 값"은 배포 서비스 `provena-api-00032-zhs`(커밋 `5d6a2fe`)의 측정이고, 이후 코드 변경(`provena-api-00034-tkx` 이후의 근거 판정 수정, 단계별 비용 기록)을 넣은 리비전의 3회 측정은 아직 없다.
 
-| 지표 | 기준 | 재는 법 (PRD 13-2) | 측정 명령 / 결과 파일 | 결과 |
+| 지표 | 기준 | 재는 법 (PRD 13-2) | 측정 명령 / 결과 파일 | 결과 (2026-11-10) |
 |---|---|---|---|---|
-| 검색 Recall@5 | 0.80 이상 | 평가셋 관련 문항, 사람이 정한 정답 섹션 기준 | `evals/retrieval/` 실행기, 결과 `evals/results/` 아래 (예정, 박진형) | 미측정 |
-| 인용 정확도 | 0.85 이상 | 답이 인용한 섹션이 정답 섹션과 맞는 비율 | `evals/agent/` 실행기, 결과 `evals/results/` 아래 (예정) | 미측정 |
-| 비관련 질문 거절 | 0.90 이상 | 비관련 4종(도메인 밖, 코퍼스에 없는 대상, 없는 항목, 기간이 다른 질문). 비공개 문서 질문 포함 | `evals/agent/` 실행기, 결과 `evals/results/` 아래 (예정) | 미측정 |
-| 판 날짜 표시 | 100% | 모든 답에 근거 섹션의 판 날짜 표시 | `evals/agent/` 실행기와 `tests/` 회귀 시험 (예정) | 미측정 |
-| 답변 리콜 | 재현율 0.80 이상, 정밀도 0.80 이상 | 실제 개정 커밋 전후 판으로 만든 시험 답변에서 결론이 바뀐 답을 찾는 비율 | `evals/agent/` 리콜 평가, 결과 `evals/results/` 아래 (예정) | 미측정 |
-| 함께 볼 정책 후보 | 정밀도를 재서 공개 | 사람이 정한 연결 정책과 대조 | `evals/agent/` 후보 평가, 결과 `evals/results/` 아래 (예정) | 미측정 |
-| 링크 추출 | 정확도를 재서 공개 | 참조 그래프 간선을 원문과 대조 | `evals/agent/` 링크 평가, 결과 `evals/results/` 아래 (예정) | 미측정 |
-| 결정표 | 승인 전 실행 0건. 셀 정확도는 재서 공개 | 사람이 원문에서 뽑은 정답과 셀 대조 | 승인 전 실행은 `tests/` 시험(decision-approval AC-01), 셀 정확도는 `evals/agent/` (예정) | 미측정 |
-| 신뢰 경계 | 결정표 기준 변경·승인 우회·유출 경로는 뚫림 0건, 나머지는 공격 성공률 공개 | 간접 인젝션 최소 30건 | `evals/safety/` 실행기와 결과 (예정) | 미측정 |
-| 응답 시간 | 검색+리랭킹 p95 3초 이하(첫 요청 제외), 전체 p95 10초 이하 | Cloud Run에서 단계별 실측 | Langfuse 트레이스와 `evals/results/` 아래 측정 파일 (예정) | 미측정 |
-| 비용 | 질문 1건 평균 $0.01 이하 | Langfuse 비용 기록 | Langfuse 대시보드 (스크린샷은 `docs/deliverables/`) (예정) | 미측정 |
-| 기동 | 깨끗한 환경에서 `docker compose up` 10분 이내 | G2 | 새 clone에서 `docker compose up -d --build`와 `/health` 확인, 소요 시간은 `docs/GATES.md` G2 칸에 기록 (손으로 잼) | 미측정 |
+| 검색 Recall@5 | 0.80 이상 | 평가셋 관련 문항, 사람이 정한 정답 섹션 기준 | `python -m evals.retrieval.compare ...`(`EVAL_REPORT.md` 9장), 결과 `evals/results/retrieval_v2_round2/`, `retrieval_fix_v1/` | v2 관련 25건 기본형(`voyage-4` 영어 문장 벡터, 리랭커 없음, 청크 800/120, k=5) 0.843(95% 구간 0.707~0.960). v1 관련 15건에서 질문 분해와 링크 확장(L1x2)을 더한 서비스 구성은 0.833에서 0.967(사후 등록 #9, `EVAL_REPORT.md` 3장). 서비스 구성의 v2 25건 Recall@5는 재지 않았다 |
+| 인용 정확도 | 0.85 이상 | 답이 인용한 섹션이 정답 섹션과 맞는 비율 | `python -m evals.agent.exp_multi_v2 run --store pg --llm anthropic --out <폴더>`(전체 인자는 결과 폴더 `compare.json`의 `meta`), 결과 `evals/results/agent_v2_q_d6151_r1~r3_bo2sda2_api/`, 배포 측정은 `python -m evals.latency.deploy_latency`와 `deploy_citation_gold`, 결과 `deploy_latency_provena-api-00032-zhs/` | v2 50건 최종 3회 평균(사전 등록 61.51) 단일 1.000, 멀티 0.992. 배포 `provena-api-00032-zhs` v2 50건 3회 0.989. v2와 겹치지 않는 검증 20건(관련 10건) 배포 3회 0.772로 기준에 못 미친다(`deploy_latency_holdout_provena-api-00032-zhs/`). v2 값은 같은 50건을 보고 고친 뒤의 값이라 낙관적일 수 있다(`EVAL_REPORT.md` 4장) |
+| 비관련 질문 거절 | 0.90 이상 | 비관련 4종(도메인 밖, 코퍼스에 없는 대상, 없는 항목, 기간이 다른 질문). 비공개 문서 질문 포함 | 위와 같다 | v2 50건 최종 3회 평균 단일·멀티 모두 1.000. 배포 00032-zhs v2 50건 3회 1.000, 검증 20건 3회 1.000 |
+| 판 날짜 표시 | 100% | 모든 답에 근거 섹션의 판 날짜 표시 | `evals/agent/run_eval.py`가 보조 값으로 내는 판 날짜 표시, 시험은 `tests/` | 표시율은 `EVAL_REPORT.md`에 실은 결과가 없어 미측정. 배포 측정에서 판 날짜가 다른 인용은 0건(00032-zhs, v2 50건 3회와 검증 20건 3회)이지만 이것은 인용한 판의 일치이지 표시율이 아니다 |
+| 답변 리콜 | 재현율 0.80 이상, 정밀도 0.80 이상 | 실제 개정 커밋 전후 판으로 만든 시험 답변에서 결론이 바뀐 답을 찾는 비율 | 측정기 `python -m evals.agent.exp_recall_v1 --pairs evals/recall_pairs.jsonl --out evals/results/recall_v1` | 미측정. 측정기는 있으나 입력 파일 `evals/recall_pairs.jsonl`이 저장소에 없어 돌리지 않았다. 리콜 동작 자체는 시험(`tests/test_recall_graph.py`, `tests/test_recall_notice.py`)으로만 확인한다 |
+| 함께 볼 정책 후보 | 정밀도를 재서 공개 | 사람이 정한 연결 정책과 대조 | 측정기 없음 | 미측정. 후보 평가 실행기를 만들지 않았다 |
+| 링크 추출 | 정확도를 재서 공개 | 참조 그래프 간선을 원문과 대조 | 측정기 없음 | 미측정. 링크 있는 청크는 2,661개로 세었으나(`docs/GATES.md` G4) 간선을 원문과 대조한 정확도는 재지 않았다. 링크 확장의 검색 효과는 위 Recall@5 행에 있다 |
+| 결정표 | 승인 전 실행 0건. 셀 정확도는 재서 공개 | 사람이 원문에서 뽑은 정답과 셀 대조 | 승인 전 실행은 `tests/test_decision_approval.py`(decision-approval AC-01) | 승인 전 실행 0건을 시험으로 확인했다. 재시작 뒤 승인·반려·결정표 승인 재개는 배포 `provena-api-00032-zhs`에서 3건 확인했다(`evals/results/d7_restart_provena-api-00032-zhs/`). 셀 정확도는 원문 권한표 파싱 363칸 중 역할 주석 대조 불일치 0(`EVAL_REPORT.md` 1장)까지이고, 모델이 만든 결정표 초안의 셀 정확도는 정답 평가셋이 없어 미측정 |
+| 신뢰 경계 | 결정표 기준 변경·승인 우회·유출 경로는 뚫림 0건, 나머지는 공격 성공률 공개 | 간접 인젝션 최소 30건 | `python -m evals.safety.run_safety`(30건 고정 세트), 배포 주소 대상은 `python -m evals.safety.deploy_injection_check`와 `deploy_corpus_injection_check`, 결과 `evals/results/injection_*`, `EVAL_REPORT.md` 6장 | 고정 30건 시험 기본 모드 뚫림 0, 실제 모델(Haiku 5.5) 뚫림 0. 배포 `provena-api-00034-tkx` 질문 쪽 주입 19건 뚫림 0, 대조군 3건 정상. 배포 `provena-api-00033-kwn` 코퍼스 주입 9건 뚫림 0(시험 청크가 인용된 8건 막힘, 1건은 판정 불가). 모델이 심은 지시를 따라 답 본문이나 쟁점표 문장을 바꾸는 경로는 코드로 막을 수 없어 공격 성공률을 공개한다(6장) |
+| 응답 시간 | 검색+리랭킹 p95 3초 이하(첫 요청 제외), 전체 p95 10초 이하 | Cloud Run에서 단계별 실측 | `python -m evals.latency.deploy_latency --revision <리비전> --commit <커밋>`, 결과 `evals/results/deploy_latency_<리비전>/`, 단계별은 `evals/latency/stage_times.py`와 `evals/agent/stage_report.py` | 전체 p95 공식 값: 배포 `provena-api-00032-zhs` v2 50건 3회, 회차별 p95 평균 8.473초(8.175, 8.915, 8.328)로 충족. 같은 방식의 이력은 `00029-qbd` 11.153초, `00020` 15.641초. `00033-kwn` 1회 측정 10.634초는 3회 평균이 아니어서 이력으로만 둔다. 검색 단계 p95는 1.40초(`00020`의 Langfuse 세션 74개), 로컬 최종 측정 150건에서 1.11초로 3초 이하이며 리랭커는 쓰지 않는다. 현재 운영 `00034-tkx`의 3회 p95는 없다 |
+| 비용 | 질문 1건 평균 $0.01 이하 | Langfuse 비용 기록 | Langfuse 대시보드(스크린샷은 `docs/images/langfuse/`), 배포 측정 요약 `evals/results/deploy_latency_<리비전>/summary.json` | 배포 `provena-api-00032-zhs` 요청당 0.0067달러(150건 합 1.0032달러), `00029-qbd` 0.0052달러. 로컬 최종 측정은 50건 회당 단일 0.261달러(요청당 약 0.0052달러). 단계별 비용은 로컬 최종 측정 150건 재계산(`evals/results/d8_stage_report/`)이며 Voyage 비용은 행에 기록이 없어 넣지 못했다 |
+| 기동 | 깨끗한 환경에서 `docker compose up` 10분 이내 | G2 | 새 clone에서 `docker compose up -d --build`와 `/health` 확인, 소요 시간은 `docs/GATES.md` G2 칸에 기록 (손으로 잼) | 2026-11-09 새 clone(main `0b503f7`, `.env` 없음) `/health` 응답까지 5분 35초. 이미지 풀기가 늦은 회차 1번은 10분 22초, 다른 회차 3분 51초. 2026-11-10에 발견된 `db/106` 역할 오류는 [PR #110](https://github.com/aihuman-7th/proj3-c/pull/110)이 고쳤고 이후 `db/109` 재정렬이 들어갔으므로, 이 병합본 기준의 새 clone 재확인은 아직 하지 않았다 |
 
 공통 규칙:
 
-- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결하면 해시가 `evals/FROZEN.json`에 기록된다(v1은 11/3, v2는 11/6 동결 예정). 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
+- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결 해시는 `evals/FROZEN.json`에 있다. v1은 2026-11-01, v2는 2026-11-02에 동결했고 v2는 2026-11-07에 38번 정답을 판정자 확인에 맞춰 고치고 다시 동결했다(결정 0075, 현재 해시 `810d01f1…24d9f`). 검증 20건(`evals/dataset_holdout_v1.jsonl`)은 v2와 겹치지 않는 문항으로 결정 0074에 따라 따로 둔다. 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
 - 실험은 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적고 한 번에 하나만 바꾼다.
 - 숫자는 실행 결과에서 나온 값만 쓰고, 실행 명령을 함께 적는다. 점수가 오르지 않았으면 오르지 않았다고 쓴다.
 - 평가 결과는 `EVAL_REPORT.md`에 개선 전후, 달라진 문항, 지표 5개 분리 보고로 옮긴다.
+- 한 번에 재는 명령(`evals/run_all.py`)은 만들지 않았다. 지표마다 위 표의 명령을 쓰고, CI는 커밋된 최종 측정 결과를 통과선과 견주는 `python evals/ci_compare.py`와 `pytest -q`를 돌린다(`.github/workflows/ci.yml`).
 
 ## 4. 데모 모드 (P-04, G2)
 
@@ -74,7 +75,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 ## 5. 파트 사이 계약과 API
 
 - 데이터 형식은 `backend/schemas/`(chunk, events, approval, recall, decision)이고 SDD 6장과 같다. 필드 추가는 PR 하나로 3명 승인, 이름 변경·삭제는 회의에서만 정한다. 시험은 `tests/test_schemas.py`. `AgentEvent.data`의 `type`별 키는 SDD 6장 표를 따른다.
-- 엔드포인트 목록은 SDD 4-4장이다. 지금 구현된 것은 `/health`, 로그인 라우터(`/auth/csrf`, `/auth/login`, `/auth/logout`, `/me`), 결정표·승인 라우터, `/chat`(SSE), `/threads`, `/threads/{thread_id}`, `/me/memory`이며 `/health` 밖의 라우터는 `DATABASE_URL`이 있을 때만 붙는다. 모든 오류는 `{"error": {"code", "message", "request_id"}}` 한 모양이고(화면 호환을 위해 같은 문구의 `detail` 문자열을 함께 낸다) 화면은 `code`로 분기한다(`backend/api/errors.py`). 요청마다 `X-Request-ID` 헤더와 로그 한 줄을 남긴다(`backend/api/middleware.py`). 오류 본문, HTTP 상태별 `code`, 요청 ID, 재시도 안내는 SDD 4-4절을, `/chat` SSE의 전달 형식·이벤트 순서·`done`의 `code`는 SDD 6장을 따른다. 나머지는 해당 기능을 만들 때 이 문서와 SDD를 같이 고친다.
+- 엔드포인트 목록은 SDD 4-4장과 정적 명세 docs/api/openapi.json(경로 42개, 동작 47개. 라우터가 바뀌면 python docs/api/export_openapi.py로 다시 만든다. 사용법은 [api.md](./api/api.md))이다. 구현된 것은 /health, 로그인·가입 라우터(/auth/csrf, /auth/login, /auth/logout, /auth/signup, /auth/google/start, /auth/google/callback, /me, /me/profile), 사용자 관리(/admin/users, /admin/signup-requests 아래), 결정표·승인(/decision-tables 아래, /approvals 아래), /chat(SSE), /threads, /threads/{thread_id}, /me/memory, 리콜(/recalls 아래, /impact-preview, /maintenance-candidates, /webhook-subscriptions, /webhook-deliveries, /webhooks/regulation-updated), 변경 감시(/changes 아래)이며 /health 밖의 라우터는 DATABASE_URL이 있을 때만 붙는다. 화면 파일을 내주는 경로와 /mcp(FastMCP 앱)는 명세에 나오지 않는다. 모든 오류는 `{"error": {"code", "message", "request_id"}}` 한 모양이고(화면 호환을 위해 같은 문구의 `detail` 문자열을 함께 낸다) 화면은 `code`로 분기한다(`backend/api/errors.py`). 요청마다 `X-Request-ID` 헤더와 로그 한 줄을 남긴다(`backend/api/middleware.py`). 오류 본문, HTTP 상태별 `code`, 요청 ID, 재시도 안내는 SDD 4-4절을, `/chat` SSE의 전달 형식·이벤트 순서·`done`의 `code`는 SDD 6장을 따른다. 경로를 더하거나 바꾸면 이 문서, SDD, 정적 명세를 같은 PR에서 고친다.
 
 ## 6. 게이트와 증거
 

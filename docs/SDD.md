@@ -1,7 +1,7 @@
 ---
 type: sdd
 project: Provena
-updated: 2026-10-28
+updated: 2026-11-10
 tags: [project, sdd]
 ---
 
@@ -124,7 +124,7 @@ flowchart LR
 | `task-brief` | 작업 지시서 양식 (목적, 입출력, 인수 테스트, 건드릴 파일) |
 | `test-first` | 테스트를 먼저 쓰고 구현 |
 | `self-check` | "완료" 전에 테스트·린트를 실제로 실행하고 출력 확인 |
-| `run-eval` | 평가셋 실행과 지표 비교 (`python evals/run_all.py`, 예정) |
+| `run-eval` | 평가셋 실행과 지표 비교 (`python -m evals.agent.exp_multi_v2 run ...`, `python evals/ci_compare.py`. 명령은 SPEC 3장) |
 | `replay` | 데모 모드 녹화 응답 재생 |
 | `data-check` | 핸드북 git 수집기·권한표 파서 점검 |
 | `regression` | 지표가 기준선보다 떨어졌는지 확인 |
@@ -144,7 +144,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발 도구 Skill (2-4)
 ├─ .mcp.json                 # 개발용 MCP 연결 설정
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). 의존성은 backend/requirements.txt
+├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장, `evals/evals.md`). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
@@ -198,7 +198,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ evals/ evals.md
 │     ├─ dataset_v1.jsonl, dataset_v2.jsonl
 │     ├─ freeze.py, FROZEN.json, PREREGISTER.md
-│     ├─ run_all.py               # 한 줄 재현 명령
+│     ├─ ci_compare.py            # 커밋된 최종 측정 결과를 통과선과 견줌(CI)
 │     ├─ retrieval/ (retrieval.md)  agent/ (agent.md)  safety/ (safety.md)  results/
 └─ tests/
 ```
@@ -380,7 +380,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 
 ## 5. 데이터 모델
 
-테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장).
+테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장). 아래 표는 요약이고, 현재 DB(앱 표 25개 + LangGraph 표 6개 = 31개, 2026-11-10 `db/109` 재정렬 뒤)의 관계도는 [ERD](./db/ERD.md), 표와 칸의 정의는 [TABLE_SPEC](./db/TABLE_SPEC.md), 코드의 SQL과 색인 대조는 [QUERY_INDEX](./db/QUERY_INDEX.md), 마이그레이션 순서와 운영 적용 절차는 `db/db.md`에 있다.
 
 | 테이블 | 주요 칸 | 쓰는 곳 |
 |---|---|---|
@@ -610,11 +610,28 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다 |
 | MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
-| 재현 | `evals/run_all.py` | 한 줄 재현 명령 |
+| 재현 | `EVAL_REPORT.md` 9장, SPEC 3장 | 지표마다 실행 명령을 적었다. 모든 지표를 한 번에 재는 `evals/run_all.py`는 만들지 않았다 |
 
-## 11. 미정 사항 (D0에 정함)
+## 11. 결정 사항과 남은 미정 사항 (D0 안건표, 2026-11-10 갱신)
 
-D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다.
+D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
+
+### 11-0. 2026-11-10 현재 확인되는 결과
+
+| 항목 | 현재 결과 | 근거 |
+|---|---|---|
+| 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
+| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다 | 결정 0078, 0086, `EVAL_REPORT.md` 8장 |
+| 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
+| 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
+| 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
+| 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
+| MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
+| F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
+| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/`(Java `src/`, `python_example/`)에 있고 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+
 
 ### 11-1. 파트 사이 계약
 
@@ -662,7 +679,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
 | 역할 배정, 폴더 주인 | 팀 작업 지침서 3장·5장 | 업무 분담안 그대로 확정 (가이드 p.28) | D0 |
-| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음, 담당을 정한다 | D0 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음. 현재 결과는 11-0 | D0 안건. 시연 영상 담당은 아직 정하지 않았다 |
 | 숫자 기준 | PRD 13-2 제안안 | 동결하고 중간에 낮추지 않는다 (가이드 p.14, p.19) | D0 |
 | 평가셋 정답 기준일(`as_of`) | 고정 커밋 날짜 하나로 통일 / 문항마다 다르게 | 고정 커밋 날짜 하나 | D0 |
 | 정답 판정 | 질문을 쓰지 않은 두 사람이 따로 판정하고, 다른 판정은 두 판정자가 합의한다(팀장은 형식만 확인) | 이 방식 | v1은 11/1 동결(기한 D2 11/3) |
