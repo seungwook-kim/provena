@@ -45,6 +45,8 @@ export const previewAdminService = createAdminService({
 
 const CANDIDATE_DECISION = { needed: 'needs_review', not_needed: 'not_needed' }
 const CANDIDATE_STATUS = { needs_review: 'needed', not_needed: 'not_needed' }
+// 백엔드 결정표 상태는 draft | approved | rejected (backend/schemas/decision.py), 화면 상태는 pending | approved | rejected 다.
+const TABLE_STATUS = { draft: 'pending', approved: 'approved', rejected: 'rejected' }
 const NETWORK_ERROR = '서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.'
 
 export function mapApprovedDecisionTable(item = {}) {
@@ -54,7 +56,7 @@ export function mapApprovedDecisionTable(item = {}) {
   return {
     id: item?.table_id == null ? '' : String(item.table_id),
     title: category ? `${category} 결정표` : '결정표',
-    status: 'approved',
+    status: TABLE_STATUS[item?.status] ?? 'approved',   // 이 목록은 승인된 표만 준다. 모르는 값은 목록의 뜻대로 승인 완료로 본다
     document: source.filter(Boolean).join(' · '),
     requestedAt: '—',   // 승인된 표 목록에는 날짜 칸이 없다
     approvalId: null,

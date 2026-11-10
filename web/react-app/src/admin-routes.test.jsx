@@ -90,12 +90,50 @@ describe('운영 현황(/admin) 실제 데이터 연결', () => {
     expect(requestsTo('GET', '/maintenance-candidates')).toHaveLength(1)
   })
 
-  it('승인 상태 필터로 표를 거른다', async () => {
+  it('필터 탭을 누르면 선택 표시가 바뀌고 상태별로 행이 걸러진다', async () => {
+    server.tables = [approvedTable(), approvedTable({ table_id: 'dt_approved_2', category: 'Travel' })]
     render(<App />)
     await screen.findByText('Procurement 결정표')
-    await userEvent.click(screen.getByRole('button', { name: '승인 대기' }))
+    const tab = name => screen.getByRole('button', { name })
+    const rows = () => document.querySelectorAll('.admin-table-panel tbody tr')
+    const selectedTabs = () => [...document.querySelectorAll('.admin-approval-filter button.selected')].map(button => button.textContent)
+    expect(selectedTabs()).toEqual(['전체'])
+    expect(tab('전체').disabled).toBe(false)
+    expect(rows()).toHaveLength(3)                     // 승인 대기 1 + 승인 완료 2
+    await userEvent.click(tab('승인 대기'))
+    expect(selectedTabs()).toEqual(['승인 대기'])
+    expect(tab('승인 대기').getAttribute('aria-pressed')).toBe('true')
+    expect(tab('전체').getAttribute('aria-pressed')).toBe('false')
+    expect(rows()).toHaveLength(1)
     expect(screen.queryByText('Procurement 결정표', { selector: 'td' })).toBeNull()
-    expect(screen.getByText('결정표 승인 요청: Travel (구간 1개, 원문과 다른 칸 0개)', { selector: 'td' })).toBeTruthy()
+    await userEvent.click(tab('승인 완료'))
+    expect(selectedTabs()).toEqual(['승인 완료'])
+    expect(rows()).toHaveLength(2)
+    expect([...rows()].every(row => row.textContent.includes('승인 완료'))).toBe(true)
+    await userEvent.click(tab('전체'))
+    expect(selectedTabs()).toEqual(['전체'])
+    expect(rows()).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '반려' })).toBeNull()   // 반려 목록 API가 없어 실제 화면에는 반려 탭을 두지 않는다
+  })
+
+  it('승인 대기가 0건이면 그 탭에서 상태 이름이 든 빈 결과 문구를 보인다', async () => {
+    server.approvals = [issueApproval()]
+    render(<App />)
+    await screen.findByText('Procurement 결정표', { selector: 'td' })
+    expect(summaryValue('처리 대기')).toBe('0')
+    await userEvent.click(screen.getByRole('button', { name: '승인 대기' }))
+    expect(screen.getByText('승인 대기 상태인 결정표가 없습니다.')).toBeTruthy()
+    expect(document.querySelectorAll('.admin-table-panel tbody tr')).toHaveLength(0)
+    expect(screen.queryByRole('alert')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: '승인 완료' }))
+    expect(document.querySelectorAll('.admin-table-panel tbody tr')).toHaveLength(1)
+  })
+
+  it('백엔드 상태값 draft는 승인 대기로, rejected는 반려로 맞춘다', async () => {
+    const { mapApprovedDecisionTable } = await import('./lib/admin-service')
+    expect(mapApprovedDecisionTable(approvedTable({ status: 'draft' })).status).toBe('pending')
+    expect(mapApprovedDecisionTable(approvedTable({ status: 'rejected' })).status).toBe('rejected')
+    expect(mapApprovedDecisionTable(approvedTable()).status).toBe('approved')
   })
 
   it('목록이 비면 오류가 아니라 빈 목록 안내를 보인다', async () => {
