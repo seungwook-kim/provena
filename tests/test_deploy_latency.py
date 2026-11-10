@@ -113,3 +113,40 @@ def test_ask_retries_once_on_timeout_and_relogs_in_on_401(monkeypatch):
     monkeypatch.setattr(dl, "ask_once", lambda *a, **k: {"status": "network_error:ConnectError", "total_s": 1.0})
     res = dl.ask(None, {"id": 8, "input": "q"}, lambda: True, use_as_of=True, timeout_s=120)
     assert res["status"] == "network_error:ConnectError" and res["attempts"] == 2    # 재시도 1회 뒤 실패로 기록
+
+
+# ---------- 서버가 done에 실은 단계별 비용·Voyage·거절 칸(backend/api/routes.py)을 행에 저장 ----------
+
+STEP_DONE = {"kind": "answer", "usage": {"cost_usd": 0.0007, "input_tokens": 4500, "output_tokens": 430, "calls": 4},
+             "cost_by_step": {"judge/judge": {"calls": 2, "input_tokens": 2000, "output_tokens": 200, "cost_usd": 0.0003, "llm_s": 1.5},
+                              "write_answer/answer": {"calls": 1, "input_tokens": 3000, "output_tokens": 300, "cost_usd": 0.0004, "llm_s": 2.0}},
+             "cost_by_step_total_usd": 0.0007, "embed_tokens": 13, "embed_calls": 1, "embed_cost_usd": 7.8e-07}
+
+
+def test_stream_saves_server_step_fields_and_keeps_existing_columns():
+    clock = Clock([0.0, 1.0])
+    got = dl.consume_chat_stream(sse("done", STEP_DONE), t0=clock(), clock=clock)
+    assert got["cost_usd"] == 0.0007 and got["input_tokens"] == 4500 and got["llm_calls"] == 4 and got["result"] == "answer"
+    assert got["cost_by_step"]["judge/judge"]["calls"] == 2 and got["embed_tokens"] == 13 and got["embed_cost_usd"] == 7.8e-07
+    assert got["refuse_stage"] is None and got["refuse_reason"] is None
+    refused = dl.consume_chat_stream(sse("done", {"kind": "refuse", "code": "no_results", "usage": {}, "refuse_stage": "give_up", "refuse_reason": "no_evidence"}),
+                                     t0=0.0, clock=Clock([0.0, 1.0]))
+    assert (refused["refuse_stage"], refused["refuse_reason"]) == ("give_up", "no_evidence")
+    old = dl.consume_chat_stream(sse("done", {"kind": "answer", "usage": {"cost_usd": 0.001}}), t0=0.0, clock=Clock([0.0, 1.0]))
+    assert all(old[k] is None for k in dl.STEP_FIELDS)     # 옛 서버: 칸이 없으면 None
+
+
+def test_summary_adds_per_step_totals_only_from_rows_that_have_them():
+    ok = dl.consume_chat_stream(sse("done", STEP_DONE), t0=0.0, clock=Clock([0.0, 1.0]))
+    refused = dl.consume_chat_stream(sse("done", {"kind": "refuse", "usage": {"cost_usd": 0.0002}, "refuse_stage": "give_up", "refuse_reason": "no_evidence",
+                                                  "cost_by_step": {"judge/judge": {"calls": 1, "input_tokens": 1000, "output_tokens": 100, "cost_usd": 0.0001, "llm_s": 0.5}},
+                                                  "embed_tokens": 0, "embed_calls": 0, "embed_cost_usd": 0.0}), t0=0.0, clock=Clock([0.0, 1.0]))
+    old = dl.consume_chat_stream(sse("done", {"kind": "answer", "usage": {"cost_usd": 0.001}}), t0=0.0, clock=Clock([0.0, 1.0]))
+    s = dl.summarize_rows([ok, refused, old])
+    assert s["step_rows"] == 2 and s["cost_by_step"]["judge/judge"]["calls"] == 3 and s["cost_by_step"]["judge/judge"]["calls_per_question"] == 1.5
+    assert s["cost_by_step"]["judge/judge"]["cost_usd"] == pytest.approx(0.0004) and s["cost_by_step"]["write_answer/answer"]["rows"] == 1
+    assert s["embed_rows"] == 2 and s["embed_tokens_sum"] == 13 and s["refuse_stage_reason"] == {"give_up/no_evidence": 1}
+    assert dl.summarize_rows([old])["step_rows"] == 0 and dl.summarize_rows([old])["cost_by_step"] == {}
+    summary = {"meta": {"n_questions": 3, "base_url": "x"}, "per_run": [{"run": 1, **s}], "all_runs": s, "relevant_only": s, "irrelevant_only": s}
+    md = dl.render_markdown(summary)
+    assert "## 단계별 비용" in md and "judge/judge" in md and "Voyage 임베딩: 토큰 합 13" in md and "give_up/no_evidence 1건" in md
