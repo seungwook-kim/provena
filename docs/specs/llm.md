@@ -59,7 +59,7 @@
 | `LANGFUSE_TRACING_ENABLED` | 비움(켜짐), `false`(끔) | Langfuse 연동 전체 스위치 |
 | `LANGFUSE_CONTENT_CAPTURE_ENABLED` | `false` | 일반 요청의 입력·출력·식별자 캡처는 명시적으로 켠 경우에만 허용 |
 
-**제공자 전환**: 로컬 개발은 Claude Code CLI(`LLM_PROVIDER=claude_cli`, `claude-haiku-5-5`, 키 불필요, 컨테이너 안에서는 동작하지 않음), 운영 배포는 OpenRouter 키(`LLM_PROVIDER=openrouter`, `anthropic/claude-haiku-5.5`)로 같은 모델을 쓴다. 환경 변수만 바꾸고 코드는 그대로다. 비용 단가는 OpenRouter 이름도 같은 단가표 항목으로 찾는다(`cost.normalize_model_id`).
+**제공자 전환**: 로컬 개발은 Claude Code CLI(`LLM_PROVIDER=claude_cli`, `claude-haiku-5-5`, 키 불필요, 컨테이너 안에서는 동작하지 않음), 운영 배포는 Anthropic 직접 호출(`LLM_PROVIDER=anthropic`, `claude-haiku-5-5`)을 유지한다(2026-11-10 결정, 결정 0086). OpenRouter(`LLM_PROVIDER=openrouter`, `anthropic/claude-haiku-5.5`)는 환경 변수만 바꾸면 고를 수 있고 코드는 그대로다. 비용 단가는 OpenRouter 이름도 같은 단가표 항목으로 찾는다(`cost.normalize_model_id`).
 
 ## Langfuse privacy and production configuration
 
