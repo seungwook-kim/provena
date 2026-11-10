@@ -51,7 +51,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 
 공통 규칙:
 
-- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결 해시는 `evals/FROZEN.json`에 있다. v1은 2026-11-01, v2는 2026-11-02에 동결했고 v2는 2026-11-07에 38번 정답을 판정자 확인에 맞춰 고치고 다시 동결했다(결정 0075, 현재 해시 `810d01f1…24d9f`). 검증 20건(`evals/dataset_holdout_v1.jsonl`)은 v2와 겹치지 않는 문항으로 결정 0074에 따라 따로 둔다. 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
+- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결 해시는 `evals/FROZEN.json`에 있다. v1은 2026-11-01, v2는 2026-11-02에 동결했고 v2는 2026-11-07에 38번 정답을 판정자 확인에 맞춰 고치고 다시 동결했다(결정 0075, 현재 해시 `810d01f1…24d9f`). 검증 20건(`evals/dataset_holdout_v1.jsonl`)은 v2와 겹치지 않는 문항으로 결정 0074에 따라 따로 둔다. 이 20건은 팀장이 검토했고 두 판정자의 판정 기록은 찾지 못해 2026-11-10에 판정을 다시 받는 중이므로(결정 0096) 판정을 받기 전까지 이 문항의 지표는 팀장 검토를 거친 정답 기준의 값이다. 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
 - 실험은 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적고 한 번에 하나만 바꾼다.
 - 숫자는 실행 결과에서 나온 값만 쓰고, 실행 명령을 함께 적는다. 점수가 오르지 않았으면 오르지 않았다고 쓴다.
 - 평가 결과는 `EVAL_REPORT.md`에 개선 전후, 달라진 문항, 지표 5개 분리 보고로 옮긴다.
