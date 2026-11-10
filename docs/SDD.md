@@ -389,14 +389,12 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | `chunks` | chunk_id, version_id, article(제목 경로), kind, text, text_sha256, acl(볼 수 있는 그룹, 비면 공개), embedding | ingest, rag |
 | `rule_links` | from_rule, to_rule, kind(페이지 링크) | GraphRAG (가산), F-02 연결 정책 리콜 |
 | `users` | user_id, login_id, password_hash, role(user, admin), groups(문서 권한 그룹) | api |
-| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at | graph |
+| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at, grounding(json, 밖으로 낼 수 있는 인용 검사 결과), skills_used(json) | graph |
 | `citations` | answer_id, chunk_id, version_id | graph, recall |
 | `decision_tables` | table_id, rule_seq, version_id, cells(json), status(draft, approved, rejected), approved_by | graph, api |
 | `approvals` | approval_id, kind, thread_id, status, decided_by | graph, api |
-| `answer_grounding` | answer_id, grounding(json), skills_used | graph |
 | `recall_events` | event_key(= 수집이 정한 event_id), changed(json), status(running, done, failed), 건수. 같은 개정은 한 번만 처리한다 | recall |
-| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked. UNIQUE (answer_id, event_key) | graph, api |
-| `recall_feedback` | notice_id, user_id, rule_seq, article, pattern, useful, reason. 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다 | api, recall |
+| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked, feedback_useful·feedback_reason·feedback_by·feedback_at(사용자 의견: 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다). UNIQUE (answer_id, event_key) | graph, api |
 | `recall_digests` | digest_id, user_id, day, count, notice_ids, payload. 하루 요약(`RECALL_DIGEST=daily`) | recall |
 | `change_monitoring` | id(1), status(active, paused), updated_by. 변경 감시 스위치 | api, ingest |
 | `maintenance_candidates` | candidate_id, upper_rule(바뀐 정책), upper_version_id, rule_seq(연결된 정책), article, status, decided_by | graph, api |
