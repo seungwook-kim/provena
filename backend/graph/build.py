@@ -1000,7 +1000,8 @@ def build_graph(
             **seen,
             **used,
         }
-        if refuse_on_none and not state.get("retries", 0) and AF.judged_none(obj):  # R: 첫 판정이 전무면 섹션 읽기와 재검색 없이 거절한다
+        # R: 첫 판정이 전무면 섹션 읽기와 재검색 없이 거절한다. 다수결 표가 갈렸으면(충분이나 일부라고 한 표가 있다) 바로 거절하지 않고 재검색 뒤 다시 판정한다(사전 등록 62.C)
+        if refuse_on_none and not state.get("retries", 0) and AF.judged_none(obj) and AF.votes_unanimous(obj):
             return {**out, "judge_none": True, "next_section": None, "section_reads": state.get("section_reads", 0)}
         return {**out, **due_sub_research(state, out)}
 
