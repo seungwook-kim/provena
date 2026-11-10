@@ -21,7 +21,7 @@
 - 등록·해제 기록 표 `admin_role_log`를 둔다.
 - 배포판의 첫 계정(최고 관리자, 평가용 계정 A·B)을 만드는 일회용 명령 `python -m backend.services.create_account`를 둔다.
 - **범위 = 한 회사용 (11/5 진형 결정)**: 회사 표·회사 칸·회사별 관리자는 두지 않는다. 회사가 여럿이면 회사마다 따로 설치한다(남은 일). 근거: `users` 표에 회사 칸이 없다(`db/101_auth_users.sql:6-14`). 지불 주체를 한 조직으로 본다(`docs/PRD.md:76`, `:125`).
-- **Out of Scope**: 회원가입, 비밀번호 바꾸기·찾기 화면, 계정 만들기·지우기·비활성화 화면, 최고 관리자를 화면에서 바꾸기, 이름·부서 같은 개인정보(요청 1번, 강경희 담당), 문서 권한 그룹(`groups`, F-06) 편집, 여러 회사, 사용자 목록 페이지 나누기, 관리자 API 전용 요청 수 제한.
+- **Out of Scope**: 회원가입 신청 화면·API 자체(`/auth/signup`, 승인 흐름은 `106-signup-approval.md`가 정한다), 비밀번호 바꾸기·찾기 화면, 계정 만들기·지우기·비활성화 화면, 최고 관리자를 화면에서 바꾸기, 이름·부서 같은 개인정보(요청 1번, 강경희 담당), 문서 권한 그룹(`groups`, F-06) 편집, 여러 회사, 사용자 목록 페이지 나누기, 관리자 API 전용 요청 수 제한.
 
 ## What
 
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS admin_role_log (
     target_user_id uuid NOT NULL REFERENCES users(user_id),
     action         text NOT NULL CHECK (action IN ('promote', 'revoke'))
 );
-CREATE INDEX IF NOT EXISTS admin_role_log_at ON admin_role_log (at);
+-- (옛 `admin_role_log_at` 색인은 두지 않는다. 쓰는 질의가 없어 `db/109_realign.sql:85`가 지웠고 `db/105_admin_role_log.sql:12`에도 없다)
 -- Supabase는 public 표를 Data API로 내보낸다(db/201_search.sql:89 설명과 같은 이유).
 ALTER TABLE admin_role_log ENABLE ROW LEVEL SECURITY;
 ```
@@ -139,7 +139,7 @@ ALTER TABLE admin_role_log ENABLE ROW LEVEL SECURITY;
 - 번호: `db/101_auth_users.sql:2`가 100번대를 김승욱 파트(로그인·사용자)로 정했다. 102는 결정표(PR #54), 103은 PR #53 → 내 정보 104(`db/104_user_profiles.sql`), 기록 표 105.
 - 기록 칸은 누가·누구를·무엇을·언제만. 아이디 문자열·IP·브라우저 정보는 넣지 않는다.
 - 로컬: `ensure_schema()`가 101 파일만 읽었다 → 101 다음에 105도 읽게 고쳤다(`backend/services/auth_store.py`). 배포: 스키마는 미리 적용해야 한다(`backend/main.py:10`).
-- `users` 표에는 RLS가 없다(`db/101_auth_users.sql` 전체에 `ROW LEVEL` 0건). 비밀번호 해시가 있는 표라 105에 `ALTER TABLE users ENABLE ROW LEVEL SECURITY;`를 같이 넣을지 열린 항목 3.
+- `users` 표는 `db/101_auth_users.sql:16`에서 `ENABLE ROW LEVEL SECURITY`가 켜져 있다. 이 문서 초안은 "RLS가 없다"고 적었으나 틀렸고 105에 같이 넣을 필요도 없다. (열린 항목 3의 RLS 부분은 해결됨)
 
 ### 첫 계정 만들기: `create_account` 명령
 
@@ -197,9 +197,9 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 8. 요청 수 제한: 로그인 제한(`backend/auth.py:501-541`)은 그대로이고 관리자 API에는 따로 두지 않는다. 최고 관리자 1명만 부를 수 있어서다(Out of Scope).
 9. 해제는 토큰을 폐기하지 않는다. 요청마다 역할을 다시 읽으므로 필요 없다.
 
-### 선행 조건 (지금 main e847c88에서 막힌 것)
+### 선행 조건 (11/5 당시 막혔던 것, 지금은 해결됨)
 
-- **토큰 폐기 저장소가 연결되지 않아 배포 배선으로는 로그인이 503이다.** `backend/main.py:117`이 `revocation_store`를 넘기지 않고 `app.state.token_revocation_store`도 두지 않는다 → `backend/auth.py:355-357`이 오류 → `:710-713`에서 503. 재현(11/5, 가짜 저장소 + main.py와 같은 인자로 라우터 생성): `POST /auth/login` → 503 `인증 폐기 저장소를 사용할 수 없습니다.` 로그인 Spec도 J-05를 열림으로 적었다(`docs/specs/login.md:78`). 관리자 기능은 이것이 연결된 뒤에야 쓸 수 있다.
+- **(해결됨) 토큰 폐기 저장소 미연결로 로그인이 503이던 문제.** 11/5 당시 `backend/main.py`가 `revocation_store`를 넘기지 않았으나, 지금은 `PostgresTokenRevocationStore`를 만들어 `app.state.token_revocation_store`에 둔다(`backend/main.py:291-299,343-344`, 시험 `tests/test_auth_revocation.py`). 아래 11/5 재현·열린 항목 5·"알아 둘 것"의 503 이야기는 그때 기록이다.
 - Google 자동 계정은 저장소·칸이 없어 아직 안 된다(위 표).
 
 ### 누가 무엇을
@@ -245,7 +245,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 2. **평가용 계정 A·B 역할**: 둘 다 `user`인가, 하나는 `admin`(최고 관리자 아님)인가. 평가자가 승인함까지 보려면 admin이 하나 필요하다(G1 "핵심 시나리오 끝까지"). A·B 중 한 명만 재무 절을 보는 일(`docs/PRD.md:184`)은 `groups`라 이 Spec 밖.
 3. **표 칸**: `users`에 RLS를 105에서 같이 켤지, `last_login` 칸을 더할지(더하면 로그인 성공 때 쓰기가 생김, `backend/auth.py` 수정).
 4. **Google 자동 아이디 머리글자**: Google 계정의 `login_id`를 어떤 머리글자로 만들지(시험 대역은 `google-`, `tests/test_google_oauth.py:71`). 최고 관리자 설정값이 그 머리글자로 시작하면 막는다. (2026-11-11: 구글 계정의 `login_id`가 이메일로 바뀌어 `google-` 아이디는 더 만들어지지 않는다. `admin_api.py`의 머리글자 막이는 남아 있지만 동작에는 영향이 없다. 정리 여부는 강경희 판단.)
-5. **토큰 폐기 저장소(J-05) 연결 시점**: 지금 배선으로는 로그인이 503이라 관리자 기능도 그 뒤다.
+5. **토큰 폐기 저장소(J-05) 연결 시점**: 해결됨(`backend/main.py:298,343`). 위 "선행 조건" 참고.
 
 ## 시나리오
 

@@ -49,7 +49,7 @@
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
 | `DEMO_MODE` | `1` | 1이면 키가 있어도 재생 |
-| `LLM_PROVIDER` | 코드 기본값 `anthropic`, `.env.example`은 `openrouter` | `anthropic`, `openai`, `openrouter`, `claude_cli` |
+| `LLM_PROVIDER` | `anthropic`(코드 기본값과 `.env.example:14` 모두, 결정 0086·0089) | `anthropic`, `openai`, `openrouter`, `claude_cli` |
 | `LLM_MODEL` | anthropic `claude-haiku-5-5`, openrouter `anthropic/claude-haiku-5.5` | |
 | `LLM_API_KEY` | 없음 | 없으면 데모 모드 |
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | openrouter일 때만 |

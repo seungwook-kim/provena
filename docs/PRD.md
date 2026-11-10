@@ -1,7 +1,7 @@
 ---
 type: prd
 project: Provena
-updated: 2026-11-10
+updated: 2026-11-11
 tags: [project, prd]
 ---
 
@@ -171,9 +171,9 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 
 | ID | 기능 | 요구사항 |
 |---|---|---|
-| P-01 | 로그인과 사용자별 기억 | 로그인을 구현한다. 사용자 id로 대화(thread)와 장기 기억(Store namespace)을 분리하고, Store 기반 시멘틱 메모리(팀·역할·담당 서비스)를 둔다. 무엇을 기억할지 기준, State와 Store의 경계, 틀린 기억을 고치는 절차, DB 기반 Store를 둔다(가이드 p.10) (G4) |
+| P-01 | 로그인과 사용자별 기억 | 로그인을 구현한다. 사용자 id로 대화(thread)와 장기 기억(Store namespace)을 분리하고, Store 기반 시멘틱 메모리(팀·역할·담당 서비스)를 둔다(현재 코드가 저장하는 칸은 소속·직급 둘뿐이다, `docs/specs/memory.md`. 칸을 늘릴지는 팀장 판단). 무엇을 기억할지 기준, State와 Store의 경계, 틀린 기억을 고치는 절차, DB 기반 Store를 둔다(가이드 p.10) (G4) |
 | P-02 | 문서 적재 | Markdown·PDF 파싱, 청킹, 임베딩, 인덱스 목록(`data/manifest.jsonl`)을 만든다. manifest에는 출처, 수집일, 커밋, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부를 적는다(가이드 p.15, p.21). 새 커밋만 받는 증분 수집을 한다 |
-| P-03 | 업무시스템 연동 | REST API(OpenAPI 명세), 자동 생성 SDK(Java·Python), FastMCP 서버(`extras/mcp_skill/`), 웹훅을 제공한다. 시연용 업무시스템 목업(`mock_erp/`)은 Java(Spring Boot)와 Python으로 만든다 |
+| P-03 | 업무시스템 연동 | REST API(OpenAPI 명세), 자동 생성 SDK(Java·Python), FastMCP 서버(`extras/mcp_skill/`), 웹훅을 제공한다. 시연용 업무시스템 목업(`mock_erp/`)은 Java(Spring Boot)와 Python으로 만든다(계획. 2026-11-11 현재 Python 예제와 OpenAPI 명세만 있고 Java 목업·SDK 자동 생성은 만들지 않았다, `mock_erp/mock_erp.md`) |
 | P-04 | 데모 모드 | `docker compose up` 한 줄로, 키 없이 뜬다. 로컬 pgvector 스냅샷과 기록된 응답을 쓰고, 데모 전용 계정 2개를 시드로 넣는다 (G2) |
 
 ### 6-3. 확장 기능 (핵심과 필수를 끝낸 뒤 진행, 빼지 않는다: 결정 0059, 0066)
@@ -270,8 +270,8 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 | 벡터DB | Supabase pgvector | 가이드 권고 |
 | MCP | FastMCP | 확정 (가산 인정 조건) |
 | 문서 파싱 | Markdown 파서 + 권한표 HTML(CSS grid) 전용 파서 + PDF는 Docling(OCR 끔) | 확정 (D1 원문 대조 3건). PDF는 `PDF 파서 비교 측정 (2026-11-03)` 근거 |
-| 업무시스템 목업 | Java(Spring Boot), Python | 확정 |
-| LLM, 임베딩, 리랭커 | 아래 모델 후보 | D0에 후보를 정하고 D2 평가셋 v1로 비교해 확정 |
+| 업무시스템 목업 | Java(Spring Boot), Python | 계획 확정. 현재는 Python만 있음(`mock_erp/mock_erp.md`, 범위를 줄일지는 팀장 판단) |
+| LLM, 임베딩, 리랭커 | 아래 모델 후보 | D0에 후보를 정하고 D2 평가셋 v1로 비교해 확정. 확정 결과(2026-11-11): 생성 Haiku 5.5(`claude-haiku-5-5`), 임베딩 `voyage-4` API, 리랭커 없음(13장 6번, `docs/SDD.md` 11-0) |
 
 MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정된다(가이드 p.20). 설계는 MCP·Skill 설계 문서에 둔다.
 
@@ -280,16 +280,16 @@ MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정
 | 위치 | 내용 |
 |---|---|
 | `backend/rag/ingest/` | 핸드북 git 수집, 파싱, 청킹, 커밋 비교, 적재, 증분 수집 |
-| `backend/rag/retrieve/` | 임베딩, 하이브리드 검색, 리랭킹, 링크 그래프 |
+| `backend/rag/retrieve/` | 임베딩, 검색(기본 `dense_en`, 하이브리드·리랭킹은 비교용 스위치), 링크 확장·링크 추출, 금액 구간 조회 |
 | `backend/graph/` | 질문 처리 그래프, 팀 에이전트(`departments/`), 결정표(`decision/`), 리콜(`recall/`) |
 | `skills/` | 런타임 Skill (권한표 해석, 팀 관점 `security`·`infra`·`itops`·`finance`, 공통 규칙) |
 | `extras/mcp_skill/` | FastMCP 서버 |
-| `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 |
-| `mock_erp/` | 업무시스템 목업 (Spring Boot, Python 예제) |
+| `web/` | 로그인, 가입, 내 정보, 채팅, 승인함, 리콜 알림, 변경 감시, 관리자·사용자 관리 화면 |
+| `mock_erp/` | 업무시스템 목업 (계획: Spring Boot, Python 예제. 현재 Python 예제만) |
 | `data/` | 원문 스냅샷, `manifest.jsonl`, 라이선스 고지 |
 | `evals/` | 평가셋, 동결, 사전 등록, 검색·에이전트·신뢰 경계 평가 |
 
-**모델 후보** (생성 가격은 OpenRouter 2026-10-27 기준, 100만 토큰당 입력/출력)
+**모델 후보** (D0 시점의 후보표다. 확정은 위 표 "LLM, 임베딩, 리랭커" 행. 생성 가격은 OpenRouter 2026-10-27 기준, 100만 토큰당 입력/출력)
 
 | 영역 | 후보 | 이유 |
 |---|---|---|
@@ -319,6 +319,7 @@ MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정
 | mcp | 서버 `fastmcp` 4.x, 클라이언트 `langchain[mcp]` (베타, langchain 1.4.0 이상) | 4.1.4 Apache-2.0 | `langchain[mcp]`가 `fastmcp>=4.0.11`에 의존해 서버와 판이 맞는다. `langchain-mcp-adapters`는 보관(archived)됐고 `mcp` 2.x와 안 맞는다 |
 | 평가 보조 | `ragas` 0.4.3 | Apache-2.0 | 0.4.3 이후 릴리스가 없고, 새로 깔면 `langchain_community` vertexai import로 깨진다(이슈 #2995 열림). import 전에 대체 모듈을 넣어 우회한다. 가이드 5지표를 대신하지 않으므로 깨지면 뺀다 |
 
+- 실제 사용(2026-11-11, `backend/requirements*.txt`와 코드 대조): 위 표는 D0 후보다. BM25는 `bm25s`가 아니라 `rank-bm25`(`backend/rag/retrieve/search.py:607`, `requirements.txt`), pgvector 저장은 `langchain-postgres`가 아니라 `pgvector`+`psycopg` 직접 사용(`requirements.txt`에 `langchain-postgres` 없음), `sentence-transformers`·`torch`는 기본 요구 사항이 아니라 로컬 모델 비교용 `backend/requirements-local-models.txt`, 기본 임베딩 `voyage-4`는 `httpx`로 REST 호출(`embed.py`), PDF 파서 Docling은 `backend/requirements-ingest-pdf.txt`, LLM 호출은 `langchain-anthropic`·`langchain-openai`(`backend/services/llm.py`)다.
 - 확인할 것: `beautifulsoup4`, `bm25s`, `langchain-postgres`는 PyPI에 Python 3.13 표시가 없다. D0에 3.13 가상환경에서 import와 테스트를 돌려 확인한다.
 - `sentence-transformers`로 모델을 불러올 때 실패하는 경우(e5 계열에서 관찰)에는 transformers 직접 호출로 우회한다. bge-m3가 실제로 불러지는지 D0에 먼저 확인한다.
 
@@ -369,17 +370,17 @@ GitLab 핸드북은 공개 문서라 범용 챗봇이 일부를 학습했을 수
 | D3 | 11/4 | 하이브리드, 리랭킹, 메타데이터 필터 | 판·절 필터, 영어 검색어 변환 |
 | D4 | 11/5 | 단일 에이전트 그래프, 기준 점수 | 질의 재작성·재검색 루프 |
 | D5 | 11/6 | 평가셋 v2 50건, Supervisor 분리, 사람 승인, 중간 점검 | F-03, F-04 승인 흐름, F-05~F-08은 유지로 확정(결정 0059, 0066) |
-| D6 | 11/9 | 서비스화, 로그인, Store, compose, Supabase, Langfuse | P-01, P-03 |
-| D7 | 11/10 | 신뢰 경계 시험, 배포 점검 | 인젝션 최소 30건 |
-| D8 | 11/11 | 비용·응답 시간 실측, CI 회귀 | F-02 리콜 흐름 점검 (실제 개정 커밋 재생). CI 회귀: 검색 회귀 시험 `tests/test_search_regression.py`가 PR마다 40문항의 문항별 Recall@5·상위 5를 기대값과 비교한다(키·DB 없이 고정 자료, [PR #94](https://github.com/aihuman-7th/proj3-c/pull/94)). 검색 결과를 바꾸는 PR은 `python -m evals.retrieval.regress_fixture`로 `tests/fixtures/search_regression/`을 다시 만들어 같은 PR에 넣는다(기대값이 바뀐 문항이 diff에 보이게) |
-| D9 | 11/12 | 실패 분석, 개선 2회차, 대체재 비교표 | 범용 챗봇 비교표(10문항)에 우리 답 추가 |
+| D6 | 11/9 | 서비스화, 로그인, Store, compose, Supabase, Langfuse | P-01, P-03 (2026-11-11 확인: 로그인·Store·compose·Supabase·Langfuse는 `docs/GATES.md` G1·G2·G4·G6에 충족으로 적혀 있음. P-03은 REST·MCP·웹훅만, SDK·Java 목업은 안 만듦) |
+| D7 | 11/10 | 신뢰 경계 시험, 배포 점검 | 인젝션 최소 30건 (2026-11-11 확인: 실제 모델 30건 시험·결과가 `EVAL_REPORT.md` 6장·`evals/safety/`에 있음, 배포 점검 `evals/safety/deploy_check.py`) |
+| D8 | 11/11 | 비용·응답 시간 실측, CI 회귀 | F-02 리콜 흐름 점검 (실제 개정 커밋 재생). CI 회귀: 검색 회귀 시험 `tests/test_search_regression.py`가 PR마다 40문항의 문항별 Recall@5·상위 5를 기대값과 비교한다(키·DB 없이 고정 자료, [PR #94](https://github.com/aihuman-7th/proj3-c/pull/94)). 검색 결과를 바꾸는 PR은 `python -m evals.retrieval.regress_fixture`로 `tests/fixtures/search_regression/`을 다시 만들어 같은 PR에 넣는다(기대값이 바뀐 문항이 diff에 보이게). (2026-11-11 확인: 비용·응답 시간 실측은 `EVAL_REPORT.md` 8장과 `evals/latency/`, 리콜 흐름 점검은 `evals/agent/exp_recall_v1.py`에 있음) |
+| D9 | 11/12 | 실패 분석, 개선 2회차, 대체재 비교표 | 범용 챗봇 비교표(10문항)에 우리 답 추가 (2026-11-11 확인: 실패 분석은 `EVAL_REPORT.md` 5장·`docs/deliverables/failure_analysis.md`, 대체재 비교는 `EVAL_REPORT.md` 10장에 있음) |
 | D10 | 11/13 | 제출물 점검, 외부 검토 반영 | 시연 영상 1차본 |
 | - | 11/14~15 | 주말. 자동 실행이나 배포를 새로 두지 않는다 | - |
 | D11 | 11/16 | 코드·설정 동결 (24:00) | - |
 | D12 | 11/17 | 실패 사례 분석 글, 포트폴리오 1장, AI 코딩 도구 사용 기록, 발표 자료 제출 (24:00) | - |
 | 발표 | 11/18 | 발표, 강사 현장 입력 3개 | - |
 
-가산은 필수 게이트를 먼저 끝낸 뒤에 한다(가이드 p.20). 계획은 자동화 +5, GraphRAG +3, MCP·Skill +3으로 11점이라 상한 +10을 넘는다. 가이드도 "가산을 모두 하려고 하지 마세요"라고 한다(p.20). 그래서 D5(11/6) 중간 점검에서 이 점을 이야기했고, 중간 점검(11/6) 결과 기능은 빼지 않는다(결정 0066). 가산 3종과 확장 기능 F-05~F-08을 모두 유지하되 필수 게이트를 먼저 끝낸다. 가산점은 상한 +10이 적용되므로 합계가 11점이어도 +10을 넘지 않는다. 대가로 F-05~F-08은 코드가 아직 없어 11/16 코드 동결까지 일이 늘어난다.
+가산은 필수 게이트를 먼저 끝낸 뒤에 한다(가이드 p.20). 계획은 자동화 +5, GraphRAG +3, MCP·Skill +3으로 11점이라 상한 +10을 넘는다. 가이드도 "가산을 모두 하려고 하지 마세요"라고 한다(p.20). 그래서 D5(11/6) 중간 점검에서 이 점을 이야기했고, 중간 점검(11/6) 결과 기능은 빼지 않는다(결정 0066). 가산 3종과 확장 기능 F-05~F-08을 모두 유지하되 필수 게이트를 먼저 끝낸다. 가산점은 상한 +10이 적용되므로 합계가 11점이어도 +10을 넘지 않는다. 대가로 F-05~F-08은 11/16 코드 동결까지 일이 늘어난다. 2026-11-11 코드 기준 F-05(`backend/graph/recall/impact.py`, `POST /impact-preview`), F-07(`backend/rag/ingest/snapshot_diff.py`), F-08(`feedback.py`, `digest.py`, `/recalls/{id}/feedback`)은 구현됐고, F-06 문서 권한은 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만이며 검색 단계 거르기는 없다(`SearchQuery.allowed_groups`·`data/acl_policy.json` 코드 없음). F-06을 마저 할지 줄일지는 팀장 판단이다.
 
 **제출물 체크리스트 (가이드 p.21)**
 

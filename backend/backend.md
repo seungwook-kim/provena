@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py`의 `build_graph`), 체크포인터·Store 연결(`persistence.py`)을 둔다. 엔드포인트는 연결만 하고 로직은 하위 폴더에 둔다.
+API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py`의 `build_graph`), 체크포인터·Store 연결(`graph/checkpoint.py`)을 둔다. 엔드포인트는 연결만 하고 로직은 하위 폴더에 둔다. 그 밖에 `admin_api.py`(최고 관리자의 사용자 관리·가입 승인 API), `profile_api.py`(내 정보 `/me/profile` API)가 있고, 라우터는 `api/`, 사용자 프로필 장기 기억 헬퍼는 `memory/`에 있다.
 
 - 주인: 김승욱 (로그인 `auth.py`와 첫 배포 `/health`는 강경희)
 - 입력: 화면·업무시스템 요청
@@ -10,11 +10,12 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 ## 작업 기록 (최신이 위)
 
-| 2026-11-10 | kyunghee | 회원가입 승인 리뷰 반영: `signup_requests` 미생성 시 undefined-table 오류만 가입 기록 없음으로 처리하고 기타 DB 오류는 503으로 처리. 106 SQL에 RLS·Data API 권한 차단 반영. 107은 현재 코드 사용처가 없어 추가하지 않음 | 미정 |
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | kyunghee | 회원가입 승인 리뷰 반영: `signup_requests` 미생성 시 undefined-table 오류만 가입 기록 없음으로 처리하고 기타 DB 오류는 503으로 처리. 106 SQL에 RLS·Data API 권한 차단 반영. 107은 현재 코드 사용처가 없어 추가하지 않음 | 미정 |
 | 2026-11-10 | 강경희 | PostgreSQL 및 메모리 인증 저장소에 가입 신청 생성·상태 조회·승인·거절 기능을 구현하고, 관리자 API와 로그인 승인 검증을 연동하였습니다. | 미정 |
+| 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #110) `api/routes.py`: 응답 시간 p95 단축 코드 스위치(기본 꺼짐)에 맞춰 `/chat` 처리를 고침(커밋 acd9a45) | #110 |
 | 2026-11-09 | 김승욱 (Claude Code) | 승인 결정의 동시 요청 잠금을 여러 인스턴스로 넓혔다. 같은 Postgres를 보는 서버 프로세스 2개로 시험하니 같은 승인 건에서 그래프가 2번 재개됐고(결정표·쟁점표 24회 모두), 쟁점표는 반대 결정 12회 중 8회에서 승인 저장과 반려 기록이 함께 남았다. `graph/decision/routes.py`의 `_decision_lock`이 스레드 잠금에 더해 `graph/decision/repo.py`의 `PostgresDecisionRepo.decision_lock`(`pg_advisory_xact_lock`, 풀과 별도 연결, 대기 120초)을 건다. 잠금 실패는 503 `save_failed`다. 또 빈 DB에서 인스턴스 2개가 동시에 뜰 때 `graph/checkpoint.py`의 표 만들기가 부딪혀 한쪽이 죽던 문제를 `setup_tables`(부딪힌 오류만 6번까지 다시)로 고쳤다. 시험 `tests/test_decision_multi_instance.py` 20건(수정 전 결정 16건 실패, 빈 DB 4건 중 3건 실패). 배포 서비스에서 인스턴스 2개 이상으로는 시험하지 않았다 | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | 운영에서 새 인스턴스의 첫 `/chat`이 약 27초 걸리던 원인(첫 검색 준비 15.6초, 첫 LLM 호출 전 모듈 import 등)을 코드로 고쳤다. 시작할 때 검색 준비를 끝날 때까지 기다린다(`main.py`의 `run_startup_warmup`, 최대 60초, 넘거나 실패해도 서버는 뜨고 경고만 남김). Cloud Run은 요청이 없을 때 CPU를 거의 주지 않아 백그라운드 준비가 요청 사이에 못 돌기 때문이다. `SEARCH_WARMUP`이 비어 있으면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서만 켜고 로컬 데모·키 없는 데모·DB 없음에서는 끈다(`1` 기다림, `0` 끔, `background` 기존 스레드 방식이며 compose 기본). 기다릴 때 현재 `LLM_PROVIDER`가 첫 호출에 쓰는 모듈만 미리 올린다(`llm.py`의 `preload_provider_modules`). 시작할 때 `backend.*` 로거를 INFO로 두고(`configure_app_logging`), LLM의 hedge(같은 요청 하나 더)·시간 상한 초과 로그를 WARNING으로 올려 요청 ID, 단계, 걸린 시간, 시도 번호만 남긴다(프롬프트·키는 쓰지 않음). 시험 `tests/test_startup_warmup.py` 추가, README·`.env.example`·`docs/specs/search.md`·`docker-compose.yml` 갱신. 운영 반영과 실제 효과는 배포 뒤 첫 요청 시간으로 확인해야 한다(미확인) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `GET /changes`의 응답 칸을 pydantic 모델(`ChangesResponse`, `ChangeItem`, `ChangeLastRun`)로 적어 OpenAPI 명세(`docs/api/openapi.json`)에 `total`·`counts`를 포함해 보이게 했다. 라우트에는 `responses={200: {"model": ...}}`만 더했고 `response_model=None`은 그대로라 응답 본문은 걸러지거나 바뀌지 않는다. 시험 `test_api_changes`·`test_api_recalls`·`test_recall_pg`·`test_mock_erp_example`·`test_mcp_server` 138 통과 9 건너뜀(DB 없음) | 미정 |
@@ -24,6 +25,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 | 2026-11-09 | 김승욱 (Claude Code) | 리콜·변경 감시 백엔드를 `main.py`에 연결: `api/recalls.py`(알림·확인·의견·검토함·요약·웹훅 구독과 전송 기록·후보·`/webhooks/regulation-updated`·`/impact-preview`), `api/changes.py`(`/changes`, 감시 켜기·멈추기). 앱 시작에서 `graph/recall/runtime.py`가 저장소를 연다(`RECALL_STORE=postgres`와 `DATABASE_URL`이면 Postgres, 아니면 메모리). 경로는 docs/specs/recall.md. 시험 `tests/test_api_recalls.py`, `tests/test_api_changes.py` | 미정 |
 | 2026-11-09 | 김승욱 (팀장, Claude Code) | 팀장이 `auth.py`를 수정함: 로그인 실패 제한에 쓰는 IP를 `TRUSTED_PROXY_HOPS`(기본 0)에 따라 `X-Forwarded-For` 오른쪽 N번째 값에서 얻는다(Cloud Run은 1). 값이 깨져 있으면 직접 접속 IP를 쓴다. 응답에 보안 헤더(`nosniff`, `X-Frame-Options`, `Referrer-Policy`, https일 때 HSTS)를 붙인다(`api/middleware.py`). 시험은 `tests/test_deploy_hardening.py` | 미정 |
 | 2026-11-09 | 박진형 (jinyeong-731) | 새로고침·목록 클릭 뒤 대화가 빈 화면이던 문제의 서버 쪽. `GET /threads/{thread_id}`에 체크포인트 이력(`get_state_history`)에서 되살린 `messages`(질문·답·근거, 오래된 순)를 더했다(`api/routes.py`의 `_messages`). 못 읽으면 빈 목록. 시험 `tests/test_api_thread_messages.py` | #71 |
+| 2026-11-09 | 김승욱 (기록: 박진형) | (보충, PR #80) `GET /changes` 응답에 `total`·`counts` 추가(`api/changes.py`) | #80 |
 | 2026-11-06 | 김승욱 (Claude Code) | D6 서비스화: 오류 응답 규약(`api/errors.py`), 요청 ID·요청 로그 순수 ASGI 미들웨어(`api/middleware.py`), `/chat`(SSE)·`/threads`·`/me/memory`(`api/routes.py`), 대화 목록 저장소(`api/threads.py`)를 `main.py`에 연결. 질문 그래프는 앱 시작에서 결정표·합동 검토와 같은 체크포인터·Store로 만들고 합동 검토 승인 재개도 질문 그래프로 한다. `/health`는 10분 간격으로 `SELECT 1`. 같은 승인 건의 동시 요청이 그래프를 두 번 재개하던 문제를 프로세스 안 잠금으로 막았다(`graph/decision/routes.py`). 시험은 가짜 모델·메모리 체크포인터·메모리 Store로 도는 `tests/test_api_*.py` | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `requirements.txt`의 langgraph에 상한 `<1.3`을 둠. `graph/multi.py`가 컴파일된 그래프의 내부 구조를 읽어, 시험한 1.2.18과 같은 1.2 판까지만 받는다 | 미정 |
 | 2026-11-02 | kkh-hue | Google OAuth Authorization Code + PKCE 시작·콜백, state/nonce 요청 쿠키 검증, Google JWK ID 토큰 검증, 주입형 OAuth 사용자 저장소·토큰 교환기 경계와 기존 JWT 쿠키 발급을 `auth.py`에 추가했다. 저장소 또는 RS256 검증 의존성이 없으면 503으로 차단하며 실제 DB·Cloud Run 검증은 하지 않았다. OAuth·기존 인증 관련 테스트와 전체 Python 테스트는 각각 53 passed, 214 passed·1 skipped였다. | #43 |

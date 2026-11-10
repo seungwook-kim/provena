@@ -15,8 +15,9 @@
 | 임베딩 모델과 선택 근거 | `voyage-4`(1024차원, 문서와 질문 모두 Voyage API), 영어 문장 벡터. 2026-11-03 팀 확정. 기준선은 `bge-m3`이다. 비교 값과 이유는 3-2절과 [임베딩 측정 기록](docs/embedding_measurement.md) 10장, 11장에 있다. 후보를 좁힌 과정은 [decisions.md](docs/decisions.md)에 있다 |
 | 벡터DB와 선택 이유, 한계 | Supabase pgvector, 가이드 권고를 따름. `voyage-4` 23,095청크를 적재했다. 한계: 무료 등급 Nano에서 전수 비교 벡터 질의가 SPEC 검색 p95 3초를 넘는다 |
 | manifest 위치 | `data/manifest.jsonl` |
+| manifest의 원문 길이·보존 길이·잘림 여부 | 문서마다 `chars_original`(원문 글자 수), `chars_kept`(청크 본문 글자 합, 겹침과 머리말 제외), `truncated`가 있다(1,565행 전부). 파일을 직접 세면 `chars_kept`가 `chars_original`보다 작은 행이 1,563행, 같은 행이 0행, 큰 행이 2행(doc_id 2425934853, 713252304)이다. 작은 이유는 Hugo 단축코드와 front matter를 청크 본문에서 지웠기 때문이고, 큰 2행은 표 행 글자에 열 이름이 붙은 쪽이다(`backend/rag/ingest/load.py` 5~6줄). 길이로 문서를 자른 적이 없어 `truncated`는 1,565행 모두 `false`이다(같은 파일 41줄). 그래서 `data/README.md` 20줄의 "길이가 다르면 `truncated`가 true"라는 설명과 달리 이 manifest에서 길이 차이는 잘림이 아니라 정리한 양이다 |
 
-**원문 대조 3건 이상**: 파싱 결과를 원문과 나란히 놓고 틀어진 곳을 적습니다.
+**원문 대조 4건**(가이드 D1 요구는 3건 이상): 파싱 결과를 원문과 나란히 놓고 틀어진 곳을 적었다.
 
 | # | 문서 | 원문에서 본 것 | 파싱 결과 | 틀어진 곳 |
 |---|---|---|---|---|
@@ -81,9 +82,9 @@
 
 ## 3. 검색 개선 전후 (사전 등록, 한 번에 하나만)
 
-> **한 번 재고 끝내면 G5는 미충족입니다.** 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 적고, 같은 평가셋으로 다시 재서 **어느 문항이 회귀했는지** 보여야 합니다.
+> 이 장의 각 행은 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 적고(커밋 순서의 한계는 표 아래 문단), 같은 평가셋으로 다시 재서 어느 문항이 회귀했는지 적었다(G5는 두 번 이상 재서 회귀를 숫자로 보이는 것이다).
 >
-> 전후 차이가 1~4문항이면 "개선"이라 쓰지 마세요. 달라진 문항 목록과 부호 검정(또는 문항 수가 적어 구별할 수 없다는 한계)을 같이 적습니다. 개선이 없거나 악화여도 사전 등록과 원인 분석이 있으면 불이익이 없습니다.
+> 전후 차이가 1~4문항인 행은 "개선"이라 쓰지 않고 달라진 문항 목록과 부호 검정(문항 수가 적어 구별할 수 없다는 한계)을 같이 적었다. 개선이 없거나 나빠진 행도 그대로 적었다.
 
 | # | 바꾼 것 (하나) | 사전 등록한 기대 | 지표 (전 → 후) | 달라진 문항 수 (좋아짐 / 나빠짐) | 회귀한 문항 | 판단 |
 |---|---|---|---|---|---|---|
@@ -484,7 +485,7 @@ PR #48 머지 커밋 `e847c88`에서 저장소만 `MemoryStore`를 Supabase의 `
 
 ## 4. 에이전트: 단일 대 멀티, 승인과 재개 (G4)
 
-단일 에이전트 기준 점수(D4)를 v2로 다시 재고, Supervisor와 서브에이전트로 나눈 뒤(D5) 같은 v2로 비교합니다. **개선이 없었다면 없었다고 적으세요.**
+단일 에이전트 기준 점수(D4)를 v2로 다시 재고, Supervisor와 서브에이전트로 나눈 뒤(D5) 같은 v2로 비교했습니다. 단일 대 멀티에서 개선은 없었고 아래 표의 비고와 "Supervisor 구조의 한계" 문단에 없었다고 적었습니다.
 
 | 구성 | 지표 | 비용 | 지연 | 비고 |
 |---|---|---|---|---|
@@ -498,6 +499,8 @@ PR #48 머지 커밋 `e847c88`에서 저장소만 `MemoryStore`를 Supabase의 `
 최종 두 행은 #25 뒤 v2 50건에서 문항별 실패 원인을 고친 코드로 쟀습니다. 고친 것은 검색어 보강, 제목 일치, 인용 고르기, 거절 조건, 근거 판정 방식이며, 각 수정은 기본 꺼짐 스위치로 넣고 사전 등록 뒤 켰습니다(`evals/PREREGISTER.md`). 같은 v2 50건을 보고 고쳤으므로 v2 값은 낙관적일 수 있어, v2와 겹치지 않는 검증 문항 20건(관련 10, 비관련 10, `evals/dataset_holdout_v1.jsonl`; 정답은 팀장 검토를 거쳤고 2026-11-11에 두 판정자가 20건 모두 Y로 재판정했다. 2장 "검증 20건의 판정 기록" 참조)으로 따로 확인했고 정답 밖 인용 행은 단일과 멀티 모두 3건으로 사전 기준을 넘지 않았습니다(결정 0074). v2 38번은 판정자 확인으로 정답 절 하나를 빼고 다시 채점했습니다(결정 0075). 검색어 보강 용어표에는 v2 문항 단어 4개(new vendor, purchase request, procurement, tprm)가 남아 있었고, 빼면 측정한 동작이 바뀌므로 이 최종 측정 때는 그대로 두고 시험에서 알려진 실패로 표시했습니다(`tests/test_remaining_fixes.py`). 이 용어표와 그 장치는 2026-11-10 결정 0101로 걷어냈으므로(사전 등록 62.34) 위 최종 행의 값은 용어표가 켜져 있던 코드의 값입니다. 최종 측정의 LLM은 Anthropic API로 호출했고 당시 배포 서비스 `provena-api-00020`의 공급자(OpenRouter)와 달랐으므로 이 응답 시간은 그 리비전의 값과 직접 비교하지 않습니다. 운영은 이후 Anthropic 직접 호출로 바꿨고 그대로 유지합니다(8장). 재배포 리비전 `provena-api-00032-zhs`(커밋 `5d6a2fe`)의 배포 측정(2026-11-10 15:24~15:38, v2 50건 3회)은 회차별 p95 평균 8.473초로 SPEC 10초를 충족했고, 인용 정답 대조는 정답 근거 인용률 0.976, 인용 정확도 0.989, 과잉 거절 0.000, 올바른 거절 1.000이다(8장, 5장 5-4, 사전 등록 62.20, 62.22). 사전 등록 62.27~62.34를 넣은 리비전 `provena-api-00035-h69`(커밋 `b2bc434`)의 배포 측정(2026-11-10 23:48~2026-11-11 00:02, v2 50건 3회)은 회차별 p95 평균 8.942초(회차 8.518초, 8.169초, 10.139초)이고, 인용 정답 대조는 정답 근거 인용률 0.929, 인용 정확도 0.924, 과잉 거절 0.013, 올바른 거절 1.000이다. 정답 근거 인용률과 인용 정확도는 사전 등록 62.31과 62.34의 실패선 아래이며 수정 중이다(5장 5-4, 8장). 결과는 `evals/results/agent_v2_q_d6151_r1_bo2sda2_api/`, `_r2_`, `_r3_` 폴더에 있습니다.
 
 단일 에이전트 그래프 v1은 2026-11-02에 구현했고, 2026-11-05에 v1 30건으로 D4 기준 점수를 3회 측정했습니다(3장 3-3, 사전 등록 #10~#21). 이 v1 값은 중간 측정이고, 같은 조합의 v2 50건 재측정과 단일 대 멀티 비교는 아래와 사전 등록 #25 이후에 있습니다. 이후 인용 범위, 근거 판정의 부분 제거, 요청 기간 자료 없음 거절, 기준일의 네 수정을 한 번에 하나씩 넣고 버전마다 3회 쟀습니다. 수정 4건을 넣은 사전 등록 #20 시점(측정 전용 검색기, v1 30건)의 정답 근거 인용률 0.944와 비관련 거절 1.000은 통과선(0.85, 0.90)을 넘었고, 인용 정확도 0.714는 통과선 0.85에 못 미쳤습니다. 머지 뒤 운영 DB(`PgStore`)로 잰 값(#22)도 판정이 같고(정답 근거 0.911, 인용 정확도 0.753, 비관련 거절 1.000, 3-3-2), 검색 p95가 SPEC 3초를 넘습니다. 그 뒤 같은 v1 30건에서 추가 수정 묶음 2건을 넣어 운영 DB로 다시 재면(#23, #24) 인용 정확도가 0.951, 0.989가 되었으나, 같은 30건을 보고 고친 값이라 일반화 근거로 쓰지 않습니다. 아래 v2 50건의 값(인용 정확도 0.970 등)은 평가셋과 코드가 위의 v1 값들과 달라 직접 비교하지 않습니다. 이 조합의 평가셋 v2 50건 측정과 Supervisor, 서브에이전트와의 비교는 2026-11-05에 단일과 멀티를 문항마다 번갈아 3회 재서 마쳤습니다(사전 등록 #25, `evals/results/agent_v2_multi_pg/`, `_r2/`, `_r3/`). 정답 근거 인용률은 단일 0.876, 멀티 0.896으로, 같은 조건 3회 안에서 단일이 0.863~0.897, 멀티가 0.887~0.913 사이를 움직여 차이가 흔들림 안에 있으므로 개선으로 쓰지 않습니다. 달라진 문항은 1회 8건(1, 2, 8, 34, 35, 38, 39, 40번), 2회 6건(1, 2, 22, 34, 35, 38번), 3회 9건(1, 8, 31, 34, 35, 36, 37, 38, 39번)입니다. 정답 근거가 실제로 달라진 문항은 멀티가 나아진 쪽 1번(1회, 3회), 36번(3회), 39번(3회)과 나빠진 쪽 38번(2회, 3회)이고, 나머지는 인용한 청크 구성이나 개수만 달랐습니다. 사전 등록에 없는 사후 분석으로, 정답 근거 인용률은 v1과 같은 1~30번(관련 15건)이 단일 0.978, 멀티 1.000이고 새 31~50번(관련 10건)이 단일 0.722, 멀티 0.739입니다.
+
+**판 날짜 표시율(SPEC 기준 100%).** 위 최종 측정(사전 등록 61.51)의 각 폴더 `single/summary.json`, `multi/summary.json`의 `as_of_shown_rate`는 v2 50건 3회 단일·멀티 모두 1.000이고, v2 50건에서 답한 행(회차당 25건)은 단일 75건, 멀티 75건 전부 답 본문에 인용마다 판 날짜 문자열이 있었다. 검증 20건(1회)도 답한 9건 전부 1.000이다. 판정은 답 본문 글에 인용의 판 날짜가 들어 있는지를 문자열로 보는 규칙 기반이며(`evals/agent/run_eval.py`의 `shows_date`) 로컬 실행기가 받은 답 글에 대한 값이다. 배포 서비스 화면에 판 날짜가 모든 답에서 표시되는지는 세지 않았다(배포 측정은 인용 이벤트의 판 날짜가 정답 청크의 판과 다른 경우 0건만 확인, 5장 5-4절).
 
 **Skill 유무 비교(가산, 사전 등록 62.3 개정 1).** 같은 단일 그래프에서 런타임 Skill을 켠 경우(`USE_SKILLS=1`)와 끈 경우(`USE_SKILLS=0`)를 평가셋 v2 50건으로 OpenRouter의 Haiku 5.5에서 번갈아 3회씩 쟀다(2026-11-09, 오류 행 0, 비용 합 0.916달러). Anthropic 키가 인증 거절되어 공급자가 위 최종 측정과 달라 그 값과는 직접 비교하지 않는다. 켬 3회 평균은 인용 정확도 0.982, 정답 근거 인용률 0.958이고 끔 3회 평균은 0.960, 0.953이며 비관련 거절은 두 쪽 모두 1.000이다. 인용 정확도 차 0.022는 사전 등록의 판정 문구(0.02 이상)로는 "Skill이 점수를 높인다"에 해당하지만, 끔 3회차 한 회(인용 0.920)에서 나온 차이이고 끔 1, 2회는 켬과 같거나 높아(0.980, 0.980 대 0.979, 0.987) 이 측정만으로 효과가 있다고 쓰지 않는다. 정답 근거 인용률 차는 0.004이다. 원자료는 `evals/results/skill_ab_v2/`, 결과 커밋은 `6c2e57b`이다.
 
@@ -627,7 +630,7 @@ PR #48 머지 커밋 `e847c88`에서 저장소만 `MemoryStore`를 Supabase의 `
 
 ## 6. 신뢰 경계
 
-코퍼스에 심은 간접 인젝션과 출처 유출 시험 **3건 이상**, 막지 못한 것은 코드로 보강합니다.
+코퍼스에 심은 간접 인젝션과 출처 유출 시험(가이드 D7 요구는 3건 이상)을 아래 표와 문단에 적었고, 막지 못한 것은 코드로 보강한 뒤 남은 것을 "아직 막지 못한 것"에 적었다.
 
 **믿지 않기로 한 것.** 검색된 원문(런북·정책·표 칸·제목·각주)은 지시가 아니라 자료로만 다룹니다. 모델이 쓴 글(답, 되묻기, 결정표 초안, 업무 종류, 쟁점표)도 그대로 믿지 않고 코드가 다시 확인합니다. 구체적으로 인용 chunk_id는 받아 온 원문과 대조하고, 답과 되묻기에는 내부 표식·시스템 프롬프트 유출 검사를 하며, 결정표는 승인 전에 실행하지 않고(문서가 가리킨 표 id는 버림) 원문과 다른 칸이 있는 초안은 승인에 사유를 요구하며, 결정표 질문에서 모델이 고른 업무 종류는 승인된 목록 안의 값만 씁니다. 기억은 사용자 id별 namespace로만 읽습니다. 이 가운데 코드로 막을 수 없는 것은 "모델이 심은 지시를 따라 답 본문이나 쟁점표 문장을 바꾸는 것"이며, 그 경로는 막았다고 쓰지 않고 공격 성공률을 공개합니다.
 
@@ -673,7 +676,7 @@ PR #48 머지 커밋 `e847c88`에서 저장소만 `MemoryStore`를 Supabase의 `
 | 트레이스에 입출력, 모델, 토큰, 지연, 비용이 남는가 | 남는다. Langfuse Cloud(일본 리전)의 프로젝트 `Provena`에 평가 문항 하나가 트레이스 하나(`eval:question`)로 남고, 목록에 입력과 출력(그림 1), 상세에 그래프 단계별 지연과 비용, 트레이스별 토큰 수(그림 2, 3)가 보인다. 모델은 호출 이름(`ChatAnthropic`, `anthropic.messages.create`)으로 보이며 모델 이름 칸은 캡처하지 않았다. 2026-11-07(15:58~17:38 UTC)과 2026-11-08 기록이 있다 |
 | 평가 점수가 트레이스에 연결되어 있는가 | 연결되어 있다. 문항 점수는 그 문항의 트레이스에(그림 2는 7개, 그림 3은 3개), 집계 점수는 평가 한 번을 묶은 세션에 붙는다(그림 4). 2026-11-08 박진형이 평가를 돌린 뒤 Langfuse API로 다시 읽어 대조했고, 문항 3개에서 문항 점수 21/21, 세션 점수 12/12가 맞았다(평가셋 v1 1, 8, 9번, LLM은 Claude API). 채점 점수(`eval/judge_score`), 오류(`eval/error`), 환각 위험(`eval/hallucination_risk`)을 문항 트레이스에 붙이는 보강 코드(`evals/agent/run_eval.py`, `evals/agent/tracking.py`)는 측정 코드 PR로 main에 넣는다 |
 | `user_id`, `session_id`를 붙였는가 | 붙였다. 코드는 `run_config`가 `session_id`(없으면 `thread_id`)와 `user_id`를 Langfuse 메타데이터로 붙이고(`backend/services/llm.py`, `backend/services/tracing.py`), 평가 트레이스에는 `user: eval`과 세션(평가 실행 id)이 보인다(그림 2, 3, 4) |
-| 느림의 원인을 트레이스로 가려낸 사례 | 기록된 사례 없음 |
+| 느림의 원인을 트레이스로 가려낸 사례 | 이 장의 캡처(그림 1~4)에는 없다. 배포 트레이스를 쓴 사례는 8장 "단계별 시간(배포본 `provena-api-00020`, Langfuse 트레이스, 이력)" 문단에 있다: 배포 리비전 `provena-api-00020`의 Langfuse 세션 74개에서 단계 시간을 다시 계산해 느림이 검색(검색 노드 p95 1.40초)이 아니라 생성(한 세션의 LLM 호출 시간 합 p50 9.66초, p95 15.26초)에 있음을 가렸다(원자료 `evals/results/deploy_latency_v2/stage_times.json`, 계산 도구 `evals/latency/stage_times.py`). 같은 측정(`deploy_latency_v2`)에서 가장 느린 문항(2번, 32.4~40.7초)은 행에 기록된 LLM 호출이 16~18회였다(5장 5-3의 7번) |
 
 확인: 2026-11-09, 읽기 전용. 기록은 `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` 두 키가 있을 때 켜지고 주소는 `LANGFUSE_HOST` 또는 `LANGFUSE_BASE_URL`로 정한다(`backend/services/tracing.py`). 배포 환경의 호출은 트레이스로 남는다. 8장의 단계별 시간은 배포 리비전 `provena-api-00020`(OpenRouter)의 Langfuse 세션 74개와 `provena-api-00024`(Anthropic 직접 호출)의 세션 7개에서 계산했고(`evals/results/deploy_latency_v2/stage_times.json`), 같은 기간 최신 트레이스 8개에는 입력과 출력이 채워져 있었다. 다만 Langfuse 내용 기록을 켠 리비전(`provena-api-00026`, PR #77) 이후에는 `/chat` 호출이 없어 내용 기록이 동작하는지는 미확인이다.
 
@@ -839,6 +842,32 @@ python -m evals.retrieval.deploy_range_answers --out evals/results/range_retriev
 python -m evals.safety.deploy_injection_check --out evals/results/injection_deploy_<리비전>/injection_check.json --revision <리비전> --commit <커밋>
 # 배포 코퍼스 주입 시험은 운영 DB에 시험 행을 넣고 지우므로 사용자 승인 뒤에만 돌린다. 먼저 --dry-run으로 사례만 본다
 python -m evals.safety.deploy_corpus_injection_check --dry-run
+
+# 아래는 최신 배포 리비전 `provena-api-00035-h69`(커밋 `b2bc434`) 묶음 측정(5장 5-4, 6장, 8장, 10장)과 4장 보조 측정의 명령이다. 새로 호출하므로 배포 주소와 평가용 계정(환경 변수, 값은 저장소에 없다)이나 유료 키가 필요하다
+# 배포본 v2 50건 x 3회와 검증 20건 x 3회. 결과 evals/results/deploy_latency_provena-api-00035-h69/, deploy_latency_holdout_provena-api-00035-h69/ (citation_gold.json, citation_gold.md는 위 deploy_citation_gold 명령으로 다시 만든다)
+python -m evals.latency.deploy_latency --revision provena-api-00035-h69 --commit b2bc434 --runs 3 --out evals/results/deploy_latency_provena-api-00035-h69
+python -m evals.latency.deploy_latency --revision provena-api-00035-h69 --commit b2bc434 --runs 3 --dataset evals/dataset_holdout_v1.jsonl --out evals/results/deploy_latency_holdout_provena-api-00035-h69
+python -m evals.latency.deploy_citation_gold --results evals/results/deploy_latency_provena-api-00035-h69 --dataset evals/dataset_v2.jsonl
+python -m evals.latency.deploy_citation_gold --results evals/results/deploy_latency_holdout_provena-api-00035-h69 --dataset evals/dataset_holdout_v1.jsonl
+# 새 인용 5건 x 3회(5-4절, 결과 evals/results/deploy_latency_cite_new_provena-api-00035-h69/)
+python -m evals.latency.deploy_latency --revision provena-api-00035-h69 --commit b2bc434 --runs 3 --dataset evals/dataset_cite_new_v1.jsonl --out evals/results/deploy_latency_cite_new_provena-api-00035-h69
+# 배포 질문 쪽 주입 시험(6장 22건 = 주입 19 + 대조 3, 결과 evals/results/injection_deploy_provena-api-00035-h69/)과 코퍼스 주입 시험(운영 DB에 시험 행을 넣고 지움, 사용자 승인 뒤에만. 환경 변수 DEPLOY_INJ_DATABASE_URL, VOYAGE_API_KEY가 더 필요하다)
+python -m evals.safety.deploy_injection_check --out evals/results/injection_deploy_provena-api-00035-h69/injection_check.json --revision provena-api-00035-h69 --commit b2bc434
+python -m evals.safety.deploy_corpus_injection_check --write-prod --out evals/results/injection_corpus_deploy_provena-api-00035-h69/corpus_injection_check.json --revision provena-api-00035-h69 --commit b2bc434
+# 배포 계정 분리·승인 중복·재시작 재개(6장 14, 20, 21행과 4장 체크포인트 행). 환경 변수 DEPLOY_CHECK_BASE_URL, DEPLOY_CHECK_A_LOGIN, DEPLOY_CHECK_A_PASSWORD, DEPLOY_CHECK_B_LOGIN, DEPLOY_CHECK_B_PASSWORD
+python -m evals.safety.deploy_check --out evals/results/deploy_check_provena-api-00035-h69/deploy_check.json
+python -m evals.safety.deploy_mix_check --out evals/results/d7_deploy_provena-api-00035-h69/mix_check.json --revision provena-api-00035-h69 --commit b2bc434
+python -m evals.safety.deploy_approval_check --out evals/results/d7_deploy_provena-api-00035-h69/approval_check.json --revision provena-api-00035-h69 --commit b2bc434
+# 재시작 재개는 두 단계다. 재배포 전 리비전에서 prepare로 승인 대기 3건을 만들고, 재배포한 새 리비전에서 resume으로 처리한다
+python -m evals.safety.deploy_restart_resume_check prepare --revision <현재 리비전> --state <상태 파일>
+python -m evals.safety.deploy_restart_resume_check resume --revision provena-api-00035-h69 --commit b2bc434 --state <상태 파일> --out evals/results/d7_restart_provena-api-00035-h69/restart_resume.json
+# 질문 종류 분류만 다시 확인(사전 등록 62.30, 62.34. 검색·답 작성을 부르지 않아 비용이 작다. 환경 변수 LLM_API_KEY, LLM_PROVIDER). --plan은 호출 없이 문항 수와 예상 비용만 낸다
+python -m evals.agent.classify_overrefuse --repeats 3 --out evals/results/classify_overrefuse_62_30
+# 합동 검토 경로 대 단일(4장, 사전 등록 62.9, 62.11, 유료. 환경 변수 OPENROUTER_API_KEY, VOYAGE_API_KEY)
+python -m evals.agent.exp_joint_review run --set main --out evals/results/joint_review_vs_single_2026-11-10/main --rounds 3
+python -m evals.agent.exp_joint_review run --set detail --out evals/results/joint_review_vs_single_2026-11-10/detail --rounds 3
+# Skill 유무 비교(4장, 사전 등록 62.3 개정 1, 유료 OpenRouter 키). USE_SKILLS=1(켬)과 0(끔)을 번갈아 3회씩, 단일 그래프만. 나머지 인자는 결과 폴더 compare.json의 meta(switches, model_switches)와 같게 준다. 결과 evals/results/skill_ab_v2/{on,off}_r1~3
+USE_SKILLS=0 python -m evals.agent.exp_multi_v2 run --store pg --llm openrouter --arms single --reasoning none --reasoning-by-task decompose=low,answer=low,judge=low --out evals/results/skill_ab_v2/off_r1
 ```
 
 ## 10. 대체재와의 비교

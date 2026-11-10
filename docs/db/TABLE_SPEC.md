@@ -307,7 +307,7 @@
 |---|---|---|---|---|---|
 | `approval_id` | `text` | NO | | PK | 승인 건 id |
 | `kind` | `text` | NO | | | `decision_table`, `issue_table`, `team_review_failed`(CHECK `approvals_kind_check`) |
-| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:312`) |
+| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:327`) |
 | `status` | `text` | NO | `'pending'` | | `pending`, `approved`, `rejected`(CHECK). `team_review_failed`의 읽는 법은 `COMMENT ON COLUMN`(102:43)에 있다 |
 | `decided_by` | `text` | YES | | | 결정한 사용자 id |
 | `summary` | `text` | NO | `''` | | 승인함 화면(`ApprovalItem`) 요약 |
@@ -356,7 +356,7 @@
 
 - 목적: 사용자별 대화(thread) 목록(G4, SDD 4-4 `/threads`). 대화 내용 전체는 여기에 두지 않고 LangGraph 체크포인트에 있다. `last`는 마지막 답 `{kind, answer, answer_id, as_of}` 하나다(`db/111_threads.sql:4`). 모든 조회에 `user_id` 조건을 붙여 남의 대화는 보이지 않는다(111:2).
 - 만든 파일: `db/111_threads.sql:6-16`.
-- 쓰는 코드: `backend/api/threads.py`의 `PostgresThreadStore`(99줄) — `ensure_schema` 116-119(로컬 데모만), `thread_touch` 121-131, `thread_get` 133-135, `threads_of` 137-139. 호출은 `backend/api/routes.py:217, 255, 272, 281, 293, 301, 314`, 생성은 `backend/main.py:250`.
+- 쓰는 코드: `backend/api/threads.py`의 `PostgresThreadStore`(99줄) — `ensure_schema` 116-119(로컬 데모만), `thread_touch` 121-131, `thread_get` 133-135, `threads_of` 137-139. 호출은 `backend/api/routes.py:220, 267, 285, 294, 307, 316, 329`, 생성은 `backend/main.py:250`.
 - RLS와 권한: RLS 켬(`db/111_threads.sql:19`), 정책 없음.
 - `user_id`는 text이며 `users.user_id`(uuid)에 대한 외래 키가 없다.
 
@@ -383,7 +383,7 @@
 
 - 목적: 답. `as_of`는 질문의 기준일(YYYY-MM-DD, 없으면 NULL = 그때의 현재 판)이다. `thread_id`는 그래프 이름 `<user_id>:<thread_id>` 그대로다(`db/120_answers_recall.sql:6`). 재정렬 뒤에는 옛 `answer_grounding`의 인용 검사 결과를 `grounding`, `skills_used`로 갖는다.
 - 만든 파일: `db/120_answers_recall.sql:7-20`(표 7-17, 칼럼 추가 19-20), 옛 DB 이전 `db/109_realign.sql:21-33`.
-- 쓰는 코드: `backend/graph/answer_store.py`의 `PgAnswerStore`(123줄) — `save` 138-150, `save_with_grounding` 152-159, `_insert_answer` 174-194, `save_grounding` 196-199, `get_grounding` 201-207, `get` 209-219, `find_by_article` 221-228. 호출은 `backend/graph/build.py:1449-1454`, 생성은 `backend/graph/recall/runtime.py:39`.
+- 쓰는 코드: `backend/graph/answer_store.py`의 `PgAnswerStore`(123줄) — `save` 138-150, `save_with_grounding` 152-159, `_insert_answer` 174-194, `save_grounding` 196-199, `get_grounding` 201-207, `get` 209-219, `find_by_article` 221-228. 호출은 `backend/graph/build.py:1448-1453`, 생성은 `backend/graph/recall/runtime.py:39`.
 - `grounding`: 인용 검사 결과(밖으로 낼 수 있는 값만). MCP 도구 `get_grounding`이 읽는다(`answer_store.py:201-207`, 읽을 때 `grounding IS NOT NULL` 조건). NULL은 아직 기록하지 않았다는 뜻이며 옛 `answer_grounding`에 줄이 없던 것과 같다. 검사 결과를 JSON으로 만들 수 없으면 그 칼럼만 비우고 답과 인용은 남긴다(`answer_store.py:155`).
 - RLS와 권한: RLS 켬(`db/120_answers_recall.sql:162`), 정책 없음.
 - `user_id`는 text이며 `users.user_id`(uuid)에 대한 외래 키가 없다.
@@ -816,7 +816,7 @@
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|
-| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:86-87, 231`) |
+| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:89-90, 234`) |
 | `checkpoint_ns` | `text` | NO | `''` | PK | 체크포인트 네임스페이스 |
 | `checkpoint_id` | `text` | NO | | PK | 체크포인트 id |
 | `parent_checkpoint_id` | `text` | YES | | | 이전 체크포인트 id |
@@ -884,7 +884,7 @@
 
 LangGraph Store 항목. `backend/memory/profile.py`가 장기 기억으로 사용자 프로필(소속 `affiliation`, 직급 `rank`)을 넣는다. namespace는 `(user_id, "profile")`, 키는 `"me"`이다(`profile.py:14, 19-22`). 대화 내용과 질문과 검색 결과는 넣지 않는다(`profile.py:2-9`).
 
-- 쓰는 코드: `backend/memory/profile.py` — `get_profile` 25, `put_profile` 33(TTL을 지정하는 호출은 이 파일에서 찾지 못함), `delete_profile` 44. 호출은 `backend/graph/build.py:451`, `backend/api/routes.py:346`(조회), `354`(수정), `360`(삭제)이다. 생성은 `checkpoint.py:120, 137`의 `PostgresStore`다.
+- 쓰는 코드: `backend/memory/profile.py` — `get_profile` 25, `put_profile` 33(TTL을 지정하는 호출은 이 파일에서 찾지 못함), `delete_profile` 44. 호출은 `backend/graph/build.py:473`, `backend/api/routes.py:361`(조회), `369`(수정), `375`(삭제)이다. 생성은 `checkpoint.py:120, 137`의 `PostgresStore`다.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|

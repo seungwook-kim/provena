@@ -57,6 +57,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `data/demo_replay/questions.txt`(녹화한 데모 질문 9개) 추가, `recorded.jsonl`을 최종 판정·분류·인용 수정 뒤로 다시 녹화(커밋 3c9a1ad, a03ac9f) | #119 |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | 고정 커밋 `static/pdfs/`의 PDF 7건을 `data/pdf/`에 받아 두고(고정 커밋 원본과 sha256·git blob id 대조) Docling(OCR 끔)으로 파싱·청킹하는 `backend/rag/ingest/pdf.py`를 추가함. 산출물은 평가 색인과 분리(`pdf_ir.jsonl` 요소 800개, `pdf_chunks.jsonl` 청크 205개). `chunks.jsonl`·`manifest.jsonl`·`chunks_index.jsonl` 해시 변동 없음, 임베딩·DB 적재는 하지 않음 | |
 | 2026-11-02 | 박진형 (jinyeong-731, Claude Code) | 판 날짜 UTC(I-011)로 `data/corpus.tar.gz` 다시 만듦: 같은 고정 커밋을 `handbook --skip-authz --fetched-at 2026-10-31`·`history --skip-authz`로 다시 읽음. 바뀐 것은 `pages.jsonl` 72쪽의 `version_date`, `history/handbook_commits.jsonl` 219건의 `date`, `collect_manifest.json`의 `version_rule` 글자·`git_version`(2.54→2.55)뿐. 원문·`corpus_id`·`manifest.jsonl`·`chunks_index.jsonl` 그대로 | 이 PR |
 | 2026-11-01 | 김승욱(팀장) | 코퍼스 고정 커밋을 이 파일 "코퍼스 고정 커밋" 절에 적고, `AGENTS.md`·`LICENSES/LICENSES.md`의 "manifest에 기록" 문장을 실제 위치로 맞춤(고정 커밋은 스냅샷 안 `collect_manifest.json`에만 있어 저장소에서 바로 보이지 않았음) | 이 PR |

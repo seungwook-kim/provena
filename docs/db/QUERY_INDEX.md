@@ -4,11 +4,11 @@
 - 합성 데이터 규모(운영 2026-11-10 조회와 맞춤): chunks 30,171행(전부 `voyage-4` 1024차원, 현재 판 23,095 + 닫힌 판 7,076), versions 1,798(현재 1,516 + 닫힌 282), docs 1,516, query_translations 692, threads 850, answers 315, citations 559, recall_events 318, changed_articles 318, maintenance_candidates 964(전부 pending), recall_notices 3, approvals 11, issue_tables 3, token_revocations 35, users 2. 크기는 chunks 240 MB(운영 264 MB), HNSW 65 MB(운영 64 MB).
 - 한계: 분포가 균일하다(org 6종 각 약 1/6, 사용자 3명 각 1/3). `chunk_id`가 판마다 유일하고(운영은 판 사이에 공유), `link_targets`와 `line_start`는 비어 있었다(GIN 시험에서만 3,352행에 값을 넣었다). 작은 표는 계획기가 Seq Scan을 고르는 것이 정상이라 "색인을 탄다"는 EXPLAIN으로 직접 보이지 않는 곳이 많다. 그 곳은 색인 정의와 질의 조건을 대조해 판정했다(각 행에 표시).
 - 실행 방식: SELECT에만 `EXPLAIN (ANALYZE, BUFFERS)`를 1회 실행했다. INSERT/UPDATE/DELETE는 실행하지 않았고 WHERE 조건을 같은 조건의 SELECT로 바꿔 쟀거나 계획만 봤다. 시간은 Execution Time이다.
-- 조사 범위: ackend/, vals/(결과 폴더 제외)의 SQL 약 150문장. scripts/에는 파일이 없다. LangGraph 표의 SQL은 라이브러리 내부라 포함하지 않았다.
+- 조사 범위: backend/, evals/(결과 폴더 제외)의 SQL 약 150문장. scripts/에는 파일이 없다. LangGraph 표의 SQL은 라이브러리 내부라 포함하지 않았다.
 
 ## 0. 운영 검색 경로
 
-- 운영 Cloud Run 환경변수(`live_00032.json`)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
+- 운영 Cloud Run 환경변수(`live_00032.json`, 저장소에 없음: 커밋된 적이 없는 로컬 덤프)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
 - 운영 `chunks_emb_hnsw_half`는 64 MB이고 `idx_scan` 66,239로 조회됐다(2026-11-10 운영 읽기 전용 조회에서 읽은 값).
 
 ## 1. 벡터 질의 (search.py vector_top)
@@ -26,7 +26,7 @@
 | org=hr, as_of=2026-09-01 | 측정 안 함 | HNSW를 쓰지 않음, 9.7 ms |
 
 - org 필터가 있으면 HNSW 색인 스캔의 추정 비용(40,835)이 전수 계획(약 1,000)보다 높게 잡혀 색인을 쓰지 않는다. `enable_seqscan=off`로도 바뀌지 않았다. org가 `docs`에 있어 `chunks` 색인이 모르기 때문이다. 합성 분포 기준 29-33 ms이며 운영의 org 분포는 알지 못한다. 이 경우를 줄이려면 `chunks`에 org를 복사해 org별 부분 HNSW를 만드는 스키마 변경이 필요한데 효과를 운영 분포로 확인하지 못해 하지 않았다.
-- 옛 판 행이 HNSW에 들어 있어도 현재 판 질의는 5행 만에 끝난다(옛 판 후보는 versions 조건에서 걸러지고 반복 스캔이 더 걷는다). 이 합성 데이터에서는 `chunks` 30,171행 중 7,076행이 옛 판이어도 1 ms 안팎이었다. 운영 실측은 `run_db_chunks_check.ps1` 결과가 필요하다.
+- 옛 판 행이 HNSW에 들어 있어도 현재 판 질의는 5행 만에 끝난다(옛 판 후보는 versions 조건에서 걸러지고 반복 스캔이 더 걷는다). 이 합성 데이터에서는 `chunks` 30,171행 중 7,076행이 옛 판이어도 1 ms 안팎이었다. 운영 실측은 `run_db_chunks_check.ps1`(저장소에 없음: 커밋된 적이 없는 로컬 도구) 결과가 필요하다.
 
 ## 2. 검색·수집 질의 (backend/rag, evals)
 

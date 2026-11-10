@@ -8,7 +8,7 @@ Provena(프로베나): IT 조직의 정책·런북(GitLab 공개 핸드북, CC B
 
 ## 기술 스택
 
-Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + pgvector, 다국어 로컬 임베딩과 bge-reranker-v2-m3, BM25 하이브리드 검색, LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(anthropic 기본, openai)로 고릅니다. 관측은 Langfuse, MCP는 FastMCP입니다. 후보 버전은 docs/SDD.md 9장.
+Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + pgvector(운영은 Supabase, 데모는 compose의 로컬 pgvector 컨테이너), 임베딩은 `voyage-4` API(1024차원)로 질문을 영어로 옮긴 뒤 영어 문장 벡터로 검색하고, 질문 분해·링크 확장·금액 구간 조회를 더했습니다. BM25 하이브리드와 리랭커(bge 등)는 기본형보다 나아지지 않아 쓰지 않습니다(`EVAL_REPORT.md` 3-2절, `.env.example`의 `SEARCH_MODE` 기본 `dense_en`, 비교용 로컬 모델은 서비스 이미지에 넣지 않음). LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(anthropic 기본, openai·openrouter·claude_cli 선택)로 고르고 기본 모델은 `claude-haiku-5-5`입니다. 관측은 Langfuse, MCP는 FastMCP입니다. 후보 버전은 docs/SDD.md 9장.
 
 필수 구성은 Python, FastAPI, LangGraph(멀티에이전트 최소형), RAG, Docker, Langfuse입니다. 폴더 역할은 `docs/SCAFFOLD.md`를 따릅니다.
 

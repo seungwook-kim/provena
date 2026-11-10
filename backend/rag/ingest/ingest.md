@@ -6,7 +6,7 @@
 
 - 주인: 박진형
 - 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표)
-- 파싱 결과 `data/parsed/document_ir.jsonl` 한 줄 = 요소 하나: `element_id, rule_seq, org, kind(heading·paragraph·list_item·table_row·quote·html·code), heading_path, parent_id, order, line_start, line_end(원본 줄, 1부터), text, links, review`. 표 행은 `table_id, row, header, cells` 추가. 청킹(B-3)은 이 형식을 읽는다
+- 파싱 결과 `data/parsed/document_ir.jsonl`(로컬 생성물, `.gitignore`가 `data/parsed/*`를 제외해 저장소에는 없고 `authz_cells.jsonl`만 커밋됨) 한 줄 = 요소 하나: `element_id, rule_seq, org, kind(heading·paragraph·list_item·table_row·quote·html·code), heading_path, parent_id, order, line_start, line_end(원본 줄, 1부터), text, links, review`. 표 행은 `table_id, row, header, cells` 추가. 청킹(B-3)은 이 형식을 읽는다
 - 입력: 핸드북 저장소(고정 커밋)
 - 출력: 원문 스냅샷, 청크, 바뀐 섹션 목록(`ChangedArticle`)
 

@@ -24,7 +24,7 @@
   - 반영 뒤에도 `as_of=2026-10-27`(동결일) 검색 결과가 반영 전과 같다.
   - 실패한 실행마다 디스코드 알림 1건, 또는 알림을 끈 사실이 실행 로그에 남는다.
 - **Out of Scope** (넣지 않은 것과 이유)
-  - 리콜 웹훅 전송(`POST /webhooks/regulation-updated`): 받는 쪽이 아직 없다. 지금은 `changed_articles` 표(`status=pending`)에 쌓고, 받는 쪽이 생기면 전송을 붙인다(10줄 내외). 받는 쪽이 표를 직접 읽어도 된다(리뷰에서 확인).
+  - 리콜 웹훅 전송(`POST /webhooks/regulation-updated`): 증분 수집이 직접 보내는 코드는 없다(저장소에 그 경로를 부르는 수집 쪽 코드 0건). 받는 쪽은 구현돼 있다(`backend/api/recalls.py`의 `/webhooks/regulation-updated`와, `changed_articles`의 `pending` 행을 읽어 처리하는 관리자용 `POST /recalls/process-pending`, `recall.md`). 수집은 `changed_articles` 표(`status=pending`)에 쌓고 리콜 쪽이 그 표를 읽는다.
   - 답의 결론이 바뀌었는지 판정(LLM, 리콜 그래프) / 사용자·업무시스템 알림(리콜)
   - 실행 되돌리기(`--rollback`): 가산 조건이 아니다. 잘못된 반영은 반영 직전 검사(행 수 대조·DB 고유 색인)가 커밋 전에 막는다.
   - 실행 기록 해시 체인, 26시간 무성공 알림, 비상 정지 변수: 기록은 `sync_runs`, 무성공은 실행 기록 날짜로 보이고, 멈춤은 Actions의 "Disable workflow"로 한다.
