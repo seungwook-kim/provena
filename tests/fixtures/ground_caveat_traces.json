@@ -531,5 +531,167 @@
    "redraft": "citation_check_failed",
    "revise": "citation_check_failed"
   }
+ },
+ {
+  "trace": "bfd7bdbc",
+  "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 1만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+  "as_of": "2026-10-27",
+  "judge_partial": false,
+  "judge_missing": [],
+  "retrieved": [
+   {
+    "chunk_id": "374e90086f57050a",
+    "org": "finance",
+    "rule_seq": 1179857673,
+    "rule_title": "The GitLab Procurement Team",
+    "article": "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+    "version_id": "7e436f79a37c",
+    "version_date": "2026-10-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "The GitLab Procurement Team > The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days\n- The Procurement team negotiates SaaS contracts >$25k and one-time contracts >$100K\n  - If this step is not taken, purchase orders will not be approved until Procurement is able to negotiate\n- SLA can extend based on level of negotiation required for large and/or complex contracts, and the suppliers willingness to meet budget and benchmark indicators. For larger spend purchases, it is beneficial to engage Procurement prior to submitting the request in Zip so negotiations can start earlier.",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/"
+   },
+   {
+    "chunk_id": "bfbe182a1e09f681",
+    "org": "finance",
+    "rule_seq": 1130740200,
+    "rule_title": "Field Marketing and Events",
+    "article": "How Long Does it take to get my New Software Purchase Approved?",
+    "version_id": "10563f30d799",
+    "version_date": "2025-10-03",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Field Marketing and Events > How Long Does it take to get my New Software Purchase Approved?\n- Contracts greater than $25K are typically negotiated by the procurement team, unless you've already done so and the pricing is benchmarked.\n  - The negotiation, review and approval cycle typically takes 2-3 weeks based on the scope of the request. Large and/or complex contracts can take longer to negotiate.\n- Contracts less than $25K do not need to be negotiated by procurement unless there is a business reason to do so.\n  - If no negotiation is required, the review and approval cycle typically takes 1-2 weeks. Large and/or complex contracts can take longer, and this can vary wildly based on supplier input into the proces.\n- The procurement process consists of multiple approvals from different cross-functional teams, this can include finance, IT, security, and legal.",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/field-marketing-events/"
+   },
+   {
+    "chunk_id": "acee71fd722f2612",
+    "org": "finance",
+    "rule_seq": 1179857673,
+    "rule_title": "The GitLab Procurement Team",
+    "article": "What is Procurement? > Procurement Team Alignment",
+    "version_id": "7e436f79a37c",
+    "version_date": "2026-10-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "The GitLab Procurement Team > What is Procurement? > Procurement Team Alignment\nDivision alignment for spend over >$25k USD / year:\n- Marketing - Ashley Abbate\n- Sales - Ashley Abbate\n- Product - Adrienne Ruhaak\n- Engineering - Adrienne Ruhaak\n- People - Adrienne Ruhaak\n- Finance - Adrienne Ruhaak\n- Legal - Adrienne Ruhaak\n- All division spend <$25k USD - Dasha Yarmusik\n- Individual Software Purchases - Anam Shaikh",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/"
+   },
+   {
+    "chunk_id": "2790f31df70593f1",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Non Billable Expenses > >$5K",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Non Billable Expenses > >$5K\nNon Billable Expenses, >$5K:\n- Exec Group (functional approval): Approves\n- PAO or VP Finance (financial approval): Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L433-443"
+   },
+   {
+    "chunk_id": "72b09f608ddee143",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving expense > >$0K to $25K",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving expense > >$0K to $25K\nApproving expense, >$0K to $25K:\n- Manager (functional approval): Approves\n- PAO or VP Finance (financial approval): Approves/Signs\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.\n(4) Approval from function responsible for supporting associated objectives and goals.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L78-88"
+   },
+   {
+    "chunk_id": "a94e4222885c1e82",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > Purchase requests commodity categories and sub-categories",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > Purchase requests commodity categories and sub-categories\n- Consulting, Professional Services & Training\n  - Consulting Fees\n  - Professional dues, membership fees\n  - Revenue Partner Payments\n- Finance & Legal\n  - Accounting\n  - Insurance - Business\n  - Legal\n  - Licenses & Registrations\n  - Tax Commodities\n- General & Admin\n  - Employee Benefit - Bike to work\n  - Security Deposits (Greater than 12 months)\n  - Credit Card Transaction fees\n  - Gifts & Donations\n  - Partner Growth Fees\n  - Postage & Shipping\n  - Printing & Copying\n  - Rent or Lease\n  - Coworking Space\n- Hosting\n  - Hosting Services\n- Marketing Programs\n  - Marketing Site\n  - Demand Advertising\n  - Field Events\n  - Swag\n  - Email\n  - Brand\n  - Prospecting\n  - Channel Partner Rebates",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "7275b0b9f027798b",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to request a new vendor?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to request a new vendor?\nThe process to set up a new vendor starts in Zip. Simply by creating a new purchase request you have the option to add a new vendor. Once the request has been submitted, the Procurement team would be notified and add the new vendor in Coupa.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "0acdc0bbc5942410",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to initiate a new request?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to initiate a new request?\n- Login to your Okta home page.\n- Click on +New Request on the right side of the top menu.\n- Select the specific request type that matches your purchase. Each request type opens its own intake form, so the sections and required fields may vary depending on the type of request you selected.\n- Complete the requisition form\n  - a) Depending on the request type, you may be asked to complete sections such as general information, vendor details, spend information, IT security and privacy, and supporting documentation.\n- If you are the requestor, then add your name, or behalf of whom you are requesting.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "f09eee1e65796fe5",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip\nZip is an add-on to Coupa that will streamline the approval process to ensure we are gathering all the right information to manage the associated approvals, and get you the services you need as soon as possible. As a result, you will now have visibility into your purchase requests including the ability to see status and current stage of the approval process.\nCheck this 2 Minute Zip Overview Video to learn more about Zip and how to submit a purchase request.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "8c381ff60408dda9",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip > How to access Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip > How to access Zip\nTo request access to Zip:\n- Utillize the Lumos App Store to submit a request for Zip and a separate request for Coupa]. All users requesting access to Zip also need a Coupa license to manage POs and invoices\n  - a) Enter a Justification for this access question, please describe what budget, management approvals, purchase orders and invoices approvals you will manage.\n  - b) If you require immediate Zip/Coupa access, please ping in the #coupa_help Slack channel.\n- Once you are provisioned access, Login to your Okta home page\n- Find the Zip tile.\n- Zip should open in a new tab with your user logged in.\n- The Zip main page should look like the one below.\nzip-image-1",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   }
+  ],
+  "draft": {
+   "answer": "계약 금액이 1만 달러이면 승인 구간은 $0K 초과 $25K 이하입니다. 업무 승인자는 Manager이고 재무 승인자는 PAO 또는 VP Finance입니다 [72b09f608ddee143]. 다만 이 값은 공개된 2023-05 판 기준이며, 현재 판의 값은 자료에서 확인할 수 없습니다.",
+   "citations": [
+    {
+     "chunk_id": "72b09f608ddee143"
+    }
+   ],
+   "period_covered": true
+  },
+  "redrafts": [],
+  "vote_groups": [
+   [
+    "{\"claims\": [{\"claim\": \"계약 금액 1만 달러는 $0K 초과 $25K 이하 구간\", \"quote\": \"Approving expense, >$0K to $25K\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$0K to $25K\"}, {\"claim\": \"업무 승인자는 Manager\", \"quote\": \"Manager (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"공개된 2023-05 판 기준이며 현재 판은 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간·승인자는 자료에 있으나 현재 판 여부는 자료로 확인되지 않음\", \"grounded\": false, \"reason_code\": \"out_of_period\", \"unsupported_sentences\": [\"다만 이 값은 공개된 2023-05 판 기준이며, 현재 판의 값은 자료에서 확인할 수 없습니다.\"]}",
+    "{\"claims\": [{\"claim\": \"금액 1만 달러는 $0K 초과 $25K 이하 구간\", \"quote\": \">$0K to $25K\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$0K to $25K\"}, {\"claim\": \"업무 승인자는 Manager\", \"quote\": \"Manager (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"공개된 2023-05 판 기준이며 현재 판은 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간과 승인자는 자료에 있으나 현재 판 확인 불가 문장은 자료 밖 주장\", \"grounded\": false, \"reason_code\": \"out_of_period\", \"unsupported_sentences\": [\"다만 이 값은 공개된 2023-05 판 기준이며, 현재 판의 값은 자료에서 확인할 수 없습니다.\"]}",
+    "{\"claims\": [{\"claim\": \"계약 금액 1만 달러는 $0K 초과 $25K 이하 구간\", \"quote\": \"Approving expense, >$0K to $25K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$0K to $25K\"}, {\"claim\": \"업무 승인자는 Manager\", \"quote\": \"Manager (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"현재 판 값은 확인 불가, 2023-05 판 기준\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간과 승인자 칸은 자료와 일치하나 현재 판 여부 설명은 자료 근거가 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"다만 이 값은 공개된 2023-05 판 기준이며, 현재 판의 값은 자료에서 확인할 수 없습니다.\"]}"
+   ]
+  ],
+  "production": {
+   "kind": "refuse",
+   "refuse_reason": "out_of_period",
+   "redraft": null,
+   "revise": null
+  }
  }
 ]

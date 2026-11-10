@@ -63,6 +63,16 @@ def test_trace_f178bec0_value_free_first_draft_is_redrafted_and_version_note_pas
     assert out["kind"] == "answer" and out["grounding"]["redrafted"] is True and "Sr Director" in out["answer"]
 
 
+def test_trace_bfd7bdbc_hedge_called_out_of_period_by_two_votes_no_longer_refuses():
+    """같은 단서 문장 "현재 판의 값은 자료에서 확인할 수 없습니다"를 두 표는 out_of_period, 한 표는 unsupported로 불렀다. 표마다 단서 구제를 적용해도 out_of_period 표에는 걸리지 않아 2:1로 거절됐다.
+    질문(금액만 있고 연도는 없다)은 근거의 기간 안이므로 세 표 모두 값은 받쳐진 것으로 센다."""
+    trace = TRACES["bfd7bdbc"]
+    assert [json.loads(v)["reason_code"] for v in trace["vote_groups"][0]] == ["out_of_period", "out_of_period", "unsupported"]
+    out, llm = replay(trace)
+    assert out["kind"] == "answer" and not out.get("refuse_reason")
+    assert "Manager" in out["answer"] and "PAO 또는 VP Finance" in out["answer"] and out["grounding"]["caveat_only"] is True
+
+
 def test_trace_c02a6765_missing_approver_value_is_still_refused():
     """승인자 값이 NOTHING FOUND인 건(재무 칸이 X)은 수정 뒤에도 거절이다."""
     out, llm = replay(TRACES["c02a6765"])
@@ -110,12 +120,25 @@ def test_hedge_only_votes_pass_but_a_single_value_vote_does_not_get_a_refusal_th
     assert graph_answer([vote(FACT), vote(HEDGE), vote(HEDGE)])["kind"] == "answer"
 
 
-def test_reason_codes_other_than_unsupported_are_not_eased():
-    """사유가 unsupported가 아닌 표는 단서 문장만 꼽았어도 건드리지 않는다(`test_ground_caveat.py::test_other_reasons_are_not_affected`와 같은 기준)."""
-    for code in ("out_of_period", "no_evidence", "nonexistent_entity"):
+def test_reason_codes_other_than_unsupported_and_out_of_period_are_not_eased():
+    """사유가 no_evidence나 nonexistent_entity인 표는 단서 문장만 꼽았어도 건드리지 않는다(`test_ground_caveat.py::test_other_reasons_are_not_affected`와 같은 기준)."""
+    for code in ("no_evidence", "nonexistent_entity"):
         assert G.caveat_only_vote(json.loads(vote(HEDGE, code=code)), ANSWER, Q, EVIDENCE) == []
     assert G.caveat_only_vote(json.loads(vote(HEDGE, grounded=True)), ANSWER, Q, EVIDENCE) == []
-    assert G.caveat_only_vote(json.loads(vote(claims=[("SaaS 계약이 지출 행에 해당하는지는 자료로 확인 불가", "NOTHING FOUND")], code="out_of_period")), ANSWER, Q, EVIDENCE) == []
+
+
+def test_out_of_period_vote_is_eased_only_for_a_hedge_in_an_in_period_question():
+    """같은 단서 문장을 표마다 unsupported 또는 out_of_period로 부른다(bfd7bdbc). out_of_period 표는 꼽은 문장이 단서뿐이고 질문이 기간 안일 때만 받쳐진 표로 센다."""
+    assert G.caveat_only_vote(json.loads(vote(HEDGE, code="out_of_period")), ANSWER, Q, EVIDENCE) == [HEDGE]
+    assert G.caveat_only_vote(json.loads(vote(HEDGE, code="out_of_period")), ANSWER, Q, EVIDENCE, cited=EVIDENCE[:1], retrieved=EVIDENCE) == [HEDGE]
+    assert G.caveat_only_vote(json.loads(vote(HEDGE, FACT, code="out_of_period")), ANSWER, Q, EVIDENCE) == []  # 값을 말하는 문장도 꼽았다
+    assert G.caveat_only_vote(json.loads(vote(code="out_of_period")), ANSWER, Q, EVIDENCE) == []              # 꼽은 문장이 없다
+    nothing_found = [("SaaS 계약이 지출 행에 해당하는지는 자료로 확인 불가", "NOTHING FOUND")]
+    assert G.caveat_only_vote(json.loads(vote(claims=nothing_found, code="out_of_period")), ANSWER, Q, EVIDENCE) == []  # 꼽은 문장 없이 요약만 있는 표는 unsupported에서만 본다
+    old_question = Q.replace("계약 금액이", "2019년에 계약 금액이")
+    assert G.check_rules(old_question, EVIDENCE, EVIDENCE).reason == G.OUT_OF_PERIOD
+    assert G.caveat_only_vote(json.loads(vote(HEDGE, code="out_of_period")), ANSWER, old_question, EVIDENCE) == []     # 질문이 기간 밖이다
+    assert G.caveat_only_vote(json.loads(vote(HEDGE, code="unsupported")), ANSWER, old_question, EVIDENCE) == [HEDGE]  # unsupported 표는 그대로다
 
 
 # ---------- 표 하나의 판별 ----------

@@ -373,19 +373,26 @@ def summaries_are_caveats(summaries: list[str], answer: str, known: str) -> bool
     return True
 
 
-def caveat_only_vote(obj: dict | None, answer: str, question: str, evidence: list[dict]) -> list[str]:
-    """판정 표 하나(grounded=false, 사유 unsupported)가 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 했으면 그 문장(또는 NOTHING FOUND 요약)을, 아니면 빈 목록.
+def caveat_only_vote(obj: dict | None, answer: str, question: str, evidence: list[dict], *, cited: list[dict] | None = None, retrieved: list[dict] | None = None) -> list[str]:
+    """판정 표 하나(grounded=false, 사유 unsupported 또는 out_of_period)가 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 했으면 그 문장(또는 NOTHING FOUND 요약)을, 아니면 빈 목록.
     (a) 꼽은 문장이 모두 단서이고 답에 값을 말하는 문장이 남아 있다(`caveat_only_flags`, 공백·구두점·따옴표를 지운 부분 일치).
-    (b) 꼽은 문장이 없고 NOTHING FOUND 주장이 모두 답의 단서 문장을 가리킨다(`summaries_are_caveats`).
-    사유가 unsupported가 아닌 표(out_of_period 등)는 건드리지 않는다. 값을 말하는 문장을 꼽았거나 값 주장이 NOTHING FOUND인 표는 그대로 거절 쪽 표다.
-    다수결에 넣기 전에 표마다 적용해, 표마다 꼽은 문장이 달라 겹치는 문장이 없어도(합친 목록이 비어도) 값에 대한 표만 센다."""
+    (b) 꼽은 문장이 없고 NOTHING FOUND 주장이 모두 답의 단서 문장을 가리킨다(`summaries_are_caveats`). 사유가 unsupported인 표에만 적용한다.
+    사유 out_of_period인 표는 (a)만 적용하고, 질문 자체가 코드 규칙(`check_rules`의 기간 판정)으로 근거의 기간 밖이면 그대로 거절 쪽 표다.
+    같은 단서 문장("현재 판의 값은 자료에서 확인할 수 없습니다")을 표마다 unsupported나 out_of_period로 달리 부르기 때문이다.
+    그 밖의 사유(no_evidence, nonexistent_entity)의 표는 건드리지 않는다. 값을 말하는 문장을 꼽았거나 값 주장이 NOTHING FOUND인 표는 그대로 거절 쪽 표다.
+    다수결에 넣기 전에 표마다 적용해, 표마다 꼽은 문장이 달라 겹치는 문장이 없어도(합친 목록이 비어도) 값에 대한 표만 센다.
+    `cited`와 `retrieved`는 기간 판정에 쓰는 인용 청크와 검색 청크다(없으면 `evidence`로 판정한다)."""
     if not isinstance(obj, dict) or obj.get("grounded") is not False:
         return []
     code = obj.get("reason_code")
-    if (code if code in REASONS else UNSUPPORTED) != UNSUPPORTED:  # `read_verdict`와 같다
+    code = code if code in REASONS else UNSUPPORTED  # `read_verdict`와 같다
+    if code not in (UNSUPPORTED, OUT_OF_PERIOD):
         return []
     listed = obj.get("unsupported_sentences")
     flagged = [c for c in listed if isinstance(c, str) and c.strip()] if isinstance(listed, list) else []
+    if code == OUT_OF_PERIOD:
+        if not flagged or check_rules(question, cited or evidence, retrieved or evidence).reason == OUT_OF_PERIOD:
+            return []
     if flagged:
         return flagged if caveat_only_flags(answer, flagged, question, evidence) else []
     missing = nothing_found_claims(obj)

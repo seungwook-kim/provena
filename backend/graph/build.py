@@ -1210,7 +1210,7 @@ def build_graph(
                 # 값은 받쳐졌고 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 한 표는, 다수결에 넣기 전에 받쳐진 표로 센다(`grounding.caveat_only_vote`).
                 # 표마다 꼽은 문장이 달라 합친 목록이 비어도 단서 때문에 거절되지 않는다. 값을 말하는 문장을 꼽은 표는 그대로다
                 obj = ask_json(system, user)[0]
-                sentences = G.caveat_only_vote(obj, answer, question, evidence)
+                sentences = G.caveat_only_vote(obj, answer, question, evidence, cited=cited, retrieved=retrieved)
                 if sentences:
                     eased.extend(sentences)
                     return {**obj, "grounded": True, "_caveat_only": sentences}
