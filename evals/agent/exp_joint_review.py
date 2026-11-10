@@ -309,7 +309,7 @@ def run_cmd(args) -> int:
         searcher, store, setup = build_search()
         rec = Rec(searcher)
         llm = SharedChatModel()
-        pages = {"page_search": M.PageSearch(searcher, rec), "heading_search": M.HeadingSearch(searcher, rec), "intro_search": M.IntroSearch(searcher, rec)}
+        pages = {"page_search": M.PageSearch(searcher, rec), "intro_search": M.IntroSearch(searcher, rec)}
         single = M.X.RecordingGraph(build_graph(rec, None, llm=llm, decompose=True, section_reader=lambda rule_seq, article, as_of: None, **pages))
         joint = build_review_graph(rec, InMemorySaver(), llm=llm, store=InMemoryIssueTableStore(), approvals=None)
         out = Path(args.out)

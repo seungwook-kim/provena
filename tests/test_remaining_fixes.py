@@ -21,10 +21,10 @@ SHORT = mk("Patch releases are deployed to production during the window.", title
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
     for name in ("GRAPH_CITE_PHRASE", "GRAPH_CITE_EXPAND", "GRAPH_CITE_MULTI", "GRAPH_TEAM_LAST", "GRAPH_KEEP_CITES",
-                 "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_REQUERY_VOCAB", "GRAPH_UNKNOWN_NAME", "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES",
+                 "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_REQUERY_VOCAB", "GRAPH_UNKNOWN_NAME", "GRAPH_QUERY_BRANCHES",
                  "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS", "SEARCH_DECOMPOSE", "USE_SKILLS",
                  "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_STOP_STALLED_SEARCH", "GRAPH_DECOMPOSE_CAP_S", "GRAPH_REFUSE_ON_NONE",
-                 "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_HEADING_TERMS", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_HEADING_MARK"):
+                 "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
     monkeypatch.setenv("GRAPH_JUDGE_QUERY", "1")
@@ -72,91 +72,6 @@ def test_cite_phrase_off_keeps_the_citations():
 
 
 OK = j(reason="", grounded=True)
-
-
-# ---------- H 제목 경로 검색 ----------
-Q38 = "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?"
-SUBS38 = ["새 SaaS 도구 도입 요청은 어디서 시작해?", "보안 검토(TPRM)는 언제 필요해?"]
-VENDOR = mk("Open Zip and choose Request a new vendor.", title="Zip End Users Guide", seq=71010, article="Zip - Getting Started > How to request a new vendor?")
-
-
-def test_heading_phrases_use_the_whole_term_table():
-    table = ["procurement", "purchase request", "new vendor", "TPRM", "third party risk management assessment", "post-deploy migration"]
-    texts = ["a (procurement, purchase request, new vendor)", "b (TPRM, third party risk management assessment)"]
-    assert F.heading_phrases(texts, table) == ["purchase request", "new vendor", "third party risk management assessment"]  # 한 단어 용어는 빼고 표 순서로
-    assert F.heading_phrases(["Post-Deploy Migration은 왜 안 돌려?"], table) == ["post-deploy migration"]  # 괄호가 아니어도, 어느 줄이든
-    assert F.heading_phrases(None, table) == [] and F.heading_phrases(["(대상: GitLab 팀원)"], table) == []
-    assert F.heading_phrases(["new vendor"]) == ["new vendor"]  # 기본은 코드 용어표 전체
-
-def _heading_llm():
-    from test_query_plan import make_llm
-    return make_llm(subs=SUBS38)
-
-
-def _heading_fake(seen):
-    def fn(phrase, org, as_of, n):
-        seen.append((phrase, as_of, n))
-        return [VENDOR] if phrase == "new vendor" else []
-    return fn
-
-
-@pytest.mark.parametrize("multi", [False, True])
-def test_heading_terms_add_the_heading_chunk_to_the_first_search(monkeypatch, multi):
-    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    seen: list = []
-    fn = lambda q: [REVIEW]  # noqa: E731
-    kw = {"llm": _heading_llm(), "decompose": True, "heading_search": _heading_fake(seen)}
-    g = build_multi_graph(fn, **kw) if multi else build_graph(fn, **kw)
-    out = g.invoke({"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert [p for p, _, _ in seen] == ["purchase request", "new vendor", "third party risk management assessment"]
-    assert all(a == "2025-06-01" and n == 1 for _, a, n in seen)
-    ids = [c["chunk_id"] for c in out["chunks"]]
-    assert ids[:2] == [REVIEW.chunk_id, VENDOR.chunk_id]  # 첫 검색 결과 뒤에 붙는다
-
-
-def test_heading_terms_need_the_terms_the_flag_and_the_search(monkeypatch):
-    seen: list = []
-    fn = lambda q: [REVIEW]  # noqa: E731
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    out = build_graph(fn, llm=_heading_llm(), decompose=True, heading_search=_heading_fake(seen)).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert seen == [] and VENDOR.chunk_id not in [c["chunk_id"] for c in out["chunks"]]  # 스위치 꺼짐
-    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    monkeypatch.delenv("GRAPH_QUERY_TERMS")
-    build_graph(fn, llm=_heading_llm(), decompose=True, heading_search=_heading_fake(seen)).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert seen == []  # 하위 질문에 용어가 없으면 부르지 않는다
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    out = build_graph(fn, llm=_heading_llm(), decompose=True).invoke({"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert VENDOR.chunk_id not in [c["chunk_id"] for c in out["chunks"]]  # 검색 함수가 없으면 그대로
-
-
-def test_heading_search_failure_keeps_the_first_search(monkeypatch):
-    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-
-    def boom(*a):
-        raise RuntimeError("db")
-    out = build_graph(lambda q: [REVIEW], llm=_heading_llm(), decompose=True, heading_search=boom).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert [c["chunk_id"] for c in out["chunks"]][:1] == [REVIEW.chunk_id]
-
-
-def test_memory_store_heading_top_filters_and_orders():
-    import numpy as np
-    from backend.rag.retrieve.search import MemoryStore
-    base = {"org": "gitlab", "kind": "text", "text": "t", "source_url": "u", "version_date": "2025-01-01", "fetched_at": "2025-01-01"}
-    rows = [{**base, "chunk_id": "b" * 16, "version_id": "v1", "rule_seq": 1, "rule_title": "Zip End Users Guide", "article": "How to request a new vendor?", "ord": 2,
-             "valid_from": "2025-01-01", "valid_to": None},
-            {**base, "chunk_id": "a" * 16, "version_id": "v1", "rule_seq": 2, "rule_title": "Accounting", "article": "New Vendor Onboarding", "ord": 1,
-             "valid_from": "2025-01-01", "valid_to": None},
-            {**base, "chunk_id": "c" * 16, "version_id": "v0", "rule_seq": 3, "rule_title": "Old", "article": "new vendor", "ord": 0,
-             "valid_from": "2024-01-01", "valid_to": "2024-06-01"}]
-    s = MemoryStore(rows, np.zeros((3, 2), dtype=np.float32), "e")
-    assert [k[0] for k in s.heading_top("New Vendor", None, None, 5)] == ["a" * 16, "b" * 16]  # 현재 판만, ord 순
-    assert [k[0] for k in s.heading_top("new vendor", None, "2024-03-01", 5)] == ["c" * 16]
-    assert s.heading_top("new vendor", None, None, 1) == [("a" * 16, "v1")] and s.heading_top(" ", None, None, 3) == []
 
 
 # ---------- Q 근거 확인 구절 먼저 ----------
@@ -224,8 +139,8 @@ def test_no_item_page_or_product_names_in_the_general_rules():
     import inspect
     import re as _re
     from backend.rag.retrieve.search import Searcher
-    src = "".join(inspect.getsource(fn) for fn in (F.qualifiers, F.scoped_out, F.drop_scoped_cites, F.heading_phrases, F._heading_words,
-                                                    F.heading_note, Searcher.intro_fill, F.scope_note_refuses,
+    src = "".join(inspect.getsource(fn) for fn in (F.qualifiers, F.scoped_out, F.drop_scoped_cites, F._heading_words,
+                                                    Searcher.intro_fill, F.scope_note_refuses,
                                                     F.drop_odd_cites, F.pointer_only))
     src += F.CITE_PICK_RULE + F._SCOPE_LIMITED.pattern + F._SCOPE_ABSENT.pattern + F._POINTER.pattern
     for name in LEAK_NAMES_RULES:
@@ -249,22 +164,20 @@ def _leak_source(which: str) -> str:
     from backend.graph import decompose as dec
     from backend.graph import query_plan as QP
     from backend.prompts import question as P
-    if which == "query_plan.TERM_ROWS":
-        return repr(QP.TERM_ROWS)
+    if which == "query_plan.py":
+        return inspect.getsource(QP)
     if which == "prompts/question.py":
         return inspect.getsource(P)
     return dec._PRODUCT_TARGET.pattern  # 분해의 제품 대상 정규식(`GRAPH_KEEP_PRODUCT_NAME`)
 
 
 @pytest.mark.parametrize("which", [
-    # 알려진 한계: 용어표에 v2 문항 단어(new vendor, purchase request, procurement, tprm)가 남아 있다. 빼면 61.51로 잰 동작이 바뀌므로
-    # 최종 측정값과 같은 코드를 유지하고 실패를 기록으로 남긴다. 단어를 빼면 strict라 이 표시를 지워야 한다(EVAL_REPORT 4장, 결정 0078).
-    pytest.param("query_plan.TERM_ROWS", marks=pytest.mark.xfail(strict=True, reason="용어표에 v2 문항 단어가 남아 있음(알려진 한계)")),
+    "query_plan.py",  # 용어표와 그 장치를 걷어냈다(사전 등록 62.34, 결정 0101)
     "prompts/question.py",
     "decompose._PRODUCT_TARGET",
 ])
 def test_no_item_page_or_product_names_in_terms_prompts_and_decompose(which):
-    """같은 누출 검사를 용어표, 질문 프롬프트, 분해의 제품 정규식에도 건다. 문항 단어가 들어 있으면 실패로 남긴다(보류 규칙 포함)."""
+    """같은 누출 검사를 질문 계획 코드, 질문 프롬프트, 분해의 제품 정규식에도 건다. 문항 단어가 들어 있으면 실패로 남긴다(보류 규칙 포함)."""
     import re as _re
     low = _leak_source(which).lower()
     hits = [name for name in (*LEAK_NAMES_RULES, *LEAK_NAMES_MORE) if name in low]
@@ -307,69 +220,3 @@ def test_drop_scoped_off_keeps_both(monkeypatch):
             citations=[{"chunk_id": REVIEW.chunk_id}, {"chunk_id": DEDICATED.chunk_id}], period_covered=True)
     out = run(build_graph(lambda q: [REVIEW, DEDICATED], llm=llm(answer=ans, grounding=OK), grounding_llm=True), "코드 리뷰 첫 응답 기한과 IMOC 무응답 처리는?")
     assert len(out["citations"]) == 2 and "scoped_drop" not in out["grounding"]
-
-
-# ---------- HM H가 더한 청크를 답 입력에서 알리기 ----------
-def test_heading_note_lists_only_marked_chunks():
-    assert F.heading_note([d(REVIEW)]) == ""
-    note = F.heading_note([d(REVIEW), {**d(VENDOR), F.HEADING_MARK_KEY: "new vendor"}])
-    assert f"chunk_id={VENDOR.chunk_id} (용어: new vendor)" in note and REVIEW.chunk_id not in note
-
-
-def _answer_inputs(monkeypatch, mark: bool, heading: bool = True, multi: bool = False):
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    if heading:
-        monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    if mark:
-        monkeypatch.setenv("GRAPH_HEADING_MARK", "1")
-    m = _heading_llm()
-    seen: list[str] = []
-    inner = m.invoke
-
-    def invoke(messages, *a, **k):
-        if "[[task:answer" in messages[0].content:
-            seen.append(messages[-1].content)
-        return inner(messages, *a, **k)
-    m.invoke = invoke
-    kw = {"llm": m, "decompose": True, "heading_search": _heading_fake([])}
-    g = build_multi_graph(lambda q: [REVIEW], **kw) if multi else build_graph(lambda q: [REVIEW], **kw)
-    out = g.invoke({"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    return out, seen
-
-
-def test_heading_mark_adds_the_note_to_the_redraft_input(monkeypatch):
-    from qgraph_fakes import j as jj
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    monkeypatch.setenv("GRAPH_HEADING_MARK", "1")
-    from qgraph_fakes import ScriptedLLM, normal_llm
-    bad = jj(grounded=False, reason_code="unsupported", reason="값 다름", unsupported_sentences=["x"])
-    m = ScriptedLLM({**normal_llm().handlers, "decompose": jj(split=True, sub_questions=SUBS38), "grounding": [bad, jj(reason="", grounded=True)]})
-    seen: list[str] = []
-    inner = m.invoke
-
-    def invoke(messages, *a, **k):
-        if "[[task:answer" in messages[0].content and "이전 답이 근거 판정을 통과하지 못했다" in messages[-1].content:
-            seen.append(messages[-1].content)
-        return inner(messages, *a, **k)
-    m.invoke = invoke
-    tprm = mk("A TPRM review is required before approval.", title="Third Party Risk", seq=71030)  # 질문의 TPRM이 근거에 있어야 코드 규칙을 지난다
-    out = build_graph(lambda q: [tprm], llm=m, decompose=True, grounding_llm=True, heading_search=_heading_fake([])).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert "redraft" in out["grounding"]
-    assert seen and all(f"chunk_id={VENDOR.chunk_id} (용어: new vendor)" in s for s in seen)
-
-
-@pytest.mark.parametrize("multi", [False, True])
-def test_heading_mark_adds_the_note_to_the_answer_input(monkeypatch, multi):
-    out, seen = _answer_inputs(monkeypatch, True, multi=multi)
-    assert seen and all(f"chunk_id={VENDOR.chunk_id} (용어: new vendor)" in s for s in seen)
-    assert all(F.HEADING_MARK_KEY not in c for c in out.get("citations") or [])  # 인용 출력에는 표시 칸이 없다
-
-
-def test_heading_mark_off_or_without_h_keeps_the_answer_input(monkeypatch):
-    _, seen = _answer_inputs(monkeypatch, False)
-    assert seen and all("질문의 용어를 그대로 담은 자료" not in s for s in seen)
-    monkeypatch.delenv("GRAPH_HEADING_TERMS")
-    _, seen = _answer_inputs(monkeypatch, True, heading=False)
-    assert seen and all("질문의 용어를 그대로 담은 자료" not in s for s in seen)  # H가 꺼져 있으면 HM도 없다

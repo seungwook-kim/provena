@@ -2,7 +2,7 @@
 키 없이 가짜 모델로 돈다. Postgres 재시작 시험은 Postgres가 있을 때만 돈다(없으면 건너뜀. 메모리 체크포인터 결과를 재시작 근거로 쓰지 않는다).
 
 Postgres 고르는 순서: PROVENA_D5_PG_URL(이미 떠 있는 임시 DB) -> PROVENA_D5_PG_BIN(Postgres bin 폴더, 임시 폴더에 새로 띄움) -> docker 이미지
-`pgvector/pgvector:pg16`이 이미 있으면 임시 컨테이너 `provena-d5-ckpt`. 아무것도 없으면 건너뛴다. 어떤 경우에도 내려받지 않는다.
+`pgvector/pgvector:pg16`이 이미 있으면 임시 컨테이너 `provena-d5-ckpt-<무작위 8자>`(끝나면 그 컨테이너만 지운다). 아무것도 없으면 건너뛴다. 어떤 경우에도 내려받지 않는다.
 시험은 앱과 같은 조건인 superuser가 아닌 표 소유자로 돈다: superuser는 RLS를 무시하므로 RLS에 막히는지 볼 수 없다. 앞의 접속 정보는 역할과 DB를 만들 권한이 있어야 한다.
 """
 from __future__ import annotations
@@ -345,10 +345,11 @@ def pg_admin_url():
         if not ok:
             pytest.skip("Postgres 없음: PROVENA_D5_PG_URL/PROVENA_D5_PG_BIN을 주거나 docker 이미지를 받아 둔 뒤 다시 돌린다 (검증 못함)")
         port = _free_port()
-        subprocess.run(["docker", "run", "-d", "--name", "provena-d5-ckpt", "-e", "POSTGRES_PASSWORD=pw", "-e", "POSTGRES_USER=app",
+        name = f"provena-d5-ckpt-{uuid.uuid4().hex[:8]}"   # 고정 이름이면 정지한 옛 컨테이너나 다른 실행과 이름이 겹쳐 docker run이 실패한다(exit 125). 만든 것만 지운다
+        subprocess.run(["docker", "run", "-d", "--name", name, "-e", "POSTGRES_PASSWORD=pw", "-e", "POSTGRES_USER=app",
                         "-p", f"127.0.0.1:{port}:5432", image], check=True, capture_output=True)
         url = f"postgresql://app:pw@127.0.0.1:{port}/postgres"
-        cleanup = lambda: subprocess.run(["docker", "rm", "-f", "provena-d5-ckpt"], capture_output=True)  # noqa: E731
+        cleanup = lambda: subprocess.run(["docker", "rm", "-f", name], capture_output=True)  # noqa: E731
     try:
         _wait(url)
         yield url

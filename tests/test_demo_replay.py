@@ -24,6 +24,24 @@ def test_variants_in_one_file_are_replayed_in_turn(tmp_path):
     assert len(store) == 2
 
 
+def test_parallel_calls_with_the_same_key_finish_in_recorded_order(tmp_path, monkeypatch):
+    """같은 키를 동시에 부르는 단계(판정 다수결)는 녹화 파일 순서가 끝난 순서다. 재생도 몇 번째 변형인지에 비례해 늦춰 그 순서로 끝나야 한다(스레드 경쟁에 맡기지 않는다)."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from langchain_core.messages import HumanMessage
+
+    (tmp_path / "recorded.jsonl").write_text("\n".join(_row(dr.request_key([HumanMessage(content="q")]), r) for r in ("a", "b", "c")) + "\n", encoding="utf-8")
+    monkeypatch.setattr(dr, "STAGGER_S", 0.05)
+    store = dr.ReplayStore(tmp_path)
+    assert [store.pick_ranked(dr.request_key([HumanMessage(content="q")]))[1] for _ in range(4)] == [0, 1, 2, 0]
+    model = dr.ReplayChatModel(store=store)
+    for _ in range(5):
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futs = {pool.submit(model.invoke, [HumanMessage(content="q")]): i for i in range(3)}
+            order = [f.result().content for f in as_completed(futs)]
+        assert order == ["a", "b", "c"]
+
+
 def test_later_file_replaces_all_variants_of_earlier_file(tmp_path):
     (tmp_path / "a.jsonl").write_text(_row("k", "old1") + "\n" + _row("k", "old2") + "\n", encoding="utf-8")
     (tmp_path / "b.jsonl").write_text(_row("k", "new") + "\n", encoding="utf-8")

@@ -1,4 +1,4 @@
-"""남은 문항 수정안 시험(기본 꺼짐). HT `GRAPH_HEADING_HEADS`, SN `GRAPH_SCOPE_NOTE_REFUSE`, CP `GRAPH_CITE_PICK`, R3를 첫 검색에만 붙이기.
+"""남은 문항 수정안 시험(기본 꺼짐). SN `GRAPH_SCOPE_NOTE_REFUSE`, CP `GRAPH_CITE_PICK`, R3를 첫 검색에만 붙이기.
 가짜 모델과 가짜 검색기만 쓴다."""
 from __future__ import annotations
 
@@ -6,20 +6,18 @@ import pytest
 from qgraph_fakes import j
 
 from backend.graph import answer_fixes as F
-from backend.graph import query_plan as QP
-from backend.graph.build import HEADS_SCAN, build_graph
+from backend.graph.build import build_graph
 from backend.graph.multi import build_multi_graph
 from test_answer_fixes_graph import ESC, IMOC, PARTIAL, Q_ESC, Q_REVIEW, REVIEW, SUBS, cite, llm, mk, run
-from test_remaining_fixes import Q38, VENDOR, _heading_llm
 
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in ("GRAPH_HEADING_HEADS", "GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_CITE_PICK", "GRAPH_INTRO_FILL", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_CITE_CONSENSUS",
-                 "GRAPH_POINTER_REFUSE", "GRAPH_SPECULATE_FIRST", "GRAPH_PARALLEL_INTAKE", "GRAPH_SKIP_FIRST_REWRITE", "GRAPH_SECTION_KEEPS_RESEARCH", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PHRASE", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_MARK",
-                 "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_REFUSE_ON_NONE", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S",
+    for name in ("GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_CITE_PICK", "GRAPH_INTRO_FILL", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_CITE_CONSENSUS",
+                 "GRAPH_POINTER_REFUSE", "GRAPH_SPECULATE_FIRST", "GRAPH_PARALLEL_INTAKE", "GRAPH_SKIP_FIRST_REWRITE", "GRAPH_SECTION_KEEPS_RESEARCH", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PHRASE",
+                 "GRAPH_QUERY_BRANCHES", "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_REFUSE_ON_NONE", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S",
                  "GRAPH_CITE_EXPAND", "GRAPH_CITE_MULTI", "GRAPH_TEAM_LAST", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_STOP_STALLED_SEARCH",
-                 "GRAPH_DECOMPOSE_CAP_S", "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_HEADING_BEST", "GRAPH_ANSWER_BEST2", "GRAPH_BEST2_SAMEDOC", "GRAPH_JUDGE_QUOTE", "GRAPH_JUDGE_ANSWER"):
+                 "GRAPH_DECOMPOSE_CAP_S", "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_BEST2", "GRAPH_BEST2_SAMEDOC", "GRAPH_JUDGE_QUOTE", "GRAPH_JUDGE_ANSWER"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
     monkeypatch.setenv("GRAPH_JUDGE_QUERY", "1")
@@ -27,59 +25,6 @@ def _clean(monkeypatch):
 
 def graph(multi, fn, m, **kw):
     return build_multi_graph(fn, llm=m, **kw) if multi else build_graph(fn, llm=m, **kw)
-
-
-# ---------- HT ----------
-NEW_REQ = mk("Click +New Request on the top menu.", title="Zip End Users Guide", seq=71010, article="Zip - Getting Started > How to initiate a new request?")
-TPRM_A = mk("A TPRM assessment is triggered for new vendors.", title="Third Party Risk Management", seq=71030, article="What Triggers a TPRM Assessment?")
-TPRM_B = mk("The table defines TPRM procedures by data class.", title="Third Party Risk Management", seq=71030, article="Vendor Selection > TPRM Assessment Requirements")
-
-
-def test_heading_heads_follow_the_matching_rows():
-    assert QP.heading_heads([Q38]) == ["new request", "tprm assessment"]
-    assert QP.heading_heads(["외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효해?"]) == ["tprm assessment"]
-    assert QP.heading_heads(["코드 리뷰 첫 응답은 며칠 안에 해야 해?"]) == [] and QP.heading_heads([]) == []
-    assert all(r.heads for r in QP.TERM_ROWS)
-
-
-def _heads_fake(seen):
-    table = {"new vendor": [VENDOR], "new request": [NEW_REQ], "tprm assessment": [TPRM_A, TPRM_B]}
-
-    def fn(phrase, org, as_of, n):
-        seen.append((phrase, n))
-        return table.get(phrase, [])[:n]
-    return fn
-
-
-@pytest.mark.parametrize("multi", [False, True])
-def test_heading_heads_add_the_head_chunks_and_skip_the_context(monkeypatch, multi):
-    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS"):
-        monkeypatch.setenv(name, "1")
-    seen: list = []
-    out = graph(multi, lambda q: [REVIEW, TPRM_A], _heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert [p for p, _ in seen] == ["purchase request", "new vendor", "third party risk management assessment", "new request", "tprm assessment"]
-    assert all(n == HEADS_SCAN for _, n in seen)
-    ids = [c["chunk_id"] for c in out["chunks"]]
-    assert ids[:2] == [REVIEW.chunk_id, TPRM_A.chunk_id]
-    assert VENDOR.chunk_id in ids and NEW_REQ.chunk_id in ids and TPRM_B.chunk_id in ids  # TPRM_A는 이미 문맥에 있어 다음 청크를 쓴다
-    assert ids.count(TPRM_A.chunk_id) == 1
-
-
-def test_heading_heads_off_keeps_h(monkeypatch):
-    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    seen: list = []
-    out = build_graph(lambda q: [REVIEW, TPRM_A], llm=_heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert [p for p, _ in seen] == ["purchase request", "new vendor", "third party risk management assessment"] and all(n == 1 for _, n in seen)
-    assert NEW_REQ.chunk_id not in [c["chunk_id"] for c in out["chunks"]]
-    monkeypatch.delenv("GRAPH_HEADING_TERMS")
-    monkeypatch.setenv("GRAPH_HEADING_HEADS", "1")
-    seen.clear()
-    build_graph(lambda q: [REVIEW], llm=_heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-    assert seen == []  # H가 꺼져 있으면 HT도 없다
 
 
 # ---------- SN ----------
@@ -389,110 +334,6 @@ def test_intro_fill_runs_only_on_the_first_search(monkeypatch, multi):
     assert len(calls) == 1  # 페이지 재검색 뒤에는 부르지 않는다
     ids = [c["chunk_id"] for c in out["chunks"]]
     assert INTRO.chunk_id in ids and IMOC.chunk_id in ids
-
-
-# ---------- HB 제목 경로 검색의 가까운 청크 하나 더(`GRAPH_HEADING_BEST`) ----------
-TPRM_C = mk("Okta integration is required for every new SaaS vendor.", title="Third Party Risk Management", seq=71030, article="Vendor Selection > TPRM Assessment Requirements")
-NEW_REQ2 = mk("Choose the request type in the Zip form.", title="Zip End Users Guide", seq=71010, article="Zip - Getting Started > How to initiate a new request?")
-
-
-def _ranked_heads(seen, ranked, table=None):
-    """제목 경로 검색 가짜. rank는 받은 청크를 ranked 순서로 돌려준다(질문 벡터 순위 자리). ranked가 None이면 못 매김(빈 목록)."""
-    table = table or {"new vendor": [VENDOR], "new request": [NEW_REQ], "tprm assessment": [TPRM_A, TPRM_B, TPRM_C]}
-
-    def fn(phrase, org, as_of, n):
-        seen.append((phrase, n))
-        return table.get(phrase, [])[:n]
-
-    def rank(query, chunks, org, as_of):
-        seen.append(("rank", len(chunks)))
-        if ranked is None:
-            return []
-        pos = {c.chunk_id: i for i, c in enumerate(ranked)}
-        return sorted(chunks, key=lambda d: pos.get(d["chunk_id"], 99))
-    fn.rank = rank
-    return fn
-
-
-def _q38(multi, fn):
-    return graph(multi, lambda q: [REVIEW, TPRM_A], _heading_llm(), decompose=True, heading_search=fn).invoke(
-        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
-
-
-def test_heading_extra_is_the_closest_when_it_differs_from_the_first():
-    a, b, c = {"chunk_id": "a"}, {"chunk_id": "b"}, {"chunk_id": "c"}
-    assert F.heading_extra([a, b, c], [c, a, b]) == c
-    assert F.heading_extra([a, b], [a, b]) is None  # 가장 가까운 것이 첫 청크면 더하지 않는다
-    assert F.heading_extra([a, b], []) is None and F.heading_extra([], [a]) is None  # 못 매기면 HT만
-
-
-@pytest.mark.parametrize("multi", [False, True])
-@pytest.mark.parametrize("on", [False, True])
-def test_heading_best_adds_the_closest_fresh_chunk(monkeypatch, multi, on):
-    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS"):
-        monkeypatch.setenv(name, "1")
-    if on:
-        monkeypatch.setenv("GRAPH_HEADING_BEST", "1")
-    seen: list = []
-    ids = [c["chunk_id"] for c in _q38(multi, _ranked_heads(seen, [TPRM_C, TPRM_B]))["chunks"]]
-    assert TPRM_B.chunk_id in ids  # 문서 순서 첫 새 청크는 켜도 그대로
-    assert (TPRM_C.chunk_id in ids) is on
-    assert any(p == "rank" for p, _ in seen) is on  # 끄면 순위 함수를 부르지 않는다
-
-
-@pytest.mark.parametrize("multi", [False, True])
-def test_heading_best_puts_extras_after_all_ht_chunks_in_vector_order(monkeypatch, multi):
-    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_BEST"):
-        monkeypatch.setenv(name, "1")
-    table = {"new vendor": [VENDOR], "new request": [NEW_REQ, NEW_REQ2], "tprm assessment": [TPRM_A, TPRM_B, TPRM_C]}
-    ids = [c["chunk_id"] for c in _q38(multi, _ranked_heads([], [TPRM_C, NEW_REQ2, TPRM_B, NEW_REQ], table))["chunks"]]
-    ht = [ids.index(x.chunk_id) for x in (NEW_REQ, TPRM_B)]
-    ex = [ids.index(x.chunk_id) for x in (TPRM_C, NEW_REQ2)]
-    assert max(ht) < min(ex) and ex[0] < ex[1]  # HT 청크가 먼저(상한에 HB 청크가 먼저 잘린다), HB 청크는 벡터 순
-
-
-def test_heading_best_skips_when_the_ranker_cannot_rank(monkeypatch):
-    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_BEST"):
-        monkeypatch.setenv(name, "1")
-    seen: list = []
-    ids = [c["chunk_id"] for c in _q38(False, _ranked_heads(seen, None))["chunks"]]
-    assert TPRM_B.chunk_id in ids and TPRM_C.chunk_id not in ids and any(p == "rank" for p, _ in seen)
-
-
-def test_heading_best_without_a_ranker_keeps_ht(monkeypatch):
-    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_BEST"):
-        monkeypatch.setenv(name, "1")
-    fn = _ranked_heads([], [TPRM_C, TPRM_B])
-    plain = lambda phrase, org, as_of, n: fn(phrase, org, as_of, n)  # noqa: E731  순위 함수가 없는 검색기
-    ids = [c["chunk_id"] for c in _q38(False, plain)["chunks"]]
-    assert TPRM_B.chunk_id in ids and TPRM_C.chunk_id not in ids
-
-
-def _me(cached):
-    import threading
-    from types import SimpleNamespace
-    calls = []
-
-    def page_vector_top(qvec, embedder, seqs, org, as_of, exclude, n):
-        calls.append(seqs)
-        return [(("c", "v1"), 0.9), (("a", "v1"), 0.5), (("b", "v1"), 0.1)]
-    me = SimpleNamespace(store=SimpleNamespace(page_vector_top=page_vector_top), cfg=SimpleNamespace(embed_model="voyage-4", mode="dense_en"),
-                         _lock=threading.Lock(), _qvecs=cached)
-    return me, calls
-
-
-def test_closest_to_query_uses_only_the_cached_question_vector():
-    import numpy as np
-    from backend.rag.retrieve.search import Searcher
-    ds = [{"chunk_id": x, "version_id": "v1", "rule_seq": 7} for x in "abc"]
-    me, calls = _me({("dense_en", "질문"): np.zeros(3, dtype=np.float32)})
-    me.cached_query_vector = lambda q: Searcher.cached_query_vector(me, q)
-    assert [d["chunk_id"] for d in Searcher.closest_to_query(me, "질문", ds)] == ["c", "a", "b"] and calls == [[7]]
-    me2, calls2 = _me({})
-    me2.cached_query_vector = lambda q: Searcher.cached_query_vector(me2, q)
-    me2.query_vector = lambda q: (_ for _ in ()).throw(AssertionError("새 벡터를 만들면 안 된다"))
-    assert Searcher.closest_to_query(me2, "질문", ds) is None and calls2 == []  # 캐시에 없으면 번역·임베딩 없이 None
-    assert Searcher.closest_to_query(me, "질문", []) is None
 
 
 # ---------- BO2 답 두 개 중 판정 구절과 맞는 쪽(`GRAPH_ANSWER_BEST2`) ----------

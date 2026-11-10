@@ -6,5 +6,9 @@
     "claude-haiku-5-5": {"input": 0.10, "output": 0.50},
     "claude-sonnet-5-5": {"input": 2.00, "output": 10.00},
     "gpt-6-luna": {"input": 0.10, "output": 0.50}
+  },
+  "embeddings_source": "임베딩 단가(100만 토큰당 달러, 입력만). voyage-4는 EVAL_REPORT.md의 단가 서술(2026-09-29 갱신본)이며 계정당 처음 2억 토큰 무료는 반영하지 않은 환산값이다. `/chat` done 이벤트의 embed_cost_usd가 이 값을 쓴다(backend/services/step_cost.py)",
+  "embeddings": {
+    "voyage-4": {"input": 0.06}
   }
 }

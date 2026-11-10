@@ -19,10 +19,6 @@
   공유하는, 다른 페이지(rule_seq)의 문맥 청크를 최대 2개 더한다. 숫자가 없는 같은 사실(A1이 보지 못함)을 다른 페이지가 말할 때의 보완이다.
   다른 팀의 페이지(제목에 Team이나 Group이 있고 인용 청크의 페이지 제목과 다름)는 더하지 않는다(다른 팀 페이지에 옮겨 적은 글).
   문턱 12는 v2 기존 행(#44, #49, #52~#54 답한 421행)에서 10~15가 같은 결과(33번 5행 정답 근거 +1, 비정답 추가 0)를 낸 구간의 가운데다(과적합 위험).
-- H `GRAPH_HEADING_TERMS=1`: 첫 검색어와 하위 질문에 코드 용어표(`query_plan.TERM_ROWS`) 전체의 두 단어 이상 영어 용어가 그대로 들어 있으면, 그 용어가 제목 경로(페이지 제목 > 절 제목)에
-  그대로 든 청크를 용어마다 1개(ord 순) 첫 검색 문맥 뒤에 더한다(`Searcher.search_headings`, 임베딩·LLM 호출 없음, DB 질의 용어당 약 0.1초). 표의 특정 줄에 묶지 않는다.
-  그래프에 heading_search가 있어야 한다. 근거: 기존 736행 오프라인에서 바뀌는 행은 한 문항 8행이고 그 행마다 정답 위치 하나가 새로 든다(비정답 1개 동반). 다른 문항과 비관련 문항에 더하는 청크 0.
-  질문과 하위 질문의 영어 구를 모두 쓰는 넓은 형태는 다른 관련 문항에 비정답 20개, 비관련 문항에 12개를 더해 버렸다.
 - Q `GRAPH_GROUNDING_QUOTE=1`: 근거 확인 프롬프트를 '주장마다 받치는 영어 구절을 먼저 그대로 복사(없으면 NOTHING FOUND)하고 판정'으로 바꾸고(`prompts.question.grounding_quoted`),
   번역·말 바꿈과 제목 경로의 간접 근거(적용 범위)를 받쳐진 것으로 보는 기준을 적는다. 호출 수는 그대로다. 근거: 기존 425행 중 근거 확인이 받쳐지지 않는다고 한 관련 문항 12행은
   모두 첫 답이 정답 근거를 인용했고(3, 4, 7, 14, 15, 39번, 다시 쓰기 +3~4초, 7번 1행은 거절), 비관련 4행은 모두 22번이다.
@@ -31,8 +27,6 @@
 - R3 `GRAPH_INTRO_FILL=1`: 검색 결과를 합친 문맥에 같은 페이지 판(rule_seq, version_id)의 청크가 3개 이상이면, 그 페이지 첫 청크의 첫 절(h2) 청크 중
   방금 검색한 질문 벡터와 가장 가까운 1개를 문맥 뒤에 더한다(`Searcher.intro_fill`, 임베딩·LLM 호출 없음). 그 절의 청크가 이미 문맥에 있으면 더하지 않는다. 그래프에 intro_search가 있어야 한다.
   근거(다른 에이전트 오프라인 분석, #54·#55·#61 기존 행): 도입부 절이 정답인 문항(Overview)은 4/4행에서 문맥에 들고, 다른 관련 문항에는 비정답 77개가 섞이며 문맥 글자가 7.4% 는다.
-- HM `GRAPH_HEADING_MARK=1`(H가 켜져 있을 때만): H가 더한 청크의 id와 용어를 답 입력 끝에 한 줄로 알리고, 그 자료가 질문한 사실을 직접 말하면 먼저 근거로 달게 한다(`heading_note`).
-  근거 판정 뒤 다시 쓰는 답(redraft) 입력에도 같은 줄을 붙인다. H가 더한 청크가 없으면 답 입력은 바뀌지 않는다. 근거: H가 더한 정답 청크가 문맥에 있어도 답이 같은 사실을 말하는 다른 페이지를 인용했다(#58 6행 중 4행, #61 2행 모두).
 """
 from __future__ import annotations
 
@@ -165,23 +159,6 @@ def grounding_quote_enabled() -> bool:
     return _flag("GRAPH_GROUNDING_QUOTE")
 
 
-def heading_terms_enabled() -> bool:
-    return _flag("GRAPH_HEADING_TERMS")
-
-
-def heading_phrases(texts: list[str] | None, table: list[str] | None = None) -> list[str]:
-    """H: 첫 검색어와 하위 질문(`texts`)에 그대로 든 코드 용어표(`query_plan.TERM_ROWS`) 전체의 두 단어 이상 영어 용어(소문자, 표 순서, 중복 없음).
-    표의 특정 줄에 묶지 않는다. 한 단어 용어는 제목에 너무 많이 나와 쓰지 않는다. table을 주면 그 목록을 표 대신 쓴다(시험용)."""
-    if table is None:
-        from backend.graph import query_plan as QP
-        table = [t for row in QP.TERM_ROWS for t in row.terms.split(",")]
-    low = " ".join(str(t) for t in texts or []).lower()
-    out: list[str] = []
-    for term in table:
-        t = term.strip().lower()
-        if " " in t and len(t) >= 6 and t in low and t not in out:
-            out.append(t)
-    return out
 
 _NOTHING = "nothing found"
 
@@ -192,28 +169,6 @@ def _squash_quote(s: str) -> str:
 
 def intro_fill_enabled() -> bool:
     return _flag("GRAPH_INTRO_FILL")
-
-
-def heading_mark_enabled() -> bool:
-    return _flag("GRAPH_HEADING_MARK")
-
-
-HEADING_MARK_KEY = "heading_match"
-
-
-def heading_note(chunks: list[dict]) -> str:
-    """HM: H가 더한 청크(`HEADING_MARK_KEY`가 있는 청크)를 답 입력 끝에 알리는 안내. 그런 청크가 없으면 빈 문자열(입력이 그대로다).
-    용어는 질문과 하위 질문에 이미 있던 영어 용어이고, 청크 id는 자료 머리에 있는 값이다."""
-    marked = [(c.get("chunk_id"), c.get(HEADING_MARK_KEY)) for c in chunks or [] if c.get(HEADING_MARK_KEY)]
-    if not marked:
-        return ""
-    listed = "\n".join(f"- chunk_id={cid} (용어: {str(term).replace('<<<', '').replace('>>>', '')})" for cid, term in marked)
-    return ("\n\n제목 경로(페이지 제목 > 절 제목)가 질문의 용어를 그대로 담은 자료:\n" + listed +
-            "\n이 자료가 질문한 사실을 직접 말하면 그 사실의 근거로 이 자료를 먼저 단다. 질문한 사실을 말하지 않으면 쓰지 않는다.")
-
-
-def heading_heads_enabled() -> bool:
-    return _flag("GRAPH_HEADING_HEADS")
 
 
 def scope_note_refuse_enabled() -> bool:
@@ -323,25 +278,53 @@ def value_keys(text: str) -> set[tuple[str, str]]:
     return out
 
 
+def _own_body(c: dict, cited: list[dict]) -> str:
+    """본문에서 앞 청크와 겹친 머리를 뗀 것. 같은 페이지 인용 청크 본문의 끝과 그대로 같은 머리는 청킹이 앞 청크에서 복사한 글이라 이 청크의 근거로 세지 않는다."""
+    body = _body(c)
+    cut = 0
+    for x in cited:
+        if c.get("rule_seq") is None or x.get("rule_seq") != c.get("rule_seq") or x["chunk_id"] == c["chunk_id"]:
+            continue
+        prev = _body(x)
+        for n in range(min(len(body), len(prev)), cut, -1):
+            if prev.endswith(body[:n]):
+                cut = n
+                break
+    return body[cut:]
+
+
+def _value_lines(body: str, keys: set[tuple[str, str]]) -> list[tuple[set[tuple[str, str]], set[str]]]:
+    """본문에서 `keys`의 값을 담은 줄마다 (그 줄의 값, 그 줄의 단어). 세 줄 이상인 본문에서 줄의 절반 이상에 되풀이되는 단어(표의 열 이름 등)는 뺀다."""
+    lines = [ln for ln in body.split("\n") if ln.strip()]
+    toks = [_tokens(ln) for ln in lines]
+    common: set[str] = set()
+    if len(lines) >= 3:
+        common = {t for t in set().union(*toks) if sum(t in x for x in toks) * 2 >= len(lines)}
+    return [(value_keys(ln) & keys, t - common) for ln, t in zip(lines, toks) if value_keys(ln) & keys]
+
+
 def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[tuple[dict, int]]:
-    """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지."""
+    """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지.
+    겹침은 청크 전체가 아니라 같은 값을 담은 줄끼리 잰다: 값(숫자, 단위)만 같고 그 값이 가리키는 대상이 다른 줄은 같은 사실이 아니다."""
     if not cited or len(cited) >= cap:
         return []
     keys = set().union(*(value_keys(_body(c)) for c in cited))
     if not keys:
         return []
     have = {c["chunk_id"] for c in cited}
-    cited_tokens = [_tokens(_body(c)) for c in cited]
+    cited_lines = [_value_lines(_body(c), keys) for c in cited]
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
             break
-        if c["chunk_id"] in have or not (value_keys(_body(c)) & keys):
+        if c["chunk_id"] in have:
             continue
-        ct = _tokens(_body(c))
-        if not ct:
-            continue
-        anchor, score = max(((i, len(ct & x) / len(ct)) for i, x in enumerate(cited_tokens)), key=lambda p: p[1])
+        anchor, score = -1, 0.0
+        for k, t in _value_lines(_own_body(c, cited), keys):
+            for i, rows in enumerate(cited_lines):
+                for k2, t2 in rows:
+                    if t and k & k2 and len(t & t2) / len(t) > score:
+                        anchor, score = i, len(t & t2) / len(t)
         if score >= MIN_OVERLAP:
             added.append((c, anchor))
             have.add(c["chunk_id"])
@@ -640,9 +623,16 @@ def _vote_key(task: str, obj: dict) -> tuple:
 
 
 def votes_settled(task: str, objs: list[dict]) -> bool:
-    """결론이 같은 표가 둘 이상이면 확정이다(나머지 호출을 기다리지 않는다)."""
+    """결론이 같은 표가 둘 이상이면 확정이다(나머지 호출을 기다리지 않는다).
+    판정(judge)의 부족 2표(충분도 일부도 아님)는 셋째 표를 기다린다. 표가 갈렸는지 알아야 바로 거절할지 정할 수 있다(`votes_unanimous`, 사전 등록 62.33)."""
     keys = [_vote_key(task, o) for o in objs if o]
-    return any(keys.count(k) >= 2 for k in keys) or len(objs) >= VOTES
+    return any(keys.count(k) >= 2 and not (task == "judge" and k == (False, False)) for k in keys) or len(objs) >= VOTES
+
+
+def votes_unanimous(obj: dict) -> bool:
+    """합친 표(`merge_votes`)의 표가 모두 같은 결론이었는지. 다수결을 쓰지 않은 표(`_votes` 없음)는 한 표이므로 True다."""
+    v = obj.get("_votes")
+    return not isinstance(v, dict) or v.get("agree") == v.get("n")
 
 
 def _same_item(a: str, b: str) -> bool:
@@ -686,22 +676,6 @@ def judge_from_quotes(obj: dict) -> dict:
     n, f = len(rows), sum(found)
     missing = [c["fact"] for c, ok in zip(rows, found) if not ok]
     return {**obj, "sufficient": f == n, "partial": 0 < f < n and n >= 2, "missing": missing if f < n else [], "_from_quotes": True}
-
-
-# ---------- HB 제목 경로 검색의 가까운 청크 하나 더(`GRAPH_HEADING_BEST`, 기본 꺼짐) ----------
-# HT가 문서 순서로 고른 첫 새 청크 1개는 그대로 두고, 같은 호출의 새 청크 중 첫 검색 질의 벡터와 가장 가까운 것이 다르면 따로 모은다.
-# 모은 청크는 모든 구가 끝난 뒤 질의 벡터 순으로 HT 청크들 뒤에 붙인다(문맥 상한 안에서 남는 자리만 쓴다. HT 청크는 HB 때문에 잘리지 않는다)
-def heading_best_enabled() -> bool:
-    return _flag("GRAPH_HEADING_BEST")
-
-
-def heading_extra(fresh: list[dict], ranked: list[dict] | None) -> dict | None:
-    """fresh: 이미 문맥에 있는 것을 뺀 새 청크(문서 순서). ranked: 같은 청크를 질문 벡터와 가까운 순으로(못 매기면 비어 있음).
-    가장 가까운 청크가 첫 새 청크와 다르면 그 청크, 아니면 None."""
-    if not fresh or not ranked:
-        return None
-    best = ranked[0]
-    return best if best.get("chunk_id") != fresh[0].get("chunk_id") else None
 
 
 # ---------- FL 사실 기록(`GRAPH_FACTS_LOG`, 기본 꺼짐, 진단 전용) ----------
@@ -787,6 +761,12 @@ def pick_best2(first: dict | None, second: dict | None, quote_ids: list[str], do
     if first is None or second is None:
         log["pick"], log["why"] = (1, "첫 후보 없음") if first is None and second is not None else (0, "둘째 후보 없음")
         return (second if log["pick"] else first), log
+    from backend.graph.grounding import says_only_absence  # 답 확인(verify)이 답이 아니라고 보는 것과 같은 판별
+
+    absent = [says_only_absence(str(d.get("answer") or "")) for d in cands]
+    if absent[0] != absent[1] and log["cands"][absent.index(False)]["cited"]:  # 한쪽만 자료에 없다는 말뿐이고 다른 쪽은 인용이 있는 답이다
+        log["pick"], log["why"] = absent.index(False), "한쪽만 자료에 없다는 말"
+        return cands[log["pick"]], log
     if not s:
         log["why"] = "구절 없음, 첫 후보"
         return first, log

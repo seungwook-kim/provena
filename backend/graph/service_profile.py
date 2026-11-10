@@ -36,9 +36,9 @@ OFF = "off"
 MEASURED_ARGS = (
     "--via-mcp", "--connected", "--structured", "judge,answer,grounding", "--section-keeps-research", "--parallel-intake", "--skip-first-rewrite",
     "--stop-stalled-search", "--judge-answer", "parallel_all", "--judge-query", "--embed-keepalive", "--brief-output", "--max-research", "1",
-    "--json-reminder", "--parallel-subs", "--query-terms", "--query-branches",
-    "--cite-expand", "--team-last", "--unknown-name", "--refuse-on-none", "--research-same-page", "--cite-phrase", "--heading-terms", "--grounding-quote",
-    "--drop-scoped-cites", "--heading-mark", "--intro-fill", "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus",
+    "--json-reminder", "--parallel-subs", "--query-branches",
+    "--cite-expand", "--team-last", "--unknown-name", "--refuse-on-none", "--research-same-page", "--cite-phrase", "--grounding-quote",
+    "--drop-scoped-cites", "--intro-fill", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus",
     "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--judge-vote",
     "--effort", "none", "--effort-by-task", "decompose=low,answer=low,judge=low", "--llm-deadline", "8", "--llm-hedge", "3.5", "--llm-retries", "2",
     "--answer-wait", "4.0", "--answer-budget", "6.5",
@@ -64,7 +64,6 @@ SERVICE_ENV: dict[str, str] = {
     "EMBED_KEEPALIVE": "1",             # --embed-keepalive
     "SEARCH_PARALLEL_SUBS": "1",        # --parallel-subs
     "SEARCH_HNSW": "1",                 # 측정 환경 SEARCH_HNSW=1(운영 DB의 HNSW 색인, db/manual/chunks_hnsw_voyage4.sql)
-    "GRAPH_QUERY_TERMS": "1",           # --query-terms
     "GRAPH_QUERY_BRANCHES": "1",        # --query-branches
     # 문항 수정 스위치(#44 이후)
     "GRAPH_CITE_EXPAND": "1",           # --cite-expand
@@ -73,12 +72,9 @@ SERVICE_ENV: dict[str, str] = {
     "GRAPH_REFUSE_ON_NONE": "1",        # --refuse-on-none
     "GRAPH_RESEARCH_SAME_PAGE": "1",    # --research-same-page (page_search가 필요하다)
     "GRAPH_CITE_PHRASE": "1",           # --cite-phrase
-    "GRAPH_HEADING_TERMS": "1",         # --heading-terms (heading_search가 필요하다)
     "GRAPH_GROUNDING_QUOTE": "1",       # --grounding-quote
     "GRAPH_DROP_SCOPED_CITES": "1",     # --drop-scoped-cites
-    "GRAPH_HEADING_MARK": "1",          # --heading-mark
     "GRAPH_INTRO_FILL": "1",            # --intro-fill (intro_search가 필요하다)
-    "GRAPH_HEADING_HEADS": "1",         # --heading-heads
     "GRAPH_SCOPE_NOTE_REFUSE": "1",     # --scope-note-refuse
     "GRAPH_CITE_PICK": "1",             # --cite-pick
     "GRAPH_REQUERY_SKIP_SEEN": "1",     # --requery-skip-seen
@@ -216,21 +212,11 @@ def page_search(query: str, rule_seqs: list[int], org: str | None, as_of: str | 
     return _searcher().search_pages(query, rule_seqs, org, as_of, k)
 
 
-class HeadingSearch:
-    """제목 경로 검색(`GRAPH_HEADING_TERMS`). 측정 실행기의 `HeadingSearch`와 같은 `Searcher.search_headings`, 순위는 `closest_to_query`다."""
-
-    def __call__(self, phrase: str, org: str | None, as_of: str | None, n: int) -> list:
-        return _searcher().search_headings(phrase, org, as_of, n)
-
-    def rank(self, query: str, chunks: list, org: str | None, as_of: str | None) -> list:
-        return list(_searcher().closest_to_query(query, chunks, org, as_of) or [])
-
-
 def intro_search(chunks: list, query: str, org: str | None, as_of: str | None) -> list:
     """도입부 채우기(`GRAPH_INTRO_FILL`). 측정 실행기의 `IntroSearch`와 같은 `Searcher.intro_fill`이다."""
     return _searcher().intro_fill(chunks, query, org, as_of)
 
 
 def service_searches() -> dict[str, Any]:
-    """`build_graph`에 넘길 페이지·제목 경로·도입부 검색. 그래프는 해당 스위치가 켜졌을 때만 부른다."""
-    return {"page_search": page_search, "heading_search": HeadingSearch(), "intro_search": intro_search}
+    """`build_graph`에 넘길 페이지·도입부 검색. 그래프는 해당 스위치가 켜졌을 때만 부른다."""
+    return {"page_search": page_search, "intro_search": intro_search}

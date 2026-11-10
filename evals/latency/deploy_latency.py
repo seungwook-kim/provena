@@ -4,6 +4,7 @@
 - 첫 토큰까지 시간: 첫 `token` 이벤트를 받은 시각. 서버는 그래프가 끝난 뒤 token, citation, done을 내보내므로 전체 시간에 가깝다.
 - 전체 시간: `done` 이벤트를 받은 시각.
 - 결과 kind(answer | clarify | refuse), 인용 수(`citation` 이벤트 개수), 비용(`done.usage.cost_usd`, 있으면)과 토큰 수.
+- 서버가 `done`에 실은 측정용 칸(`STEP_FIELDS`): 단계별 비용·시간(`cost_by_step`), Voyage 토큰·환산 비용(`embed_*`), 거절·되묻기 단계·사유(`refuse_stage`, `refuse_reason`). 행에 그대로 저장하고 summary에 단계별 합을 낸다. 옛 서버면 None.
 - 인용한 청크 id 목록(`cited_chunk_ids`, 이벤트 순서 그대로)과 그 판 날짜(`cited_version_dates`). 정답 위치 대조는 `evals/latency/deploy_citation_gold.py`가 한다(여기서는 청크 id만 남긴다).
 - 답 본문(`answer`, `token` 이벤트의 글을 이은 것). 배포 결과의 RAGAS 채점(`evals/latency/deploy_ragas.py`)이 입력으로 읽는다. 검색한 청크 본문은 스트림에 없어 남기지 않는다.
 
@@ -40,6 +41,9 @@ DATASET = REPO / "evals" / "dataset_v2.jsonl"
 DEFAULT_OUT = REPO / "evals" / "results" / "deploy_latency_v2"
 ENV_REQUIRED = ("DEPLOY_LATENCY_BASE_URL", "DEPLOY_LATENCY_LOGIN", "DEPLOY_LATENCY_PASSWORD")
 RETRY_STATUS = {502, 503, 504}
+# `/chat` done 이벤트의 측정용 칸(backend/api/routes.py): 단계별 비용(cost_by_step: 단계 -> calls·input_tokens·output_tokens·cost_usd·llm_s), 질문 번역을 더한 합,
+# Voyage 토큰·호출 수·환산 비용, 거절·되묻기를 낸 노드와 사유 코드. rows.jsonl에 기존 칸과 함께 그대로 저장한다.
+STEP_FIELDS = ("cost_by_step", "cost_by_step_total_usd", "embed_tokens", "embed_calls", "embed_cost_usd", "refuse_stage", "refuse_reason")
 
 
 class AttemptTimeout(Exception):
@@ -94,7 +98,8 @@ def iter_sse(lines: Iterable[str]) -> Iterator[tuple[str, str]]:
 def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], float], deadline_s: float | None = None) -> dict[str, Any]:
     """`/chat`의 SSE 줄을 읽어 시간과 결과를 계산한다. `t0`는 요청을 보낸 시각(`clock()` 기준)."""
     out: dict[str, Any] = {"status": "no_done", "first_token_s": None, "total_s": None, "result": None, "citations": 0,
-                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0, "answer": ""}
+                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0, "answer": "",
+                           **{k: None for k in STEP_FIELDS}}   # 서버가 done에 실은 단계별 비용·Voyage 토큰·거절 단계(옛 서버면 None)
 
     def guarded(src: Iterable[str]) -> Iterator[str]:
         for ln in src:
@@ -129,10 +134,38 @@ def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], 
             usage = data.get("usage") or {}
             out.update(status="ok", total_s=round(now, 3), result=data.get("kind"), cost_usd=usage.get("cost_usd"),
                        input_tokens=usage.get("input_tokens"), output_tokens=usage.get("output_tokens"), llm_calls=usage.get("calls"))
+            out.update({k: data.get(k) for k in STEP_FIELDS})
             if out["first_token_s"] is None:   # 토큰 없이 끝난 경우(거절 등)는 done 시각을 첫 응답으로 본다
                 out["first_token_s"] = round(now, 3)
             return out
     return out
+
+
+def step_summary(ok: list[dict]) -> dict[str, Any]:
+    """성공 행의 단계별 비용·Voyage 토큰·거절 단계 합계. 칸이 없는 행(옛 서버)은 세지 않고, 하나도 없으면 `step_rows`가 0이다."""
+    have = [r for r in ok if isinstance(r.get("cost_by_step"), dict)]
+    steps: dict[str, dict[str, float]] = {}
+    for r in have:
+        for name, v in r["cost_by_step"].items():
+            s = steps.setdefault(name, {"rows": 0, "calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0})
+            s["rows"] += 1
+            for k in ("calls", "input_tokens", "output_tokens", "cost_usd", "llm_s"):
+                s[k] += v.get(k) or 0
+    n = len(have)
+    by_step = {name: {"rows": s["rows"], "calls": s["calls"], "input_tokens": s["input_tokens"], "output_tokens": s["output_tokens"],
+                      "cost_usd": round(s["cost_usd"], 8), "llm_s": round(s["llm_s"], 3),
+                      "cost_usd_per_question": round(s["cost_usd"] / n, 8), "calls_per_question": round(s["calls"] / n, 3)}
+               for name, s in sorted(steps.items(), key=lambda kv: -kv[1]["cost_usd"])}
+    embed = [r for r in ok if isinstance(r.get("embed_tokens"), (int, float))]
+    refused: dict[str, int] = {}
+    for r in ok:
+        if r.get("refuse_stage"):
+            key = f"{r['refuse_stage']}/{r.get('refuse_reason')}"
+            refused[key] = refused.get(key, 0) + 1
+    return {"step_rows": n, "cost_by_step": by_step,
+            "embed_tokens_sum": sum(r["embed_tokens"] for r in embed) if embed else None,
+            "embed_cost_usd_sum": round(sum(r.get("embed_cost_usd") or 0 for r in embed), 8) if embed else None,
+            "embed_rows": len(embed), "refuse_stage_reason": dict(sorted(refused.items()))}
 
 
 def summarize_rows(rows: list[dict]) -> dict[str, Any]:
@@ -143,6 +176,7 @@ def summarize_rows(rows: list[dict]) -> dict[str, Any]:
     for r in ok:
         kinds[str(r.get("result"))] = kinds.get(str(r.get("result")), 0) + 1
     return {
+        **step_summary(ok),
         "n": len(rows), "n_ok": len(ok), "n_fail": len(fails),
         "first_token_s": stats([r["first_token_s"] for r in ok if r.get("first_token_s") is not None]),
         "total_s": stats([r["total_s"] for r in ok if r.get("total_s") is not None]),
@@ -202,6 +236,15 @@ def render_markdown(summary: dict[str, Any]) -> str:
               "## 평가 보고서 8장 형식 (전체 단계만 잼, 단계별 분해는 클라이언트에서 알 수 없음)", "",
               "| 단계 | p50 | p95 | 요청당 비용 |", "|---|---|---|---|",
               f"| 전체(배포본, 클라이언트 측) | {_f(a['total_s']['p50'])}초 | {_f(a['total_s']['p95'])}초 | {_f(a['cost_usd_per_question'], 4)}달러 |"]
+    if a.get("step_rows"):   # 서버가 단계별 비용을 done에 실은 측정만(배포본 8장 단계별 비용 칸)
+        lines += ["", f"## 단계별 비용 (서버 집계 `done.cost_by_step`, 성공 {a['step_rows']}행)", "",
+                  "| 단계 | 요청당 호출 | 호출 수 | 입력 토큰 | 출력 토큰 | 요청당 비용(달러) | 비용 합(달러) | LLM 호출 시간 합(초, 겹침 포함) |", "|---|---|---|---|---|---|---|---|"]
+        lines += [f"| {name} | {_f(v['calls_per_question'], 2)} | {v['calls']} | {v['input_tokens']} | {v['output_tokens']} | {_f(v['cost_usd_per_question'], 6)} | {_f(v['cost_usd'], 6)} | {_f(v['llm_s'], 1)} |"
+                  for name, v in a["cost_by_step"].items()]
+        if a.get("embed_rows"):
+            lines += ["", f"Voyage 임베딩: 토큰 합 {a['embed_tokens_sum']}, 환산 비용 합 {_f(a['embed_cost_usd_sum'], 6)}달러(무료 한도 미반영, {a['embed_rows']}행)."]
+        if a.get("refuse_stage_reason"):
+            lines += ["", "거절·되묻기 단계/사유: " + ", ".join(f"{k} {v}건" for k, v in a["refuse_stage_reason"].items()) + "."]
     if a["failures"]:
         lines += ["", "## 실패한 문항", "", "| 회차 | 문항 | 사유 |", "|---|---|---|"]
         lines += [f"| {f['run']} | {f['id']} | {f['status']} |" for f in a["failures"]]

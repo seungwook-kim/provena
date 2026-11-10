@@ -59,6 +59,7 @@ def ask(client: httpx.Client, item: dict) -> dict:
         body["as_of"] = as_of
     t0 = time.perf_counter()
     answer, cites, done, err = [], [], {}, None
+    step_fields = ("cost_by_step", "cost_by_step_total_usd", "embed_tokens", "embed_calls", "embed_cost_usd", "refuse_stage", "refuse_reason")   # done의 측정용 칸(deploy_latency.STEP_FIELDS와 같다)
     with client.stream("POST", "/chat", json=body, headers={"Accept": "text/event-stream"}, timeout=120) as resp:
         if resp.status_code != 200:
             return {"status": f"http_{resp.status_code}", "total_s": round(time.perf_counter() - t0, 3)}
@@ -77,8 +78,11 @@ def ask(client: httpx.Client, item: dict) -> dict:
                 done = d
             elif et == "error":
                 err = d.get("code") or "error"
-    return {"status": "ok" if done else (err or "no_done"), "kind": done.get("kind"), "cost_usd": (done.get("usage") or {}).get("cost_usd"),
-            "total_s": round(time.perf_counter() - t0, 3), "answer": "".join(answer), "citations": cites}
+    usage = done.get("usage") or {}
+    return {"status": "ok" if done else (err or "no_done"), "kind": done.get("kind"), "cost_usd": usage.get("cost_usd"),
+            "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"), "llm_calls": usage.get("calls"),
+            "total_s": round(time.perf_counter() - t0, 3), "answer": "".join(answer), "citations": cites,
+            **{k: done.get(k) for k in step_fields}}
 
 
 def main(argv=None) -> int:

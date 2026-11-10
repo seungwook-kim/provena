@@ -997,6 +997,29 @@
         "title": "RunSource",
         "type": "object"
       },
+      "SignupRequest": {
+        "properties": {
+          "login_id": {
+            "title": "Login Id",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "password_confirmation": {
+            "title": "Password Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login_id",
+          "password",
+          "password_confirmation"
+        ],
+        "title": "SignupRequest",
+        "type": "object"
+      },
       "SubscriptionBody": {
         "additionalProperties": false,
         "properties": {
@@ -1090,6 +1113,180 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/signup-requests": {
+      "get": {
+        "operationId": "list_signup_requests_admin_signup_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response List Signup Requests Admin Signup Requests Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Signup Requests"
+      }
+    },
+    "/admin/signup-requests/{login_id}/{action}": {
+      "post": {
+        "operationId": "review_signup_request_admin_signup_requests__login_id___action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "login_id",
+            "required": true,
+            "schema": {
+              "title": "Login Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Review Signup Request Admin Signup Requests  Login Id   Action  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Signup Request"
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "list_users_admin_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Users"
+      }
+    },
+    "/admin/users/{login_id}/promote": {
+      "post": {
+        "operationId": "promote_admin_users__login_id__promote_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "login_id",
+            "required": true,
+            "schema": {
+              "title": "Login Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Promote Admin Users  Login Id  Promote Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Promote"
+      }
+    },
+    "/admin/users/{login_id}/revoke": {
+      "post": {
+        "operationId": "revoke_admin_users__login_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "login_id",
+            "required": true,
+            "schema": {
+              "title": "Login Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revoke Admin Users  Login Id  Revoke Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke"
+      }
+    },
     "/approvals": {
       "get": {
         "operationId": "list_approvals_approvals_get",
@@ -1295,6 +1492,48 @@
           }
         },
         "summary": "Logout"
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "operationId": "signup_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Signup Auth Signup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signup"
       }
     },
     "/changes": {
@@ -1854,6 +2093,73 @@
           }
         },
         "summary": "Memory Patch"
+      }
+    },
+    "/me/profile": {
+      "get": {
+        "operationId": "get_profile_me_profile_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "edit",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "View"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Profile Me Profile Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Profile"
+      },
+      "put": {
+        "operationId": "put_profile_me_profile_put",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Profile Me Profile Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Put Profile"
       }
     },
     "/recalls": {
