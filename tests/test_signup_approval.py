@@ -122,3 +122,67 @@ def test_memory_existing_and_approved_users_use_normal_login_path(monkeypatch):
     assert wrong_password.status_code == 401
     inactive = client.post('/auth/login', json={'login_id': 'inactive-user', 'password': password}, headers=csrf(client))
     assert inactive.status_code == 401
+
+
+class _SignupTableMissing(Exception):
+    sqlstate = "42P01"
+
+    def __init__(self, table_name=None, message=None):
+        self.diag = type('Diag', (), {'table_name': table_name})() if table_name is not None else None
+        super().__init__(message or (f'relation "{table_name}" does not exist' if table_name else "undefined table"))
+
+
+class _SignupStoreError(Exception):
+    sqlstate = "08006"
+
+
+class _ExistingUserWithoutSignupTable(ApprovalStore):
+    def get_signup_status(self, user_id):
+        raise _SignupTableMissing("signup_requests")
+
+
+class _ExistingUserWithOtherTableMissing(ApprovalStore):
+    def get_signup_status(self, user_id):
+        raise _SignupTableMissing("other_table")
+
+
+class _ExistingUserWithSignupMessageOnly(ApprovalStore):
+    def get_signup_status(self, user_id):
+        raise _SignupTableMissing(message='relation "signup_requests" does not exist\nLINE 1: SELECT status FROM signup_requests WHERE user_id = $1\n                           ^')
+
+
+class _UnknownSignupStoreError(ApprovalStore):
+    def get_signup_by_login_id(self, login_id):
+        raise _SignupStoreError()
+
+
+def test_existing_account_login_survives_missing_signup_table(monkeypatch):
+    monkeypatch.setenv('PROVENA_ENV', 'local')
+    monkeypatch.setenv('PROVENA_DEV_MODE', '1')
+    client = client_for(_ExistingUserWithoutSignupTable())
+    response = client.post('/auth/login', json={'login_id': 'new-user', 'password': 'password-123'}, headers=csrf(client))
+    assert response.status_code == 200
+
+
+def test_unknown_signup_table_error_is_not_hidden(monkeypatch):
+    monkeypatch.setenv('PROVENA_ENV', 'local')
+    monkeypatch.setenv('PROVENA_DEV_MODE', '1')
+    client = client_for(_UnknownSignupStoreError())
+    response = client.post('/auth/login', json={'login_id': 'missing-user', 'password': 'password-123'}, headers=csrf(client))
+    assert response.status_code == 503
+
+
+def test_other_missing_table_error_is_not_treated_as_missing_signup_table(monkeypatch):
+    monkeypatch.setenv('PROVENA_ENV', 'local')
+    monkeypatch.setenv('PROVENA_DEV_MODE', '1')
+    client = client_for(_ExistingUserWithOtherTableMissing())
+    response = client.post('/auth/login', json={'login_id': 'new-user', 'password': 'password-123'}, headers=csrf(client))
+    assert response.status_code == 503
+
+
+def test_signup_table_message_fallback_is_strict(monkeypatch):
+    monkeypatch.setenv('PROVENA_ENV', 'local')
+    monkeypatch.setenv('PROVENA_DEV_MODE', '1')
+    client = client_for(_ExistingUserWithSignupMessageOnly())
+    response = client.post('/auth/login', json={'login_id': 'new-user', 'password': 'password-123'}, headers=csrf(client))
+    assert response.status_code == 200

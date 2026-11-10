@@ -348,7 +348,7 @@ def create_app(
         app.include_router(create_api_router(store=store, secret=auth_secret))   # /chat, /threads, /me/memory
         app.include_router(create_recall_router(store=store, secret=auth_secret))   # /recalls, /webhooks/regulation-updated 등(F-02)
         app.include_router(create_changes_router(store=store, secret=auth_secret))  # /changes(변경 감시)
-        if profile_store is not None:   # 시험의 가짜 사용자 저장소일 땐 내 정보·사용자 관리를 열지 않는다
+        if profile_store is not None:   # 시험의 가짜 사용자 저장소일 땐 내 정보 API만 열지 않는다
             # 로그인·내 정보·사용자 관리 라우터가 같은 서명 키(auth_secret)를 쓴다(로컬 데모의 무작위 키 포함)
             cipher = ProfileCipher.from_env(allow_ephemeral=is_local_demo())
             app.include_router(create_profile_router(auth_store=store, profile_store=profile_store, cipher=cipher, secret=auth_secret))
