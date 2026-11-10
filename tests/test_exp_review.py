@@ -399,3 +399,31 @@ def test_default_llm_is_openrouter(monkeypatch):
     assert a.llm == "openrouter" and a.store == "memory" and a.limit is None and a.dataset is None
     with pytest.raises(SystemExit):
         M.main(["run"])  # --out은 필수
+
+
+# ---------- missing 기준 (사전 등록 62.36) ----------
+
+def test_missing_rule_is_one_text_shared_by_both_arms_and_is_narrow():
+    """missing 기준은 한 곳(`T.MISSING_RULE`)에 있고 team과 single이 같은 문구를 쓴다. 세부 식별 정보는 넣지 않고 결론을 가르는 값만 넣는다."""
+    assert T.MISSING_RULE in T.SUPERVISOR_SYSTEM and T.MISSING_RULE in M.SINGLE_SYSTEM
+    assert "검토에 꼭 필요한데 요청에 없는 값" not in T.SUPERVISOR_SYSTEM + M.SINGLE_SYSTEM  # 옛 넓은 정의
+    for phrase in ("결론", "나눠 적을 수 있으면 넣지 않는다", "세부 식별 정보", "통째로 빠졌으면"):
+        assert phrase in T.MISSING_RULE
+    (team, single), llm, _ = make_arms()
+    run_one(team, item())
+    run_one(single, item())
+    assert T.MISSING_RULE in llm.systems["supervisor"][0] and T.MISSING_RULE in llm.systems["single"][0]
+
+
+def test_empty_missing_goes_on_to_search_and_filled_missing_asks_back_in_both_arms():
+    (team, single), _, retriever = make_arms(llm=review_llm(supervisor=j(missing=[], tasks={}), single=single_issues))
+    for arm in (team, single):
+        row = run_one(arm, item())
+        assert row["status"] == "pending_approval" and row["issue_rows"]
+    assert len(retriever.calls) == 8  # 갈래마다 팀 4곳을 검색한다
+    filled = review_llm(supervisor=j(missing=["도입 금액"], tasks={}), single=j(missing=["도입 금액"], issues=[]))
+    (team, single), _, retriever = make_arms(llm=filled)
+    row = run_one(team, item(kind="clarify", text="새 SaaS를 도입하려 한다."))
+    assert row["status"] == "clarify" and row["issue_rows"] == [] and retriever.calls == []  # team은 검색 없이 되묻는다
+    row = run_one(single, item(kind="clarify", text="새 SaaS를 도입하려 한다."))  # single은 기존대로 검색을 먼저 한 뒤 모델이 되묻는다
+    assert row["status"] == "clarify" and row["issue_rows"] == []
