@@ -1218,9 +1218,9 @@ def build_graph(
             def one_vote() -> dict | None:
                 # 값은 받쳐졌고 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 한 표는, 다수결에 넣기 전에 받쳐진 표로 센다(`grounding.caveat_only_vote`).
                 # 표마다 꼽은 문장이 달라 합친 목록이 비어도 단서 때문에 거절되지 않는다. 값을 말하는 문장을 꼽은 표는 그대로다
-                # 코드 규칙이 정하는 사유(no_evidence, out_of_period)를 모델 표가 냈는데 코드 규칙으로는 성립하지 않으면 unsupported 표로 읽는다(grounding.recode_vote, 사전 등록 62.29).
+                # 질문에 시점 표현이 없는데 모델 표가 out_of_period를 내면 unsupported 표로 읽는다(`grounding.recode_vote`, 사전 등록 62.29).
                 # 바로 거절하지 않고 단서 구제와 다시 쓰기·재판정을 거친다
-                obj = G.recode_vote(ask_json(system, user)[0], question, cited)
+                obj = G.recode_vote(ask_json(system, user)[0], question)
                 if isinstance(obj, dict) and obj.get("_recoded"):
                     recoded.append(obj["_recoded"])
                 sentences = G.caveat_only_vote(obj, answer, question, evidence, cited=cited, retrieved=retrieved)
