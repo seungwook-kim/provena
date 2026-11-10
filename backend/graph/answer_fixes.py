@@ -815,6 +815,12 @@ def pick_best2(first: dict | None, second: dict | None, quote_ids: list[str], do
     if first is None or second is None:
         log["pick"], log["why"] = (1, "첫 후보 없음") if first is None and second is not None else (0, "둘째 후보 없음")
         return (second if log["pick"] else first), log
+    from backend.graph.grounding import says_only_absence  # 답 확인(verify)이 답이 아니라고 보는 것과 같은 판별
+
+    absent = [says_only_absence(str(d.get("answer") or "")) for d in cands]
+    if absent[0] != absent[1] and log["cands"][absent.index(False)]["cited"]:  # 한쪽만 자료에 없다는 말뿐이고 다른 쪽은 인용이 있는 답이다
+        log["pick"], log["why"] = absent.index(False), "한쪽만 자료에 없다는 말"
+        return cands[log["pick"]], log
     if not s:
         log["why"] = "구절 없음, 첫 후보"
         return first, log
