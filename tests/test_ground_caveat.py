@@ -129,17 +129,19 @@ def test_recode_vote_only_touches_code_owned_reasons_that_the_code_rules_do_not_
     assert G.recode_vote(None, QUESTION, cited) is None
 
 
-def test_period_refusal_items_of_the_eval_sets_all_name_a_period():
-    """평가셋의 기간 정답 거절 문항(wrong_period)은 모두 질문에 시점 표현이 있어 모델의 out_of_period 표가 그대로 거절 사유로 남는다."""
+def test_period_refusal_items_of_the_eval_sets_that_name_a_period_keep_the_model_vote():
+    """평가셋의 기간 정답 거절 문항(wrong_period) 8개 가운데 질문에 시점 표현이 있는 7개는 모델의 out_of_period 표가 그대로 거절 사유로 남는다.
+    v2 30번("두 번째 기수")은 시점 표현이 없어 그 표가 unsupported로 읽힌다(다시 쓴 답이 재판정을 통과해야 나간다. 사전 등록 62.29의 알려진 한계)."""
     import json
     from pathlib import Path
 
     evals = Path(__file__).parent.parent / "evals"
     items = [json.loads(line) for name in ("dataset_v2.jsonl", "dataset_holdout_v1.jsonl") for line in (evals / name).read_text(encoding="utf-8").splitlines() if line.strip()]
     period = [x for x in items if x.get("irrelevant_type") == "wrong_period"]
-    assert len(period) == 7 and all(G.mentions_period(x["input"]) for x in period)
+    named = [x for x in period if G.mentions_period(x["input"])]
+    assert len(period) == 8 and len(named) == 7 and [x["id"] for x in period if x not in named] == [30]
     vote = {"grounded": False, "reason_code": "out_of_period"}
-    assert all(G.recode_vote(vote, x["input"], [ROW.model_dump()]) is vote for x in period)
+    assert all(G.recode_vote(vote, x["input"], [ROW.model_dump()]) is vote for x in named)
 
 
 @pytest.mark.parametrize("code", ["out_of_period", "no_evidence"])
