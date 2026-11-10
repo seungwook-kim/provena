@@ -19,7 +19,7 @@ def _session(sid, minute):
          "name": "TaskEffortAnthropic", "startTime": t(1), "endTime": t(4), "latency": 3},
         {"id": f"{sid}s", "parentObservationId": f"{sid}g", "sessionId": f"u:{sid}", "type": "SPAN",
          "name": "search", "startTime": t(4), "endTime": t(5), "latency": 1},
-        # 그래프가 끝난(10초) 뒤 시작한 호출 → 세지 않는다(고치기 전에는 생성 합이 -27초가 됐다)
+        # 그래프가 끝난(10초) 뒤 시작한 호출 → 세지 않는다(고치기 전에는 생성 합이 -7초가 됐다)
         {"id": f"{sid}c2", "parentObservationId": f"{sid}g", "sessionId": f"u:{sid}", "type": "GENERATION",
          "name": "TaskEffortAnthropic", "startTime": t(20), "endTime": t(50), "latency": 30},
     ]
