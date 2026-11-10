@@ -75,9 +75,9 @@ WHERE nsp.nspname = 'public'
 구조 전체는 `docs/db/ERD.md`, 표별 칼럼·색인·권한은 `docs/db/TABLE_SPEC.md`에 있다.
 
 - 합친 표: `answer_grounding`은 `answers.grounding`, `answers.skills_used`로, `recall_feedback`은 `recall_notices.feedback_*` 칸으로, `issue_table_rejections`는 `approvals.comment`, `decided_by`, `decided_at`으로 옮겼다. 새 DB는 `105`, `110`, `120`이 처음부터 합친 모양으로 만든다.
-- `109_realign.sql`은 옛 모양 DB를 올린다. 옛 표는 지우지 않고 `<이름>_old_20261110`으로 이름만 바꾼다(되돌림은 이름을 되돌리면 된다). 쓰이지 않는 색인 4개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`)를 지우고 `issue_tables_thread_user_idx`를 만든다. `anon`, `authenticated` 역할이 있을 때만 public 표·뷰·시퀀스의 권한을 회수하고 앞으로 만드는 표의 기본 권한도 회수한다. 여러 번 실행해도 된다.
-- 옛 표는 `db/manual/109_purge_old.sql`로 지운다. 백업 확인 뒤 사람이 직접 실행하며, 되돌릴 수 없다.
-- 운영 적용 순서: 백업, `109_realign.sql`, 곧바로 새 코드 배포. 109 적용 뒤 옛 코드는 옛 표 이름으로 쓰다 실패한다. 코드가 옛 모양과 호환되는지는 확인하지 않았다.
+- `109_realign.sql`(1단계)은 옛 모양 DB를 올린다. 합칠 칸을 더하고 값을 복사만 하며 옛 표는 건드리지 않아서 옛 코드가 그대로 돈다. 쓰이지 않는 색인 7개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`, `token_revocations_expires_at`, `signup_requests_status_requested_at`, `recall_notices_review_idx`)를 지우고 `issue_tables_thread_user_idx`, `recall_notices_feedback_idx`, `chunks_link_targets_gin`을 만든다. `anon`, `authenticated` 역할이 있을 때만 public 표·뷰·시퀀스의 권한을 회수하고 앞으로 만드는 표의 기본 권한도 회수한다. 여러 번 실행해도 된다.
+- 2단계 `db/manual/109_retire_old.sql`은 새 코드가 배포되고 옛 리비전이 내려간 뒤 사람이 직접 실행한다. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 한 번 더 옮기고 옛 표 3개를 `<이름>_old_20261110`으로 이름만 바꾼다(되돌림은 이름을 되돌리면 된다). 이름이 바뀐 옛 표는 `db/manual/109_purge_old.sql`로 지운다. 백업 확인 뒤 직접 실행하며, 되돌릴 수 없다.
+- 운영 적용 순서: 백업, `109_realign.sql`(옛 코드가 그대로 돈다), 새 코드 배포, 옛 리비전 내림, `manual/109_retire_old.sql`, 두어 날 뒤 `manual/109_purge_old.sql`. 1단계 뒤 새 코드가 뜨기 전까지 옛 코드가 옛 표에 쓴 값은 2단계가 옮긴다. 새 코드가 뜬 뒤 2단계 전까지 옛 리비전이 아직 요청을 받으면 그 요청이 쓴 값이 새 칸에 안 보일 수 있다(2단계가 채운다).
 - 바꾸지 않은 것: LangGraph가 만드는 6개 표(구조 변경 금지), `users.groups`와 `chunks.acl`(문서 권한 F-06 연결 지점), `threads` 등의 `user_id` text 타입(결정 0091), 옛 판 `chunks` 행(결정 0092).
 
 ## 작업 기록 (최신이 위)

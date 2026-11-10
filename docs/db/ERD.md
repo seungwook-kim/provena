@@ -3,7 +3,7 @@
 이 문서는 DB 재정렬(결정 0090) 뒤의 `public` 스키마 구조를 그림으로 보인다. 기준은 `db/*.sql`의 현재 내용이다. 칼럼 하나하나의 설명, 만든 파일, 쓰는 코드, 색인은 [TABLE_SPEC.md](TABLE_SPEC.md)에 있다.
 
 - 앱 표 25개와 LangGraph 라이브러리 표 6개, 모두 31개다. 재정렬 전에는 34개(앱 표 28 + LangGraph 6)였다.
-- `db/109_realign.sql`을 적용한 DB에는 이름만 바뀐 옛 표 3개(`answer_grounding_old_20261110`, `recall_feedback_old_20261110`, `issue_table_rejections_old_20261110`)가 `db/manual/109_purge_old.sql`을 실행하기 전까지 남는다. 이 표들은 그림에 넣지 않았다.
+- `db/109_realign.sql`(1단계)을 적용한 DB에는 옛 표 3개(`answer_grounding`, `recall_feedback`, `issue_table_rejections`)가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql` 뒤에는 `_old_20261110`이 붙은 이름으로 `db/manual/109_purge_old.sql`을 실행하기 전까지 남는다. 이 표들은 그림에 넣지 않았다.
 
 ## 1. 읽는 법
 

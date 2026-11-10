@@ -76,7 +76,7 @@ class PgIssueTableStore:
 
     def record_rejection(self, *, approval_id, thread_id, user_id, reason, decided_by):
         """반려 사유와 결정자를 승인함 줄(approvals)에 쓴다. 이미 사유가 있으면 첫 사유를 지키고(재개가 겹쳐도 한 번), 줄이 없으면 아무것도 하지 않는다.
-        상태(rejected)와 결정 시각은 곧이어 `decide_review_item` 이 쓴다. 옛 issue_table_rejections 표는 db/109_realign.sql 이 이 줄로 합쳤다."""
+        상태(rejected)와 결정 시각은 곧이어 `decide_review_item` 이 쓴다. 옛 issue_table_rejections 표는 db/109_realign.sql(1단계)과 db/manual/109_retire_old.sql(2단계)이 이 줄로 합쳤다."""
         sql = (
             "UPDATE approvals SET comment = %s, decided_by = COALESCE(decided_by, %s) "
             "WHERE approval_id = %s AND kind = 'issue_table' AND comment = ''"

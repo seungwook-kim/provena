@@ -9,8 +9,8 @@
 - 칼럼 표의 "키" 칸은 PK(기본키), FK(외래 키), UK(고유 제약)이다. "NULL" 칸의 `NO`는 NOT NULL이다.
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
 - 표마다 색인의 "이유가 되는 질의"는 `docs/db/QUERY_INDEX.md`의 질의-색인 대조표(코드의 SQL 약 150문장)와 같다. 대조 결과 색인이 없어 문제가 되는 질의는 없고, 쓰이지 않는 색인은 109가 지웠다.
-- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:120-143)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
-- 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`을 적용한 DB에는 여기에 옛 표 3개가 `db/manual/109_purge_old.sql` 실행 전까지 더 남는다(2-3).
+- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:108-131)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
+- 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3).
 
 ## 2. 요약
 
@@ -59,9 +59,9 @@
 | `store` | LangGraph | 라이브러리 `.setup()` | Store 항목. `backend/memory/profile.py`가 사용자 프로필(소속과 직급)을 넣는다 | 0행 / 56 KB |
 | `store_migrations` | LangGraph | 라이브러리 `.setup()` | Store 표 마이그레이션 버전 | 4행 / 24 KB |
 
-### 2-3. 이름만 바뀐 옛 표 3개 (`db/manual/109_purge_old.sql` 실행 전까지)
+### 2-3. 합쳐진 옛 표 3개 (1단계 뒤 원래 이름으로 남고, 2단계 뒤 이름만 바뀌며, `db/manual/109_purge_old.sql` 뒤에 사라진다)
 
-`db/109_realign.sql`은 합친 뒤 옛 표를 지우지 않고 이름만 바꾼다. 앱 코드는 이 표를 읽지도 쓰지도 않는다.
+`db/109_realign.sql`(1단계)은 새 칸에 값을 복사만 하고 옛 표를 건드리지 않아서, 옛 코드가 계속 돈다. 새 코드를 배포하고 옛 리비전이 내려간 뒤 `db/manual/109_retire_old.sql`(2단계)이 그 사이에 옛 표에 쌓인 값을 새 칸으로 한 번 더 옮기고 옛 표 이름을 바꾼다. 새 코드는 이 표를 읽지도 쓰지도 않는다.
 
 | 옛 표 이름 (바뀐 이름) | 합친 곳 | 109 적용 전 운영 조회 (행 / 크기) |
 |---|---|---|
@@ -71,7 +71,7 @@
 
 ### 2-4. 마이그레이션 파일
 
-`db/` 바로 아래 `.sql`만 compose 초기화와 시험이 이름 순서로 실행한다. `db/manual/` 아래는 사람이 직접 실행한다(`db/manual/chunks_hnsw_voyage4.sql:2-3`, `db/manual/109_purge_old.sql:2`). 번호대는 100번대가 인증·승인·대화·답변·리콜, 200번대가 검색·데이터다(`db/101_auth_users.sql:2`, `db/201_search.sql:1`).
+`db/` 바로 아래 `.sql`만 compose 초기화와 시험이 이름 순서로 실행한다. `db/manual/` 아래는 사람이 직접 실행한다(`db/manual/chunks_hnsw_voyage4.sql:2-3`, `db/manual/109_retire_old.sql:1`, `db/manual/109_purge_old.sql:2`). 번호대는 100번대가 인증·승인·대화·답변·리콜, 200번대가 검색·데이터다(`db/101_auth_users.sql:2`, `db/201_search.sql:1`).
 
 | 파일 | 만드는 것 |
 |---|---|
@@ -82,14 +82,15 @@
 | `db/104_user_profiles.sql` | `user_profiles` |
 | `db/105_admin_role_log.sql` | `admin_role_log` |
 | `db/106_signup_approval.sql` | `signup_requests` |
-| `db/109_realign.sql` | 새 표를 만들지 않는다. 옛 모양 DB를 합친 구조로 올린다(3장) |
+| `db/109_realign.sql` | 새 표를 만들지 않는다. 옛 모양 DB에 합친 칸을 더하고 값을 복사하며 색인을 정리한다(1단계, 3장) |
+| `db/manual/109_retire_old.sql` | 2단계. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 옮기고 옛 표 3개의 이름을 `_old_20261110`으로 바꾼다 |
 | `db/110_issue_tables.sql` | `issue_tables` |
 | `db/111_threads.sql` | `threads` |
 | `db/120_answers_recall.sql` | `answers`, `citations`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_digests`, `change_monitoring` |
 | `db/201_search.sql` | `docs`, `versions`, `chunks`, `index_meta`, `query_translations` |
 | `db/202_sync.sql` | `sync_runs`, `changed_articles` |
 | `db/manual/chunks_hnsw_voyage4.sql` | `chunks` 부분 HNSW 색인 `chunks_emb_hnsw_half` |
-| `db/manual/109_purge_old.sql` | 옛 표 3개를 `DROP TABLE IF EXISTS`로 지운다 |
+| `db/manual/109_purge_old.sql` | 이름이 바뀐 옛 표 3개를 `DROP TABLE IF EXISTS`로 지운다 |
 
 번호 107, 108은 이 브랜치에 없다. PR #113(미머지)이 이메일 가입 인증용으로 쓸 예정이라고 `db/109_realign.sql:2-3`에 적혀 있다.
 
@@ -101,13 +102,13 @@
 
 | 옛 표 | 합친 곳 | 옮기는 방법 | 코드 쪽 |
 |---|---|---|---|
-| `answer_grounding` | `answers.grounding`, `answers.skills_used` (둘 다 jsonb, NULL 허용) | 109 단계 1(109:17-34)이 칼럼을 더하고 `answer_id`로 값을 복사한 뒤 옛 표 이름을 바꾼다 | `backend/graph/answer_store.py:152-159, 196-207`. NULL은 "아직 기록하지 않음"이며 옛 표에 줄이 없던 것과 같다(`db/120_answers_recall.sql:15`) |
-| `recall_feedback` | `recall_notices.feedback_useful`, `feedback_reason`, `feedback_by`, `feedback_at` | 109 단계 2(109:36-65)가 칼럼과 부분 색인 `recall_notices_feedback_idx`를 만들고 `notice_id`로 복사한다. 알림이 없는 의견 행은 옛 표에만 남고 `NOTICE`로 알린다(109:52-56) | `backend/graph/recall/store.py:353-368` |
-| `issue_table_rejections` | `approvals.comment`, `approvals.decided_by`, `approvals.decided_at` (칼럼은 102가 이미 갖고 있었다) | 109 단계 3(109:67-86)이 `approval_id`와 `kind = 'issue_table'`이 같은 줄에 사유(`comment`가 빈 문자열일 때), 결정자, 시각을 채운다 | `backend/graph/departments/store.py:77-85` |
+| `answer_grounding` | `answers.grounding`, `answers.skills_used` (둘 다 jsonb, NULL 허용) | 109 단계 1(109:21-33)이 칼럼을 더하고 `answer_id`로 값을 복사한다(새 칸이 NULL인 줄만). 옛 표 이름은 2단계(`109_retire_old.sql`)가 바꾼다 | `backend/graph/answer_store.py:152-159, 196-207`. NULL은 "아직 기록하지 않음"이며 옛 표에 줄이 없던 것과 같다(`db/120_answers_recall.sql:15`) |
+| `recall_feedback` | `recall_notices.feedback_useful`, `feedback_reason`, `feedback_by`, `feedback_at` | 109 단계 2(109:35-59)가 칼럼과 부분 색인 `recall_notices_feedback_idx`를 만들고 `notice_id`로 복사한다(새 칸이 NULL인 줄만). 알림이 없는 의견 행은 옛 표에만 남고 `NOTICE`로 알린다(109:51-55) | `backend/graph/recall/store.py:353-368` |
+| `issue_table_rejections` | `approvals.comment`, `approvals.decided_by`, `approvals.decided_at` (칼럼은 102가 이미 갖고 있었다) | 109 단계 3(109:61-75)이 `approval_id`와 `kind = 'issue_table'`이 같은 줄에 사유(`comment`가 빈 문자열일 때), 결정자, 시각을 채운다 | `backend/graph/departments/store.py:77-85` |
 
-옛 표는 데이터를 그대로 두고 `<이름>_old_20261110`으로 이름만 바꾼다. 같은 이름이 이미 있으면 바꾸지 않고 `NOTICE`만 낸다. 되돌리려면 새 코드를 내리고 이름을 원래대로 바꾼다(109:12-13). 완전히 지우는 파일은 `db/manual/109_purge_old.sql`이며, 되돌릴 수 없으므로 백업 뒤에 수동으로 실행한다(같은 파일 5-6줄).
+1단계는 옛 표와 옛 칸을 건드리지 않아서 옛 코드를 다시 배포하면 되돌아간다(109:15). 2단계가 옛 표를 `<이름>_old_20261110`으로 이름만 바꾸며(데이터 그대로), 같은 이름이 이미 있으면 바꾸지 않고 `NOTICE`만 낸다. 2단계 뒤에 되돌리려면 새 코드를 내리고 이름을 원래대로 바꾼다(109:16-17). 완전히 지우는 파일은 `db/manual/109_purge_old.sql`이며, 되돌릴 수 없으므로 백업 뒤에 수동으로 실행한다(같은 파일 5-6줄).
 
-새 DB는 110, 120, 105 파일이 이미 합친 구조로 만든다. 109는 모든 단계가 "있을 때만" 움직여서 어느 순서로 실행해도, 여러 번 실행해도 같은 결과가 된다(109:3-4).
+새 DB는 110, 120, 105 파일이 이미 합친 구조로 만든다. 109는 모든 단계가 "있을 때만" 움직여서 어느 순서로 실행해도, 여러 번 실행해도 같은 결과가 된다(109:4-5).
 
 ### 3-2. 색인 변화
 
@@ -124,12 +125,12 @@
 | 추가 | `issue_tables_thread_user_idx` | `issue_tables (thread_id, user_id, approved_at DESC)` | 유일한 조회 `PgIssueTableStore.get_by_thread`의 조건과 정렬을 받는다(`backend/graph/departments/store.py:89-90`) |
 | 추가 | `recall_notices_feedback_idx` | `recall_notices (user_id, change_pattern, (changed ->> 'article'), ((changed ->> 'rule_seq')::bigint)) WHERE feedback_useful IS NOT NULL` | 의견 집계 질의 `feedback_counts`(`backend/graph/recall/store.py:357-362`). 의견이 있는 알림만 색인한다 |
 
-삭제 근거는 109:88에 "운영 조회 2026-11-10, 통계 초기화 2026-10-29 이후 `idx_scan` 0이고 코드에 그 열로 찾는 질의가 없다"로 적혀 있다. 색인을 되돌리려면 위 정의를 다시 실행한다(109:15, 89-92).
+삭제 근거는 109:77에 "운영 조회 2026-11-10, 통계 초기화 2026-10-29 이후 `idx_scan` 0이고 코드에 그 열로 찾는 질의가 없다"로 적혀 있다. 색인을 되돌리려면 위 정의를 다시 실행한다(109:19, 78-91).
 
 ### 3-3. 권한 회수
 
-- `db/109_realign.sql` 단계 5(109:120-143)가 `public`의 표, 파티션 표, 뷰, 구체화 뷰, 시퀀스에서 `anon`과 `authenticated`의 권한을 모두 회수하고, 이후 만들어지는 표와 시퀀스의 기본 권한도 회수한다. 두 역할이 없는 일반 PostgreSQL에서는 건너뛴다.
-- 회수한 이유는 109:120-121에 적혀 있다. 운영 Supabase가 `public`의 모든 표에 두 역할 권한을 열어 두었고(RLS가 막고 있었다), RLS에 더해 권한도 거두어 이중으로 잠그는 것이다. 앱은 소유자 역할로 접속하므로 영향이 없다(109:10).
+- `db/109_realign.sql` 단계 5(109:108-131)가 `public`의 표, 파티션 표, 뷰, 구체화 뷰, 시퀀스에서 `anon`과 `authenticated`의 권한을 모두 회수하고, 이후 만들어지는 표와 시퀀스의 기본 권한도 회수한다. 두 역할이 없는 일반 PostgreSQL에서는 건너뛴다.
+- 회수한 이유는 109:108-109에 적혀 있다. 운영 Supabase가 `public`의 모든 표에 두 역할 권한을 열어 두었고(RLS가 막고 있었다), RLS에 더해 권한도 거두어 이중으로 잠그는 것이다. 앱은 소유자 역할로 접속하므로 영향이 없다(109:13).
 - `ALTER DEFAULT PRIVILEGES`는 그 문장을 실행한 역할이 이후 만드는 객체에 적용되는 PostgreSQL 규칙이다. LangGraph 표를 만드는 앱 접속 역할이 109를 실행한 역할과 같은지는 코드에서 알 수 없다.
 - `signup_requests`는 비밀번호 해시를 담아서 106이 먼저 `PUBLIC`, `anon`, `authenticated`의 권한을 회수한다(`db/106_signup_approval.sql:14-28`).
 
@@ -271,7 +272,7 @@
 #### 4-2-2. `approvals`
 
 - 목적: 승인 건. 그래프가 `interrupt`로 멈춘 한 번이 한 줄이고 `thread_id`로 같은 대화를 재개한다. `kind`로 결정표(`decision_table`), 쟁점표(`issue_table`), 팀 검토 실패 알림(`team_review_failed`)을 나눈다(102:29-30). 재정렬 뒤에는 쟁점표 반려 사유(`comment`), 결정자(`decided_by`), 결정 시각(`decided_at`)도 이 표가 갖는다.
-- 만든 파일: `db/102_decision_approvals.sql:22-43`(표 22-28, `kind` 제약 29-30, 고유 색인 34-35, 칼럼 추가 37-41, 대기 색인 42, `status` 설명 43). `comment`, `decided_by`, `decided_at` 칼럼은 102에 이미 있었고, 109 단계 3(109:67-86)이 옛 `issue_table_rejections`의 값을 옮겼다.
+- 만든 파일: `db/102_decision_approvals.sql:22-43`(표 22-28, `kind` 제약 29-30, 고유 색인 34-35, 칼럼 추가 37-41, 대기 색인 42, `status` 설명 43). `comment`, `decided_by`, `decided_at` 칼럼은 102에 이미 있었고, 109 단계 3(109:61-75)이 옛 `issue_table_rejections`의 값을 옮겼다.
 - 쓰는 코드: `backend/graph/decision/repo.py` — `queue_draft` 248-265, `decide` 267-286, `queue_review_item` 288-302, `decide_review_item` 304-319, `get_approval` 321-325, `list_pending` 333-334. `backend/graph/departments/store.py:77-85`(`record_rejection`)이 반려 사유를 쓴다. 같은 승인 건의 결정을 하나씩 처리하는 자문 잠금(`decision_lock`, repo.py:231-246)은 이 표의 행이 아니라 `approval_id` 문자열로 건다.
 - RLS와 권한: RLS 켬(`db/102_decision_approvals.sql:47`), 정책 없음.
 
@@ -354,7 +355,7 @@
 #### 4-4-1. `answers`
 
 - 목적: 답. `as_of`는 질문의 기준일(YYYY-MM-DD, 없으면 NULL = 그때의 현재 판)이다. `thread_id`는 그래프 이름 `<user_id>:<thread_id>` 그대로다(`db/120_answers_recall.sql:6`). 재정렬 뒤에는 옛 `answer_grounding`의 인용 검사 결과를 `grounding`, `skills_used`로 갖는다.
-- 만든 파일: `db/120_answers_recall.sql:7-20`(표 7-17, 칼럼 추가 19-20), 옛 DB 이전 `db/109_realign.sql:17-34`.
+- 만든 파일: `db/120_answers_recall.sql:7-20`(표 7-17, 칼럼 추가 19-20), 옛 DB 이전 `db/109_realign.sql:21-33`.
 - 쓰는 코드: `backend/graph/answer_store.py`의 `PgAnswerStore`(123줄) — `save` 138-150, `save_with_grounding` 152-159, `_insert_answer` 174-194, `save_grounding` 196-199, `get_grounding` 201-207, `get` 209-219, `find_by_article` 221-228. 호출은 `backend/graph/build.py:1449-1454`, 생성은 `backend/graph/recall/runtime.py:39`.
 - `grounding`: 인용 검사 결과(밖으로 낼 수 있는 값만). MCP 도구 `get_grounding`이 읽는다(`answer_store.py:201-207`, 읽을 때 `grounding IS NOT NULL` 조건). NULL은 아직 기록하지 않았다는 뜻이며 옛 `answer_grounding`에 줄이 없던 것과 같다. 검사 결과를 JSON으로 만들 수 없으면 그 칼럼만 비우고 답과 인용은 남긴다(`answer_store.py:155`).
 - RLS와 권한: RLS 켬(`db/120_answers_recall.sql:162`), 정책 없음.
@@ -425,7 +426,7 @@
 #### 4-4-4. `recall_notices`
 
 - 목적: 리콜 알림. 같은 답, 같은 개정은 한 줄이다(`UNIQUE (answer_id, event_key)`). `review_status`는 확신도가 낮거나 의견 규칙으로 눌린 알림이 `pending`(관리자 검토함)이고, 사용자에게는 `released`이거나 NULL인 것만 보인다. `digest_status`는 `RECALL_DIGEST=daily`일 때 요약 대기(`pending`)에서 요약 보냄(`sent`)으로 간다(`db/120_answers_recall.sql:50-52`). 재정렬 뒤에는 옛 `recall_feedback`의 사용자 의견을 `feedback_*` 네 칼럼으로 갖는다.
-- 만든 파일: `db/120_answers_recall.sql:53-90`(표 53-82, 의견 칼럼 추가 83-87, 색인 88-90), `:134-138`(의견 색인), 옛 DB 이전 `db/109_realign.sql:36-65`.
+- 만든 파일: `db/120_answers_recall.sql:53-90`(표 53-82, 의견 칼럼 추가 83-87, 색인 88-90), `:134-138`(의견 색인), 옛 DB 이전 `db/109_realign.sql:35-59`.
 - 쓰는 코드: `backend/graph/recall/store.py`의 `PgRecallStore` — `notice_add` 325-333, `notice_get` 335-337, `notices_all` 339-341, `notice_update` 343-345, `digest_pending` 347-349, `feedback_put` 353-355, `feedback_counts` 357-362, `feedback_list` 364-368. API 쪽 읽기는 `backend/api/recalls.py:177, 181, 185`.
 - 의견: 사용자 의견(도움 됨 true / 필요 없음 false). 아직 없으면 NULL이다. 알림당 한 줄이며 다시 보내면 덮어쓴다(`db/120_answers_recall.sql:77`, `store.py:352`).
 - RLS와 권한: RLS 켬(`db/120_answers_recall.sql:165`), 정책 없음.

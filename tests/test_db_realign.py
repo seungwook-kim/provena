@@ -76,6 +76,10 @@ def _sql(name: str) -> str:
     return (ROOT / "db" / name).read_text(encoding="utf-8")
 
 
+def _retire() -> str:
+    return (ROOT / "db" / "manual" / "109_retire_old.sql").read_text(encoding="utf-8")
+
+
 def _tables(c) -> set[str]:
     return {r[0] for r in c.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")}
 
@@ -112,7 +116,7 @@ def _old_db(url: str):
     return c
 
 
-def test_109_moves_data_renames_old_tables_and_is_repeatable(db):
+def test_109_copies_data_keeps_old_tables_then_retire_renames_them(db):
     c = _old_db(db)
     before = _tables(c)
     unused = {"answers_user_idx", "issue_tables_thread_idx", "issue_tables_user_idx", "admin_role_log_at", "recall_notices_review_idx",
@@ -121,18 +125,27 @@ def test_109_moves_data_renames_old_tables_and_is_repeatable(db):
 
     sql = _sql("109_realign.sql")
     c.execute(sql)
+    # 1단계(109): 옛 표는 그대로 있어서 옛 코드가 계속 돈다. 새 칸에는 값이 복사돼 있다.
+    assert _tables(c) == before
+    assert c.execute("SELECT count(*) FROM answer_grounding").fetchone()[0] == 2
+    # 옛 코드가 1단계 뒤에 옛 표에 쓴 값(새 코드 배포 전 창): 2단계가 새 칸으로 옮긴다. 이미 새 칸에 있는 값은 덮어쓰지 않는다.
+    c.execute("UPDATE answer_grounding SET grounding = '{\"late\": 1}' WHERE answer_id = 'a2'")                 # 새 칸에 이미 {} 가 있다
+    c.execute("INSERT INTO answer_grounding (answer_id, grounding, skills_used) VALUES ('a3', '{\"late\": true}', '[\"s9\"]')")  # 새 칸은 NULL
+    c.execute("INSERT INTO recall_feedback (notice_id, user_id, answer_id, rule_seq, article, pattern, useful, reason, given_by) "
+              "VALUES ('n2', 'u1', 'a2', 7, 'Art', 'amount', true, '늦게 들어온 의견', 'u1')")
+    c.execute(_retire())
     after = _tables(c)
     assert not set(MERGED_AWAY) & after and {n + OLD for n in MERGED_AWAY} <= after
     assert after - {n + OLD for n in MERGED_AWAY} == before - set(MERGED_AWAY)               # 그 밖의 표는 그대로, 새 표도 없다
-    assert c.execute(f"SELECT count(*) FROM answer_grounding{OLD}").fetchone()[0] == 2        # 옛 데이터는 그대로 남는다
+    assert c.execute(f"SELECT count(*) FROM answer_grounding{OLD}").fetchone()[0] == 3        # 옛 데이터는 그대로 남는다
 
     # answer_grounding -> answers: 기록이 있던 답만 NULL 이 아니다
     got = dict((r[0], (r[1], r[2])) for r in c.execute("SELECT answer_id, grounding, skills_used FROM answers ORDER BY 1"))
-    assert got["a1"] == ({"grounded": True}, ["s1"]) and got["a2"] == ({}, []) and got["a3"] == (None, None)
+    assert got["a1"] == ({"grounded": True}, ["s1"]) and got["a2"] == ({}, []) and got["a3"] == ({"late": True}, ["s9"])
     # recall_feedback -> recall_notices: 알림이 있는 의견만 옮겨진다(고아 의견은 _old 에만)
     fb = c.execute("SELECT notice_id, feedback_useful, feedback_reason, feedback_by FROM recall_notices WHERE feedback_useful IS NOT NULL").fetchall()
-    assert fb == [("n1", False, "관련 없음", "u1")]
-    assert c.execute(f"SELECT count(*) FROM recall_feedback{OLD}").fetchone()[0] == 2
+    assert sorted(fb) == [("n1", False, "관련 없음", "u1"), ("n2", True, "늦게 들어온 의견", "u1")]
+    assert c.execute(f"SELECT count(*) FROM recall_feedback{OLD}").fetchone()[0] == 3
     # issue_table_rejections -> approvals: 빈 사유만 채우고 이미 있던 사유는 지키며, 줄이 없던 것은 건너뛴다. 줄 수는 그대로
     appr = {r[0]: (r[1], r[2]) for r in c.execute("SELECT approval_id, comment, decided_by FROM approvals")}
     assert len(appr) == 4 and appr["ap-r1"] == ("옛 표 사유 1", "admin-1") and appr["ap-r2"] == ("옛 표 사유 2", None)
@@ -144,10 +157,11 @@ def test_109_moves_data_renames_old_tables_and_is_repeatable(db):
     # 의견 집계가 부분 색인 식으로 같은 값을 준다
     n = c.execute("SELECT count(*) FROM recall_notices WHERE user_id = 'u1' AND change_pattern = 'amount' AND (changed ->> 'article') = 'Art' "
                   "AND ((changed ->> 'rule_seq')::bigint) = 7 AND feedback_useful IS NOT NULL").fetchone()[0]
-    assert n == 1
+    assert n == 2
 
     snapshot = (sorted(after), sorted(idx), got, appr)
     c.execute(sql)                                                                             # 다시 돌려도 같다
+    c.execute(_retire())
     again = (sorted(_tables(c)), sorted(_indexes(c)),
              dict((r[0], (r[1], r[2])) for r in c.execute("SELECT answer_id, grounding, skills_used FROM answers ORDER BY 1")),
              {r[0]: (r[1], r[2]) for r in c.execute("SELECT approval_id, comment, decided_by FROM approvals")})
