@@ -300,6 +300,15 @@ def reset_warned() -> None:
         _warned = False
 
 
+def recorded_text(content: Any) -> str:
+    """녹화할 응답 글. 추론을 켠 단계(`LLM_EFFORT_BY_TASK`의 decompose, answer, judge)는 Anthropic이 `[생각 블록, 글 블록]` 목록을 돌려준다.
+    목록을 JSON 글로 그대로 적으면 재생이 그 글을 응답 본문으로 내서 그래프가 JSON을 못 읽고(`_text`는 문자열을 그대로 쓴다) 다른 경로(재작성, 재검색)로 간다.
+    그래서 그래프가 읽는 것과 같게 글 블록만 잇는다(`backend/graph/build.py`의 `_text`와 같은 규칙)."""
+    if isinstance(content, list):
+        return "".join(b if isinstance(b, str) else str(b.get("text") or "") for b in content if isinstance(b, str) or (isinstance(b, dict) and b.get("type") == "text"))
+    return content if isinstance(content, str) else str(content)
+
+
 class RecordingChatModel(FakeListChatModel):
     """녹화 모드: 실제 모델(`inner`)을 부르고 요청 키 -> 응답을 저장소에 덧붙인다. 사용량(usage_metadata)은 그대로 넘겨 비용 집계가 유지된다."""
 
@@ -315,7 +324,7 @@ class RecordingChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         ai = self.inner.invoke(messages, stop=stop, **kwargs)
-        text = ai.content if isinstance(ai.content, str) else json.dumps(ai.content, ensure_ascii=False, default=str)
+        text = recorded_text(ai.content)
         store = self.store if self.store is not None else get_store()
         if store.add(request_key(messages), message_role(messages), self.model_name, _content_text(messages[-1]) if messages else "", text):
             self.recorded += 1
