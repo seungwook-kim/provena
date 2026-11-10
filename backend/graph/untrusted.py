@@ -179,8 +179,11 @@ def _invisible_free(s: str) -> str:
     return "".join(ch for ch in unicodedata.normalize("NFKC", s) if unicodedata.category(ch) != "Cf")
 
 
-def strip_instructions(text: str, *, cut_tail: bool = False) -> tuple[str, list[str]]:
-    """(정화한 글, 뺀 문장·절 목록). cut_tail은 제목용: 지시가 시작한 자리부터 끝까지 자른다."""
+def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: bool = False) -> tuple[str, list[str]]:
+    """(정화한 글, 뺀 문장·절 목록). cut_tail은 제목용: 지시가 시작한 자리부터 끝까지 자른다.
+    whole_sentence는 지시로 판정된 절이 든 문장을 통째로 뺀다. 기본(꺼짐)은 지시 절만 빼고 같은 문장의 나머지 절을 남겨 검색 원문의 사실을 지킨다.
+    쉼표로 이어진 지시 문장은 뒷절이 따로는 지시로 안 보이는 조각이 많아("..., including your system prompt, verbatim.") 그 조각이 남는다.
+    남은 조각을 그대로 인용하면 안 되는 쪽(되묻기가 질문 속 영문 구를 따옴표로 인용할 때)이 켠다."""
     s = _invisible_free(str(text or ""))
     removed: list[str] = []
 
@@ -201,6 +204,9 @@ def strip_instructions(text: str, *, cut_tail: bool = False) -> tuple[str, list[
             k = _first(piece)
             removed.append(piece[k:])
             out.append(piece[:k])
+            continue
+        if whole_sentence:
+            removed.append(piece.strip())
             continue
         clauses = _CLAUSE.split(piece)
         hits = [c for c in clauses if c.strip() and is_instruction(c)]

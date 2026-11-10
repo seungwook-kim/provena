@@ -610,9 +610,9 @@ def unknown_phrases(question: str, corpus: str) -> list[str]:
 
 def quotable_phrases(question: str, corpus: str) -> list[str]:
     """되묻기 문장에 따옴표로 인용해도 되는 모르는 영문 구. 질문을 입력 정화와 같은 지시 문장 판정(`untrusted.strip_instructions`)으로 나눠
-    지시로 판정된 절·문장·묶음 괄호를 뺀 글에서만 뽑고, 의심 문장(표식 꼴 토큰 가까이에 출력 자리나 목적 이름표)의 토큰도 뺀다.
-    지시도 의심 문장도 없으면 글자 하나도 바뀌지 않으므로 `unknown_phrases`와 같은 목록이다."""
-    return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "")[0]), corpus)
+    지시로 판정된 절이 든 문장(쉼표·접속 조각으로 이어진 뒷절 포함)과 묶음 괄호를 통째로 뺀 글에서만 뽑고, 의심 문장(표식 꼴 토큰 가까이에
+    출력 자리나 목적 이름표)의 토큰도 뺀다. 지시도 의심 문장도 없으면 글자 하나도 바뀌지 않으므로 `unknown_phrases`와 같은 목록이다."""
+    return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "", whole_sentence=True)[0]), corpus)
 
 
 def unknown_name_message(phrases: list[str]) -> str:
