@@ -69,6 +69,22 @@ from backend.services.profile_store import PostgresProfileStore
 
 log = logging.getLogger(__name__)
 
+
+def warn_if_silent_demo() -> bool:
+    """키가 없어 데모 모드(가짜 모델)로 떨어졌는데 그게 의도로 보이지 않으면 시작 로그에 경고를 남긴다. 남겼으면 True.
+    의도로 보는 경우: `PROVENA_ENV`가 local·demo, `DEMO_MODE`를 켬, `LLM_PROVIDER=claude_cli`(키 없이 실제 모델).
+    동작은 바꾸지 않는다(시험·로컬 데모가 키 없이 앱을 만든다). 배포에서 `LLM_API_KEY`가 빠진 것을 로그로 바로 알게 하려는 것이다."""
+    from backend.services.demo_replay import env_flag
+    from backend.services.llm import is_demo_mode
+
+    if (os.getenv("PROVENA_ENV") or "").strip().lower() in ("local", "demo") or env_flag("DEMO_MODE"):
+        return False
+    if not is_demo_mode():
+        return False
+    log.warning("LLM_API_KEY가 없어 데모 모드(가짜 모델)로 동작합니다. 배포라면 LLM_API_KEY를 넣고 다시 배포하세요. "
+                "의도한 데모라면 DEMO_MODE=1 또는 PROVENA_ENV=demo로 두면 이 경고가 사라집니다.")
+    return True
+
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
 BOOTSTRAP_TRIES = 10
 BOOTSTRAP_WAIT_SECONDS = 2.0
@@ -296,6 +312,8 @@ def create_app(
     async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         from backend.graph.service_profile import service_profile
         configure_app_logging()   # backend.* 로그를 INFO로(요청 로그·LLM 지연 로그가 운영 로그에 나오게)
+        if graph_factory is None:
+            warn_if_silent_demo()   # 배포에서 키가 빠져 조용히 가짜 모델로 도는 것을 시작 로그로 알린다(동작은 그대로)
         with service_profile(enabled=graph_factory is None):   # 서비스 기본 설정(61.51)을 환경 변수로 채운다. 시험이 그래프를 꽂으면 바꾸지 않는다
             if store is not None and is_local_demo():
                 bootstrap_local_auth(store, profile_store)
