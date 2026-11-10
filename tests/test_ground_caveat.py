@@ -108,11 +108,73 @@ def test_flagged_sentence_that_is_not_in_the_answer_does_not_excuse_other_senten
 
 
 def test_other_reasons_are_not_affected():
-    """사유가 no_evidence나 nonexistent_entity인 판정은 단서 문장만 꼽았어도 거절 그대로다."""
-    for code in ("no_evidence", "nonexistent_entity"):
-        llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code=code, reason="사유", unsupported_sentences=[HEDGE]))
-        out = ask(llm)
-        assert out["kind"] == "refuse" and out["refuse_reason"] == code
+    """사유가 nonexistent_entity인 판정은 단서 문장만 꼽았어도 거절 그대로다."""
+    llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="nonexistent_entity", reason="사유", unsupported_sentences=[HEDGE]))
+    out = ask(llm)
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "nonexistent_entity" and "recoded" not in out["grounding"]
+
+
+# ---------- 코드 규칙이 정하는 사유를 모델 표가 냈을 때 (사전 등록 62.29) ----------
+def test_recode_vote_only_touches_code_owned_reasons_that_the_code_rules_do_not_hold():
+    cited = [ROW.model_dump()]
+    vote = {"grounded": False, "reason_code": "out_of_period", "reason": "판 없음"}
+    assert G.recode_vote(vote, QUESTION, cited) == {**vote, "reason_code": "unsupported", "_recoded": "out_of_period"}
+    for question in ("2019년에 계약 금액이 30만 달러라면 승인자는?", "FY25 보고서는 어디서 봐?", "작년 3분기 가용률은?", "지난달 기준 승인자는?"):
+        assert G.recode_vote(vote, question, cited) is vote                      # 시점 표현이 있으면 모델의 기간 판정 그대로
+    no_ev = {"grounded": False, "reason_code": "no_evidence", "reason": "답 없음"}
+    assert G.recode_vote(no_ev, QUESTION, cited)["reason_code"] == "unsupported"
+    assert G.recode_vote(no_ev, QUESTION, []) is no_ev                           # 인용이 없으면 코드 규칙의 no_evidence와 같다
+    for other in ({"grounded": False, "reason_code": "nonexistent_entity"}, {"grounded": False, "reason_code": "unsupported"}, {"grounded": True}, {}):
+        assert G.recode_vote(other, QUESTION, cited) is other
+    assert G.recode_vote(None, QUESTION, cited) is None
+
+
+def test_period_refusal_items_of_the_eval_sets_all_name_a_period():
+    """평가셋의 기간 정답 거절 문항(wrong_period)은 모두 질문에 시점 표현이 있어 모델의 out_of_period 표가 그대로 거절 사유로 남는다."""
+    import json
+    from pathlib import Path
+
+    evals = Path(__file__).parent.parent / "evals"
+    items = [json.loads(line) for name in ("dataset_v2.jsonl", "dataset_holdout_v1.jsonl") for line in (evals / name).read_text(encoding="utf-8").splitlines() if line.strip()]
+    period = [x for x in items if x.get("irrelevant_type") == "wrong_period"]
+    assert len(period) == 7 and all(G.mentions_period(x["input"]) for x in period)
+    vote = {"grounded": False, "reason_code": "out_of_period"}
+    assert all(G.recode_vote(vote, x["input"], [ROW.model_dump()]) is vote for x in period)
+
+
+@pytest.mark.parametrize("code", ["out_of_period", "no_evidence"])
+def test_model_vote_with_a_code_owned_reason_is_redrafted_instead_of_refused_outright(code):
+    """시점 표현이 없는 질문의 out_of_period 표, 인용이 있는 답의 no_evidence 표는 바로 거절하지 않고 unsupported처럼 답을 다시 써 재판정한다. 다시 쓴 답이 받쳐지면 나간다."""
+    first = FACT.replace("VP(Approves)", "VP")
+    votes = [j(grounded=False, reason_code=code, reason="사유"), j(grounded=True)]
+    llm = normal_llm(answer=[reply(first), reply(FACT)], grounding=votes)
+    out = ask(llm)
+    assert out["kind"] == "answer" and out["grounding"]["redrafted"] is True and out["grounding"]["recoded"] == [code]
+    assert llm.count("grounding") == 2 and llm.count("answer") == 2
+
+
+@pytest.mark.parametrize("code", ["out_of_period", "no_evidence"])
+def test_recoded_vote_still_refuses_when_the_redraft_is_not_grounded(code):
+    """다시 쓴 답도 받쳐지지 않으면 거절이다. 판정 기준은 낮아지지 않고 거절 사유만 unsupported가 된다."""
+    llm = normal_llm(answer=[reply(FACT.replace("VP(Approves)", "VP")), reply(FACT)], grounding=j(grounded=False, reason_code=code, reason="사유"))
+    out = ask(llm)
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["grounding"]["recoded"] == [code]
+
+
+def test_no_evidence_vote_flagging_only_a_hedge_is_eased_like_unsupported():
+    llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="no_evidence", reason="사유", unsupported_sentences=[HEDGE]))
+    out = ask(llm)
+    assert out["kind"] == "answer" and out["grounding"]["caveat_only"] is True and out["grounding"]["recoded"] == ["no_evidence"]
+
+
+def test_out_of_period_vote_on_a_question_that_names_a_period_still_refuses_outright():
+    """질문에 시점 표현이 있으면(코드 규칙이 읽지 못하는 회계연도 표현 포함) 모델의 out_of_period 표는 그대로 거절 사유이고 답을 다시 쓰지 않는다."""
+    question = QUESTION.replace("계약 금액이", "FY21에 계약 금액이")
+    assert G.check_rules(question, [ROW.model_dump()], [ROW.model_dump()]).ok
+    llm = normal_llm(answer=reply(FACT), grounding=j(grounded=False, reason_code="out_of_period", reason="FY21 판 없음"))
+    out = run(graph(lambda q: [ROW], llm=llm, grounding_llm=True), question=question)
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and "recoded" not in out["grounding"]
+    assert llm.count("answer") == 1
 
 
 def test_out_of_period_flag_on_a_hedge_only_is_eased_when_the_question_is_in_period():
@@ -125,9 +187,10 @@ def test_out_of_period_flag_on_a_hedge_only_is_eased_when_the_question_is_in_per
 
 
 def test_out_of_period_flag_on_a_value_sentence_still_refuses():
+    """값 문장을 꼽은 표는 구제하지 않는다. 질문에 시점 표현이 없어 사유는 unsupported로 읽고(사전 등록 62.29), 다시 쓴 답이 그대로라 거절이다."""
     llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=[HEDGE, FACT]))
     out = ask(llm)
-    assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period"
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and "caveat_only" not in out["grounding"]
 
 
 def test_out_of_period_flag_still_refuses_when_the_question_itself_is_out_of_period():
