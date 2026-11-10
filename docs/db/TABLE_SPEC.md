@@ -10,11 +10,11 @@
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
 - 표마다 색인의 "이유가 되는 질의"는 `docs/db/QUERY_INDEX.md`의 질의-색인 대조표(코드의 SQL 약 150문장)와 같다. 대조 결과 색인이 없어 문제가 되는 질의는 없고, 쓰이지 않는 색인은 109가 지웠다.
 - RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:108-131)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
-- 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3).
+- 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3). 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42), 옛 표 삭제(2026-11-11)를 모두 적용했고, 삭제 뒤 운영 `public` 표는 이 문서와 같은 31개(앱 25 + LangGraph 6)다(적용 기록은 2-3).
 
 ## 2. 요약
 
-"2026-11-10 운영 조회" 열은 같은 날 읽기 전용으로 조회한 운영 Supabase의 행 수와 총 크기(표와 색인과 TOAST 합)다. 조회 시점은 109 적용 전이어서 `answers`, `recall_notices`, `approvals`에는 합쳐진 칼럼의 값이 아직 없다. 이 열 외에 운영 값은 이 문서에 쓰지 않았다.
+"2026-11-10 운영 조회" 열은 같은 날 읽기 전용으로 조회한 운영 Supabase의 행 수와 총 크기(표와 색인과 TOAST 합)다. 조회 시점은 109 적용 전이어서 `answers`, `recall_notices`, `approvals`에는 합쳐진 칼럼의 값이 아직 없다(운영 DB에는 이후 2026-11-10 밤부터 2026-11-11까지 109를 적용했다. 2-3). 이 열 외에 운영 값은 이 문서에 쓰지 않았다.
 
 ### 2-1. 앱 표 25개
 
@@ -63,11 +63,13 @@
 
 `db/109_realign.sql`(1단계)은 새 칸에 값을 복사만 하고 옛 표를 건드리지 않아서, 옛 코드가 계속 돈다. 새 코드를 배포하고 옛 리비전이 내려간 뒤 `db/manual/109_retire_old.sql`(2단계)이 그 사이에 옛 표에 쌓인 값을 새 칸으로 한 번 더 옮기고 옛 표 이름을 바꾼다. 새 코드는 이 표를 읽지도 쓰지도 않는다.
 
-| 옛 표 이름 (바뀐 이름) | 합친 곳 | 109 적용 전 운영 조회 (행 / 크기) |
-|---|---|---|
-| `answer_grounding` (`answer_grounding_old_20261110`) | `answers.grounding`, `answers.skills_used` | 315행 / 152 KB |
-| `recall_feedback` (`recall_feedback_old_20261110`) | `recall_notices.feedback_*` | 1행 / 48 KB |
-| `issue_table_rejections` (`issue_table_rejections_old_20261110`) | `approvals.comment`, `approvals.decided_by`, `approvals.decided_at` | 2행 / 32 KB |
+**운영 DB 적용 기록(2026-11-10~11-11).** 1단계는 2026-11-10 밤에 적용했고, 새 칸 9개와 색인 3개가 생겼으며 `answers.grounding`은 371행 중 371행이 채워졌다. 새 코드를 배포하고 옛 리비전을 내린 뒤 2단계를 2026-11-11 00:42에 실행했다. 옛 표 3개의 이름이 `_old_20261110`으로 바뀌었고 이때 `public` 표는 34개였으며 `answers`는 519행 중 519행이 채워졌고 오류 로그는 0건이었다. 옛 표는 2026-11-11에 삭제했다. 삭제 전에 옛 표의 행이 새 칸에 빠진 것이 0건임을 확인했고, 삭제 뒤 `public` 표는 31개, 오류 로그 0건, `/health` 200이었다. 코드가 쓰지 않아 지우기로 한 색인 7개가 삭제된 것도 확인했다.
+
+| 옛 표 이름 (바뀐 이름) | 합친 곳 | 109 적용 전 운영 조회 (행 / 크기) | 1단계 적용 시점 행 수 |
+|---|---|---|---|
+| `answer_grounding` (`answer_grounding_old_20261110`) | `answers.grounding`, `answers.skills_used` | 315행 / 152 KB | 371행 |
+| `recall_feedback` (`recall_feedback_old_20261110`) | `recall_notices.feedback_*` | 1행 / 48 KB | 1행 |
+| `issue_table_rejections` (`issue_table_rejections_old_20261110`) | `approvals.comment`, `approvals.decided_by`, `approvals.decided_at` | 2행 / 32 KB | 2행 |
 
 ### 2-4. 마이그레이션 파일
 
@@ -896,6 +898,6 @@ Store 표 마이그레이션 버전 기록. 라이브러리가 쓴다.
 - `users.groups`를 읽는 SQL은 코드에서 찾지 못했다(4-1-1). `chunks.acl`은 `backend/graph/recall/acl.py:40-41`이 읽는다.
 - `issue_tables.thread_id`가 화면용 바깥 이름인지 그래프 이름 `<user_id>:<thread_id>`인지는 확인하지 못했다. 쓰는 값은 그래프 상태의 `thread_id`(`backend/graph/departments/review.py:316`)이고, 그 값이 어느 쪽인지는 호출부까지 따라가지 않았다.
 - 운영 DB에서 HNSW 색인 `chunks_emb_hnsw_half`가 있는지는 확인하지 못했다. 2026-11-10 운영 조회 요약에는 `chunks`의 색인 수만 있고 색인 이름은 없다.
-- 운영 DB에 `db/109_realign.sql`을 적용했는지는 이 문서가 알지 못한다. 2-1의 운영 조회 열은 적용 전 값이다.
+- 운영 DB에는 `db/109_realign.sql`(1단계, 2026-11-10 밤)과 2단계(2026-11-11 00:42), 옛 표 삭제(2026-11-11)를 적용했다(2-3). 2-1의 운영 조회 열은 적용 전 값이다.
 - 제약 색인의 이름(`users_pkey`, `users_login_id_key` 등)은 PostgreSQL 기본 규칙에 따라 적었고 운영 DB에서 대조하지 않았다.
 - `token_revocations`의 만료 행 정리와 `admin_role_log` 읽기 질의는 코드에서 찾지 못했다(각각 4-1-5, 4-1-4).
