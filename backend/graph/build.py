@@ -1203,23 +1203,23 @@ def build_graph(
         try:
             system = P.with_skills(grounding_system, [("근거 판정 Skill", body)])
             user = P.grounding_user(question, answer, cited, as_of, G.same_page_context(cited, retrieved), partial=partial)
-            obj = voted("grounding", "ground", lambda: ask_json(system, user)[0]) or {}
-            if obj.get("grounded") is True:
-                out["state"] = "grounded"
-            elif obj.get("grounded") is False:
-                code, claims = obj.get("reason_code"), obj.get("unsupported_sentences")
-                out.update(
-                    state="ungrounded",
-                    code=code if code in G.REASONS else G.UNSUPPORTED,
-                    detail=str(obj.get("reason") or ""),
-                    claims=[c for c in claims if isinstance(c, str) and c.strip()] if isinstance(claims, list) else [],
-                )
-            if out["state"] == "ungrounded" and out["code"] == G.UNSUPPORTED and G.caveat_only_flags(answer, out["claims"], question, [*cited, *retrieved]):
-                out.update(state="grounded", caveat_only=out["claims"])  # 받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이다(`grounding.is_caveat`). 값을 말하는 문장은 받쳐졌다
-            items = obj.get("claims")
-            out["quotes"] = [str(c.get("quote")) for c in items if isinstance(c, dict) and isinstance(c.get("quote"), str)] if isinstance(items, list) else []  # Q 형식일 때만 생긴다
-            extra = obj.get("off_topic_sentences")
-            out["off_topic"] = [c for c in extra if isinstance(c, str) and c.strip()] if isinstance(extra, list) else []
+            evidence = [*cited, *retrieved]
+            eased: list[str] = []
+
+            def one_vote() -> dict | None:
+                # 값은 받쳐졌고 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 한 표는, 다수결에 넣기 전에 받쳐진 표로 센다(`grounding.caveat_only_vote`).
+                # 표마다 꼽은 문장이 달라 합친 목록이 비어도 단서 때문에 거절되지 않는다. 값을 말하는 문장을 꼽은 표는 그대로다
+                obj = ask_json(system, user)[0]
+                sentences = G.caveat_only_vote(obj, answer, question, evidence)
+                if sentences:
+                    eased.extend(sentences)
+                    return {**obj, "grounded": True, "_caveat_only": sentences}
+                return obj
+
+            obj = voted("grounding", "ground", one_vote) or {}
+            out.update(G.read_verdict(obj, answer, question, evidence))
+            if eased and out["state"] == "grounded" and not out.get("caveat_only"):
+                out["caveat_only"] = eased
         except CostCapExceeded:
             raise
         except Exception as e:  # noqa: BLE001  호출 실패는 결론 없음으로 두고 코드 규칙 결과를 따른다

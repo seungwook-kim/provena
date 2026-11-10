@@ -1261,7 +1261,7 @@ PROMPT_SHA256 = {  # 품질 수정(PREREGISTER #28)을 넣은 프롬프트. 스�
     "CLASSIFY_SYSTEM": "e265870968c954a0e95b7fd06d73036bbb44cd0631a3dc7ad27fd659bc55e85d",
     "REWRITE_SYSTEM": "9bfc455ab98362ab486bc7cfccead687f0ab7c43bf4d9a11e20c4c7ef63e61ca",
     "JUDGE_SYSTEM": "0091429f0067887fe8587b9d3c46c1c2059f0b0c5db613cc4c6be3264bafc157",  # 11/6 정리: 겹친 판정 문장 셋을 둘로 합쳤다(아래 로그 값도 같이)
-    "ANSWER_SYSTEM": "1411210cdf2c2f5a2e630ee16e2bf0bd5fd40f62c5e3bd317e6649e0d7364004",
+    "ANSWER_SYSTEM": "5341d824c47d708f0b8b6e23eade62bfa0acffc03e77726fd7c682eebc7e1ee0",  # 11/10: 질문 대상이 표의 행에 해당하는지를 자기 단서로 덧붙이지 않는 규칙 한 줄을 더했다(아래 로그 값도 같이)
     "GROUNDING_SYSTEM": "2ceb5a0bc18ed7963a178cd41c949c55f651363c3fc67d515995e3e4ecfcb146",
 }
 NO_SPLIT = j(split=False, sub_questions=[])
@@ -1653,14 +1653,14 @@ def _chunk(i, text="x", **over):
 # ---- 꺼짐이면 품질 수정(PREREGISTER #28)을 넣은 코드와 바이트까지 같다 ----
 # 스위치를 끄고 낸 값이다. 재검색이 없는 경로는 프롬프트 상수만 PR #54(84cd02d) 것으로 되돌리면 그 커밋의 값(2c155781)과 같았다. 프롬프트를 일부러 고치면 이 값도 같이 새로 낸다
 PROMPT_LOG_SHA256 = {
-    "answer": (dict(decompose=NO_SPLIT, grounding=j(grounded=True)), "230ee9948baaf7d8cb210dfb12599207308135e8cbfa2ae3bd4d1a139f0ac667",
+    "answer": (dict(decompose=NO_SPLIT, grounding=j(grounded=True)), "25fc129b109298445a1e13101bd9d8271626550fcabdf73a5a2ce32731946f01",
                ["classify", "rewrite", "decompose", "judge", "answer", "grounding"]),
     "refuse": (dict(decompose=NO_SPLIT, judge=NO, rewrite=True), "a048c55e615c4b62760c8169b2d558d7cb8ecb96c1fa44fa805f45c6d3d44797",
                ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "rewrite", "judge"]),
-    "recover": (dict(decompose=TWO_FACTS, judge=[NO, j(sufficient=True)], rewrite=True, grounding=j(grounded=True)), "d15aae3398a8d72513c28747db1ca38b276c004bac62f3b0da799215c00865fc",
+    "recover": (dict(decompose=TWO_FACTS, judge=[NO, j(sufficient=True)], rewrite=True, grounding=j(grounded=True)), "f3699392ffcf2d3efcf52c4af9eb69b37b7498e17592d58b39f3b83ba01844ac",
                 ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "answer", "grounding"]),
     "partial": (dict(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=True, grounding=j(grounded=True)),
-                "0a132b377aec780befecc2cc4e0fb6fd03e1da47d0391af59ebdb5eef76216d6",
+                "f9aa107aa57318c3ebe706018c203fbed04fba5af88ee03fdbdd2ad82a4128d6",
                 ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "rewrite", "judge", "answer", "grounding"]),
 }
 

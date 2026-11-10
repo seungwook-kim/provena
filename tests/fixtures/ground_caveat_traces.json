@@ -1,0 +1,535 @@
+[
+ {
+  "trace": "4807636d",
+  "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 30만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+  "as_of": "2026-10-27",
+  "judge_partial": false,
+  "judge_missing": [],
+  "retrieved": [
+   {
+    "chunk_id": "905520380353f37a",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Legal Contracts > Non standard terms > $500k annual revenue",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Legal Contracts > Non standard terms > $500k annual revenue\nLegal Contracts, Non standard terms > $500k annual revenue:\n- CFO (financial approval): Signs\n- CLO (financial approval): Signs/Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L212-222"
+   },
+   {
+    "chunk_id": "9d81119a0f98e780",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Legal Contracts > Standard Terms",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Legal Contracts > Standard Terms\nLegal Contracts, Standard Terms:\n- Exec Group (functional approval): Signs\n- PAO or VP Finance (financial approval): Signs\n- CLO (financial approval): Signs/Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L188-198"
+   },
+   {
+    "chunk_id": "f7b2279a86888e7c",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving Payment > >$500K and above",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving Payment > >$500K and above\nApproving Payment, >$500K and above:\n- CFO (financial approval): X\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L175-185"
+   },
+   {
+    "chunk_id": "fdde953c7bca6352",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving expense > >$250K up to $500K",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving expense > >$250K up to $500K\nApproving expense, >$250K up to $500K:\n- VP (functional approval): Approves\n- PAO or VP Finance (financial approval): Approves/Signs\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.\n(4) Approval from function responsible for supporting associated objectives and goals.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L114-124"
+   },
+   {
+    "chunk_id": "68ef17df6892a0de",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving Payment > >$0k up to $500k",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\nApproving Payment, >$0k up to $500k:\n- PAO or VP Finance (financial approval): X\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L163-173"
+   },
+   {
+    "chunk_id": "0acdc0bbc5942410",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to initiate a new request?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to initiate a new request?\n- Login to your Okta home page.\n- Click on +New Request on the right side of the top menu.\n- Select the specific request type that matches your purchase. Each request type opens its own intake form, so the sections and required fields may vary depending on the type of request you selected.\n- Complete the requisition form\n  - a) Depending on the request type, you may be asked to complete sections such as general information, vendor details, spend information, IT security and privacy, and supporting documentation.\n- If you are the requestor, then add your name, or behalf of whom you are requesting.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "232c8b1253eb99ad",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nAny time GitLab is bound to terms and conditions, and/or, required to:\n- Pay an individual (or vendor);\n- Provide services / software;\n- Click-through terms and conditions to gain access to a tool or resource; or\n- Carry out any specific activites (e.g., keep information confidential).\nTeam Members must follow the applicable process to ensure all terms and obligations are reviewed and approved by specific stakeholders.\nGeneral examples include:\n- The purchasing of any software and/or professional services to be used by a GitLab Team Member to carry out an activity at GitLab;\n- The sale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   },
+   {
+    "chunk_id": "70a3a373cf8fd14b",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nsale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or\n- Contracts/Agreements which bind GitLab to obligations without the necessity of payment, for example: Evaluation/Trial Agreements and Non-Disclosure Agreements\nALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP INDICATING IT HAS BEEN REVIEWED AND APPROVED BY THE APPLICABLE LEGAL TEAM MEMBERS PRIOR TO SIGNING BY AN AUTHORIZED GITLAB TEAM MEMBER PER THE AUTHORIZATION MATRIX. ANY REQUEST FOR SIGNATURE WITHOUT A LEGAL STAMP WILL BE REJECTED.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   }
+  ],
+  "draft": {
+   "answer": "계약 금액 30만 달러는 자료의 '>$250K up to $500K' 구간에 들어가며, 재무 승인자는 PAO 또는 VP Finance(Approves/Signs)입니다 [fdde953c7bca6352]. 이 구간의 업무 승인자는 VP(Approves)입니다 [fdde953c7bca6352]. 다만 이 표는 지출(expense) 승인 기준이며 SaaS 계약이 지출 행에 해당하는지는 자료만으로 확인되지 않습니다. 계약 서명에는 GitLab Legal Stamp가 필요합니다 [70a3a373cf8fd14b].",
+   "citations": [
+    {
+     "chunk_id": "fdde953c7bca6352"
+    },
+    {
+     "chunk_id": "70a3a373cf8fd14b"
+    }
+   ],
+   "period_covered": true
+  },
+  "redrafts": [
+   "{\"asked\": [\"계약 금액 30만 달러일 때 업무 승인자\", \"계약 금액 30만 달러일 때 재무 승인자\"], \"picks\": [{\"fact\": \"계약 금액 30만 달러일 때 업무 승인자\", \"value\": \"VP (Approves)\", \"chunk_id\": \"fdde953c7bca6352\"}, {\"fact\": \"계약 금액 30만 달러일 때 재무 승인자\", \"value\": \"PAO 또는 VP Finance (Approves/Signs)\", \"chunk_id\": \"fdde953c7bca6352\"}], \"answer\": \"계약 금액 30만 달러는 '>$250K up to $500K' 구간에 해당하며, 업무 승인자는 VP(Approves), 재무 승인자는 PAO 또는 VP Finance(Approves/Signs)입니다 [fdde953c7bca6352]. 다만 이 구간은 지출(expense) 승인 행이며, 자료만으로는 외부 SaaS 도입 계약이 이 행에 해당하는지 확인되지 않습니다.\", \"citations\": [{\"chunk_id\": \"fdde953c7bca6352\"}], \"period_covered\": true, \"partial\": true}"
+  ],
+  "vote_groups": [
+   [
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$250K up to $500K\"}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"업무 승인자는 VP\", \"quote\": \"VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"계약 서명에는 GitLab Legal Stamp 필요\", \"quote\": \"ALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP\", \"scope\": null}], \"reason\": \"구간·승인자는 자료에 있으나 SaaS 계약이 지출 행에 해당하는지는 자료에 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"이 구간의 업무 승인자는 VP(Approves)입니다 [fdde953c7bca6352].\"]}",
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$250K up to $500K\"}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance(Approves/Signs)\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"업무 승인자는 VP(Approves)\", \"quote\": \"VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"SaaS 계약이 지출 행에 해당하는지 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}, {\"claim\": \"계약 서명에는 GitLab Legal Stamp 필요\", \"quote\": \"ALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP\", \"scope\": null}], \"reason\": \"구간과 승인자는 자료에 있으나 SaaS 계약이 지출 행인지 자료로 확인되지 않음\", \"grounded\": true, \"reason_code\": \"unsupported\", \"unsupported_sentences\": []}",
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$250K up to $500K\"}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance(Approves/Signs)\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"업무 승인자는 VP(Approves)\", \"quote\": \"VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"계약 서명에는 GitLab Legal Stamp 필요\", \"quote\": \"ALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP\", \"scope\": \"Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\"}, {\"claim\": \"SaaS 계약이 지출 행에 해당하는지는 자료로 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간과 승인자 칸은 본문에 있으나 SaaS 계약이 지출 행에 해당하는지는 자료에 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"다만 이 표는 지출(expense) 승인 기준이며 SaaS 계약이 지출 행에 해당하는지는 자료만으로 확인되지 않습니다 [fdde953c7bca6352].\"]}"
+   ],
+   [
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": null}, {\"claim\": \"업무 승인자는 VP\", \"quote\": \"- VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"외부 SaaS 도입 계약이 이 행(지출 승인)에 해당\", \"quote\": \"NOTHING FOUND\", \"scope\": \"Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\"}], \"reason\": \"구간과 승인자는 받쳐지나 SaaS 계약이 지출 행에 속한다는 근거가 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"계약 금액 30만 달러는 '>$250K up to $500K' 구간에 해당하며, 업무 승인자는 VP(Approves), 재무 승인자는 PAO 또는 VP Finance(Approves/Signs)입니다 [fdde953c7bca6352].\"]}",
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$250K up to $500K\"}, {\"claim\": \"업무 승인자 VP\", \"quote\": \"- VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"외부 SaaS 도입 계약이 이 행에 해당한다는 확인\", \"quote\": \"NOTHING FOUND\", \"scope\": \"Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\"}], \"reason\": \"구간·승인자는 자료에 있으나 SaaS 계약이 지출 행에 해당하는지는 자료로 확인되지 않음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"다만 이 구간은 지출(expense) 승인 행이며, 자료만으로는 외부 SaaS 도입 계약이 이 행에 해당하는지 확인되지 않습니다.\"]}",
+    "{\"claims\": [{\"claim\": \"30만 달러는 >$250K up to $500K 구간\", \"quote\": \"Approving expense, >$250K up to $500K:\", \"scope\": null}, {\"claim\": \"업무 승인자 VP\", \"quote\": \"- VP (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"외부 SaaS 도입 계약이 지출 행에 해당하는지 자료로 확인되지 않음\", \"quote\": \"NOTHING FOUND\", \"scope\": \"When is Approval Required to Approve or Sign an Agreement or Contract > The purchasing of any software and/or professional services to be used by a GitLab Team Member\"}], \"reason\": \"구간과 승인자는 받쳐지나 SaaS 계약이 지출 행인지 자료로 확정되지 않음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"자료만으로는 외부 SaaS 도입 계약이 이 행에 해당하는지 확인되지 않습니다.\"]}"
+   ]
+  ],
+  "production": {
+   "kind": "refuse",
+   "refuse_reason": "unsupported",
+   "redraft": "rejudge_ungrounded",
+   "revise": null
+  }
+ },
+ {
+  "trace": "f178bec0",
+  "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 10만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+  "as_of": "2026-10-27",
+  "judge_partial": false,
+  "judge_missing": [],
+  "retrieved": [
+   {
+    "chunk_id": "374e90086f57050a",
+    "org": "finance",
+    "rule_seq": 1179857673,
+    "rule_title": "The GitLab Procurement Team",
+    "article": "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+    "version_id": "7e436f79a37c",
+    "version_date": "2026-10-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "The GitLab Procurement Team > The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days\n- The Procurement team negotiates SaaS contracts >$25k and one-time contracts >$100K\n  - If this step is not taken, purchase orders will not be approved until Procurement is able to negotiate\n- SLA can extend based on level of negotiation required for large and/or complex contracts, and the suppliers willingness to meet budget and benchmark indicators. For larger spend purchases, it is beneficial to engage Procurement prior to submitting the request in Zip so negotiations can start earlier.",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/"
+   },
+   {
+    "chunk_id": "2d54cd9cb28ce74a",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > Legal approval / redlines",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > Legal approval / redlines\nWhen the Legal team reviews and provides redlines to the vendor's contract, the following actions should be taken:\n- Stakeholder / Requester's Role:\n- The requester is responsible for sending any legal redlines to the vendor via email, unless any of the following apply:\n  - The Procurement team is already actively in negotiation or communication with the vendor\n  - The total contract value is > $100k\n  - Procurement comments that they are specifically sending the redlines themselves for any reason\n- If the requester sends the redlines to the vendor, it is crucial to copy the Procurement approver on the email for visibility.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "d5b22544ecea134b",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Legal Contracts > Changes to Standard Terms and Vendor Contracts\nLegal Contracts, Changes to Standard Terms and Vendor Contracts:\n- PAO or VP Finance (financial approval): Signs\n- CLO (financial approval): Signs/Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L200-210"
+   },
+   {
+    "chunk_id": "96eff1a8c833ff33",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving expense > >$50K up to $250K",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\nApproving expense, >$50K up to $250K:\n- Sr Director (functional approval): Approves\n- PAO or VP Finance (financial approval): Approves/Signs\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.\n(4) Approval from function responsible for supporting associated objectives and goals.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L102-112"
+   },
+   {
+    "chunk_id": "68ef17df6892a0de",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving Payment > >$0k up to $500k",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\nApproving Payment, >$0k up to $500k:\n- PAO or VP Finance (financial approval): X\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L163-173"
+   },
+   {
+    "chunk_id": "a94e4222885c1e82",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > Purchase requests commodity categories and sub-categories",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > Purchase requests commodity categories and sub-categories\n- Consulting, Professional Services & Training\n  - Consulting Fees\n  - Professional dues, membership fees\n  - Revenue Partner Payments\n- Finance & Legal\n  - Accounting\n  - Insurance - Business\n  - Legal\n  - Licenses & Registrations\n  - Tax Commodities\n- General & Admin\n  - Employee Benefit - Bike to work\n  - Security Deposits (Greater than 12 months)\n  - Credit Card Transaction fees\n  - Gifts & Donations\n  - Partner Growth Fees\n  - Postage & Shipping\n  - Printing & Copying\n  - Rent or Lease\n  - Coworking Space\n- Hosting\n  - Hosting Services\n- Marketing Programs\n  - Marketing Site\n  - Demand Advertising\n  - Field Events\n  - Swag\n  - Email\n  - Brand\n  - Prospecting\n  - Channel Partner Rebates",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "7275b0b9f027798b",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to request a new vendor?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to request a new vendor?\nThe process to set up a new vendor starts in Zip. Simply by creating a new purchase request you have the option to add a new vendor. Once the request has been submitted, the Procurement team would be notified and add the new vendor in Coupa.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "0acdc0bbc5942410",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to initiate a new request?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to initiate a new request?\n- Login to your Okta home page.\n- Click on +New Request on the right side of the top menu.\n- Select the specific request type that matches your purchase. Each request type opens its own intake form, so the sections and required fields may vary depending on the type of request you selected.\n- Complete the requisition form\n  - a) Depending on the request type, you may be asked to complete sections such as general information, vendor details, spend information, IT security and privacy, and supporting documentation.\n- If you are the requestor, then add your name, or behalf of whom you are requesting.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "f09eee1e65796fe5",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip\nZip is an add-on to Coupa that will streamline the approval process to ensure we are gathering all the right information to manage the associated approvals, and get you the services you need as soon as possible. As a result, you will now have visibility into your purchase requests including the ability to see status and current stage of the approval process.\nCheck this 2 Minute Zip Overview Video to learn more about Zip and how to submit a purchase request.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "8c381ff60408dda9",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip > How to access Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip > How to access Zip\nTo request access to Zip:\n- Utillize the Lumos App Store to submit a request for Zip and a separate request for Coupa]. All users requesting access to Zip also need a Coupa license to manage POs and invoices\n  - a) Enter a Justification for this access question, please describe what budget, management approvals, purchase orders and invoices approvals you will manage.\n  - b) If you require immediate Zip/Coupa access, please ping in the #coupa_help Slack channel.\n- Once you are provisioned access, Login to your Okta home page\n- Find the Zip tile.\n- Zip should open in a new tab with your user logged in.\n- The Zip main page should look like the one below.\nzip-image-1",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "232c8b1253eb99ad",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nAny time GitLab is bound to terms and conditions, and/or, required to:\n- Pay an individual (or vendor);\n- Provide services / software;\n- Click-through terms and conditions to gain access to a tool or resource; or\n- Carry out any specific activites (e.g., keep information confidential).\nTeam Members must follow the applicable process to ensure all terms and obligations are reviewed and approved by specific stakeholders.\nGeneral examples include:\n- The purchasing of any software and/or professional services to be used by a GitLab Team Member to carry out an activity at GitLab;\n- The sale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   },
+   {
+    "chunk_id": "70a3a373cf8fd14b",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nsale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or\n- Contracts/Agreements which bind GitLab to obligations without the necessity of payment, for example: Evaluation/Trial Agreements and Non-Disclosure Agreements\nALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP INDICATING IT HAS BEEN REVIEWED AND APPROVED BY THE APPLICABLE LEGAL TEAM MEMBERS PRIOR TO SIGNING BY AN AUTHORIZED GITLAB TEAM MEMBER PER THE AUTHORIZATION MATRIX. ANY REQUEST FOR SIGNATURE WITHOUT A LEGAL STAMP WILL BE REJECTED.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   }
+  ],
+  "draft": {
+   "answer": "10만 달러 계약에 해당하는 승인 구간이 공개 권한표에 명확히 확인되지 않아 업무 승인자와 재무 승인자를 특정할 수 없습니다. 확인 필요.",
+   "citations": [
+    {
+     "chunk_id": "96eff1a8c833ff33"
+    }
+   ],
+   "period_covered": true
+  },
+  "redrafts": [
+   "{\"asked\": [\"10만 달러 계약의 업무 승인자\", \"10만 달러 계약의 재무 승인자\"], \"picks\": [{\"fact\": \"10만 달러 계약의 업무 승인자\", \"value\": \"Sr Director (functional approval): Approves\", \"chunk_id\": \"96eff1a8c833ff33\"}, {\"fact\": \"10만 달러 계약의 재무 승인자\", \"value\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"chunk_id\": \"96eff1a8c833ff33\"}], \"answer\": \"10만 달러는 >$50K up to $250K 구간에 속하므로, 업무 승인자는 Sr Director이고 재무 승인자는 PAO 또는 VP Finance입니다 [96eff1a8c833ff33]. 이 구간의 승인자는 공개 판(2023-05) 기준입니다.\", \"citations\": [{\"chunk_id\": \"96eff1a8c833ff33\"}], \"period_covered\": true, \"partial\": false}"
+  ],
+  "vote_groups": [
+   [
+    "{\"claims\": [{\"claim\": \"10만 달러 계약은 >$50K up to $250K 구간\", \"quote\": \"Approving expense, >$50K up to $250K\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 Sr Director\", \"quote\": \"Sr Director (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}], \"reason\": \"10만 달러가 구간에 들고 두 승인자가 자료에 있음\", \"grounded\": true, \"reason_code\": \"\", \"unsupported_sentences\": []}",
+    "{\"claims\": [{\"claim\": \"10만 달러 계약 구간 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": \"Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 확인 필요\", \"quote\": \"Sr Director (functional approval): Approves\", \"scope\": \"Approving expense > >$50K up to $250K\"}, {\"claim\": \"재무 승인자는 확인 필요\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": \"Approving expense > >$50K up to $250K\"}], \"reason\": \"자료의 >$50K up to $250K 구간에 10만 달러가 속하므로 답의 확인 필요 판단은 근거가 부족\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"10만 달러 계약에 해당하는 승인 구간이 공개 권한표에 명확히 확인되지 않아 업무 승인자와 재무 승인자를 특정할 수 없습니다. 확인 필요.\"]}",
+    "{\"claims\": [{\"claim\": \"10만 달러 계약 구간의 승인 칸을 찾지 못함\", \"quote\": \"Approving expense, >$50K up to $250K\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 Sr Director\", \"quote\": \"Sr Director (functional approval): Approves\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}], \"reason\": \"10만 달러는 >$50K up to $250K 구간에 속하고 승인자가 자료에 있음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"10만 달러 계약에 해당하는 승인 구간이 공개 권한표에 명확히 확인되지 않아 업무 승인자와 재무 승인자를 특정할 수 없습니다. 확인 필요.\"]}"
+   ],
+   [
+    "{\"claims\": [{\"claim\": \"10만 달러는 >$50K up to $250K 구간\", \"quote\": \"Approving expense, >$50K up to $250K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 Sr Director\", \"quote\": \"- Sr Director (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"공개 판(2023-05) 기준이라는 표기\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간과 승인자는 자료에 있으나 공개 판 기준 표기는 자료 본문 근거가 아님\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"이 구간의 승인자는 공개 판(2023-05) 기준입니다.\"]}",
+    "{\"claims\": [{\"claim\": \"10만 달러는 >$50K up to $250K 구간\", \"quote\": \"Approving expense, >$50K up to $250K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 Sr Director\", \"quote\": \"- Sr Director (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"공개 판(2023-05) 기준\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"구간과 승인자는 자료에 있으나 공개 판 기준 단서는 자료 본문에 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"이 구간의 승인자는 공개 판(2023-05) 기준입니다.\"]}",
+    "{\"claims\": [{\"claim\": \"10만 달러는 >$50K up to $250K 구간\", \"quote\": \"Approving expense, >$50K up to $250K:\", \"scope\": \"Authorization Matrix (2023-05) > Approving expense > >$50K up to $250K\"}, {\"claim\": \"업무 승인자는 Sr Director\", \"quote\": \"- Sr Director (functional approval): Approves\", \"scope\": null}, {\"claim\": \"재무 승인자는 PAO 또는 VP Finance\", \"quote\": \"- PAO or VP Finance (financial approval): Approves/Signs\", \"scope\": null}, {\"claim\": \"공개 판(2023-05) 기준\", \"quote\": \"NOTHING FOUND\", \"scope\": \"Authorization Matrix (2023-05)\"}], \"reason\": \"구간과 두 승인자는 자료에 있으나 '외부 SaaS 도입'이 이 지출 승인 행에 해당하는지 판단할 근거는 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"10만 달러는 >$50K up to $250K 구간에 속하므로, 업무 승인자는 Sr Director이고 재무 승인자는 PAO 또는 VP Finance입니다 [96eff1a8c833ff33]. 이 구간의 승인자는 공개 판(2023-05) 기준입니다.\"]}"
+   ]
+  ],
+  "production": {
+   "kind": "refuse",
+   "refuse_reason": "unsupported",
+   "redraft": "rejudge_ungrounded",
+   "revise": "citation_check_failed"
+  }
+ },
+ {
+  "trace": "c02a6765",
+  "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+  "as_of": "2026-10-27",
+  "judge_partial": true,
+  "judge_missing": [
+   "외부 SaaS 도입 계약 5만 달러의 업무 승인자"
+  ],
+  "retrieved": [
+   {
+    "chunk_id": "374e90086f57050a",
+    "org": "finance",
+    "rule_seq": 1179857673,
+    "rule_title": "The GitLab Procurement Team",
+    "article": "The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days",
+    "version_id": "7e436f79a37c",
+    "version_date": "2026-10-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "The GitLab Procurement Team > The Procurement Process > Review Steps, Timeline, and Considerations > 4.B. Negotiation: 12 days\n- The Procurement team negotiates SaaS contracts >$25k and one-time contracts >$100K\n  - If this step is not taken, purchase orders will not be approved until Procurement is able to negotiate\n- SLA can extend based on level of negotiation required for large and/or complex contracts, and the suppliers willingness to meet budget and benchmark indicators. For larger spend purchases, it is beneficial to engage Procurement prior to submitting the request in Zip so negotiations can start earlier.",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/"
+   },
+   {
+    "chunk_id": "d5b22544ecea134b",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Legal Contracts > Changes to Standard Terms and Vendor Contracts",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Legal Contracts > Changes to Standard Terms and Vendor Contracts\nLegal Contracts, Changes to Standard Terms and Vendor Contracts:\n- PAO or VP Finance (financial approval): Signs\n- CLO (financial approval): Signs/Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L200-210"
+   },
+   {
+    "chunk_id": "bfbe182a1e09f681",
+    "org": "finance",
+    "rule_seq": 1130740200,
+    "rule_title": "Field Marketing and Events",
+    "article": "How Long Does it take to get my New Software Purchase Approved?",
+    "version_id": "10563f30d799",
+    "version_date": "2025-10-03",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Field Marketing and Events > How Long Does it take to get my New Software Purchase Approved?\n- Contracts greater than $25K are typically negotiated by the procurement team, unless you've already done so and the pricing is benchmarked.\n  - The negotiation, review and approval cycle typically takes 2-3 weeks based on the scope of the request. Large and/or complex contracts can take longer to negotiate.\n- Contracts less than $25K do not need to be negotiated by procurement unless there is a business reason to do so.\n  - If no negotiation is required, the review and approval cycle typically takes 1-2 weeks. Large and/or complex contracts can take longer, and this can vary wildly based on supplier input into the proces.\n- The procurement process consists of multiple approvals from different cross-functional teams, this can include finance, IT, security, and legal.",
+    "source_url": "https://handbook.gitlab.com/handbook/finance/procurement/field-marketing-events/"
+   },
+   {
+    "chunk_id": "68ef17df6892a0de",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Approving Payment > >$0k up to $500k",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\nApproving Payment, >$0k up to $500k:\n- PAO or VP Finance (financial approval): X\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L163-173"
+   },
+   {
+    "chunk_id": "cd0799105880ade2",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "Transfer of funds among GitLab entities > Up to $500K",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "row",
+    "text": "Authorization Matrix (2023-05) > Transfer of funds among GitLab entities > Up to $500K\nTransfer of funds among GitLab entities, Up to $500K:\n- PAO or VP Finance (financial approval): Approves",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L458-468"
+   },
+   {
+    "chunk_id": "a94e4222885c1e82",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > Purchase requests commodity categories and sub-categories",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > Purchase requests commodity categories and sub-categories\n- Consulting, Professional Services & Training\n  - Consulting Fees\n  - Professional dues, membership fees\n  - Revenue Partner Payments\n- Finance & Legal\n  - Accounting\n  - Insurance - Business\n  - Legal\n  - Licenses & Registrations\n  - Tax Commodities\n- General & Admin\n  - Employee Benefit - Bike to work\n  - Security Deposits (Greater than 12 months)\n  - Credit Card Transaction fees\n  - Gifts & Donations\n  - Partner Growth Fees\n  - Postage & Shipping\n  - Printing & Copying\n  - Rent or Lease\n  - Coworking Space\n- Hosting\n  - Hosting Services\n- Marketing Programs\n  - Marketing Site\n  - Demand Advertising\n  - Field Events\n  - Swag\n  - Email\n  - Brand\n  - Prospecting\n  - Channel Partner Rebates",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "7275b0b9f027798b",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to request a new vendor?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to request a new vendor?\nThe process to set up a new vendor starts in Zip. Simply by creating a new purchase request you have the option to add a new vendor. Once the request has been submitted, the Procurement team would be notified and add the new vendor in Coupa.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "0acdc0bbc5942410",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "Zip - Getting Started > How to initiate a new request?",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > Zip - Getting Started > How to initiate a new request?\n- Login to your Okta home page.\n- Click on +New Request on the right side of the top menu.\n- Select the specific request type that matches your purchase. Each request type opens its own intake form, so the sections and required fields may vary depending on the type of request you selected.\n- Complete the requisition form\n  - a) Depending on the request type, you may be asked to complete sections such as general information, vendor details, spend information, IT security and privacy, and supporting documentation.\n- If you are the requestor, then add your name, or behalf of whom you are requesting.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "232c8b1253eb99ad",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nAny time GitLab is bound to terms and conditions, and/or, required to:\n- Pay an individual (or vendor);\n- Provide services / software;\n- Click-through terms and conditions to gain access to a tool or resource; or\n- Carry out any specific activites (e.g., keep information confidential).\nTeam Members must follow the applicable process to ensure all terms and obligations are reviewed and approved by specific stakeholders.\nGeneral examples include:\n- The purchasing of any software and/or professional services to be used by a GitLab Team Member to carry out an activity at GitLab;\n- The sale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   },
+   {
+    "chunk_id": "70a3a373cf8fd14b",
+    "org": "finance",
+    "rule_seq": 3054269612,
+    "rule_title": "Authorization Matrix (2023-05)",
+    "article": "When is Approval Required to Approve or Sign an Agreement or Contract",
+    "version_id": "0a3de8337541",
+    "version_date": "2023-05-11",
+    "fetched_at": "2026-10-31",
+    "kind": "article",
+    "text": "Authorization Matrix (2023-05) > When is Approval Required to Approve or Sign an Agreement or Contract\nsale of any GitLab software and/or professional services;\n- Employment, contracting or subcontract agreements; and/or\n- Contracts/Agreements which bind GitLab to obligations without the necessity of payment, for example: Evaluation/Trial Agreements and Non-Disclosure Agreements\nALL AGREEMENTS TO BE EXECUTED MUST INCLUDE THE GITLAB LEGAL STAMP INDICATING IT HAS BEEN REVIEWED AND APPROVED BY THE APPLICABLE LEGAL TEAM MEMBERS PRIOR TO SIGNING BY AN AUTHORIZED GITLAB TEAM MEMBER PER THE AUTHORIZATION MATRIX. ANY REQUEST FOR SIGNATURE WITHOUT A LEGAL STAMP WILL BE REJECTED.",
+    "source_url": "https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md"
+   },
+   {
+    "chunk_id": "f09eee1e65796fe5",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip\nZip is an add-on to Coupa that will streamline the approval process to ensure we are gathering all the right information to manage the associated approvals, and get you the services you need as soon as possible. As a result, you will now have visibility into your purchase requests including the ability to see status and current stage of the approval process.\nCheck this 2 Minute Zip Overview Video to learn more about Zip and how to submit a purchase request.",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   },
+   {
+    "chunk_id": "8c381ff60408dda9",
+    "org": "business-technology",
+    "rule_seq": 2551781254,
+    "rule_title": "Zip End Users Guide",
+    "article": "What is Zip > How to access Zip",
+    "version_id": "9270459a6930",
+    "version_date": "2026-05-27",
+    "fetched_at": "2026-11-09",
+    "kind": "article",
+    "text": "Zip End Users Guide > What is Zip > How to access Zip\nTo request access to Zip:\n- Utillize the Lumos App Store to submit a request for Zip and a separate request for Coupa]. All users requesting access to Zip also need a Coupa license to manage POs and invoices\n  - a) Enter a Justification for this access question, please describe what budget, management approvals, purchase orders and invoices approvals you will manage.\n  - b) If you require immediate Zip/Coupa access, please ping in the #coupa_help Slack channel.\n- Once you are provisioned access, Login to your Okta home page\n- Find the Zip tile.\n- Zip should open in a new tab with your user logged in.\n- The Zip main page should look like the one below.\nzip-image-1",
+    "source_url": "https://handbook.gitlab.com/handbook/business-technology/enterprise-applications/guides/zip-guide/"
+   }
+  ],
+  "draft": {
+   "answer": "제공된 자료에는 5만 달러 계약의 업무 승인자와 재무 승인자를 정한 권한표 행이 없어서 확인할 수 없습니다. 승인 권한표는 구간별로 나뉘며, 자료에 있는 구간은 $0k~$500k의 지급 승인 행입니다. 해당 행은 재무 승인자로 PAO 또는 VP Finance를 X로 표시하지만 승인권자로 적혀 있지 않아 질문에 답할 수 없습니다.",
+   "citations": [
+    {
+     "chunk_id": "68ef17df6892a0de"
+    }
+   ],
+   "period_covered": true
+  },
+  "redrafts": [
+   "{\"asked\": [\"외부 SaaS 계약 금액 5만 달러의 업무 승인자\", \"외부 SaaS 계약 금액 5만 달러의 재무 승인자\"], \"picks\": [{\"fact\": \"5만 달러 계약의 업무 승인자\", \"value\": \"자료에 없음\", \"chunk_id\": \"374e90086f57050a\"}, {\"fact\": \"5만 달러 계약의 재무 승인자\", \"value\": \"PAO or VP Finance (금액 구간 자료 없음)\", \"chunk_id\": \"68ef17df6892a0de\"}], \"answer\": \"자료에서 5만 달러 계약의 업무 승인자는 확인할 수 없습니다. 재무 승인 칸에는 PAO 또는 VP Finance가 X로 표시되어 있으나, 승인자로 적힌 칸이 아니어서 확인 필요합니다. [68ef17df6892a0de]\", \"citations\": [{\"chunk_id\": \"374e90086f57050a\"}, {\"chunk_id\": \"68ef17df6892a0de\"}], \"partial\": true, \"period_covered\": true}"
+  ],
+  "vote_groups": [
+   [
+    "{\"claims\": [{\"claim\": \"5만 달러 계약 행이 자료에 없어 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}, {\"claim\": \"$0k~$500k 지급 승인 행이 있음\", \"quote\": \"Approving Payment, >$0k up to $500k:\", \"scope\": \"Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\"}, {\"claim\": \"해당 행 재무 승인자는 PAO 또는 VP Finance로 X 표시\", \"quote\": \"PAO or VP Finance (financial approval): X\", \"scope\": null}, {\"claim\": \"승인권자로 적혀 있지 않아 답할 수 없음\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"해당 구간의 재무 승인 칸은 X이며 승인자 값이 자료에 없음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"해당 행은 재무 승인자로 PAO 또는 VP Finance를 X로 표시하지만 승인권자로 적혀 있지 않아 질문에 답할 수 없습니다.\"]}",
+    "{\"claims\": [{\"claim\": \"5만 달러 계약 행이 자료에 없어 확인 불가\", \"quote\": \"NOTHING FOUND\", \"scope\": null}, {\"claim\": \"$0k~$500k 지급 승인 행 존재\", \"quote\": \"Approving Payment, >$0k up to $500k:\", \"scope\": \"Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\"}, {\"claim\": \"재무 승인자로 PAO 또는 VP Finance를 X로 표시\", \"quote\": \"PAO or VP Finance (financial approval): X\", \"scope\": null}, {\"claim\": \"승인권자로 적혀 있지 않아 답할 수 없음\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"5만 달러 구간 행은 없고 해당 행은 X 표시뿐이라 승인권자 답은 자료에 없음\", \"grounded\": false, \"reason_code\": \"out_of_period\", \"unsupported_sentences\": [\"제공된 자료에는 5만 달러 계약의 업무 승인자와 재무 승인자를 정한 권한표 행이 없어서 확인할 수 없습니다.\", \"해당 행은 재무 승인자로 PAO 또는 VP Finance를 X로 표시하지만 승인권자로 적혀 있지 않아 질문에 답할 수 없습니다.\"]}",
+    "{\"claims\": [{\"claim\": \"5만 달러 계약 행이 자료에 없다\", \"quote\": \"NOTHING FOUND\", \"scope\": null}, {\"claim\": \"$0k~$500k 지급 승인 행이 있다\", \"quote\": \"Approving Payment, >$0k up to $500k:\", \"scope\": \"finance / Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k\"}, {\"claim\": \"재무 승인자로 PAO 또는 VP Finance가 X로 표시\", \"quote\": \"PAO or VP Finance (financial approval): X\", \"scope\": null}, {\"claim\": \"해당 행은 승인권자로 적혀 있지 않다\", \"quote\": \"NOTHING FOUND\", \"scope\": null}], \"reason\": \"5만 달러 행 부재 주장은 자료 확인, 나머지 값은 본문에 있음\", \"grounded\": false, \"reason_code\": \"unsupported\", \"unsupported_sentences\": [\"제공된 자료에는 5만 달러 계약의 업무 승인자와 재무 승인자를 정한 권한표 행이 없어서 확인할 수 없습니다.\", \"해당 행은 재무 승인자로 PAO 또는 VP Finance를 X로 표시하지만 승인권자로 적혀 있지 않아 질문에 답할 수 없습니다.\"], \"off_topic_sentences\": []}"
+   ]
+  ],
+  "production": {
+   "kind": "refuse",
+   "refuse_reason": "unsupported",
+   "redraft": "citation_check_failed",
+   "revise": "citation_check_failed"
+  }
+ }
+]
