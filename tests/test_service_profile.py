@@ -70,7 +70,7 @@ def test_service_values_match_the_measured_arguments():
 def test_measured_args_are_the_61_51_setting():
     _, args = measured_args()
     assert (args.effort, args.effort_by_task) == ("none", "decompose=low,answer=low,judge=low")
-    assert (args.llm_deadline, args.llm_hedge, args.llm_retries, args.answer_wait, args.answer_budget) == ("8", "3.5", "2", 5.5, 8.0)
+    assert (args.llm_deadline, args.llm_hedge, args.llm_retries, args.answer_wait, args.answer_budget) == ("8", "3.5", "2", 4.0, 6.5)
     assert args.judge_quote and args.answer_best2 and args.best2_samedoc and args.judge_vote and args.max_research == 1
 
 

@@ -2,7 +2,7 @@
 
 - C 검색 hedge(`SEARCH_HEDGE`): 임베딩 + 벡터 질의가 늦으면 같은 일을 한 번 더 보내 먼저 온 결과를 쓴다. 결과는 꺼짐과 같다.
 - E 그래프 밖 왕복(`CHAT_FINAL_FROM_STREAM`, `ANSWER_SAVE_ONE_CONN`): 최종 상태 재조회와 답 저장 연결 수를 줄인다. 저장 내용은 같다.
-- A 답 대기 시간은 서비스 기본값을 바꾸지 않는다.
+- A 답 대기 시간은 서비스 기본값(4.0초, 예산 6.5초)이다.
 각 스위치는 꺼진 상태가 지금과 같다는 시험을 함께 둔다.
 """
 from __future__ import annotations
@@ -442,16 +442,16 @@ def test_answer_save_one_conn_on_falls_back_for_a_store_without_the_method(monke
     assert [c[0] for c in st.calls] == ["save", "grounding"] and st.get(out["answer_id"])
 
 
-# ============================ B, A: 서비스 기본값은 그대로 ============================
+# ============================ A: 답 대기 4.0초, 예산 6.5초가 서비스 기본값(사전 등록 62.22) ============================
 
-def test_candidates_are_not_in_the_service_profile_and_nothing_turns_on():
+def test_candidates_are_not_in_the_service_profile_and_the_answer_wait_defaults_are_set():
     assert set(SP.CANDIDATE_ENV) & set(SP.SERVICE_ENV) == set()
     env: dict = {}
     SP.apply_service_profile(env)
     assert not (set(SP.CANDIDATE_ENV) & set(env))                # 서비스 설정을 채워도 후보 스위치는 켜지지 않는다
-    assert SP.SERVICE_ENV["GRAPH_ANSWER_WAIT_S"] == "5.5" and SP.SERVICE_ENV["GRAPH_ANSWER_BUDGET_S"] == "8.0" and SP.SERVICE_ENV["LLM_HEDGE_S"] == "3.5"
-    assert "--answer-wait" in SP.MEASURED_ARGS and SP.MEASURED_ARGS[SP.MEASURED_ARGS.index("--answer-wait") + 1] == "5.5"
-    assert SP.MEASURE_ONLY_ARGS == ("--answer-wait", "4.0", "--answer-budget", "6.5")
+    assert SP.SERVICE_ENV["GRAPH_ANSWER_WAIT_S"] == "4.0" and SP.SERVICE_ENV["GRAPH_ANSWER_BUDGET_S"] == "6.5" and SP.SERVICE_ENV["LLM_HEDGE_S"] == "3.5"
+    assert "--answer-wait" in SP.MEASURED_ARGS and SP.MEASURED_ARGS[SP.MEASURED_ARGS.index("--answer-wait") + 1] == "4.0"
+    assert SP.MEASURED_ARGS[SP.MEASURED_ARGS.index("--answer-budget") + 1] == "6.5"
 
 
 def test_user_given_candidate_values_survive_the_service_profile(monkeypatch):
@@ -473,5 +473,5 @@ def test_measurement_runner_takes_the_new_switches_and_the_answer_wait_arguments
 
     args = _parse(["--speculate-first", "--search-hedge", "1.5"])
     assert M.chosen_model_switches(args) == {**MODEL_OFF, "GRAPH_SPECULATE_FIRST": "1", "SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
-    args = _parse([*SP.MEASURE_ONLY_ARGS])
+    args = _parse(["--answer-wait", "4.0", "--answer-budget", "6.5"])
     assert M.chosen_model_switches(args) == {**MODEL_OFF, "GRAPH_ANSWER_WAIT_S": "4.0", "GRAPH_ANSWER_BUDGET_S": "6.5"}
