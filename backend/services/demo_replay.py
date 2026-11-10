@@ -31,6 +31,7 @@ import logging
 import os
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPLAY_DIR = ROOT / "data" / "demo_replay"
 RECORD_FILE = "recorded.jsonl"
 GENERIC_ROLE = "generic"
+STAGGER_S = 0.05  # 재생에서 같은 키의 n번째 변형을 n*STAGGER_S초 늦춰 낸다(녹화 때의 완료 순서를 재현)
 DEFAULT_FAKE_TEXT = "(가짜 모델 응답) 합성 시험용 답변입니다. 실제 핸드북 근거가 아닙니다."
 _TRUE = ("1", "true", "yes", "on")
 _TASK = re.compile(r"\[\[task:(\w+)\]\]")
@@ -133,14 +135,19 @@ class ReplayStore:
 
     def pick(self, key: str) -> dict | None:
         """그 키의 녹화 줄. 응답 변형이 여럿이면 부를 때마다 차례로 돌려가며 낸다(재생이 녹화 때처럼 여러 답을 섞어 쓰게)."""
+        return self.pick_ranked(key)[0]
+
+    def pick_ranked(self, key: str) -> tuple[dict | None, int]:
+        """`pick`과 같되 그 줄이 같은 키 변형 중 몇 번째(0부터, 녹화 파일 순서)인지도 돌려준다. 변형이 하나 이하면 0."""
         with self._lock:
             self._refresh()
             rows = self._variants.get(key)
             if not rows:
-                return None
+                return None, 0
             n = self._turn.get(key, 0)
             self._turn[key] = n + 1
-            return rows[n % len(rows)]
+            rank = n % len(rows)
+            return rows[rank], (rank if len(rows) > 1 else 0)
 
     def __len__(self) -> int:
         with self._lock:
@@ -270,7 +277,11 @@ class ReplayChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         store = self.store if self.store is not None else get_store()
-        row = store.pick(request_key(messages))
+        row, rank = store.pick_ranked(request_key(messages))
+        if rank:
+            # 같은 요청을 동시에 여러 번 보내는 단계(판정 다수결, 근거 판정, 답 두 번 쓰기)는 녹화 파일의 순서가 그 호출들이 끝난 순서다.
+            # 재생은 즉시 돌아와 스레드 경쟁으로 끝나는 순서가 뒤섞이므로, 몇 번째 변형인지에 비례해 늦춰 녹화 때와 같은 순서로 끝나게 한다(0원).
+            time.sleep(rank * STAGGER_S)
         if row is not None:
             self.hits += 1
             text = str(row["response"])
