@@ -99,7 +99,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_MODEL` | `voyage-4` | API(1024차원, 키 `VOYAGE_API_KEY`). 비교 후보: `Snowflake/snowflake-arctic-embed-l-v2.0`(비교용 로컬 모델, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로), `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, 기준선 `BAAI/bge-m3` |
 | `VOYAGE_API_KEY` | 비움 | voyage-4 질문 임베딩. 부를 때 읽고 어디에도 찍지 않는다. 없으면 EC-09 |
 | `SEARCH_LINK_N` | `2` | 링크 확장으로 바꿀 뒤 자리 수. `0`이면 끈다 |
-| `SEARCH_RANGE_N` | `3` | 금액 구간 조회로 바꿀 뒤 자리 수 상한. `0`이면 끈다 |
+| `SEARCH_RANGE_N` | `3`(데모 모드는 `0`) | 금액 구간 조회로 바꿀 뒤 자리 수 상한. `0`이면 끈다. 데모 모드(키 없음 또는 `DEMO_MODE=1`)의 녹화가 이 조회를 넣기 전 것이라 값을 비우면 데모에서만 끈다 |
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |

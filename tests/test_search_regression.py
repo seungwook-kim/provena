@@ -44,7 +44,10 @@ def got():
     with pytest.MonkeyPatch.context() as mp:
         for k in SEARCH_ENV:
             mp.delenv(k, raising=False)
-        cfg = SearchConfig.from_env()                       # 서비스 warmup()과 같은 설정 읽기
+        with pytest.MonkeyPatch.context() as keyed:         # 서비스 기본 설정은 실제 키가 있을 때의 값이다(키 없는 데모는 금액 구간 조회를 끈다). 설정을 읽는 동안만 키가 있는 것으로 본다
+            keyed.delenv("DEMO_MODE", raising=False)
+            keyed.setenv("LLM_API_KEY", "test-not-a-real-key")
+            cfg = SearchConfig.from_env()                   # 서비스 warmup()과 같은 설정 읽기
         searcher, _ = rf.make_searcher(rows, docs, vec, cfg=cfg)
         mp.setattr(sys.modules["backend.rag.retrieve.search"], "_searcher", searcher)   # search()가 이 검색기를 쓴다(warmup·DB 없이)
         res, traces = rf.run(contract_search, items, subs, load_exclusions(rf.ROOT / "evals" / "exclusions.json"))
