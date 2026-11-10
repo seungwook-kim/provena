@@ -413,11 +413,13 @@ describe('React authentication and session isolation', () => {
     expect(sessionStorage.getItem('unrelated')).toBe('keep')
   })
 
-  it.each([403, 500, 200])('does not claim logout success for HTTP %s; allows retry', async status => {
+  it.each([[403, '권한이 없습니다'], [500, '서버 오류'], [200, '로그아웃 완료를 확인하지 못했습니다']])('does not claim logout success for HTTP %s; allows retry', async (status, expected) => {
     await authenticated()
     server.logoutStatus = status
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
-    expect((await screen.findByRole('alert')).textContent).toContain('종료를 확인')
+    const text = (await screen.findByRole('alert')).textContent
+    expect(text).toContain(expected)
+    expect((text.match(/확인하지 못했습니다/g) || []).length).toBeLessThanOrEqual(1)
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
     server.logoutStatus = 204

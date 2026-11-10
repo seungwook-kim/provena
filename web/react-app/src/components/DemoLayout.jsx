@@ -28,7 +28,7 @@ function SessionExitControl({ demoMode }) {
     try {
       await signOut()
     } catch (logoutError) {
-      const message = `로그아웃 종료를 확인하지 못했습니다. ${logoutError.message || '다시 시도해 주세요.'}`
+      const message = logoutError.message || '로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.'
       navigate(returnTo, { replace: true, state: { logoutError: message } })
     }
   }

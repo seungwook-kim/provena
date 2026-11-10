@@ -10,3 +10,12 @@ describe('내 계정 팝업 CSS', () => {
     expect(css).toMatch(/\.account-menu-info dd\{[^}]*overflow-wrap:anywhere/)
   })
 })
+
+describe('로그아웃 실패 문구 CSS', () => {
+  it('상위 nowrap 상속을 끊고 좁은 화면에서 화면 밖으로 나가지 않는다', () => {
+    const css = readFileSync('src/styles.css', 'utf8')
+    const box = css.match(/\.demo-logout-error\{[^}]*\}/)[0]
+    expect(box).toContain('white-space:normal')
+    expect(box).toContain('max-width:min(320px,calc(100vw - 48px))')
+  })
+})
