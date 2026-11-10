@@ -64,6 +64,7 @@ python -m backend.graph.recall.process_pending [--limit 50] [--force]
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (Claude Code) | 리콜 판정 입력의 개정 전후 본문과 섹션 제목에 입력 정화, 판정 설명에 출력 검사(`guard_explanation(sources=...)`, 이유 `injected_instruction`) 추가(사전 등록 62.26) | - |
 | 2026-11-09 | 김승욱 (Claude Code) | 리콜 그래프·판정기·저장소·웹훅·검토함·하루 요약·의견·함께 볼 정책 후보·변경 감시·영향 미리보기와 라우터를 구현하고 `db/120_answers_recall.sql`을 더했다. 판정 설명 검사(지시문·표지·다른 사용자 값)와 판정·코드 규칙 불일치 교차 검사를 넣었다. 시험은 `tests/test_recall_*.py`, `test_api_recalls.py`, `test_api_changes.py`, `test_snapshot_diff.py`와 실제 Postgres용 `test_recall_pg.py`(`PROVENA_TEST_DATABASE_URL`이 있을 때만) | 미정 |
 
 ## 문제 기록 (최신이 위)

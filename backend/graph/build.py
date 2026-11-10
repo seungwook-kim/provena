@@ -485,7 +485,13 @@ def build_graph(
         reason = state.get("judge_reason") or None
         seen = P.seen_titles(state.get("chunks") or []) if reason else []
         obj, _ = ask_json(system, P.rewrite_user(state["question"], state.get("profile", {}), reason, missing=state.get("judge_missing") or (), seen=seen))
-        return obj or {}
+        obj = obj or {}
+        query = obj.get("query")
+        if reason and isinstance(query, str) and U.leaks_instruction(query, state.get("chunks") or [], state["question"]):
+            # 출력 검사(사전 등록 62.26): 재작성 결과가 이미 찾은 문서의 지시에서 온 표식·문장을 옮겼으면 그 검색어는 쓰지 않고 원 질문으로 검색한다
+            log.warning("재작성 검색어에서 원문 지시를 옮긴 부분을 찾아 원 질문으로 되돌린다")
+            obj = {**obj, "query": state["question"]}
+        return obj
 
     def in_background(pool: ThreadPoolExecutor, node: str, fn: Callable[[], Any]) -> Any:
         """지금의 실행 문맥(콜백, LLM 기록)을 옮겨 부른다. 기록에는 순차로 돌 때의 노드 이름으로 남긴다."""
@@ -1017,6 +1023,12 @@ def build_graph(
         ask_back = state.get("clarify_question")
         if ask_back and leaks_internal(ask_back):  # 되묻기 문장도 사용자에게 그대로 나가므로 답과 같은 유출 검사를 한다(verify를 거치지 않는 길)
             return {"kind": "refuse", "answer": MSG_REFUSE_LEAK, "citations": []}
+        if ask_back and U.scrub_enabled():  # 출력 검사(사전 등록 62.26): 되묻기에도 원문 지시에서 온 표식·문장을 옮긴 문장이 없어야 한다. 남는 문장이 없으면 거절한다
+            scrubbed, removed = U.scrub_answer(ask_back, state.get("chunks", []), state["question"])
+            if removed:
+                if not scrubbed.strip():
+                    return {"kind": "refuse", "answer": MSG_REFUSE_LEAK, "citations": []}
+                ask_back = scrubbed
         if ask_back and not clarify_has_number(ask_back):  # 숫자를 담은 되묻기는 인용 없이 수치를 말하는 것이라 거절로 바꾼다
             return {"kind": "clarify", "answer": ask_back, "citations": []}
         return {"kind": "refuse", "answer": MSG_REFUSE, "citations": []}
@@ -1173,7 +1185,7 @@ def build_graph(
     def verify(state: AgentState) -> dict:
         if leaks_internal(state.get("answer", "")):
             return {"kind": "refuse", "answer": MSG_REFUSE_LEAK, "citations": [], "dropped_citations": []}
-        if U.scrub_enabled():  # 출력 검사(GRAPH_SCRUB_OUTPUT, 기본 꺼짐): 검색 원문의 지시 문장에서 온 표식·문장을 옮긴 답 문장을 뺀다. 남는 문장이 없으면 거절한다
+        if U.scrub_enabled():  # 출력 검사(GRAPH_SCRUB_OUTPUT, 기본 켬): 검색 원문의 지시 문장에서 온 표식·문장을 옮긴 답 문장을 뺀다. 남는 문장이 없으면 거절한다
             scrubbed, removed = U.scrub_answer(state.get("answer", ""), state.get("chunks", []), state["question"])
             if removed:
                 if not scrubbed.strip():

@@ -100,7 +100,7 @@ def build_recall_graph(*, answers: Any, read_section: SectionReader | None = Non
         for a in state["affected"]:
             v = judge_.judge(a, ch, old_text, new_text)
             if not v["judge_failed"]:              # 어떤 판정기든 설명에 지시문·표지·다른 사용자 값이 섞이면 고정 문장으로 바꾸고 실패로 센다
-                text, why = guard_explanation(v["explanation"], row=a, others=state["affected"])
+                text, why = guard_explanation(v["explanation"], row=a, others=state["affected"], sources=(old_text, new_text))
                 if why:
                     v = {**v, "explanation": text, "confidence": None, "judge_failed": True, "guarded": why}
             if v["judge_failed"]:
