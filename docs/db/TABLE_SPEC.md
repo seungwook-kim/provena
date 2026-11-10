@@ -8,6 +8,7 @@
 - 코드 위치는 `파일:줄` 또는 `파일:함수`이며 2026-11-10 작업 트리에서 `grep`으로 확인했다. 찾지 못한 것은 "코드에서 찾지 못함"이라고 적었다.
 - 칼럼 표의 "키" 칸은 PK(기본키), FK(외래 키), UK(고유 제약)이다. "NULL" 칸의 `NO`는 NOT NULL이다.
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
+- 표마다 색인의 "이유가 되는 질의"는 `docs/db/QUERY_INDEX.md`의 질의-색인 대조표(코드의 SQL 약 150문장)와 같다. 대조 결과 색인이 없어 문제가 되는 질의는 없고, 쓰이지 않는 색인은 109가 지웠다.
 - RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:120-143)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
 - 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`을 적용한 DB에는 여기에 옛 표 3개가 `db/manual/109_purge_old.sql` 실행 전까지 더 남는다(2-3).
 
@@ -119,7 +120,7 @@
 | 삭제 | `token_revocations_expires_at` | `token_revocations (expires_at)` | 만료 행을 지우는 코드가 없고 조회는 `jti` 기본키로 한다(`auth_store.py:402`). 정리 작업을 만들 때 다시 만든다 |
 | 삭제 | `signup_requests_status_requested_at` | `signup_requests (status, requested_at)` | `status`로 거르는 질의가 없다. 목록(`auth_store.py:298`)은 조건 없이 전체를 읽는다 |
 | 삭제 | `recall_notices_review_idx` | `recall_notices (created_at DESC) WHERE review_status = 'pending'` | 검토함은 `notices_all()`로 전부 읽어 앱에서 거른다(`recalls.py:181-185`). 쓰는 질의가 없다 |
-| 추가 | `chunks_link_targets_gin` | `chunks USING gin (link_targets)` | 함께 볼 정책 찾기 `maintenance.py:62-69`가 `link_targets @> ARRAY[대상]`로 찾는다. 로컬 합성 데이터(chunks 30,171행)에서 chunks 전체 훑기 8.969 ms, 버퍼 26,159에서 GIN 비트맵 스캔 버퍼 56으로 줄었다(`db_explain_local.md`) |
+| 추가 | `chunks_link_targets_gin` | `chunks USING gin (link_targets)` | 함께 볼 정책 찾기 `maintenance.py:62-69`가 `link_targets @> ARRAY[대상]`로 찾는다. 로컬 합성 데이터(chunks 30,171행)에서 chunks 전체 훑기 8.969 ms, 버퍼 26,159에서 GIN 비트맵 스캔 버퍼 56으로 줄었다(`docs/db/QUERY_INDEX.md`) |
 | 추가 | `issue_tables_thread_user_idx` | `issue_tables (thread_id, user_id, approved_at DESC)` | 유일한 조회 `PgIssueTableStore.get_by_thread`의 조건과 정렬을 받는다(`backend/graph/departments/store.py:89-90`) |
 | 추가 | `recall_notices_feedback_idx` | `recall_notices (user_id, change_pattern, (changed ->> 'article'), ((changed ->> 'rule_seq')::bigint)) WHERE feedback_useful IS NOT NULL` | 의견 집계 질의 `feedback_counts`(`backend/graph/recall/store.py:357-362`). 의견이 있는 알림만 색인한다 |
 
