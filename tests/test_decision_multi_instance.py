@@ -145,10 +145,9 @@ def test_two_instances_resume_the_graph_once_and_keep_one_decision(two_servers, 
         if kind == "decision_table":
             (table_status,) = c.execute("SELECT t.status FROM approvals a JOIN decision_tables t ON t.table_id = a.target_id WHERE a.approval_id = %s", (aid,)).fetchone()
             assert table_status == status
-        else:   # 쟁점표: 승인이면 저장 1건과 반려 기록 0건, 반려면 그 반대. 두 쪽이 함께 남으면 안 된다
+        else:   # 쟁점표: 승인이면 저장 1건, 반려면 0건(반려 사유는 approvals 줄이 갖는다). 반려인데 저장이 남으면 안 된다
             saved = c.execute("SELECT count(*) FROM issue_tables WHERE thread_id = %s", (tid,)).fetchone()[0]
-            rejected = c.execute("SELECT count(*) FROM issue_table_rejections WHERE thread_id = %s", (tid,)).fetchone()[0]
-            assert (saved, rejected) == ((1, 0) if status == "approved" else (0, 1)), f"저장 {saved}건, 반려 기록 {rejected}건, 최종 {status}"
+            assert saved == (1 if status == "approved" else 0), f"저장 {saved}건, 최종 {status}"
     assert resumes[1] == 1, f"그래프가 {resumes[1]}번 재개됐다(프로세스 {resumes[0]}개): {codes}"
     assert status in ("approved", "rejected")
     if approve_a == approve_b:

@@ -1,4 +1,4 @@
-"""리콜 저장소: 처리 기록, 알림, 함께 볼 정책 후보, 웹훅 구독·전송, 의견, 하루 요약 (표는 `db/120_answers_recall.sql`).
+"""리콜 저장소: 처리 기록, 알림(사용자 의견 포함), 함께 볼 정책 후보, 웹훅 구독·전송, 하루 요약 (표는 `db/120_answers_recall.sql`).
 
 - `InMemoryRecallStore`: 시험과 DB 없는 로컬용(기본). 프로세스가 끝나면 사라진다.
 - `PgRecallStore`: `RECALL_STORE=postgres`일 때. 호출마다 연결하고 준비된 문장을 끈다(Supabase 풀러).
@@ -349,19 +349,23 @@ class PgRecallStore:
                        "AND (review_status IS NULL OR review_status = 'released') ORDER BY created_at, notice_id")
 
     # ---- 의견
+    # 의견은 알림(recall_notices)의 feedback_* 칸이다. 알림당 한 줄이고 다시 보내면 덮어쓴다. 섹션(rule_seq, article)과 변경 유형은 알림이 이미 갖고 있다.
     def feedback_put(self, rec):
-        cols = [c for c in FEEDBACK_COLUMNS if c != "created_at"]
-        self._q(f"INSERT INTO recall_feedback ({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))}) "
-                "ON CONFLICT (notice_id) DO UPDATE SET useful = EXCLUDED.useful, reason = EXCLUDED.reason, given_by = EXCLUDED.given_by, "
-                "created_at = now()", tuple(rec.get(c) for c in cols))
+        self._q("UPDATE recall_notices SET feedback_useful = %s, feedback_reason = %s, feedback_by = %s, feedback_at = now() "
+                "WHERE notice_id = %s", (bool(rec["useful"]), rec.get("reason") or "", rec.get("given_by"), rec["notice_id"]))
 
     def feedback_counts(self, user_id, rule_seq, article, pattern):
-        rows = self._q("SELECT useful FROM recall_feedback WHERE user_id = %s AND rule_seq = %s AND article = %s AND pattern = %s",
-                       (user_id, int(rule_seq), article, pattern))
+        # 식이 recall_notices_feedback_idx 의 식과 같아야 부분 색인을 탄다
+        rows = self._q("SELECT feedback_useful AS useful FROM recall_notices WHERE user_id = %s AND change_pattern = %s "
+                       "AND (changed ->> 'article') = %s AND ((changed ->> 'rule_seq')::bigint) = %s AND feedback_useful IS NOT NULL",
+                       (user_id, pattern, article, int(rule_seq)))
         return _counts(rows)
 
     def feedback_list(self):
-        return self._q(f"SELECT {', '.join(FEEDBACK_COLUMNS)} FROM recall_feedback ORDER BY created_at")
+        return self._q("SELECT notice_id, user_id, answer_id, ((changed ->> 'rule_seq')::bigint) AS rule_seq, (changed ->> 'article') AS article, "
+                       "change_pattern AS pattern, severity, feedback_useful AS useful, COALESCE(feedback_reason, '') AS reason, "
+                       "feedback_by AS given_by, feedback_at AS created_at FROM recall_notices WHERE feedback_useful IS NOT NULL "
+                       "ORDER BY feedback_at, notice_id")
 
     # ---- 하루 요약
     def digest_add(self, rec):

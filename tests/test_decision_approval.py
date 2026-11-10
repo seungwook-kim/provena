@@ -357,12 +357,11 @@ def pg_admin_url():
 
 
 OWNER, ANON, OWNER_DB = "provena_d5_owner", "provena_d5_anon", "provena_d5_db"
-RLS_TABLES = ("decision_tables", "approvals", "issue_tables", "issue_table_rejections")
+RLS_TABLES = ("decision_tables", "approvals", "issue_tables")
 INTRUDER_INSERT = {
     "decision_tables": "INSERT INTO decision_tables (table_id, rule_seq, version_id, cells) VALUES ('침입', 1, 'v', '[]')",
     "approvals": "INSERT INTO approvals (approval_id, kind, thread_id, target_id) VALUES ('침입', 'issue_table', '침입', '침입')",
     "issue_tables": "INSERT INTO issue_tables (approval_id, thread_id, user_id, request, issue_rows) VALUES ('침입', 't', 'u', 'r', '[]')",
-    "issue_table_rejections": "INSERT INTO issue_table_rejections (approval_id, thread_id, user_id) VALUES ('침입', 't', 'u')",
 }
 
 
@@ -399,7 +398,6 @@ def _seed_all_tables(url: str) -> None:
         c.execute("INSERT INTO decision_tables (table_id, rule_seq, version_id, cells) VALUES (%s, 1, 'v', '[]')", (f"s-{tag}",))
         c.execute("INSERT INTO approvals (approval_id, kind, thread_id, status, target_id) VALUES (%s, 'issue_table', %s, 'approved', 's')", (f"s-{tag}", f"s-{tag}"))
         c.execute("INSERT INTO issue_tables (approval_id, thread_id, user_id, request, issue_rows) VALUES (%s, 't', 'u', 'r', '[]')", (f"s-{tag}",))
-        c.execute("INSERT INTO issue_table_rejections (approval_id, thread_id, user_id) VALUES (%s, 't', 'u')", (f"s-{tag}",))
 
 
 def test_postgres_runs_on_a_real_server_as_a_plain_owner(pg_url, capsys):
@@ -434,7 +432,7 @@ def test_postgres_rls_blocks_public_key_role_but_not_the_owner(pg_admin_url, pg_
     with psycopg.connect(_role_url(pg_admin_url, ANON, OWNER_DB), autocommit=True) as anon:
         assert anon.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
         assert anon.execute(f"DELETE FROM {table}").rowcount == 0
-        col = "reason" if table == "issue_table_rejections" else "status" if table in ("approvals", "decision_tables") else "request"
+        col = "status" if table in ("approvals", "decision_tables") else "request"
         assert anon.execute(f"UPDATE {table} SET {col} = 'x'").rowcount == 0
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             anon.execute(INTRUDER_INSERT[table])
@@ -457,12 +455,16 @@ def test_postgres_issue_table_store_roundtrip_under_rls(pg_url):
     later = store.save(approval_id=f"a2-{tid}", **{**args, "as_of": None})
     latest = store.get_by_thread(tid, "u1")
     assert latest["table_id"] == later and latest["as_of"] is None
-    store.record_rejection(approval_id=f"r1-{tid}", thread_id=tid, user_id="u1", reason="첫 사유", decided_by="admin-1")
-    store.record_rejection(approval_id=f"r1-{tid}", thread_id=tid, user_id="u1", reason="둘째 사유", decided_by="admin-2")
     import psycopg
 
+    with psycopg.connect(pg_url, autocommit=True) as c:      # 반려 사유는 승인함 줄에 쓴다(별도 표 없음). 줄이 없으면 아무것도 쓰지 않는다
+        store.record_rejection(approval_id=f"none-{tid}", thread_id=tid, user_id="u1", reason="줄 없음", decided_by="admin-1")
+        assert c.execute("SELECT count(*) FROM approvals WHERE approval_id = %s", (f"none-{tid}",)).fetchone()[0] == 0
+        c.execute("INSERT INTO approvals (approval_id, kind, thread_id, status, target_id) VALUES (%s, 'issue_table', %s, 'rejected', 'x')", (f"r1-{tid}", tid))
+    store.record_rejection(approval_id=f"r1-{tid}", thread_id=tid, user_id="u1", reason="첫 사유", decided_by="admin-1")
+    store.record_rejection(approval_id=f"r1-{tid}", thread_id=tid, user_id="u1", reason="둘째 사유", decided_by="admin-2")
     with psycopg.connect(pg_url) as c:
-        assert c.execute("SELECT reason, decided_by FROM issue_table_rejections WHERE thread_id = %s", (tid,)).fetchall() == [("첫 사유", "admin-1")]
+        assert c.execute("SELECT comment, decided_by FROM approvals WHERE thread_id = %s", (tid,)).fetchall() == [("첫 사유", "admin-1")]
         assert c.execute("SELECT count(*) FROM issue_tables WHERE thread_id = %s", (tid,)).fetchone()[0] == 2
 
 
