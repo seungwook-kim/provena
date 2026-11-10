@@ -640,9 +640,16 @@ def _vote_key(task: str, obj: dict) -> tuple:
 
 
 def votes_settled(task: str, objs: list[dict]) -> bool:
-    """결론이 같은 표가 둘 이상이면 확정이다(나머지 호출을 기다리지 않는다)."""
+    """결론이 같은 표가 둘 이상이면 확정이다(나머지 호출을 기다리지 않는다).
+    판정(judge)의 부족 2표(충분도 일부도 아님)는 셋째 표를 기다린다. 표가 갈렸는지 알아야 바로 거절할지 정할 수 있다(`votes_unanimous`, 사전 등록 62.C)."""
     keys = [_vote_key(task, o) for o in objs if o]
-    return any(keys.count(k) >= 2 for k in keys) or len(objs) >= VOTES
+    return any(keys.count(k) >= 2 and not (task == "judge" and k == (False, False)) for k in keys) or len(objs) >= VOTES
+
+
+def votes_unanimous(obj: dict) -> bool:
+    """합친 표(`merge_votes`)의 표가 모두 같은 결론이었는지. 다수결을 쓰지 않은 표(`_votes` 없음)는 한 표이므로 True다."""
+    v = obj.get("_votes")
+    return not isinstance(v, dict) or v.get("agree") == v.get("n")
 
 
 def _same_item(a: str, b: str) -> bool:
