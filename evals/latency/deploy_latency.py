@@ -5,6 +5,7 @@
 - 전체 시간: `done` 이벤트를 받은 시각.
 - 결과 kind(answer | clarify | refuse), 인용 수(`citation` 이벤트 개수), 비용(`done.usage.cost_usd`, 있으면)과 토큰 수.
 - 인용한 청크 id 목록(`cited_chunk_ids`, 이벤트 순서 그대로)과 그 판 날짜(`cited_version_dates`). 정답 위치 대조는 `evals/latency/deploy_citation_gold.py`가 한다(여기서는 청크 id만 남긴다).
+- 답 본문(`answer`, `token` 이벤트의 글을 이은 것). 배포 결과의 RAGAS 채점(`evals/latency/deploy_ragas.py`)이 입력으로 읽는다. 검색한 청크 본문은 스트림에 없어 남기지 않는다.
 
 규칙
 - 문항은 1번부터 순서대로 하나씩 보낸다(동시 요청 없음). thread_id를 주지 않으므로 서버가 문항마다 새 대화를 만든다.
@@ -93,7 +94,7 @@ def iter_sse(lines: Iterable[str]) -> Iterator[tuple[str, str]]:
 def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], float], deadline_s: float | None = None) -> dict[str, Any]:
     """`/chat`의 SSE 줄을 읽어 시간과 결과를 계산한다. `t0`는 요청을 보낸 시각(`clock()` 기준)."""
     out: dict[str, Any] = {"status": "no_done", "first_token_s": None, "total_s": None, "result": None, "citations": 0,
-                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0}
+                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0, "answer": ""}
 
     def guarded(src: Iterable[str]) -> Iterator[str]:
         for ln in src:
@@ -113,6 +114,7 @@ def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], 
             if out["first_token_s"] is None:
                 out["first_token_s"] = round(now, 3)
             out["answer_chars"] += len(str(data.get("text") or ""))
+            out["answer"] += str(data.get("text") or "")   # 토큰 글을 이으면 답 본문이 된다(RAGAS 채점 입력, `deploy_ragas.py`)
         elif etype == "citation":
             out["citations"] += 1
             out["cited_chunk_ids"].append(data.get("chunk_id"))
@@ -227,7 +229,7 @@ def load_dataset(path: Path = DATASET, limit: int | None = None) -> list[dict]:
 
 
 def ask_once(client, item: dict, *, use_as_of: bool, timeout_s: float, clock: Callable[[], float] = time.perf_counter) -> dict[str, Any]:
-    """한 번 보낸다. 실패 사유는 상태 문자열로 돌려주고(예외를 밖으로 내지 않음) 응답 본문은 남기지 않는다."""
+    """한 번 보낸다. 실패 사유는 상태 문자열로 돌려주고(예외를 밖으로 내지 않음) 성공하면 답 본문(`answer`)과 인용 id를 함께 돌려준다."""
     import httpx
 
     body: dict[str, Any] = {"message": item["input"]}
