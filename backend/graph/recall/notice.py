@@ -50,12 +50,26 @@ def system_prompt(use_skills: bool | None = None) -> str:
     return SYSTEM + (f"\n\n[알림 문구 Skill]\n{body}" if body else "")
 
 
+def _source(text: str | None) -> str | None:
+    """핸드북 원문(개정 전후 본문)은 다른 검색 원문과 같은 입력 정화를 거친다(사전 등록 62.26). 지시가 없으면 글자 하나도 바꾸지 않는다."""
+    from backend.graph import untrusted as U
+
+    return U.sanitize_text(text) if text and U.sanitize_enabled() else text
+
+
+def _heading(text: str | None) -> str:
+    from backend.graph import untrusted as U
+
+    value = text or ""
+    return _strip_marks(U.sanitize_heading(value) if U.sanitize_enabled() else value)
+
+
 def recall_user(row: dict, changed: ChangedArticle, old: str | None, new: str | None) -> str:
     def block(name: str, body: str | None) -> str:
         return f"[{name}]\n<<<자료>>>\n{_strip_marks(body) if body else '(없음)'}\n<<<끝>>>"
 
-    return "\n".join([f"바뀐 섹션: {changed.article} ({changed.change_type})", block("지난 질문", row.get("question")), block("지난 답", row.get("answer")),
-                      block(f"개정 전 {changed.old_version_date}", old), block(f"개정 뒤 {changed.new_version_date}", new)])
+    return "\n".join([f"바뀐 섹션: {_heading(changed.article)} ({changed.change_type})", block("지난 질문", row.get("question")), block("지난 답", row.get("answer")),
+                      block(f"개정 전 {changed.old_version_date}", _source(old)), block(f"개정 뒤 {changed.new_version_date}", _source(new))])
 
 
 def is_affected(row: dict, changed: ChangedArticle) -> bool:
@@ -91,10 +105,12 @@ def _shares_window(text: str, source: str, n: int = _WINDOW) -> bool:
     return any(source[i:i + n] in text for i in range(len(source) - n + 1))
 
 
-def guard_explanation(explanation: str, *, row: dict | None = None, others: list[dict] | None = None) -> tuple[str, str | None]:
+def guard_explanation(explanation: str, *, row: dict | None = None, others: list[dict] | None = None,
+                      sources: tuple[str | None, ...] = ()) -> tuple[str, str | None]:
     """판정 설명 검사. (설명, 바꾼 이유). 이유가 None이면 그대로다.
     - 시스템 프롬프트: 판정 시스템 프롬프트(`SYSTEM`)의 20자 이상 연속 부분이 설명에 있으면 `system_leak`.
     - injection: `CANARY-` 표지나 자료 구분자(<<<자료>>>, <<<끝>>>)가 설명에 있으면 `injected_marker`.
+    - 원문 지시: `sources`(판정에 넣은 개정 전후 본문)의 지시 문장에서 온 표식·문장을 옮겼으면 `injected_instruction`(출력 검사 `GRAPH_SCRUB_OUTPUT`, 사전 등록 62.26).
     - 다른 사용자: `others`(같은 사건의 다른 답)의 user_id나 질문이 설명에 있으면 `other_user`. `row` 자신의 id·질문·답에 있는 값은 허용한다.
     바꾼 설명은 `GUARDED_EXPLANATION`이다(맨 앞 "[판정 실패, 확인 필요]")."""
     text = _squash(explanation)
@@ -104,6 +120,11 @@ def guard_explanation(explanation: str, *, row: dict | None = None, others: list
         return GUARDED_EXPLANATION, "system_leak"
     if _CANARY.search(text) or any(d in text for d in _DELIMS):
         return GUARDED_EXPLANATION, "injected_marker"
+    if any(sources):
+        from backend.graph import untrusted as U
+
+        if U.leaks_instruction(explanation, [{"text": s} for s in sources if s], str((row or {}).get("question") or "")):
+            return GUARDED_EXPLANATION, "injected_instruction"
     own = row or {}
     own_text = " ".join(_squash(own.get(k)) for k in ("user_id", "question", "answer"))
     for o in others or []:
@@ -134,7 +155,7 @@ def judge_answer(row: dict, changed: ChangedArticle, old_text: str | None, new_t
         log.warning("리콜 판정 호출 실패: %s", type(e).__name__)
     if obj is None:
         return {"conclusion_changed": True, "explanation": FAILED_EXPLANATION, "confidence": None, "judge_failed": True}
-    explanation, why = guard_explanation(str(obj.get("explanation") or "").strip(), row=row, others=others)
+    explanation, why = guard_explanation(str(obj.get("explanation") or "").strip(), row=row, others=others, sources=(old_text, new_text))
     if why:
         log.warning("리콜 설명 차단: %s (answer_id=%s)", why, row.get("answer_id"))
         return {"conclusion_changed": obj["conclusion_changed"], "explanation": explanation, "confidence": None, "judge_failed": True, "guarded": why}
