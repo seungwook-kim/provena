@@ -365,7 +365,7 @@ def _strip_marks(text: object) -> str:
 
 def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
     """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다. 머리(제목·절)도 문서 front matter에서 오므로 같이 지운다."""
-    from backend.graph import untrusted as U  # 입력 정화(GRAPH_SANITIZE_INPUT, 기본 꺼짐): 원문의 모델 상대 지시 문장을 입력에서 뺀다. 꺼져 있으면 바뀌는 것이 없다
+    from backend.graph import untrusted as U  # 입력 정화(GRAPH_SANITIZE_INPUT, 기본 켬): 원문의 모델 상대 지시 문장을 입력에서 뺀다. 끄면(0) 바뀌는 것이 없다
 
     parts = []
     for c in chunks:
@@ -394,8 +394,14 @@ def classify_user(question: str, profile: dict) -> str:
 
 
 def seen_titles(chunks: Iterable[dict]) -> list[str]:
-    """이미 모은 근거의 문서 제목(제목 경로). 나온 순서로 한 번씩."""
-    titles = (" > ".join(t for t in (_strip_marks(c.get("rule_title")), _strip_marks(c.get("article"))) if t) for c in chunks)
+    """이미 모은 근거의 문서 제목(제목 경로). 나온 순서로 한 번씩. 이 제목은 재작성 입력에 `format_materials`를 거치지 않고 들어가므로 같은 입력 정화를 거친다(사전 등록 62.26)."""
+    from backend.graph import untrusted as U
+
+    def head(value: object) -> str:
+        text = str(value or "")
+        return _strip_marks(U.sanitize_heading(text) if U.sanitize_enabled() else text)
+
+    titles = (" > ".join(t for t in (head(c.get("rule_title")), head(c.get("article"))) if t) for c in chunks)
     return list(dict.fromkeys(t for t in titles if t))
 
 
