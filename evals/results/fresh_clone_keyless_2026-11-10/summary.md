@@ -30,6 +30,7 @@
 ## README와 다른 점
 
 1. 녹화 미적중: README는 "LLM 키 없이 기록해 둔 응답을 재생"한다고 적었으나, 5개 질문 모두 답 본문이 대체 문장이었다. 원인은 커밋 `4f03a8d`가 `ANSWER_SYSTEM`과 `redraft_user`에 규칙을 추가해 2026-11-09 녹화의 요청 키와 맞지 않게 된 것이다. 질문 벡터 녹화는 맞아서 검색과 인용은 정상이다. 조치는 재녹화이다. 녹화가 현재 코드와 맞는지는 `python -m pytest -m demo_replay`(`tests/test_demo_replay_fresh.py`)로 키 없이 확인하고, 실패하면 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`로 다시 녹화한다.
+   - 재녹화 뒤(2026-11-10 23:25, 최종 코드, 커밋 `a03ac9f`): 키 없는 재생 시험 `python -m pytest -m demo_replay`가 통과했고 데모 질문 결과가 README 기대와 일치한다. 위 1번의 대체 문장 상태는 해소되었다. 이 파일의 나머지 값은 재녹화 전(20:35~20:58) 측정 그대로다.
 2. 시험용 컨테이너 이름: 그 뒤 같은 브랜치에서 시험용 Postgres 컨테이너 이름을 무작위로 바꾸어, 전체 pytest의 errors가 0건이 되었다. 위 41 errors는 이 변경 전 main의 결과이다.
 3. 답 저장소: 기본 compose는 `RECALL_STORE`가 비어 있어 답 저장소가 메모리이다. 질문 5건을 보내도 `answers` 표는 0행이고 `threads`만 늘어난다. 표 구조(`answers.grounding` 등)는 확인했으나, 답을 저장할 때 `grounding`이 채워지는지는 이 키 없는 기본 구성으로는 확인하지 못했다.
 
