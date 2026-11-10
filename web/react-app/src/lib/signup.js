@@ -2,25 +2,43 @@ import { apiJson, apiRequest } from './api'
 
 const MIN_PASSWORD_LENGTH = 8
 const MAX_PASSWORD_BYTES = 72
+const EMAIL_RE = /^[^@\s]{1,254}@[^@\s]{1,254}\.[^@\s]{1,63}$/
 
-export function validateSignupInput({ loginId = '', email = '', password = '', passwordConfirmation = '' } = {}) {
+export function validateSignupInput({ email = '', password = '', passwordConfirmation = '' } = {}) {
   const errors = []
-  const id = (loginId || email).trim()
-  if (!id || !password || !passwordConfirmation) errors.push('아이디와 비밀번호, 비밀번호 확인을 모두 입력해 주세요.')
-  if (id.length > 64 || /\s/.test(id)) errors.push('아이디는 공백 없이 64자 이하로 입력해 주세요.')
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!normalizedEmail || !password || !passwordConfirmation) errors.push('이메일과 비밀번호를 모두 입력해 주세요.')
+  if (normalizedEmail && !EMAIL_RE.test(normalizedEmail)) errors.push('올바른 이메일 주소를 입력해 주세요.')
   const passwordBytes = typeof TextEncoder === 'function' ? new TextEncoder().encode(password).length : password.length
   if (password && (password.length < MIN_PASSWORD_LENGTH || passwordBytes > MAX_PASSWORD_BYTES)) errors.push(`비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상, UTF-8 기준 ${MAX_PASSWORD_BYTES}바이트 이하로 입력해 주세요.`)
-  if (password && passwordConfirmation && password !== passwordConfirmation) errors.push('비밀번호와 비밀번호 확인이 일치하지 않습니다.')
+  if (password && passwordConfirmation && password !== passwordConfirmation) errors.push('비밀번호가 일치하지 않습니다.')
   return errors
 }
 
-export async function requestSignup({ loginId, password, passwordConfirmation }) {
+async function csrfHeaders() {
   await apiRequest('/auth/csrf')
   const csrfToken = document.cookie.split('; ').find(cookie => cookie.startsWith('provena_csrf='))?.split('=')[1]
   if (!csrfToken) throw new Error('CSRF 토큰을 받을 수 없습니다.')
+  return { 'X-CSRF-Token': decodeURIComponent(csrfToken) }
+}
+
+export async function requestSignup({ email, password, passwordConfirmation }) {
   return apiJson('/auth/signup', {
-    method: 'POST',
-    headers: { 'X-CSRF-Token': decodeURIComponent(csrfToken) },
-    body: JSON.stringify({ login_id: loginId, password, password_confirmation: passwordConfirmation }),
+    method: 'POST', headers: await csrfHeaders(),
+    body: JSON.stringify({ login_id: email.trim().toLowerCase(), password, password_confirmation: passwordConfirmation }),
+  })
+}
+
+export async function verifySignup({ email, code }) {
+  return apiJson('/auth/signup/verify', {
+    method: 'POST', headers: await csrfHeaders(),
+    body: JSON.stringify({ login_id: email.trim().toLowerCase(), code }),
+  })
+}
+
+export async function resendSignupCode(email) {
+  return apiJson('/auth/signup/resend', {
+    method: 'POST', headers: await csrfHeaders(),
+    body: JSON.stringify({ login_id: email.trim().toLowerCase(), code: '' }),
   })
 }

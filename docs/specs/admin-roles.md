@@ -17,7 +17,7 @@
 
 - 배포판 하나에 최고 관리자 1명을 둔다(방식 B, 11/5 진형 결정). 최고 관리자만 관리자를 등록·해제한다.
 - DB 역할은 지금처럼 `user`/`admin` 둘만 쓴다(`db/101_auth_users.sql:10`). 최고 관리자는 설정값 `PROVENA_OWNER_LOGIN_ID`로 정한다.
-- 사용자 권한 관리 엔드포인트 3개(`GET /admin/users`, `POST /admin/users/{login_id}/promote`, `POST /admin/users/{login_id}/revoke`)와 가입 승인 엔드포인트 2개(`GET /admin/signup-requests`, `POST /admin/signup-requests/{login_id}/{action}`), `/me`의 `is_owner` 칸을 둔다.
+- 사용자 권한 관리 엔드포인트 3개(`GET /admin/users`, `POST /admin/users/{login_id}/promote`, `POST /admin/users/{login_id}/revoke`)와 가입 승인 엔드포인트 3개(`GET /admin/signup-requests`, `POST /admin/signup-requests/{login_id}/{action}`(기존 호환), `POST /admin/signup-requests/by-id/{request_id}/{action}`), `/me`의 `is_owner` 칸을 둔다.
 - 등록·해제 기록 표 `admin_role_log`를 둔다.
 - 배포판의 첫 계정(최고 관리자, 평가용 계정 A·B)을 만드는 일회용 명령 `python -m backend.services.create_account`를 둔다.
 - **범위 = 한 회사용 (11/5 진형 결정)**: 회사 표·회사 칸·회사별 관리자는 두지 않는다. 회사가 여럿이면 회사마다 따로 설치한다(남은 일). 근거: `users` 표에 회사 칸이 없다(`db/101_auth_users.sql:6-14`). 지불 주체를 한 조직으로 본다(`docs/PRD.md:76`, `:125`).
@@ -86,8 +86,9 @@
 | GET | `/admin/users` | 최고 관리자 | - | 200 `{"users":[{"login_id","role","is_owner","created_at"}]}`, `created_at` 오름차순 | 401, 403, 503 |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"admin","changed":true\|false}` | 401, 403, 404, 409, 503 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"user","changed":true\|false}` | 401, 403, 404, 409, 503 |
-| GET | `/admin/signup-requests` | 최고 관리자 | - | 200 `{"requests":[{"login_id","requested_at","status"}]}`. `password_hash`는 포함하지 않음 | 401, 403, 503 |
+| GET | `/admin/signup-requests` | 최고 관리자 | - | 200 `{"requests":[{"request_id","login_id","requested_at","status","email_verified"}]}`. `password_hash`는 포함하지 않음 | 401, 403, 503 |
 | POST | `/admin/signup-requests/{login_id}/{action}` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token`; `action`은 `approve` 또는 `reject` | 200 `{"login_id","status","changed":true\|false}` | 401, 403, 404, 422, 503 |
+| POST | `/admin/signup-requests/by-id/{request_id}/{action}` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token`; `action`은 `approve` 또는 `reject` | 200 `{"request_id","status","changed":true\|false}` | 401, 403, 404, 409, 422, 503 |
 
 ### 회원가입 승인 권한·보안 및 이력
 
@@ -303,3 +304,17 @@ TEST_DATABASE_URL=<로컬 시험 DB> .venv/Scripts/python.exe -m pytest -q tests
 
 - 윈도우에서 `create_account`를 `< NUL`로 돌리면 `isatty()`가 참이라 숨김 입력을 기다리며 멈춘다. 터미널 없이 돌릴 때는 빈 파이프(예: PowerShell `'' | python -m backend.services.create_account ...`)와 `PROVENA_NEW_ACCOUNT_PASSWORD`를 쓴다.
 - 로그인 503(토큰 폐기 저장소 미연결, 위 "선행 조건")은 고치지 않았다. 로컬 확인은 메모리 저장소로 했다.
+## Implemented signup request by-id endpoint
+
+The implemented administrator endpoint is:
+
+- `POST /admin/signup-requests/by-id/{request_id}/{action}`
+- `request_id` is an integer path parameter; `action` is `approve` or `reject`.
+- The caller must be authenticated, active, have the `admin` role, and be the
+  configured owner (`PROVENA_OWNER_LOGIN_ID`). A valid CSRF token is required.
+- Success is `200` with `{"request_id": <integer>, "status": "approved"|"rejected", "changed": <boolean>}`.
+- Invalid input/action is `422`; a missing request is `404`; an unverified
+  request is `409`; unavailable storage or an unsupported store operation is `503`.
+
+This endpoint identifies the signup request by numeric request id and is
+separate from `POST /admin/signup-requests/{login_id}/{action}`.

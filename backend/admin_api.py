@@ -46,6 +46,8 @@ class AdminUserStore(AuthStore, Protocol):
     def list_signup_requests(self) -> Iterable[Any]: ...
     def review_signup_request(self, login_id: str, action: str, reviewed_by: UUID | str) -> str: ...
 
+    def reset_signup_verification_by_id(self, request_id: int) -> str: ...
+
 
 def owner_configured(owner_login_id: str | None) -> bool:
     return bool(owner_login_id) and not owner_login_id.startswith(GOOGLE_LOGIN_PREFIX)
@@ -185,12 +187,15 @@ def create_admin_router(
             rows = list(store.list_signup_requests())
         except Exception:
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
-        return {"requests": [{"login_id": row.login_id, "requested_at": _iso(row.requested_at), "status": row.status} for row in rows]}
+        return {"requests": [{"request_id": getattr(row, "request_id", None), "login_id": row.login_id,
+                              "requested_at": _iso(row.requested_at), "status": row.status,
+                              "email_verified": bool(getattr(row, "email_verified", False))} for row in rows]}
 
     @router.post("/admin/signup-requests/{login_id}/{action}")
     def review_signup_request(login_id: str, action: str, request: Request, response: Response,
                               owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         require_csrf(request)
+        login_id = login_id.strip().lower() if "@" in login_id else login_id.strip()
         if action not in {"approve", "reject"}:
             raise HTTPException(status_code=422, detail="invalid signup action", headers=NO_STORE)
         response.headers["Cache-Control"] = "no-store"
@@ -200,7 +205,47 @@ def create_admin_router(
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
         if result == "missing":
             raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+        if result == "unverified":
+            raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
         return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
+
+    @router.post("/admin/signup-requests/by-id/{request_id}/reset-verification")
+    def reset_signup_verification(request_id: int, request: Request, response: Response,
+                                  owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
+        require_csrf(request)
+        reset = getattr(store, "reset_signup_verification_by_id", None)
+        if not callable(reset):
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            result = reset(request_id)
+        except Exception:
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
+        if result == "missing":
+            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+        if result == "unavailable":
+            raise HTTPException(status_code=409, detail="verification reset is unavailable", headers=NO_STORE)
+        return {"request_id": request_id, "reset": True}
+
+    @router.post("/admin/signup-requests/by-id/{request_id}/{action}")
+    def review_signup_request_by_id(request_id: int, action: str, request: Request, response: Response,
+                                    owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
+        require_csrf(request)
+        if action not in {"approve", "reject"}:
+            raise HTTPException(status_code=422, detail="invalid signup action", headers=NO_STORE)
+        review = getattr(store, "review_signup_request_by_id", None)
+        if not callable(review):
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            result = review(request_id, action, owner.user_id)
+        except Exception:
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
+        if result == "missing":
+            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+        if result == "unverified":
+            raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
+        return {"request_id": request_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
 
     return router
 

@@ -128,6 +128,15 @@ export async function reviewSignupRequest(loginId, action) {
   })
 }
 
+export async function reviewSignupRequestById(requestId, action) {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/by-id/${encodeURIComponent(requestId)}/${action}`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
+
 export async function changeAdminRole(loginId, action) {
   await apiRequest('/auth/csrf')
   const token = readCsrfToken()
