@@ -1,0 +1,24 @@
+{
+  "corpus": {
+    "chunks": 23095,
+    "changed_fields": 0,
+    "suspect_chunks": 2,
+    "examples": []
+  },
+  "cells": {
+    "cells": 363,
+    "categories": 8,
+    "changed_cells": 0,
+    "leaked_drafts": 0
+  },
+  "answers": {
+    "answers": 340,
+    "changed_answers": 0,
+    "rows_with_changed_chunk_text": 0,
+    "examples": [],
+    "rows_with_changed_index_chunk": 0,
+    "changed_answers_with_index_chunks": 0,
+    "chunks_not_in_index": 0,
+    "rows_with_changed_model_input": 0
+  }
+}

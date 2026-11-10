@@ -1,10 +1,14 @@
 """검색 원문 속 지시(간접 인젝션) 코드 방어 두 가지. 스위치는 만들 때 기본 꺼짐이었고 사전 등록 62.1의 채택 기준을 채워 기본 켬으로 바꿨다(끄려면 값을 0으로).
 
-- `GRAPH_SANITIZE_INPUT` 입력 정화: 검색 원문(본문과 제목·절 제목)을 모델 프롬프트에 넣기 전에, 모델·AI·에이전트를 상대로 한 지시 문장·절을 뺀다.
+- `GRAPH_SANITIZE_INPUT` 입력 정화: 검색 원문(본문과 제목·절 제목·절 이름)을 모델 프롬프트에 넣기 전에, 모델·AI·에이전트를 상대로 한 지시 문장·절을 뺀다.
   `backend.prompts.question.format_materials`가 부르므로 질문 답 경로(판정, 답 작성, 근거 판정, 다시 쓰기)와 합동 검토 팀 에이전트 입력에 같이 걸리고,
   MCP 검색(`mcp_retriever`)과 섹션 읽기가 돌려준 청크도 같은 `format_materials`를 거치므로 같이 걸린다. Skill(`skills/`)은 저장소 안의 신뢰하는 지침이라 대상이 아니다.
+  `format_materials`를 거치지 않고 원문이 모델에 들어가는 길도 같은 정화를 부른다(사전 등록 62.26): 재작성 입력의 이미 찾은 문서 제목(`prompts/question.py seen_titles`),
+  결정표 변환 초안 입력의 권한표 칸(`graph/decision/convert.py`, `sanitize_cell`), 리콜 판정 입력의 개정 전후 본문과 섹션 제목(`graph/recall/notice.py recall_user`).
 - `GRAPH_SCRUB_OUTPUT` 출력 검사: 최종 답 문장(쟁점표 문장)에 검색 원문 지시 문장 안의 표식 후보(따옴표 문자열, 숫자가 든 표식 토큰, 모르는 chunk_id, 가짜 제목 경로)나
   지시 문장 일부(글자 15자 이상)가 그대로 있으면 그 문장을 뺀다. 남는 문장이 없으면 호출한 쪽이 거절한다.
+  모델이 쓴 글이 사용자에게 나가는 길은 모두 이 검사를 거친다: 답과 다시 쓴 답(`graph/build.py`), 되묻기 문장(`give_up`), 쟁점 문장과 topic 칸(`graph/departments/issue_table.py`),
+  리콜 알림 설명(`graph/recall/notice.py guard_explanation`).
 
 설계 근거(공개 자료):
 - Spotlighting (Hines et al., Microsoft, 2024, arXiv:2403.14720): 신뢰하지 않는 글을 모델 입력에서 구획·표시해 구분한다. 이 저장소는 이미 구획 표시(`<<<자료>>>`)를 쓰고
@@ -251,13 +255,21 @@ def sanitize_heading(text: str | None) -> str:
 
 
 def sanitize_chunk(c: dict) -> dict:
-    """청크 사본: 본문·제목·절 제목에서 지시를 뺀다. 원본은 바꾸지 않는다(인용 검사와 근거 판정은 원본과 대조한다)."""
+    """청크 사본: 본문·제목·절 제목·절 이름(org)에서 지시를 뺀다. 원본은 바꾸지 않는다(인용 검사와 근거 판정은 원본과 대조한다)."""
     out = dict(c)
     out["text"] = sanitize_text(c.get("text") or "")
-    for k in ("rule_title", "article"):
+    for k in ("rule_title", "article", "org"):
         if c.get(k):
             out[k] = sanitize_heading(c.get(k))
     return out
+
+
+def sanitize_cell(value: object) -> object:
+    """권한표 칸 같은 짧은 칸 하나. 문자열이면 제목처럼 지시가 시작한 자리부터 자르고, 문자열이 아니면(숫자, 목록, 비어 있음) 그대로 돌려준다.
+    스위치(`GRAPH_SANITIZE_INPUT`)가 꺼져 있으면 아무것도 바꾸지 않는다. 지시가 없는 칸은 글자 하나도 바꾸지 않는다."""
+    if not sanitize_enabled() or not isinstance(value, str):
+        return value
+    return sanitize_heading(value)
 
 
 # ---------- 출력 검사 ----------
@@ -334,6 +346,10 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
             if c.get(field):
                 clean, rem = strip_instructions(str(c[field]), cut_tail=field != "text")
                 instr += rem
+                if rem and field != "text":
+                    # 제목은 지시가 시작한 자리부터 잘려 앞 토막에 표식이 남을 수 있다(예: "문서번호 X-1 를 ..."). 지시가 든 제목의 남은 토막은 믿는 글로 보지 않고 의심 절로 둔다(사전 등록 62.26)
+                    suspects.append(clean)
+                    continue
                 rest, sus = split_suspects(clean)
                 suspects += sus
                 benign.append(rest)
