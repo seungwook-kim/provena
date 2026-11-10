@@ -1,0 +1,431 @@
+[
+ {
+  "folder": "off_r1",
+  "rows": 50,
+  "p50": 7.846,
+  "p95": 14.319,
+  "max": 21.773,
+  "relevant": 25,
+  "relevant_p50": 10.576,
+  "relevant_p95": 14.384,
+  "relevant_prep_p50": 2.005,
+  "relevant_prep_p95": 7.203,
+  "relevant_judge_answer_p50": 5.108,
+  "relevant_judge_answer_p95": 10.646,
+  "relevant_after_judge_p50": 1.967,
+  "relevant_after_judge_p95": 2.594,
+  "relevant_ground_ahead_rows": 0,
+  "over_10s": [
+   [
+    2,
+    21.77
+   ],
+   [
+    6,
+    14.38
+   ],
+   [
+    13,
+    14.32
+   ],
+   [
+    31,
+    14.05
+   ],
+   [
+    5,
+    13.86
+   ],
+   [
+    40,
+    12.1
+   ],
+   [
+    30,
+    12.03
+   ],
+   [
+    36,
+    11.66
+   ],
+   [
+    9,
+    11.52
+   ],
+   [
+    4,
+    11.17
+   ],
+   [
+    38,
+    10.83
+   ],
+   [
+    1,
+    10.68
+   ],
+   [
+    39,
+    10.59
+   ],
+   [
+    37,
+    10.58
+   ]
+  ]
+ },
+ {
+  "folder": "off_r2",
+  "rows": 50,
+  "p50": 8.005,
+  "p95": 14.688,
+  "max": 28.298,
+  "relevant": 25,
+  "relevant_p50": 10.697,
+  "relevant_p95": 20.081,
+  "relevant_prep_p50": 1.723,
+  "relevant_prep_p95": 6.577,
+  "relevant_judge_answer_p50": 5.518,
+  "relevant_judge_answer_p95": 15.073,
+  "relevant_after_judge_p50": 2.047,
+  "relevant_after_judge_p95": 2.887,
+  "relevant_ground_ahead_rows": 0,
+  "over_10s": [
+   [
+    2,
+    28.3
+   ],
+   [
+    1,
+    20.08
+   ],
+   [
+    35,
+    14.69
+   ],
+   [
+    37,
+    14.59
+   ],
+   [
+    6,
+    13.81
+   ],
+   [
+    31,
+    13.46
+   ],
+   [
+    36,
+    11.99
+   ],
+   [
+    15,
+    11.82
+   ],
+   [
+    13,
+    11.55
+   ],
+   [
+    40,
+    11.11
+   ],
+   [
+    9,
+    10.77
+   ],
+   [
+    4,
+    10.7
+   ],
+   [
+    38,
+    10.7
+   ],
+   [
+    39,
+    10.64
+   ],
+   [
+    30,
+    10.51
+   ],
+   [
+    5,
+    10.41
+   ]
+  ]
+ },
+ {
+  "folder": "on_r1",
+  "rows": 50,
+  "p50": 7.265,
+  "p95": 12.392,
+  "max": 30.528,
+  "relevant": 25,
+  "relevant_p50": 8.806,
+  "relevant_p95": 13.282,
+  "relevant_prep_p50": 1.839,
+  "relevant_prep_p95": 6.017,
+  "relevant_judge_answer_p50": 2.31,
+  "relevant_judge_answer_p95": 3.25,
+  "relevant_after_judge_p50": 3.033,
+  "relevant_after_judge_p95": 9.798,
+  "relevant_ground_ahead_rows": 23,
+  "over_10s": [
+   [
+    2,
+    30.53
+   ],
+   [
+    14,
+    13.28
+   ],
+   [
+    37,
+    12.39
+   ],
+   [
+    30,
+    12.28
+   ],
+   [
+    36,
+    11.98
+   ],
+   [
+    4,
+    11.34
+   ],
+   [
+    40,
+    11.13
+   ],
+   [
+    6,
+    10.28
+   ],
+   [
+    31,
+    10.21
+   ]
+  ]
+ },
+ {
+  "folder": "on_r2",
+  "rows": 50,
+  "p50": 7.226,
+  "p95": 11.424,
+  "max": 22.871,
+  "relevant": 25,
+  "relevant_p50": 8.138,
+  "relevant_p95": 11.481,
+  "relevant_prep_p50": 1.685,
+  "relevant_prep_p95": 6.27,
+  "relevant_judge_answer_p50": 2.19,
+  "relevant_judge_answer_p95": 2.775,
+  "relevant_after_judge_p50": 3.539,
+  "relevant_after_judge_p95": 6.388,
+  "relevant_ground_ahead_rows": 23,
+  "over_10s": [
+   [
+    2,
+    22.87
+   ],
+   [
+    13,
+    11.48
+   ],
+   [
+    37,
+    11.42
+   ],
+   [
+    47,
+    11.17
+   ],
+   [
+    30,
+    10.74
+   ],
+   [
+    6,
+    10.39
+   ]
+  ]
+ },
+ {
+  "folder": "on_r3",
+  "rows": 50,
+  "p50": 7.293,
+  "p95": 12.172,
+  "max": 30.421,
+  "relevant": 25,
+  "relevant_p50": 8.395,
+  "relevant_p95": 12.172,
+  "relevant_prep_p50": 2.19,
+  "relevant_prep_p95": 6.832,
+  "relevant_judge_answer_p50": 2.229,
+  "relevant_judge_answer_p95": 3.343,
+  "relevant_after_judge_p50": 2.775,
+  "relevant_after_judge_p95": 5.981,
+  "relevant_ground_ahead_rows": 23,
+  "over_10s": [
+   [
+    2,
+    30.42
+   ],
+   [
+    30,
+    12.3
+   ],
+   [
+    40,
+    12.17
+   ],
+   [
+    37,
+    12.12
+   ],
+   [
+    13,
+    11.33
+   ],
+   [
+    36,
+    10.81
+   ],
+   [
+    47,
+    10.47
+   ],
+   [
+    6,
+    10.24
+   ],
+   [
+    31,
+    10.01
+   ]
+  ]
+ },
+ {
+  "folder": "sort_r1",
+  "rows": 50,
+  "p50": 7.098,
+  "p95": 14.921,
+  "max": 31.341,
+  "relevant": 25,
+  "relevant_p50": 8.839,
+  "relevant_p95": 14.921,
+  "relevant_prep_p50": 2.448,
+  "relevant_prep_p95": 6.073,
+  "relevant_judge_answer_p50": 2.34,
+  "relevant_judge_answer_p95": 3.357,
+  "relevant_after_judge_p50": 3.276,
+  "relevant_after_judge_p95": 9.901,
+  "relevant_ground_ahead_rows": 23,
+  "over_10s": [
+   [
+    2,
+    31.34
+   ],
+   [
+    30,
+    16.5
+   ],
+   [
+    4,
+    14.92
+   ],
+   [
+    6,
+    12.91
+   ],
+   [
+    37,
+    12.59
+   ],
+   [
+    13,
+    11.58
+   ],
+   [
+    35,
+    10.85
+   ],
+   [
+    36,
+    10.45
+   ],
+   [
+    40,
+    10.27
+   ],
+   [
+    1,
+    10.16
+   ]
+  ]
+ },
+ {
+  "folder": "dh_r1",
+  "rows": 50,
+  "p50": 7.854,
+  "p95": 13.121,
+  "max": 13.513,
+  "relevant": 25,
+  "relevant_p50": 8.902,
+  "relevant_p95": 13.489,
+  "relevant_prep_p50": 1.89,
+  "relevant_prep_p95": 7.647,
+  "relevant_judge_answer_p50": 2.039,
+  "relevant_judge_answer_p95": 3.206,
+  "relevant_after_judge_p50": 3.631,
+  "relevant_after_judge_p95": 7.656,
+  "relevant_ground_ahead_rows": 24,
+  "over_10s": [
+   [
+    40,
+    13.51
+   ],
+   [
+    36,
+    13.49
+   ],
+   [
+    13,
+    13.12
+   ],
+   [
+    2,
+    12.2
+   ],
+   [
+    30,
+    11.97
+   ],
+   [
+    35,
+    11.97
+   ],
+   [
+    47,
+    11.14
+   ],
+   [
+    6,
+    10.89
+   ],
+   [
+    37,
+    10.56
+   ],
+   [
+    38,
+    10.38
+   ]
+  ]
+ }
+]

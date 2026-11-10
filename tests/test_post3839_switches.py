@@ -82,7 +82,7 @@ def test_switches_off_in_the_runner_are_empty_values():
                  "--cite-expand", "--cite-multi", "--team-last", "--keep-cites", "--sub-research", "--page-research", "--requery-vocab", "--unknown-name",
                  "--refuse-on-none", "--research-same-page", "--cite-phrase", "--heading-terms", "--grounding-quote", "--drop-scoped-cites", "--heading-mark", "--intro-fill",
                  "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--prompts-head",
-                 "--judge-vote", "--judge-quote", "--sub-merge", "--heading-best", "--facts-log", "--answer-best2", "--best2-samedoc"):
+                 "--judge-vote", "--judge-quote", "--sub-merge", "--heading-best", "--facts-log", "--answer-best2", "--best2-samedoc", "--speculate-ground"):
         p.add_argument(flag, action="store_true")
     ns = p.parse_args([])
     keys = {"reasoning": "", "provider_sort": "", "llm_deadline": "", "llm_hedge": "", "llm_hedge_by_task": "", "llm_retries": "", "trace_detail": False, "json_reminder": False,

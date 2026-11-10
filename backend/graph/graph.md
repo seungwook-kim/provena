@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (Claude Code) | 응답 시간 p95 단축 시도(사전 등록 62.8). `build.py`에 스위치 `GRAPH_SPECULATE_GROUND`(코드 기본 꺼짐, 서비스 설정 `SERVICE_ENV`에서는 켬, `answer_fixes.py`의 `speculate_ground_enabled`)를 더했다. 답 후보가 나오는 대로 인용 검사(`verify`)를 거쳐 근거 판정 호출을 같은 입력으로 미리 부르고(`ground_ahead`), `ground_once`의 판정 호출(`verdict_for`)이 입력 해시가 같으면 그 결과를 쓴다. 판정 지침·기준·답 고르기는 그대로다. 로컬 OpenRouter 50건에서 p95 회차 평균이 끔 14.504초에서 켬 11.996초로 줄었으나 SPEC 10초에는 미달이고 사전 등록 통과 기준도 넘지 못했으나, 품질 지표가 끈 쪽과 같아 사용자 결정으로 `SERVICE_ENV`에 `GRAPH_SPECULATE_GROUND=1`을 넣었다(EVAL_REPORT 8장). 측정 뒤 미리 부르기 등록 시점을 고친 것은 재측정 전이다. 시험 `tests/test_speculate_ground.py` | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `answer_store.py`에 `PgAnswerStore`(`db/120_answers_recall.sql`)와 `count_by_articles`를 더하고, `find_by_article` 결과에 `thread_id`, `version_date`, `source_url`을 붙였다(리콜이 쓴다). 리콜 구현은 `recall/recall.md` | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `build_graph` 설명의 `SEARCH_DECOMPOSE` 문구를 코드(기본 켬, `decompose_enabled()`)에 맞춤. 동작 변경 없음 | 미정 |
 | 2026-11-02 | 김승욱 (Claude Code) | 단일 에이전트 그래프 v1: `build_graph`, 노드 10개, 재검색 2회 상한, 인용 검사, 근거 판정, 저장, `AgentEvent` 흐름 | 이번 PR |

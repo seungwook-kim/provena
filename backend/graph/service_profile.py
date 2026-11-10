@@ -42,7 +42,7 @@ MEASURED_ARGS = (
     "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--judge-vote",
     "--effort", "none", "--effort-by-task", "decompose=low,answer=low,judge=low", "--llm-deadline", "8", "--llm-hedge", "3.5", "--llm-retries", "2",
     "--answer-wait", "5.5", "--answer-budget", "8.0",
-    "--judge-quote", "--answer-best2", "--best2-samedoc",
+    "--judge-quote", "--answer-best2", "--best2-samedoc", "--speculate-ground",
 )
 
 EFFORT_BY_TASK = "decompose=low,answer=low,judge=low"  # 질문 분해, 답 작성, 근거 충분 판정만 낮은 추론. 나머지 단계는 끔
@@ -91,6 +91,7 @@ SERVICE_ENV: dict[str, str] = {
     "GRAPH_JUDGE_QUOTE": "1",           # --judge-quote
     "GRAPH_ANSWER_BEST2": "1",          # --answer-best2
     "GRAPH_BEST2_SAMEDOC": "1",         # --best2-samedoc
+    "GRAPH_SPECULATE_GROUND": "1",      # --speculate-ground (사전 등록 62.8. 통과 기준은 못 넘었고 사용자 결정으로 켬)
     # 추론과 시간
     "LLM_EFFORT": "none",               # --effort none (anthropic)
     "LLM_EFFORT_BY_TASK": EFFORT_BY_TASK,  # --effort-by-task (anthropic)
