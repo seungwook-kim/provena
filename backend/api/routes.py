@@ -114,6 +114,12 @@ def _final_values(graph: Any, internal: str) -> dict:
         return {}
 
 
+def final_from_stream_enabled() -> bool:
+    """사전 등록 62.16 `CHAT_FINAL_FROM_STREAM=1`: `/chat`이 그래프가 끝난 뒤 체크포인트에서 최종 상태를 다시 읽지(`get_state`) 않고, 스트림이 모은 노드 갱신을 쓴다.
+    쓰는 칸(`kind`, `as_of`, `answer_id`, `citations`)은 질문마다 `load_memory`가 비우고 마지막으로 쓴 노드의 값이 남는 칸이라 두 값이 같다(시험이 대조한다). 기본 꺼짐."""
+    return (os.environ.get("CHAT_FINAL_FROM_STREAM") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _messages(graph: Any, internal: str) -> list[dict]:
     """체크포인트 이력에서 대화 이력(질문·답·근거)을 오래된 순으로 되살린다. 화면이 새로고침 뒤 대화를 다시 그릴 때 쓴다.
 
@@ -237,8 +243,9 @@ def create_api_router(
             log_llm_usage(model=model_name(), summary=summary, latency_ms=(time.perf_counter() - started) * 1000, route="/chat", request_id=request_id)
             return summary
 
+        streamed: dict | None = {} if final_from_stream_enabled() else None   # 62.16: 켜면 get_state 없이 스트림 값을 쓴다
         try:
-            for ev in stream_events(graph, graph_input, thread_id=internal, config=cfg):
+            for ev in stream_events(graph, graph_input, thread_id=internal, config=cfg, values_out=streamed):
                 data = dict(ev.data)
                 if ev.type == "error" and index_not_ready(data):
                     # 색인이 없는 새 환경(INDEX_URL 없음). 오류가 아니라 거절로 끝내고, 원인은 로그에만 남긴다
@@ -254,7 +261,7 @@ def create_api_router(
                         yield {"event": out.type, "data": out.model_dump_json()}
                     continue
                 if ev.type in ("token", "citation", "done") and final is None:
-                    final = _final_values(graph, internal)
+                    final = dict(streamed) if streamed is not None else _final_values(graph, internal)
                 if ev.type == "token":
                     text.append(str(data.get("text") or ""))
                 elif ev.type == "citation":

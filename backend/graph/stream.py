@@ -25,8 +25,11 @@ def _tokens(text: str) -> list[str]:
     return _TOKEN.findall(text) or ([text] if text else [])
 
 
-def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | None = None) -> Iterator[AgentEvent]:
-    """`graph_input`은 입력 dict 또는 `Command(resume=...)`."""
+def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | None = None, values_out: dict | None = None) -> Iterator[AgentEvent]:
+    """`graph_input`은 입력 dict 또는 `Command(resume=...)`.
+
+    `values_out`을 주면 그래프가 끝난 뒤(token, citation, done을 내기 전에) 이번 실행의 노드 갱신을 합친 값을 거기에 채운다(사전 등록 62.16 `CHAT_FINAL_FROM_STREAM`:
+    체크포인트에서 최종 상태를 다시 읽지 않으려는 것). 주지 않으면 이 함수의 동작은 그대로다."""
     cfg = {**(config or {})}
     cfg["configurable"] = {**cfg.get("configurable", {}), "thread_id": thread_id}
     if isinstance(graph_input, dict):
@@ -46,6 +49,8 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
     except Exception as e:  # noqa: BLE001 - 어떤 실패든 화면에는 error 이벤트로 전한다
         yield AgentEvent(type="error", thread_id=thread_id, data={"code": type(e).__name__, "message": str(e)})
         return
+    if values_out is not None:
+        values_out.update(final)
     for tok in _tokens(final.get("answer", "")):
         yield AgentEvent(type="token", thread_id=thread_id, data={"text": tok})
     if final.get("kind") == "answer":

@@ -36,6 +36,7 @@ from typing import Protocol
 
 import numpy as np
 
+from backend.rag.retrieve import hedge as hedge_mod
 from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedNoKey
 from backend.schemas.chunk import DEFAULT_K, Chunk, SearchQuery
@@ -63,10 +64,12 @@ class SearchConfig:
     link_n: int = 2          # 링크 확장으로 바꿀 뒤 자리 수(확정 조합 L1x2 = 2, PREREGISTER #8). 0이면 끔
     link_keep_per_sub: int = 2  # 나뉜 질문은 하위 질문마다 이만큼 자리를 지키고 남은 자리만 링크로 바꾼다. 0이면 지키지 않는다(#9 측정과 같음)
     range_n: int = 3         # 금액 구간 조회로 채울 뒤 자리 수 상한(사전 등록 62.7, 62.13에서 2→3). 질문에 금액이 없으면 쓰지 않는다. 0이면 끔(SEARCH_RANGE_N=0)
+    hedge: bool = False      # 사전 등록 62.14 `SEARCH_HEDGE=1`: 질문 임베딩 + 벡터 질의가 hedge_s초 안에 안 오면 같은 일을 한 번 더 보내 먼저 온 결과를 쓴다. 기본 꺼짐
+    hedge_s: float = 1.5     # `SEARCH_HEDGE_S`
 
     @classmethod
     def from_env(cls) -> "SearchConfig":
-        from backend.rag.retrieve import embed, rerank
+        from backend.rag.retrieve import embed, hedge, rerank
         from backend.services.llm import is_demo_mode
         # 데모 모드(키 없음 또는 DEMO_MODE=1)의 녹화(data/demo_replay/, 2026-11-09)는 금액 구간 조회를 넣기 전에 만든 것이라, 조회를 켜면 달러 금액 질문의
         # 근거 청크가 달라져 판정·답 녹화 키가 맞지 않는다(5만 달러 질문이 발췌형 가짜 응답으로 나왔다). 그래서 SEARCH_RANGE_N을 안 줬으면 데모에서만 끈다.
@@ -79,7 +82,8 @@ class SearchConfig:
                   rerank_top=int(os.environ.get("RERANK_TOP") or 10),
                   translate=(os.environ.get("QUERY_TRANSLATE") or "1") != "0",
                   link_n=int(os.environ.get("SEARCH_LINK_N") or 2),
-                  range_n=int(os.environ.get("SEARCH_RANGE_N") or range_default))
+                  range_n=int(os.environ.get("SEARCH_RANGE_N") or range_default),
+                  hedge=hedge.enabled(), hedge_s=hedge.hedge_seconds())
         cfg.check()
         return cfg
 
@@ -92,6 +96,8 @@ class SearchConfig:
             raise ValueError(f"SEARCH_LINK_N은 0 이상: {self.link_n}")
         if self.range_n < 0:
             raise ValueError(f"SEARCH_RANGE_N은 0 이상: {self.range_n}")
+        if not self.hedge_s > 0:
+            raise ValueError(f"SEARCH_HEDGE_S는 0보다 커야 한다: {self.hedge_s}")
 
 
 # ---------- 기록 ----------
@@ -113,6 +119,8 @@ class SearchTrace:
     n_link: int = 0                      # 링크 확장으로 바꾼 자리 수
     n_range: int = 0                     # 금액 구간 조회로 바꾼 자리 수
     n_returned: int = 0
+    hedged: bool = False                 # 사전 등록 62.14: 임베딩 + 벡터 질의에 같은 일을 한 번 더 보냈는가(`SEARCH_HEDGE=1`)
+    hedge_winner: int = 0                # 이긴 시도(0 = 처음 보낸 것, 1 = 나중에 보낸 것)
     ms: dict = field(default_factory=dict)
 
 
@@ -777,40 +785,57 @@ class Searcher:
             return []
         n = max(q.k, cfg.rerank_top if self.reranker else 0)
 
-        qvecs = None
-        if mode != "bm25_kw":
-            t = time.perf_counter()
-            try:                                                 # 전체 + 하위 질문 벡터를 한 번에(API면 요청 1번)
-                qvecs = self.embed([trans[i] if mode == "dense_en" else texts[i] for i in range(len(texts))])
-            except EmbedNoKey:                                   # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
-                tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
-                log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
-                _last.set(tr)
-                return []
-            tr.ms["embed"] = _ms(t)
-            for i, text in enumerate(texts):
-                self._remember(mode, text, qvecs[i])
-
         merge = sub_merge_enabled() and len(texts) > 1
         # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣는다
         idx = range(len(texts)) if merge else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
-        score_maps: dict[int, dict[Key, float]] = {i: {} for i in idx}
-        def one(i: int):
-            return self._ranked(texts[i], trans[i], None if qvecs is None else qvecs[i], mode, q, mask, n, tr,
-                                score_maps[i] if merge else None)
 
-        token = _db_ms.set(tr.ms)
+        def vector_stage(trace: SearchTrace):
+            """질문 임베딩 + 하위 질문마다 벡터 질의(+ 방식에 따라 BM25, 리랭킹). 읽기뿐이라 같은 입력이면 몇 번을 돌려도 결과가 같다.
+            `trace`에 이 시도의 시간·개수를 모은다(hedge가 켜지면 시도마다 따로 모았다가 이긴 쪽만 `tr`에 합친다)."""
+            qv = None
+            if mode != "bm25_kw":
+                t = time.perf_counter()
+                qv = self.embed([trans[i] if mode == "dense_en" else texts[i] for i in range(len(texts))])    # 전체 + 하위 질문 벡터를 한 번에(API면 요청 1번)
+                trace.ms["embed"] = _ms(t)
+                for i, text in enumerate(texts):
+                    self._remember(mode, text, qv[i])
+            smaps: dict[int, dict[Key, float]] = {i: {} for i in idx}
+
+            def one(i: int):
+                return self._ranked(texts[i], trans[i], None if qv is None else qv[i], mode, q, mask, n, trace,
+                                    smaps[i] if merge else None)
+
+            token = _db_ms.set(trace.ms)
+            try:
+                # 하위 질문은 서로 독립이다. 결과는 하위 질문 순서대로 합치므로 동시에 찾아도 순위가 같다. 벡터만 쓰는 방식에서만 켠다(BM25와 리랭커는 프로세스 안 계산이라 빨라지지 않는다)
+                if parallel_subs_enabled() and len(idx) >= 2 and mode in VECTOR_ONLY_MODES and self.reranker is None:
+                    with ThreadPoolExecutor(max_workers=len(idx), thread_name_prefix="subq") as pool:
+                        out = list(pool.map(lambda i, ctx: ctx.run(one, i), idx, [contextvars.copy_context() for _ in idx]))
+                else:
+                    out = [one(i) for i in idx]
+            finally:
+                _db_ms.reset(token)
+            return qv, out, smaps
+
         try:
-            # 하위 질문은 서로 독립이다. 결과는 하위 질문 순서대로 합치므로 동시에 찾아도 순위가 같다. 벡터만 쓰는 방식에서만 켠다(BM25와 리랭커는 프로세스 안 계산이라 빨라지지 않는다)
-            if parallel_subs_enabled() and len(idx) >= 2 and mode in VECTOR_ONLY_MODES and self.reranker is None:
-                with ThreadPoolExecutor(max_workers=len(idx), thread_name_prefix="subq") as pool:
-                    done = list(pool.map(lambda i, ctx: ctx.run(one, i), idx, [contextvars.copy_context() for _ in idx]))
+            if cfg.hedge:   # 사전 등록 62.14: 시도마다 따로 된 기록에 모으고, 이긴 시도의 기록만 합친다(진 시도가 개수·시간을 부풀리지 않게)
+                def attempt_stage(attempt: int):
+                    own = SearchTrace(cfg.embed_model, cfg.rerank_model, mode)
+                    return (*vector_stage(own), own)
+                (qvecs, done, score_maps, own), winner, sent = hedge_mod.hedged(attempt_stage, cfg.hedge_s)
+                tr.ms.update(own.ms)
+                tr.n_dense += own.n_dense
+                tr.n_bm25 += own.n_bm25
+                tr.hedged, tr.hedge_winner = sent, winner
             else:
-                done = [one(i) for i in idx]
-        finally:
-            _db_ms.reset(token)
+                qvecs, done, score_maps = vector_stage(tr)
+        except EmbedNoKey:                                       # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
+            tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
+            log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
+            _last.set(tr)
+            return []
         for got, r in done:
             lists.append(got)
             rows.update(r)

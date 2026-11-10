@@ -232,6 +232,12 @@ def speculate_enabled() -> bool:
     return _flag("GRAPH_SPECULATE_FIRST")
 
 
+def speculate_early_search_enabled() -> bool:
+    """SE `GRAPH_SPECULATE_EARLY_SEARCH=1`(`GRAPH_SPECULATE_FIRST`와 같이 쓴다): 예비 분해(`decompose_gate`)가 끝나길 기다리지 않고 원 질문의 첫 검색을 같은 시각에 시작한다.
+    예비 분해가 나누지 않고 분류가 정책 경로이면 그 결과를 쓰고(입력은 같다), 아니면 버린다. 기본 꺼짐."""
+    return _flag("GRAPH_SPECULATE_EARLY_SEARCH")
+
+
 def speculate_ground_enabled() -> bool:
     """SG `GRAPH_SPECULATE_GROUND=1`: 답 후보가 나오는 대로 그 답의 근거 판정을 미리 부르고, 나중에 같은 입력의 판정이 필요하면 그 결과를 쓴다(입력과 판정 기준은 그대로)."""
     return _flag("GRAPH_SPECULATE_GROUND")

@@ -108,6 +108,20 @@ SERVICE_ENV: dict[str, str] = {
 }
 
 
+# 응답 시간 p95 단축 후보(사전 등록 62.14~62.19). 측정 전이라 서비스 값(`SERVICE_ENV`)에 넣지 않는다. 켜려면 환경 변수로 직접 주고(Cloud Run 리비전 환경 변수),
+# 측정 실행기(`evals/agent/exp_multi_v2.py`)에서는 같은 이름의 인자로 켠다. 꺼진 상태는 지금과 같다(tests/test_speed_p95_code.py).
+CANDIDATE_ENV: dict[str, str] = {
+    "SEARCH_HEDGE": "1",                      # C 62.14 --search-hedge 1.5: 첫 검색(임베딩 + 벡터 질의)이 SEARCH_HEDGE_S초 안에 안 오면 같은 검색을 하나 더
+    "SEARCH_HEDGE_S": "1.5",
+    "GRAPH_SPECULATE_EARLY_SEARCH": "1",      # D 62.15 --speculate-early-search: 원 질문 첫 검색을 예비 분해(GRAPH_SPECULATE_FIRST)와 같이 시작
+    "CHAT_FINAL_FROM_STREAM": "1",            # E 62.16: /chat이 끝난 뒤 체크포인트를 다시 읽지 않고 스트림 값을 씀(인자 없음, 서비스 경로만)
+    "ANSWER_SAVE_ONE_CONN": "1",              # E 62.16: 답 저장과 근거 기록 저장을 연결 하나로(인자 없음, 서비스 경로만)
+    "LLM_HEDGE_BY_TASK": "classify=1.2,decompose_gate=1.2,decompose=2.0",  # B 62.17 --llm-hedge-by-task: 분류·분해 호출만 일찍 한 번 더(코드는 이미 있다)
+}
+# A 62.18: 답 대기 5.5초 -> 4.0초, 예산 8.0초 -> 6.5초. 답 품질(추론 답이 빠른 답으로 바뀌는 비율)에 영향이 있어 서비스 기본값(SERVICE_ENV)은 그대로 두고 측정 인자로만 켠다
+MEASURE_ONLY_ARGS = ("--answer-wait", "4.0", "--answer-budget", "6.5")
+
+
 def profile_values(environ: MutableMapping[str, str] | None = None) -> dict[str, str]:
     """이번 실행에 채울 값. `SERVICE_ENV`에 `MCP_TOKEN`이 있을 때만 `SEARCH_VIA_MCP=1`을 더한다(--via-mcp)."""
     env = os.environ if environ is None else environ

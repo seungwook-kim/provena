@@ -149,6 +149,38 @@ class PgAnswerStore:
                     [(answer_id, c.chunk_id, c.version_id, c.rule_seq, c.article, c.version_date, c.source_url) for c in citations],
                 )
 
+    def save_with_grounding(self, answer_id, user_id, thread_id, question, answer, as_of, citations, grounding: dict, skills_used: list[str]) -> None:
+        """`save`와 `save_grounding`을 같은 순서, 같은 문장으로 연결 하나에서 한다(사전 등록 62.16 `ANSWER_SAVE_ONE_CONN`). 연결 만들기가 한 번 준다.
+        답과 인용은 지금처럼 한 트랜잭션이고 근거 기록은 그 뒤 따로 쓴다(근거 기록이 실패해도 답과 인용은 남는다)."""
+        with self._connect() as conn:
+            with conn.transaction():
+                self._insert_answer(conn, answer_id, user_id, thread_id, question, answer, as_of, citations)
+            self._insert_grounding(conn, answer_id, grounding, skills_used)
+
+    @staticmethod
+    def _insert_answer(conn, answer_id, user_id, thread_id, question, answer, as_of, citations) -> None:
+        conn.execute(
+            "INSERT INTO answers (answer_id, user_id, thread_id, question, answer, as_of) VALUES (%s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (answer_id) DO NOTHING",
+            (answer_id, user_id, thread_id or "", question, answer, as_of),
+        )
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO citations (answer_id, chunk_id, version_id, rule_seq, article, version_date, source_url) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                [(answer_id, c.chunk_id, c.version_id, c.rule_seq, c.article, c.version_date, c.source_url) for c in citations],
+            )
+
+    @staticmethod
+    def _insert_grounding(conn, answer_id: str, grounding: dict, skills_used: list[str]) -> None:
+        from psycopg.types.json import Jsonb
+
+        conn.execute(
+            "INSERT INTO answer_grounding (answer_id, grounding, skills_used) VALUES (%s, %s, %s) "
+            "ON CONFLICT (answer_id) DO UPDATE SET grounding = EXCLUDED.grounding, skills_used = EXCLUDED.skills_used",
+            (answer_id, Jsonb(dict(grounding)), Jsonb(list(skills_used))),
+        )
+
     def save_grounding(self, answer_id: str, grounding: dict, skills_used: list[str]) -> None:
         from psycopg.types.json import Jsonb
 

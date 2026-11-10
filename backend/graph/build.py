@@ -341,6 +341,8 @@ def build_graph(
     best2 = AF.answer_best2_enabled()  # BO2: 답을 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽을 고른다(`--judge-quote`와 함께)
     best2_samedoc = AF.best2_samedoc_enabled()  # BO2SD: BO2의 둘째 규칙에서 S 청크와 같은 문서인 S 밖 인용은 세지 않는다
     speculate = AF.speculate_enabled()  # SP: 분해를 기다리는 동안 원 질문으로 첫 검색과 판정을 미리 돌리고, 분해가 나누지 않으면 그 결과를 쓴다
+    save_one_conn = env_flag("ANSWER_SAVE_ONE_CONN")  # 62.16: 답 저장과 근거 기록 저장을 연결 하나로(`PgAnswerStore.save_with_grounding`). 기본 꺼짐
+    speculate_early = speculate and AF.speculate_early_search_enabled()  # SE(사전 등록 62.15): SP의 원 질문 재작성·첫 검색을 예비 분해가 끝나길 기다리지 않고 같이 시작한다. 분해가 나누거나 경로가 정책이 아니면 결과를 버린다
     spec_runs: dict[str, tuple[str, Any]] = {}  # SP: 열쇠(search_cache[SPEC_KEY]) -> ("use" | "drop", 미리 돌린 결과 Future)
     spec_boxes: dict[str, dict] = {}  # SP: 열쇠 -> 미리 돌리기 상태(돌렸는지). 첫 검색 노드가 기록 표시를 쓰고 지운다
     spec_lock = threading.Lock()
@@ -609,21 +611,49 @@ def build_graph(
         token = uuid.uuid4().hex
         box: dict = {"token": token, "routed": threading.Event(), "stop": threading.Event(), "route": ""}
         pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="speculate")
+        early: Any = None  # SE: 일찍 돌린 재작성·검색의 Future(꺼짐이면 None). 아래에서 chain보다 먼저 시작한다
 
         def as_node(node: str, fn: Callable[[], Any]) -> Any:
             base = var_child_runnable_config.get() or {}
             var_child_runnable_config.set({**base, "metadata": {**(base.get("metadata") or {}), "langgraph_node": node}})
             return fn()
 
+        def start_state(route: str) -> dict:
+            return {**state, "route": route, "search_cache": {**(state.get("search_cache") or {}), INTAKE_KEY: {"decompose": [[], "llm"]}, SPEC_KEY: token}}
+
+        def early_chain() -> dict:
+            """SE(`GRAPH_SPECULATE_EARLY_SEARCH`): 예비 분해와 같은 시각에 시작하는 재작성(LLM 없음)과 원 질문 첫 검색. 경로(route)는 이 두 노드가 읽지 않는다(`reads_authz`는 답 쓰기에서만 읽는다)."""
+            s = start_state("")
+            out: dict = {}
+            for node, fn in (("rewrite", rewrite), ("search", search)):
+                out[node] = as_node(node, lambda fn=fn: fn(s))
+                s = {**s, **out[node]}
+            return out
+
+        def settle_early() -> None:
+            """쓰지 않기로 한 일찍 돌린 검색은 끝날 때까지 기다린다(요청이 끝난 뒤에 호출이 돌지 않게). 오류는 버리고 비용 상한만 올린다."""
+            if early is not None:
+                drain_speculation(early)
+
         def chain() -> dict | None:
             if as_node("search", lambda: gate_split(ask, state["question"])) is not False:
+                settle_early()
                 return None
             box["routed"].wait()
             if not takes_policy_path(box["route"]) or box["stop"].is_set():
+                settle_early()
                 return None
-            s: dict = {**state, "route": box["route"], "search_cache": {**(state.get("search_cache") or {}), INTAKE_KEY: {"decompose": [[], "llm"]}, SPEC_KEY: token}}
+            s: dict = start_state(box["route"])
             out: dict = {}
             box["ran"] = True
+            if early is not None:   # 게이트가 나누지 않고 경로가 정책이므로 일찍 돌린 재작성·검색을 그대로 쓴다. 오류는 그 노드가 직접 돌았을 때처럼 올린다
+                out.update(early.result())
+                s = {**s, **out["rewrite"], **out["search"]}
+                if not s.get("search_error"):   # 검색 오류면 순차와 같이 판정 없이 끝난다
+                    if box["stop"].is_set():
+                        return None
+                    out["judge"] = as_node("judge", lambda: judge(s))
+                return out
             for node, fn in (("rewrite", rewrite), ("search", search), ("judge", judge)):
                 if box["stop"].is_set():
                     return None
@@ -633,6 +663,11 @@ def build_graph(
                     break
             return out
 
+        if speculate_early:
+            box["ran"] = True
+            pool_early = ThreadPoolExecutor(max_workers=1, thread_name_prefix="speculate_early")
+            early = pool_early.submit(contextvars.copy_context().run, early_chain)
+            pool_early.shutdown(wait=False)
         box["future"] = pool.submit(contextvars.copy_context().run, chain)
         pool.shutdown(wait=False)
         return box
@@ -1436,7 +1471,7 @@ def build_graph(
     def save(state: AgentState) -> dict:
         answer_id = uuid.uuid4().hex
         if answer_store is not None:
-            answer_store.save(
+            fields = (
                 answer_id,
                 state.get("user_id") or "",
                 state.get("thread_id") or "",
@@ -1445,6 +1480,10 @@ def build_graph(
                 state.get("as_of"),
                 [Chunk(**c) for c in state.get("citations", [])],
             )
+            if save_one_conn and hasattr(answer_store, "save_with_grounding"):  # 사전 등록 62.16 `ANSWER_SAVE_ONE_CONN`: 같은 두 저장을 연결 하나로(저장 내용과 순서는 그대로)
+                answer_store.save_with_grounding(*fields, G.public_grounding(state.get("grounding") or {}), state.get("skills_used") or [])
+                return {"answer_id": answer_id}
+            answer_store.save(*fields)
             if hasattr(answer_store, "save_grounding"):
                 answer_store.save_grounding(answer_id, G.public_grounding(state.get("grounding") or {}), state.get("skills_used") or [])
         return {"answer_id": answer_id}
