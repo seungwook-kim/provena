@@ -26,7 +26,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request as UrlRequest, urlopen
 from uuid import UUID, uuid4
-from backend.services.email_sender import EmailSender, configured_email_sender
+from backend.services.email_sender import EmailDeliveryUnavailable, EmailSender, configured_email_sender
 
 log = logging.getLogger(__name__)
 
@@ -882,10 +882,20 @@ def create_auth_router(
                 resolved_email_sender.send_verification_email(
                     email=login_id, code=value, expires_minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES
                 )
-            result = issue_verification(
-                login_id, code_hash, code, now, expires_at,
-                EMAIL_VERIFICATION_MAX_SENDS, EMAIL_VERIFICATION_RESEND_SECONDS, deliver,
-            )
+            try:
+                result = issue_verification(
+                    login_id, code_hash, code, now, expires_at,
+                    EMAIL_VERIFICATION_MAX_SENDS, EMAIL_VERIFICATION_RESEND_SECONDS, deliver,
+                )
+            except EmailDeliveryUnavailable:
+                log.error("verification email not sent: EMAIL_PROVIDER is not configured")
+                raise HTTPException(status_code=503, detail="이메일 인증 기능을 사용할 수 없습니다.") from None
+            except RuntimeError as exc:
+                # 발송 실패: 저장소가 같은 트랜잭션을 되돌려 발송 횟수·코드는 바뀌지 않는다.
+                # 가입 첫 발송이면 호출한 쪽(signup)이 방금 만든 대기 신청을 지우고,
+                # 재발송이면 신청은 그대로 두어 다시 시도할 수 있다.
+                log.warning("verification email delivery failed: %s", type(exc).__name__)
+                raise HTTPException(status_code=503, detail="이메일 발송에 실패했습니다.") from None
             if result == "unavailable":
                 raise HTTPException(status_code=404, detail="signup request not found")
             if result == "limited":
@@ -901,11 +911,18 @@ def create_auth_router(
             expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES)
             save_verification(login_id, _verification_hash(login_id, code), expires_at, now)
             return expires_at, now + timedelta(seconds=EMAIL_VERIFICATION_RESEND_SECONDS)
+        except EmailDeliveryUnavailable:
+            log.error("verification email not sent: EMAIL_PROVIDER is not configured")
+            raise HTTPException(status_code=503, detail="이메일 인증 기능을 사용할 수 없습니다.") from None
         except Exception as exc:
             log.warning("verification email delivery failed: %s", type(exc).__name__)
             raise HTTPException(status_code=503, detail="이메일 발송에 실패했습니다.") from None
 
-    @router.post("/auth/signup", status_code=201)
+    @router.post(
+        "/auth/signup",
+        status_code=201,
+        responses={503: {"description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"}},
+    )
     def signup(request: Request, payload: SignupRequest) -> dict[str, str]:
         require_csrf(request)
         _check_signup_ip_rate_limit(request)
@@ -947,7 +964,14 @@ def create_auth_router(
             response["verification_resend_available_at"] = issued[1].isoformat()
         return response
 
-    @router.post("/auth/signup/verify")
+    @router.post(
+        "/auth/signup/verify",
+        description="Requires a valid CSRF token and a six-digit verification code.",
+        responses={400: {"description": "Incorrect verification code"},
+                   410: {"description": "Verification code expired"},
+                   429: {"description": "Verification attempts exceeded"},
+                   503: {"description": "Email verification storage unavailable"}},
+    )
     def verify_signup(request: Request, payload: SignupVerificationRequest) -> dict[str, str]:
         require_csrf(request)
         login_id = _normalise_signup_login(payload.login_id)
@@ -965,7 +989,11 @@ def create_auth_router(
             raise HTTPException(status_code=429, detail="인증번호 시도 횟수를 초과했습니다.")
         raise HTTPException(status_code=400, detail="인증번호가 올바르지 않습니다.")
 
-    @router.post("/auth/signup/resend")
+    @router.post(
+        "/auth/signup/resend",
+        description="Resends only for pending, unverified email signup requests. Missing, completed, and rate-limited requests are intentionally returned as status unavailable.",
+        responses={503: {"description": "Email verification storage or provider unavailable (also returned when EMAIL_PROVIDER is not configured or delivery fails)"}},
+    )
     def resend_signup(request: Request, payload: SignupVerificationRequest) -> dict[str, str]:
         require_csrf(request)
         _check_signup_ip_rate_limit(request)

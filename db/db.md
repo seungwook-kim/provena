@@ -10,7 +10,7 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
 
 ## 운영 Supabase 인증 스키마 적용
 
-회원가입 승인 기능은 `db/101_auth_users.sql` 적용 후 `db/106_signup_approval.sql`을 적용한다. 106은 비밀번호 해시 보호를 위해 RLS를 켜고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 모두 회수한다. 현재 코드에는 107 프로필 필드 사용처가 없어 107은 적용하지 않는다.
+회원가입 승인 기능은 `db/101_auth_users.sql` 적용 후 `db/106_signup_approval.sql`을 적용한다. 106은 비밀번호 해시 보호를 위해 RLS를 켜고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 모두 회수한다. 이메일 가입 인증을 쓰는 앱을 배포하기 전에는 106 다음에 `db/107_email_signup_verification.sql`(인증 열과 색인), `db/108_auth_privacy_hardening.sql`(`users`·`signup_requests`와 id 시퀀스의 RLS, 권한 회수)을 이 순서로 적용한다. 107과 108은 몇 번을 돌려도 같은 결과이고, 108은 106·109처럼 `anon`·`authenticated` 역할이 있을 때만 해당 역할의 권한을 회수한다. 번호 107은 `docs/specs/107-user-profile-fields.md`(프로필 추가 칸 제안)와도 겹치지만 서로 다른 것이다. 그 제안은 SQL 파일이 없고 코드에 사용처(`role_enc`, `service_enc`)가 없어 적용하지 않는다.
 
 일반 PostgreSQL(docker compose 등 Supabase가 아닌 환경)처럼 `anon`, `authenticated` 역할이 없으면 106은 해당 역할에 대한 권한 회수를 건너뛰고 RLS 활성화와 `PUBLIC` 권한 회수만 적용한다.
 
@@ -82,10 +82,11 @@ WHERE nsp.nspname = 'public'
 
 ## 작업 기록 (최신이 위)
 
-| 2026-11-10 | 강경희 (kyunghee) | `106_signup_approval.sql`의 `signup_requests`에 RLS를 활성화하고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 회수하는 보안 설정을 반영. `101` 다음에 106을 적용하며 현재 코드에서 107 프로필 필드는 사용하지 않음을 기록 | 미정 |
+| 2026-11-10 | 강경희 (kyunghee) | `106_signup_approval.sql`의 `signup_requests`에 RLS를 활성화하고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 회수하는 보안 설정을 반영. `101` 다음에 106을 적용함을 기록. 같은 줄의 "107 프로필 필드는 사용하지 않음"은 프로필 추가 칸 제안(`docs/specs/107-user-profile-fields.md`)을 가리키며, 같은 번호의 `107_email_signup_verification.sql`은 이메일 가입 인증에 쓰여 적용 대상이다(위 절 참고) | 미정 |
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 김승욱 (Claude Code) | `108_auth_privacy_hardening.sql`의 `REVOKE ... FROM anon, authenticated`를 역할이 있을 때만 실행하는 `DO` 블록으로 바꾸고 106과 겹치는 줄을 정리했다. 새 Postgres 16 컨테이너에 `db/`의 SQL을 compose와 같은 순서로 전부 실행해 오류 0, 108 뒤의 109 이후 파일까지 실행됨을 확인했고, 108을 한 번 더 돌리고 `anon`·`authenticated` 역할을 만든 뒤에도 돌려 오류 없이 권한 0건임을 확인했다. 운영 DB의 107·108 적용 여부는 이 저장소에서 확인하지 못했고 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | `109_realign.sql`(표 3개 합침, 색인 정리, `anon`·`authenticated` 권한 회수), `manual/109_purge_old.sql` 추가, `105`·`110`·`120`을 합친 모양으로 수정, `docs/db/ERD.md`, `TABLE_SPEC.md` 추가. 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-09 | 박진형 (Claude Code) | `104_user_profiles.sql`(내 정보 암호문 표 `user_profiles`, `users` 외래키, RLS)과 `105_admin_role_log.sql`(관리자 등록·해제 기록 `admin_role_log`, RLS) 추가. 둘 다 `IF NOT EXISTS`라 다시 돌려도 된다. 운영 Supabase에는 적용하지 않았다(미적용) — `101` 다음에 104·105를 앱 재배포 전에 적용해야 한다(104가 없으면 `/me`가 503) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `120_answers_recall.sql` 추가: `answers`, `citations`, `answer_grounding`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_feedback`, `recall_digests`, `change_monitoring`(모두 `IF NOT EXISTS`, RLS). 로컬 pgvector 컨테이너에 `01_init`, 1xx, 201, 202, 120 순으로 적용하고 120을 한 번 더 적용해 확인했고, `tests/test_recall_pg.py`가 저장소 SQL을 그 DB에서 시험한다. 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
