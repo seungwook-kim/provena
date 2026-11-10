@@ -105,3 +105,24 @@ def test_best2_candidates_ground_ahead_and_the_picked_one_is_reused(monkeypatch)
     assert out["kind"] == "answer"
     assert 1 <= _grounding_calls(m) <= 2
 
+
+
+def test_caveat_only_verdict_also_passes_through_the_ahead_verdict(monkeypatch):
+    """#101의 단서 문장 처리(`caveat_only_flags`)는 `llm_verdict` 안에 있어 미리 부른 판정에도 똑같이 걸린다.
+    단서 문장만 받쳐지지 않는다고 꼽혀도 값이 받쳐졌으면 답이 나가고, 판정 호출은 한 번이다."""
+    import test_ground_caveat as C
+    from qgraph_fakes import normal_llm
+
+    def ask_with(env):
+        if env:
+            monkeypatch.setenv("GRAPH_SPECULATE_GROUND", "1")
+        else:
+            monkeypatch.delenv("GRAPH_SPECULATE_GROUND", raising=False)
+        m = normal_llm(answer=C.reply(C.FACT, C.HEDGE), grounding=C.judge_flagging(C.HEDGE))
+        return m, C.ask(m)
+
+    _, off = ask_with(False)
+    m, on = ask_with(True)
+    assert on["kind"] == off["kind"] == "answer" and on["answer"] == off["answer"]
+    assert on["grounding"]["caveat_only"] is True and on["grounding"]["ground_ahead"] is True
+    assert m.count("grounding") == 1
