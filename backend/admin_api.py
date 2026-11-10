@@ -46,6 +46,8 @@ class AdminUserStore(AuthStore, Protocol):
     def list_signup_requests(self) -> Iterable[Any]: ...
     def review_signup_request(self, login_id: str, action: str, reviewed_by: UUID | str) -> str: ...
 
+    def reset_signup_verification_by_id(self, request_id: int) -> str: ...
+
 
 def owner_configured(owner_login_id: str | None) -> bool:
     return bool(owner_login_id) and not owner_login_id.startswith(GOOGLE_LOGIN_PREFIX)
@@ -206,6 +208,24 @@ def create_admin_router(
         if result == "unverified":
             raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
         return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
+
+    @router.post("/admin/signup-requests/by-id/{request_id}/reset-verification")
+    def reset_signup_verification(request_id: int, request: Request, response: Response,
+                                  owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
+        require_csrf(request)
+        reset = getattr(store, "reset_signup_verification_by_id", None)
+        if not callable(reset):
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            result = reset(request_id)
+        except Exception:
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
+        if result == "missing":
+            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+        if result == "unavailable":
+            raise HTTPException(status_code=409, detail="verification reset is unavailable", headers=NO_STORE)
+        return {"request_id": request_id, "reset": True}
 
     @router.post("/admin/signup-requests/by-id/{request_id}/{action}")
     def review_signup_request_by_id(request_id: int, action: str, request: Request, response: Response,

@@ -161,6 +161,26 @@ class MemoryAuthStore:
             row = self._signup_requests.get(login_id)
             return dict(row) if row else None
 
+    def issue_verification(self, login_id: str, code_hash: str, code: str, now: datetime, expires_at: datetime,
+                           max_sends: int, resend_seconds: int, send: Callable[[str], None]) -> str:
+        """Send and persist one code while holding the store lock."""
+        with self._lock:
+            row = self._signup_requests.get(login_id)
+            if not row or row.get("status") != "pending" or not row.get("email_verification_required"):
+                return "unavailable"
+            if row.get("email_verified_at") is not None:
+                return "unavailable"
+            last_sent = row.get("last_verification_sent_at")
+            if last_sent and (now - last_sent).total_seconds() < resend_seconds:
+                return "limited"
+            if row.get("verification_send_count", 0) >= max_sends:
+                return "limited"
+            send(code)
+            row.update(verification_code_hash=code_hash, verification_expires_at=expires_at,
+                       verification_attempts=0, verification_send_count=row["verification_send_count"] + 1,
+                       last_verification_sent_at=now)
+            return "sent"
+
     def save_verification(self, login_id: str, code_hash: str, expires_at: datetime, sent_at: datetime) -> None:
         with self._lock:
             row = self._signup_requests[login_id]
@@ -242,6 +262,19 @@ class MemoryAuthStore:
             login_id = next((key for key, row in self._signup_requests.items()
                              if row.get("request_id") == request_id), None)
         return "missing" if login_id is None else self.review_signup_request(login_id, action, reviewed_by)
+
+    def reset_signup_verification_by_id(self, request_id: int) -> str:
+        with self._lock:
+            row = next((item for item in self._signup_requests.values()
+                        if item.get("request_id") == request_id), None)
+            if row is None:
+                return "missing"
+            if row.get("status") != "pending" or not row.get("email_verification_required") or row.get("email_verified_at") is not None:
+                return "unavailable"
+            row.update(verification_code_hash=None, verification_expires_at=None,
+                       verification_attempts=0, verification_send_count=0,
+                       last_verification_sent_at=None)
+            return "reset"
 
 
 class PostgresAuthStore:
@@ -350,15 +383,40 @@ class PostgresAuthStore:
     def get_signup_verification(self, login_id: str) -> dict[str, Any] | None:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT email_verification_required, email_verified_at, verification_expires_at, "
+                "SELECT status, email_verification_required, email_verified_at, verification_expires_at, "
                 "verification_attempts, verification_send_count, last_verification_sent_at "
                 "FROM signup_requests WHERE login_id = %s ORDER BY request_id DESC LIMIT 1", (login_id,)
             ).fetchone()
         if row is None:
             return None
-        return {"email_verification_required": row[0], "email_verified_at": row[1],
-                "verification_expires_at": row[2], "verification_attempts": row[3],
-                "verification_send_count": row[4], "last_verification_sent_at": row[5]}
+        return {"status": row[0], "email_verification_required": row[1], "email_verified_at": row[2],
+                "verification_expires_at": row[3], "verification_attempts": row[4],
+                "verification_send_count": row[5], "last_verification_sent_at": row[6]}
+
+    def issue_verification(self, login_id: str, code_hash: str, code: str, now: datetime, expires_at: datetime,
+                           max_sends: int, resend_seconds: int, send: Callable[[str], None]) -> str:
+        """Serialize eligibility, delivery, and persistence with a row lock."""
+        with self._connect() as conn:
+            with conn.transaction():
+                row = conn.execute(
+                    "SELECT status, email_verification_required, email_verified_at, verification_send_count, "
+                    "last_verification_sent_at FROM signup_requests "
+                    "WHERE login_id = %s ORDER BY request_id DESC LIMIT 1 FOR UPDATE", (login_id,)
+                ).fetchone()
+                if row is None or row[0] != "pending" or not row[1] or row[2] is not None:
+                    return "unavailable"
+                if row[4] and (now - row[4]).total_seconds() < resend_seconds:
+                    return "limited"
+                if row[3] >= max_sends:
+                    return "limited"
+                send(code)
+                conn.execute(
+                    "UPDATE signup_requests SET verification_code_hash = %s, verification_expires_at = %s, "
+                    "verification_attempts = 0, verification_send_count = verification_send_count + 1, "
+                    "last_verification_sent_at = %s WHERE login_id = %s AND status = 'pending'",
+                    (code_hash, expires_at, now, login_id),
+                )
+                return "sent"
 
     def save_verification(self, login_id: str, code_hash: str, expires_at: datetime, sent_at: datetime) -> None:
         with self._connect() as conn:
@@ -437,6 +495,24 @@ class PostgresAuthStore:
         with self._connect() as conn:
             row = conn.execute("SELECT login_id FROM signup_requests WHERE request_id = %s", (request_id,)).fetchone()
         return "missing" if row is None else self.review_signup_request(row[0], action, reviewed_by)
+
+    def reset_signup_verification_by_id(self, request_id: int) -> str:
+        with self._connect() as conn:
+            with conn.transaction():
+                row = conn.execute(
+                    "SELECT status, email_verification_required, email_verified_at "
+                    "FROM signup_requests WHERE request_id = %s FOR UPDATE", (request_id,)
+                ).fetchone()
+                if row is None:
+                    return "missing"
+                if row[0] != "pending" or not row[1] or row[2] is not None:
+                    return "unavailable"
+                conn.execute(
+                    "UPDATE signup_requests SET verification_code_hash = NULL, verification_expires_at = NULL, "
+                    "verification_attempts = 0, verification_send_count = 0, last_verification_sent_at = NULL "
+                    "WHERE request_id = %s", (request_id,)
+                )
+                return "reset"
 
     def _insert_user(self, conn: Any, login_id: str, password_hash: str, role: str) -> AuthUser:
         if role not in ROLES:

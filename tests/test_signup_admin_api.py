@@ -106,3 +106,47 @@ def test_signup_request_rejects_without_creating_user(monkeypatch):
         headers=csrf(login_client),
     )
     assert rejected_login.status_code == 403
+
+
+def test_owner_can_reset_exhausted_signup_verification(monkeypatch):
+    app, store, owner, secret = build_app(monkeypatch)
+    store.create_pending_user("verified-reset-api", hash_password("pending-password-2"), email_verification_required=True)
+    request = store._signup_requests["verified-reset-api"]
+    request.update(verification_code_hash="hashed-code", verification_expires_at=None,
+                   verification_attempts=3, verification_send_count=5,
+                   last_verification_sent_at=None)
+    owner_client = client_for(app, owner, secret)
+    headers = csrf(owner_client)
+
+    response = owner_client.post(
+        f"/admin/signup-requests/by-id/{request['request_id']}/reset-verification",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"request_id": request["request_id"], "reset": True}
+    assert request["verification_send_count"] == 0
+    assert request["verification_code_hash"] is None
+    assert request["verification_attempts"] == 0
+
+    assert owner_client.post(
+        f"/admin/signup-requests/by-id/{request['request_id']}/reset-verification"
+    ).status_code == 403
+
+
+def test_reset_signup_verification_is_owner_only_and_not_for_verified_or_approved(monkeypatch):
+    app, store, owner, secret = build_app(monkeypatch)
+    store.create_pending_user("verified-reset-api", hash_password("pending-password-2"), email_verification_required=True)
+    request = store._signup_requests["verified-reset-api"]
+    request["email_verified_at"] = request["requested_at"]
+    owner_client = client_for(app, owner, secret)
+    assert owner_client.post(
+        f"/admin/signup-requests/by-id/{request['request_id']}/reset-verification",
+        headers=csrf(owner_client),
+    ).status_code == 409
+
+    member = store.create_user("member-reset-api", hash_password("member-password-2"), "user")
+    member_client = client_for(app, member, secret)
+    assert member_client.post(
+        f"/admin/signup-requests/by-id/{request['request_id']}/reset-verification",
+        headers=csrf(member_client),
+    ).status_code == 403

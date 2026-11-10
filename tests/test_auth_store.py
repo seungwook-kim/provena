@@ -153,9 +153,9 @@ def test_postgres_signup_request_list_uses_request_login_id_without_user_join():
             return Rows(self.rows)
 
     rows = [
-        ("pending-user", datetime(2026, 1, 1, tzinfo=timezone.utc), "pending"),
-        ("approved-user", datetime(2026, 1, 2, tzinfo=timezone.utc), "approved"),
-        ("rejected-user", datetime(2026, 1, 3, tzinfo=timezone.utc), "rejected"),
+        (1, "pending-user", datetime(2026, 1, 1, tzinfo=timezone.utc), "pending", False),
+        (2, "approved-user", datetime(2026, 1, 2, tzinfo=timezone.utc), "approved", True),
+        (3, "rejected-user", datetime(2026, 1, 3, tzinfo=timezone.utc), "rejected", False),
     ]
     connections = []
 

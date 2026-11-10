@@ -84,3 +84,9 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 ## 7. 데이터와 이용 조건
 
 핸드북 본문은 CC BY-SA 4.0이다. 답에 원문을 보일 때는 페이지 URL, 라이선스 링크, 수정 여부를 함께 표시한다. 원문 텍스트는 코드와 폴더를 나누고 `data/LICENSES/`에 고지와 출처를 적는다. 로고를 쓰지 않으며 README와 발표에 "GitLab Inc.와 제휴·보증 관계 없음"을 적는다(SDD 8장).
+
+## 이메일 가입·인증 API 정합성
+
+이메일 가입은 `/auth/signup`에서 시작하고 `/auth/signup/verify`와 `/auth/signup/resend`로 인증을 처리한다. 인증번호는 5분간 유효하며 재발송은 이메일별 60초 및 최대 5회 제한과 IP별 60초 30회 제한을 함께 적용한다. 관리자 가입 승인 목록은 `/admin/signup-requests`이고, 승인은 `request_id` 기반 `/admin/signup-requests/by-id/{request_id}/{action}`를 우선 사용한다. 최고 관리자(owner)만 이메일 미인증·승인 대기 신청의 발송 횟수를 `/admin/signup-requests/by-id/{request_id}/reset-verification`으로 초기화할 수 있으며, 해당 요청은 CSRF 보호를 적용한다.
+
+`107_email_signup_verification.sql` 및 `108_auth_privacy_hardening.sql`의 운영 적용 여부와 순서는 최신 DB 재정렬 정책(`109_realign.sql`)과 함께 DB 담당자가 결정한다. 애플리케이션은 운영 DB에 마이그레이션을 자동 적용하지 않는다.
