@@ -368,27 +368,27 @@ GROUNDING = {"grounded": True}
 SKILLS = ["glossary"]
 
 
-def test_pg_save_with_grounding_runs_the_same_statements_on_one_connection():
+def test_pg_save_with_grounding_is_one_connection_one_transaction_one_answer_insert():
     old, old_log, old_connects = _pg_store()
     old.save(*SAVE_ARGS)
     old.save_grounding("a1", GROUNDING, SKILLS)
     new, new_log, new_connects = _pg_store()
     new.save_with_grounding(*SAVE_ARGS, GROUNDING, SKILLS)
     assert len(old_connects) == 2 and len(new_connects) == 1                  # 연결 수가 2에서 1로
-    assert [x for x in old_log if x[0] != "close"] == [x for x in new_log if x[0] != "close"]   # 같은 문장, 같은 값, 같은 순서(트랜잭션 경계 포함)
+    new_kinds = [x[0] for x in new_log if x[0] != "close"]
+    assert new_kinds == ["begin", "exec", "many", "commit"]                   # 답(근거 칸 포함) INSERT 한 문장 + 인용, 한 트랜잭션
+    assert "grounding" in new_log[1][1] and "answer_grounding" not in new_log[1][1]
+    old_execs = [x for x in old_log if x[0] == "exec"]
+    assert len(old_execs) == 2 and "UPDATE answers SET grounding" in old_execs[1][1]    # 따로 쓰는 길은 UPDATE 한 문장
+    assert len([x for x in new_log if x[0] == "exec"]) == 1                   # 새 길은 문장이 하나 준다(왕복 한 번)
 
 
-def test_pg_save_with_grounding_keeps_the_answer_when_the_grounding_write_fails():
-    new, log, _ = _pg_store(fail_on="answer_grounding")
-    with pytest.raises(RuntimeError):
-        new.save_with_grounding(*SAVE_ARGS, GROUNDING, SKILLS)
-    kinds = [x[0] for x in log]
-    assert kinds[:4] == ["begin", "exec", "many", "commit"]     # 답과 인용은 이미 커밋됐다(지금 save와 save_grounding을 따로 부를 때와 같다)
-    old, old_log, _ = _pg_store(fail_on="answer_grounding")
-    old.save(*SAVE_ARGS)
-    with pytest.raises(RuntimeError):
-        old.save_grounding("a1", GROUNDING, SKILLS)
-    assert [x[0] for x in old_log if x[0] != "close"][:4] == kinds[:4]
+def test_pg_save_with_grounding_keeps_the_answer_when_the_grounding_cannot_be_made_into_json():
+    new, log, _ = _pg_store()
+    new.save_with_grounding(*SAVE_ARGS, {"bad": object()}, SKILLS)           # 근거 칸만 비우고 답과 인용은 남긴다
+    execs = [x for x in log if x[0] == "exec"]
+    assert [x[0] for x in log if x[0] != "close"] == ["begin", "exec", "many", "commit"]
+    assert "ON CONFLICT (answer_id) DO NOTHING" in execs[0][1] and "grounding" not in execs[0][1]
 
 
 class RecordingStore(InMemoryAnswerStore):

@@ -794,7 +794,7 @@ def test_status_column_meaning_is_written_in_the_schema():
     assert "status      text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected'))" in sql
 
 
-@pytest.mark.parametrize("name,tables", [("102_decision_approvals.sql", ("decision_tables", "approvals")), ("110_issue_tables.sql", ("issue_tables", "issue_table_rejections"))])
+@pytest.mark.parametrize("name,tables", [("102_decision_approvals.sql", ("decision_tables", "approvals")), ("110_issue_tables.sql", ("issue_tables",))])
 def test_review_tables_turn_rls_on_like_the_search_tables(name, tables):
     import re
 

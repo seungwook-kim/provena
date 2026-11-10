@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS admin_role_log (
     target_user_id uuid NOT NULL REFERENCES users(user_id),
     action         text NOT NULL CHECK (action IN ('promote', 'revoke'))
 );
-CREATE INDEX IF NOT EXISTS admin_role_log_at ON admin_role_log (at);
+-- at 색인은 두지 않는다: 이 표를 읽는 질의가 코드에 없고(쓰기만 한다) 운영 조회에서도 색인이 한 번도 쓰이지 않았다. 옛 admin_role_log_at 은 db/109_realign.sql 이 지운다.
 -- Supabase는 public 표를 Data API로 내보낸다(db/201_search.sql:90 설명과 같은 이유).
 ALTER TABLE admin_role_log ENABLE ROW LEVEL SECURITY;

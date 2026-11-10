@@ -63,7 +63,7 @@ class PgLinks:
             "SELECT c.rule_seq, c.article, d.title, min(c.seq) AS first_seq FROM chunks c "
             "JOIN versions v ON v.rule_seq = c.rule_seq AND v.version_id = c.version_id AND v.valid_to IS NULL "
             "JOIN docs d ON d.rule_seq = c.rule_seq "
-            "WHERE %s = ANY(c.link_targets) AND c.rule_seq <> %s AND c.article IS NOT NULL "
+            "WHERE c.link_targets @> ARRAY[%s]::bigint[] AND c.rule_seq <> %s AND c.article IS NOT NULL "
             "GROUP BY c.rule_seq, c.article, d.title ORDER BY c.rule_seq, first_seq LIMIT %s",
             (int(rule_seq), int(rule_seq), LIMIT))
         return [{"rule_seq": int(s), "article": a, "title": t} for s, a, t, _ in rows]

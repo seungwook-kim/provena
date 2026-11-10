@@ -387,22 +387,30 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | `docs` | rule_seq(페이지 id), org(절), title(페이지 제목), fmt(md), source_url(핸드북 URL), fetched_at | ingest |
 | `versions` | version_id(커밋 sha 기반), rule_seq, version_date(커밋 날짜), version_date_before(판 날짜가 정확하지 않고 그 이전, I-001), file_sha256 | ingest, diff |
 | `chunks` | chunk_id, version_id, article(제목 경로), kind, text, text_sha256, acl(볼 수 있는 그룹, 비면 공개), embedding | ingest, rag |
-| `rule_links` | from_rule, to_rule, kind(페이지 링크) | GraphRAG (가산), F-02 연결 정책 리콜 |
+| (`chunks.link_targets`) | 본문 링크가 가리키는 페이지 rule_seq 배열(GIN 색인 `chunks_link_targets_gin`). 별도 `rule_links` 표는 만들지 않았고 이 칸이 같은 일을 한다 | 검색 링크 확장(GraphRAG 가산), F-02 연결 정책 리콜 |
 | `users` | user_id, login_id, password_hash, role(user, admin), groups(문서 권한 그룹) | api |
-| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at | graph |
+| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at, grounding(json, 밖으로 낼 수 있는 인용 검사 결과), skills_used(json) | graph |
 | `citations` | answer_id, chunk_id, version_id | graph, recall |
 | `decision_tables` | table_id, rule_seq, version_id, cells(json), status(draft, approved, rejected), approved_by | graph, api |
-| `approvals` | approval_id, kind, thread_id, status, decided_by | graph, api |
-| `answer_grounding` | answer_id, grounding(json), skills_used | graph |
+| `approvals` | approval_id, kind(decision_table, issue_table, team_review_failed), thread_id, status, decided_by, comment(반려 사유), decided_at | graph, api |
 | `recall_events` | event_key(= 수집이 정한 event_id), changed(json), status(running, done, failed), 건수. 같은 개정은 한 번만 처리한다 | recall |
-| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked. UNIQUE (answer_id, event_key) | graph, api |
-| `recall_feedback` | notice_id, user_id, rule_seq, article, pattern, useful, reason. 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다 | api, recall |
+| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked, feedback_useful·feedback_reason·feedback_by·feedback_at(사용자 의견: 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다). UNIQUE (answer_id, event_key) | graph, api |
 | `recall_digests` | digest_id, user_id, day, count, notice_ids, payload. 하루 요약(`RECALL_DIGEST=daily`) | recall |
 | `change_monitoring` | id(1), status(active, paused), updated_by. 변경 감시 스위치 | api, ingest |
 | `maintenance_candidates` | candidate_id, upper_rule(바뀐 정책), upper_version_id, rule_seq(연결된 정책), article, status, decided_by | graph, api |
 | `webhook_subscriptions` | sub_id, url, secret_ref, active | api |
 | `webhook_deliveries` | delivery_id, sub_id, notice_id, kind(notice, digest), status(pending, success, failed), tries, attempts(시도별 상태 코드·오류 종류·시각) | api |
-| LangGraph 체크포인트·Store | 라이브러리가 만든다 | graph |
+| `threads` | (user_id, thread_id), title, status(idle, running, pending_approval), last(json), created_at, updated_at. 사용자별 대화 목록 | api |
+| `issue_tables` | table_id, approval_id, thread_id, user_id, request, as_of, issue_rows(json), unreviewed(json), approved_by, approved_at. 사람 승인을 받은 합동 검토 쟁점표(F-03) | graph |
+| `signup_requests` | request_id, user_id, login_id, password_hash, status(pending, approved, rejected), requested_at, reviewed_at, reviewed_by. 가입 요청과 관리자 승인(결정 0082) | api |
+| `user_profiles` | user_id, 이름·소속·전화·주소의 암호문(AES-256-GCM), key_version, updated_at | api |
+| `admin_role_log` | log_id, at, by_user_id, target_user_id, action. 관리자 등록·해제 기록(쓰기 전용) | api |
+| `token_revocations` | jti, expires_at, revoked_at. 로그아웃한 토큰 | api |
+| `index_meta` | id(1), embedder, dim, n_chunks, status(loading, ready), generation 등. 색인 장부 | rag, ingest |
+| `query_translations` | query_sha256, model, keywords, sentence. 질문 번역 장부 | rag |
+| `sync_runs` | run_id, job, slot, trigger, status, started_at, finished_at, 건수. 정해진 시각 수집의 실행 기록과 중복 실행 방지 (job, slot) | ingest |
+| `changed_articles` | event_id(= `recall_events.event_key`), run_id, rule_seq, article, old_version_date, new_version_date, change_type, status(pending, sent, failed). 리콜에 넘길 바뀐 섹션 | ingest, recall |
+| LangGraph 체크포인트·Store | 라이브러리가 만든다(`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `store`, `store_migrations`) | graph |
 
 - 대화는 `thread_id`, 장기 기억은 Store namespace `(user_id, ...)`로 사용자마다 나눈다(P-01, G4).
 - Store 기억(가이드 p.10): 무엇을 기억할지 기준(팀·역할·담당 서비스처럼 답에 쓰는 사실만), State와 Store의 경계(대화 중 값은 State, 다음 대화에도 쓸 값만 Store), 틀린 기억을 고치는 절차(`GET/PATCH/DELETE /me/memory`), DB 기반 Store.
