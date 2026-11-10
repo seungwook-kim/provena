@@ -127,6 +127,7 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 ### 키 없이 뜨는 데모 모드
 
 - `DEMO_MODE=1`(기본)이면 LLM 키 없이 기록해 둔 응답(`data/demo_replay/`)을 재생하고, 기록이 없는 호출은 결정적 가짜 응답으로 대신한다. 검색 색인은 위 절차대로 `loader`가 `data/index.tar.gz`(없으면 `INDEX_URL`)를 풀어 적재하며, 색인이 없으면 질문은 거절로 끝난다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
+- 새 clone 기동 확인(2026-11-10): `.env` 없이 `docker compose up`으로 db healthy, loader 청크 23,095개 적재, `/health` ok, 데모 계정 두 개 로그인 200, 아래 CUD 질문에 승인 권한표 2023-05판 인용 답을 확인했다. 단 `db/106` 역할 오류로 db가 종료되던 문제([PR #110](https://github.com/aihuman-7th/proj3-c/pull/110))를 고치기 전 커밋(`0eb745e`)으로 만든 clone에 수정을 적용한 상태에서 한 확인이며, PR #110 머지본 기준 재확인은 발표 전에 한다([docs/GATES.md](./docs/GATES.md) G2).
 - 녹화는 LLM 응답과 질문 임베딩(voyage-4 벡터) 두 가지다. 키가 없으면 새 질문의 벡터를 만들 수 없으므로, **녹화한 질문만 키 없이 답이 나온다.** 녹화에 없는 질문은 "검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다."라는 거절로 끝난다. 다른 질문을 시험하려면 `.env`에 `LLM_API_KEY`와 `VOYAGE_API_KEY`를 넣고 `DEMO_MODE=0`으로 바꾼다.
 - 키 없이 인용 답이 나오는 질문(녹화 2026-11-09, `data/demo_replay/recorded.jsonl`). 글자가 같아야 재생된다(공백 차이는 무시).
   - 제3자가 프로덕션 데이터에 접근하거나 영향을 줄 수 있다면 보안 검토가 필요한가요?
