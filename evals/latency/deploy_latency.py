@@ -4,6 +4,7 @@
 - 첫 토큰까지 시간: 첫 `token` 이벤트를 받은 시각. 서버는 그래프가 끝난 뒤 token, citation, done을 내보내므로 전체 시간에 가깝다.
 - 전체 시간: `done` 이벤트를 받은 시각.
 - 결과 kind(answer | clarify | refuse), 인용 수(`citation` 이벤트 개수), 비용(`done.usage.cost_usd`, 있으면)과 토큰 수.
+- 인용한 청크 id 목록(`cited_chunk_ids`, 이벤트 순서 그대로)과 그 판 날짜(`cited_version_dates`). 정답 위치 대조는 `evals/latency/deploy_citation_gold.py`가 한다(여기서는 청크 id만 남긴다).
 
 규칙
 - 문항은 1번부터 순서대로 하나씩 보낸다(동시 요청 없음). thread_id를 주지 않으므로 서버가 문항마다 새 대화를 만든다.
@@ -13,7 +14,8 @@
 - 계정 정보와 쿠키는 출력하지도 저장하지도 않는다. 로그인 정보는 환경 변수로만 받는다.
 
     환경 변수: DEPLOY_LATENCY_BASE_URL, DEPLOY_LATENCY_LOGIN, DEPLOY_LATENCY_PASSWORD (일반 평가용 계정)
-    python -m evals.latency.deploy_latency --revision provena-api-00020 --commit 2c2d61d [--runs 3] [--resume] [--limit N]
+    python -m evals.latency.deploy_latency --revision provena-api-00020 --commit 2c2d61d [--runs 3] [--resume] [--limit N] [--dataset evals/dataset_holdout_v1.jsonl --out 폴더]
+(`--dataset`을 주지 않으면 평가셋 v2 50건. 준 평가셋의 경로와 sha256은 summary.json의 meta에 적는다.)
 
 결과: evals/results/deploy_latency_v2/run1~3/rows.jsonl, 같은 폴더의 summary.json, summary.md.
 """
@@ -91,7 +93,7 @@ def iter_sse(lines: Iterable[str]) -> Iterator[tuple[str, str]]:
 def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], float], deadline_s: float | None = None) -> dict[str, Any]:
     """`/chat`의 SSE 줄을 읽어 시간과 결과를 계산한다. `t0`는 요청을 보낸 시각(`clock()` 기준)."""
     out: dict[str, Any] = {"status": "no_done", "first_token_s": None, "total_s": None, "result": None, "citations": 0,
-                           "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0}
+                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0}
 
     def guarded(src: Iterable[str]) -> Iterator[str]:
         for ln in src:
@@ -113,6 +115,8 @@ def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], 
             out["answer_chars"] += len(str(data.get("text") or ""))
         elif etype == "citation":
             out["citations"] += 1
+            out["cited_chunk_ids"].append(data.get("chunk_id"))
+            out["cited_version_dates"].append(data.get("version_date"))
         elif etype == "error":
             out.update(status="error", error_code=str(data.get("code") or "unknown"), total_s=round(now, 3))
             return out
@@ -165,7 +169,9 @@ def _f(v: float | None, nd: int = 3) -> str:
 
 def render_markdown(summary: dict[str, Any]) -> str:
     m = summary["meta"]
-    lines = [f"# 배포본 응답 시간 (평가셋 v2 {m.get('n_questions')}건 x {len(summary['per_run'])}회)", "",
+    ds = m.get("dataset") or "dataset_v2.jsonl"
+    ds_label = "평가셋 v2" if ds == "dataset_v2.jsonl" else f"평가셋 {ds}"
+    lines = [f"# 배포본 응답 시간 ({ds_label} {m.get('n_questions')}건 x {len(summary['per_run'])}회)", "",
              f"- 대상: {m.get('base_url')}, 리비전 {m.get('revision') or '미기재'}, 커밋 {m.get('commit') or '미기재'}",
              f"- 측정 시각: {m.get('started_at')} ~ {m.get('finished_at')}",
              f"- 방식: 평가셋 순서대로 문항마다 새 대화로 `POST /chat`을 한 건씩 보내고, 요청을 보낸 시각부터 첫 `token`, `done` 이벤트까지 클라이언트 쪽에서 쟀다(네트워크 지연 포함, 동시 요청 없음, 제한 시간 {m.get('timeout_s')}초, `as_of`는 평가셋 값).",
@@ -206,6 +212,14 @@ def _mean(values: list[float | None]) -> float | None:
 
 
 # ---------------------------------------------------------------- 네트워크
+
+def dataset_label(path: Path) -> str:
+    """결과 meta에 적는 평가셋 경로. 저장소 안이면 저장소 기준 상대 경로, 밖이면 준 그대로."""
+    try:
+        return path.resolve().relative_to(REPO).as_posix()
+    except ValueError:
+        return path.as_posix()
+
 
 def load_dataset(path: Path = DATASET, limit: int | None = None) -> list[dict]:
     items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -287,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--timeout", type=float, default=120.0, help="문항 하나의 제한 시간(초)")
     ap.add_argument("--resume", action="store_true", help="이미 성공한 문항은 건너뛰고 이어서 잰다")
     ap.add_argument("--limit", type=int, default=0, help="앞에서 N문항만(시험용)")
+    ap.add_argument("--dataset", default=str(DATASET), help="평가셋 JSONL(기본 evals/dataset_v2.jsonl). 경로와 sha256을 결과 meta에 적는다")
     ap.add_argument("--no-as-of", action="store_true", help="as_of를 보내지 않는다(서버 기본 기준일)")
     ap.add_argument("--pause", type=float, default=0.0, help="문항 사이에 쉬는 초")
     args = ap.parse_args(argv)
@@ -301,7 +316,11 @@ def main(argv: list[str] | None = None) -> int:
 
     base = os.environ["DEPLOY_LATENCY_BASE_URL"].rstrip("/")
     creds = Creds(os.environ["DEPLOY_LATENCY_LOGIN"], os.environ["DEPLOY_LATENCY_PASSWORD"])
-    items = load_dataset(limit=args.limit or None)
+    dataset_path = Path(args.dataset)
+    if not dataset_path.is_file():
+        print(f"평가셋 파일이 없다: {dataset_path}", file=sys.stderr)
+        return 2
+    items = load_dataset(dataset_path, limit=args.limit or None)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     if not args.resume and any((out / f"run{n}" / "rows.jsonl").exists() for n in range(1, args.runs + 1)):
@@ -330,7 +349,8 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     meta: dict[str, Any] = {
-        "dataset": DATASET.name, "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(), "n_questions": len(items),
+        "dataset": dataset_path.name, "dataset_path": dataset_label(dataset_path), "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+        "n_questions": len(items),
         "base_url": base, "revision": args.revision, "commit": args.commit, "timeout_s": args.timeout, "as_of": "dataset" if not args.no_as_of else "none",
         "health_s": health_s, "started_at": now_iso(), "finished_at": None, "runs_requested": args.runs,
         "note": "클라이언트 측 시간(요청 전송부터 첫 token, done 이벤트까지). 로그인과 CSRF 준비 시간은 넣지 않았다.",
@@ -338,9 +358,13 @@ def main(argv: list[str] | None = None) -> int:
     old = out / "summary.json"
     if args.resume and old.exists():   # 이어서 할 때 처음 시작 시각을 유지한다
         try:
-            meta["started_at"] = json.loads(old.read_text(encoding="utf-8"))["meta"].get("started_at") or meta["started_at"]
+            old_meta = json.loads(old.read_text(encoding="utf-8"))["meta"]
         except (ValueError, KeyError):
-            pass
+            old_meta = {}
+        if old_meta.get("dataset_sha256") and old_meta["dataset_sha256"] != meta["dataset_sha256"]:   # 다른 평가셋의 결과에 이어 붙이면 섞인다
+            print(f"{out}의 이전 결과는 다른 평가셋({old_meta.get('dataset')})으로 쟀다. 같은 평가셋으로 이어서 하거나 --out을 바꿔라.", file=sys.stderr)
+            return 2
+        meta["started_at"] = old_meta.get("started_at") or meta["started_at"]
 
     runs: dict[int, list[dict]] = {}
     for n in range(1, args.runs + 1):
