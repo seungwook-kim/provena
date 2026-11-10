@@ -551,11 +551,12 @@ def finish_run(config: dict | None) -> dict:
 
     `run_config`가 만든 config가 아니면 빈 합계를 돌려준다. 예외를 던지지 않는다.
     """
-    summary = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0, "cap_usd": None, "trace_id": None}
+    summary = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0, "cap_usd": None, "trace_id": None, "cost_by_step": {}}
     try:
         for cb in (config or {}).get("callbacks") or []:
             if isinstance(cb, CostTracker):
                 summary.update(cb.summary())
+                summary["cost_by_step"] = cb.by_step()   # 단계별 합(숫자만, 항상). `/chat`의 done 이벤트가 실어 보낸다
         for cb in (config or {}).get("callbacks") or []:
             if isinstance(cb, CostTracker):
                 continue

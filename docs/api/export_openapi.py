@@ -35,6 +35,14 @@ def build_openapi() -> dict:
     from backend.main import create_app
 
     app = create_app(auth_store=_NoStore())          # lifespan은 돌리지 않는다: DB·모델·검색 준비 없음
+    # 내 정보 라우터(`/me/profile`)는 실제 사용자 저장소와 짝일 때만 앱이 붙이므로(backend/main.py), 여기서 빈 저장소로 직접 붙인다.
+    # 암호 키는 이 실행 안에서만 쓰는 임시 값이고 명세에 들어가지 않는다. 명세는 아직 만들지 않았으므로(app.openapi() 전) 경로가 반영된다.
+    from backend.profile_api import create_profile_router
+    from backend.services.profile_crypto import ProfileCipher
+
+    app.include_router(create_profile_router(auth_store=_NoStore(), profile_store=_NoStore(),
+                                             cipher=ProfileCipher.from_env(allow_ephemeral=True),
+                                             secret=os.environ["AUTH_SECRET"]))
     return app.openapi()
 
 

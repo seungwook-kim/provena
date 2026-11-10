@@ -112,6 +112,7 @@ def score_row(row: dict, item: dict, by_id: dict[str, Any]) -> dict[str, Any]:
         "wrong_citation": bool(answered and cited_on_gold < len(cited_ids)),
         "unresolved": unresolved, "version_date_mismatch": date_mismatch,
         "n_citation_events": row.get("citations"),
+        "refuse_stage": row.get("refuse_stage"), "refuse_reason": row.get("refuse_reason"),   # 서버가 done에 실은 거절 단계·사유(deploy_latency 행에서 그대로)
     }
 
 

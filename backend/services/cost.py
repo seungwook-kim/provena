@@ -6,6 +6,7 @@
   이미 보낸 호출은 되돌릴 수 없으므로 상한을 넘기는 마지막 한 번은 나갈 수 있다.
 - 모델이 `response_metadata["total_cost_usd"]`로 비용을 직접 알려 주면(claude_cli: CLI가 보고한 API 환산 비용, 캐시 단가 반영) 단가표 대신 그 값을 합산한다.
 - 가짜 모델(데모 모드)은 사용량을 안 돌려주므로 비용은 0이다.
+- 단계별 합(`by_step()`): 같은 호출을 `llm_trace.step_of`가 정한 단계 이름(노드/표지)으로 나눠 호출 수·토큰·비용·걸린 시간을 쌓는다. 항상 켜져 있고 내용은 저장하지 않는다(`step_cost.py`).
 
 환경변수:
 - `LLM_COST_CAP_USD`: 질문 한 건의 비용 상한(달러). 없거나 비면 기본 `DEFAULT_COST_CAP_USD`. `0`, `off`, `none`이면 상한 없음.
@@ -17,11 +18,14 @@ import json
 import logging
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
+
+from backend.services import llm_trace
 
 log = logging.getLogger(__name__)
 
@@ -134,6 +138,8 @@ class CostTracker(BaseCallbackHandler):
         self.output_tokens = 0
         self.cost_usd = 0.0
         self.calls = 0
+        self._steps: dict[str, dict] = {}   # 단계(`llm_trace.step_of`)별 합. 항상 켜 둔다: 호출마다 dict 갱신 몇 번뿐이고 내용은 저장하지 않는다
+        self._open: dict[UUID, tuple[str, float]] = {}   # 진행 중인 호출의 (단계, 시작 시각). 끝나거나 실패하면 지운다
         self._lock = threading.Lock()
 
     def _check(self) -> None:
@@ -141,19 +147,49 @@ class CostTracker(BaseCallbackHandler):
             if self.cap_usd is not None and self.cost_usd >= self.cap_usd:
                 raise CostCapExceeded(self.cost_usd, self.cap_usd)
 
+    def _open_step(self, run_id: UUID, messages: Any, kwargs: dict) -> None:
+        try:
+            step = llm_trace.step_of(messages, kwargs.get("metadata"))[0]
+            with self._lock:
+                self._open[run_id] = (step, time.perf_counter())
+        except Exception as e:  # noqa: BLE001  단계 기록이 실패해도 합계와 상한은 그대로 동작해야 한다
+            log.debug("단계 기록 시작 실패: %s", type(e).__name__)
+
     def on_chat_model_start(self, serialized: dict[str, Any], messages: Any, *, run_id: UUID, **kwargs: Any) -> None:
         self._check()
+        self._open_step(run_id, messages, kwargs)
 
     def on_llm_start(self, serialized: dict[str, Any], prompts: Any, *, run_id: UUID, **kwargs: Any) -> None:
         self._check()
+        self._open_step(run_id, None, kwargs)
 
     def on_llm_end(self, response: Any, *, run_id: UUID, **kwargs: Any) -> None:
         with self._lock:
+            step, t0 = self._open.pop(run_id, ("unknown", None))
+            seconds = time.perf_counter() - t0 if t0 is not None else 0.0
+            row = None
             for model, i_tok, o_tok, reported in _usage_of(response):
+                call_cost = reported if reported is not None else cost_usd(model or self.default_model, i_tok, o_tok, self.prices)
                 self.calls += 1
                 self.input_tokens += i_tok
                 self.output_tokens += o_tok
-                self.cost_usd += reported if reported is not None else cost_usd(model or self.default_model, i_tok, o_tok, self.prices)
+                self.cost_usd += call_cost
+                if row is None:
+                    row = self._steps.setdefault(step, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0})
+                    row["llm_s"] += seconds   # 호출 한 번의 걸린 시간(여러 호출이 겹치면 합이 실제 대기보다 길 수 있다)
+                row["calls"] += 1
+                row["input_tokens"] += i_tok
+                row["output_tokens"] += o_tok
+                row["cost_usd"] += call_cost
+
+    def on_llm_error(self, error: BaseException, *, run_id: UUID, **kwargs: Any) -> None:
+        with self._lock:
+            self._open.pop(run_id, None)
+
+    def by_step(self) -> dict[str, dict]:
+        """단계 이름 -> {calls, input_tokens, output_tokens, cost_usd, llm_s}. 단계 합 = `summary()`의 합계(같은 호출을 같은 자리에서 센다)."""
+        with self._lock:
+            return {k: {**v, "cost_usd": round(v["cost_usd"], 8), "llm_s": round(v["llm_s"], 3)} for k, v in self._steps.items()}
 
     def summary(self) -> dict:
         with self._lock:

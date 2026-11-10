@@ -72,7 +72,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | 파일 | 하는 일 |
 |---|---|
 | `backend/rag/retrieve/search.py` | `search()`, 필터, RRF, 방식 분기. 비교 입구 `make_search(embedder, mode, reranker, rerank_top)`: `evals/retrieval/compare.py --factory backend.rag.retrieve.search:make_search` 가 조합마다 부른다. 서비스와 같은 검색 코드를 쓰고 저장소만 DB 대신 `data/index/` 스냅샷(numpy)을 읽는다. 이름은 1차 비교(`experiment_v1`)의 짧은 이름도 받고, BM25만은 `embedder="none"`·`bm25_kw` |
-| `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix). voyage-4는 REST 호출(`VoyageClient`, 시간 한도 10초·재시도 0번 = MCP 30초 − 번역 15초 안쪽) |
+| `backend/rag/retrieve/embed.py` | 임베딩 모델 불러오기, 질문·문서 앞말(모델별 prefix). voyage-4는 REST 호출(`VoyageClient`, 시간 한도 10초·재시도 0번 = MCP 30초 − 번역 15초 안쪽). 응답의 `usage.total_tokens`는 `/chat` 요청 집계에 더해 done의 `embed_tokens`·`embed_cost_usd`로 나간다(`backend/services/step_cost.py`, docs/SDD.md 6장) |
 | `backend/rag/retrieve/links.py` | 링크 확장 재료: 청크 `element_ids` → 파싱 결과 `links` → 청크 주소 기준 urljoin → '#'·끝 '/' 뗌 → manifest 주소로 rule_seq. 자기 쪽·코퍼스 밖 제외. 측정 코드 `exp_decompose_v1.Links`와 같은 규칙(AC-07에서 23,095청크 대조) |
 | `backend/rag/retrieve/ranges.py` | 금액 구간 조회 재료(순수 함수, 모델·LLM 없음): `amounts_in`(질문의 달러 금액: `$30,000`, `$30K`, `30,000 dollars`, `3만 달러`), `parse_band`(제목 경로 끝의 금액 구간 6가지 표기), `covering`(표마다 금액이 속한 가장 좁은 구간 행). `search.py`의 `Searcher._range_expand`와 저장소의 `band_headings`·`key_scores`가 쓴다. 시험 `tests/test_range_search.py`, 재현·회귀 `evals/retrieval/range_context.py` |
 | `backend/rag/retrieve/rerank.py` | 리랭커 불러오기, int8(CPU) 선택 |

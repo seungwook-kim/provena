@@ -8,7 +8,7 @@
 
 ## 0. 운영 검색 경로
 
-- 운영 Cloud Run 환경변수(`live_00032.json`)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:350-354`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
+- 운영 Cloud Run 환경변수(`live_00032.json`)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
 - 운영 `chunks_emb_hnsw_half`는 64 MB이고 `idx_scan` 66,239로 조회됐다(2026-11-10 운영 읽기 전용 조회에서 읽은 값).
 
 ## 1. 벡터 질의 (search.py vector_top)
@@ -32,19 +32,19 @@
 
 | file:line | 표 | 조건/정렬 | 색인 | EXPLAIN | 판정 |
 |---|---|---|---|---|---|
-| search.py:320, 327 | index_meta | id=1 (검색마다 generation 확인) | index_meta_pkey | Seq Scan 1행, 0.04 ms | 1행 표, 생략 |
-| search.py:333 | chunks, versions, docs | 전체 JOIN, ORDER BY ord, chunk_id | pkey 들 | 전표 Seq Scan, 본문 없이 18.4 ms, 본문 포함 35.8 ms | 기동·generation 변경 때 전수 읽기가 의도 |
-| search.py:350-354 | chunks, versions, docs | embedder, `_FILTER`, ORDER BY dist LIMIT n | chunks_emb_hnsw_half, versions_one_current, docs_pkey | 1장 | HNSW 경로 |
-| search.py:363-367 | 같음 | 같음 (HNSW 꺼짐) | 거리용 색인 없음 | 1장 | 전수 비교가 의도 |
-| search.py:376 | chunks | embedder, `ord % 211 = 3`, LIMIT 150 | 없음 | Seq Scan, 30,028행 버림, 10.1 ms | 기동 때 1회 |
-| search.py:386-392 | chunks, versions, docs | rule_seq=ANY, `_FILTER`, NOT EXISTS | chunks_page | Bitmap Index Scan 126행, 1.25 ms | 충분 |
-| search.py:403-405 | chunks, versions, docs | `strpos(lower(d.title or ' > ' or article), p) > 0` | 없음(식 검색) | Seq Scan 30,171행, 15-20 ms | 색인으로 줄일 수 없음, 15-20 ms |
-| search.py:412-414 | chunks | rule_seq=ANY, `strpos(article,'$')`, `_FILTER` | chunks_page | 0.42 ms | 충분 |
-| search.py:421-424 | chunks | unnest(chunk_id, version_id) | chunks_pkey | Index Scan, 0.17 ms | 충분 |
-| search.py:431 | chunks | rule_seq, version_id, ORDER BY ord | chunks_page | 0.20 ms | 충분 |
-| search.py:437-440 | chunks, versions, docs | unnest 조인 | pkey 들 | Index Scan, 0.14 ms | 충분 |
-| search.py:447, 455-456 | query_translations | (query_sha256, model) | query_translations_pkey | Index Scan, 0.06 ms | 충분 |
-| search.py:880 | chunks | chunk_id=ANY | chunks_pkey | 0.10 ms | 충분 |
+| search.py:321, 328 | index_meta | id=1 (검색마다 generation 확인) | index_meta_pkey | Seq Scan 1행, 0.04 ms | 1행 표, 생략 |
+| search.py:334 | chunks, versions, docs | 전체 JOIN, ORDER BY ord, chunk_id | pkey 들 | 전표 Seq Scan, 본문 없이 18.4 ms, 본문 포함 35.8 ms | 기동·generation 변경 때 전수 읽기가 의도 |
+| search.py:351-355 | chunks, versions, docs | embedder, `_FILTER`, ORDER BY dist LIMIT n | chunks_emb_hnsw_half, versions_one_current, docs_pkey | 1장 | HNSW 경로 |
+| search.py:364-368 | 같음 | 같음 (HNSW 꺼짐) | 거리용 색인 없음 | 1장 | 전수 비교가 의도 |
+| search.py:377 | chunks | embedder, `ord % 211 = 3`, LIMIT 150 | 없음 | Seq Scan, 30,028행 버림, 10.1 ms | 기동 때 1회 |
+| search.py:387-393 | chunks, versions, docs | rule_seq=ANY, `_FILTER`, NOT EXISTS | chunks_page | Bitmap Index Scan 126행, 1.25 ms | 충분 |
+| search.py:404-406 | chunks, versions, docs | `strpos(lower(d.title or ' > ' or article), p) > 0` | 없음(식 검색) | Seq Scan 30,171행, 15-20 ms | 색인으로 줄일 수 없음, 15-20 ms |
+| search.py:413-415 | chunks | rule_seq=ANY, `strpos(article,'$')`, `_FILTER` | chunks_page | 0.42 ms | 충분 |
+| search.py:422-425 | chunks | unnest(chunk_id, version_id) | chunks_pkey | Index Scan, 0.17 ms | 충분 |
+| search.py:432 | chunks | rule_seq, version_id, ORDER BY ord | chunks_page | 0.20 ms | 충분 |
+| search.py:438-441 | chunks, versions, docs | unnest 조인 | pkey 들 | Index Scan, 0.14 ms | 충분 |
+| search.py:448, 456-457 | query_translations | (query_sha256, model) | query_translations_pkey | Index Scan, 0.06 ms | 충분 |
+| search.py:894 | chunks | chunk_id=ANY | chunks_pkey | 0.10 ms | 충분 |
 | section.py:169-173 | versions, docs | rule_seq, valid_to IS NULL 또는 as_of 구간 | versions_one_current, versions_pkey, docs_pkey | 0.11 ms | 충분 |
 | section.py:182-183, 189-190 | chunks | rule_seq, version_id, (article), ORDER BY seq | chunks_page | 0.17 ms, 0.25 ms | 충분 |
 | section.py:194 | docs | DISTINCT org | 없음 | Seq Scan 1,516행, 0.28 ms | 1,516행, 생략 |
@@ -129,7 +129,7 @@
 
 ## 5. 결론
 
-- 큰 표(chunks 30,171, versions 1,798, docs 1,516, query_translations 692, threads 850, citations 559, changed_articles 318, maintenance_candidates 964)에서 Seq Scan이 남는 질의는 의도한 전수 읽기(기동·적재·증분 1회), 식 검색(`heading_top` 15-20 ms), 날짜 식 목록(318행)뿐이다. 검색의 `/chat` 경로는 HNSW(org 필터 없음 1 ms 안팎), org 필터 있는 경우 29-33 ms다.
+- 큰 표(chunks 30,171, versions 1,798, docs 1,516, query_translations 692, threads 850, citations 559, changed_articles 318, maintenance_candidates 964)에서 Seq Scan이 남는 질의는 의도한 전수 읽기(기동·적재·증분 1회), 날짜 식 목록(318행)뿐이다. 검색의 `/chat` 경로는 HNSW(org 필터 없음 1 ms 안팎), org 필터 있는 경우 29-33 ms다.
 - 색인 변경: 제거 7개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`, `token_revocations_expires_at`, `signup_requests_status_requested_at`, `recall_notices_review_idx`), 추가 2개(`issue_tables_thread_user_idx`, `chunks_link_targets_gin`), 부분 색인 `recall_notices_feedback_idx`는 의견 표 합침으로 추가.
 - 만들지 않은 색인: `approvals(thread_id)`(11행, 수천 행이 되면), `changed_articles_pending` 칸 재설계(pending 0행), `chunks(ord)`(쓰기 비용), org별 부분 HNSW(운영 분포 모름), `chunks.org` 복사(스키마 변경).
 - 코드 쪽 관찰(색인 문제가 아님, 이번에 고치지 않음): `recall_notices`·`maintenance_candidates` 목록을 LIMIT 없이 전부 읽고 앱에서 자른다(`recalls.py:177-187`), `GET /threads`가 사용자의 모든 대화를 읽는다(`threads.py:138`), `PgRecallStore._q`·`PgChangeStore._q`가 호출마다 새 연결을 연다(`/changes` 한 요청에 약 8번).

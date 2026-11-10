@@ -108,25 +108,22 @@ def test_flagged_sentence_that_is_not_in_the_answer_does_not_excuse_other_senten
 
 
 def test_other_reasons_are_not_affected():
-    """사유가 nonexistent_entity인 판정은 단서 문장만 꼽았어도 거절 그대로다."""
-    llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="nonexistent_entity", reason="사유", unsupported_sentences=[HEDGE]))
-    out = ask(llm)
-    assert out["kind"] == "refuse" and out["refuse_reason"] == "nonexistent_entity" and "recoded" not in out["grounding"]
+    """사유가 no_evidence나 nonexistent_entity인 판정은 단서 문장만 꼽았어도 거절 그대로다."""
+    for code in ("no_evidence", "nonexistent_entity"):
+        llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code=code, reason="사유", unsupported_sentences=[HEDGE]))
+        out = ask(llm)
+        assert out["kind"] == "refuse" and out["refuse_reason"] == code and "recoded" not in out["grounding"] and llm.count("answer") == 1
 
 
-# ---------- 코드 규칙이 정하는 사유를 모델 표가 냈을 때 (사전 등록 62.29) ----------
-def test_recode_vote_only_touches_code_owned_reasons_that_the_code_rules_do_not_hold():
-    cited = [ROW.model_dump()]
+# ---------- 시점 표현이 없는 질문에 모델 표가 기간 사유를 냈을 때 (사전 등록 62.29) ----------
+def test_recode_vote_only_touches_out_of_period_votes_on_questions_without_a_period():
     vote = {"grounded": False, "reason_code": "out_of_period", "reason": "판 없음"}
-    assert G.recode_vote(vote, QUESTION, cited) == {**vote, "reason_code": "unsupported", "_recoded": "out_of_period"}
+    assert G.recode_vote(vote, QUESTION) == {**vote, "reason_code": "unsupported", "_recoded": "out_of_period"}
     for question in ("2019년에 계약 금액이 30만 달러라면 승인자는?", "FY25 보고서는 어디서 봐?", "작년 3분기 가용률은?", "지난달 기준 승인자는?"):
-        assert G.recode_vote(vote, question, cited) is vote                      # 시점 표현이 있으면 모델의 기간 판정 그대로
-    no_ev = {"grounded": False, "reason_code": "no_evidence", "reason": "답 없음"}
-    assert G.recode_vote(no_ev, QUESTION, cited)["reason_code"] == "unsupported"
-    assert G.recode_vote(no_ev, QUESTION, []) is no_ev                           # 인용이 없으면 코드 규칙의 no_evidence와 같다
-    for other in ({"grounded": False, "reason_code": "nonexistent_entity"}, {"grounded": False, "reason_code": "unsupported"}, {"grounded": True}, {}):
-        assert G.recode_vote(other, QUESTION, cited) is other
-    assert G.recode_vote(None, QUESTION, cited) is None
+        assert G.recode_vote(vote, question) is vote                      # 시점 표현이 있으면 모델의 기간 판정 그대로
+    for other in ({"grounded": False, "reason_code": "no_evidence"}, {"grounded": False, "reason_code": "nonexistent_entity"}, {"grounded": False, "reason_code": "unsupported"}, {"grounded": True}, {}):
+        assert G.recode_vote(other, QUESTION) is other                    # no_evidence 표는 그대로 거절 사유다
+    assert G.recode_vote(None, QUESTION) is None
 
 
 def test_period_refusal_items_of_the_eval_sets_that_name_a_period_keep_the_model_vote():
@@ -141,12 +138,12 @@ def test_period_refusal_items_of_the_eval_sets_that_name_a_period_keep_the_model
     named = [x for x in period if G.mentions_period(x["input"])]
     assert len(period) == 8 and len(named) == 7 and [x["id"] for x in period if x not in named] == [30]
     vote = {"grounded": False, "reason_code": "out_of_period"}
-    assert all(G.recode_vote(vote, x["input"], [ROW.model_dump()]) is vote for x in named)
+    assert all(G.recode_vote(vote, x["input"]) is vote for x in named)
 
 
-@pytest.mark.parametrize("code", ["out_of_period", "no_evidence"])
-def test_model_vote_with_a_code_owned_reason_is_redrafted_instead_of_refused_outright(code):
-    """시점 표현이 없는 질문의 out_of_period 표, 인용이 있는 답의 no_evidence 표는 바로 거절하지 않고 unsupported처럼 답을 다시 써 재판정한다. 다시 쓴 답이 받쳐지면 나간다."""
+def test_out_of_period_vote_on_a_question_without_a_period_is_redrafted_instead_of_refused_outright():
+    """시점 표현이 없는 질문의 out_of_period 표는 바로 거절하지 않고 unsupported처럼 답을 다시 써 재판정한다. 다시 쓴 답이 받쳐지면 나간다."""
+    code = "out_of_period"
     first = FACT.replace("VP(Approves)", "VP")
     votes = [j(grounded=False, reason_code=code, reason="사유"), j(grounded=True)]
     llm = normal_llm(answer=[reply(first), reply(FACT)], grounding=votes)
@@ -155,18 +152,18 @@ def test_model_vote_with_a_code_owned_reason_is_redrafted_instead_of_refused_out
     assert llm.count("grounding") == 2 and llm.count("answer") == 2
 
 
-@pytest.mark.parametrize("code", ["out_of_period", "no_evidence"])
-def test_recoded_vote_still_refuses_when_the_redraft_is_not_grounded(code):
+def test_recoded_vote_still_refuses_when_the_redraft_is_not_grounded():
     """다시 쓴 답도 받쳐지지 않으면 거절이다. 판정 기준은 낮아지지 않고 거절 사유만 unsupported가 된다."""
-    llm = normal_llm(answer=[reply(FACT.replace("VP(Approves)", "VP")), reply(FACT)], grounding=j(grounded=False, reason_code=code, reason="사유"))
+    llm = normal_llm(answer=[reply(FACT.replace("VP(Approves)", "VP")), reply(FACT)], grounding=j(grounded=False, reason_code="out_of_period", reason="사유"))
     out = ask(llm)
-    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["grounding"]["recoded"] == [code]
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["grounding"]["recoded"] == ["out_of_period"]
 
 
-def test_no_evidence_vote_flagging_only_a_hedge_is_eased_like_unsupported():
-    llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="no_evidence", reason="사유", unsupported_sentences=[HEDGE]))
+def test_no_evidence_vote_on_a_cited_answer_still_refuses_outright():
+    """인용이 있는 답에 모델 표가 no_evidence를 내면 지금처럼 바로 거절한다. 다시 쓰지 않는다(62.29에서 측정 전에 범위에서 뺐다)."""
+    llm = normal_llm(answer=[reply(FACT.replace("VP(Approves)", "VP")), reply(FACT)], grounding=[j(grounded=False, reason_code="no_evidence", reason="사유"), j(grounded=True)])
     out = ask(llm)
-    assert out["kind"] == "answer" and out["grounding"]["caveat_only"] is True and out["grounding"]["recoded"] == ["no_evidence"]
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "no_evidence" and "recoded" not in out["grounding"] and llm.count("answer") == 1
 
 
 def test_out_of_period_vote_on_a_question_that_names_a_period_still_refuses_outright():

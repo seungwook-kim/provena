@@ -78,11 +78,11 @@ def test_switches_off_keep_the_m44_prompts():
 
 def test_switches_off_in_the_runner_are_empty_values():
     p = argparse.ArgumentParser()
-    for flag in ("--keep-product-name", "--requery-terms", "--query-terms", "--query-branches",
+    for flag in ("--keep-product-name", "--requery-terms", "--query-branches",
                  "--cite-expand", "--cite-multi", "--team-last", "--keep-cites", "--sub-research", "--page-research", "--requery-vocab", "--unknown-name",
-                 "--refuse-on-none", "--research-same-page", "--cite-phrase", "--heading-terms", "--grounding-quote", "--drop-scoped-cites", "--heading-mark", "--intro-fill",
-                 "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--prompts-head",
-                 "--judge-vote", "--judge-quote", "--sub-merge", "--heading-best", "--facts-log", "--answer-best2", "--best2-samedoc", "--speculate-ground"):
+                 "--refuse-on-none", "--research-same-page", "--cite-phrase", "--grounding-quote", "--drop-scoped-cites", "--intro-fill",
+                 "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--prompts-head",
+                 "--judge-vote", "--judge-quote", "--sub-merge", "--facts-log", "--answer-best2", "--best2-samedoc", "--speculate-ground"):
         p.add_argument(flag, action="store_true")
     ns = p.parse_args([])
     keys = {"reasoning": "", "provider_sort": "", "llm_deadline": "", "llm_hedge": "", "llm_retries": "", "trace_detail": False, "json_reminder": False,

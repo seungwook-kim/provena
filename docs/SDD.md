@@ -1,7 +1,7 @@
 ---
 type: sdd
 project: Provena
-updated: 2026-10-28
+updated: 2026-11-10
 tags: [project, sdd]
 ---
 
@@ -124,7 +124,7 @@ flowchart LR
 | `task-brief` | 작업 지시서 양식 (목적, 입출력, 인수 테스트, 건드릴 파일) |
 | `test-first` | 테스트를 먼저 쓰고 구현 |
 | `self-check` | "완료" 전에 테스트·린트를 실제로 실행하고 출력 확인 |
-| `run-eval` | 평가셋 실행과 지표 비교 (`python evals/run_all.py`, 예정) |
+| `run-eval` | 평가셋 실행과 지표 비교 (`python -m evals.agent.exp_multi_v2 run ...`, `python evals/ci_compare.py`. 명령은 SPEC 3장) |
 | `replay` | 데모 모드 녹화 응답 재생 |
 | `data-check` | 핸드북 git 수집기·권한표 파서 점검 |
 | `regression` | 지표가 기준선보다 떨어졌는지 확인 |
@@ -144,7 +144,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발 도구 Skill (2-4)
 ├─ .mcp.json                 # 개발용 MCP 연결 설정
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). 의존성은 backend/requirements.txt
+├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장, `evals/evals.md`). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
@@ -198,7 +198,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ evals/ evals.md
 │     ├─ dataset_v1.jsonl, dataset_v2.jsonl
 │     ├─ freeze.py, FROZEN.json, PREREGISTER.md
-│     ├─ run_all.py               # 한 줄 재현 명령
+│     ├─ ci_compare.py            # 커밋된 최종 측정 결과를 통과선과 견줌(CI)
 │     ├─ retrieval/ (retrieval.md)  agent/ (agent.md)  safety/ (safety.md)  results/
 └─ tests/
 ```
@@ -380,7 +380,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 
 ## 5. 데이터 모델
 
-테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장).
+테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장). 아래 표는 요약이고, 현재 DB(앱 표 25개 + LangGraph 표 6개 = 31개, 2026-11-10 `db/109` 재정렬 뒤)의 관계도는 [ERD](./db/ERD.md), 표와 칸의 정의는 [TABLE_SPEC](./db/TABLE_SPEC.md), 코드의 SQL과 색인 대조는 [QUERY_INDEX](./db/QUERY_INDEX.md), 마이그레이션 순서와 운영 적용 절차는 `db/db.md`에 있다.
 
 | 테이블 | 주요 칸 | 쓰는 곳 |
 |---|---|---|
@@ -527,7 +527,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
 | `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
-| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution` |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
 
@@ -538,6 +538,11 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 
 - `done.attribution`은 고정 값이다: `source`(`GitLab Handbook`), `license`(`CC BY-SA 4.0`), `license_url`, `modified`(`true`), `notice`(GitLab Inc.와 제휴·보증 관계가 없다는 문구).
 - `kind`, `as_of`는 그래프의 최종 상태에서 읽는다. 최종 상태를 읽지 못하면 두 값이 `null`일 수 있다.
+- `done`의 측정용 칸(숫자와 코드뿐이고 질문·프롬프트·답 내용은 담지 않는다. 끄는 스위치 없이 항상 켜져 있고, 기존 칸의 이름과 모양은 그대로다. 구현은 `backend/services/step_cost.py`):
+  - `cost_by_step`: 단계 이름 -> `{calls, input_tokens, output_tokens, cost_usd, llm_s}`. 단계 이름은 그래프 노드와 호출 표지를 `/`로 이은 것(`classify/classify`, `rewrite/rewrite`, `search/decompose`, `judge/judge`, `write_answer/answer`, `ground/grounding` 등)이고 질문 번역 LLM은 `translate_keywords`, `translate_sentence`다. `llm_s`는 그 단계 LLM 호출 시간의 합이라 호출이 겹치면 실제 대기보다 길 수 있다.
+  - `usage`의 `calls`, `input_tokens`, `output_tokens`, `cost_usd`는 질문 번역을 뺀 그래프 합이다. `cost_by_step`의 번역 단계를 뺀 합과 같다(반올림 오차 안에서). `cost_by_step_total_usd`는 번역을 포함한 단계 비용 합이다.
+  - `embed_tokens`, `embed_calls`: 이 요청에서 부른 Voyage 임베딩 API 응답의 `usage.total_tokens` 합과 호출 수. 캐시 적중 등으로 호출이 없으면 0이다. `embed_cost_usd`는 `llm_prices.json`의 `embeddings`(voyage-4 100만 토큰당 0.06달러)로 환산한 값이며 계정 무료 한도는 반영하지 않는다.
+  - `refuse_stage`: 마지막으로 `kind`를 거절·되묻기로 낸 그래프 노드(`out_of_domain`, `search`, `give_up`, `verify`, `ground`, `decision_answer` 등). `refuse_reason`: 사유 코드. 그래프가 정한 `refuse_reason`(`no_evidence`, `out_of_period`, `nonexistent_entity`, `unsupported`)이 있으면 그 값, 없으면 `unavailable`/`no_key`/`unknown_name`(검색), `decision_error`, `out_of_domain`, `leak`, `citation_check`, `no_evidence`(`give_up`의 거절), `clarify`(되묻기), `index_not_ready`(색인 미준비). 답이면 두 칸 모두 없다.
 
 정상 종료 스트림의 예시다. 값은 형식을 보이기 위한 것이며 실제 값이 아니다.
 
@@ -549,7 +554,7 @@ event: citation
 data: {"type":"citation","thread_id":"t-1a2b3c4d5e6f","data":{"chunk_id":"0a1b2c3d4e5f6789","rule_title":"Incident Management","article":"Incident Management > Severities","version_date":"2026-10-12","version_date_before":false,"source_url":"https://handbook.gitlab.com/...","text":"..."}}
 
 event: done
-data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
+data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"cost_by_step":{"judge/judge":{"calls":2,"input_tokens":900,"output_tokens":100,"cost_usd":0.0003,"llm_s":1.8},"write_answer/answer":{"calls":1,"input_tokens":300,"output_tokens":200,"cost_usd":0.0037,"llm_s":2.1}},"cost_by_step_total_usd":0.004,"embed_tokens":13,"embed_calls":1,"embed_cost_usd":7.8e-07,"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
 ```
 
 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.
@@ -605,11 +610,28 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다 |
 | MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
-| 재현 | `evals/run_all.py` | 한 줄 재현 명령 |
+| 재현 | `EVAL_REPORT.md` 9장, SPEC 3장 | 지표마다 실행 명령을 적었다. 모든 지표를 한 번에 재는 `evals/run_all.py`는 만들지 않았다 |
 
-## 11. 미정 사항 (D0에 정함)
+## 11. 결정 사항과 남은 미정 사항 (D0 안건표, 2026-11-10 갱신)
 
-D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다.
+D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
+
+### 11-0. 2026-11-10 현재 확인되는 결과
+
+| 항목 | 현재 결과 | 근거 |
+|---|---|---|
+| 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
+| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다 | 결정 0078, 0086, `EVAL_REPORT.md` 8장 |
+| 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
+| 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
+| 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
+| 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
+| MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
+| F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
+| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/`(Java `src/`, `python_example/`)에 있고 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+
 
 ### 11-1. 파트 사이 계약
 
@@ -657,7 +679,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
 | 역할 배정, 폴더 주인 | 팀 작업 지침서 3장·5장 | 업무 분담안 그대로 확정 (가이드 p.28) | D0 |
-| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음, 담당을 정한다 | D0 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음. 현재 결과는 11-0 | D0 안건. 시연 영상 담당은 아직 정하지 않았다 |
 | 숫자 기준 | PRD 13-2 제안안 | 동결하고 중간에 낮추지 않는다 (가이드 p.14, p.19) | D0 |
 | 평가셋 정답 기준일(`as_of`) | 고정 커밋 날짜 하나로 통일 / 문항마다 다르게 | 고정 커밋 날짜 하나 | D0 |
 | 정답 판정 | 질문을 쓰지 않은 두 사람이 따로 판정하고, 다른 판정은 두 판정자가 합의한다(팀장은 형식만 확인) | 이 방식 | v1은 11/1 동결(기한 D2 11/3) |
