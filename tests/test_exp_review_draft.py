@@ -82,8 +82,9 @@ def test_anthropic_env_needs_a_key_and_never_prints_it(monkeypatch, capsys):
     fake = "sk-ant-" + "x" * 20
     monkeypatch.setenv("ANTHROPIC_API_KEY", fake)
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-y")
-    for name in ("LLM_PROVIDER", "LLM_MODEL", "LLM_API_KEY"):
-        monkeypatch.delenv(name, raising=False)
+    for name in ("LLM_PROVIDER", "LLM_MODEL", "LLM_API_KEY", "LLM_BASE_URL", "LLM_FALLBACK_MODEL", "DEMO_MODE", "LLM_RECORD", "LLM_REASONING", "LLM_PROVIDER_SORT"):
+        monkeypatch.setenv(name, "x")  # 원래 값(없음 포함)을 기록해 시험 뒤 되돌린다. 함수가 바꾼 값이 다른 시험으로 새지 않게
+        monkeypatch.delenv(name)
     M.use_anthropic_env()
     import os
     assert os.environ["LLM_PROVIDER"] == "anthropic" and os.environ["LLM_MODEL"] == M.ANTHROPIC_MODEL
