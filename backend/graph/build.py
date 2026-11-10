@@ -81,6 +81,9 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _MARK = re.compile(r"\[([0-9a-f]{16})\]")
 _ASKS_FACT = re.compile(r"누가|누구|언제|어디|어느|얼마|몇|무엇|뭐|어떻게|왜")
 _REVIEW_WORD = re.compile(r"검토|리뷰|review|평가해|봐\s*줘|맡아|맡길", re.I)
+# 규정상 필요한지·해야 하는지를 예·아니오로 묻는 말로 끝나는 질문("~가 필요한가요?", "~해야 하나요?", "~있어야 하나요?"). 이때 "검토"는 맡기는 일이 아니라 묻는 대상이다
+_ASKS_NEED = re.compile(r"(필요|필수|의무|\S야\s*(하|되|돼|합|할|한))[^.!?\n]{0,8}(\?|가요|나요|까요|한가|하나|인가|니|냐|까)\s*\??\s*$")
+_REVIEW_REQUEST = re.compile(r"(검토|리뷰|review|평가)[를을]?\s*(해\s*[줘주]|부탁|바랍|요청|맡)|봐\s*[줘주]|맡아|맡길", re.I)  # 검토를 해 달라고 맡기는 말
 _AMOUNT_WORD = re.compile(r"[천만억]\s*(?:달러|원|불)|구간|금액")
 # 값이 아니라 이름 안의 숫자: 글자로 시작하는 S1, Sev1, IPv4와 숫자로 시작하는 2FA. USD500, 5K, 10MB, 3GB처럼 값과 단위인 것은 남긴다
 _NAME_WITH_DIGIT = re.compile(r"(?<![$A-Za-z0-9.,])(?:(?!(?:USD|KRW|EUR|GBP|JPY)\d)[A-Za-z]+\d[A-Za-z0-9]*|\d+(?!(?:USD|KRW|EUR|GBP|JPY|KB|MB|GB|TB|PB|MS|SEC|MIN|HRS?|DAYS?)(?![A-Za-z0-9]))[A-Z]{2,}(?![A-Za-z0-9]))")
@@ -108,6 +111,14 @@ REFUSE_REASON_BY_MESSAGE = {
     MSG_REFUSE_LEAK: "leak",
     MSG_REFUSE_CITATION: "citation_check",
 }
+
+
+def asks_fact_not_review(question: str) -> bool:
+    """합동 검토로 분류된 질문이 검토를 맡기는 요청이 아니라 사실을 묻는 질문인가.
+    의문사로 묻고 검토라는 말이 없거나, 규정상 필요 여부를 예·아니오로 묻고 검토를 해 달라는 말이 없으면 사실 질문이다."""
+    if _ASKS_FACT.search(question) and not _REVIEW_WORD.search(question):
+        return True
+    return bool(_ASKS_NEED.search(question.strip())) and not _REVIEW_REQUEST.search(question)
 
 
 def route_of(obj: dict | None) -> str:
@@ -579,7 +590,7 @@ def build_graph(
                 if query["task_type"] is None:  # 승인된 표 중 질문이 묻는 업무 종류가 없다(외부 SaaS 도입처럼 표 이름과 바로 맞지 않는 질문). 거절하지 않고 핸드북(금액 구간 검색 포함)에서 찾는다
                     return "rule"
                 picked.update(query)
-            if route == "review" and review_graph is not None and _ASKS_FACT.search(state["question"] or "") and not _REVIEW_WORD.search(state["question"] or ""):  # 사실을 묻는 질문을 승인 대기로 멈추지 않는다
+            if route == "review" and review_graph is not None and asks_fact_not_review(state["question"] or ""):  # 사실을 묻는 질문을 승인 대기로 멈추지 않는다
                 return "rule"
             # 도메인 밖은 검색 없이 끝나 뒤 단계가 되돌릴 수 없다. 두 번 다 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다
             if route == "out_of_domain" and once() != "out_of_domain":

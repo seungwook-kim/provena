@@ -41,13 +41,11 @@ class TermRow:
         return all(re.search(p, text, re.I) for p in self.all_of) and not any(re.search(p, text, re.I) for p in self.none_of)
 
 
-# 핸드북 용어표(`skills/search-terms/SKILL.md`의 같은 개념 행). 한국어 말이 번역되면 핸드북 용어와 멀어지는 개념만 둔다
-TERM_ROWS: tuple[TermRow, ...] = (
-    TermRow("구매·새 도구 도입", (r"도입|구매|구입|사고\s*싶|사려", r"도구|툴|소프트웨어|SaaS|앱|애플리케이션|솔루션|벤더|업체"),
-            "procurement, purchase request, new vendor", heads=("new request",)),
-    TermRow("업체 보안 검토", (r"TPRM|보안\s*(검토|평가|심사)|(업체|벤더|공급사)\s*보안",), "TPRM, third party risk management assessment", heads=("TPRM assessment",)),
-)
-# heads: 핸드북이 그 개념의 절 제목에 쓰는 구(구매 요청을 시작하는 'New Request', 업체 보안 검토의 'TPRM Assessment'). 검색어 벡터는 바꾸지 않는다
+# 핸드북 용어표. 한국어 말이 번역되면 핸드북 용어와 멀어지는 개념만 둔다.
+# 지금은 비어 있다: 구매·새 도구 도입 행과 업체 보안 검토 행은 v2 문항의 말에 맞춘 것이라 뺐다(사전 등록 62.34).
+# 금액으로 승인자를 묻는 질문에 구매 절차 용어가 붙어 승인 권한표의 금액 구간 행이 검색에서 밀렸다. 표가 비면 덧붙임과 제목 경로 추가(H, HT)는 아무것도 하지 않는다
+TERM_ROWS: tuple[TermRow, ...] = ()
+# heads: 핸드북이 그 개념의 절 제목에 쓰는 구. 검색어 벡터는 바꾸지 않는다
 
 
 def heading_heads(texts: list[str]) -> list[str]:

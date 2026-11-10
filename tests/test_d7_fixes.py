@@ -14,6 +14,13 @@ from test_remaining_fixes import Q38, VENDOR, _heading_llm
 
 
 @pytest.fixture(autouse=True)
+def _sample_terms(monkeypatch):
+    """서비스 용어표는 비어 있다(62.34). 장치 시험은 표본 행으로 돈다."""
+    from qgraph_fakes import sample_term_rows
+    monkeypatch.setattr(QP, "TERM_ROWS", sample_term_rows())
+
+
+@pytest.fixture(autouse=True)
 def _clean(monkeypatch):
     for name in ("GRAPH_HEADING_HEADS", "GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_CITE_PICK", "GRAPH_INTRO_FILL", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_CITE_CONSENSUS",
                  "GRAPH_POINTER_REFUSE", "GRAPH_SPECULATE_FIRST", "GRAPH_PARALLEL_INTAKE", "GRAPH_SKIP_FIRST_REWRITE", "GRAPH_SECTION_KEEPS_RESEARCH", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PHRASE", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_MARK",

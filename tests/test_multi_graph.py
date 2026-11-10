@@ -2445,6 +2445,10 @@ def test_grounding_input_says_the_answer_is_partial():
     ("보안 예외는 언제 어디서 신청해?", "rule"),
     (REQUEST, "review"),
     ("새 모니터링 도구 도입을 누가 승인할지 합동 검토해줘", "review"),
+    ("외부 업체가 고객 데이터를 다루면 보안 검토가 필요한가요?", "rule"),   # 필요 여부를 묻는다: "검토"는 묻는 대상이다(62.34)
+    ("배포 전에 변경 승인을 받아야 하나요?", "rule"),
+    ("이 도입안을 검토해 주세요. 보안 평가도 필요한가요?", "review"),   # 검토를 맡기는 말이 있으면 그대로 합동 검토
+    ("새 도구 도입에 보안 검토가 필요한지 합동 검토해줘", "review"),
 ])
 def test_question_asking_a_fact_does_not_stop_at_review(_off2, label, build, question, route):
     llm = review_llm(classify=j(route="review"))

@@ -8,12 +8,15 @@
 `python -m evals.agent.classify_overrefuse --repeats 3 --out evals/results/classify_overrefuse_<표지>`
 `--plan`은 호출하지 않고 문항 수와 예상 호출 수·비용만 낸다(0원).
 
-문항: `evals/dataset_v2.jsonl` 50, `evals/dataset_holdout_v1.jsonl` 20, `evals/overrefuse_probe_v1.jsonl` 10(사내 규정을 묻는 기술 질문 5, 일반 기술 질문 5).
+문항: `evals/dataset_v2.jsonl` 50, `evals/dataset_holdout_v1.jsonl` 20, `evals/overrefuse_probe_v1.jsonl` 10(사내 규정을 묻는 기술 질문 5, 일반 기술 질문 5),
+`evals/review_probe_v1.jsonl` 4(규정상 필요 여부를 예·아니오로 묻는 정책 질문, 사전 등록 62.34. 평가셋과 겹치지 않는다).
+합동 검토 경로는 서버처럼 연결된 것으로 두어(자리만 채운 값, 부르지 않는다) 분류 뒤 코드의 되돌림까지 적용한 경로를 적는다.
 종료 코드: 0 통과, 1 기준 미달(뒤 단계를 돌리기 전에 멈춘다), 2 실행 불가(키 없음, 문항 없음).
 
 통과 기준(62.A에 측정 전에 적은 값과 같다. 검증 109번은 이 수정을 만들 때 본 문항이라 따로 적고 기준에서 뺀다):
 - 관련 문항(v2 25, 검증 9, 새 사내 규정형 5)의 도메인 밖 행 0
 - 일반 지식만 묻는 문항(`GENERAL_IDS`와 새 일반 기술 5)의 도메인 밖 행 비율 0.90 이상
+- 필요 여부를 예·아니오로 묻는 문항(`need_yes_no` 4)의 합동 검토(`review`) 행 0 (62.34)
 """
 from __future__ import annotations
 
@@ -24,7 +27,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-DATASETS = ("evals/dataset_v2.jsonl", "evals/dataset_holdout_v1.jsonl", "evals/overrefuse_probe_v1.jsonl")
+DATASETS = ("evals/dataset_v2.jsonl", "evals/dataset_holdout_v1.jsonl", "evals/overrefuse_probe_v1.jsonl", "evals/review_probe_v1.jsonl")
+NEED_PROBE = "need_yes_no"  # 규정상 필요 여부를 예·아니오로 묻는 정책 질문(62.34). 합동 검토로 가면 안 된다
 SEEN_ID = 109  # 이 수정을 만들 때 본 검증 문항. 결과는 적되 통과 기준에서 뺀다
 # 수정 전 저장 기록(`agent_v2_q_d6151_{r1,r2,r3,h1}_bo2sda2_api`)에서 모든 행이 도메인 밖이었고, 조직이 정한 것이 아니라 일반 지식·외부 법령만 묻는 문항
 GENERAL_IDS = (16, 17, 18, 19, 41, 42, 111, 112)
@@ -62,7 +66,7 @@ def classify_node(llm: Any):
     def no_search(_q):
         raise RuntimeError("분류 확인은 검색을 부르지 않는다")
 
-    return build_graph(no_search, llm=llm, parallel_intake=False).nodes["classify"].bound
+    return build_graph(no_search, llm=llm, parallel_intake=False, review_graph=lambda state: {}).nodes["classify"].bound  # 합동 검토는 자리만 채운다(분류 노드는 부르지 않는다)
 
 
 class Counting:
@@ -87,7 +91,7 @@ def run(items: list[dict], llm: Any, repeats: int = 1) -> list[dict]:
         for it in items:
             before = llm.calls if hasattr(llm, "calls") else 0
             route = node.invoke({"question": it["question"], "profile": {}}).get("route")
-            rows.append({"repeat": rep, "id": it["id"], "kind": it["kind"], "group": group_of(it), "route": route,
+            rows.append({"repeat": rep, "id": it["id"], "kind": it["kind"], "group": group_of(it), "probe": it["probe"], "route": route,
                          "llm_calls": (llm.calls - before) if hasattr(llm, "calls") else None})
     return rows
 
@@ -104,7 +108,10 @@ def summarize(rows: list[dict]) -> dict:
     s["general_out_of_domain_rate"] = round(general_rate, 3)
     s["pass_relevant"] = s["relevant"]["out_of_domain"] == 0
     s["pass_general"] = general_rate >= MIN_GENERAL_RATE
-    s["passed"] = s["pass_relevant"] and s["pass_general"]
+    need = [r for r in rows if r.get("probe") == NEED_PROBE]
+    s["need_yes_no"] = {"rows": len(need), "review": sum(1 for r in need if r["route"] == "review"), "review_ids": sorted({r["id"] for r in need if r["route"] == "review"})}
+    s["pass_need_yes_no"] = s["need_yes_no"]["review"] == 0
+    s["passed"] = s["pass_relevant"] and s["pass_general"] and s["pass_need_yes_no"]
     return s
 
 

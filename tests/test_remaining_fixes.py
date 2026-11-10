@@ -16,6 +16,14 @@ DEPLOY = mk(f"For deployments, {SENT[0].lower()}{SENT[1:]}", title="Deployments"
 TEAM_COPY = mk(SENT, title="Delivery Group", seq=71003, article="Notes")
 SAME_PAGE = mk(SENT + " More text.", title="Patch Releases", seq=71001, article="Other")
 SHORT = mk("Patch releases are deployed to production during the window.", title="Release Notes", seq=71004)
+from backend.graph import query_plan as QP  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _sample_terms(monkeypatch):
+    """서비스 용어표는 비어 있다(62.34). 장치 시험은 표본 행으로 돈다."""
+    from qgraph_fakes import sample_term_rows
+    monkeypatch.setattr(QP, "TERM_ROWS", sample_term_rows())
 
 
 @pytest.fixture(autouse=True)
@@ -250,16 +258,15 @@ def _leak_source(which: str) -> str:
     from backend.graph import query_plan as QP
     from backend.prompts import question as P
     if which == "query_plan.TERM_ROWS":
-        return repr(QP.TERM_ROWS)
+        import importlib
+        return inspect.getsource(importlib.import_module("backend.graph.query_plan"))  # 표본 행이 아니라 서비스 코드의 표와 설명
     if which == "prompts/question.py":
         return inspect.getsource(P)
     return dec._PRODUCT_TARGET.pattern  # 분해의 제품 대상 정규식(`GRAPH_KEEP_PRODUCT_NAME`)
 
 
 @pytest.mark.parametrize("which", [
-    # 알려진 한계: 용어표에 v2 문항 단어(new vendor, purchase request, procurement, tprm)가 남아 있다. 빼면 61.51로 잰 동작이 바뀌므로
-    # 최종 측정값과 같은 코드를 유지하고 실패를 기록으로 남긴다. 단어를 빼면 strict라 이 표시를 지워야 한다(EVAL_REPORT 4장, 결정 0078).
-    pytest.param("query_plan.TERM_ROWS", marks=pytest.mark.xfail(strict=True, reason="용어표에 v2 문항 단어가 남아 있음(알려진 한계)")),
+    "query_plan.TERM_ROWS",  # v2 문항 단어 행을 뺐다(사전 등록 62.34, 결정 0101). 알려진 실패 표시도 지웠다
     "prompts/question.py",
     "decompose._PRODUCT_TARGET",
 ])

@@ -20,6 +20,13 @@ NOTE = "대상에 따라 절차가 갈린다"
 
 
 @pytest.fixture(autouse=True)
+def _sample_terms(monkeypatch):
+    """서비스 용어표는 비어 있다(62.34). 장치 시험은 표본 행으로 돈다."""
+    from qgraph_fakes import sample_term_rows
+    monkeypatch.setattr(QP, "TERM_ROWS", sample_term_rows())
+
+
+@pytest.fixture(autouse=True)
 def _clean(monkeypatch):
     for name in ("GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS", 
                  "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S"):
