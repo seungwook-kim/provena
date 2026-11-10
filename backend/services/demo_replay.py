@@ -4,8 +4,9 @@
 - 데모 모드(`LLM_API_KEY` 없음, 또는 `DEMO_MODE=1`)의 `get_chat_model()`은 `ReplayChatModel`을 돌려준다.
   호출마다 요청 키로 `data/demo_replay/*.jsonl`에서 녹화한 응답을 찾는다. 없으면 결정적 가짜 응답(`demo_fallback`)으로 대신하고, 처음 한 번만 로그를 남긴다.
 - 녹화 모드(`LLM_RECORD=1` + 실제 키 + 데모 아님)의 `get_chat_model()`은 `RecordingChatModel`로 실제 모델을 감싸 요청 키 -> 응답을 같은 폴더에 덧붙인다.
-  녹화는 `python -m backend.services.demo_record --questions <파일>`이 한다. 이 CLI는 서비스 설정(61.51)을 적용하지 않아 서버와 프롬프트가 다를 수 있으니,
-  데모 서버가 재생할 녹화는 서버를 `LLM_RECORD=1`·`DEMO_MODE=0`으로 띄워 `/chat`에 질문을 보내 만든다(2026-11-09 data/demo_replay/ 녹화가 이 방법이다).
+  녹화는 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`가 한다. 이 CLI는 서버(`/chat`)와 같은 질문 그래프(서비스 설정 61.51 포함)와
+  같은 Postgres 검색 경로를 쓴다(2026-11-10까지는 CLI가 import 오류로 돌지 않았고, 2026-11-09 녹화는 서버를 `LLM_RECORD=1`·`DEMO_MODE=0`으로 띄워 `/chat`으로 만들었다).
+  녹화가 현재 코드의 요청 키와 맞는지는 `tests/test_demo_replay_fresh.py`(`python -m pytest -m demo_replay`, 키·네트워크 없이 0원)가 본다.
 
 요청 키(`request_key`): sha256(역할 + 정규화한 메시지). 역할은 시스템 프롬프트 첫 줄의 `[[task:...]]` 표지(없으면 `generic`).
 공급자·모델 이름은 키에 넣지 않는다(녹화한 모델과 재생하는 쪽의 모델 설정이 달라도 같은 요청이면 같은 응답을 찾으려는 것이고, 모델 이름은 녹화 줄에 정보로만 남긴다).

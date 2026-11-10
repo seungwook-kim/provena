@@ -1,10 +1,18 @@
 """데모 질문을 실제 모델로 돌려 응답을 녹화한다(`data/demo_replay/recorded.jsonl`). 키가 있는 사람이 한 번 돌리면 키 없는 데모가 그 응답을 재생한다.
 
-사용: `LLM_API_KEY=... python -m backend.services.demo_record --questions data/demo_replay/questions.txt [--out data/demo_replay] [--search real|fake]`
+사용(환경 변수는 이름만): `LLM_API_KEY`, `LLM_PROVIDER`(+`LLM_MODEL`), `VOYAGE_API_KEY`, `DATABASE_URL`(색인을 적재한 새 Postgres)을 프로세스 환경에 둔다.
+`python -m backend.services.demo_record --questions data/demo_replay/questions.txt [--out data/demo_replay]`
+녹화 전에 `data/demo_replay/recorded.jsonl`을 치운다(남아 있으면 새 응답이 변형으로 섞인다). 저장소 밖 실행기(`run_demo_rerecord.ps1`)가 새 Postgres 준비부터
+녹화, 시험까지 한다. 다 돌린 뒤 `python -m pytest -m demo_replay`로 녹화가 현재 코드와 맞는지 본다(tests/test_demo_replay_fresh.py).
+
+비용(2026-11-10 추정): 질문 하나가 LLM을 평균 약 10회(배포 측정 50문항 평균 9.98회) 부르고 약 0.005달러(claude-haiku-5-5, 입력 0.10·출력 0.50달러/100만 토큰)다.
+`data/demo_replay/questions.txt`의 9개 질문은 약 90~117회, 약 0.05달러(최대 관측 질문당 0.013달러로 잡으면 0.12달러 이하)이고 Voyage 질문 임베딩은 0.0001달러 미만이다.
 
 질문 파일: `.txt`(한 줄에 한 질문, `#` 줄은 주석), `.jsonl`(줄마다 {"question", "org"?, "as_of"?}), `.json`(같은 모양의 목록 또는 문자열 목록).
-질문 그래프 전체(분류, 재작성, 판정, 답 작성, 근거 판정, 결정표·합동 검토 경로)를 인메모리 저장소로 돌린다. 모든 LLM 호출은 `llm.py`의 `get_chat_model()`을 거치고,
-`LLM_RECORD=1`(이 CLI가 켠다)이면 녹화 래퍼가 요청 키 -> 응답을 쓴다. 재생은 같은 검색 결과(같은 색인)에서만 맞는다: 녹화와 데모 서버가 같은 `data/index`를 써야 한다.
+서버(`/chat`)와 같은 질문 그래프(`backend.main.build_question_graph`, 서비스 설정 61.51 포함)를 체크포인터·Store만 메모리로 두고 돌린다. 검색도 서버와 같은 Postgres 경로다
+(numpy 저장소는 DB와 검색 결과가 달라 이 녹화는 데모 재생과 키가 맞지 않는다). 모든 LLM 호출은 `llm.py`의 `get_chat_model()`을 거치고,
+`LLM_RECORD=1`(이 CLI가 켠다)이면 녹화 래퍼가 요청 키 -> 응답을 쓴다. 재생은 같은 검색 결과(같은 색인, 번역 장부가 빈 새 DB)에서만 맞는다.
+키 없는 데모(`SEARCH_RANGE_N`을 비우면 금액 구간 조회를 끈다)와 같은 검색 조건이 되도록 `SEARCH_RANGE_N`을 0으로 둔다(직접 준 값이 있으면 그 값).
 데모 모드(키 없음 또는 DEMO_MODE=1)에서는 실행을 거부한다.
 """
 from __future__ import annotations
@@ -39,34 +47,39 @@ def load_questions(path: Path | str) -> list[dict]:
     return out
 
 
-def build_default_graph(llm: Any, search: str = "auto"):
-    """저장소를 인메모리로 둔 질문 그래프(결정표·합동 검토 포함). 실제 서버와 같은 `build_app`을 쓰되 DB는 건드리지 않는다."""
+def build_default_graph(search: str = "real"):
+    """서버(`/chat`)와 같은 질문 그래프(`backend.main.build_question_graph`: 서비스 설정 61.51, 결정표, 합동 검토). 체크포인터·Store·답 저장소만 메모리로 둔다.
+
+    검색은 서버와 같은 `backend.rag.retrieve.search`라서 `DATABASE_URL`의 Postgres(색인이 적재된 DB)가 필요하다. 서비스 설정은 환경 변수로 채운 채로 두고
+    되돌리지 않는다(이 프로세스는 녹화만 한다). 모델은 `SharedChatModel`이 처음 부를 때 `get_chat_model()`로 만든다."""
+    from types import SimpleNamespace
+
     from langgraph.checkpoint.memory import InMemorySaver
     from langgraph.store.memory import InMemoryStore
 
-    from backend.app import build_app
-    from backend.graph import InMemoryAnswerStore
+    from backend.graph.decision.repo import InMemoryDecisionRepo
+    from backend.graph.departments.store import InMemoryIssueTableStore
+    from backend.graph.recall.runtime import make_answer_store
+    from backend.graph.service_profile import apply_service_profile
+    from backend.main import build_question_graph
 
-    if search == "auto":
-        from backend.main import default_search_fn
-
-        search_fn = default_search_fn()
-    elif search == "real":
-        from backend.rag.retrieve import search as search_fn
-    else:
-        from backend.rag.fake_search import fake_search as search_fn
-    app = build_app(llm=llm, search_fn=search_fn, checkpointer=InMemorySaver(), store=InMemoryStore(), answer_store=InMemoryAnswerStore())
-    return app.question_graph
+    if search not in ("real", "auto"):
+        raise ValueError("서버와 같은 검색(real)만 녹화할 수 있다. 가짜 검색으로 만든 녹화는 데모 재생과 키가 맞지 않는다")
+    apply_service_profile()
+    state = SimpleNamespace(issue_store=InMemoryIssueTableStore(), decision_repo=InMemoryDecisionRepo(), checkpointer=InMemorySaver(),
+                            store=InMemoryStore(), answer_store=make_answer_store(None))
+    return build_question_graph(state)
 
 
-def record_questions(questions: list[dict], *, graph: Any = None, llm: Any = None, search: str = "auto") -> dict:
-    """질문마다 그래프를 한 번 돌린다. `graph`를 주면 그것을(시험용), 아니면 `llm`(없으면 `get_chat_model()`)으로 만든 기본 그래프를 쓴다.
-    돌려주는 값: {"questions", "ok", "failed", "new_recordings", "errors"}. `new_recordings`는 `RecordingChatModel`이 새로 쓴 줄 수(알 수 있을 때)."""
-    from backend.services.llm import finish_run, get_chat_model, run_config
+def record_questions(questions: list[dict], *, graph: Any = None, search: str = "real") -> dict:
+    """질문마다 그래프를 한 번 돌린다. `graph`를 주면 그것을(시험용), 아니면 서버와 같은 기본 그래프를 쓴다.
+    돌려주는 값: {"questions", "ok", "failed", "new_recordings", "errors"}. `new_recordings`는 녹화 폴더의 요청 키 수 증가분."""
+    from backend.services.demo_replay import get_store
+    from backend.services.llm import finish_run, run_config
 
     if graph is None:
-        llm = llm if llm is not None else get_chat_model()
-        graph = build_default_graph(llm, search)
+        graph = build_default_graph(search)
+    before = len(get_store())
     ok, errors = 0, []
     for q in questions:
         tid = f"demo-record-{uuid.uuid4().hex[:8]}"
@@ -79,30 +92,32 @@ def record_questions(questions: list[dict], *, graph: Any = None, llm: Any = Non
             log.warning("녹화 실패: %s -> %s", q["question"][:40], e)
         finally:
             finish_run(cfg)
-    new = getattr(llm, "recorded", None)
-    return {"questions": len(questions), "ok": ok, "failed": len(errors), "new_recordings": new, "errors": errors}
+    return {"questions": len(questions), "ok": ok, "failed": len(errors), "new_recordings": len(get_store()) - before, "errors": errors}
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="데모 질문을 실제 모델로 돌려 응답을 녹화한다")
     p.add_argument("--questions", type=Path, required=True, help="질문 파일(.txt/.jsonl/.json)")
     p.add_argument("--out", type=Path, default=None, help="녹화 폴더(기본 data/demo_replay 또는 DEMO_REPLAY_DIR)")
-    p.add_argument("--search", choices=("auto", "real", "fake"), default="auto", help="검색 경로(기본 auto = 서버와 같은 선택)")
+    p.add_argument("--search", choices=("real", "auto"), default="real", help="검색 경로. 서버와 같은 Postgres 검색만 지원한다(두 값은 같다)")
     a = p.parse_args(argv)
     if a.out is not None:
         os.environ["DEMO_REPLAY_DIR"] = str(a.out)
     os.environ["LLM_RECORD"] = "1"
-    os.environ.setdefault("DECISION_SEED", "on")  # 재생(데모 모드)은 결정표 시드를 넣어 추출 프롬프트에 업무 종류 후보가 붙는다. 녹화도 같은 입력이어야 키가 맞는다
-    from backend.services.llm import get_chat_model, is_demo_mode
+    os.environ.setdefault("SEARCH_RANGE_N", "0")  # 키 없는 데모는 금액 구간 조회를 끈다(search.py 데모 예외). 녹화도 같은 검색 조건이어야 키가 맞는다
+    from backend.services.llm import is_demo_mode
 
     if is_demo_mode():
         print("녹화는 실제 LLM이 필요합니다: LLM_API_KEY를 설정하고 DEMO_MODE를 끄세요.", file=sys.stderr)
+        return 2
+    if not (os.environ.get("DATABASE_URL") or "").strip():
+        print("DATABASE_URL이 없습니다: 색인을 적재한 새 Postgres가 필요합니다(서버와 같은 검색 경로).", file=sys.stderr)
         return 2
     questions = load_questions(a.questions)
     if not questions:
         print(f"질문이 없습니다: {a.questions}", file=sys.stderr)
         return 2
-    rep = record_questions(questions, llm=get_chat_model(), search=a.search)
+    rep = record_questions(questions, search=a.search)
     print(json.dumps(rep, ensure_ascii=False, indent=2))
     return 0 if not rep["failed"] else 1
 
