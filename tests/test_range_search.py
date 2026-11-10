@@ -206,6 +206,24 @@ def test_range_n_caps_the_replaced_places_and_k_stays():
     assert sum(c.chunk_id in {"b2", "p1", "n1"} for c in two) == 2 and sum(c.chunk_id in {"b2", "p1", "n1"} for c in one) == 1
 
 
+def test_table_choice_follows_the_full_question_vector_not_the_sub_questions():
+    """금액이 속한 표가 여럿일 때 어느 표의 행을 남기는지는 하위 질문(LLM이 회차마다 다르게 씀)이 아니라 전체 질문 벡터로 정한다."""
+    rows = MEM_ROWS + [mk("Approving Payment > >$0k up to $500k", [0.10, 0, 0, 0, 0, 1], cid="p1"),
+                       mk("Non Billable Expenses > >$5K", [0.11, 0, 0, 0, 0, 1], cid="n1")]
+    rows += [mk(None, [0, 0, 0, 0, 1, 0.5], cid=f"f{i}", seq=300 + i, page=f"filler {i}") for i in range(4)]   # 하위 질문 쪽 상위를 채워 구간 행 b1~b3이 우연히 들지 않게 한다
+    vecs = np.stack([np.asarray(r["_v"], dtype=np.float32) / np.linalg.norm(r["_v"]) for r in rows])
+    full, sub = np.asarray([1, 0, 0, 0, 0, 0], dtype=np.float32), np.asarray([0, 0, 0, 0, 0, 1], dtype=np.float32)   # 하위 질문은 지급 승인 쪽으로 쏠린다
+
+    def build(sub_vec):
+        embed_ = lambda texts: np.stack([full if i == 0 else sub_vec for i in range(len(texts))])  # noqa: E731
+        return Searcher(SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none", link_n=0, range_n=1), MemoryStore(rows, vecs, "voyage-4"),
+                        embedder=embed_, reranker=None, check_meta=False, translator=lambda query, kind: translate.Result(query, "stored"))
+
+    q = SearchQuery(query="approval for $30,000", sub_queries=["who approves the contract", "who signs it"], k=5)
+    assert "b2" in ids(build(sub).search(q))
+    assert "b2" in ids(build(np.asarray([0, 0, 0, 0, 0.2, 1], dtype=np.float32)).search(q))     # 하위 질문이 바뀌어도 같은 표가 남는다
+
+
 def test_link_expanded_chunks_are_dropped_before_rows_that_belong_to_the_question():
     rows = [dict(r, link_targets=[100]) if r["chunk_id"] == "o1" else r for r in MEM_ROWS]
     got = searcher(rows, link_n=2).search(SearchQuery(query="approval for $30,000", k=5))
@@ -229,7 +247,7 @@ def test_store_without_range_queries_is_skipped():
 
 
 def test_config_checks_and_env(monkeypatch):
-    assert SearchConfig(embed_model="voyage-4").range_n == 2
+    assert SearchConfig(embed_model="voyage-4").range_n == 3
     with pytest.raises(ValueError):
         SearchConfig(embed_model="voyage-4", range_n=-1).check()
     monkeypatch.setenv("SEARCH_RANGE_N", "0")

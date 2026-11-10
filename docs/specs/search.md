@@ -26,7 +26,7 @@
 4. 질문 벡터를 voyage-4 API로 한 번에 만든다(전체 질문 + 하위 질문, `input_type=query`).
 5. `sub_queries`가 없으면 전체 질문 벡터로 상위 `k`개, 있으면 하위 질문마다 상위 `k`개를 뽑아 번갈아(이미 든 것은 건너뜀) `k`개로 합친다.
 6. 링크 확장 L1x2: 그 `k`개가 링크한 다른 페이지(`chunks.link_targets`)의 청크 중 같은 `org`·`as_of` 필터를 지나고 아직 안 든 것을 **전체 질문 벡터**와 가까운 순으로 `SEARCH_LINK_N`(2)개 골라 뒤 자리를 바꾼다. 나뉜 질문은 하위 질문마다 2자리(`link_keep_per_sub`)를 지키고 남은 자리만 바꾼다(하위 질문 2개면 1자리, 3개면 바꾸지 않음). 리랭커는 기본 없음.
-7. 금액 구간 조회(사전 등록 62.7): 질문(한국어 원문, 하위 질문, 영어 문장)에 달러 금액이 있으면(`ranges.amounts_in`) 위 `k`개가 든 페이지의 청크 중 제목 경로 끝이 금액 구간인 행(`ranges.parse_band`: `>$25K up to $50K`, `Up to $5K`, `$100K plus` 등)에서 그 금액이 속한 행을 표마다 하나씩(가장 좁은 구간) 고르고, 질문 벡터(전체·하위 질문 중 큰 값)와 가까운 순으로 `SEARCH_RANGE_N`(2)개까지 뒤 자리를 바꾼다. 이미 든 구간 행은 그대로 두고, 자리는 뒤에서부터 구간 행이 아닌 청크를 덜어낸다(`k`는 그대로). 금액이 없거나 위 `k`의 페이지에 구간 행이 없으면 바꾸지 않는다. 벡터는 "$30,000"이 어느 구간에 드는지 알지 못해 구간 행 일곱 개가 서로 비슷한 점수로 흩어지기 때문이다(EVAL_REPORT 5장).
+7. 금액 구간 조회(사전 등록 62.7): 질문(한국어 원문, 하위 질문, 영어 문장)에 달러 금액이 있으면(`ranges.amounts_in`) 위 `k`개가 든 페이지의 청크 중 제목 경로 끝이 금액 구간인 행(`ranges.parse_band`: `>$25K up to $50K`, `Up to $5K`, `$100K plus` 등)에서 그 금액이 속한 행을 표마다 하나씩(가장 좁은 구간) 고르고, 전체 질문 벡터(하위 질문 벡터는 쓰지 않는다. 하위 질문은 LLM이 회차마다 다르게 써서 표 선택이 흔들렸다, 사전 등록 62.13)와 가까운 순으로 `SEARCH_RANGE_N`(3)개까지 뒤 자리를 바꾼다. 이미 든 구간 행은 그대로 두고, 자리는 뒤에서부터 구간 행이 아닌 청크를 덜어낸다(`k`는 그대로). 금액이 없거나 위 `k`의 페이지에 구간 행이 없으면 바꾸지 않는다. 벡터는 "$30,000"이 어느 구간에 드는지 알지 못해 구간 행 일곱 개가 서로 비슷한 점수로 흩어지기 때문이다(EVAL_REPORT 5장).
 8. 상위 `k`개를 `Chunk`로 돌려준다.
 
 확정 조합(2026-11-05, `evals/results/retrieval_fix_v1/`): voyage-4 · `dense_en` · 리랭커 없음 · k=5 · 질문 분해 · L1x2 = v1 Recall@5 0.967(자리 지키기를 넣기 전 값, `link_keep_per_sub=0`). 링크 확장은 강사 확인을 받았다(조장 11/5). 분해 LLM은 그래프가 부르고 `sub_queries`로 넘긴다(MCP는 넘기지 않는다).
@@ -99,7 +99,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_MODEL` | `voyage-4` | API(1024차원, 키 `VOYAGE_API_KEY`). 비교 후보: `Snowflake/snowflake-arctic-embed-l-v2.0`(비교용 로컬 모델, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로), `voyageai/voyage-4-nano`, `Qwen/Qwen3-Embedding-0.6B`, `intfloat/multilingual-e5-large`, 기준선 `BAAI/bge-m3` |
 | `VOYAGE_API_KEY` | 비움 | voyage-4 질문 임베딩. 부를 때 읽고 어디에도 찍지 않는다. 없으면 EC-09 |
 | `SEARCH_LINK_N` | `2` | 링크 확장으로 바꿀 뒤 자리 수. `0`이면 끈다 |
-| `SEARCH_RANGE_N` | `2` | 금액 구간 조회로 바꿀 뒤 자리 수 상한. `0`이면 끈다 |
+| `SEARCH_RANGE_N` | `3` | 금액 구간 조회로 바꿀 뒤 자리 수 상한. `0`이면 끈다 |
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
