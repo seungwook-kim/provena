@@ -376,7 +376,9 @@ def chosen_model_switches(args) -> dict:
             "SEARCH_SUB_MERGE": "1" if args.sub_merge else "",
             "GRAPH_HEADING_BEST": "1" if args.heading_best else "",
             "GRAPH_FACTS_LOG": "1" if args.facts_log else "",
-            "GRAPH_ANSWER_BEST2": "1" if args.answer_best2 else "", "GRAPH_BEST2_SAMEDOC": "1" if args.best2_samedoc else ""}
+            "GRAPH_ANSWER_BEST2": "1" if args.answer_best2 else "", "GRAPH_BEST2_SAMEDOC": "1" if args.best2_samedoc else "",
+            # SG 답 후보가 나오는 대로 근거 판정을 미리 부르고 같은 입력이면 그 결과를 쓴다
+            "GRAPH_SPECULATE_GROUND": "1" if args.speculate_ground else ""}
 
 
 def check_dataset(path: Path, sha256: str = "") -> None:
@@ -554,6 +556,7 @@ def main(argv=None) -> int:
     p.add_argument("--judge-vote", action="store_true", help="판정(judge)과 근거 확인(grounding)을 같은 입력으로 병렬 3번 부르고 결론이 2표 같으면 확정한다. 빠진 사실과 받쳐지지 않는 문장은 2표 이상만 남긴다. 기본 꺼짐")
     p.add_argument("--judge-quote", action="store_true", help="판정이 사실마다 자료 원문 구절을 먼저 복사하고(없으면 NOTHING FOUND) 결론은 코드가 그 목록에서 정한다(--structured의 judge 대조 칸 대신). 기본 꺼짐")
     p.add_argument("--prompts-head", action="store_true", help="대조군: HEAD(11/6 D6 API 커밋) 뒤 스위치 없이 기본 프롬프트와 입력에 늘 붙게 된 문장을 빼고 HEAD 때 문장을 쓴다. 스위치로 붙는 규칙은 그대로다(backend/prompts/question.py at_head). 기본 꺼짐")
+    p.add_argument("--speculate-ground", action="store_true", help="SG: 답 후보(추론 답, 빠른 답, 둘째 답)가 나오는 대로 인용 검사와 같은 검사를 거쳐 근거 판정을 미리 부르고, 뽑힌 답의 판정 입력이 같으면 그 결과를 쓴다. 판정 입력·기준은 그대로다. 기본 꺼짐")
     p.add_argument("--unchanged-rejudge", action="store_true", help="UR: 근거 판정 사유를 받은 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정하고, 받쳐지면 그대로 낸다. 기본 꺼짐")
     p.add_argument("--speculate-first", action="store_true", help="SP: 예비 분해(단계 decompose_gate, 추론은 --reasoning 값)가 나누지 않는다고 하면 분해를 기다리는 동안 원 질문으로 "
                    "첫 검색과 판정을 미리 돌린다. 분해(decompose)가 나누지 않으면 그 결과를 쓰고, 나누면 버린다(--parallel-intake, --skip-first-rewrite가 필요). 기본 꺼짐")

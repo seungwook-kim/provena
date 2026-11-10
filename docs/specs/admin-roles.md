@@ -17,7 +17,7 @@
 
 - 배포판 하나에 최고 관리자 1명을 둔다(방식 B, 11/5 진형 결정). 최고 관리자만 관리자를 등록·해제한다.
 - DB 역할은 지금처럼 `user`/`admin` 둘만 쓴다(`db/101_auth_users.sql:10`). 최고 관리자는 설정값 `PROVENA_OWNER_LOGIN_ID`로 정한다.
-- 엔드포인트 3개(`GET /admin/users`, `POST /admin/users/{login_id}/promote`, `POST /admin/users/{login_id}/revoke`)와 `/me`의 `is_owner` 칸을 더한다.
+- 사용자 권한 관리 엔드포인트 3개(`GET /admin/users`, `POST /admin/users/{login_id}/promote`, `POST /admin/users/{login_id}/revoke`)와 가입 승인 엔드포인트 2개(`GET /admin/signup-requests`, `POST /admin/signup-requests/{login_id}/{action}`), `/me`의 `is_owner` 칸을 둔다.
 - 등록·해제 기록 표 `admin_role_log`를 둔다.
 - 배포판의 첫 계정(최고 관리자, 평가용 계정 A·B)을 만드는 일회용 명령 `python -m backend.services.create_account`를 둔다.
 - **범위 = 한 회사용 (11/5 진형 결정)**: 회사 표·회사 칸·회사별 관리자는 두지 않는다. 회사가 여럿이면 회사마다 따로 설치한다(남은 일). 근거: `users` 표에 회사 칸이 없다(`db/101_auth_users.sql:6-14`). 지불 주체를 한 조직으로 본다(`docs/PRD.md:76`, `:125`).
@@ -86,6 +86,14 @@
 | GET | `/admin/users` | 최고 관리자 | - | 200 `{"users":[{"login_id","role","is_owner","created_at"}]}`, `created_at` 오름차순 | 401, 403, 503 |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"admin","changed":true\|false}` | 401, 403, 404, 409, 503 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"user","changed":true\|false}` | 401, 403, 404, 409, 503 |
+| GET | `/admin/signup-requests` | 최고 관리자 | - | 200 `{"requests":[{"login_id","requested_at","status"}]}`. `password_hash`는 포함하지 않음 | 401, 403, 503 |
+| POST | `/admin/signup-requests/{login_id}/{action}` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token`; `action`은 `approve` 또는 `reject` | 200 `{"login_id","status","changed":true\|false}` | 401, 403, 404, 422, 503 |
+
+### 회원가입 승인 권한·보안 및 이력
+
+- 두 가입 승인 API는 `/admin/users`와 같은 인증·인가 정책을 사용한다. 인증되지 않은 요청은 401이고, owner가 아닌 일반 사용자 및 `admin`은 403이다. 브라우저가 전달하는 관리자 ID는 사용하지 않으며, 승인·거절 처리자는 인증된 owner의 `user_id`로 정한다.
+- 승인·거절 POST는 owner 확인 뒤 `X-CSRF-Token`을 검증한다. 허용되지 않은 `action`은 422, 존재하지 않는 가입 신청은 404로 응답한다. 이미 처리된 신청은 상태나 이력을 다시 변경하지 않고 `changed:false`를 반환한다.
+- 가입 승인·거절 이력은 `db/106_signup_approval.sql`의 `signup_requests`에 남긴다. `status`는 승인 또는 거절 상태, `reviewed_by`는 실제 처리한 관리자의 `user_id`, `reviewed_at`은 처리 시각이다. `db/105_admin_role_log.sql`의 `admin_role_log`는 기존 관리자 권한 승격·해제 이력 전용이며 가입 승인 이력에는 사용하지 않는다.
 
 - 검사 순서: 인증(401) → 최고 관리자(403) → CSRF(403) → 대상 조회(404) → 대상이 최고 관리자·비활성(409) → 쓰기. CSRF는 쓰기 전에 반드시 본다.
 - 응답에 `Cache-Control: no-store`(기존 `/me`와 같게, `backend/auth.py:819`).
@@ -268,7 +276,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 |---|---|---|
 | `db/105_admin_role_log.sql` (새) | 위 SQL 그대로(번호만 105) | 김승욱 |
 | `backend/services/auth_store.py` | `create_user`(:102, `ON CONFLICT DO NOTHING` → 있으면 `AccountExistsError`), `set_password`(:115), `list_users`(:122, 해시를 SELECT 하지 않음), `set_role`(:130, `conn.transaction()` 안에서 `FOR UPDATE` → UPDATE + 기록 INSERT, 결과 `changed/unchanged/missing/inactive`), `ensure_schema`가 101 다음 105(:159). `upsert_user`는 데모 시드용 그대로 | 김승욱 |
-| `backend/admin_api.py` (새) | `owner_configured`(:46, 빈 값·`google-` 머리글자면 닫힘), `is_owner`(:50, admin + 활성 + `hmac.compare_digest`), `check_owner`(:61, 시작 로그 1줄, 값 없음), `create_admin_router`(:91, 엔드포인트 3개), `owner_check_for`(:169, `/me`용) | 강경희(auth) 쪽과 맞출 것 |
+| `backend/admin_api.py` (새) | `owner_configured`(:46, 빈 값·`google-` 머리글자면 닫힘), `is_owner`(:50, admin + 활성 + `hmac.compare_digest`), `check_owner`(:61, 시작 로그 1줄, 값 없음), `create_admin_router`(:91, 사용자 권한 관리 3개와 가입 승인 2개 엔드포인트), `owner_check_for`(:169, `/me`용) | 강경희(auth) 쪽과 맞출 것 |
 | `backend/auth.py` | `MeResponse.is_owner`(:505), `create_auth_router(owner_check=...)`(:660), `/me`가 채움(:838). 콜백을 안 넘기면 `/me`는 예전 모양(`response_model_exclude_none`) | 강경희 |
 | `backend/main.py` | `PROVENA_OWNER_LOGIN_ID`를 시작 때 한 번 읽음(:113, 앞뒤 공백만 뗌), lifespan에서 `check_owner`(:121), `/me` 콜백(:136), 관리자 라우터(:140) | 김승욱 |
 | `backend/services/create_account.py` (새) | 위 "첫 계정 만들기" 그대로. 종료 코드 0 성공 / 2 입력 / 3 같은 아이디·없는 아이디 / 4 DB. argparse 기본 오류(입력값을 되풀이함)를 값 없는 문장으로 바꿈 | 김승욱 |
@@ -277,7 +285,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 ### 처음 계획과 달라진 것
 
 1. 최고 관리자 확인을 `auth.py`가 아니라 `backend/admin_api.py`에 뒀다(위). 검사 순서는 그대로: 인증 → 최고 관리자 → CSRF(`admin_api.py:130`) → 대상 조회 → 409 → 쓰기.
-2. 기록을 보는 API는 없다(Spec 엔드포인트 3개 그대로). 화면은 "이 화면에서 한 변경"만 보이고, 서버 기록은 `admin_role_log` 표에 남는다.
+2. 관리자 권한 변경 기록을 보는 API는 없다. 화면은 "이 화면에서 한 변경"만 보이고, 서버 기록은 `admin_role_log` 표에 남는다. 가입 승인·거절 이력은 위의 가입 신청 API와 `signup_requests` 표를 사용한다.
 3. 목록에는 비활성 계정도 나온다(`is_active`는 내보내지 않음). 그 줄을 등록하면 409 `비활성 계정입니다.`
 4. 화면 주소 `/admin/users`와 API 주소 `/admin/users`가 같다. 로컬 vite는 `Accept: text/html`(화면 열기)만 index.html로 돌린다(`provena-ivory-1105/vite.config.js`). 배포에서 같은 도메인으로 화면을 내주면 같은 처리가 필요하다(남은 일).
 
