@@ -51,7 +51,7 @@ flowchart LR
 | 검증 109번(데이터팀 dbt 모델 SQL 서브쿼리와 팀 스타일 가이드). 관련 문항 | `out_of_domain`으로 분류해 거절했다(단일과 멀티 2행). 두 번 확인 규칙이 적용된 최종 설정에서도 그대로여서 고치지 못했고, 같은 분류가 두 번 나온 이유는 원인 확인 못 함 | `evals/results/agent_v2_q_d6151_h1_bo2sda2_api/single/rows.jsonl`, `multi/rows.jsonl` |
 | 외부 SaaS 도입처럼 승인된 결정표 목록의 업무 종류와 바로 맞지 않는 금액 승인자 질문(금액 5종 x 3회 15건) | 분류가 `decision`으로 보냈으나 값 뽑기가 업무 종류를 찾지 못해 리비전 `provena-api-00029-qbd`에서 15건 모두 "결정표를 실행하지 않았습니다: task_type이 필요하다"로 거절했다. 업무 종류를 못 찾으면 거절하지 않고 `rule`로 보내도록 고쳤고(PR #97), 리비전 `provena-api-00030-6t4`에서는 15건 중 11건이 정답 구간 행을 인용해 답했다 | `evals/results/range_retrieval_62_7/answers_deploy/`(`00029-qbd`), `answers_deploy_provena-api-00030-6t4/`. 5장 5-2절 10번 행 |
 
-위 표와 반대 방향, 곧 합동 검토나 결정표로 가야 할 질문이 정책 질문 경로로 가는 경우는 비율을 모른다. 그것을 재는 평가셋(`evals/dataset_review_v1.jsonl`)이 저장소에 추적되어 있지 않다(`EVAL_REPORT.md` 4장).
+위 표와 반대 방향, 곧 합동 검토나 결정표로 가야 할 질문이 정책 질문 경로로 가는 경우는 비율을 모른다. 그것을 재는 평가셋이 저장소에 추적되어 있지 않다(`EVAL_REPORT.md` 4장). `evals/dataset_review_v1.jsonl`은 합동 검토의 정답 쟁점을 재는 초안 10건이며 이 오분류를 재는 평가셋이 아니다.
 
 ## 조원 간 계약서 (병렬로 일하기 전에 먼저 씁니다)
 

@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (Claude Code) | 합동 검토(F-03) 평가셋 초안과 측정기를 저장소에 올림: `dataset_review_v1.jsonl`(요청 10건, 정답 쟁점 칸·판정자 칸 비어 있음), 판정 안내 `review_judge_guide.md`, 측정기 `agent/exp_review_v1.py`(팀 에이전트 갈래 대 에이전트 하나 갈래, 코드만 있고 돌린 적 없음), 시험 `tests/test_exp_review.py`(30개, 모델 호출 없음). EVAL_REPORT 4장과 `ARCHITECTURE.md`가 이 파일을 "저장소에 없다"고 적던 문구를 고침. 판정 전이라 정답 쟁점 누락률은 아직 재지 못함 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 응답 시간 p95 단축 로컬 측정(사전 등록 62.8, 62.10, 62.12). 결과 `evals/results/speed_p95_2026-11-10/`(끔 2회, 켬 3회, 공급자 정렬 1회, 분해 hedge 1회), 도구 `evals/latency/run_local_pg.py`(.env 없이 로컬 Postgres), `local_summary.py`, `local_stages.py`. 결과는 EVAL_REPORT 8장 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | D8 단계별 실측 보강(LLM·Langfuse 호출 없음): `evals/agent/stage_report.py`가 최종 측정 결과에 나오는 호출 이름 3개(`search/decompose_gate`, `write_answer/answer_fast`, `ground/answer_fast`)를 단계 표에 몰라 멈추던 것을 표에 더했다. 최종 측정 3회(`agent_v2_q_d6151_r1~r3_bo2sda2_api`)의 단일 150건 단계별 시간·비용과 승인 대기 시스템 몫(메모리 체크포인터, 가짜 모델)을 `evals/results/d8_stage_report/`에 저장하고 `EVAL_REPORT.md` 8장에 행 1개와 설명 2단을 더했다 | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `EVAL_REPORT.md` 두 곳 보강: 3장에 사전 등록 #10 이후 107개 항목의 커밋 순서를 git 이력으로 센 값(별도 커밋이 먼저인 항목 #26, #27 두 개, 결과와 같은 커밋 104개, 결과 없음 1개)과 한계를 적고, 8장 단계 표의 리랭킹 행을 `사용하지 않음`으로, 마지막 `왜 이 모델과 이 구성인가`를 4장·결정 기록 근거로 썼다. 검색·생성 단계 시간은 배포본 Langfuse 트레이스(리비전 00020, 세션 74개)에서 다시 계산해 8장에 채우고, 계산 도구 vals/latency/stage_times.py와 세션별 값 vals/results/deploy_latency_v2/stage_times.json을 올렸다. 62.1 행 복구(#82·#83 병합 충돌 해소 때 누락) | 미정 |
