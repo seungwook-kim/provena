@@ -43,6 +43,9 @@ class AdminUserStore(AuthStore, Protocol):
 
     def set_role(self, target_login_id: str, new_role: str, by_user_id: UUID | str) -> str: ...
 
+    def list_signup_requests(self) -> Iterable[Any]: ...
+    def review_signup_request(self, login_id: str, action: str, reviewed_by: UUID | str) -> str: ...
+
 
 def owner_configured(owner_login_id: str | None) -> bool:
     return bool(owner_login_id) and not owner_login_id.startswith(GOOGLE_LOGIN_PREFIX)
@@ -173,6 +176,31 @@ def create_admin_router(
     def revoke(login_id: str, request: Request, response: Response,
                owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         return change(request, response, owner, login_id, "user")
+
+    @router.get("/admin/signup-requests")
+    def list_signup_requests(request: Request, response: Response) -> dict[str, list[dict[str, Any]]]:
+        owner_guard(request)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            rows = list(store.list_signup_requests())
+        except Exception:
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
+        return {"requests": [{"login_id": row.login_id, "requested_at": _iso(row.requested_at), "status": row.status} for row in rows]}
+
+    @router.post("/admin/signup-requests/{login_id}/{action}")
+    def review_signup_request(login_id: str, action: str, request: Request, response: Response,
+                              owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
+        require_csrf(request)
+        if action not in {"approve", "reject"}:
+            raise HTTPException(status_code=422, detail="invalid signup action", headers=NO_STORE)
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            result = store.review_signup_request(login_id, action, owner.user_id)
+        except Exception:
+            raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
+        if result == "missing":
+            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+        return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
 
     return router
 
