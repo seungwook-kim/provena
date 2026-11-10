@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "dataset": "dataset_holdout_v1.jsonl",
+    "dataset_path": "evals/dataset_holdout_v1.jsonl",
+    "dataset_sha256": "c877c0657ff086a174135cc22e4d71858b776a4c02555325ce63721f1af51d07",
+    "n_questions": 20,
+    "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+    "revision": "provena-api-00032-zhs",
+    "commit": "5d6a2fe",
+    "timeout_s": 120.0,
+    "as_of": "dataset",
+    "health_s": 0.103,
+    "started_at": "2026-11-10T15:44:31+09:00",
+    "finished_at": "2026-11-10T15:49:33+09:00",
+    "runs_requested": 3,
+    "note": "클라이언트 측 시간(요청 전송부터 첫 token, done 이벤트까지). 로그인과 CSRF 준비 시간은 넣지 않았다."
+  },
+  "per_run": [
+    {
+      "run": 1,
+      "n": 20,
+      "n_ok": 20,
+      "n_fail": 0,
+      "first_token_s": {
+        "mean": 5.029,
+        "p50": 5.425,
+        "p95": 7.713,
+        "max": 9.714
+      },
+      "total_s": {
+        "mean": 5.071,
+        "p50": 5.456,
+        "p95": 7.744,
+        "max": 9.751
+      },
+      "kinds": {
+        "answer": 9,
+        "clarify": 1,
+        "refuse": 10
+      },
+      "citations_mean": 0.8,
+      "cost_usd_sum": 0.110554,
+      "cost_usd_per_question": 0.005528,
+      "cost_rows": 20,
+      "failures": []
+    },
+    {
+      "run": 2,
+      "n": 20,
+      "n_ok": 20,
+      "n_fail": 0,
+      "first_token_s": {
+        "mean": 4.961,
+        "p50": 4.086,
+        "p95": 12.948,
+        "max": 13.393
+      },
+      "total_s": {
+        "mean": 5.003,
+        "p50": 4.122,
+        "p95": 12.984,
+        "max": 13.44
+      },
+      "kinds": {
+        "answer": 9,
+        "clarify": 1,
+        "refuse": 10
+      },
+      "citations_mean": 0.8,
+      "cost_usd_sum": 0.11544,
+      "cost_usd_per_question": 0.005772,
+      "cost_rows": 20,
+      "failures": []
+    },
+    {
+      "run": 3,
+      "n": 20,
+      "n_ok": 20,
+      "n_fail": 0,
+      "first_token_s": {
+        "mean": 4.96,
+        "p50": 4.931,
+        "p95": 8.307,
+        "max": 14.027
+      },
+      "total_s": {
+        "mean": 5.0,
+        "p50": 4.975,
+        "p95": 8.352,
+        "max": 14.075
+      },
+      "kinds": {
+        "answer": 9,
+        "clarify": 1,
+        "refuse": 10
+      },
+      "citations_mean": 0.9,
+      "cost_usd_sum": 0.114124,
+      "cost_usd_per_question": 0.005706,
+      "cost_rows": 20,
+      "failures": []
+    }
+  ],
+  "all_runs": {
+    "n": 60,
+    "n_ok": 60,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 4.983,
+      "p50": 4.945,
+      "p95": 9.714,
+      "max": 14.027
+    },
+    "total_s": {
+      "mean": 5.024,
+      "p50": 4.989,
+      "p95": 9.751,
+      "max": 14.075
+    },
+    "kinds": {
+      "answer": 27,
+      "clarify": 3,
+      "refuse": 30
+    },
+    "citations_mean": 0.83,
+    "cost_usd_sum": 0.340118,
+    "cost_usd_per_question": 0.005669,
+    "cost_rows": 60,
+    "failures": []
+  },
+  "relevant_only": {
+    "n": 30,
+    "n_ok": 30,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 6.568,
+      "p50": 5.992,
+      "p95": 13.393,
+      "max": 14.027
+    },
+    "total_s": {
+      "mean": 6.611,
+      "p50": 6.05,
+      "p95": 13.44,
+      "max": 14.075
+    },
+    "kinds": {
+      "answer": 27,
+      "refuse": 3
+    },
+    "citations_mean": 1.67,
+    "cost_usd_sum": 0.265977,
+    "cost_usd_per_question": 0.008866,
+    "cost_rows": 30,
+    "failures": []
+  },
+  "irrelevant_only": {
+    "n": 30,
+    "n_ok": 30,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 3.398,
+      "p50": 2.829,
+      "p95": 6.183,
+      "max": 7.118
+    },
+    "total_s": {
+      "mean": 3.438,
+      "p50": 2.879,
+      "p95": 6.23,
+      "max": 7.151
+    },
+    "kinds": {
+      "clarify": 3,
+      "refuse": 27
+    },
+    "citations_mean": 0.0,
+    "cost_usd_sum": 0.074141,
+    "cost_usd_per_question": 0.002471,
+    "cost_rows": 30,
+    "failures": []
+  }
+}
