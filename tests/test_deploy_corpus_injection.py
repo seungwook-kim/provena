@@ -168,8 +168,8 @@ def test_success_path_restores_tables_and_ledger(plan, tmp_path):
     before = db.state()
     led = tmp_path / "ledger.json"
     res = run(db, plan, ledger=led)
-    assert res.inserted == {"docs": 11, "versions": 11, "chunks": 11}
-    assert res.cleanup["ok"] and res.cleanup["deleted"] == {"chunks": 11, "versions": 11, "docs": 11}
+    assert res.inserted == {"docs": 14, "versions": 14, "chunks": 14}
+    assert res.cleanup["ok"] and res.cleanup["deleted"] == {"chunks": 14, "versions": 14, "docs": 14}
     assert db.state() == before and res.cleanup["counts_match"] and not any(res.cleanup["leftover"].values())
     assert json.loads(led.read_text(encoding="utf-8"))["state"] == "cleaned" and db.closed
     assert all(c.verdict in ("막힘", "정상") for c in res.cases) and all(res.extras[c.id]["cited"] for c in res.cases)
@@ -408,7 +408,7 @@ def test_dry_run_prints_without_connecting(capsys, monkeypatch):
         monkeypatch.delenv(k, raising=False)
     assert T.main(["--dry-run", "--date", DATE]) == 0
     out = capsys.readouterr().out
-    assert "INSERT INTO chunks" in out and "DELETE FROM chunks" in out and "TEST-INJ-DEPLOY-20261110-D1" in out and "합 33행" in out
+    assert "INSERT INTO chunks" in out and "DELETE FROM chunks" in out and "TEST-INJ-DEPLOY-20261110-D1" in out and "합 42행" in out
 
 
 def test_write_requires_flag_and_env(monkeypatch, capsys):
@@ -474,3 +474,30 @@ def test_unknown_case_stops_before_any_connection(capsys, monkeypatch):
         monkeypatch.delenv(k, raising=False)
     assert T.main(["--date", DATE, "--write-prod", "--cases", "D6,D99"]) == T.EXIT_ENV
     assert "D99" in capsys.readouterr().err
+
+
+# ---------- D6 재설계 사례(D6V3, C6, C7) ----------
+
+def test_d6_redesign_cases_keep_the_planted_sentence_and_technique():
+    plan = T.build_plan(DATE, only=("D6", "D6V3", "C6", "C7"))
+    by = {p.key: p for p in plan}
+    assert set(by) == {"D6", "D6V3", "C6", "C7"}
+    d6, v3, c6, c7 = by["D6"], by["D6V3"], by["C6"], by["C7"]
+    assert v3.planted == d6.planted and v3.canary == d6.canary == "CANARY-DEPLOY-P2V5" and v3.source_case_id == d6.source_case_id == "INJ-P2-V5"
+    assert v3.path == "P2" and v3.spec.kind == c6.spec.kind == c7.spec.kind == "row"
+    assert v3.text.endswith(v3.planted) and v3.text.startswith(v3.article)
+    assert not c6.planted and not c6.canary and not c7.planted and not c7.canary          # 대조군은 심은 문장이 없다
+    assert c7.text == d6.text.removesuffix(" " + d6.planted)                                # 진단 대조군 = 원래 D6 청크에서 심은 문장만 뺀 것
+    assert len({p.chunk_id for p in plan}) == len({p.rule_seq for p in plan}) == 4
+
+
+def test_d6_redesign_cases_selectable_and_dry_run_has_nine_rows(capsys, monkeypatch):
+    for k in ("DEPLOY_INJ_DATABASE_URL", "VOYAGE_API_KEY", "DEPLOY_CHECK_B_PASSWORD"):
+        monkeypatch.delenv(k, raising=False)
+    assert T.main(["--dry-run", "--date", DATE, "--cases", "D6V3,C6,C7"]) == 0
+    out = capsys.readouterr().out
+    assert "넣는 행: docs 3, versions 3, chunks 3" in out and "합 9행" in out
+    for key in ("D6V3", "C6", "C7"):
+        assert f"TEST-INJ-DEPLOY-{DATE}-{key}" in out
+    assert f"{DATE}-D1" not in out and f"{DATE}-D6'" not in out
+    assert T.main(["--dry-run", "--date", DATE, "--cases", "D6V9"]) == 2
