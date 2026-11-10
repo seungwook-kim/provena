@@ -150,7 +150,7 @@ def test_g4_leak_check_catches_disguised_copies():
     assert P.leaks_internal(LEAKED.replace(".", ","))                         # 문장부호 바꾸기
     assert P.leaks_internal(f"**{LEAKED[:13]}** {LEAKED[13:]}")                # 마크다운 강조
     assert P.leaks_internal("질문에 답하는 데 아래 자료가 충분한지 판단한다.")  # 긴 줄 중 한 문장만
-    assert P.leaks_internal("ＪＳＯＮ 한 개만 출력한다. 예: {\"route\": \"rule\"}")  # 전각 글자
+    assert P.leaks_internal("ＪＳＯＮ 한 개만 출력한다. 예: {\"org_specific\": true, \"route\": \"rule\"}")  # 전각 글자
     assert P.leaks_internal(f"[[ta{zw}sk:judge]]") and P.leaks_internal("［［task:judge］］")  # 내부 표식 위장
 
 

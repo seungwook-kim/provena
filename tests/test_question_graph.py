@@ -440,6 +440,52 @@ def test_ambiguous_or_broken_classification_goes_to_policy_path():
         assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1, raw
 
 
+def test_out_of_domain_is_not_followed_when_the_model_says_the_question_is_about_the_organization():
+    """62.A: 모델이 조직이 정한 것을 묻는 질문이라고 적고도 도메인 밖으로 분류하면 정책 경로로 보낸다(두 번째 확인 호출 없이)."""
+    fn, calls = counting_search()
+    llm = normal_llm(classify=j(org_specific=True, route="out_of_domain"))
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1 and llm.count("classify") == 1
+
+
+def test_out_of_domain_with_org_specific_false_still_refuses_without_search():
+    from backend.graph.build import MSG_REFUSE_OUT_OF_DOMAIN
+
+    fn, calls = counting_search()
+    llm = normal_llm(classify=j(org_specific=False, route="out_of_domain"))
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "out_of_domain" and out["answer"] == MSG_REFUSE_OUT_OF_DOMAIN and len(calls) == 0 and llm.count("classify") == 2
+    assert llm.count("rewrite") == 0 and llm.count("judge") == 0 and llm.count("answer") == 0
+
+
+def test_second_vote_saying_org_specific_sends_the_question_to_the_policy_path():
+    fn, calls = counting_search()
+    llm = normal_llm(classify=[j(org_specific=False, route="out_of_domain"), j(org_specific=True, route="out_of_domain")])
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1 and llm.count("classify") == 2
+
+
+def test_route_of_reads_the_reply_and_only_true_overrides_out_of_domain():
+    from backend.graph.build import route_of
+
+    assert route_of({"route": "out_of_domain"}) == "out_of_domain"  # 칸이 없으면 분류를 그대로 따른다
+    assert route_of({"org_specific": False, "route": "out_of_domain"}) == "out_of_domain"
+    assert route_of({"org_specific": True, "route": "out_of_domain"}) == "rule"
+    for loose in ("true", 1, "yes", None):  # 참 값 하나만 뒤집는다. 글자나 숫자는 뒤집지 않는다
+        assert route_of({"org_specific": loose, "route": "out_of_domain"}) == "out_of_domain", loose
+    for route in ("rule", "decision", "review"):  # 다른 경로는 이 칸과 무관하다
+        assert route_of({"org_specific": False, "route": route}) == route and route_of({"org_specific": True, "route": route}) == route
+    for broken in (None, {}, [], "rule", {"route": None}, {"route": "Out_Of_Domain"}, {"org_specific": False}):
+        assert route_of(broken) == "rule", broken
+
+
+def test_classify_prompt_separates_general_knowledge_from_what_the_organization_set():
+    from backend.prompts.question import CLASSIFY_SYSTEM
+
+    assert "주제가 아니라 무엇을 묻는지로 가린다" in CLASSIFY_SYSTEM and "검색한 뒤에 판정하므로 여기서 따지지 않는다" in CLASSIFY_SYSTEM
+    assert "org_specific" in CLASSIFY_SYSTEM and '{"org_specific": true, "route": "rule"}' in CLASSIFY_SYSTEM
+
+
 def test_classify_prompt_names_out_of_domain_and_defaults_to_rule():
     from backend.prompts.question import CLASSIFY_SYSTEM
 

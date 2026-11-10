@@ -110,6 +110,19 @@ REFUSE_REASON_BY_MESSAGE = {
 }
 
 
+def route_of(obj: dict | None) -> str:
+    """분류 응답에서 경로를 읽는다. 모르는 값은 일반 정책 질문(`rule`)이다.
+    도메인 밖은 검색 없이 끝나므로, 질문이 이 조직이 정한 것이나 이 조직의 일을 묻는다고 모델이 스스로 적었으면(`org_specific`이 true) 따르지 않고 정책 경로로 보낸다.
+    핸드북에 근거가 있는지는 검색 뒤의 판정이 정한다."""
+    obj = obj if isinstance(obj, dict) else {}
+    route = obj.get("route")
+    if route not in ROUTES:
+        return "rule"
+    if route == "out_of_domain" and obj.get("org_specific") is True:
+        return "rule"
+    return route
+
+
 def _text(msg: Any) -> str:
     c = getattr(msg, "content", msg)
     if isinstance(c, list):  # 블록 목록(Anthropic API가 생각 블록과 함께 돌려줄 때): 글 블록만 잇는다
@@ -555,8 +568,7 @@ def build_graph(
 
         def once() -> str:
             obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
-            route = (obj or {}).get("route")
-            return route if route in ROUTES else "rule"  # 모르면 일반 정책 질문
+            return route_of(obj)
 
         def decide() -> str:
             route = once()
