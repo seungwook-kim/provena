@@ -21,8 +21,10 @@ function isBasicProfileComplete(form) {
   return Boolean(form.name.trim()) && PHONE_PATTERN.test(phoneDigits)
 }
 
+// 업무 역할과 담당 서비스는 저장할 칸이 서버에 없다(PUT /me/profile은 name·dept·phone·address, /me/memory는 affiliation·rank만 받는다).
+// 저장되지 않는 값이 저장·가입을 막지 않도록 필수 조건에서 뺐다.
 function isProfileEditComplete(form) {
-  return Boolean(form.team) && Boolean(form.role) && Boolean(form.service.trim()) && isBasicProfileComplete(form)
+  return Boolean(form.team) && isBasicProfileComplete(form)
 }
 
 function ProfileEditPage() {
@@ -94,8 +96,8 @@ function ProfileEditPage() {
       <p className="profile-description">소속 팀과 기본 정보를 수정할 수 있습니다.</p>
       {loading ? <p role="status">회원정보를 불러오는 중입니다.</p> : <form className="profile-form profile-form-edit" onSubmit={submit} noValidate>
         <label><span>소속 팀 <em aria-hidden="true">*</em></span><select required value={form.team} onChange={event => update('team', event.target.value)}><option value="" disabled>소속 팀을 선택해 주세요.</option>{TEAM_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label><span>업무 역할 <em aria-hidden="true">*</em> <small>(저장 연동 준비 중)</small></span><select required value={form.role} onChange={event => update('role', event.target.value)}><option value="">설정하지 않음</option>{ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label><span>담당 서비스 <em aria-hidden="true">*</em> <small>(저장 연동 준비 중)</small></span><input required value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>
+        <label><span>업무 역할 <small>(선택 · 저장 연동 준비 중)</small></span><select value={form.role} onChange={event => update('role', event.target.value)}><option value="">설정하지 않음</option>{ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label><span>담당 서비스 <small>(선택 · 저장 연동 준비 중)</small></span><input value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>
         <p className="profile-storage-notice">업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없으며, 현재 저장되지 않습니다. 담당 서비스도 현재 영구 저장 API가 없어 저장되지 않습니다.</p>
         <label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} autoComplete="name" /></label>
         <label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" autoComplete="tel" placeholder="예시) 010-1234-5678" /></label>
@@ -140,7 +142,8 @@ function ProfileOnboardingPage() {
   }, [user?.user_id])
 
   const current = steps[step]
-  const canContinue = step === 0 ? Boolean(form.team) : step === 1 ? Boolean(form.role) : step === 2 ? Boolean(form.service.trim()) : step === 3 ? isBasicProfileComplete(form) : true
+  const optionalStep = step === 1 || step === 2   // 업무 역할·담당 서비스: 저장되지 않는 선택 항목이라 비워도 다음으로 간다
+  const canContinue = step === 0 ? Boolean(form.team) : step === 3 ? isBasicProfileComplete(form) : true
 
   function update(field, value) {
     const nextValue = field === 'phone' ? formatPhone(value) : value
@@ -177,9 +180,10 @@ function ProfileOnboardingPage() {
       {loading ? <p role="status">회원정보를 불러오는 중입니다.</p> : <>
         {step === 0 && <div className="profile-choice-grid">{TEAM_OPTIONS.map(option => <button type="button" key={option} className={form.team === option ? 'selected' : ''} onClick={() => update('team', option)}>{option}</button>)}</div>}
         {step === 1 && <div className="profile-choice-grid">{ROLE_OPTIONS.map(option => <button type="button" key={option} className={form.role === option ? 'selected' : ''} onClick={() => update('role', option)}>{option}</button>)}</div>}
-        {step === 2 && <label className="profile-field"><span>담당 서비스</span><input required value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>}
+        {optionalStep && <p className="profile-storage-notice">선택 항목입니다. 저장되지 않으므로 고르지 않고 넘어가도 됩니다.</p>}
+        {step === 2 && <label className="profile-field"><span>담당 서비스</span><input value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>}
         {step === 3 && <div className="profile-form profile-form-wizard"><label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} autoComplete="name" /></label><label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" autoComplete="tel" placeholder="예시) 010-1234-5678" /></label><label><span>근무지 주소 <small>(선택)</small></span><textarea className="profile-address-field" value={form.address} onChange={event => update('address', event.target.value)} autoComplete="street-address" /></label></div>}
-        {step === 4 && <dl className="profile-summary"><dt>소속 팀</dt><dd>{form.team}</dd><dt>업무 역할 (저장되지 않음)</dt><dd>{form.role}</dd><dt>담당 서비스 (저장되지 않음)</dt><dd>{form.service}</dd><dt>이름</dt><dd>{form.name}</dd><dt>전화번호</dt><dd>{form.phone}</dd><dt>근무지 주소</dt><dd>{form.address || '설정하지 않음'}</dd></dl>}
+        {step === 4 && <dl className="profile-summary"><dt>소속 팀</dt><dd>{form.team}</dd><dt>업무 역할 (저장되지 않음)</dt><dd>{form.role || '설정하지 않음'}</dd><dt>담당 서비스 (저장되지 않음)</dt><dd>{form.service.trim() || '설정하지 않음'}</dd><dt>이름</dt><dd>{form.name}</dd><dt>전화번호</dt><dd>{form.phone}</dd><dt>근무지 주소</dt><dd>{form.address || '설정하지 않음'}</dd></dl>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className={`profile-wizard-actions${step === 0 ? ' first-step' : ''}`}>{step > 0 && <button type="button" className="profile-confirm-cancel" disabled={saving} onClick={() => setStep(currentStep => currentStep - 1)}>이전</button>}{step < steps.length - 1 ? <button type="button" className="button button-dark" disabled={!canContinue || saving} onClick={next}>다음</button> : <button type="button" className="button button-dark" disabled={saving} onClick={submit}>{saving ? '저장 중입니다.' : '등록 완료'}</button>}</div>
       </>}

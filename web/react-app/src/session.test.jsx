@@ -148,15 +148,15 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).toBeNull()
   })
 
-  it('shows all six fields on the completed-user profile edit screen and saves only the profile API fields', async () => {
+  it('shows all six fields on the completed-user profile edit screen, keeps role and service optional, and saves only the profile API fields', async () => {
     server.user = { ...A, profile_completed: true }
     server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '' }
     window.history.replaceState({}, '', '/myinfo')
     render(<App />)
     await screen.findByRole('heading', { name: '회원정보 수정' })
     expect(await screen.findByLabelText('소속 팀 *')).toBeTruthy()
-    await userEvent.selectOptions(screen.getByLabelText('업무 역할 * (저장 연동 준비 중)'), '개발자')
-    const service = screen.getByLabelText('담당 서비스 * (저장 연동 준비 중)')
+    await userEvent.selectOptions(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)'), '개발자')
+    const service = screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)')
     await userEvent.type(service, '결제 API')
     expect(screen.getByLabelText('이름 *')).toBeTruthy()
     const phone = screen.getByLabelText('전화번호 *')
@@ -164,12 +164,55 @@ describe('React authentication and session isolation', () => {
     const address = screen.getByLabelText('근무지 주소 (선택)')
     expect(address.className).toBe('profile-address-field')
     await userEvent.clear(service)
-    expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(true)
+    // 담당 서비스는 저장되지 않는 선택 칸이라 비워도 저장을 막지 않는다(새로고침하면 늘 비어 있다).
+    expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(false)
     await userEvent.type(service, '결제 API')
     await userEvent.clear(phone)
     await userEvent.type(phone, '01098765432')
     await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '' })
+  })
+
+  it('lets a returning user save basic info while role and service stay empty', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    const phone = await screen.findByLabelText('전화번호 *')
+    expect(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)').value).toBe('')
+    expect(screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)').value).toBe('')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    const save = screen.getByRole('button', { name: '변경사항 저장' })
+    expect(save.disabled).toBe(false)
+    await userEvent.click(save)
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '' })
+    expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
+  })
+
+  it('lets registration finish without choosing a role or a service', async () => {
+    server.user = { ...A, profile_completed: false }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: '보안' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
+    expect(screen.getByText('선택 항목입니다. 저장되지 않으므로 고르지 않고 넘어가도 됩니다.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '어떤 서비스를 담당하시나요?' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.type(screen.getByRole('textbox', { name: '이름' }), '홍길동')
+    await userEvent.type(screen.getByRole('textbox', { name: '전화번호' }), '01012345678')
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '입력한 정보를 확인해 주세요.' })).toBeTruthy()
+    expect(screen.getAllByText('설정하지 않음')).toHaveLength(3)   // 업무 역할, 담당 서비스, 근무지 주소
+    await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
+    expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '' })
+    await screen.findByRole('button', { name: '내 계정' })
+    expect(window.location.pathname).toBe('/chat')
   })
 
   it('keeps all five registration steps and saves the profile before entering chat', async () => {
