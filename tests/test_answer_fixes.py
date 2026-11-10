@@ -57,6 +57,29 @@ def test_expand_respects_the_cap_and_max_add():
     assert len(out) == 4  # 이미 상한이면 더하지 않는다
 
 
+def test_expand_compares_the_lines_that_carry_the_value_not_the_whole_chunk():
+    """표의 열 이름이 되풀이되어 청크 전체 단어는 많이 겹쳐도, 같은 값(1 year)이 다른 대상의 줄에 있으면 더하지 않는다."""
+    row = "Record: {} | Retention Requirement: {} | Disposal Requirement: Secure Deletion"
+    cited = [ch(A, "\n".join([row.format("Access request records", "2 years"), row.format("Production audit logs", "1 year"),
+                              row.format("System access reviews", "3 months")]))]
+    other_rows = ch(B, "\n".join([row.format("Job roles and responsibilities", "1 year"), row.format("Personnel files", "5 years"),
+                                  row.format("Meeting notes", "6 months")]))
+    other_page = ch(C, "Backups of customer databases are kept for 1 year minimum.\nBackups of other databases are kept 90 days.", title="Logging")
+    same_fact = ch(D, "Production audit logs are retained for 1 year.", title="Audit")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], other_rows, other_page, same_fact])
+    assert [c["chunk_id"] for c in out] == [A, D]
+
+
+def test_expand_ignores_the_head_copied_from_the_cited_chunk():
+    """앞 청크 끝을 복사한 머리(청킹 겹침)에만 같은 줄이 있는 다음 청크는 더하지 않는다. 자기 본문에 있으면 더한다."""
+    tail = "Record: Firewall configuration artifacts | Retention Requirement: 1 year"
+    cited = [{**ch(A, "Record: Production audit logs | Retention Requirement: 1 year\n" + tail), "rule_seq": 1}]
+    nxt = {**ch(B, tail[8:] + "\nRecord: Risk assessment report | Retention Requirement: 2 years"), "rule_seq": 1}
+    other_page = {**nxt, "chunk_id": C, "rule_seq": 2, "text": "Other\n" + tail}
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], nxt, other_page])
+    assert [c["chunk_id"] for c in out] == [A, C]
+
+
 def test_expand_numbered_continues_the_numbers():
     body = "Merge requests should receive a review response within 2 business days for team members."
     cited = [ch(A, "Incidents are paged within 15 minutes by the on-call engineer."), ch(B, body)]
@@ -293,3 +316,24 @@ def test_clarify_never_quotes_a_fragment_of_the_deployed_injection_cases():
         p = planted[(fn, cid)]
         quoted = F.quotable_phrases(f"{_AMOUNT_Q}\n\n{p}", corpus)
         assert not [x for x in quoted if x.lower() in p.lower()], (cid, quoted)
+
+
+def test_pick_best2_skips_the_absence_only_candidate_when_the_other_answers():
+    """한쪽 후보만 자료에 없다는 말뿐이고 다른 쪽이 인용 있는 답이면, S 안 인용 수가 같거나 불리해도 답 쪽을 고른다."""
+    absent = {"answer": f"자료에는 해당 금액의 행이 없습니다 [{A}][{B}].", "raw_citations": [A, B]}
+    answer = {"answer": f"해당 금액은 부서장 승인이 필요합니다 [{A}].", "raw_citations": [A]}
+    for first, second, want in ((absent, answer, 1), (answer, absent, 0)):
+        got, log = F.pick_best2(first, second, [A, B])
+        assert got is answer and log["pick"] == want and log["why"] == "한쪽만 자료에 없다는 말"
+    got, log = F.pick_best2(absent, answer, [])  # 판정 구절이 없어도 같다
+    assert got is answer
+
+
+def test_pick_best2_absence_rule_leaves_other_cases_alone():
+    absent = {"answer": f"자료에는 해당 금액의 행이 없습니다 [{A}].", "raw_citations": [A]}
+    uncited = {"answer": "해당 금액은 부서장 승인이 필요합니다.", "raw_citations": []}
+    a1 = {"answer": f"승인이 필요합니다 [{A}].", "raw_citations": [A]}
+    a2 = {"answer": f"승인이 필요합니다 [{A}][{B}].", "raw_citations": [A, B]}
+    assert F.pick_best2(absent, dict(absent), [A])[1]["why"] == "동점, 첫 후보"       # 둘 다 없다는 말
+    assert F.pick_best2(absent, uncited, [A])[1]["why"] == "S 안 인용 청크 수"        # 다른 쪽에 인용이 없으면 기존 규칙
+    assert F.pick_best2(a1, a2, [A])[1]["why"] == "S 밖 인용 수"                      # 둘 다 답이면 기존 규칙
