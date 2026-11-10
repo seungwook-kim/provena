@@ -2,7 +2,7 @@
 
 `IssueTableStore` Protocol을 지키면 인메모리와 Postgres를 바꿔 끼울 수 있다. 스키마는 `db/110_issue_tables.sql`이다.
 - `save`: 같은 `approval_id`로 다시 불려도 한 건만 남는다(재개가 겹쳐도 중복 저장 없음). table_id를 돌려준다.
-- `record_rejection`: 반려 사유만 남기고 쟁점표는 저장하지 않는다.
+- `record_rejection`: 반려 사유만 남기고 쟁점표는 저장하지 않는다. Postgres 는 별도 표 없이 승인함 `approvals` 의 같은 `approval_id` 줄에 사유를 쓴다.
 - `get_by_thread`: 요청한 사용자가 자기 쟁점표를 확인한다(Happy Path 8). 다른 사용자 것은 돌려주지 않는다.
 Postgres 구현은 연결 만드는 함수를 주입받는다(`backend/services/auth_store.py`와 같은 방식, 호출마다 열고 닫음).
 """
@@ -75,12 +75,14 @@ class PgIssueTableStore:
         return str(row[0])
 
     def record_rejection(self, *, approval_id, thread_id, user_id, reason, decided_by):
+        """반려 사유와 결정자를 승인함 줄(approvals)에 쓴다. 이미 사유가 있으면 첫 사유를 지키고(재개가 겹쳐도 한 번), 줄이 없으면 아무것도 하지 않는다.
+        상태(rejected)와 결정 시각은 곧이어 `decide_review_item` 이 쓴다. 반려 기록은 별도 표 없이 이 줄(comment, decided_by, decided_at)이 전부다. 옛 DB 이전은 db/109_realign.sql(복사)과 db/manual/109_retire_old.sql(정리)."""
         sql = (
-            "INSERT INTO issue_table_rejections (approval_id, thread_id, user_id, reason, decided_by) "
-            "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (approval_id) DO NOTHING"
+            "UPDATE approvals SET comment = %s, decided_by = COALESCE(decided_by, %s) "
+            "WHERE approval_id = %s AND kind = 'issue_table' AND comment = ''"
         )
         with self._connect() as conn:
-            conn.execute(sql, (approval_id, thread_id, user_id, reason, decided_by))
+            conn.execute(sql, (reason, decided_by, approval_id))
 
     def get_by_thread(self, thread_id, user_id):
         sql = (

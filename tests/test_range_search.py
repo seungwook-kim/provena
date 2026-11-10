@@ -224,6 +224,79 @@ def test_table_choice_follows_the_full_question_vector_not_the_sub_questions():
     assert "b2" in ids(build(np.asarray([0, 0, 0, 0, 0.2, 1], dtype=np.float32)).search(q))     # 하위 질문이 바뀌어도 같은 표가 남는다
 
 
+# ---------- 질문이 이름을 부른 표 먼저(사전 등록 62.27) ----------
+
+@pytest.mark.parametrize("a,b,want", [
+    ("approver", "approving", True), ("approval", "approving", True), ("expense", "expenses", True), ("payment", "payments", True),
+    ("contract", "contracts", True), ("approve", "appropriate", False), ("debt", "debts", False), ("fund", "funds", False), ("sign", "signing", False),
+])
+def test_same_word_compares_stems(a, b, want):
+    assert ranges.same_word(a, b) is want and ranges.same_word(b, a) is want
+
+
+def test_table_named_matches_question_words_in_any_text():
+    table = ("Approving expense",)
+    assert ranges.table_named(table, ["계약 금액이 1만 달러라면 업무 승인자는 누구야?", "Who is the approver for a $10,000 contract?"])
+    assert ranges.table_named(("Approving Payment",), [None, "who is the finance approver"])
+    assert not ranges.table_named(("Bad debt write off",), ["Who is the approver for a $10,000 contract?"])
+    assert not ranges.table_named(("Non Billable Expenses",), ["who signs a contract"])          # 'non'은 불용어, 'expenses'는 질문에 없다
+    assert not ranges.table_named(table, ["계약 금액이 1만 달러라면 업무 승인자는 누구야?"])     # 한국어만 있으면 맞추지 못한다
+    assert not ranges.table_named((), ["approver"])
+
+
+FOUR_TABLES = MEM_ROWS + [mk("Approving Payment > >$0k up to $500k", [0.10, 0, 0, 0, 0, 1], cid="p1"),
+                          mk("Bad debt write off > Up to $10K", [0.30, 0, 0, 0, 0, 1], cid="d1"),          # 질문의 "$10,000"과 글자가 겹쳐 점수가 가장 높다
+                          mk("Non Billable Expenses > >$5K", [0.25, 0, 0, 0, 0, 1], cid="n1")]
+
+
+def test_tables_named_by_the_question_come_before_higher_scoring_tables():
+    """$10,000은 네 표에 든다. 질문이 'approver'라고 했으면 'Approving expense'·'Approving Payment'가 점수가 더 높은 'Bad debt write off'보다 먼저다."""
+    got = ids(searcher(FOUR_TABLES, link_n=0, range_n=2).search(SearchQuery(query="who is the approver for a $10,000 contract", k=5)))
+    assert "b1" in got and "p1" in got and "d1" not in got and "n1" not in got and len(got) == 5
+    three = ids(searcher(FOUR_TABLES, link_n=0, range_n=3).search(SearchQuery(query="who is the approver for a $10,000 contract", k=5)))
+    assert {"b1", "p1", "d1"} <= set(three)                      # 세 번째 자리는 이름이 없는 표 중 점수 순
+
+
+def test_without_a_table_name_in_the_question_the_vector_order_stays():
+    got = ids(searcher(FOUR_TABLES, link_n=0, range_n=2).search(SearchQuery(query="who signs a $10,000 contract", k=5)))
+    assert "d1" in got and "n1" in got and "b1" not in got and "p1" not in got
+
+
+def test_sub_question_text_can_name_the_table():
+    """표 이름은 전체 질문뿐 아니라 하위 질문(번역 포함)에 있어도 센다. 이름이 맞는 표가 여럿이면 그 안에서는 전체 질문 벡터 점수 순이다."""
+    q = SearchQuery(query="contract of $10,000", sub_queries=["who approves the payment", "who signs"], k=5)
+    assert ids(searcher(FOUR_TABLES, link_n=0, range_n=1).search(q))[-1] == "b1"           # 'approves'가 두 표(expense, Payment)에 맞고 점수는 b1(0.20) > p1(0.10)
+    got = ids(searcher(FOUR_TABLES, link_n=0, range_n=2).search(q))
+    assert "b1" in got and "p1" in got and "d1" not in got
+
+
+def test_full_question_top_pages_are_candidates_when_the_sub_questions_miss_the_table_page():
+    """하위 질문만으로 만든 상위 k에 표 페이지가 없어도, 전체 질문 벡터의 상위 k에 그 페이지가 있으면 구간 행을 찾는다."""
+    rows = BAND + [mk(None, [0.0, 0, 0, 0, 1, 0], cid=f"o{i}", seq=100 + i, page=f"page {i}") for i in range(6)]   # 다른 페이지 여섯 개, 전체 질문과는 멀다
+    rows = [dict(r, _v=[0.9, *r["_v"][1:]]) if r["chunk_id"].startswith("b") else r for r in rows]                  # 구간 행은 전체 질문과 가깝다
+    vecs = np.stack([np.asarray(r["_v"], dtype=np.float32) / np.linalg.norm(r["_v"]) for r in rows])
+    full, sub = np.asarray([1, 0, 0, 0, 0, 0], dtype=np.float32), np.asarray([0, 0, 0, 0, 1, 0], dtype=np.float32)
+
+    def build(range_n):
+        embed_ = lambda texts: np.stack([full if i == 0 else sub for i in range(len(texts))])  # noqa: E731
+        return Searcher(SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none", link_n=0, range_n=range_n), MemoryStore(rows, vecs, "voyage-4"),
+                        embedder=embed_, reranker=None, check_meta=False, translator=lambda query, kind: translate.Result(query, "stored"))
+
+    q = SearchQuery(query="approval for $30,000", sub_queries=["who approves the contract", "who signs it"], k=5)
+    assert "b2" not in ids(build(0).search(q))                   # 하위 질문의 상위 k는 다른 페이지뿐이다
+    got = ids(build(1).search(q))
+    assert "b2" in got and len(got) == 5 and last_search_trace().n_range == 1
+
+
+def test_unsplit_question_does_not_run_the_extra_page_query():
+    s = searcher(MEM_ROWS, link_n=0)
+    calls: list = []
+    orig = s.store.vector_top
+    s.store.vector_top = lambda *a, **kw: calls.append(a) or orig(*a, **kw)
+    s.search(SearchQuery(query="approval for $30,000 contract", k=5))
+    assert len(calls) == 1                                       # 나누지 않은 질문은 상위 k가 곧 전체 질문의 것이라 다시 묻지 않는다
+
+
 def test_link_expanded_chunks_are_dropped_before_rows_that_belong_to_the_question():
     rows = [dict(r, link_targets=[100]) if r["chunk_id"] == "o1" else r for r in MEM_ROWS]
     got = searcher(rows, link_n=2).search(SearchQuery(query="approval for $30,000", k=5))

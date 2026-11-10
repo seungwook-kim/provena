@@ -9,6 +9,8 @@
 - `parse_band(heading_last)`: 제목 경로의 마지막 단계가 금액 구간 하나뿐일 때 `Band`로 바꾼다. 구간 표기 6가지는 아래 `_PATTERNS`.
   구간 말이 없는 금액(예: "$500k annual revenue")과 문장 속 금액은 구간이 아니다.
 - `covering(headings, amounts)`: 제목 경로 목록에서 금액이 든 구간 행을, 표(제목 경로에서 구간 단계를 뺀 앞부분)와 금액마다 가장 좁은 구간 하나씩 고른다.
+- `table_named(table, texts)`: 질문 글(원문, 번역, 하위 질문)에 그 표 이름의 낱말이 있는지(`approver`와 `Approving`처럼 같은 어간이면 같은 낱말).
+  금액이 여러 표에 들 때 검색 쪽이 질문이 이름을 부른 표를 먼저 두는 데 쓴다(사전 등록 62.27).
 """
 from __future__ import annotations
 
@@ -146,3 +148,38 @@ def covering(headings: list[tuple[object, str]], amounts: list[float]) -> list[t
     for (table, _x), (rank, key) in sorted(best.items(), key=lambda kv: kv[1][0][2]):
         seen.setdefault(key, table)
     return list(seen.items())
+
+
+# ---------- 질문이 이름을 부른 표 ----------
+# 표 이름(제목 경로에서 구간 단계를 뺀 앞부분)의 낱말이 질문 글에 있으면 그 표는 질문이 부른 표다. 금액이 든 구간 행은 어느 표든 본문이 제목과 역할 줄뿐이라
+# 벡터 점수가 서로 0.03 안에 몰리고, 질문의 금액과 글자가 겹치는 구간(예: "$10,000"과 "Up to $10K")이 표와 무관하게 앞서는 일이 있다(운영 재연 2026-11-10).
+_WORD = re.compile(r"[A-Za-z]+")
+_TABLE_STOP = {"the", "and", "or", "of", "to", "in", "on", "for", "up", "among", "per", "non", "with", "from", "all"}
+_MIN_WORD = 3        # 이보다 짧은 낱말(up, of)은 비교하지 않는다
+_MIN_COMMON = 6      # 어간 비교: 공통 앞부분이 이 길이 이상이고 짧은 쪽 길이 - 2 이상이면 같은 낱말(approver/approving/approval, expense/expenses)
+
+
+def same_word(a: str, b: str) -> bool:
+    """같은 낱말인지(소문자). 같거나, 공통 앞부분이 `_MIN_COMMON`자 이상이고 짧은 쪽 길이에서 2자 안에 든다. approve/appropriate는 공통 5자라 다르다."""
+    if a == b:
+        return True
+    common = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        common += 1
+    return common >= max(_MIN_COMMON, min(len(a), len(b)) - 2)
+
+
+def _words(text: str | None) -> list[str]:
+    return [w.lower() for w in _WORD.findall(text or "") if len(w) >= _MIN_WORD and w.lower() not in _TABLE_STOP]
+
+
+def table_named(table: tuple[str, ...], texts: list[str | None]) -> bool:
+    """표 이름(`covering`이 돌려주는 제목 경로 앞부분)의 낱말 중 하나라도 질문 글(원문, 번역, 하위 질문)에 같은 낱말로 있으면 True.
+    한국어 글은 영문 낱말이 없어 맞지 않고, 영어 번역과 하위 질문이 맞춘다. 불용어와 두 글자 이하 낱말은 보지 않는다."""
+    names = [w for part in table for w in _words(part)]
+    if not names:
+        return False
+    asked = {w for t in texts for w in _words(t)}
+    return any(same_word(n, a) for n in names for a in asked)

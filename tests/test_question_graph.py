@@ -575,8 +575,12 @@ def test_ungrounded_without_sentence_list_or_with_other_reason_is_refused_as_bef
     llm = normal_llm(grounding=j(grounded=False, reason_code="unsupported", reason="기한이 다름"))
     out = run(graph(llm=llm, grounding_llm=True))
     assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and llm.count("grounding") == 1
-    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=["근거에 따라 답합니다"]))
+    llm = normal_llm(grounding=j(grounded=False, reason_code="nonexistent_entity", reason="대상 없음", unsupported_sentences=["근거에 따라 답합니다"]))
     out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "nonexistent_entity" and llm.count("grounding") == 1
+    # 질문에 시점 표현이 있으면 모델의 out_of_period 표는 그대로 거절 사유다(사전 등록 62.29)
+    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=["근거에 따라 답합니다"]))
+    out = run(graph(llm=llm, grounding_llm=True), question="FY21 기준 " + Q)
     assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and llm.count("grounding") == 1
 
 
@@ -967,10 +971,17 @@ def test_rewrite_that_says_the_period_is_missing_is_refused():
 
 
 def test_only_unsupported_gets_a_rewrite():
-    for code in ("no_evidence", "out_of_period", "nonexistent_entity"):
+    """nonexistent_entity와, 질문에 시점 표현이 있을 때의 out_of_period는 다시 쓰지 않고 거절한다.
+    인용이 있는 답의 no_evidence와 시점 표현이 없는 질문의 out_of_period는 unsupported로 읽어 다시 쓴다(사전 등록 62.29, `grounding.recode_vote`)."""
+    for code, question in (("nonexistent_entity", Q), ("out_of_period", "FY21 기준 " + Q)):
+        llm = normal_llm(grounding=j(grounded=False, reason_code=code, reason="없음", unsupported_sentences=["근거에 따라 답합니다"]))
+        out = run(graph(llm=llm, grounding_llm=True), question=question)
+        assert out["kind"] == "refuse" and out["refuse_reason"] == code and llm.count("answer") == 1 and "redraft" not in out["grounding"]
+    for code in ("no_evidence", "out_of_period"):
         llm = normal_llm(grounding=j(grounded=False, reason_code=code, reason="없음", unsupported_sentences=["근거에 따라 답합니다"]))
         out = run(graph(llm=llm, grounding_llm=True))
-        assert out["kind"] == "refuse" and out["refuse_reason"] == code and llm.count("answer") == 1 and "redraft" not in out["grounding"]
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and llm.count("answer") == 2
+        assert out["grounding"]["recoded"] == [code] and out["grounding"]["redraft"]["result"] == "unchanged"
 
 
 def test_rewrite_that_dropped_an_asked_fact_says_so():
@@ -1016,7 +1027,8 @@ def test_partial_answer_must_still_pass_the_grounding_judge():
     llm = normal_llm(decompose=TWO_FACTS, judge=PARTIAL, rewrite=_rewrites(),
                      grounding=j(grounded=False, reason_code="no_evidence", reason="질문의 대상이 자료에 없다"))
     out = run(graph(llm=llm, decompose=True, grounding_llm=True))
-    assert out["kind"] == "refuse" and out["refuse_reason"] == "no_evidence" and out["citations"] == []
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and out["citations"] == []  # 인용이 있는 답의 no_evidence 표는 unsupported로 읽는다(62.29). 다시 쓴 답도 받쳐지지 않아 거절이다
+    assert out["grounding"]["recoded"] == ["no_evidence"]
 
 
 def test_research_that_finds_the_rest_gives_a_full_answer_without_the_note():

@@ -1,0 +1,480 @@
+{
+ "summary": {
+  "traces": 14,
+  "votes": 63,
+  "votes_recoded": 4,
+  "changed": 0,
+  "answer_to_refuse": 0,
+  "refuse_to_answer": 0,
+  "reason_only_changed": 0
+ },
+ "rows": [
+  {
+   "trace": "ee28fd80",
+   "amount": "1만 달러",
+   "production": "answer",
+   "before": "답(다시 쓴 답)",
+   "after": "답(다시 쓴 답)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "2a01bd08",
+   "amount": "3만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "c3a94d4f",
+   "amount": "5만 달러",
+   "production": "answer",
+   "before": "답(다시 쓴 답)",
+   "after": "답(다시 쓴 답)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "27c30464",
+   "amount": "10만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "4807636d",
+   "amount": "30만 달러",
+   "production": "refuse/unsupported",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 3,
+     "eased": 1,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 3,
+     "eased": 2,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 3,
+     "eased": 1,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 3,
+     "eased": 2,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "e2b6f53d",
+   "amount": "1만 달러",
+   "production": "answer",
+   "before": "답(다시 쓴 답)",
+   "after": "답(다시 쓴 답)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "50aaba89",
+   "amount": "3만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "18f8f61a",
+   "amount": "5만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "f178bec0",
+   "amount": "10만 달러",
+   "production": "refuse/unsupported",
+   "before": "답(다시 쓴 답)",
+   "after": "답(다시 쓴 답)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 3,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 3,
+     "eased": 0,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "966b0433",
+   "amount": "30만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "58fdbb15",
+   "amount": "3만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    },
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "c02a6765",
+   "amount": "5만 달러",
+   "production": "refuse/unsupported",
+   "before": "거절 unsupported(다시 쓴 답의 저장 표 없음)",
+   "after": "거절 unsupported(다시 쓴 답의 저장 표 없음)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "ungrounded",
+     "code": "unsupported",
+     "used": 2,
+     "eased": 0,
+     "recoded": [
+      "out_of_period"
+     ]
+    }
+   ]
+  },
+  {
+   "trace": "6972a921",
+   "amount": "30만 달러",
+   "production": "answer",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 0,
+     "recoded": []
+    }
+   ]
+  },
+  {
+   "trace": "bfd7bdbc",
+   "amount": "1만 달러",
+   "production": "refuse/out_of_period",
+   "before": "답(첫 초안)",
+   "after": "답(첫 초안)",
+   "changed": false,
+   "groups_before": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": []
+    }
+   ],
+   "groups_after": [
+    {
+     "state": "grounded",
+     "code": "",
+     "used": 2,
+     "eased": 2,
+     "recoded": [
+      "out_of_period",
+      "out_of_period"
+     ]
+    }
+   ]
+  }
+ ]
+}

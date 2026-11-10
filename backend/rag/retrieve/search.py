@@ -7,8 +7,9 @@
 하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
-금액 구간 조회(SEARCH_RANGE_N=n, 기본 3(데모 모드는 0: 녹화가 조회 전 것), 0이면 끔, 사전 등록 62.7·62.13): 질문에 달러 금액이 있으면 상위 k가 든 페이지의 구간 행(제목 경로 끝이
-'>$25K up to $50K' 같은 금액 구간) 중 그 금액이 속한 행을 표마다 하나씩 골라 전체 질문 벡터와 가까운 순으로 n개까지 뒤 자리를 바꾼다(ranges.py).
+금액 구간 조회(SEARCH_RANGE_N=n, 기본 3(데모 모드는 0: 녹화가 조회 전 것), 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
+전체 질문 벡터의 상위 k 페이지도)의 구간 행(제목 경로 끝이 '>$25K up to $50K' 같은 금액 구간) 중 그 금액이 속한 행을 표마다 하나씩 골라, 질문이 이름을 부른 표
+(ranges.table_named: `approver`와 `Approving expense`처럼 같은 낱말)를 먼저, 그 안에서 전체 질문 벡터와 가까운 순으로 n개까지 뒤 자리를 바꾼다(ranges.py).
 
 1차 비교(evals/retrieval/experiment_v1.py)와 같은 점수가 나오게 둔 것:
 - BM25 토큰화 `_tokens`(소문자 [a-z0-9]+, 한 글자·불용어 뺌), 상위 고르기 `top_positions`(0점도 후보에 듦, numpy 순서 그대로).
@@ -724,10 +725,11 @@ class Searcher:
 
     def _range_expand(self, top: list[Key], rows: dict[Key, dict], qvecs, texts: list[str | None], q: SearchQuery,
                       tr: SearchTrace) -> list[Key]:
-        """금액 구간 조회(사전 등록 62.7): 질문에 달러 금액이 있으면, 상위 k가 든 페이지의 구간 행(제목 경로 끝이 ">$25K up to $50K" 같은 금액 구간인 청크)
-        중 그 금액이 속한 행을 표(제목 경로에서 구간 단계를 뺀 앞부분)마다 하나씩 고르고, 전체 질문 벡터(하위 질문은 쓰지 않는다)와 가까운 순으로
-        range_n개까지 뒤 자리를 바꾼다. 벡터는 "$30,000"이 어느 구간인지 알지 못해 구간 행들이 서로 거의 같은 점수로 흩어지기 때문이다.
-        상위 k에 이미 든 구간 행은 그대로 두고 자리만 센다. 금액이 없거나, 상위 k의 페이지에 구간 행이 없거나, 저장소가 이 조회를 모르면 그대로 돌려준다."""
+        """금액 구간 조회(사전 등록 62.7, 62.13, 62.27): 질문에 달러 금액이 있으면, 상위 k가 든 페이지의 구간 행(제목 경로 끝이 ">$25K up to $50K" 같은 금액 구간인
+        청크) 중 그 금액이 속한 행을 표(제목 경로에서 구간 단계를 뺀 앞부분)마다 하나씩 고르고, 질문이 이름을 부른 표(`ranges.table_named`)를 먼저, 그 안에서
+        전체 질문 벡터(하위 질문은 쓰지 않는다)와 가까운 순으로 range_n개까지 뒤 자리를 바꾼다. 벡터는 "$30,000"이 어느 구간인지 알지 못해 구간 행들이 서로
+        거의 같은 점수로 흩어지기 때문이다. 질문을 나눴으면 전체 질문 벡터의 상위 k 페이지도 후보 페이지에 넣는다(하위 질문만으로 만든 상위 k에 표 페이지가
+        없는 회차가 생기지 않게). 상위 k에 이미 든 구간 행은 그대로 두고 자리만 센다. 금액이 없거나, 후보 페이지에 구간 행이 없거나, 저장소가 이 조회를 모르면 그대로 돌려준다."""
         n = self.cfg.range_n
         if not n or qvecs is None or not top:
             return top
@@ -736,14 +738,26 @@ class Searcher:
         if not amounts or find is None or score is None:
             return top
         t = time.perf_counter()
-        seqs = sorted({int(rows[k]["rule_seq"]) for k in top})
-        picks = [k for k, _ in ranges.covering(find(seqs, q.org, q.as_of), amounts)]
+        seqs = {int(rows[k]["rule_seq"]) for k in top}
+        if tr.n_sub:
+            # 질문을 나눴으면 상위 k는 하위 질문만으로 만든 것이라, 하위 질문 문장(LLM이 회차마다 다르게 쓴다)에 따라 표 페이지가 상위 k에서 빠질 수 있다.
+            # 전체 질문 벡터의 상위 k 페이지를 후보에 더한다(벡터 질의 1회, 임베딩은 이미 있다). 표를 고르는 점수는 아래와 같이 전체 질문 벡터다
+            whole = [k for k, _ in self.store.vector_top(qvecs[0], self.cfg.embed_model, q.org, q.as_of, q.k)]
+            missing = [k for k in whole if k not in rows]
+            if missing:
+                rows.update(self.store.fetch(missing))
+            seqs |= {int(rows[k]["rule_seq"]) for k in whole if k in rows}
+        covering = ranges.covering(find(sorted(seqs), q.org, q.as_of), amounts)
+        picks = [k for k, _ in covering]
         if not picks:
             return top
         # 전체 질문 벡터 하나로만 고른다. 하위 질문은 LLM이 회차마다 다르게 쓰고 번역도 달라져, 금액이 속한 표가 여럿일 때 어느 표가 남는지가 회차마다 바뀌었다
         # (운영 트레이스 2026-11-09: 같은 질문 3회에서 지출 승인 행이 빠진 회차가 있었다).
+        # 질문이 이름을 부른 표(예: "approver"와 "Approving expense")를 먼저 둔다. 금액이 여러 표에 들면 구간 행끼리 점수가 0.03 안에 몰려, 질문의 금액과
+        # 글자가 겹치는 다른 표의 행("$10,000"과 "Up to $10K")이 질문이 부른 표를 밀어냈다(운영 재연 2026-11-10, 사전 등록 62.27).
         best = score(qvecs[0], self.cfg.embed_model, picks)
-        chosen = sorted(picks, key=lambda k: -best.get(k, float("-inf")))[:n]   # 안정 정렬: 같은 점수는 제목 순서
+        named = {k for k, table in covering if ranges.table_named(table, texts)}
+        chosen = sorted(picks, key=lambda k: (k not in named, -best.get(k, float("-inf"))))[:n]   # 안정 정렬: 같은 점수는 제목 순서
         new = [k for k in chosen if k not in top]
         if new:
             rows.update(self.store.fetch(new))

@@ -37,7 +37,6 @@ def tag():
     yield t
     with _conn() as c:
         c.execute("DELETE FROM recall_notices WHERE user_id LIKE %s", (t + "%",))
-        c.execute("DELETE FROM recall_feedback WHERE user_id LIKE %s", (t + "%",))
         c.execute("DELETE FROM recall_digests WHERE user_id LIKE %s", (t + "%",))
         c.execute("DELETE FROM webhook_deliveries WHERE sub_id LIKE %s", (t + "%",))
         c.execute("DELETE FROM webhook_subscriptions WHERE sub_id LIKE %s", (t + "%",))
@@ -85,6 +84,24 @@ def test_service_end_to_end_on_postgres(tag):
     assert store.notice_update("pgt-없음", acked=True) is None
 
 
+def test_grounding_lives_in_the_answers_row(tag):
+    store = PgAnswerStore(DSN)
+    ch = chunk(rule_seq=SEQ_PG, article=ARTICLE)
+    save_answer(store, f"{tag}-g0", f"{tag}-u1", citations=[ch])
+    assert store.get_grounding(f"{tag}-g0") is None                                              # 아직 기록하지 않음(NULL)
+    store.save_grounding(f"{tag}-g0", {"grounded": True}, ["glossary"])
+    got = store.get_grounding(f"{tag}-g0")
+    assert got["grounding"] == {"grounded": True} and got["skills_used"] == ["glossary"] and [c["chunk_id"] for c in got["citations"]] == [ch.chunk_id]
+    store.save_with_grounding(f"{tag}-g1", f"{tag}-u1", f"{tag}-u1:t1", "질문?", "답 [1]", None, [ch], {"grounded": False}, [])
+    store.save_with_grounding(f"{tag}-g1", f"{tag}-u1", f"{tag}-u1:t1", "질문?", "답 [1]", None, [ch], {"grounded": True}, ["a"])   # 다시 저장: 근거 칸만 덮어쓴다
+    again = store.get_grounding(f"{tag}-g1")
+    assert again["grounding"] == {"grounded": True} and again["skills_used"] == ["a"] and len(again["citations"]) == 1
+    store.save_grounding(f"{tag}-없는답", {"x": 1}, [])                                           # 답이 없으면 아무것도 쓰지 않는다
+    assert store.get_grounding(f"{tag}-없는답") is None
+    with _conn() as c:
+        assert c.execute("SELECT to_regclass('public.answer_grounding')").fetchone()[0] is None
+
+
 def test_failed_event_can_be_claimed_again(tag):
     store, key = PgRecallStore(DSN), f"{tag}-ev2"
     assert store.claim_event(key, {"x": 1}) is True and store.claim_event(key, {"x": 1}) is False
@@ -93,15 +110,32 @@ def test_failed_event_can_be_claimed_again(tag):
     assert store.claim_event(key, {"x": 1}) is True and store.event_get(key)["error_kind"] is None
 
 
+def _notice(tag, n, user="u1", pattern="amount"):
+    return {"notice_id": f"{tag}-{n}", "event_key": f"{tag}-ev-{n}", "answer_id": f"{tag}-a-{n}", "user_id": f"{tag}-{user}",
+            "changed": {"rule_seq": SEQ_PG, "article": ARTICLE, "old_version_date": OLD_DATE, "new_version_date": NEW_DATE, "change_type": "modified"},
+            "conclusion_changed": True, "explanation": "금액이 바뀜", "severity": "high", "change_pattern": pattern}
+
+
 def test_feedback_digest_candidates_and_webhook_records(tag):
     store = PgRecallStore(DSN)
-    fb = {"notice_id": f"{tag}-n1", "user_id": f"{tag}-u1", "answer_id": f"{tag}-a1", "rule_seq": SEQ_PG, "article": ARTICLE, "pattern": "amount",
+    for n in ("n1", "n2"):
+        store.notice_add(_notice(tag, n))                                                          # 의견은 알림 줄의 feedback_* 칸이다(옛 recall_feedback 표 없음)
+    store.notice_add(_notice(tag, "n3", pattern="deadline"))                                      # 다른 변경 유형은 집계에 섞이지 않는다
+    fb = {"notice_id": f"{tag}-n1", "user_id": f"{tag}-u1", "answer_id": f"{tag}-a-n1", "rule_seq": SEQ_PG, "article": ARTICLE, "pattern": "amount",
           "severity": "high", "useful": False, "reason": "관련 없음", "given_by": f"{tag}-u1"}
     store.feedback_put(fb)
     store.feedback_put({**fb, "notice_id": f"{tag}-n2"})
+    store.feedback_put({**fb, "notice_id": f"{tag}-n3", "pattern": "deadline"})
     store.feedback_put({**fb, "useful": True})                                                    # 같은 알림에 다시 보내면 덮어쓴다
     assert store.feedback_counts(f"{tag}-u1", SEQ_PG, ARTICLE, "amount") == {"useful": 1, "not_useful": 1}
-    assert len(store.feedback_list()) >= 2
+    assert store.feedback_counts(f"{tag}-u1", SEQ_PG, ARTICLE, "deadline") == {"useful": 0, "not_useful": 1}
+    assert store.feedback_counts(f"{tag}-u2", SEQ_PG, ARTICLE, "amount") == {"useful": 0, "not_useful": 0}
+    mine = [r for r in store.feedback_list() if r["user_id"] == f"{tag}-u1"]
+    assert len(mine) == 3 and {"notice_id", "user_id", "answer_id", "rule_seq", "article", "pattern", "severity", "useful", "reason", "given_by",
+                               "created_at"} <= set(mine[0])
+    assert {(r["notice_id"], r["rule_seq"], r["pattern"], r["useful"]) for r in mine} == {
+        (f"{tag}-n1", SEQ_PG, "amount", True), (f"{tag}-n2", SEQ_PG, "amount", False), (f"{tag}-n3", SEQ_PG, "deadline", False)}
+    assert store.notice_get(f"{tag}-n1")["explanation"] == "금액이 바뀜" and "feedback_useful" not in store.notice_get(f"{tag}-n1")   # 알림 응답 모양은 그대로
 
     d = {"digest_id": f"{tag}-d1", "user_id": f"{tag}-u1", "day": "2026-11-09", "count": 2, "notice_ids": ["a", "b"], "payload": {"items": [1, 2]}}
     assert store.digest_add(d)[1] is True and store.digest_add({**d, "count": 9})[1] is False

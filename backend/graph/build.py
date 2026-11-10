@@ -82,8 +82,6 @@ _MARK = re.compile(r"\[([0-9a-f]{16})\]")
 _ASKS_FACT = re.compile(r"누가|누구|언제|어디|어느|얼마|몇|무엇|뭐|어떻게|왜")
 _REVIEW_WORD = re.compile(r"검토|리뷰|review|평가해|봐\s*줘|맡아|맡길", re.I)
 _AMOUNT_WORD = re.compile(r"[천만억]\s*(?:달러|원|불)|구간|금액")
-# 질문에 시점이 드러나 있는지: 연도, 월, 분기, 회계연도, 상대 표현. 재작성이 낸 기준일은 이런 표현이 있을 때만 쓴다
-_PERIOD_CUE = re.compile(r"(?:19|20)\d{2}|\d{1,2}\s*월|분기|\bQ[1-4]\b|\bFY\s*\d{2,4}|작년|올해|지난|이번|전년|내년|오늘|어제|\d+\s*(?:년|개월)\s*전", re.I)
 # 값이 아니라 이름 안의 숫자: 글자로 시작하는 S1, Sev1, IPv4와 숫자로 시작하는 2FA. USD500, 5K, 10MB, 3GB처럼 값과 단위인 것은 남긴다
 _NAME_WITH_DIGIT = re.compile(r"(?<![$A-Za-z0-9.,])(?:(?!(?:USD|KRW|EUR|GBP|JPY)\d)[A-Za-z]+\d[A-Za-z0-9]*|\d+(?!(?:USD|KRW|EUR|GBP|JPY|KB|MB|GB|TB|PB|MS|SEC|MIN|HRS?|DAYS?)(?![A-Za-z0-9]))[A-Z]{2,}(?![A-Za-z0-9]))")
 _WHEN = re.compile(r"(?<!\d)(?:(?:19|20)\d{2}(?:[-./]\d{1,2}(?:[-./]\d{1,2})?)?|\d{1,2}\s*월)(?!\d)")  # 시점을 되묻는 말에 쓰는 연도, 날짜, 월
@@ -133,9 +131,7 @@ def finish_answer(answer: str, citations: list[dict], as_of: str | None) -> str:
     return f"{body}\n\n기준일 {as_of or '미지정'} · 근거 판 날짜 {dates} · {LICENSE_NOTE}"
 
 
-def mentions_period(question: str) -> bool:
-    """질문에 시점 표현이 있는지. 없는 질문에 재작성이 기준일을 채워 내면(오늘 날짜 등) 그 값은 쓰지 않는다."""
-    return bool(_PERIOD_CUE.search(question or ""))
+mentions_period = G.mentions_period  # 질문에 시점 표현이 있는지. 없는 질문에 재작성이 기준일을 채워 내면(오늘 날짜 등) 그 값은 쓰지 않는다. 근거 판정(grounding.recode_vote)과 같은 판별이다
 
 
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
@@ -1217,11 +1213,16 @@ def build_graph(
             user = P.grounding_user(question, answer, cited, as_of, G.same_page_context(cited, retrieved), partial=partial)
             evidence = [*cited, *retrieved]
             eased: list[str] = []
+            recoded: list[str] = []
 
             def one_vote() -> dict | None:
                 # 값은 받쳐졌고 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 한 표는, 다수결에 넣기 전에 받쳐진 표로 센다(`grounding.caveat_only_vote`).
                 # 표마다 꼽은 문장이 달라 합친 목록이 비어도 단서 때문에 거절되지 않는다. 값을 말하는 문장을 꼽은 표는 그대로다
-                obj = ask_json(system, user)[0]
+                # 코드 규칙이 정하는 사유(no_evidence, out_of_period)를 모델 표가 냈는데 코드 규칙으로는 성립하지 않으면 unsupported 표로 읽는다(grounding.recode_vote, 사전 등록 62.29).
+                # 바로 거절하지 않고 단서 구제와 다시 쓰기·재판정을 거친다
+                obj = G.recode_vote(ask_json(system, user)[0], question, cited)
+                if isinstance(obj, dict) and obj.get("_recoded"):
+                    recoded.append(obj["_recoded"])
                 sentences = G.caveat_only_vote(obj, answer, question, evidence, cited=cited, retrieved=retrieved)
                 if sentences:
                     eased.extend(sentences)
@@ -1232,6 +1233,8 @@ def build_graph(
             out.update(G.read_verdict(obj, answer, question, evidence))
             if eased and out["state"] == "grounded" and not out.get("caveat_only"):
                 out["caveat_only"] = eased
+            if recoded:
+                out["recoded"] = sorted(set(recoded))
         except CostCapExceeded:
             raise
         except Exception as e:  # noqa: BLE001  호출 실패는 결론 없음으로 두고 코드 규칙 결과를 따른다
@@ -1383,6 +1386,8 @@ def build_graph(
                 info["llm_error"] = verdict["error"]
             if verdict.get("caveat_only"):
                 info["caveat_only"] = True
+            if verdict.get("recoded"):
+                info["recoded"] = verdict["recoded"]
             if verdict["state"] == "ungrounded":
                 reason, detail = verdict["code"], verdict["detail"]
                 revised = None

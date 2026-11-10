@@ -399,6 +399,31 @@ def caveat_only_vote(obj: dict | None, answer: str, question: str, evidence: lis
     return missing if summaries_are_caveats(missing, answer, f"{question}\n{_evidence_blob(evidence)}") else []
 
 
+# ---------- 코드 규칙이 정하는 사유를 모델 표가 냈을 때 (사전 등록 62.29) ----------
+# 질문에 시점이 드러나 있는지: 연도, 월, 분기, 회계연도, 상대 표현
+_PERIOD_CUE = re.compile(r"(?:19|20)\d{2}|\d{1,2}\s*월|분기|\bQ[1-4]\b|\bFY\s*\d{2,4}|작년|올해|지난|이번|전년|내년|오늘|어제|\d+\s*(?:년|개월)\s*전", re.I)
+
+
+def mentions_period(question: str) -> bool:
+    """질문에 시점 표현이 있는지."""
+    return bool(_PERIOD_CUE.search(question or ""))
+
+
+def recode_vote(obj: dict | None, question: str, cited: list[dict]) -> dict | None:
+    """판정 표 하나(grounded=false)의 사유가 코드 규칙이 정하는 사유인데 코드 규칙으로는 성립하지 않으면, 사유를 unsupported로 바꾼 표를 돌려준다(`_recoded`에 원래 사유). 그 밖에는 받은 표 그대로다.
+    - no_evidence: 코드 규칙(`check_rules`)에서는 인용으로 남은 청크가 없다는 뜻이다. 인용 검사를 통과한 인용이 있는 답에 모델이 낸 no_evidence는 인용한 자료가 답을 받치지 못한다는 판단이다.
+    - out_of_period: 질문에 시점 표현이 없으면 질문이 묻는 기간이 없다. 판 날짜가 기준일보다 이르다는 것은 판정 지침에서 문제가 아니다.
+      시점 표현이 있는 질문의 표는 그대로 둔다(회계연도, 분기처럼 코드 규칙이 읽지 못하는 기간을 모델이 판정한다).
+    unsupported가 된 표는 단서 구제(`caveat_only_vote`)와 다시 쓰기·재판정을 그대로 거친다. 바로 거절하지 않을 뿐 판정 기준은 같다.
+    nonexistent_entity는 코드 규칙이 등급·코드와 대문자 용어만 보고 모델이 더 넓게 보므로 바꾸지 않는다."""
+    if not isinstance(obj, dict) or obj.get("grounded") is not False:
+        return obj
+    code = obj.get("reason_code")
+    if (code == NO_EVIDENCE and cited) or (code == OUT_OF_PERIOD and not mentions_period(question)):
+        return {**obj, "reason_code": UNSUPPORTED, "_recoded": code}
+    return obj
+
+
 def read_verdict(obj: dict, answer: str, question: str, evidence: list[dict]) -> dict:
     """근거 판정 LLM 응답(다수결로 합친 뒤) 하나를 읽는다. state는 grounded, ungrounded, inconclusive 중 하나다(명확히 거절한 경우만 ungrounded).
     받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이면 받쳐진 것으로 본다(`caveat_only_flags`)."""
