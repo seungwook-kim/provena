@@ -14,6 +14,7 @@ D5(11/6)에 Supervisor와 서브에이전트로 나누고 같은 평가셋(v2)�
 from __future__ import annotations
 
 import contextvars
+import hashlib
 import json
 import logging
 import os
@@ -343,6 +344,10 @@ def build_graph(
     spec_runs: dict[str, tuple[str, Any]] = {}  # SP: 열쇠(search_cache[SPEC_KEY]) -> ("use" | "drop", 미리 돌린 결과 Future)
     spec_boxes: dict[str, dict] = {}  # SP: 열쇠 -> 미리 돌리기 상태(돌렸는지). 첫 검색 노드가 기록 표시를 쓰고 지운다
     spec_lock = threading.Lock()
+    speculate_ground = AF.speculate_ground_enabled()  # SG: 답 후보가 나오는 대로 근거 판정을 미리 부르고, 같은 입력의 판정이 필요할 때 그 결과를 쓴다
+    ground_runs: dict[str, tuple[float, Any]] = {}  # SG: 판정 입력의 해시 -> (시작 시각, 미리 돌린 판정 Future). 쓰면 꺼낸다
+    ground_lock = threading.Lock()
+    ground_pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="ground_ahead") if speculate_ground else None
     if AF.cite_pick_enabled():  # CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서를 답 프롬프트에 더한다(추론 답, 빠른 답, 다시 쓰는 답)
         answer_base, answer_system = P._add_rule(answer_base, AF.CITE_PICK_RULE), P._add_rule(answer_system, AF.CITE_PICK_RULE)
     if cite_multi:  # `GRAPH_CITE_MULTI=1`: 같은 사실을 다른 페이지가 말하면 3개까지 표시한다
@@ -1056,7 +1061,57 @@ def build_graph(
             again, raw2 = ask_json(system, user + QP.targets_note(targets, missing))
             if again is not None:
                 obj, raw = again, raw2
-        return draft_fields(obj, raw, used)
+        out = draft_fields(obj, raw, used)
+        ground_ahead(state, out)
+        return out
+
+    def verdict_key(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool) -> str:
+        """근거 판정 LLM 호출의 입력 전체를 하나의 해시로 만든다. 입력이 하나라도 다르면 다른 열쇠다."""
+        raw = json.dumps([question, draft, cited, as_of, body, chunks, partial], ensure_ascii=False, sort_keys=True, default=str)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def verdict_for(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool = False) -> dict:
+        """근거 판정 LLM 한 번. SG가 같은 입력으로 미리 돌려 둔 판정이 있으면 그 결과를 쓰고(`ahead` 표시), 없으면 `llm_verdict`를 부른다."""
+        if speculate_ground:
+            with ground_lock:
+                run = ground_runs.pop(verdict_key(question, draft, cited, as_of, body, chunks, partial), None)
+            if run is not None:
+                return {**run[1].result(), "ahead": True}
+        return llm_verdict(question, draft, cited, as_of, body, chunks, partial=partial)
+
+    def ground_ahead(state: AgentState, cand: dict) -> None:
+        """SG: 답 후보(`cand`)가 나오는 대로 `verify`와 같은 검사를 거친 뒤 `ground_once`가 부를 근거 판정을 같은 입력으로 미리 부른다.
+        나중에 뽑힌 답이 이 후보와 같으면 `verdict_for`가 그 결과를 받는다. 뽑히지 않은 후보의 판정은 쓰이지 않고 버려진다(비용만). 실패하면 아무 일도 없다(그때는 지금처럼 부른다)."""
+        if not speculate_ground or ground_pool is None or not cand.get("raw_citations") or not cand.get("answer"):
+            return
+
+        def start() -> None:
+            try:
+                v = verify({**state, **cand})
+                if v.get("kind") != "answer":
+                    return
+                body = skill("grounding-check")
+                if not body:
+                    return
+                if reads_authz(state):  # ground_once와 같은 입력
+                    body = f"{body}\n\n[승인 권한표 Skill]\n{skill('delegation')}"
+                cited, draft, chunks = v.get("citations", []), v.get("answer", ""), state.get("chunks", [])
+                partial = bool(state.get("judge_partial"))
+                llm_on = grounding_llm if grounding_llm is not None else not is_demo_mode()
+                if not llm_on or not G.check_rules(state["question"], cited, chunks).ok or (skip_ground and not partial and G.values_backed(draft, cited)):
+                    return
+                key = verdict_key(state["question"], draft, cited, state.get("as_of"), body, chunks, partial)
+                now = time.monotonic()
+                with ground_lock:
+                    for old in [k for k, (t, _) in ground_runs.items() if now - t > 120.0]:
+                        ground_runs.pop(old, None)
+                    if key in ground_runs or len(ground_runs) >= 64:
+                        return
+                    ground_runs[key] = (now, in_background(ground_pool, "ground", lambda: llm_verdict(state["question"], draft, cited, state.get("as_of"), body, chunks, partial=partial)))
+            except Exception as e:  # noqa: BLE001 - 미리 하는 일이 실패해도 답 경로는 그대로 간다
+                log.debug("근거 판정 미리 부르기 실패: %s", type(e).__name__)
+
+        start()  # 검사는 로컬 계산이라 답을 낸 쪽에서 바로 돈다. 그래야 판정이 등록된 뒤에 답이 다음 단계로 넘어가 같은 호출이 두 번 나가지 않는다
 
     def timed_reply(state: AgentState) -> dict:
         """`GRAPH_ANSWER_WAIT_S`가 있으면 첫 답은 추론 답을 그 시간까지 기다리고, 늦거나 실패하면 같이 보낸 빠른 답을 쓴다. 재검색 뒤의 답은 시간이 모자라 빠른 답이다."""
@@ -1158,6 +1213,8 @@ def build_graph(
                     detail=str(obj.get("reason") or ""),
                     claims=[c for c in claims if isinstance(c, str) and c.strip()] if isinstance(claims, list) else [],
                 )
+            if out["state"] == "ungrounded" and out["code"] == G.UNSUPPORTED and G.caveat_only_flags(answer, out["claims"], question, [*cited, *retrieved]):
+                out.update(state="grounded", caveat_only=out["claims"])  # 받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이다(`grounding.is_caveat`). 값을 말하는 문장은 받쳐졌다
             items = obj.get("claims")
             out["quotes"] = [str(c.get("quote")) for c in items if isinstance(c, dict) and isinstance(c.get("quote"), str)] if isinstance(items, list) else []  # Q 형식일 때만 생긴다
             extra = obj.get("off_topic_sentences")
@@ -1305,10 +1362,14 @@ def build_graph(
         if v.ok and llm_on and skip_ground and not partial and G.values_backed(draft, cited):  # 값이 모두 인용 청크에 있다. 코드 규칙과 인용 검사는 이미 지났다
             info["llm"] = "skipped(values_backed)"
         elif v.ok and llm_on:
-            verdict = llm_verdict(state["question"], draft, cited, as_of, body, state.get("chunks", []), partial=partial)
+            verdict = verdict_for(state["question"], draft, cited, as_of, body, state.get("chunks", []), partial=partial)
+            if verdict.get("ahead"):
+                info["ground_ahead"] = True
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
             if verdict.get("error"):
                 info["llm_error"] = verdict["error"]
+            if verdict.get("caveat_only"):
+                info["caveat_only"] = True
             if verdict["state"] == "ungrounded":
                 reason, detail = verdict["code"], verdict["detail"]
                 revised = None

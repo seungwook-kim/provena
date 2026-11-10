@@ -37,11 +37,14 @@ STEP_STAGE = {
     "classify/classify": "plan",
     "supervisor/classify": "plan",
     "search/decompose": "plan",
+    "search/decompose_gate": "plan",         # 예비 분해(`--speculate-first`, 최종 측정 설정에서 켜짐)
     "rewrite/rewrite": "plan",
     "judge/judge": "plan",
     "write_answer/answer": "generate",
+    "write_answer/answer_fast": "generate",  # 첫 답을 기다리지 않고 내는 빠른 답(최종 측정 설정)
     "ground/grounding": "verify",
     "ground/answer": "verify",               # 근거 판정 뒤 다시 쓰기
+    "ground/answer_fast": "verify",          # 같은 다시 쓰기의 빠른 답
 }
 STAGES = ("search", "plan", "generate", "verify")
 LABEL = {"search": "검색", "plan": "판단(분류·분해·재작성·근거 충분 판정)", "generate": "생성(답 작성)", "verify": "검증(근거 판정·다시 쓰기)"}
