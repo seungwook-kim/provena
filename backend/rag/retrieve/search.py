@@ -41,7 +41,7 @@ from backend.rag.retrieve import hedge as hedge_mod
 from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedNoKey
 from backend.schemas.chunk import DEFAULT_K, Chunk, SearchQuery
-from backend.services import llm_trace
+from backend.services import llm_trace, step_cost
 
 log = logging.getLogger(__name__)
 
@@ -662,7 +662,7 @@ class Searcher:
             got = [self._translate_one(texts[0], kind)]
         else:
             with ThreadPoolExecutor(max_workers=len(texts)) as ex:
-                got = list(ex.map(llm_trace.bind(lambda t: self._translate_one(t, kind)), texts))
+                got = list(ex.map(step_cost.bind(llm_trace.bind(lambda t: self._translate_one(t, kind))), texts))
         tr.translation_source = got[0][1]
         reasons = [r for _, _, r in got if r]
         if reasons:

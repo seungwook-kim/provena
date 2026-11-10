@@ -127,6 +127,16 @@ def _task_of(messages: Any) -> str | None:
     return None
 
 
+def step_of(messages: Any, meta: dict | None) -> tuple[str, str | None, str | None]:
+    """(step, node, task). 호출별 기록(`LlmTraceHandler`)과 요청 비용의 단계별 합(`cost.CostTracker`)이 같은 이름을 쓰게 한 곳에서 정한다."""
+    meta = meta or {}
+    node, task = meta.get("langgraph_node"), _task_of(messages)
+    if task is None and meta.get("kind"):       # 번역(translate.py)은 프롬프트에 표지가 없고 config에 종류가 있다
+        task = f"translate_{meta['kind']}"
+    step = "/".join(x for x in (node, task) if x) or str(meta.get("graph") or "unknown")
+    return step, node, task
+
+
 _prices: dict | None = None
 
 
@@ -174,10 +184,7 @@ class LlmTraceHandler(BaseCallbackHandler):
         try:
             meta = metadata or {}
             model_type = (invocation_params or {}).get("_type")
-            node, task = meta.get("langgraph_node"), _task_of(messages)
-            if task is None and meta.get("kind"):       # 번역(translate.py)은 프롬프트에 표지가 없고 config에 종류가 있다
-                task = f"translate_{meta['kind']}"
-            step = "/".join(x for x in (node, task) if x) or str(meta.get("graph") or "unknown")
+            step, node, task = step_of(messages, meta)
             row = {"step": step, "node": node, "task": task, "model_type": model_type, "t": time.perf_counter()}
             if model_type in WRAPPER_TYPES:
                 row["inner_mark"] = len(self.collector.calls)

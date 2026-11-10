@@ -527,7 +527,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
 | `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
-| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution` |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
 
@@ -538,6 +538,11 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 
 - `done.attribution`은 고정 값이다: `source`(`GitLab Handbook`), `license`(`CC BY-SA 4.0`), `license_url`, `modified`(`true`), `notice`(GitLab Inc.와 제휴·보증 관계가 없다는 문구).
 - `kind`, `as_of`는 그래프의 최종 상태에서 읽는다. 최종 상태를 읽지 못하면 두 값이 `null`일 수 있다.
+- `done`의 측정용 칸(숫자와 코드뿐이고 질문·프롬프트·답 내용은 담지 않는다. 끄는 스위치 없이 항상 켜져 있고, 기존 칸의 이름과 모양은 그대로다. 구현은 `backend/services/step_cost.py`):
+  - `cost_by_step`: 단계 이름 -> `{calls, input_tokens, output_tokens, cost_usd, llm_s}`. 단계 이름은 그래프 노드와 호출 표지를 `/`로 이은 것(`classify/classify`, `rewrite/rewrite`, `search/decompose`, `judge/judge`, `write_answer/answer`, `ground/grounding` 등)이고 질문 번역 LLM은 `translate_keywords`, `translate_sentence`다. `llm_s`는 그 단계 LLM 호출 시간의 합이라 호출이 겹치면 실제 대기보다 길 수 있다.
+  - `usage`의 `calls`, `input_tokens`, `output_tokens`, `cost_usd`는 질문 번역을 뺀 그래프 합이다. `cost_by_step`의 번역 단계를 뺀 합과 같다(반올림 오차 안에서). `cost_by_step_total_usd`는 번역을 포함한 단계 비용 합이다.
+  - `embed_tokens`, `embed_calls`: 이 요청에서 부른 Voyage 임베딩 API 응답의 `usage.total_tokens` 합과 호출 수. 캐시 적중 등으로 호출이 없으면 0이다. `embed_cost_usd`는 `llm_prices.json`의 `embeddings`(voyage-4 100만 토큰당 0.06달러)로 환산한 값이며 계정 무료 한도는 반영하지 않는다.
+  - `refuse_stage`: 마지막으로 `kind`를 거절·되묻기로 낸 그래프 노드(`out_of_domain`, `search`, `give_up`, `verify`, `ground`, `decision_answer` 등). `refuse_reason`: 사유 코드. 그래프가 정한 `refuse_reason`(`no_evidence`, `out_of_period`, `nonexistent_entity`, `unsupported`)이 있으면 그 값, 없으면 `unavailable`/`no_key`/`unknown_name`(검색), `decision_error`, `out_of_domain`, `leak`, `citation_check`, `no_evidence`(`give_up`의 거절), `clarify`(되묻기), `index_not_ready`(색인 미준비). 답이면 두 칸 모두 없다.
 
 정상 종료 스트림의 예시다. 값은 형식을 보이기 위한 것이며 실제 값이 아니다.
 
@@ -549,7 +554,7 @@ event: citation
 data: {"type":"citation","thread_id":"t-1a2b3c4d5e6f","data":{"chunk_id":"0a1b2c3d4e5f6789","rule_title":"Incident Management","article":"Incident Management > Severities","version_date":"2026-10-12","version_date_before":false,"source_url":"https://handbook.gitlab.com/...","text":"..."}}
 
 event: done
-data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
+data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"cost_by_step":{"judge/judge":{"calls":2,"input_tokens":900,"output_tokens":100,"cost_usd":0.0003,"llm_s":1.8},"write_answer/answer":{"calls":1,"input_tokens":300,"output_tokens":200,"cost_usd":0.0037,"llm_s":2.1}},"cost_by_step_total_usd":0.004,"embed_tokens":13,"embed_calls":1,"embed_cost_usd":7.8e-07,"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
 ```
 
 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.

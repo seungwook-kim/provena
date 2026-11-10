@@ -162,3 +162,13 @@ def test_main_end_to_end_writes_json_and_markdown_without_network(tmp_path: Path
     s = out["summary"]
     assert [p["cited_correct_rate"] for p in s["per_run"]] == [1.0, 1.0] and [p["wrong_citation_rows"] for p in s["per_run"]] == [0, 1]
     assert (res_dir / "citation_gold.md").read_text(encoding="utf-8").startswith("# 배포본 인용 정답 대조 (ds.jsonl x 2회)")
+
+
+def test_score_row_passes_through_the_servers_refuse_stage_and_reason():
+    its = {it["id"]: it for it in items()}
+    by_id = {c.chunk_id: c for c in CORPUS}
+    r = row(1, 3, result="refuse", cited=[])
+    r.update(refuse_stage="ground", refuse_reason="unsupported")
+    scored = cg.score_row(r, its[3], by_id)
+    assert (scored["refuse_stage"], scored["refuse_reason"]) == ("ground", "unsupported")
+    assert cg.score_row(row(1, 3, result="refuse", cited=[]), its[3], by_id)["refuse_stage"] is None      # 옛 행

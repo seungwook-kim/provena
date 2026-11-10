@@ -99,6 +99,15 @@ MSG_REFUSE_BY_REASON = {
     G.NONEXISTENT_ENTITY: "질문이 묻는 대상이 검색된 핸드북 근거에 없어 답하지 않습니다.",
     G.UNSUPPORTED: "검색된 근거가 답의 주장을 받쳐 주지 못해 답하지 않습니다.",
 }
+# 상태에 `refuse_reason`이 없는 거절의 사유 코드(`/chat` done의 `refuse_reason`, step_cost.refuse_meta). `refuse_reason`이 있으면(no_evidence | out_of_period | nonexistent_entity | unsupported) 그 값이 먼저다
+REFUSE_REASON_BY_MESSAGE = {
+    MSG_REFUSE: "no_evidence",
+    MSG_REFUSE_OUT_OF_DOMAIN: "out_of_domain",
+    MSG_REFUSE_SEARCH_DOWN: "unavailable",
+    MSG_REFUSE_NO_KEY: "no_key",
+    MSG_REFUSE_LEAK: "leak",
+    MSG_REFUSE_CITATION: "citation_check",
+}
 
 
 def _text(msg: Any) -> str:
