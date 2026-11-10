@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, changeAdminRole, listAdminUsers } from '../lib/api'
+import { ApiError, changeAdminRole, listAdminUsers, listSignupRequests, reviewSignupRequestById } from '../lib/api'
 import { useSession } from '../lib/session'
 import DemoLayout from '../components/DemoLayout'
 import AdminUsersTabs from '../components/AdminUsersTabs'
@@ -15,6 +15,8 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState('')
   const [confirm, setConfirm] = useState(null)
+  const [signupRequests, setSignupRequests] = useState([])
+  const [signupLoading, setSignupLoading] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -27,7 +29,19 @@ export default function AdminUsersPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { if (user?.is_owner) load(); else setLoading(false) }, [user?.is_owner])
+  async function loadSignupRequests() {
+    setSignupLoading(true)
+    try { const result = await listSignupRequests(); setSignupRequests(result.requests ?? []) }
+    catch (loadError) { setError(loadError.message || '가입 승인 목록을 불러오지 못했습니다.') }
+    finally { setSignupLoading(false) }
+  }
+
+  useEffect(() => { if (user?.is_owner) { load(); loadSignupRequests() } else setLoading(false) }, [user?.is_owner])
+  async function reviewSignup(requestId, action) {
+    setError(''); setMessage('')
+    try { const result = await reviewSignupRequestById(requestId, action); setMessage(result.changed ? '가입 신청 처리가 완료되었습니다.' : '변경할 상태가 없습니다.'); await loadSignupRequests() }
+    catch (reviewError) { setError(reviewError.message || '가입 신청 처리에 실패했습니다.') }
+  }
   async function applyChange() {
     if (!confirm || busy) return
     setBusy(confirm.login_id)
@@ -49,7 +63,7 @@ export default function AdminUsersPage() {
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="profile-success" role="status">{message}</p>}
-    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="roles" />
+    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} />
     {false && <div>
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}

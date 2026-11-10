@@ -184,6 +184,28 @@
 @media(max-width:900px){.approval-service-page{padding:26px 18px 56px}.approval-service-layout{grid-template-columns:280px minmax(0,1fr)}.approval-service-layout article{padding:24px}.review-form{grid-template-columns:1fr 1fr}.review-form label:nth-child(3){grid-column:1/-1}.review-form button{grid-column:2}}
 @media(max-width:760px){.approval-service-page>header{align-items:start;flex-direction:column;gap:8px}.approval-service-layout{grid-template-columns:1fr}.approval-service-layout aside{border-right:0;border-bottom:1px solid var(--line);max-height:310px;overflow:auto}.approval-service-layout article{padding:22px 18px}.approval-compare{grid-template-columns:1fr}.department-item{align-items:start;flex-direction:column;gap:8px}.department-item>p{text-align:left}.review-form{grid-template-columns:1fr}.review-form label:nth-child(3),.review-form button{grid-column:auto}}
 @media(max-width:480px){.approval-service-page{padding-inline:14px}.approval-filters{width:100%;overflow:auto}.approval-filters button{flex:1;white-space:nowrap}.approval-detail-head a{align-self:flex-start}.approval-service-layout article{padding-inline:15px}}
+
+/* Approval inbox: give the review workspace enough room without changing other pages. */
+.approval-service-page{max-width:1480px}
+.approval-service-page>header{margin-bottom:22px}
+.approval-service-page .approval-service-layout{grid-template-columns:300px minmax(0,1fr)}
+.approval-service-page .approval-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.approval-service-page .approval-table{min-width:860px;table-layout:auto}
+.approval-service-page .approval-table th,.approval-service-page .approval-table td{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}
+.approval-service-page .approval-table th:nth-child(1),.approval-service-page .approval-table td:nth-child(1){min-width:120px}
+.approval-service-page .approval-table th:nth-child(2),.approval-service-page .approval-table td:nth-child(2){min-width:180px}
+.approval-service-page .approval-table th:nth-child(3),.approval-service-page .approval-table td:nth-child(3){min-width:92px}
+.approval-service-page .approval-table th:nth-child(4),.approval-service-page .approval-table td:nth-child(4){min-width:92px}
+.approval-service-page .approval-table th:nth-child(5),.approval-service-page .approval-table td:nth-child(5){min-width:260px}
+
+@media(max-width:900px){
+  .approval-service-page .approval-service-layout{grid-template-columns:280px minmax(0,1fr)}
+}
+
+@media(max-width:760px){
+  .approval-service-page .approval-service-layout{grid-template-columns:1fr}
+  .approval-service-page .approval-table{min-width:860px}
+}
 .admin-summary .admin-summary-grid{margin-top:0}
 .admin-status-distribution{margin-top:18px;border-top:1px solid var(--line);padding-top:18px}
 .admin-status-distribution>div:first-child{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -296,6 +318,20 @@
 .recall-detail-actions{border-top:1px solid #E3EAF4;padding-top:16px}
 @media(max-width:760px){.recall-service-page{padding:22px 16px 56px}.recall-service-heading{align-items:start;padding:18px 20px}.recall-service-heading h1{font-size:28px}.recall-filter-row{width:100%;overflow:auto}.recall-filter-row button{flex:1;white-space:nowrap}.recall-service-list{padding:14px}.recall-service-detail{padding:22px 18px}.recall-detail-top{padding:16px}.recall-policy-grid section{padding:16px}}
 @media(prefers-reduced-motion:reduce){.recall-service-item{transition:none}}
+
+/* Recall detail polish: keep status markers, actions and judgement badges stable. */
+.recall-service-page .recall-service-item>div{align-items:flex-start}
+.recall-service-page .recall-service-item>div>i[aria-label="미확인"]{display:block;flex:0 0 7px;width:7px;height:7px;margin:6px 0 0 1px;border-radius:50%;background:var(--change);box-sizing:border-box}
+.recall-service-page .recall-detail-top>div{min-width:0}
+.recall-service-page .recall-detail-top>.demo-outline-button{flex:0 0 auto;min-width:88px;padding:9px 14px;white-space:nowrap;text-align:center}
+.recall-service-page .recall-detail-badges{display:flex;align-items:center;gap:6px;margin:10px 0 0;min-height:26px}
+.recall-service-page .recall-detail-badges .recall-severity,.recall-service-page .recall-detail-badges .recall-confidence,.recall-service-page .recall-detail-badges .recall-confirm-badge{min-height:26px;box-sizing:border-box;white-space:nowrap;line-height:1.2}
+.recall-service-page .recall-detail-top h2{margin-top:12px;overflow-wrap:anywhere;word-break:keep-all}
+
+@media(max-width:760px){
+  .recall-service-page .recall-detail-top>.demo-outline-button{align-self:flex-start}
+  .recall-service-page .recall-detail-badges{flex-wrap:wrap}
+}
 
 /* Chat usability refinements: scoped to the chat screen only. */
 .demo-chat-page .demo-thread-list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -526,3 +562,5 @@
 .approval-table th{color:var(--muted);font-size:11px;font-weight:600}
 .approval-table tr.mismatch td{background:var(--change-soft)}
 .approval-service-layout aside>button:not([class]){margin-top:8px;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);padding:8px 12px;font-size:12px}
+.auth-page .login-card > .google-button{margin-top:16px}
+.verification-timer{margin:0;color:var(--muted);font-variant-numeric:tabular-nums}.signup-verified{gap:12px}.signup-verified p{margin:0;color:var(--muted);line-height:1.6}.signup-verified .button{margin-top:8px}

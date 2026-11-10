@@ -1,51 +1,10 @@
-import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { requestSignup, validateSignupInput } from '../lib/signup'
-import AuthIllustration from '../components/AuthIllustration'
-import Logo from '../components/Logo'
-
-export default function SignupPage() {
-  const [params] = useSearchParams()
-  const navigate = useNavigate()
-  const [loginId, setLoginId] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmation, setConfirmation] = useState('')
-  const [message, setMessage] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  async function submit(event) {
-    event.preventDefault()
-    setMessage('')
-    const errors = validateSignupInput({ loginId, password, passwordConfirmation: confirmation })
-    if (errors.length) {
-      setMessage(errors[0])
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      const result = await requestSignup({ loginId: loginId.trim(), password, passwordConfirmation: confirmation })
-      navigate('/login', { replace: true, state: { signupMessage: result.message } })
-    } catch (error) {
-      setMessage(error.message || '회원가입 요청을 처리하지 못했습니다.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return <div className="auth-page"><div className="auth-panel">
-    <Link to="/" className="login-brand" aria-label="Provena 처음으로"><Logo /></Link>
-    <main className="login-card">
-      <h1>회원가입</h1>
-      <form onSubmit={submit} noValidate className="login-form">
-        <label><span>아이디</span><input value={loginId} onChange={event => setLoginId(event.target.value)} type="text" autoComplete="username" placeholder="아이디를 입력하세요" /></label>
-        <label><span>비밀번호</span><input value={password} onChange={event => setPassword(event.target.value)} type="password" autoComplete="new-password" placeholder="8자 이상 입력" /></label>
-        <label><span>비밀번호 확인</span><input value={confirmation} onChange={event => setConfirmation(event.target.value)} type="password" autoComplete="new-password" placeholder="비밀번호를 다시 입력" /></label>
-        {(message || params.get('oauth_error') === 'google_login_failed') && <p className="form-error" role="alert">{message || 'Google 로그인에 실패했습니다. 다시 시도해 주세요.'}</p>}
-        <button className="button button-dark" type="submit" disabled={submitting}>{submitting ? '확인 중...' : '회원가입'}</button>
-      </form>
-      <div className="login-divider"><span />또는<span /></div>
-      <a href="/auth/google/start" aria-label="Google로 계속하기" className="button google-button">Google 계정으로 회원가입</a>
-      <p className="signup-link">이미 계정이 있으신가요? <Link to="/login">로그인으로 돌아가기</Link></p>
-    </main></div><AuthIllustration /></div>
-}
+import {useEffect,useState} from 'react'
+import {Link,useNavigate} from 'react-router-dom'
+import {requestSignup,resendSignupCode,validateSignupInput,verifySignup} from '../lib/signup'
+import AuthIllustration from '../components/AuthIllustration';import Logo from '../components/Logo';import {Eye,EyeOff} from 'lucide-react'
+export default function SignupPage(){const navigate=useNavigate();const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[confirmation,setConfirmation]=useState('');const[code,setCode]=useState('');const[started,setStarted]=useState(false);const[verified,setVerified]=useState(false);const[message,setMessage]=useState('');const[busy,setBusy]=useState(false);const[showPassword,setShowPassword]=useState(false);const[showConfirmation,setShowConfirmation]=useState(false);const[expiresAt,setExpiresAt]=useState(null);const[resendAt,setResendAt]=useState(null);const[remaining,setRemaining]=useState(null);const[resendRemaining,setResendRemaining]=useState(0)
+useEffect(()=>{if(!expiresAt||verified)return;const tick=()=>{setRemaining(Math.max(0,Math.ceil((new Date(expiresAt)-Date.now())/1000)));setResendRemaining(resendAt?Math.max(0,Math.ceil((new Date(resendAt)-Date.now())/1000)):0)};tick();const id=setInterval(tick,1000);return()=>clearInterval(id)},[expiresAt,resendAt,verified])
+async function submit(e){e.preventDefault();setMessage('');const errors=validateSignupInput({email,password,passwordConfirmation:confirmation});if(errors.length){setMessage(errors[0]);return}setBusy(true);try{const r=await requestSignup({email,password,passwordConfirmation:confirmation});if(!r.verification_expires_at)throw Error('인증번호 발송 상태를 확인하지 못했습니다.');setStarted(true);setExpiresAt(r.verification_expires_at);setResendAt(r.verification_resend_available_at)}catch(e){setMessage(e.message||'회원가입 신청을 처리하지 못했습니다.')}finally{setBusy(false)}}
+async function verify(){setBusy(true);setMessage('');try{await verifySignup({email,code});setVerified(true)}catch(e){setMessage(e.message||'인증번호를 확인하지 못했습니다.')}finally{setBusy(false)}}
+async function resend(){if(resendRemaining>0)return;setBusy(true);setMessage('');try{const r=await resendSignupCode(email);if(r.status!=='sent'||!r.verification_expires_at)throw Error('인증번호를 발송하지 못했습니다.');setExpiresAt(r.verification_expires_at);setResendAt(r.verification_resend_available_at);setMessage('새 인증번호를 발송했습니다.')}catch(e){setMessage(e.message||'인증번호를 재발송하지 못했습니다.')}finally{setBusy(false)}}
+return <div className="auth-page"><div className="auth-panel"><Link to="/" className="login-brand"><Logo/></Link><main className="login-card"><h1>회원가입</h1>{!started?<form onSubmit={submit} className="login-form"><label><span>이메일</span><input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email"/></label><label><span>비밀번호</span><div className="password-input-wrap"><input value={password} onChange={e=>setPassword(e.target.value)} type={showPassword?'text':'password'}/><button type="button" className="password-toggle" onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></label><label><span>비밀번호 확인</span><div className="password-input-wrap"><input value={confirmation} onChange={e=>setConfirmation(e.target.value)} type={showConfirmation?'text':'password'}/><button type="button" className="password-toggle" onClick={()=>setShowConfirmation(v=>!v)}>{showConfirmation?<EyeOff size={19}/>:<Eye size={19}/>}</button></div></label>{message&&<p className="form-error">{message}</p>}<button className="button button-dark" disabled={busy}>인증번호 발송</button></form>:verified?<div className="login-form signup-verified"><p>이메일 인증이 완료되었습니다.</p><p>관리자 승인 후 로그인할 수 있습니다.</p><button className="button button-dark" onClick={()=>navigate('/login',{replace:true})}>로그인으로 이동</button></div>:<div className="login-form"><p>인증번호를 <strong>{email.trim().toLowerCase()}</strong>로 발송했습니다.</p><p className={remaining===0?'form-error':'verification-timer'}>{remaining===0?'인증번호가 만료되었습니다. 재발송해 주세요.':`남은 시간 ${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`}</p><label><span>6자리 인증번호</span><input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric"/></label>{message&&<p className="form-error">{message}</p>}<button className="button button-dark" onClick={verify} disabled={busy||code.length!==6}>인증번호 확인</button><button className="button" onClick={resend} disabled={busy||resendRemaining>0}>인증번호 재발송</button></div>}<a href="/auth/google/start" className="button google-button">Google로 계속하기</a><p className="signup-link">이미 계정이 있으신가요? <Link to="/login">로그인으로 돌아가기</Link></p></main></div><AuthIllustration/></div>}
