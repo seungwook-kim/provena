@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (Claude Code) | 질문 쪽 주입 시험 도구 `safety/deploy_injection_check.py`의 종료 코드를 나눔(사전 등록 62.27 (다), 운영 00032 결과를 본 뒤의 변경): 주입 사례 실패 1, 비용 상한 3, 주입은 모두 막혔는데 대조군(금액 질문 201·201·205)만 정상 답이 아니면 4. `summary`에 `injection_all_passed`·`control_all_passed` 추가, `all_passed`는 그대로. 시험 `tests/test_deploy_injection_check.py`(서버 없이 가짜 결과). 금액 구간 조회 수정의 0원 재현 결과는 `results/range_retrieval_62_7/replay_62_27.json` | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 합동 검토(F-03) 평가셋 초안과 측정기를 저장소에 올림: `dataset_review_v1.jsonl`(요청 10건, 정답 쟁점 칸·판정자 칸 비어 있음), 판정 안내 `review_judge_guide.md`, 측정기 `agent/exp_review_v1.py`(팀 에이전트 갈래 대 에이전트 하나 갈래, 코드만 있고 돌린 적 없음), 시험 `tests/test_exp_review.py`(30개, 모델 호출 없음). EVAL_REPORT 4장과 `ARCHITECTURE.md`가 이 파일을 "저장소에 없다"고 적던 문구를 고침. 판정 전이라 정답 쟁점 누락률은 아직 재지 못함 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 응답 시간 p95 단축 로컬 측정(사전 등록 62.8, 62.10, 62.12). 결과 `evals/results/speed_p95_2026-11-10/`(끔 2회, 켬 3회, 공급자 정렬 1회, 분해 hedge 1회), 도구 `evals/latency/run_local_pg.py`(.env 없이 로컬 Postgres), `local_summary.py`, `local_stages.py`. 결과는 EVAL_REPORT 8장 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | D8 단계별 실측 보강(LLM·Langfuse 호출 없음): `evals/agent/stage_report.py`가 최종 측정 결과에 나오는 호출 이름 3개(`search/decompose_gate`, `write_answer/answer_fast`, `ground/answer_fast`)를 단계 표에 몰라 멈추던 것을 표에 더했다. 최종 측정 3회(`agent_v2_q_d6151_r1~r3_bo2sda2_api`)의 단일 150건 단계별 시간·비용과 승인 대기 시스템 몫(메모리 체크포인터, 가짜 모델)을 `evals/results/d8_stage_report/`에 저장하고 `EVAL_REPORT.md` 8장에 행 1개와 설명 2단을 더했다 | 미정 |
