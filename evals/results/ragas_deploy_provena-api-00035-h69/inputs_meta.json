@@ -1,0 +1,39 @@
+{
+  "revision": "provena-api-00035-h69",
+  "results_dir": "C:/d7r3/evals/results/deploy_latency_provena-api-00035-h69",
+  "dataset": "dataset_v2.jsonl",
+  "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
+  "runs": [
+    1,
+    2,
+    3
+  ],
+  "corpus_source": "index.tar.gz:chunks.jsonl",
+  "corpus_n_chunks": 23095,
+  "corpus_meta": {
+    "n_chunks": 23095,
+    "chunks_sha256": "86e6c26c8a0ca56133db98a4dea2cfe916cd69f78cdc05da6fcc74053427a4b5",
+    "chunks_fingerprint": "dd284b465cf37a751f128db9ea481b7a249c2eebc8cca2b02ce1ba08f5b75932"
+  },
+  "input": {
+    "rows": 150,
+    "not_target": 76,
+    "no_answer_field": 0,
+    "no_context": 0,
+    "unresolved_ids": 0,
+    "version_date_mismatch": 0,
+    "unknown_dataset_id": 0,
+    "scored_rows": 74
+  },
+  "estimate": {
+    "usd_per_row": 0.00471,
+    "usd": 0.348,
+    "minutes": 7.1,
+    "basis": "61.51 실측 1.412301달러/300행(evals/results/ragas_d6151)"
+  },
+  "judge": "claude-haiku-5-5",
+  "embedding": "voyage-4",
+  "contexts": "인용한 청크 본문(61.51은 검색한 5개)",
+  "max_cost_usd": 1.0,
+  "started_at": "2026-11-11T00:02:07+0900"
+}

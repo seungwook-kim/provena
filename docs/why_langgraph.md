@@ -30,6 +30,7 @@
 | 시험용 Postgres, 프로세스 분리 | 시작해 승인 대기에서 멈춤, 프로세스 종료, 새 프로세스에서 같은 `thread_id`로 재개. 승인과 반려 모두 시험하고 재개 때 초안을 다시 쓰지 않는지도 본다 | `tests/test_decision_approval.py`, `tests/decision_restart_worker.py` |
 | 운영 DB와 Cloud Run, 2026-11-09 | 이전 리비전이 만든 합동 검토 쟁점표 승인 대기 1건을 새 리비전 `provena-api-00029-qbd`에서 승인하자 체크포인트에서 이어져 쟁점표 18행이 저장됐다 | `EVAL_REPORT.md` 4장 체크포인트 행 |
 | 운영 서비스 재배포, 2026-11-10 | 리비전 `provena-api-00031-dhq`에서 승인 대기 3건(쟁점표 승인용, 쟁점표 반려용, 결정표 승인용)을 만들고, 재배포한 `provena-api-00032-zhs`(커밋 `5d6a2fe`)에서 3건을 처리했다. 3건 모두 통과했다 | `evals/results/d7_restart_provena-api-00032-zhs/restart_resume.json`, 실행기 `evals/safety/deploy_restart_resume_check.py` |
+| 운영 서비스 재배포, 2026-11-11 | 재시작 전 리비전 `provena-api-00034-tkx`에서 만든 승인 대기 3건을 재배포한 `provena-api-00035-h69`(커밋 `b2bc434`)에서 처리했다. 3건 모두 통과했고 R1~R9가 모두 참이었다(문제 0개, 상태 완전, 승인함 대기 복원, 승인·반려·번복 409·반복 같은 결과) | `evals/results/d7_restart_provena-api-00035-h69/restart_resume.json`, 실행기 `evals/safety/deploy_restart_resume_check.py` |
 
 2026-11-10 확인의 세부는 다음과 같다. 대기 건은 05:55 UTC(+09:00 14:55)에 만들었고 재개는 06:20 UTC에 시작해 4.5초 안에 끝났다. 재시작 뒤에도 3건이 승인함 목록에 있었고, 쟁점표 승인 건은 18행, 반려 건은 20행, 결정표 건은 2행이 준비 때와 같게 복원됐다. 대기 중인 대화에 새 질문을 보내면 409, 일반 계정이 결정을 보내면 403이었다. 관리자의 승인은 200이고 상태가 `approved`(승인), `rejected`(반려)로 바뀌어 승인한 쟁점표는 18행, 승인한 결정표는 2행이 저장됐고 반려한 건은 저장이 0이었다. 같은 결정을 다시 보내면 200(같은 상태), 반대 결정은 409였고, 재요청 뒤 대화 답의 개수와 승인된 결정표 수는 늘지 않았다. 증거 파일에는 승인 번호, 대화 번호, 사용자 식별자, 아이디가 없다.
 
