@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-10 | 김승욱 (Claude Code) | 검색 hedge(사전 등록 62.14, 기본 꺼짐 `SEARCH_HEDGE=1`, 대기 `SEARCH_HEDGE_S` 기본 1.5초): `Searcher.search`의 질문 임베딩 + 벡터 질의 단계를 `vector_stage`로 떼어 내고, 켜면 대기 시간 안에 안 끝날 때 같은 일을 한 번 더 보내 먼저 성공한 결과를 쓴다(`hedge.py`). 번역(LLM)은 범위 밖이라 한 번만 돌고 결과는 같다. 검색 기록은 시도마다 따로 모아 이긴 시도만 합치고 `SearchTrace.hedged`·`hedge_winner`를 남긴다. 꺼짐 동작은 그대로(시험 `tests/test_speed_p95_code.py`) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | 금액 구간 조회(사전 등록 62.7): 데모 녹화 1번 구간에서 5만 달러만 구간 행(`>$25K up to $50K`)이 근거로 들고 3만·10만 달러는 충분 판정이 NOTHING FOUND가 된 원인을 확인. 구간 행 일곱 개가 청크 하나씩이고 제목과 역할 줄뿐이라 벡터가 비슷하고(청킹과 표 머리는 정상), voyage-4 벡터가 "$30,000"이 어느 구간인지 몰라 "$50,000"과 "$50K"처럼 글자가 겹친 경우만 상위에 들었음. `ranges.py`(금액·구간 읽기, 순수 함수)와 `Searcher._range_expand`(금액이 있을 때 구간 행으로 뒤 자리 최대 2개 교체, `SEARCH_RANGE_N=0`이면 끔), 저장소 `band_headings`·`key_scores`. 검색만 재현(LLM 없음): 데모 15칸 정답 구간 행이 문맥에 든 칸 1 → 14, v2 50·검증 20의 첫 검색 문맥 회귀 나빠진 문항 0. 시험 `tests/test_range_search.py` | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | "이 폴더가 하는 일"을 현재 파일에 맞춤: 없는 `link_graph.py` 대신 `links.py`와 `search.py`의 `_link_expand`, 임베딩 기본 voyage-4 API, 리랭커 기본 없음. 동작 변경 없음 | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `search.py` 주석의 HNSW SQL 위치를 `db/manual/chunks_hnsw_voyage4.sql`로 고침. 동작 변경 없음 | 미정 |

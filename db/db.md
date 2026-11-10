@@ -12,6 +12,8 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
 
 회원가입 승인 기능은 `db/101_auth_users.sql` 적용 후 `db/106_signup_approval.sql`을 적용한다. 106은 비밀번호 해시 보호를 위해 RLS를 켜고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 모두 회수한다. 현재 코드에는 107 프로필 필드 사용처가 없어 107은 적용하지 않는다.
 
+일반 PostgreSQL(docker compose 등 Supabase가 아닌 환경)처럼 `anon`, `authenticated` 역할이 없으면 106은 해당 역할에 대한 권한 회수를 건너뛰고 RLS 활성화와 `PUBLIC` 권한 회수만 적용한다.
+
 `ensure_schema()`는 `bootstrap_local_auth()`에서만 호출되며, `bootstrap_local_auth()` 자체가 `is_local_demo()`가 참인 로컬 데모 조건에서만 실행된다. 따라서 운영 환경에서는 앱 시작 시 인증 테이블이 자동으로 생성되지 않는다. 운영 Supabase에서는 아래 절차로 인증 SQL을 Supabase SQL Editor에서 수동 실행해야 한다.
 
 1. `db/101_auth_users.sql`을 먼저 실행해 `users` 테이블을 만든다.

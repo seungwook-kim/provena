@@ -341,6 +341,7 @@ def build_graph(
     best2 = AF.answer_best2_enabled()  # BO2: 답을 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽을 고른다(`--judge-quote`와 함께)
     best2_samedoc = AF.best2_samedoc_enabled()  # BO2SD: BO2의 둘째 규칙에서 S 청크와 같은 문서인 S 밖 인용은 세지 않는다
     speculate = AF.speculate_enabled()  # SP: 분해를 기다리는 동안 원 질문으로 첫 검색과 판정을 미리 돌리고, 분해가 나누지 않으면 그 결과를 쓴다
+    save_one_conn = env_flag("ANSWER_SAVE_ONE_CONN")  # 62.16: 답 저장과 근거 기록 저장을 연결 하나로(`PgAnswerStore.save_with_grounding`). 기본 꺼짐
     spec_runs: dict[str, tuple[str, Any]] = {}  # SP: 열쇠(search_cache[SPEC_KEY]) -> ("use" | "drop", 미리 돌린 결과 Future)
     spec_boxes: dict[str, dict] = {}  # SP: 열쇠 -> 미리 돌리기 상태(돌렸는지). 첫 검색 노드가 기록 표시를 쓰고 지운다
     spec_lock = threading.Lock()
@@ -1202,23 +1203,23 @@ def build_graph(
         try:
             system = P.with_skills(grounding_system, [("근거 판정 Skill", body)])
             user = P.grounding_user(question, answer, cited, as_of, G.same_page_context(cited, retrieved), partial=partial)
-            obj = voted("grounding", "ground", lambda: ask_json(system, user)[0]) or {}
-            if obj.get("grounded") is True:
-                out["state"] = "grounded"
-            elif obj.get("grounded") is False:
-                code, claims = obj.get("reason_code"), obj.get("unsupported_sentences")
-                out.update(
-                    state="ungrounded",
-                    code=code if code in G.REASONS else G.UNSUPPORTED,
-                    detail=str(obj.get("reason") or ""),
-                    claims=[c for c in claims if isinstance(c, str) and c.strip()] if isinstance(claims, list) else [],
-                )
-            if out["state"] == "ungrounded" and out["code"] == G.UNSUPPORTED and G.caveat_only_flags(answer, out["claims"], question, [*cited, *retrieved]):
-                out.update(state="grounded", caveat_only=out["claims"])  # 받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이다(`grounding.is_caveat`). 값을 말하는 문장은 받쳐졌다
-            items = obj.get("claims")
-            out["quotes"] = [str(c.get("quote")) for c in items if isinstance(c, dict) and isinstance(c.get("quote"), str)] if isinstance(items, list) else []  # Q 형식일 때만 생긴다
-            extra = obj.get("off_topic_sentences")
-            out["off_topic"] = [c for c in extra if isinstance(c, str) and c.strip()] if isinstance(extra, list) else []
+            evidence = [*cited, *retrieved]
+            eased: list[str] = []
+
+            def one_vote() -> dict | None:
+                # 값은 받쳐졌고 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 한 표는, 다수결에 넣기 전에 받쳐진 표로 센다(`grounding.caveat_only_vote`).
+                # 표마다 꼽은 문장이 달라 합친 목록이 비어도 단서 때문에 거절되지 않는다. 값을 말하는 문장을 꼽은 표는 그대로다
+                obj = ask_json(system, user)[0]
+                sentences = G.caveat_only_vote(obj, answer, question, evidence, cited=cited, retrieved=retrieved)
+                if sentences:
+                    eased.extend(sentences)
+                    return {**obj, "grounded": True, "_caveat_only": sentences}
+                return obj
+
+            obj = voted("grounding", "ground", one_vote) or {}
+            out.update(G.read_verdict(obj, answer, question, evidence))
+            if eased and out["state"] == "grounded" and not out.get("caveat_only"):
+                out["caveat_only"] = eased
         except CostCapExceeded:
             raise
         except Exception as e:  # noqa: BLE001  호출 실패는 결론 없음으로 두고 코드 규칙 결과를 따른다
@@ -1436,7 +1437,7 @@ def build_graph(
     def save(state: AgentState) -> dict:
         answer_id = uuid.uuid4().hex
         if answer_store is not None:
-            answer_store.save(
+            fields = (
                 answer_id,
                 state.get("user_id") or "",
                 state.get("thread_id") or "",
@@ -1445,6 +1446,10 @@ def build_graph(
                 state.get("as_of"),
                 [Chunk(**c) for c in state.get("citations", [])],
             )
+            if save_one_conn and hasattr(answer_store, "save_with_grounding"):  # 사전 등록 62.16 `ANSWER_SAVE_ONE_CONN`: 같은 두 저장을 연결 하나로(저장 내용과 순서는 그대로)
+                answer_store.save_with_grounding(*fields, G.public_grounding(state.get("grounding") or {}), state.get("skills_used") or [])
+                return {"answer_id": answer_id}
+            answer_store.save(*fields)
             if hasattr(answer_store, "save_grounding"):
                 answer_store.save_grounding(answer_id, G.public_grounding(state.get("grounding") or {}), state.get("skills_used") or [])
         return {"answer_id": answer_id}

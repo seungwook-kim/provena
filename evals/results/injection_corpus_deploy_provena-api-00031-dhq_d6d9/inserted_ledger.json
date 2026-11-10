@@ -1,0 +1,24 @@
+{
+  "state": "cleaned",
+  "date": "20261110",
+  "org": "TEST-INJ-DEPLOY-20261110",
+  "version_id": "TESTINJ20261110",
+  "updated": "2026-11-10T11:19:32+09:00",
+  "rows": [
+    {
+      "rule_seq": 9026111006,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D6",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111009,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D9",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111010,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-C1",
+      "version_id": "TESTINJ20261110"
+    }
+  ]
+}

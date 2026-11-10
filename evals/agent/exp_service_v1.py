@@ -50,13 +50,13 @@ def database_url_from_env_file() -> str:
 
 def build_pg_searcher(embedder=None, translator=None):
     """운영 DB(`PgStore`) 위에 서비스 `Searcher`를 만든다. 적재 장부가 voyage-4 ready가 아니면 `check_meta`가 멈춘다."""
-    from backend.rag.retrieve import embed
+    from backend.rag.retrieve import embed, hedge
     from backend.rag.retrieve.search import PgStore, SearchConfig, Searcher
 
     if embedder is None:
         model = embed.load_model("voyage-4")
         embedder = lambda texts: embed.encode_queries(model, texts)  # noqa: E731
-    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none")
+    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none", hedge=hedge.enabled(), hedge_s=hedge.hedge_seconds())  # 사전 등록 62.14: SEARCH_HEDGE가 켜졌을 때만(기본 꺼짐)
     store = PgStore(database_url_from_env_file())
     searcher = Searcher(cfg, store, embedder=embedder, reranker=None, translator=translator)
     return searcher, {"rows_source": "PgStore", "generation": store.generation(), "config": dataclasses.asdict(cfg)}
@@ -64,7 +64,7 @@ def build_pg_searcher(embedder=None, translator=None):
 
 def build_searcher(embedder=None, translator=None):
     """`MemoryStore` 위에 서비스 `Searcher`를 만든다. embedder/translator는 시험에서 바꿔 끼우는 자리이고 None이면 실제(Voyage, Claude CLI)."""
-    from backend.rag.retrieve import embed, links
+    from backend.rag.retrieve import embed, hedge, links
     from backend.rag.retrieve.search import MemoryStore, SearchConfig, Searcher
 
     raw, chunks, docs, _ = D.load_cell()
@@ -74,7 +74,7 @@ def build_searcher(embedder=None, translator=None):
     if embedder is None:
         model = embed.load_model("voyage-4")
         embedder = lambda texts: embed.encode_queries(model, texts)  # noqa: E731
-    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none")
+    cfg = SearchConfig(embed_model="voyage-4", mode="dense_en", rerank_model="none", hedge=hedge.enabled(), hedge_s=hedge.hedge_seconds())  # 사전 등록 62.14: SEARCH_HEDGE가 켜졌을 때만(기본 꺼짐)
     store = MemoryStore(rows, docs, "voyage-4")
     searcher = Searcher(cfg, store, embedder=embedder, reranker=None, translator=translator, check_meta=False)
     return searcher, {"rows_source": source, "rows": len(rows), "links_with_targets": sum(1 for t in targets if t),

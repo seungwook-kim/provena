@@ -85,9 +85,9 @@ def test_switches_off_in_the_runner_are_empty_values():
                  "--judge-vote", "--judge-quote", "--sub-merge", "--heading-best", "--facts-log", "--answer-best2", "--best2-samedoc", "--speculate-ground"):
         p.add_argument(flag, action="store_true")
     ns = p.parse_args([])
-    keys = {"reasoning": "", "provider_sort": "", "llm_deadline": "", "llm_hedge": "", "llm_hedge_by_task": "", "llm_retries": "", "trace_detail": False, "json_reminder": False,
+    keys = {"reasoning": "", "provider_sort": "", "llm_deadline": "", "llm_hedge": "", "llm_retries": "", "trace_detail": False, "json_reminder": False,
             "reasoning_by_task": "", "section_keeps_research": False, "answer_wait": 0, "answer_budget": 0, "structured": "", "judge_query": False,
-            "embed_keepalive": False, "parallel_subs": False, "decompose_cap": 0}
+            "embed_keepalive": False, "parallel_subs": False, "decompose_cap": 0, "search_hedge": 0}
     for k, v in keys.items():
         setattr(ns, k, v)
     got = M.chosen_model_switches(ns)

@@ -34,6 +34,18 @@ def test_stream_times_and_fields_are_computed_from_events():
     assert got["cost_usd"] == 0.0123 and got["input_tokens"] == 100 and got["llm_calls"] == 5
 
 
+def test_stream_keeps_the_answer_text_by_joining_token_texts_exactly():
+    """토큰은 공백을 낀 조각이므로 그대로 이으면 답 본문이 된다. RAGAS 채점이 이 값을 읽는다."""
+    text = "SEV2는 30분 안에 확인합니다.\n\n- 근거: 온콜 문서 [1]"
+    pieces = ["SEV2는 ", "30분 ", "안에 ", "확인합니다.\n\n", "- ", "근거: ", "온콜 ", "문서 ", "[1]"]
+    assert "".join(pieces) == text
+    lines = [ln for p in pieces for ln in sse("token", {"text": p})] + sse("citation", {"chunk_id": "a"}) + sse("done", {"kind": "answer", "usage": {}})
+    got = dl.consume_chat_stream(lines, t0=0.0, clock=Clock([0.0, 1.0]))
+    assert got["answer"] == text and got["answer_chars"] == len(text)
+    nothing = dl.consume_chat_stream(sse("done", {"kind": "refuse", "usage": {}}), t0=0.0, clock=Clock([0.0, 1.0]))
+    assert nothing["answer"] == "" and nothing["answer_chars"] == 0
+
+
 def test_refusal_without_token_uses_done_time_as_first_response_and_error_event_fails():
     clock = Clock([0.0, 2.0])
     got = dl.consume_chat_stream(sse("done", {"kind": "refuse", "code": "no_results", "usage": {"cost_usd": None}}), t0=clock(), clock=clock)

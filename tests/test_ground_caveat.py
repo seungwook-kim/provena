@@ -108,6 +108,31 @@ def test_flagged_sentence_that_is_not_in_the_answer_does_not_excuse_other_senten
 
 
 def test_other_reasons_are_not_affected():
+    """사유가 no_evidence나 nonexistent_entity인 판정은 단서 문장만 꼽았어도 거절 그대로다."""
+    for code in ("no_evidence", "nonexistent_entity"):
+        llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code=code, reason="사유", unsupported_sentences=[HEDGE]))
+        out = ask(llm)
+        assert out["kind"] == "refuse" and out["refuse_reason"] == code
+
+
+def test_out_of_period_flag_on_a_hedge_only_is_eased_when_the_question_is_in_period():
+    """판정 모델은 같은 단서 문장("현재 판의 값은 확인할 수 없다")을 표마다 unsupported 또는 out_of_period로 달리 부른다(운영 트레이스 bfd7bdbc).
+    질문 자체는 근거의 기간 안이고 꼽은 문장이 값을 말하지 않는 단서뿐이면 사유 이름과 상관없이 값은 받쳐진 것으로 센다."""
     llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=[HEDGE]))
     out = ask(llm)
+    assert out["kind"] == "answer" and not out.get("refuse_reason") and "VP(Approves)" in out["answer"]
+    assert out["grounding"]["caveat_only"] is True
+
+
+def test_out_of_period_flag_on_a_value_sentence_still_refuses():
+    llm = normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=[HEDGE, FACT]))
+    out = ask(llm)
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period"
+
+
+def test_out_of_period_flag_still_refuses_when_the_question_itself_is_out_of_period():
+    """질문이 근거의 가장 이른 판(2023년)보다 앞선 연도를 물으면 코드 규칙의 기간 판정이 기간 밖이므로, 단서 문장만 꼽았어도 거절 그대로다."""
+    question = QUESTION.replace("계약 금액이", "2019년에 계약 금액이")
+    assert G.check_rules(question, [ROW.model_dump()], [ROW.model_dump()]).reason == G.OUT_OF_PERIOD
+    out = run(graph(lambda q: [ROW], llm=normal_llm(answer=reply(FACT, HEDGE), grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=[HEDGE])), grounding_llm=True), question=question)
     assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period"

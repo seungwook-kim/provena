@@ -467,46 +467,6 @@ def _hedge_request(task):
     return httpx.Request("POST", "http://fake.invalid/", content=json.dumps(body).encode())
 
 
-def test_hedge_by_task_uses_the_task_time_and_falls_back_to_the_global_one():
-    import httpx
-
-    from backend.services.llm import DeadlineTransport
-
-    class Quick:
-        def handle_request(self, request):
-            return httpx.Response(200, json={})
-
-    t = DeadlineTransport(Quick(), 9.0, hedge=3.5, hedge_tasks={"classify": 1.5})
-    assert t._hedge_for(_hedge_request("classify")) == 1.5
-    assert t._hedge_for(_hedge_request("judge")) == 3.5
-    assert t._hedge_for(httpx.Request("POST", "http://fake.invalid/", content=b"not json")) == 3.5
-    assert DeadlineTransport(Quick(), 9.0, hedge=3.5)._hedge_for(_hedge_request("classify")) == 3.5  # 꺼짐: 지금과 같다
-
-
-def test_hedge_by_task_sends_the_second_request_earlier_for_that_task():
-    import threading
-    import time
-
-    import httpx
-
-    from backend.services.llm import DeadlineTransport
-
-    calls = []
-    lock = threading.Lock()
-
-    class FirstSlow:
-        def handle_request(self, request):
-            with lock:
-                calls.append(1)
-                n = len(calls)
-            time.sleep(1.0 if n == 1 else 0.01)
-            return httpx.Response(200, json={"n": n})
-
-    t = DeadlineTransport(FirstSlow(), 3.0, hedge=2.0, hedge_tasks={"classify": 0.1})
-    started = time.monotonic()
-    assert t.handle_request(_hedge_request("classify")).json() == {"n": 2} and time.monotonic() - started < 0.6
-
-
 def test_deadline_skip_tasks_send_listed_tasks_without_the_limit():
     """`LLM_DEADLINE_SKIP_TASKS`에 맞는 단계(정확한 이름, 끝 * 접두어)는 상한을 넘겨도 자르지 않고 hedge도 보내지 않는다. 맞지 않는 단계는 지금처럼 자른다."""
     import time
@@ -549,7 +509,7 @@ def test_deadline_skip_tasks_on_the_anthropic_transport():
             time.sleep(0.3)
             return httpx2.Response(200, json={}, request=request)
 
-    t = _deadline_transport_httpx2(0.1, 0.0, {}, ("team_*",))
+    t = _deadline_transport_httpx2(0.1, 0.0, ("team_*",))
     t.inner = Slow()
     with httpx2.Client(transport=t) as c:
         assert c.post("https://api.anthropic.com/v1/messages", json={"system": "[[task:team_infra]]\n규칙", "messages": []}).status_code == 200
@@ -572,15 +532,3 @@ def test_deadline_skip_tasks_parses_the_environment_and_reaches_the_clients(monk
         monkeypatch.setenv("LLM_DEADLINE_SKIP_TASKS", bad)
         with pytest.raises(ValueError):
             llm.deadline_skip_tasks()
-
-
-def test_hedge_by_task_parses_the_environment(monkeypatch):
-    from backend.services.llm import hedge_by_task
-    monkeypatch.delenv("LLM_HEDGE_BY_TASK", raising=False)
-    assert hedge_by_task() == {}
-    monkeypatch.setenv("LLM_HEDGE_BY_TASK", "classify=1.5, Decompose=2")
-    assert hedge_by_task() == {"classify": 1.5, "decompose": 2.0}
-    for bad in ("classify", "classify=0", "=1.5", "classify=x"):
-        monkeypatch.setenv("LLM_HEDGE_BY_TASK", bad)
-        with pytest.raises(ValueError):
-            hedge_by_task()

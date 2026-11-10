@@ -302,6 +302,11 @@ def is_caveat(sentence: str, known: str) -> bool:
     body = _ID_MARK.sub("", sentence or "").strip()
     if not body or not (_META_ABSENCE.search(body) or _ONLY_MATERIAL_ABSENCE.search(body) or _VERSION_NOTE.search(body)):
         return False
+    return _values_known(body, known)
+
+
+def _values_known(body: str, known: str) -> bool:
+    """글에 든 숫자와 영문 용어가 모두 `known`(질문과 근거)에 있는지. 새 값을 들이는 글은 False."""
     low = known.lower()
     return all(re.search(rf"(?<![0-9A-Za-z_.]){re.escape(t.lower())}(?![0-9A-Za-z_.])", low) for t in [*_NUMBER.findall(_DATE.sub("", body)), *_LATIN.findall(body)])
 
@@ -319,11 +324,102 @@ def caveat_only_flags(answer: str, claims: list[str], question: str, evidence: l
     known = f"{question}\n{_evidence_blob(evidence)}"
     sentences = [s for line in (answer or "").splitlines() for s in split_sentences(line)]
     for claim in claims:
-        c = _flat(claim)
-        hit = [s for s in sentences if len(c) >= _MIN_CLAIM and len(_flat(s)) >= _MIN_CLAIM and (c in _flat(s) or _flat(s) in c)]
+        c = _loose(claim)
+        hit = [s for s in sentences if len(c) >= _MIN_CLAIM and len(_loose(s)) >= _MIN_CLAIM and (c in _loose(s) or _loose(s) in c)]
         if not hit or not all(is_caveat(s, known) for s in hit):  # 꼽은 문장이 답의 문장과 맞아야 하고, 맞는 답 문장이 모두 단서여야 한다
             return False
     return not only_caveats(answer, known)
+
+
+_LOOSE = re.compile(r"[\W_]+")  # 공백, 구두점, 따옴표, 괄호
+_NOTHING_FOUND = "nothingfound"
+_MIN_CLAIM_GRAMS = 3
+_CLAIM_MATCH = 0.5  # NOTHING FOUND 요약의 글자 두 개 묶음 중 이 비율 이상이 답의 한 문장에 있어야 그 문장의 요약으로 본다
+
+
+def _loose(text: str) -> str:
+    """문장 일치를 볼 때 쓰는 정규화. 인용 표시와 공백, 구두점, 따옴표, 괄호를 지운다. 판정 모델은 꼽은 문장을 따옴표나 문장 부호를 바꿔 복사하는 일이 있다."""
+    return _LOOSE.sub("", _ANY_MARK.sub("", text or ""))
+
+
+def _grams(text: str) -> set[str]:
+    flat = _loose(text)
+    return {flat[i:i + 2] for i in range(len(flat) - 1)}
+
+
+def nothing_found_claims(obj: dict) -> list[str]:
+    """판정 표의 claims 중 구절을 못 찾은(NOTHING FOUND) 주장 요약. Q 형식(`GRAPH_GROUNDING_QUOTE`)에서만 있다."""
+    items = obj.get("claims") if isinstance(obj, dict) else None
+    return [c["claim"] for c in items if isinstance(c, dict) and isinstance(c.get("claim"), str) and c["claim"].strip()
+            and re.sub(r"[^a-z]", "", str(c.get("quote") or "").lower()) == _NOTHING_FOUND] if isinstance(items, list) else []
+
+
+def summaries_are_caveats(summaries: list[str], answer: str, known: str) -> bool:
+    """NOTHING FOUND 주장 요약이 모두 답의 단서 문장을 가리키는지. 요약은 답 문장의 말을 줄여 쓴 것이라 글자 두 개 묶음으로 가장 가까운 답 문장을 찾고,
+    그 문장이 단서 문장(`is_caveat`)이고 값을 말하는 어느 문장보다 가까울 때만 단서로 본다. 요약이 새 숫자나 영문 용어를 들이거나, 값을 말하는 문장이 답에 없으면 False."""
+    sentences = [s for line in (answer or "").splitlines() for s in split_sentences(line)]
+    caveats = [s for s in sentences if is_caveat(s, known)]
+    values = [s for s in sentences if s not in caveats]
+    if not summaries or not caveats or not values:
+        return False
+    for summary in summaries:
+        grams = _grams(summary)
+        if len(grams) < _MIN_CLAIM_GRAMS or not _values_known(summary, known):
+            return False
+        near_caveat = max(len(grams & _grams(s)) for s in caveats) / len(grams)
+        near_value = max(len(grams & _grams(s)) for s in values) / len(grams)
+        if near_caveat < _CLAIM_MATCH or near_caveat <= near_value:
+            return False
+    return True
+
+
+def caveat_only_vote(obj: dict | None, answer: str, question: str, evidence: list[dict], *, cited: list[dict] | None = None, retrieved: list[dict] | None = None) -> list[str]:
+    """판정 표 하나(grounded=false, 사유 unsupported 또는 out_of_period)가 값을 말하지 않는 단서 문장만 받쳐지지 않는다고 했으면 그 문장(또는 NOTHING FOUND 요약)을, 아니면 빈 목록.
+    (a) 꼽은 문장이 모두 단서이고 답에 값을 말하는 문장이 남아 있다(`caveat_only_flags`, 공백·구두점·따옴표를 지운 부분 일치).
+    (b) 꼽은 문장이 없고 NOTHING FOUND 주장이 모두 답의 단서 문장을 가리킨다(`summaries_are_caveats`). 사유가 unsupported인 표에만 적용한다.
+    사유 out_of_period인 표는 (a)만 적용하고, 질문 자체가 코드 규칙(`check_rules`의 기간 판정)으로 근거의 기간 밖이면 그대로 거절 쪽 표다.
+    같은 단서 문장("현재 판의 값은 자료에서 확인할 수 없습니다")을 표마다 unsupported나 out_of_period로 달리 부르기 때문이다.
+    그 밖의 사유(no_evidence, nonexistent_entity)의 표는 건드리지 않는다. 값을 말하는 문장을 꼽았거나 값 주장이 NOTHING FOUND인 표는 그대로 거절 쪽 표다.
+    다수결에 넣기 전에 표마다 적용해, 표마다 꼽은 문장이 달라 겹치는 문장이 없어도(합친 목록이 비어도) 값에 대한 표만 센다.
+    `cited`와 `retrieved`는 기간 판정에 쓰는 인용 청크와 검색 청크다(없으면 `evidence`로 판정한다)."""
+    if not isinstance(obj, dict) or obj.get("grounded") is not False:
+        return []
+    code = obj.get("reason_code")
+    code = code if code in REASONS else UNSUPPORTED  # `read_verdict`와 같다
+    if code not in (UNSUPPORTED, OUT_OF_PERIOD):
+        return []
+    listed = obj.get("unsupported_sentences")
+    flagged = [c for c in listed if isinstance(c, str) and c.strip()] if isinstance(listed, list) else []
+    if code == OUT_OF_PERIOD:
+        if not flagged or check_rules(question, cited or evidence, retrieved or evidence).reason == OUT_OF_PERIOD:
+            return []
+    if flagged:
+        return flagged if caveat_only_flags(answer, flagged, question, evidence) else []
+    missing = nothing_found_claims(obj)
+    return missing if summaries_are_caveats(missing, answer, f"{question}\n{_evidence_blob(evidence)}") else []
+
+
+def read_verdict(obj: dict, answer: str, question: str, evidence: list[dict]) -> dict:
+    """근거 판정 LLM 응답(다수결로 합친 뒤) 하나를 읽는다. state는 grounded, ungrounded, inconclusive 중 하나다(명확히 거절한 경우만 ungrounded).
+    받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이면 받쳐진 것으로 본다(`caveat_only_flags`)."""
+    out: dict = {"state": "inconclusive", "code": "", "detail": "", "claims": []}
+    if obj.get("grounded") is True:
+        out["state"] = "grounded"
+    elif obj.get("grounded") is False:
+        code, claims = obj.get("reason_code"), obj.get("unsupported_sentences")
+        out.update(
+            state="ungrounded",
+            code=code if code in REASONS else UNSUPPORTED,
+            detail=str(obj.get("reason") or ""),
+            claims=[c for c in claims if isinstance(c, str) and c.strip()] if isinstance(claims, list) else [],
+        )
+    if out["state"] == "ungrounded" and out["code"] == UNSUPPORTED and caveat_only_flags(answer, out["claims"], question, evidence):
+        out.update(state="grounded", caveat_only=out["claims"])  # 받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이다(`is_caveat`). 값을 말하는 문장은 받쳐졌다
+    items = obj.get("claims")
+    out["quotes"] = [str(c.get("quote")) for c in items if isinstance(c, dict) and isinstance(c.get("quote"), str)] if isinstance(items, list) else []  # Q 형식일 때만 생긴다
+    extra = obj.get("off_topic_sentences")
+    out["off_topic"] = [c for c in extra if isinstance(c, str) and c.strip()] if isinstance(extra, list) else []
+    return out
 
 
 # ---------- 요청한 기간의 자료가 없는 답 (수정 3) ----------

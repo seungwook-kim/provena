@@ -41,7 +41,7 @@ MEASURED_ARGS = (
     "--drop-scoped-cites", "--heading-mark", "--intro-fill", "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus",
     "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--judge-vote",
     "--effort", "none", "--effort-by-task", "decompose=low,answer=low,judge=low", "--llm-deadline", "8", "--llm-hedge", "3.5", "--llm-retries", "2",
-    "--answer-wait", "5.5", "--answer-budget", "8.0",
+    "--answer-wait", "4.0", "--answer-budget", "6.5",
     "--judge-quote", "--answer-best2", "--best2-samedoc", "--speculate-ground",
 )
 
@@ -103,8 +103,18 @@ SERVICE_ENV: dict[str, str] = {
     # 합동 검토 감독과 팀 에이전트(teams.py). 질문 그래프 단계(classify, rewrite, judge, answer, answer_fast, grounding, decompose 등)는 넣지 않는다
     "LLM_DEADLINE_SKIP_TASKS": "decision_draft,supervisor,team_*",
     "LLM_MAX_RETRIES": "2",             # --llm-retries 2
-    "GRAPH_ANSWER_WAIT_S": "5.5",       # --answer-wait 5.5
-    "GRAPH_ANSWER_BUDGET_S": "8.0",     # --answer-budget 8.0
+    "GRAPH_ANSWER_WAIT_S": "4.0",       # --answer-wait 4.0 (사전 등록 62.18, 62.22: 5.5에서 줄임)
+    "GRAPH_ANSWER_BUDGET_S": "6.5",     # --answer-budget 6.5 (8.0에서 줄임)
+}
+
+
+# 응답 시간 p95 단축 후보(사전 등록 62.14, 62.16, 62.22). 운영 측정 전이라 서비스 값(`SERVICE_ENV`)에 넣지 않는다. 켜려면 환경 변수로 직접 주고(Cloud Run 리비전 환경 변수),
+# 측정 실행기(`evals/agent/exp_multi_v2.py`)에서는 같은 이름의 인자로 켠다. 꺼진 상태는 지금과 같다(tests/test_speed_p95_code.py).
+CANDIDATE_ENV: dict[str, str] = {
+    "SEARCH_HEDGE": "1",                      # C 62.14 --search-hedge 1.5: 첫 검색(임베딩 + 벡터 질의)이 SEARCH_HEDGE_S초 안에 안 오면 같은 검색을 하나 더
+    "SEARCH_HEDGE_S": "1.5",
+    "CHAT_FINAL_FROM_STREAM": "1",            # E 62.16: /chat이 끝난 뒤 체크포인트를 다시 읽지 않고 스트림 값을 씀(인자 없음, 서비스 경로만)
+    "ANSWER_SAVE_ONE_CONN": "1",              # E 62.16: 답 저장과 근거 기록 저장을 연결 하나로(인자 없음, 서비스 경로만)
 }
 
 
