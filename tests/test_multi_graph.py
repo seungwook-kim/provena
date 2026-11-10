@@ -2598,7 +2598,8 @@ def test_answer_wait_asks_for_the_careful_answer_only_once(_off2, monkeypatch, l
 @pytest.mark.parametrize("label,build", BUILDERS, ids=BUILDER_IDS)
 def test_answer_budget_spent_skips_the_careful_answer(_off2, monkeypatch, label, build):
     monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "1")
-    monkeypatch.setenv("GRAPH_ANSWER_BUDGET_S", "0.000001")
+    # 예산을 음수로 두면 남은 시간이 시계 해상도와 관계없이 항상 0 이하가 되어, 시각을 재는 방식에 시험 결과가 좌우되지 않는다.
+    monkeypatch.setenv("GRAPH_ANSWER_BUDGET_S", "-1")
     monkeypatch.setenv("GRAPH_JUDGE_ANSWER", "parallel_all")
     llm = _llm(decompose=NO_SPLIT, grounding=j(grounded=True), answer=_reply("느린답"), answer_fast=_reply("빠른답"))
     out = run(build(fake_search, llm=llm, grounding_llm=True))
