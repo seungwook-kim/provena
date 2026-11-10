@@ -16,6 +16,7 @@ import logging
 import ipaddress
 import json
 import re
+import threading
 from dataclasses import dataclass, field
 from typing import Protocol, cast
 from collections.abc import Callable
@@ -556,10 +557,12 @@ class LoginRateLimiter:
         self.window_seconds = window_seconds
         self._failures_by_login_id: dict[str, list[float]] = {}
         self._failures_by_ip: dict[str, list[float]] = {}
+        self._signup_requests_by_ip: dict[str, list[float]] = {}
+        self._signup_rate_lock = threading.Lock()
 
     def _prune_expired(self, now: float) -> None:
         # Sweep both maps so abandoned IDs and IPs do not accumulate forever.
-        for failures in (self._failures_by_login_id, self._failures_by_ip):
+        for failures in (self._failures_by_login_id, self._failures_by_ip, self._signup_requests_by_ip):
             for key, stamps in list(failures.items()):
                 recent = [stamp for stamp in stamps if now - stamp < self.window_seconds]
                 if recent:
@@ -586,6 +589,28 @@ class LoginRateLimiter:
         """Clear only the ID bucket; IP failures remain independent."""
 
         self._failures_by_login_id.pop(login_id, None)
+
+    def is_signup_ip_limited(self, client_ip: str) -> bool:
+        """Use the existing 60-second/30-request IP policy for signup mail routes."""
+
+        self._prune_expired(time.monotonic())
+        return len(self._signup_requests_by_ip.get(client_ip, [])) >= self.max_ip_attempts
+
+    def record_signup_ip_request(self, client_ip: str) -> None:
+        """Record every accepted signup/resend attempt, independent of email address."""
+
+        stamp = time.monotonic()
+        self._prune_expired(stamp)
+        self._signup_requests_by_ip.setdefault(client_ip, []).append(stamp)
+
+    def allow_signup_ip_request(self, client_ip: str) -> bool:
+        """Atomically check and record one signup/resend request in this process."""
+
+        with self._signup_rate_lock:
+            if self.is_signup_ip_limited(client_ip):
+                return False
+            self.record_signup_ip_request(client_ip)
+            return True
 
 
 def _trusted_proxy_hops() -> int:
@@ -830,6 +855,11 @@ def create_auth_router(
     def _normalise_signup_login(login_id: str) -> str:
         return login_id.strip().lower()
 
+    def _check_signup_ip_rate_limit(request: Request) -> None:
+        client_ip = _client_ip(request)
+        if not limiter.allow_signup_ip_request(client_ip):
+            raise HTTPException(status_code=429, detail="요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+
     def _verification_hash(login_id: str, code: str) -> str:
         return hmac.new(resolved_secret.encode(), f"{login_id}\x00{code}".encode(), hashlib.sha256).hexdigest()
 
@@ -842,12 +872,30 @@ def create_auth_router(
         row = get_verification(login_id)
         if row is None:
             raise HTTPException(status_code=404, detail="signup request not found")
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES)
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        code_hash = _verification_hash(login_id, code)
+        issue_verification = getattr(store, "issue_verification", None)
+        if callable(issue_verification):
+            def deliver(value: str) -> None:
+                resolved_email_sender.send_verification_email(
+                    email=login_id, code=value, expires_minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES
+                )
+            result = issue_verification(
+                login_id, code_hash, code, now, expires_at,
+                EMAIL_VERIFICATION_MAX_SENDS, EMAIL_VERIFICATION_RESEND_SECONDS, deliver,
+            )
+            if result == "unavailable":
+                raise HTTPException(status_code=404, detail="signup request not found")
+            if result == "limited":
+                raise HTTPException(status_code=429, detail="인증번호 발송 제한을 초과했습니다.")
+            return expires_at, now + timedelta(seconds=EMAIL_VERIFICATION_RESEND_SECONDS)
         last_sent = row.get("last_verification_sent_at")
         if last_sent and (now - last_sent).total_seconds() < EMAIL_VERIFICATION_RESEND_SECONDS:
             raise HTTPException(status_code=429, detail="인증번호 재발송은 잠시 후 다시 시도해 주세요.")
         if row.get("verification_send_count", 0) >= EMAIL_VERIFICATION_MAX_SENDS:
             raise HTTPException(status_code=429, detail="인증번호 발송 횟수를 초과했습니다.")
-        code = f"{secrets.randbelow(1_000_000):06d}"
         try:
             resolved_email_sender.send_verification_email(email=login_id, code=code, expires_minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES)
             expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES)
@@ -860,6 +908,7 @@ def create_auth_router(
     @router.post("/auth/signup", status_code=201)
     def signup(request: Request, payload: SignupRequest) -> dict[str, str]:
         require_csrf(request)
+        _check_signup_ip_rate_limit(request)
         login_id = _normalise_signup_login(payload.login_id)
         if (not login_id or len(login_id) > 64 or any(char.isspace() for char in login_id)
                 or payload.password != payload.password_confirmation):
@@ -889,7 +938,7 @@ def create_auth_router(
         except Exception as exc:
             if type(exc).__name__ == "AccountExistsError":
                 if email_required:
-                    raise HTTPException(status_code=409, detail="이미 진행 중인 가입 신청이 있습니다. 인증번호 재발송을 이용해 주세요.") from None
+                    raise HTTPException(status_code=409, detail="회원가입을 완료할 수 없습니다. 입력값을 확인하거나 이메일 인증 이어하기를 이용해 주세요.") from None
                 raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
             raise HTTPException(status_code=503, detail="회원가입을 처리할 수 없습니다.") from None
         response = {"message": "회원가입이 완료되었습니다. 로그인해 주세요."}
@@ -919,13 +968,24 @@ def create_auth_router(
     @router.post("/auth/signup/resend")
     def resend_signup(request: Request, payload: SignupVerificationRequest) -> dict[str, str]:
         require_csrf(request)
+        _check_signup_ip_rate_limit(request)
         login_id = _normalise_signup_login(payload.login_id)
         if not EMAIL_RE.fullmatch(login_id):
             raise HTTPException(status_code=422, detail="이메일 형식을 확인해 주세요.")
         row = getattr(store, "get_signup_verification", lambda _login_id: None)(login_id)
-        if not row or not row.get("email_verification_required"):
+        if (not row or row.get("status") != "pending"
+                or not row.get("email_verification_required")
+                or row.get("email_verified_at") is not None):
             return {"status": "unavailable"}
-        issued = _issue_signup_verification(login_id)
+        try:
+            issued = _issue_signup_verification(login_id)
+        except HTTPException as exc:
+            # Keep unavailable, missing, and rate-limited requests
+            # indistinguishable to callers. The store still enforces the
+            # limits atomically before any delivery attempt.
+            if exc.status_code in {404, 429}:
+                return {"status": "unavailable"}
+            raise
         return {"status": "sent", "verification_expires_at": issued[0].isoformat(),
                 "verification_resend_available_at": issued[1].isoformat()}
 

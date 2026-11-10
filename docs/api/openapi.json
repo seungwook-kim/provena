@@ -1020,6 +1020,24 @@
         "title": "SignupRequest",
         "type": "object"
       },
+      "SignupVerificationRequest": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "login_id": {
+            "title": "Login Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login_id",
+          "code"
+        ],
+        "title": "SignupVerificationRequest",
+        "type": "object"
+      },
       "SubscriptionBody": {
         "additionalProperties": false,
         "properties": {
@@ -1137,6 +1155,62 @@
           }
         },
         "summary": "List Signup Requests"
+      }
+    },
+    "/admin/signup-requests/by-id/{request_id}/{action}": {
+      "post": {
+        "operationId": "review_signup_request_by_id_admin_signup_requests_by_id__request_id___action__post",
+        "description": "Owner-admin only; requires a valid CSRF token. action must be approve or reject.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Review Signup Request By Id Admin Signup Requests By Id  Request Id   Action  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Owner-admin or CSRF authorization failed" },
+          "404": { "description": "Signup request not found" },
+          "409": { "description": "Email verification is required" },
+          "503": { "description": "Signup approval storage unavailable" },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Signup Request By Id"
       }
     },
     "/admin/signup-requests/{login_id}/{action}": {
@@ -1534,6 +1608,97 @@
           }
         },
         "summary": "Signup"
+      }
+    },
+    "/auth/signup/resend": {
+      "post": {
+        "operationId": "resend_signup_auth_signup_resend_post",
+        "description": "Resends only for pending, unverified email signup requests. Missing, completed, and rate-limited requests are intentionally returned as status unavailable.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Resend Signup Auth Signup Resend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": { "description": "Email verification storage or provider unavailable" },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Signup"
+      }
+    },
+    "/auth/signup/verify": {
+      "post": {
+        "operationId": "verify_signup_auth_signup_verify_post",
+        "description": "Requires a valid CSRF token and a six-digit verification code.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Verify Signup Auth Signup Verify Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": { "description": "Incorrect verification code" },
+          "410": { "description": "Verification code expired" },
+          "429": { "description": "Verification attempts exceeded" },
+          "503": { "description": "Email verification storage unavailable" },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Signup"
       }
     },
     "/changes": {
