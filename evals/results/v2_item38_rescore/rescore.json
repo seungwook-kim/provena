@@ -1,0 +1,675 @@
+{
+ "item": 38,
+ "old_gold": [
+  "business-technology/enterprise-applications/guides/zip-guide/_index.md > Zip - Getting Started > How to initiate a new request?",
+  "business-technology/enterprise-applications/guides/zip-guide/_index.md > Zip - Getting Started > How to request a new vendor? | finance/procurement/tips-for-submitting-a-zip-request.md > Other Tips for Submitting Requests",
+  "security/security-assurance/security-risk/third-party-risk-management.md > What Triggers a TPRM Assessment?",
+  "security/security-assurance/security-risk/third-party-risk-management.md > Security Considerations for Vendor Selection"
+ ],
+ "new_gold": [
+  "business-technology/enterprise-applications/guides/zip-guide/_index.md > Zip - Getting Started > How to initiate a new request? | business-technology/enterprise-applications/guides/zip-guide/_index.md > Zip - Getting Started > How to request a new vendor? | finance/procurement/tips-for-submitting-a-zip-request.md > Other Tips for Submitting Requests | finance/procurement/_index.md > The Procurement Process > How to start the Procurement Process",
+  "security/security-assurance/security-risk/third-party-risk-management.md > What Triggers a TPRM Assessment?"
+ ],
+ "results": [
+  {
+   "folder": "agent_v2_multi_pg/multi",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 1,
+    "old": [
+     0,
+     4,
+     0
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.8866666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.8866666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   }
+  },
+  {
+   "folder": "agent_v2_multi_pg/single",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     0,
+     4,
+     0
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.8666666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.8666666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   }
+  },
+  {
+   "folder": "agent_v2_multi_pg_r2/multi",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 1,
+    "old": [
+     0,
+     4,
+     0
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.8866666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.8866666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   }
+  },
+  {
+   "folder": "agent_v2_multi_pg_r2/single",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 3,
+    "old": [
+     1,
+     4,
+     2
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.8966666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9861111111111112
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.8866666666666667,
+    "wrong_citation_rate": 0.041666666666666664,
+    "citation_accuracy": 0.9583333333333334
+   }
+  },
+  {
+   "folder": "agent_v2_multi_pg_r3/multi",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     0,
+     4,
+     0
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9133333333333334,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.94
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9133333333333334,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.94
+   }
+  },
+  {
+   "folder": "agent_v2_multi_pg_r3/single",
+   "measured_with_gold": "old",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 3,
+    "old": [
+     1,
+     4,
+     2
+    ],
+    "new": [
+     0,
+     2,
+     0
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.8633333333333333,
+    "wrong_citation_rate": 0.08333333333333333,
+    "citation_accuracy": 0.9652777777777778
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.8533333333333333,
+    "wrong_citation_rate": 0.08333333333333333,
+    "citation_accuracy": 0.9375
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r1_a2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9533333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9733333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r1_a2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 3,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     3
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9333333333333332,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.96
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9533333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9733333333333333
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r1_bo2sda2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9666666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9866666666666667
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9866666666666667
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r1_bo2sda2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.97,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 1.0,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r2_a2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9566666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r2_a2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9433333333333332,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.96
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9733333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r2_bo2sda2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.98,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   },
+   "new_gold": {
+    "cited_correct_rate": 1.0,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r2_bo2sda2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.98,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   },
+   "new_gold": {
+    "cited_correct_rate": 1.0,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r3_a2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9533333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9733333333333333
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9733333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9733333333333333
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r3_a2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9466666666666668,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9666666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r3_bo2sda2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9566666666666667,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.97
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.99
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_r3_bo2sda2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9566666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.0,
+    "citation_accuracy": 1.0
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_s1_a1_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9566666666666667,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.9666666666666667
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.9866666666666667
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_s1_a1_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9333333333333332,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9533333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_s1_a2_api/multi",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     2,
+     4,
+     2
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9666666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.99
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9866666666666667,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.99
+   }
+  },
+  {
+   "folder": "agent_v2_q_d6151_s1_a2_api/single",
+   "measured_with_gold": "new",
+   "item38_row_matches_stored": true,
+   "metrics_match_summary_json": true,
+   "item38_hit_total_on_gold": {
+    "answered": true,
+    "cited": 2,
+    "old": [
+     1,
+     4,
+     1
+    ],
+    "new": [
+     2,
+     2,
+     2
+    ]
+   },
+   "old_gold": {
+    "cited_correct_rate": 0.9433333333333332,
+    "wrong_citation_rate": 0.08,
+    "citation_accuracy": 0.96
+   },
+   "new_gold": {
+    "cited_correct_rate": 0.9733333333333333,
+    "wrong_citation_rate": 0.04,
+    "citation_accuracy": 0.98
+   }
+  }
+ ]
+}
