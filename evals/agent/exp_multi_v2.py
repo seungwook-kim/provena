@@ -348,9 +348,8 @@ def chosen_model_switches(args) -> dict:
             "GRAPH_DECOMPOSE_CAP_S": str(args.decompose_cap) if args.decompose_cap else "",
             # 재검색 수정안(기본 꺼짐): R 첫 판정 전무면 바로 거절, 가 부분 판정 뒤 재검색을 문맥 페이지 안 검색으로 교체
             "GRAPH_REFUSE_ON_NONE": "1" if args.refuse_on_none else "", "GRAPH_RESEARCH_SAME_PAGE": "1" if args.research_same_page else "",
-            # 남은 문항 수정안(기본 꺼짐): A1b 문장 공유 인용 보강, 단계별 hedge
+            # 남은 문항 수정안(기본 꺼짐): A1b 문장 공유 인용 보강
             "GRAPH_CITE_PHRASE": "1" if args.cite_phrase else "",
-            "LLM_HEDGE_BY_TASK": args.llm_hedge_by_task,
             # 남은 문항 수정안(기본 꺼짐): H 용어표 용어가 제목 경로에 든 청크를 첫 검색 문맥에 더한다
             "GRAPH_HEADING_TERMS": "1" if args.heading_terms else "",
             # Q 근거 확인을 구절 먼저 찾고 판정으로
@@ -379,9 +378,8 @@ def chosen_model_switches(args) -> dict:
             "GRAPH_ANSWER_BEST2": "1" if args.answer_best2 else "", "GRAPH_BEST2_SAMEDOC": "1" if args.best2_samedoc else "",
             # SG 답 후보가 나오는 대로 근거 판정을 미리 부르고 같은 입력이면 그 결과를 쓴다
             "GRAPH_SPECULATE_GROUND": "1" if args.speculate_ground else "",
-            # 사전 등록 62.14, 62.15: 검색 hedge(초, 0이면 끔), 원 질문 첫 검색을 예비 분해와 같이 시작(--speculate-first가 필요하다)
-            "SEARCH_HEDGE": "1" if args.search_hedge else "", "SEARCH_HEDGE_S": str(args.search_hedge) if args.search_hedge else "",
-            "GRAPH_SPECULATE_EARLY_SEARCH": "1" if args.speculate_early_search else ""}
+            # 사전 등록 62.14: 검색 hedge(초, 0이면 끔)
+            "SEARCH_HEDGE": "1" if args.search_hedge else "", "SEARCH_HEDGE_S": str(args.search_hedge) if args.search_hedge else ""}
 
 
 def check_dataset(path: Path, sha256: str = "") -> None:
@@ -561,7 +559,6 @@ def main(argv=None) -> int:
     p.add_argument("--prompts-head", action="store_true", help="대조군: HEAD(11/6 D6 API 커밋) 뒤 스위치 없이 기본 프롬프트와 입력에 늘 붙게 된 문장을 빼고 HEAD 때 문장을 쓴다. 스위치로 붙는 규칙은 그대로다(backend/prompts/question.py at_head). 기본 꺼짐")
     p.add_argument("--speculate-ground", action="store_true", help="SG: 답 후보(추론 답, 빠른 답, 둘째 답)가 나오는 대로 인용 검사와 같은 검사를 거쳐 근거 판정을 미리 부르고, 뽑힌 답의 판정 입력이 같으면 그 결과를 쓴다. 판정 입력·기준은 그대로다. 기본 꺼짐")
     p.add_argument("--search-hedge", type=float, default=0, help="이 초 안에 첫 검색(질문 임베딩 + 벡터 질의)이 안 오면 같은 검색을 한 번 더 보내 먼저 온 결과를 쓴다. 예: 1.5. 기본 꺼짐(0)")
-    p.add_argument("--speculate-early-search", action="store_true", help="SE: --speculate-first의 원 질문 재작성·첫 검색을 예비 분해가 끝나길 기다리지 않고 같이 시작한다. 분해가 나누거나 경로가 정책이 아니면 버린다. 기본 꺼짐")
     p.add_argument("--unchanged-rejudge", action="store_true", help="UR: 근거 판정 사유를 받은 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정하고, 받쳐지면 그대로 낸다. 기본 꺼짐")
     p.add_argument("--speculate-first", action="store_true", help="SP: 예비 분해(단계 decompose_gate, 추론은 --reasoning 값)가 나누지 않는다고 하면 분해를 기다리는 동안 원 질문으로 "
                    "첫 검색과 판정을 미리 돌린다. 분해(decompose)가 나누지 않으면 그 결과를 쓰고, 나누면 버린다(--parallel-intake, --skip-first-rewrite가 필요). 기본 꺼짐")
@@ -569,7 +566,6 @@ def main(argv=None) -> int:
     p.add_argument("--pointer-refuse", action="store_true", help="PT: 근거 확인(Q 형식)이 복사한 구절이 모두 다른 자료를 가리키는 안내뿐이면 다시 쓰지 않고 거절한다. 기본 꺼짐")
     p.add_argument("--cite-pick", action="store_true", help="CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서(온전한 문장, 되풀이된 문장, 절 제목, 공통 규범)와 주어·조건 확인을 답 프롬프트에 더한다. 기본 꺼짐")
     p.add_argument("--drop-scoped-cites", action="store_true", help="P: 질문에 없는 한정어(제목 경로에서 질문 낱말 바로 앞, 문맥의 다른 페이지 제목에 없는 낱말)가 붙은 페이지만 인용한 문장을 근거 판정 뒤 코드가 뺀다. 기본 꺼짐")
-    p.add_argument("--llm-hedge-by-task", default="", action=MergeTaskMap, help="단계별 hedge 초. 예: classify=1.5. 나머지 단계는 --llm-hedge(--llm-deadline과 같이). 여러 번 주면 단계별로 합친다")
     p.add_argument("--query-terms", action="store_true", help="첫 검색의 하위 질문에 핸드북 영어 용어를 코드 표로 붙인다(query_plan.TERM_ROWS). 기본 꺼짐")
     p.add_argument("--query-branches", action="store_true", help="대상에 따라 절차가 갈리는 주제인데 대상이 없으면 대상마다 하위 질문을 만들고, 답이 대상을 빠뜨리면 한 번 다시 쓴다. 기본 꺼짐")
     p.add_argument("--keep-product-name", action="store_true", help="첫 검색에서 'GitLab 계정'처럼 제품의 대상을 가리키는 회사 이름은 떼지 않는다. 기본 꺼짐")

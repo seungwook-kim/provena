@@ -15,7 +15,7 @@
 - `LLM_FALLBACK_MODEL`: 기본 모델이 (재시도 뒤에도) 실패하면 같은 제공자·같은 키로 이 모델을 한 번 더 부른다. 비용 상한 초과(`CostCapExceeded`)와 설정 오류(ValueError)는 폴백하지 않는다. 비우면 폴백 없음.
 - `LLM_REASONING`: openrouter 요청에 `reasoning.effort`를 붙인다(none, minimal, low, medium, high). 비우면 보내지 않는다. 다른 제공자에는 쓰지 않는다.
 - `LLM_EFFORT`, `LLM_EFFORT_BY_TASK`: anthropic 요청의 `effort`(none, low, medium, high, xhigh, max, none은 생각 끔 `thinking: disabled`). 기본 수준과 단계별 덮기(`answer=medium,grounding=medium`)이며 단계는 시스템 프롬프트의 `[[task:...]]`로 읽는다. 둘 다 비우면 보내지 않는다(API 기본). 다른 제공자에는 쓰지 않는다.
-- `LLM_DEADLINE_S`·`LLM_HEDGE_S`·`LLM_HEDGE_BY_TASK`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
+- `LLM_DEADLINE_S`·`LLM_HEDGE_S`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
 - `LLM_DEADLINE_SKIP_TASKS`: 쉼표 목록(끝 `*`는 접두어). 시스템 프롬프트의 `[[task:...]]`가 맞는 요청은 위 상한과 hedge 없이 그대로 보낸다. 비면 모든 요청에 건다.
 - `LLM_PROVIDER_SORT`: openrouter 요청에 `provider.sort`를 붙인다(latency, throughput, price). 비우면 보내지 않는다.
 - `LLM_BASE_URL`: openrouter의 API 주소를 바꾼다(기본 `https://openrouter.ai/api/v1`). OpenAI 호환 주소면 된다.
@@ -119,10 +119,8 @@ class DeadlineTransport(httpx.BaseTransport):
 
     timeout_exc: Any = httpx.ReadTimeout  # 넘으면 내는 예외. SDK가 재시도하는 시간 초과 예외여야 한다(anthropic SDK는 httpx2, _deadline_transport_httpx2)
 
-    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, hedge_tasks: dict[str, float] | None = None,
-                 skip_tasks: tuple[str, ...] = ()) -> None:
+    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, skip_tasks: tuple[str, ...] = ()) -> None:
         self.inner, self.seconds, self.hedge = inner, seconds, hedge  # hedge(`LLM_HEDGE_S`): 이 시간 안에 답이 없으면 같은 요청을 하나 더 보내 먼저 온 답을 쓴다
-        self.hedge_tasks = dict(hedge_tasks or {})  # `LLM_HEDGE_BY_TASK`: 단계([[task:...]] 표지)마다 다른 hedge 시간. 없는 단계는 `hedge`
         self.skip_tasks = tuple(skip_tasks)  # `LLM_DEADLINE_SKIP_TASKS`: 이 단계는 상한과 hedge 없이 그대로 보낸다(답이 긴 결정표 초안, 합동 검토)
         self.pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix="llm-http")
 
@@ -143,12 +141,6 @@ class DeadlineTransport(httpx.BaseTransport):
                 return found.group(1)
         return None
 
-    def _hedge_for(self, request: httpx.Request) -> float:
-        return self._hedge_of(self._task_of(request) if self.hedge_tasks else None)
-
-    def _hedge_of(self, task: str | None) -> float:
-        return self.hedge_tasks.get(task, self.hedge) if task else self.hedge
-
     def _fetch(self, request: httpx.Request) -> httpx.Response:
         response = self.inner.handle_request(request)
         response.read()
@@ -165,10 +157,10 @@ class DeadlineTransport(httpx.BaseTransport):
         except ValueError:
             attempt = 0
         limit = self.seconds * (attempt + 1)
-        task = self._task_of(request) if (self.hedge_tasks or self.skip_tasks) else None
+        task = self._task_of(request) if self.skip_tasks else None
         if task and task_matches(task, self.skip_tasks):
             return self.inner.handle_request(request)
-        hedge = self._hedge_of(task)
+        hedge = self.hedge
         future = self.pool.submit(self._fetch, request)
         if not hedge or hedge >= limit:
             try:
@@ -246,23 +238,6 @@ def reasoning_by_task() -> dict[str, str]:
     return out
 
 
-def hedge_by_task() -> dict[str, float]:
-    """`LLM_HEDGE_BY_TASK`(예: `classify=1.5`). 단계마다 hedge 시간(초, 0보다 크다). 나머지 단계는 `LLM_HEDGE_S`를 따른다. 틀린 값은 ValueError다."""
-    out: dict[str, float] = {}
-    for part in (os.environ.get("LLM_HEDGE_BY_TASK") or "").split(","):
-        if not part.strip():
-            continue
-        task, _, value = part.partition("=")
-        try:
-            seconds = float(value)
-        except ValueError:
-            seconds = 0.0
-        if not task.strip() or seconds <= 0:
-            raise ValueError(f"LLM_HEDGE_BY_TASK는 단계=초 목록이고 초는 0보다 크다: {part!r}")
-        out[task.strip().lower()] = seconds
-    return out
-
-
 class TaskReasoningTransport(httpx.BaseTransport):
     """시스템 프롬프트의 `[[task:...]]` 표지를 읽어 그 단계의 추론 수준으로 요청을 고쳐 보낸다. 표지가 없거나 목록에 없는 단계는 그대로 보낸다."""
 
@@ -308,7 +283,7 @@ def _openrouter_client() -> dict[str, Any]:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, hedge_by_task(), deadline_skip_tasks())
+        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, deadline_skip_tasks())
     if efforts:
         opts["transport"] = TaskReasoningTransport(opts.get("transport") or httpx.HTTPTransport(), efforts)
     return {"http_client": httpx.Client(**opts)}
@@ -374,7 +349,7 @@ def anthropic_efforts() -> tuple[str | None, dict[str, str]]:
 
 
 def _anthropic_http_client() -> Any:
-    """anthropic 공급자의 HTTP 클라이언트. `LLM_DEADLINE_S`(시도별 상한)·`LLM_HEDGE_S`·`LLM_HEDGE_BY_TASK`(같은 요청 하나 더)와 `LLM_TRACE_DETAIL=1`(호출 기록)을
+    """anthropic 공급자의 HTTP 클라이언트. `LLM_DEADLINE_S`(시도별 상한)·`LLM_HEDGE_S`(같은 요청 하나 더)와 `LLM_TRACE_DETAIL=1`(호출 기록)을
     openrouter(`_openrouter_client`)와 같은 `DeadlineTransport`로 건다. 셋 다 비면 None이고 SDK 기본 클라이언트 그대로다."""
     from backend.services import llm_trace
 
@@ -387,14 +362,14 @@ def _anthropic_http_client() -> Any:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, hedge_by_task(), deadline_skip_tasks())
+        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, deadline_skip_tasks())
     return httpx2.Client(**opts)
 
 
 _deadline2_cls: Any = None
 
 
-def _deadline_transport_httpx2(seconds: float, hedge: float, hedge_tasks: dict[str, float], skip_tasks: tuple[str, ...] = ()) -> Any:
+def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[str, ...] = ()) -> Any:
     """`DeadlineTransport`와 같은 동작을 httpx2 전송으로. 넘으면 httpx2.ReadTimeout을 내 anthropic SDK가 재시도한다."""
     import httpx2
 
@@ -404,7 +379,7 @@ def _deadline_transport_httpx2(seconds: float, hedge: float, hedge_tasks: dict[s
             timeout_exc = httpx2.ReadTimeout
 
         _deadline2_cls = DeadlineTransport2
-    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, hedge_tasks, skip_tasks)
+    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, skip_tasks)
 
 
 _tuned_anthropic_cls: Any = None
