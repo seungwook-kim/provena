@@ -121,18 +121,17 @@ def test_missing_gmail_config_fails_closed_outside_local(monkeypatch):
         configured_email_sender()
 
 
-def test_missing_email_provider_fails_closed_in_production(monkeypatch):
+def test_missing_email_provider_outside_local_disables_sending_without_stopping_startup(monkeypatch):
     monkeypatch.setenv("PROVENA_ENV", "production")
     monkeypatch.delenv("EMAIL_PROVIDER", raising=False)
-    with pytest.raises(RuntimeError, match="EMAIL_PROVIDER is required"):
-        configured_email_sender()
+    sender = configured_email_sender()
+    assert not isinstance(sender, RecordingEmailSender)
+    with pytest.raises(RuntimeError, match="not configured"):
+        sender.send_verification_email(email="a@example.com", code="123456", expires_minutes=5)
 
 
-def test_missing_email_provider_keeps_recording_sender_for_local_and_tests(monkeypatch):
+def test_missing_email_provider_keeps_recording_sender_only_for_local(monkeypatch):
     monkeypatch.delenv("EMAIL_PROVIDER", raising=False)
-    monkeypatch.delenv("PROVENA_ENV", raising=False)
-    assert isinstance(configured_email_sender(), RecordingEmailSender)
-
     monkeypatch.setenv("PROVENA_ENV", "local")
     assert isinstance(configured_email_sender(), RecordingEmailSender)
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import hmac
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -54,6 +54,12 @@ def _to_user(row: tuple | None) -> AuthUser | None:
     )
 
 
+# 인증번호가 만료된 뒤 이 시간이 지나도록 인증하지 않은 이메일 가입 신청은 같은 이메일로 다시 가입할 때 덮어쓴다
+# (인증하지 않은 채 남은 신청이 그 이메일을 계속 선점하지 못하게 한다). 만료 기준은 verification_expires_at 이고,
+# 코드를 한 번도 보내지 못한 신청은 requested_at 을 쓴다. 새 열은 필요 없다.
+STALE_UNVERIFIED_SIGNUP_HOURS = 24
+
+
 class AccountExistsError(Exception):
     """create_user: 같은 로그인 아이디가 이미 있다(덮어쓰지 않는다)."""
 
@@ -72,6 +78,18 @@ class SignupRequestRow:
     status: str
     request_id: int | None = None
     email_verified: bool = False
+
+
+def _is_stale_unverified(row: dict[str, Any], now: datetime) -> bool:
+    """인증번호 만료 뒤 STALE_UNVERIFIED_SIGNUP_HOURS 가 지난 미인증 대기 신청인지."""
+    if row.get("status") != "pending" or not row.get("email_verification_required"):
+        return False
+    if row.get("email_verified_at") is not None:
+        return False
+    since = row.get("verification_expires_at") or row.get("requested_at")
+    if since is None:
+        return False
+    return now - since > timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS)
 
 
 class MemoryAuthStore:
@@ -142,9 +160,14 @@ class MemoryAuthStore:
     def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> None:
         """Store a pending request only; no users record or user ID is made."""
         with self._lock:
-            if login_id in self._users or login_id in self._signup_requests:
+            if login_id in self._users:
                 raise AccountExistsError("login_id already exists")
             now = datetime.now(timezone.utc)
+            stale = self._signup_requests.get(login_id)
+            if stale is not None and _is_stale_unverified(stale, now):
+                del self._signup_requests[login_id]
+            if login_id in self._signup_requests:
+                raise AccountExistsError("login_id already exists")
             request_id = self._next_signup_request_id
             self._next_signup_request_id += 1
             self._signup_requests[login_id] = {
@@ -353,6 +376,12 @@ class PostgresAuthStore:
                 existing = conn.execute("SELECT 1 FROM users WHERE login_id = %s", (login_id,)).fetchone()
                 if existing is not None:
                     raise AccountExistsError("login_id already exists")
+                conn.execute(
+                    "DELETE FROM signup_requests WHERE login_id = %s AND status = 'pending' "
+                    "AND email_verification_required AND email_verified_at IS NULL "
+                    "AND COALESCE(verification_expires_at, requested_at) < now() - make_interval(hours => %s)",
+                    (login_id, STALE_UNVERIFIED_SIGNUP_HOURS),
+                )
                 try:
                     conn.execute(
                         "INSERT INTO signup_requests (login_id, password_hash, status, email_verification_required) VALUES (%s, %s, 'pending', %s)",

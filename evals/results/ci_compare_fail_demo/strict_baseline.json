@@ -1,0 +1,29 @@
+{
+  "source": "시연용 임시 기준값: 정상 기준(evals/ci_baseline.json)을 일부러 높였다. 단일 정답 근거 인용률 1.0, 멀티 정답 근거 인용률 1.0, 멀티 오답 근거 0.0으로 올려 실제 결과(0.996, 0.991, 0.027)가 기준보다 나빠지는 경우를 만든다. 실제 기준값이 아니다.",
+  "dataset": "dataset_v2.jsonl",
+  "runs": [
+    "agent_v2_q_d6151_r1_bo2sda2_api",
+    "agent_v2_q_d6151_r2_bo2sda2_api",
+    "agent_v2_q_d6151_r3_bo2sda2_api"
+  ],
+  "arms": {
+    "single": {
+      "cited_correct_rate": 1.0,
+      "citation_accuracy": 1.0,
+      "correct_refusal_rate": 1.0,
+      "over_refusal_rate": 0.0,
+      "hallucination_risk_rate": 0.0,
+      "wrong_citation_rate": 0.0,
+      "latency_p95_s": 9.806
+    },
+    "multi": {
+      "cited_correct_rate": 1.0,
+      "citation_accuracy": 0.992,
+      "correct_refusal_rate": 1.0,
+      "over_refusal_rate": 0.0,
+      "hallucination_risk_rate": 0.0,
+      "wrong_citation_rate": 0.0,
+      "latency_p95_s": 9.695
+    }
+  }
+}

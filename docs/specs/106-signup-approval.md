@@ -2,7 +2,7 @@
 
 현재 스키마는 `login_id`, `password_hash`, 상태, 신청 시각, 승인 시각, 승인자와 승인 후 연결되는 `user_id`를 기록한다. 신청 단계에서는 `users` 행을 만들지 않고, 승인 시 저장된 해시를 그대로 재사용한다. `db/106_signup_approval.sql`은 RLS를 활성화하고 Supabase Data API의 `PUBLIC`, `anon`, `authenticated` 역할에 대한 테이블 권한을 회수한다.
 
-운영 적용 순서는 `db/101_auth_users.sql` → `db/106_signup_approval.sql`이며, 운영 DB에는 자동 적용하지 않는다. 현재 코드에는 107 프로필 필드 사용처가 없어 `db/107_user_profile_fields.sql`은 필요하지 않다.
+운영 적용 순서는 `db/101_auth_users.sql` → `db/106_signup_approval.sql`이며, 운영 DB에는 자동 적용하지 않는다. 106 다음에는 이메일 가입 인증용 `db/107_email_signup_verification.sql`과 `db/108_auth_privacy_hardening.sql`을 순서대로 적용한다([107-email-signup-verification.md](./107-email-signup-verification.md)). 프로필 추가 칸 제안([107-user-profile-fields.md](./107-user-profile-fields.md))은 번호만 같은 다른 문서이며 SQL 파일이 없고 코드에 사용처가 없어 적용하지 않는다.
 
 이 문서는 회원가입 승인 기능의 스키마 제안이다. 실행용 migration이 아니며, 운영 DB나 Docker 초기화 과정에서 자동 적용하지 않는다.
 

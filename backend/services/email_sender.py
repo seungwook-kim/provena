@@ -25,6 +25,17 @@ class RecordingEmailSender:
         self.deliveries.append({"email": email, "code": code, "expires_minutes": str(expires_minutes)})
 
 
+class EmailDeliveryUnavailable(RuntimeError):
+    """메일 공급자가 설정되지 않아 보낼 수 없다(발송 실패와 같은 RuntimeError 계열)."""
+
+
+class UnavailableEmailSender:
+    """EMAIL_PROVIDER 미설정(로컬이 아닌 환경): 서버는 켜 두고 발송만 거절한다."""
+
+    def send_verification_email(self, *, email: str, code: str, expires_minutes: int) -> None:
+        raise EmailDeliveryUnavailable("email provider is not configured")
+
+
 class ResendEmailSender:
     def __init__(self, api_key: str, sender: str) -> None:
         self.api_key = api_key
@@ -85,9 +96,13 @@ def configured_email_sender() -> EmailSender:
     environment = os.getenv("PROVENA_ENV", "").strip().lower()
     local = environment == "local"
     if not provider:
-        if environment not in {"", "local"}:
-            raise RuntimeError("EMAIL_PROVIDER is required outside local development")
-        return RecordingEmailSender()
+        if local:
+            return RecordingEmailSender()
+        # 운영에서 EMAIL_PROVIDER 를 아직 설정하지 않았어도 서버는 떠야 한다(로그인·채팅과 무관하다).
+        # 대신 가입 메일을 보내는 경로만 막는다: 발송 시도마다 EmailDeliveryUnavailable 이 나고
+        # 가입·재발송 라우트가 503 으로 답한다. 기록용 발송기로 내려가 성공처럼 보이는 일은 없다.
+        log.error("EMAIL_PROVIDER is not set; email signup verification is disabled until it is configured")
+        return UnavailableEmailSender()
     if provider == "gmail":
         username = os.getenv("GMAIL_SMTP_USER", "").strip()
         app_password = os.getenv("GMAIL_APP_PASSWORD", "")

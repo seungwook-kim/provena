@@ -19,6 +19,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import FileResponse, Response
 
@@ -36,6 +37,36 @@ OWNER_TARGET = "최고 관리자는 바꿀 수 없습니다."
 INACTIVE_TARGET = "비활성 계정입니다."
 UNAVAILABLE = "인증 저장소를 사용할 수 없습니다."
 NO_STORE = {"Cache-Control": "no-store"}
+
+
+class SignupRequestItem(BaseModel):
+    request_id: int | None
+    login_id: str
+    requested_at: str | None
+    status: str
+    email_verified: bool
+
+
+class SignupRequestList(BaseModel):
+    requests: list[SignupRequestItem]
+
+
+class SignupReviewByIdResult(BaseModel):
+    request_id: int
+    status: str
+    changed: bool
+
+
+class SignupVerificationResetResult(BaseModel):
+    request_id: int
+    reset: bool
+
+
+_OWNER_ERRORS: dict[int | str, dict[str, Any]] = {
+    401: {"description": "Authentication required"},
+    403: {"description": "Owner-admin or CSRF authorization failed"},
+    503: {"description": "Signup approval storage unavailable"},
+}
 
 
 class AdminUserStore(AuthStore, Protocol):
@@ -179,7 +210,7 @@ def create_admin_router(
                owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         return change(request, response, owner, login_id, "user")
 
-    @router.get("/admin/signup-requests")
+    @router.get("/admin/signup-requests", response_model=SignupRequestList, responses=_OWNER_ERRORS)
     def list_signup_requests(request: Request, response: Response) -> dict[str, list[dict[str, Any]]]:
         owner_guard(request)
         response.headers["Cache-Control"] = "no-store"
@@ -209,7 +240,13 @@ def create_admin_router(
             raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
         return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
 
-    @router.post("/admin/signup-requests/by-id/{request_id}/reset-verification")
+    @router.post(
+        "/admin/signup-requests/by-id/{request_id}/reset-verification",
+        response_model=SignupVerificationResetResult,
+        description="Owner-admin only; requires a valid CSRF token. Clears the verification code and resets the attempt and send counters of an unverified pending email signup request so a new code can be issued.",
+        responses={**_OWNER_ERRORS, 404: {"description": "Signup request not found"},
+                   409: {"description": "Verification reset is unavailable for this request"}},
+    )
     def reset_signup_verification(request_id: int, request: Request, response: Response,
                                   owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         require_csrf(request)
@@ -227,7 +264,13 @@ def create_admin_router(
             raise HTTPException(status_code=409, detail="verification reset is unavailable", headers=NO_STORE)
         return {"request_id": request_id, "reset": True}
 
-    @router.post("/admin/signup-requests/by-id/{request_id}/{action}")
+    @router.post(
+        "/admin/signup-requests/by-id/{request_id}/{action}",
+        response_model=SignupReviewByIdResult,
+        description="Owner-admin only; requires a valid CSRF token. action must be approve or reject.",
+        responses={**_OWNER_ERRORS, 404: {"description": "Signup request not found"},
+                   409: {"description": "Email verification is required"}},
+    )
     def review_signup_request_by_id(request_id: int, action: str, request: Request, response: Response,
                                     owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         require_csrf(request)
