@@ -5,6 +5,14 @@ name: CI
 on:
   pull_request:
 
+permissions:
+  contents: read
+
+# 같은 PR에 커밋을 연달아 올리면 앞선 실행을 끊어 Actions 사용 시간을 아낀다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
