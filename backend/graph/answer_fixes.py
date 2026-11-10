@@ -323,25 +323,53 @@ def value_keys(text: str) -> set[tuple[str, str]]:
     return out
 
 
+def _own_body(c: dict, cited: list[dict]) -> str:
+    """본문에서 앞 청크와 겹친 머리를 뗀 것. 같은 페이지 인용 청크 본문의 끝과 그대로 같은 머리는 청킹이 앞 청크에서 복사한 글이라 이 청크의 근거로 세지 않는다."""
+    body = _body(c)
+    cut = 0
+    for x in cited:
+        if c.get("rule_seq") is None or x.get("rule_seq") != c.get("rule_seq") or x["chunk_id"] == c["chunk_id"]:
+            continue
+        prev = _body(x)
+        for n in range(min(len(body), len(prev)), cut, -1):
+            if prev.endswith(body[:n]):
+                cut = n
+                break
+    return body[cut:]
+
+
+def _value_lines(body: str, keys: set[tuple[str, str]]) -> list[tuple[set[tuple[str, str]], set[str]]]:
+    """본문에서 `keys`의 값을 담은 줄마다 (그 줄의 값, 그 줄의 단어). 세 줄 이상인 본문에서 줄의 절반 이상에 되풀이되는 단어(표의 열 이름 등)는 뺀다."""
+    lines = [ln for ln in body.split("\n") if ln.strip()]
+    toks = [_tokens(ln) for ln in lines]
+    common: set[str] = set()
+    if len(lines) >= 3:
+        common = {t for t in set().union(*toks) if sum(t in x for x in toks) * 2 >= len(lines)}
+    return [(value_keys(ln) & keys, t - common) for ln, t in zip(lines, toks) if value_keys(ln) & keys]
+
+
 def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[tuple[dict, int]]:
-    """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지."""
+    """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지.
+    겹침은 청크 전체가 아니라 같은 값을 담은 줄끼리 잰다: 값(숫자, 단위)만 같고 그 값이 가리키는 대상이 다른 줄은 같은 사실이 아니다."""
     if not cited or len(cited) >= cap:
         return []
     keys = set().union(*(value_keys(_body(c)) for c in cited))
     if not keys:
         return []
     have = {c["chunk_id"] for c in cited}
-    cited_tokens = [_tokens(_body(c)) for c in cited]
+    cited_lines = [_value_lines(_body(c), keys) for c in cited]
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
             break
-        if c["chunk_id"] in have or not (value_keys(_body(c)) & keys):
+        if c["chunk_id"] in have:
             continue
-        ct = _tokens(_body(c))
-        if not ct:
-            continue
-        anchor, score = max(((i, len(ct & x) / len(ct)) for i, x in enumerate(cited_tokens)), key=lambda p: p[1])
+        anchor, score = -1, 0.0
+        for k, t in _value_lines(_own_body(c, cited), keys):
+            for i, rows in enumerate(cited_lines):
+                for k2, t2 in rows:
+                    if t and k & k2 and len(t & t2) / len(t) > score:
+                        anchor, score = i, len(t & t2) / len(t)
         if score >= MIN_OVERLAP:
             added.append((c, anchor))
             have.add(c["chunk_id"])

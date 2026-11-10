@@ -57,6 +57,29 @@ def test_expand_respects_the_cap_and_max_add():
     assert len(out) == 4  # 이미 상한이면 더하지 않는다
 
 
+def test_expand_compares_the_lines_that_carry_the_value_not_the_whole_chunk():
+    """표의 열 이름이 되풀이되어 청크 전체 단어는 많이 겹쳐도, 같은 값(1 year)이 다른 대상의 줄에 있으면 더하지 않는다."""
+    row = "Record: {} | Retention Requirement: {} | Disposal Requirement: Secure Deletion"
+    cited = [ch(A, "\n".join([row.format("Access request records", "2 years"), row.format("Production audit logs", "1 year"),
+                              row.format("System access reviews", "3 months")]))]
+    other_rows = ch(B, "\n".join([row.format("Job roles and responsibilities", "1 year"), row.format("Personnel files", "5 years"),
+                                  row.format("Meeting notes", "6 months")]))
+    other_page = ch(C, "Backups of customer databases are kept for 1 year minimum.\nBackups of other databases are kept 90 days.", title="Logging")
+    same_fact = ch(D, "Production audit logs are retained for 1 year.", title="Audit")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], other_rows, other_page, same_fact])
+    assert [c["chunk_id"] for c in out] == [A, D]
+
+
+def test_expand_ignores_the_head_copied_from_the_cited_chunk():
+    """앞 청크 끝을 복사한 머리(청킹 겹침)에만 같은 줄이 있는 다음 청크는 더하지 않는다. 자기 본문에 있으면 더한다."""
+    tail = "Record: Firewall configuration artifacts | Retention Requirement: 1 year"
+    cited = [{**ch(A, "Record: Production audit logs | Retention Requirement: 1 year\n" + tail), "rule_seq": 1}]
+    nxt = {**ch(B, tail[8:] + "\nRecord: Risk assessment report | Retention Requirement: 2 years"), "rule_seq": 1}
+    other_page = {**nxt, "chunk_id": C, "rule_seq": 2, "text": "Other\n" + tail}
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], nxt, other_page])
+    assert [c["chunk_id"] for c in out] == [A, C]
+
+
 def test_expand_numbered_continues_the_numbers():
     body = "Merge requests should receive a review response within 2 business days for team members."
     cited = [ch(A, "Incidents are paged within 15 minutes by the on-call engineer."), ch(B, body)]
