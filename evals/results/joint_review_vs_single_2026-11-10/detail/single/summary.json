@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "preregister": "evals/PREREGISTER.md 62.11",
+    "set": "detail",
+    "items": [
+      {
+        "id": "D-10K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 1만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$0K to $25K"
+      },
+      {
+        "id": "D-30K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 3만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$25K up to $50K"
+      },
+      {
+        "id": "D-40K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 4만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$25K up to $50K"
+      },
+      {
+        "id": "D-50K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 5만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$25K up to $50K"
+      },
+      {
+        "id": "D-100K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 10만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$50K up to $250K"
+      },
+      {
+        "id": "D-300K",
+        "group": "amount",
+        "input": "새 외부 SaaS 모니터링 도구를 연 30만 달러에 1년 계약으로 도입하려 한다. 벤더는 외부 상용 업체이고, 서비스 로그와 메트릭만 외부로 보내며 고객 개인정보는 포함하지 않는다.",
+        "as_of": null,
+        "gold": "Approving expense > >$250K up to $500K"
+      }
+    ],
+    "rounds": 3,
+    "order": "문항 번호와 회차의 합이 짝수면 single 먼저, 홀수면 joint 먼저",
+    "warmup": true,
+    "started": "2026-11-10 00:51:54",
+    "finished": "2026-11-10 01:00:05",
+    "store": "MemoryStore(색인 스냅샷 data/index, 링크 대상 포함)",
+    "search": {
+      "rows": 23095,
+      "chunks_sha256": "86e6c26c8a0ca56133db98a4dea2cfe916cd69f78cdc05da6fcc74053427a4b5",
+      "config": {
+        "embed_model": "voyage-4",
+        "mode": "dense_en",
+        "pool": 100,
+        "rerank_model": "none",
+        "rerank_top": 10,
+        "translate": true,
+        "link_n": 2,
+        "link_keep_per_sub": 2,
+        "range_n": 2
+      }
+    },
+    "cache": "호출마다 번역 장부와 질문 벡터 기억을 비움",
+    "llm": {
+      "provider": "openrouter",
+      "model": "anthropic/claude-haiku-5.5"
+    },
+    "service_profile": "61.51(backend/graph/service_profile.py)",
+    "run_cost_cap_usd": 0.08,
+    "total_cost_usd_incl_warmup": 0.201637,
+    "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
+    "single": "build_graph(서비스 설정, decompose=True, 합동 검토·결정표 미연결 = 정책 질문 경로)",
+    "joint": "build_review_graph(체크포인터 메모리, 승인함 없음, 쟁점표와 승인 interrupt까지)",
+    "run_id": "eval-joint-review-20261110-005118",
+    "arm": "single"
+  },
+  "summary": {
+    "runs": 18,
+    "errors": 0,
+    "latency_p50_s": 20.194,
+    "latency_p95_s": 23.316,
+    "latency_mean_s": 18.81,
+    "latency_max_s": 23.316,
+    "llm_calls_mean": 10.06,
+    "llm_calls_min": 8,
+    "llm_calls_max": 13,
+    "translation_calls_mean": 1,
+    "cost_usd_total": 0.13551,
+    "cost_usd_mean_per_run": 0.007528,
+    "cost_unknown_calls": 0,
+    "failed_llm_calls": 0,
+    "completed_rate": 0.1111,
+    "results": {
+      "answer": 2,
+      "refuse": 16
+    },
+    "citation_verify_rate": 1.0,
+    "citations_mean_per_run": 0.33,
+    "team_section_coverage_mean": 0.111,
+    "team_section_coverage_by_run": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    "amount_band_hit_rate": 0.0,
+    "v2_gold_hit_rate": null,
+    "stability_jaccard_across_rounds": 0.8611,
+    "per_round_p95_s": {
+      "1": 21.251,
+      "2": 23.316,
+      "3": 21.512
+    },
+    "existing_metrics": {
+      "n": 18,
+      "errors": 0,
+      "cited_correct_rate": 0.0,
+      "wrong_citation_rate": 1.0,
+      "over_refusal_rate": 0.8888888888888888,
+      "correct_refusal_rate": null,
+      "hallucination_risk_rate": 0.0,
+      "answer_check_refusals": 0,
+      "correct_refusal_rate_without_answer_check": null,
+      "over_refusal_rate_without_answer_check": 0.8888888888888888,
+      "citation_accuracy": 0.0,
+      "as_of_shown_rate": 1.0,
+      "latency_p95_s": 23.316,
+      "judge_score": null,
+      "cost_usd": 0.13551
+    }
+  }
+}

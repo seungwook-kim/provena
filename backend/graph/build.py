@@ -1213,6 +1213,8 @@ def build_graph(
                     detail=str(obj.get("reason") or ""),
                     claims=[c for c in claims if isinstance(c, str) and c.strip()] if isinstance(claims, list) else [],
                 )
+            if out["state"] == "ungrounded" and out["code"] == G.UNSUPPORTED and G.caveat_only_flags(answer, out["claims"], question, [*cited, *retrieved]):
+                out.update(state="grounded", caveat_only=out["claims"])  # 받쳐지지 않는다고 꼽은 문장이 값을 말하지 않는 단서뿐이다(`grounding.is_caveat`). 값을 말하는 문장은 받쳐졌다
             items = obj.get("claims")
             out["quotes"] = [str(c.get("quote")) for c in items if isinstance(c, dict) and isinstance(c.get("quote"), str)] if isinstance(items, list) else []  # Q 형식일 때만 생긴다
             extra = obj.get("off_topic_sentences")
@@ -1366,6 +1368,8 @@ def build_graph(
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
             if verdict.get("error"):
                 info["llm_error"] = verdict["error"]
+            if verdict.get("caveat_only"):
+                info["caveat_only"] = True
             if verdict["state"] == "ungrounded":
                 reason, detail = verdict["code"], verdict["detail"]
                 revised = None
