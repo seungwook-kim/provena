@@ -30,6 +30,8 @@
 
     python -m evals.agent.exp_review_v1 run --out evals/results/review_v1_<이름>
     python -m evals.agent.exp_review_v1 run --limit 2 --out <폴더>          # 점검용(partial)
+    python -m evals.agent.exp_review_v1 plan --dataset evals/dataset_review_v1_gold_draft.jsonl --repeats 3 --max-cost 1   # 0원 예상
+    python -m evals.agent.exp_review_v1 run --llm anthropic --dataset evals/dataset_review_v1_gold_draft.jsonl --gold-draft --repeats 3 --max-cost 1 --out <폴더>   # 사전 등록 62.35
 
 동결 전 평가셋(판정 전)으로 돌리면 정답 지표는 "판정 전"이고 시간, 비용, 되묻기, 근거 포함률, 승인 전 저장 건수만 나온다. 동결 뒤에는 동결 해시를 확인하고 돈다.
 모델 비용 상한은 평가 실행기와 같이 질문 한 건 기본 $0.05(`LLM_COST_CAP_USD`)다. 팀 갈래는 한 건에 모델을 5번 이상 부르므로 넘으면 환경 변수로 올린다.
@@ -78,6 +80,12 @@ ARMS = ("team", "single")
 KINDS = ("full", "partial", "clarify", "low_issue")
 PENDING = "판정 전"
 OPENROUTER_MODEL = "anthropic/claude-haiku-5.5"
+ANTHROPIC_MODEL = "claude-haiku-5-5"
+DRAFT_STATUS = "팀장 검토 초안, 판정자 확인 전"  # 정답 쟁점 초안 표시(`evals/dataset_review_v1_gold_draft.jsonl`). `--gold-draft`일 때만 정답 지표에 쓴다
+# 예상 비용(`plan`): 런 하나(문항 하나, 갈래 하나)의 상한 추정. 근거는 사전 등록 62.11 측정의 합동 검토 런
+# (`evals/results/joint_review_vs_single_2026-11-10/detail/joint/rows.jsonl`, 쟁점표가 나온 런 0.0035~0.0041달러, LLM 9~10회, 번역 포함)이다.
+# single 갈래는 쟁점 호출 1회에 네 팀 자료를 한 번에 넣어 입력 토큰이 팀 4회의 합과 비슷하다고 보고 같은 값을 쓴다
+EST_RUN_USD = 0.0042
 TEAM_FAILED = "team_review_failed"
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -93,6 +101,19 @@ def use_openrouter_env() -> None:
         os.environ.pop(name, None)
     os.environ["LLM_PROVIDER"] = "openrouter"
     os.environ["LLM_MODEL"] = OPENROUTER_MODEL
+    os.environ["LLM_API_KEY"] = key
+
+
+def use_anthropic_env() -> None:
+    """`--llm anthropic`: Anthropic API의 Haiku 5.5(운영과 같은 공급자). 키는 `ANTHROPIC_API_KEY`에서만 가져오고 값은 출력하지 않는다.
+    주소를 바꾸는 값, 폴백 모델, 다른 공급자 키를 지운다(`exp_multi_v2.use_anthropic_env`와 같은 규칙)."""
+    key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not key.startswith("sk-ant-"):
+        raise SystemExit("ANTHROPIC_API_KEY가 없거나 Anthropic 형식이 아니라 멈춘다")
+    for name in ("LLM_BASE_URL", "LLM_FALLBACK_MODEL", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "DEMO_MODE", "LLM_RECORD", "LLM_REASONING", "LLM_PROVIDER_SORT"):
+        os.environ.pop(name, None)
+    os.environ["LLM_PROVIDER"] = "anthropic"
+    os.environ["LLM_MODEL"] = ANTHROPIC_MODEL
     os.environ["LLM_API_KEY"] = key
 
 
@@ -136,13 +157,16 @@ def load_review_dataset(path: Path) -> list[dict]:
     return items
 
 
-def judged_state(item: dict) -> str:
+def judged_state(item: dict, allow_draft: bool = False) -> str:
     """`n/a`(정답 쟁점 지표 대상 아님: 되물을 요청) | `pending`(판정 전) | `ready`.
 
     판정자 칸(`judges`)이 비었으면 판정 전이다. 판정자가 있는데 정답 쟁점이 비었으면 `no_gold_issues: true`로 "쟁점 없음"을 확인했을 때만 끝난 것으로 본다.
+    `allow_draft`(`--gold-draft`)이면 `gold_status`가 초안 표시(`DRAFT_STATUS`)이고 정답 쟁점이 있는 문항을 판정자 없이도 계산한다(결과에 초안 기준이라고 적는다).
     """
     if item["kind"] == "clarify":
         return "n/a"
+    if allow_draft and not item["judges"] and item.get("gold_status") == DRAFT_STATUS and item["gold_issues"]:
+        return "ready"
     if not item["judges"]:
         return "pending"
     if not item["gold_issues"] and item.get("no_gold_issues") is not True:
@@ -417,7 +441,7 @@ def make_arm(name: str, retriever: Callable, llm: Any, *, use_skills: bool | Non
     return Arm(name, rec, counter, graph=graph, store=store, use_skills=use_skills)
 
 
-def run_arm_item(arm: Arm, item: dict, run_id: str) -> dict:
+def run_arm_item(arm: Arm, item: dict, run_id: str, repeat: int = 1) -> dict:
     """한 갈래로 문항 하나를 돌려 행을 만든다. 한 문항의 실패로 전체를 잃지 않고 오류 행으로 남긴다. 비용 상한만 올린다."""
     arm.rec.set_item(item)
     calls0 = arm.llm.calls
@@ -443,7 +467,7 @@ def run_arm_item(arm: Arm, item: dict, run_id: str) -> dict:
     seconds = time.perf_counter() - t0
     cost = tracking.finish_item(config)
     return {
-        "id": item["id"], "kind": item["kind"], "arm": arm.name, "input": item["input"], "as_of": as_of,
+        "id": item["id"], "repeat": repeat, "kind": item["kind"], "arm": arm.name, "input": item["input"], "as_of": as_of,
         "status": norm["status"], "interrupt_kind": norm["interrupt_kind"], "clarify_question": norm["clarify_question"],
         "issue_rows": norm["issue_rows"], "unreviewed": norm["unreviewed"], "team_status": norm["team_status"],
         "saved_before_approval": norm["saved"], "error": error,
@@ -453,20 +477,46 @@ def run_arm_item(arm: Arm, item: dict, run_id: str) -> dict:
     }
 
 
+class BudgetExceeded(Exception):
+    """누적 비용이 `--max-cost`에 닿아 다음 런을 돌리지 않고 멈췄다. 이미 돈 행은 남는다."""
+
+
 def run_arms(items: list[dict], arms: list[Arm], run_id: str, *, on_row: Callable[[Arm, dict], None] | None = None,
-             stop_on_search_error: bool = True) -> dict[str, list[dict]]:
-    """문항마다 모든 갈래를 번갈아 돌린다(순서는 문항마다 바뀐다). 검색 오류가 기록되면 멈춘다(키·색인 문제로 모델 비용을 쓰지 않게)."""
-    for i, item in enumerate(items):
-        for arm in (arms if i % 2 == 0 else list(reversed(arms))):
-            arm.rec.errors = []
-            row = run_arm_item(arm, item, run_id)
-            row["retrieval_errors"] = len(arm.rec.errors)
-            arm.rows.append(row)
-            if on_row:
-                on_row(arm, row)
-            if stop_on_search_error and arm.rec.errors:
-                raise SystemExit(f"검색 오류로 중단({arm.name}, 문항 {item['id']}): {arm.rec.errors[-1]}")
+             stop_on_search_error: bool = True, repeats: int = 1, max_cost: float | None = None) -> dict[str, list[dict]]:
+    """문항마다 모든 갈래를 번갈아 돌린다(순서는 문항과 회차마다 바뀐다). 검색 오류가 기록되면 멈춘다(키·색인 문제로 모델 비용을 쓰지 않게).
+    `max_cost`(달러)를 주면 런이 끝날 때마다 누적 비용을 보고, 다음 런의 예상 비용(`EST_RUN_USD`)을 더하면 넘는 시점에 `BudgetExceeded`로 멈춘다."""
+    spent, n = 0.0, 0
+    for rep in range(1, repeats + 1):
+        for i, item in enumerate(items):
+            for arm in (arms if (i + rep) % 2 == 1 else list(reversed(arms))):
+                if max_cost is not None and spent + EST_RUN_USD > max_cost:
+                    raise BudgetExceeded(f"누적 {spent:.4f}달러에 다음 런 예상 {EST_RUN_USD}달러를 더하면 상한 {max_cost}달러를 넘어 멈춘다({n}런 완료)")
+                arm.rec.errors = []
+                row = run_arm_item(arm, item, run_id, repeat=rep)
+                row["retrieval_errors"] = len(arm.rec.errors)
+                arm.rows.append(row)
+                spent += row.get("cost_usd") or 0.0
+                n += 1
+                if on_row:
+                    on_row(arm, row)
+                if stop_on_search_error and arm.rec.errors:
+                    raise SystemExit(f"검색 오류로 중단({arm.name}, 문항 {item['id']}): {arm.rec.errors[-1]}")
     return {a.name: a.rows for a in arms}
+
+
+def plan(items: list[dict], repeats: int, max_cost: float | None) -> dict:
+    """모델과 검색을 부르지 않고 런 수와 예상 호출 수·비용만 낸다(0원)."""
+    clarify = sum(it["kind"] == "clarify" for it in items)
+    other = len(items) - clarify
+    runs = len(items) * len(ARMS) * repeats
+    # team: Supervisor 1회 + 팀 4회(되물을 요청은 Supervisor 1회만), single: 쟁점 호출 1회. 번역·재시도는 따로 센다(62.11 기록 9~10회는 번역 포함)
+    calls = repeats * ((other * 5 + clarify * 1) + len(items) * 1)
+    searches = repeats * (other * len(T.TEAMS) + len(items) * len(T.TEAMS))  # single은 되물을 요청이어도 검색을 먼저 돈다
+    est = round(runs * EST_RUN_USD, 4)
+    return {"items": len(items), "clarify_items": clarify, "arms": list(ARMS), "repeats": repeats, "runs": runs,
+            "llm_calls_without_translation": calls, "search_calls": searches,
+            "est_cost_usd_upper": est, "est_basis": f"런당 {EST_RUN_USD}달러(사전 등록 62.11 합동 검토 런 기록 0.0035~0.0041달러의 위쪽), 번역·Voyage 질의 임베딩 비용 제외",
+            "max_cost_usd": max_cost, "fits_max_cost": None if max_cost is None else est <= max_cost}
 
 
 # ---------- 지표 ----------
@@ -507,8 +557,13 @@ def match_gold(item: dict, issue_rows: list[dict]) -> dict:
             "unmatched_rows": len(issue_rows) - len(hit_rows), "rows": len(issue_rows), "detail": detail}
 
 
-def compute_review_metrics(rows: list[dict], items: dict[str, dict]) -> dict:
-    """한 갈래의 행 목록과 문항(id -> 문항)으로 지표를 낸다. 판정 전 문항이 있으면 정답 지표는 계산하지 않는다."""
+def compute_review_metrics(rows: list[dict], items: dict[str, dict], allow_draft: bool = False) -> dict:
+    """한 갈래의 행 목록과 문항(id -> 문항)으로 지표를 낸다. 판정 전 문항이 있으면 정답 지표는 계산하지 않는다.
+    `allow_draft`이면 초안 정답 문항도 계산하고 `gold_status`에 초안 기준이라고 적는다."""
+    def state_of(it: dict) -> str:
+        return judged_state(it, allow_draft)
+
+    drafted = any(not it["judges"] and it.get("gold_status") == DRAFT_STATUS for it in (items[str(r["id"])] for r in rows))
     n = len(rows)
     issue_rows = [x for r in rows for x in r["issue_rows"]]
     iso = [bool(ISO_DATE.fullmatch(str(x.get("version_date") or ""))) for x in issue_rows]
@@ -518,8 +573,8 @@ def compute_review_metrics(rows: list[dict], items: dict[str, dict]) -> dict:
     saved = [r["saved_before_approval"] for r in rows if r.get("saved_before_approval") is not None]
     lat = [r["latency_s"] for r in rows]
 
-    scored = [r for r in rows if judged_state(items[str(r["id"])]) != "n/a"]
-    pending_ids = sorted((r["id"] for r in scored if judged_state(items[str(r["id"])]) == "pending"), key=str)
+    scored = [r for r in rows if state_of(items[str(r["id"])]) != "n/a"]
+    pending_ids = sorted({r["id"] for r in scored if state_of(items[str(r["id"])]) == "pending"}, key=str)
     gold: dict[str, Any] = {"gold_status": "해당 문항 없음", "gold_pending_ids": pending_ids, "gold_items": 0, "gold_total": None, "gold_found": None,
                             "missed_issue_rate": None, "date_agree_rate": None, "unmatched_row_rate": None}
     if scored and pending_ids:
@@ -527,7 +582,8 @@ def compute_review_metrics(rows: list[dict], items: dict[str, dict]) -> dict:
     elif scored:
         ms = [match_gold(items[str(r["id"])], r["issue_rows"]) for r in scored]
         total, found = sum(m["total"] for m in ms), sum(m["found"] for m in ms)
-        gold.update(gold_status="계산함", gold_items=len(scored), gold_total=total, gold_found=found,
+        gold.update(gold_status=f"계산함(초안 정답 기준: {DRAFT_STATUS})" if allow_draft and drafted else "계산함",
+                    gold_items=len(scored), gold_total=total, gold_found=found,
                     missed_issue_rate=_rate(total - found, total),
                     date_agree_rate=_rate(sum(m["date_agree"] for m in ms), sum(m["date_checked"] for m in ms)),
                     unmatched_row_rate=_rate(sum(m["unmatched_rows"] for m in ms), sum(m["rows"] for m in ms)))
@@ -559,9 +615,9 @@ def _num(v: Any) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
-def compare(rows: dict[str, list[dict]], items: dict[str, dict]) -> dict:
+def compare(rows: dict[str, list[dict]], items: dict[str, dict], allow_draft: bool = False) -> dict:
     """두 갈래의 지표와 차이(team - single). 한 쪽이 "판정 전"이거나 None이면 그 차이는 내지 않는다."""
-    metrics = {name: compute_review_metrics(r, items) for name, r in rows.items()}
+    metrics = {name: compute_review_metrics(r, items, allow_draft) for name, r in rows.items()}
     out: dict = {"metrics": metrics}
     if set(ARMS) <= set(rows):
         t, s = metrics["team"], metrics["single"]
@@ -588,8 +644,14 @@ def run_cmd(args) -> int:
         items = items[: args.limit]
     if not items:
         raise SystemExit("돌릴 문항이 없다")
+    repeats = max(1, int(getattr(args, "repeats", 1) or 1))
+    max_cost = getattr(args, "max_cost", None)
+    allow_draft = bool(getattr(args, "gold_draft", False))
+    print(json.dumps({"plan": plan(items, repeats, max_cost)}, ensure_ascii=False), flush=True)
     if args.llm == "openrouter":
         use_openrouter_env()
+    elif args.llm == "anthropic":
+        use_anthropic_env()
     else:
         use_claude_cli_env()
     from evals.agent import exp_confirmed_v1 as X  # 무거운 가져오기는 실제 실행에서만
@@ -618,26 +680,37 @@ def run_cmd(args) -> int:
         (out / row["arm"]).mkdir(parents=True, exist_ok=True)
         (out / row["arm"] / "rows.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in arm.rows), encoding="utf-8")
 
+    stopped = None
     try:
-        rows = run_arms(items, arms, run_id, on_row=show)
+        rows = run_arms(items, arms, run_id, on_row=show, repeats=repeats, max_cost=max_cost)
+    except BudgetExceeded as e:
+        stopped = str(e)
+        print(stopped, flush=True)
+        rows = {a.name: a.rows for a in arms}
     finally:
         if use_pg:
             searcher.store.pool.close()
-    result = compare(rows, by_id)
+    result = compare(rows, by_id, allow_draft)
     meta = {
         "dataset": dataset.name,
         "dataset_sha256": hashlib.sha256(dataset.read_bytes()).hexdigest(),
         "frozen": state,
-        "judged": {s: sum(judged_state(it) == s for it in items) for s in ("ready", "pending", "n/a")},
+        "judged": {s: sum(judged_state(it, allow_draft) == s for it in items) for s in ("ready", "pending", "n/a")},
+        "gold_draft": allow_draft,
+        "gold_status": sorted({it.get("gold_status") or "" for it in items}),
+        "repeats": repeats,
+        "max_cost_usd": max_cost,
+        "stopped_by_budget": stopped,
         "store": "PgStore" if use_pg else "MemoryStore",
         "search": {**setup, "per_team": "팀마다 한 번, 팀 절(org)과 기준일을 걸어 `T.search_text`로 검색한다(두 갈래 같음)"},
-        "llm": {"provider": os.environ["LLM_PROVIDER"], "model": os.environ["LLM_MODEL"], "anthropic_api_key": "unused", "same_model_object": True},
+        "llm": {"provider": os.environ["LLM_PROVIDER"], "model": os.environ["LLM_MODEL"],
+                "anthropic_api_key": "used" if os.environ["LLM_PROVIDER"] == "anthropic" else "unused", "same_model_object": True},
         "use_skills": skills_enabled(),
         "arms": list(ARMS),
         "order": "문항마다 순서를 바꿔 번갈아 돌림(짝수 번째 team 먼저, 홀수 번째 single 먼저)",
         "single_baseline": "에이전트 하나가 네 관점을 한 번에 검토한다. 검색, 모델, 인용 검사, 행 만들기, 시도 상한은 team과 같다. 이 코드는 측정기 안에만 있다",
         "translation_cache": "MemoryStore는 번역을 프로세스 안에서 기억한다. 번갈아 돌려도 뒤에 도는 쪽이 번역을 기억에서 받을 수 있다" if not use_pg else "PgStore는 번역을 DB에 저장한다",
-        "partial": bool(args.limit),
+        "partial": bool(args.limit) or stopped is not None,
         "run_id": run_id,
         "finished": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
@@ -647,7 +720,19 @@ def run_cmd(args) -> int:
     (out / "compare.json").write_text(json.dumps({"meta": meta, **result}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"delta_team_minus_single": result.get("delta_team_minus_single"),
                       "gold_status": {a: result["metrics"][a]["gold_status"] for a in ARMS}}, ensure_ascii=False, indent=2))
-    return 0
+    return 3 if stopped else 0
+
+
+def plan_cmd(args) -> int:
+    dataset = Path(args.dataset) if args.dataset else DATASET
+    items = load_review_dataset(dataset)
+    if args.limit:
+        items = items[: args.limit]
+    out = plan(items, max(1, args.repeats), args.max_cost)
+    out["dataset"] = dataset.name
+    out["judged_with_gold_draft"] = {s: sum(judged_state(it, True) == s for it in items) for s in ("ready", "pending", "n/a")}
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0 if out["fits_max_cost"] in (None, True) else 1
 
 
 def main(argv=None) -> int:
@@ -655,11 +740,21 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("run", help="team과 single을 같은 문항으로 번갈아 실행(서비스 Searcher, 기본 MemoryStore)")
     p.add_argument("--store", choices=("memory", "pg"), default="memory", help="검색 저장소. pg는 .env의 DATABASE_URL로 운영 DB를 읽는다")
-    p.add_argument("--llm", choices=("openrouter", "claude_cli"), default="openrouter", help="모델 경로. 기본 openrouter(Haiku 5.5, 환경 변수 OPENROUTER_API_KEY)")
+    p.add_argument("--llm", choices=("openrouter", "anthropic", "claude_cli"), default="openrouter",
+                   help="모델 경로. 기본 openrouter(Haiku 5.5, OPENROUTER_API_KEY). anthropic은 Anthropic API의 Haiku 5.5(ANTHROPIC_API_KEY)")
     p.add_argument("--dataset", help="평가셋 경로. 기본은 evals/dataset_review_v1.jsonl")
     p.add_argument("--limit", type=int, help="앞에서 N문항만 돈다(partial, 점수로 쓰지 않는다)")
+    p.add_argument("--repeats", type=int, default=1, help="같은 문항을 N회 번갈아 돈다(회차마다 갈래 순서를 바꾼다)")
+    p.add_argument("--max-cost", type=float, default=None, help="누적 LLM 비용 상한(달러). 다음 런 예상치를 더해 넘으면 멈추고 종료 코드 3")
+    p.add_argument("--gold-draft", action="store_true", help=f"gold_status가 '{DRAFT_STATUS}'인 초안 정답으로 정답 지표를 계산한다(결과에 초안 기준이라고 적는다)")
     p.add_argument("--out", required=True, help="team/, single/, compare.json을 쓸 폴더")
     p.set_defaults(fn=run_cmd)
+    q = sub.add_parser("plan", help="모델과 검색을 부르지 않고 런 수와 예상 호출 수·비용만 낸다(0원)")
+    q.add_argument("--dataset", help="평가셋 경로. 기본은 evals/dataset_review_v1.jsonl")
+    q.add_argument("--limit", type=int)
+    q.add_argument("--repeats", type=int, default=1)
+    q.add_argument("--max-cost", type=float, default=None)
+    q.set_defaults(fn=plan_cmd)
     args = ap.parse_args(argv)
     return args.fn(args)
 
