@@ -287,6 +287,45 @@ def says_only_absence(answer: str) -> bool:
     return bool(sentences) and all(_META_ABSENCE.search(s) for s in sentences)
 
 
+# ---------- 사실 주장이 아닌 문장(자료에 없다는 말, 판 기준 안내)만 받쳐지지 않는다고 한 판정 ----------
+# 근거 판정 LLM은 주장마다 받치는 원문 구절을 찾고 없으면 NOTHING FOUND로 적는다. "자료만으로는 확인되지 않습니다", "공개 판 기준입니다"처럼 값을 말하지 않는
+# 문장은 어느 청크에도 구절이 없으므로(위 `unmark_absence`도 같은 이유로 표시를 뺀다) 같은 문장이 어떤 호출에서는 받쳐지지 않는 주장으로 꼽혀 답 전체가 거절됐다(운영 트레이스 2026-11-09).
+# 판정이 받쳐지지 않는다고 꼽은 문장이 모두 이런 문장이고 답에 값을 말하는 문장이 남아 있으면 그 판정으로 거절하지 않는다. 값을 말하는 문장의 판정은 그대로다.
+_ONLY_MATERIAL_ABSENCE = re.compile(r"자료만으로는?[^.!?\n]{0,40}?(?:없(?!다고|음을)|찾을 수|확인되지|확인할 수|알 수 없)")
+_VERSION_NOTE = re.compile(r"(?:공개|과거|고정|현재)\s*판|판\s*\(\d{4}-\d{2}\)|\d{4}-\d{2}\s*판")
+_DATE = re.compile(r"\d{4}-\d{2}")
+
+
+def is_caveat(sentence: str, known: str) -> bool:
+    """값을 말하지 않는 단서 문장인지. (a) 자료에 없거나 확인되지 않는다는 말, 또는 (b) 근거 판 기준이라는 안내이고, (c) 문장의 숫자와 영문 용어가
+    모두 질문이나 근거(`known`)에 있어야 한다. 값을 새로 들이는 문장은 단서로 보지 않는다."""
+    body = _ID_MARK.sub("", sentence or "").strip()
+    if not body or not (_META_ABSENCE.search(body) or _ONLY_MATERIAL_ABSENCE.search(body) or _VERSION_NOTE.search(body)):
+        return False
+    low = known.lower()
+    return all(re.search(rf"(?<![0-9A-Za-z_.]){re.escape(t.lower())}(?![0-9A-Za-z_.])", low) for t in [*_NUMBER.findall(_DATE.sub("", body)), *_LATIN.findall(body)])
+
+
+def only_caveats(answer: str, known: str) -> bool:
+    """답의 모든 문장이 단서 문장인지(값을 말하는 문장이 없다)."""
+    sentences = [s for line in (answer or "").splitlines() for s in split_sentences(line)]
+    return all(is_caveat(s, known) for s in sentences)
+
+
+def caveat_only_flags(answer: str, claims: list[str], question: str, evidence: list[dict]) -> bool:
+    """판정이 받쳐지지 않는다고 꼽은 문장(`claims`)이 있고 모두 단서 문장이며, 답에 값을 말하는 문장이 남아 있으면 True."""
+    if not claims:
+        return False
+    known = f"{question}\n{_evidence_blob(evidence)}"
+    sentences = [s for line in (answer or "").splitlines() for s in split_sentences(line)]
+    for claim in claims:
+        c = _flat(claim)
+        hit = [s for s in sentences if len(c) >= _MIN_CLAIM and len(_flat(s)) >= _MIN_CLAIM and (c in _flat(s) or _flat(s) in c)]
+        if not hit or not all(is_caveat(s, known) for s in hit):  # 꼽은 문장이 답의 문장과 맞아야 하고, 맞는 답 문장이 모두 단서여야 한다
+            return False
+    return not only_caveats(answer, known)
+
+
 # ---------- 요청한 기간의 자료가 없는 답 (수정 3) ----------
 # 질문에 연도, 연월, 월이 있어야 적용한다. 공백은 지우고 비교한다("2026년 9월" -> "2026년9월")
 _PERIOD_EXPR = re.compile(r"(?:(?:19|20)\d{2}\s*년\s*)?\d{1,2}\s*월|(?:19|20)\d{2}\s*년|(?:19|20)\d{2}-\d{2}(?!\d)|[1-4]\s*분기|\bQ[1-4]\b|\bFY\s?\d{2,4}\b")
