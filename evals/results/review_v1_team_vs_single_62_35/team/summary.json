@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "dataset": "dataset_review_v1_gold_draft.jsonl",
+    "dataset_sha256": "d0d1537f27671e6c216713fbf64d65a871d8d0f326fe8b8099a2b1b6e7875620",
+    "frozen": "unfrozen",
+    "judged": {
+      "ready": 8,
+      "pending": 0,
+      "n/a": 2
+    },
+    "gold_draft": true,
+    "gold_status": [
+      "팀장 검토 초안, 판정자 확인 전"
+    ],
+    "repeats": 3,
+    "max_cost_usd": 1.0,
+    "stopped_by_budget": null,
+    "store": "MemoryStore",
+    "search": {
+      "rows_source": "data/chunks/chunks.jsonl",
+      "rows": 23095,
+      "links_with_targets": 2661,
+      "config": {
+        "embed_model": "voyage-4",
+        "mode": "dense_en",
+        "pool": 100,
+        "rerank_model": "none",
+        "rerank_top": 10,
+        "translate": true,
+        "link_n": 2,
+        "link_keep_per_sub": 2,
+        "range_n": 3,
+        "hedge": false,
+        "hedge_s": 1.5
+      },
+      "per_team": "팀마다 한 번, 팀 절(org)과 기준일을 걸어 `T.search_text`로 검색한다(두 갈래 같음)"
+    },
+    "llm": {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "anthropic_api_key": "used",
+      "same_model_object": true
+    },
+    "use_skills": true,
+    "arms": [
+      "team",
+      "single"
+    ],
+    "order": "문항마다 순서를 바꿔 번갈아 돌림(짝수 번째 team 먼저, 홀수 번째 single 먼저)",
+    "single_baseline": "에이전트 하나가 네 관점을 한 번에 검토한다. 검색, 모델, 인용 검사, 행 만들기, 시도 상한은 team과 같다. 이 코드는 측정기 안에만 있다",
+    "translation_cache": "MemoryStore는 번역을 프로세스 안에서 기억한다. 번갈아 돌려도 뒤에 도는 쪽이 번역을 기억에서 받을 수 있다",
+    "partial": false,
+    "run_id": "eval-review-20261111-014139",
+    "finished": "2026-11-11 01:53:18",
+    "arm": "team"
+  },
+  "metrics": {
+    "n": 30,
+    "errors": 0,
+    "retrieval_errors": 0,
+    "gold_status": "계산함(초안 정답 기준: 팀장 검토 초안, 판정자 확인 전)",
+    "gold_pending_ids": [],
+    "gold_items": 24,
+    "gold_total": 111,
+    "gold_found": 0,
+    "missed_issue_rate": 1.0,
+    "date_agree_rate": null,
+    "unmatched_row_rate": null,
+    "issue_rows": 0,
+    "section_rate": null,
+    "date_rate": null,
+    "evidence_complete_rate": null,
+    "unreviewed_team_slots": 0,
+    "pre_approval_saved": 0,
+    "clarify_expected": 6,
+    "clarify_asked": 6,
+    "clarify_rate": 1.0,
+    "clarify_confirmed": false,
+    "false_clarify_rate": 1.0,
+    "latency_mean_s": 4.182133333333334,
+    "latency_p95_s": 5.462,
+    "cost_usd": 0.012074,
+    "cost_usd_mean": 0.00040247,
+    "llm_calls_mean": 1.0
+  }
+}
