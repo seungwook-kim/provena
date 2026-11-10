@@ -73,7 +73,6 @@ LEFTOVER_FIELDS = {"search_query": "", "search_org": None, "decision_query": {},
                    "early_answer": {}, "judged_chunks": 0, "search_stalled": False, "judge_missing": [], "judge_query": "", "judge_scope": "", "section_reads": 0,
                    "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False}
 MAX_MISSING = 4  # 판정이 적은 빠진 사실을 재작성에 넘기는 개수의 상한
-HEADS_SCAN = 6  # HT: 제목 경로 구마다 ord 순으로 보는 청크 수(문맥에 이미 있는 것을 건너뛰고 첫 1개를 쓴다)
 REQUERY_NEW = 5  # SS: 페이지 재검색이 더하는 새 청크 수(문맥에 있는 청크는 세지 않는다). 61.10: 3이면 2번 7cd641이 4번째로 빠진 행이 있다
 JUDGE_ANSWER_MODES = ("parallel", "parallel_all", "joint")  # `GRAPH_JUDGE_ANSWER`: 근거 충분 판정과 답 작성을 동시에 부르거나(parallel) 한 호출로 합친다(joint)
 LICENSE_NOTE = "출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)"
@@ -289,7 +288,6 @@ def build_graph(
     ground_skip_backed: bool | None = None,
     json_only: bool | None = None,
     page_search: Callable[..., list] | None = None,
-    heading_search: Callable[..., list] | None = None,
     intro_search: Callable[..., list] | None = None,
 ):
     """컴파일된 질문 그래프를 만든다.
@@ -344,7 +342,6 @@ def build_graph(
     answer_base = P.ANSWER_SYSTEM
     answer_system = P.answer_picked(answer_base) if "answer" in structured else answer_base
     # 첫 검색어 코드 보강(기본 꺼짐, query_plan.py). 끄면 검색어, 하위 질문, 답 입력이 #44 측정 구성과 같다
-    query_terms = QP.terms_enabled()
     query_branches = QP.branches_enabled()
     # 놓친 문항 해결안(기본 꺼짐, answer_fixes.py). 끄면 입력, 프롬프트, 인용이 #50 측정 구성과 같다
     cite_expand, cite_multi, team_last, keep_cites = AF.cite_expand_enabled(), AF.cite_multi_enabled(), AF.team_last_enabled(), AF.keep_cites_enabled()
@@ -356,11 +353,7 @@ def build_graph(
     same_page = AF.research_same_page_enabled() and page_search is not None  # 가: 부분 판정 뒤 재검색을 문맥 페이지 안 검색으로 바꾼다
     cite_phrase = AF.cite_phrase_enabled()  # A1b: 인용 청크와 긴 문장을 그대로 공유하는 다른 페이지 청크를 인용에 더한다
     drop_scoped = AF.drop_scoped_enabled()  # P: 질문에 없는 한정어가 붙은 페이지만 인용한 문장을 뺀다
-    heading_best = AF.heading_best_enabled()  # HB: 제목 경로 검색 호출마다 질문 벡터와 가장 가까운 새 청크를 하나 더한다(검색기가 순위 함수를 줄 때만)
-    heading_terms = AF.heading_terms_enabled() and heading_search is not None  # H: 첫 검색어·하위 질문에 든 용어표 용어가 제목 경로에 든 청크를 첫 검색 문맥에 더한다
-    heading_mark = heading_terms and AF.heading_mark_enabled()  # HM: H가 더한 청크를 답 입력에서 알린다
     intro_fill = AF.intro_fill_enabled() and intro_search is not None  # R3: 같은 페이지 청크가 3개 이상이면 그 페이지 도입부 절 청크 1개를 더한다
-    heading_heads = heading_terms and AF.heading_heads_enabled()  # HT: 표 줄의 절 이름 구도 찾고 문맥에 있는 청크는 건너뛴다
     scope_refuse = AF.scope_note_refuse_enabled()  # SN: 충분 판정의 scope_note가 범위 한정과 부재를 함께 말하면 거절한다
     skip_seen = AF.requery_skip_seen_enabled()  # SS: 페이지 재검색이 문맥에 이미 있는 청크를 건너뛰고 새 청크만 가져온다
     consensus = AF.consensus_enabled()  # CS: 한 문장의 인용 중 여러 페이지가 되풀이하는 문장을 공유하지 않는 인용을 뺀다
@@ -888,8 +881,8 @@ def build_graph(
             subs, source = early["decompose"] if early is not None and "decompose" in early else split_question(state)
             extra = {"sub_queries": subs, "decompose_source": source}
         query = drop_company_prefix([state["question"]])[0] if split else state["search_query"]
-        if split and (query_terms or query_branches):  # `GRAPH_QUERY_TERMS`, `GRAPH_QUERY_BRANCHES`(기본 꺼짐): 첫 검색어를 코드 표로 보강한다(query_plan.py)
-            plan = QP.plan_first_search(state["question"], query, subs, terms=query_terms, branches=query_branches)
+        if split and query_branches:  # `GRAPH_QUERY_BRANCHES`(기본 꺼짐): 대상에 따라 절차가 갈리는 주제의 하위 질문을 대상마다 나눈다(query_plan.py)
+            plan = QP.plan_first_search(state["question"], query, subs, branches=query_branches)
             query, subs = plan.query, plan.subs
             extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"),
@@ -902,46 +895,6 @@ def build_graph(
             return {**extra, **cleared, "kind": "refuse", "answer": MSG_REFUSE_SEARCH_DOWN, "citations": [], "search_error": "unavailable"}
         if not found and _search_fallback_reason() == "no_key":  # 키 없는 데모: 같은 검색을 되풀이하지 않고 끝낸다
             return {**extra, **memo, "kind": "refuse", "answer": MSG_REFUSE_NO_KEY, "citations": [], "search_error": "no_key"}
-        if first and heading_terms:  # H(`GRAPH_HEADING_TERMS`): 첫 검색어·하위 질문에 든 용어표 용어가 제목 경로에 든 청크를 용어마다 1개 더한다. 실패하면 그대로 간다
-            added: list[dict] = []
-            phrases = AF.heading_phrases([query, *subs])
-            if heading_heads:  # HT: 맞는 표 줄의 절 이름 구도 찾고, 이미 문맥에 있는 청크는 건너뛰어 그 구의 다음 청크를 쓴다
-                phrases += [h for h in QP.heading_heads([state["question"], query, *subs]) if h not in phrases]
-            have_ids = {c.get("chunk_id") for c in [*state.get("chunks", []), *found]}
-            ranker = getattr(heading_search, "rank", None) if heading_best and heading_heads else None
-            extras: list[dict] = []  # HB: 구마다 질의 벡터로 가장 가까운 새 청크(HT 첫 청크와 다를 때). 모든 구 뒤에 붙인다
-            for phrase in phrases:
-                try:
-                    got = heading_search(phrase, state.get("search_org"), state.get("as_of"), HEADS_SCAN if heading_heads else 1)
-                except Exception as e:  # noqa: BLE001 - 제목 경로 검색 실패가 답을 막지 않는다
-                    log.warning("제목 경로 검색 실패: %s", type(e).__name__)
-                    continue
-                more = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
-                if heading_heads:
-                    fresh = [c for c in more if c.get("chunk_id") not in have_ids]
-                    more = fresh[:1]
-                    have_ids |= {c.get("chunk_id") for c in more}
-                    if ranker is not None and len(fresh) > 1:  # HB(`GRAPH_HEADING_BEST`)
-                        try:
-                            hb_pick = AF.heading_extra(fresh, ranker(query, fresh, state.get("search_org"), state.get("as_of")))
-                        except Exception as e:  # noqa: BLE001 - 순위를 못 매기면 HT만
-                            log.warning("제목 경로 순위 실패: %s", type(e).__name__)
-                            hb_pick = None
-                        if hb_pick is not None:
-                            extras.append({**hb_pick, AF.HEADING_MARK_KEY: phrase} if heading_mark else hb_pick)
-                            have_ids.add(hb_pick.get("chunk_id"))
-                if heading_mark:  # HM: 답 입력에서 이 청크의 제목 경로가 질문 용어와 같다고 알린다(`AF.heading_note`)
-                    more = [{**c, AF.HEADING_MARK_KEY: phrase} for c in more]
-                added += more
-            if extras:  # HB: HT 청크들 뒤에, 질의 벡터 순으로(못 매기면 모은 순서). 상한은 merge_chunks가 지킨다
-                if len(extras) > 1:
-                    try:
-                        extras = ranker(query, extras, state.get("search_org"), state.get("as_of")) or extras
-                    except Exception as e:  # noqa: BLE001
-                        log.warning("제목 경로 순위 실패: %s", type(e).__name__)
-                added += extras
-            if added:  # 첫 검색 결과 뒤에 붙인다(상한 MAX_CHUNKS). 무엇을 더했는지는 heading_search 쪽 기록에 남긴다(상태 칸은 늘리지 않는다)
-                found = merge_chunks(list(found), added)
         # 재검색은 앞 결과를 버리지 않고 합친다. 판단, 인용 검사, 근거 판정은 모두 이 합친 목록과 대조한다
         merged = merge_chunks(state.get("chunks", []), found)
         return {"chunks": with_intro(state, merged, query) if first else merged, **memo, **extra}  # R3는 첫 검색에만 붙인다
@@ -1094,8 +1047,6 @@ def build_graph(
         if team_last:  # `GRAPH_TEAM_LAST=1`: 질문이 팀을 말하지 않으면 팀 문서를 답 입력 뒤로 보낸다(빼지 않고 순서만)
             chunks = AF.team_docs_last(state["question"], chunks)
         user = P.answer_user(state["question"], chunks, state.get("as_of"), partial=bool(state.get("judge_partial")), scope_note=state.get("judge_scope") or "")
-        if heading_mark:  # HM: H가 더한 청크가 답 입력에 있을 때만 안내 한 줄을 붙인다(없으면 입력이 그대로다)
-            user += AF.heading_note(chunks)
         targets = (state.get("query_targets") or []) if query_branches else []
         obj, raw = ask_json(system, user + QP.targets_note(targets))
         missing = QP.missing_targets(str((obj or {}).get("answer") or ""), targets) if obj is not None else []
@@ -1312,8 +1263,6 @@ def build_graph(
         try:
             shown = AF.team_docs_last(question, chunks) if team_last else chunks
             user = P.redraft_user(question, shown, as_of, state.get("answer", ""), verdict["detail"], verdict["claims"])
-            if heading_mark:  # HM: 다시 쓰는 답에도 H가 더한 청크를 알린다(없으면 입력이 그대로다)
-                user += AF.heading_note(chunks)
             obj, _ = ask_json(P.with_skills(answer_system, answer_blocks(state)), user)
         except CostCapExceeded:
             raise

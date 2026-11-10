@@ -171,11 +171,6 @@ def valid_mask(meta: RowMeta, org: str | None, as_of: str | None) -> np.ndarray:
     return m
 
 
-def heading_text(row: dict) -> str:
-    """청크의 제목 경로: 페이지 제목 > 절 제목(article). 제목 경로 검색(`heading_top`)이 보는 문자열이다."""
-    return f"{row.get('rule_title') or row.get('title') or ''} > {row.get('article') or ''}"
-
-
 class MemoryStore:
     """numpy 저장소: 테스트와 DB 대조(V2)용. 필터·동점 규칙은 PgStore와 같다."""
 
@@ -228,16 +223,6 @@ class MemoryStore:
         s = self.vectors[pos] @ np.asarray(qvec, dtype=np.float32)
         order = sorted(range(len(pos)), key=lambda j: (-s[j], self._rm.keys[pos[j]][0]))[:n]
         return [(self._rm.keys[pos[j]], float(s[j])) for j in order]
-
-    def heading_top(self, phrase, org, as_of, n):
-        """제목 경로('페이지 제목 > 절 제목')에 phrase(소문자 비교)가 그대로 든 청크(필터 안) n개. 순서는 ord(없으면 행 순서), chunk_id(PgStore와 같다)."""
-        p = (phrase or "").strip().lower()
-        if not p or n <= 0:
-            return []
-        m = valid_mask(self._rm, org, as_of)
-        pos = [i for i in np.flatnonzero(m) if p in heading_text(self.rows[i]).lower()]
-        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))  # 스냅샷 행에는 ord가 없고 파일 순서가 곧 ord다(load_snapshot)
-        return [self._rm.keys[i] for i in pos[:n]]
 
     def band_headings(self, rule_seqs, org, as_of):
         """금액 구간 조회(`Searcher._range_expand`) 후보: 그 페이지들의 청크 중(필터 안) 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord 순."""
@@ -395,16 +380,6 @@ ORDER BY dist, chunk_id"""
                                "seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of,
                                "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
         return [((r[0], r[1]), float(r[2])) for r in rows]
-
-    def heading_top(self, phrase, org, as_of, n):
-        """제목 경로(페이지 제목 > 절 제목)에 phrase(소문자 비교)가 그대로 든 청크 n개, 같은 필터(_FILTER), ord·chunk_id 순(MemoryStore와 같다)."""
-        p = (phrase or "").strip().lower()
-        if not p or n <= 0:
-            return []
-        sql = f"""SELECT c.chunk_id, c.version_id {_JOIN}
-WHERE strpos(lower(d.title || ' > ' || coalesce(c.article, '')), %(p)s) > 0 AND {_FILTER}
-ORDER BY c.ord, c.chunk_id LIMIT %(n)s"""
-        return [(r[0], r[1]) for r in self._all(sql, {"p": p, "org": org, "as_of": as_of, "n": n})]
 
     def band_headings(self, rule_seqs, org, as_of):
         """금액 구간 조회 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord·chunk_id 순(MemoryStore와 같다)."""
@@ -983,41 +958,9 @@ class Searcher:
         rows = self.store.fetch(picks) if picks else {}
         return [to_chunk(rows[k]) for k in picks if k in rows]
 
-    def cached_query_vector(self, query: str):
-        """이 검색기가 이미 만든 질문 벡터(캐시)만 돌려준다. 없으면 None(번역 LLM이나 임베딩을 새로 부르지 않는다)."""
-        with self._lock:
-            got = self._qvecs.get((self.cfg.mode, query))
-        return None if got is None else np.asarray(got, dtype=np.float32)
-
-    def closest_to_query(self, query: str, chunks: list, org: str | None = None, as_of: str | None = None) -> list | None:
-        """HB(그래프 `GRAPH_HEADING_BEST=1`, 기본 꺼짐) 전용. chunks(Chunk 또는 dict)를 질문 벡터와 가까운 순으로 돌려준다(그 청크들의 페이지 안 벡터 순위).
-        질문 벡터는 이 검색기가 첫 검색에서 이미 만든 것(캐시)만 쓴다. 캐시에 없거나 순위를 매길 수 없으면 None(부르는 쪽이 HB를 건너뛴다).
-        기본 검색(`search`)은 바꾸지 않는다."""
-        ds = [c.model_dump() if hasattr(c, "model_dump") else dict(c) for c in chunks or []]
-        top = getattr(self.store, "page_vector_top", None)
-        seqs = sorted({int(d["rule_seq"]) for d in ds if d.get("rule_seq") is not None})
-        if not ds or top is None or not seqs:
-            return None
-        qvec = self.cached_query_vector(query)
-        if qvec is None:
-            return None
-        order = {k: i for i, (k, _) in enumerate(top(qvec, self.cfg.embed_model, seqs, org, as_of, [], HEADING_BEST_POOL))}
-        idx = sorted(range(len(ds)), key=lambda i: (order.get((ds[i].get("chunk_id"), ds[i].get("version_id")), len(order) + i)))
-        return [chunks[i] for i in idx]
-
-    def search_headings(self, phrase: str, org: str | None = None, as_of: str | None = None, n: int = 1) -> list[Chunk]:
-        """제목 경로 검색(그래프 `GRAPH_HEADING_TERMS=1`, 기본 꺼짐) 전용. 제목 경로(페이지 제목 > 절 제목)에 phrase가 그대로 든 청크를 ord 순으로 n개.
-        벡터와 번역을 쓰지 않는다(임베딩·LLM 호출 없음). 기본 검색(`search`)은 바꾸지 않는다. 저장소가 이 질의를 모르면 빈 목록이다."""
-        self._refresh()
-        top = getattr(self.store, "heading_top", None)
-        keys = top(phrase, org, as_of, n) if top else []
-        rows = self.store.fetch(keys) if keys else {}
-        return [to_chunk(rows[key]) for key in keys if key in rows]
-
 
 _TRACE_LOCK = threading.Lock()
 QVEC_CACHE = 512   # 질문 벡터 기억 상한(R3용)
-HEADING_BEST_POOL = 500  # HB: 제목 경로 후보의 페이지에서 벡터 순위를 볼 청크 수
 INTRO_MIN = 3      # R3: 같은 페이지 판의 청크가 이만큼 문맥에 있어야 도입부를 채운다
 INTRO_WHOLE = 2    # R3: 도입부 절의 청크가 이 수 이하면 절 전체를 더한다
 

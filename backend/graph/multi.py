@@ -319,7 +319,6 @@ def build_multi_graph(
     ground_skip_backed: bool | None = None,
     json_only: bool | None = None,
     page_search=None,
-    heading_search=None,
     intro_search=None,
 ):
     """컴파일된 멀티 에이전트 질문 그래프. 라우팅 방식(`router`)을 뺀 인자와 뜻은 `build_graph`와 같다(그대로 넘긴다).
@@ -337,7 +336,7 @@ def build_multi_graph(
     single = build_graph(retriever, None, llm=llm, answer_store=answer_store, store=store, use_skills=use_skills,
                          grounding_llm=grounding_llm, decompose=decompose, section_reader=section_reader, decision_repo=decision_repo, review_graph=review_graph,
                          parallel_intake=parallel_intake, brief_output=brief_output, max_research=research_limit, judge_answer=judge_answer,
-                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, heading_search=heading_search, intro_search=intro_search)
+                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, intro_search=intro_search)
     parts = SingleParts(single)
     agents = build_agents(parts)
     specs = {name: {**AGENTS, **CONNECTED_AGENTS}[name] for name in agents}

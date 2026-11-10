@@ -129,7 +129,7 @@
 
 ## 5. 결론
 
-- 큰 표(chunks 30,171, versions 1,798, docs 1,516, query_translations 692, threads 850, citations 559, changed_articles 318, maintenance_candidates 964)에서 Seq Scan이 남는 질의는 의도한 전수 읽기(기동·적재·증분 1회), 식 검색(`heading_top` 15-20 ms), 날짜 식 목록(318행)뿐이다. 검색의 `/chat` 경로는 HNSW(org 필터 없음 1 ms 안팎), org 필터 있는 경우 29-33 ms다.
+- 큰 표(chunks 30,171, versions 1,798, docs 1,516, query_translations 692, threads 850, citations 559, changed_articles 318, maintenance_candidates 964)에서 Seq Scan이 남는 질의는 의도한 전수 읽기(기동·적재·증분 1회), 날짜 식 목록(318행)뿐이다. 검색의 `/chat` 경로는 HNSW(org 필터 없음 1 ms 안팎), org 필터 있는 경우 29-33 ms다.
 - 색인 변경: 제거 7개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`, `token_revocations_expires_at`, `signup_requests_status_requested_at`, `recall_notices_review_idx`), 추가 2개(`issue_tables_thread_user_idx`, `chunks_link_targets_gin`), 부분 색인 `recall_notices_feedback_idx`는 의견 표 합침으로 추가.
 - 만들지 않은 색인: `approvals(thread_id)`(11행, 수천 행이 되면), `changed_articles_pending` 칸 재설계(pending 0행), `chunks(ord)`(쓰기 비용), org별 부분 HNSW(운영 분포 모름), `chunks.org` 복사(스키마 변경).
 - 코드 쪽 관찰(색인 문제가 아님, 이번에 고치지 않음): `recall_notices`·`maintenance_candidates` 목록을 LIMIT 없이 전부 읽고 앱에서 자른다(`recalls.py:177-187`), `GET /threads`가 사용자의 모든 대화를 읽는다(`threads.py:138`), `PgRecallStore._q`·`PgChangeStore._q`가 호출마다 새 연결을 연다(`/changes` 한 요청에 약 8번).

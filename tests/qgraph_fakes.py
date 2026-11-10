@@ -56,13 +56,3 @@ def normal_llm(**override) -> ScriptedLLM:
     }
     h.update(override)
     return ScriptedLLM(h)
-
-
-def sample_term_rows():
-    """용어표 장치(덧붙임, 제목 경로 추가) 시험에 쓰는 표본 행. 서비스 표(`query_plan.TERM_ROWS`)는 비어 있다(사전 등록 62.34)."""
-    from backend.graph.query_plan import TermRow
-    return (
-        TermRow("구매·새 도구 도입", (r"도입|구매|구입|사고\s*싶|사려", r"도구|툴|소프트웨어|SaaS|앱|애플리케이션|솔루션|벤더|업체"),
-                "procurement, purchase request, new vendor", heads=("new request",)),
-        TermRow("업체 보안 검토", (r"TPRM|보안\s*(검토|평가|심사)|(업체|벤더|공급사)\s*보안",), "TPRM, third party risk management assessment", heads=("TPRM assessment",)),
-    )

@@ -403,13 +403,13 @@ OFF = {"parallel_intake": False, "brief_output": False, "max_research": 2, "judg
 
 MODEL_OFF = {"LLM_REASONING": "", "LLM_PROVIDER_SORT": "", "LLM_DEADLINE_S": "", "LLM_MAX_RETRIES": "", "LLM_TRACE_DETAIL": "", "LLM_JSON_REMINDER": "", "LLM_REASONING_BY_TASK": "", "GRAPH_SECTION_KEEPS_RESEARCH": "", "LLM_HEDGE_S": "", "GRAPH_ANSWER_WAIT_S": "", "GRAPH_ANSWER_BUDGET_S": "", "LLM_STRUCTURED": "", "GRAPH_JUDGE_QUERY": "", "EMBED_KEEPALIVE": "", "SEARCH_PARALLEL_SUBS": "",
              "GRAPH_KEEP_PRODUCT_NAME": "", "GRAPH_REQUERY_TERMS": "", 
-             "GRAPH_QUERY_TERMS": "", "GRAPH_QUERY_BRANCHES": "",
+             "GRAPH_QUERY_BRANCHES": "",
              "GRAPH_CITE_EXPAND": "", "GRAPH_CITE_MULTI": "", "GRAPH_TEAM_LAST": "", "GRAPH_KEEP_CITES": "", "GRAPH_SUB_RESEARCH": "", "GRAPH_PAGE_RESEARCH": "",
              "GRAPH_REQUERY_VOCAB": "", "GRAPH_UNKNOWN_NAME": "", "GRAPH_DECOMPOSE_CAP_S": "", "GRAPH_REFUSE_ON_NONE": "", "GRAPH_RESEARCH_SAME_PAGE": "",
-             "GRAPH_CITE_PHRASE": "", "GRAPH_HEADING_TERMS": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
-             "GRAPH_HEADING_MARK": "", "GRAPH_INTRO_FILL": "", 
-             "GRAPH_HEADING_HEADS": "", "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
-             "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_HEADING_BEST": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
+             "GRAPH_CITE_PHRASE": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
+             "GRAPH_INTRO_FILL": "", 
+             "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
+             "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
             "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": ""}
 
 
@@ -432,13 +432,11 @@ def test_switches_can_be_chosen_on_the_command_line():
     assert M.chosen_model_switches(_parse(["--decompose-cap", "2.5"])) == {**MODEL_OFF, "GRAPH_DECOMPOSE_CAP_S": "2.5"}
     assert M.chosen_model_switches(_parse(["--refuse-on-none", "--research-same-page"])) == {**MODEL_OFF, "GRAPH_REFUSE_ON_NONE": "1", "GRAPH_RESEARCH_SAME_PAGE": "1"}
     assert M.chosen_model_switches(_parse(["--cite-phrase"])) == {**MODEL_OFF, "GRAPH_CITE_PHRASE": "1"}
-    assert M.chosen_model_switches(_parse(["--heading-terms"])) == {**MODEL_OFF, "GRAPH_HEADING_TERMS": "1"}
     assert M.chosen_model_switches(_parse(["--grounding-quote"])) == {**MODEL_OFF, "GRAPH_GROUNDING_QUOTE": "1"}
     assert M.chosen_model_switches(_parse(["--drop-scoped-cites"])) == {**MODEL_OFF, "GRAPH_DROP_SCOPED_CITES": "1"}
-    assert M.chosen_model_switches(_parse(["--heading-mark", "--intro-fill"])) == {
-        **MODEL_OFF, "GRAPH_HEADING_MARK": "1", "GRAPH_INTRO_FILL": "1"}
-    assert M.chosen_model_switches(_parse(["--heading-heads", "--scope-note-refuse", "--cite-pick"])) == {
-        **MODEL_OFF, "GRAPH_HEADING_HEADS": "1", "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
+    assert M.chosen_model_switches(_parse(["--intro-fill"])) == {**MODEL_OFF, "GRAPH_INTRO_FILL": "1"}
+    assert M.chosen_model_switches(_parse(["--scope-note-refuse", "--cite-pick"])) == {
+        **MODEL_OFF, "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
     assert M.chosen_model_switches(_parse(["--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first"])) == {
         **MODEL_OFF, "GRAPH_REQUERY_SKIP_SEEN": "1", "GRAPH_CITE_CONSENSUS": "1", "GRAPH_POINTER_REFUSE": "1", "GRAPH_SPECULATE_FIRST": "1"}
 
@@ -447,7 +445,7 @@ def test_prompts_head_flag_sets_only_its_switch():
     assert M.chosen_model_switches(_parse(["--prompts-head"])) == {**MODEL_OFF, "GRAPH_PROMPTS_HEAD": "1"}
 
 
-@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--heading-best", "GRAPH_HEADING_BEST"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2"), ("--best2-samedoc", "GRAPH_BEST2_SAMEDOC")])
+@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2"), ("--best2-samedoc", "GRAPH_BEST2_SAMEDOC")])
 def test_research_fix_flags_set_only_their_switch(flag, env):
     assert M.chosen_model_switches(_parse([flag])) == {**MODEL_OFF, env: "1"}
 
@@ -534,14 +532,4 @@ def test_dataset_sha256_checks_only_the_given_file(tmp_path):
         M.check_dataset(M.DATASET, "0" * 64)  # v2 기본값에는 쓰지 않는다
     M.check_dataset(M.DATASET)
 
-
-def test_heading_rank_records_whether_it_ranked():
-    from types import SimpleNamespace
-    rec = SimpleNamespace(calls=[])
-    ok = M.HeadingSearch(SimpleNamespace(closest_to_query=lambda q, cs, o, a: list(reversed(cs))), rec)
-    assert [c["chunk_id"] for c in ok.rank("질문", [{"chunk_id": "a"}, {"chunk_id": "b"}], None, None)] == ["b", "a"]
-    miss = M.HeadingSearch(SimpleNamespace(closest_to_query=lambda q, cs, o, a: None), rec)
-    assert miss.rank("질문", [{"chunk_id": "a"}], None, None) == []
-    assert [(c["kind"], c["ranked"]) for c in rec.calls] == [("heading_rank", True), ("heading_rank", False)]
-    assert sum(c["kind"] == "heading_rank" and not c.get("ranked") for c in rec.calls) == 1  # 행의 heading_rank_fail과 같은 셈
 
