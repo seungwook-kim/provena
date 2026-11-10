@@ -151,7 +151,7 @@ class PgAnswerStore:
 
     def save_with_grounding(self, answer_id, user_id, thread_id, question, answer, as_of, citations, grounding: dict, skills_used: list[str]) -> None:
         """답, 인용, 근거 검사 결과를 연결 하나, 트랜잭션 하나, 답 INSERT 한 문장으로 쓴다(사전 등록 62.16 `ANSWER_SAVE_ONE_CONN`).
-        근거 검사 결과는 answers 의 칸이라 따로 INSERT 하지 않는다(옛 answer_grounding 표를 합쳤다: 왕복 한 번이 준다).
+        근거 검사 결과(grounding, skills_used)는 answers 의 칸이라 따로 INSERT 하지 않는다(별도 표를 쓰지 않아 왕복 한 번이 준다. 옛 DB 이전은 db/109_realign.sql).
         검사 결과를 JSON 으로 만들 수 없으면 그 칸만 비우고(NULL) 답과 인용은 남긴다."""
         g, s = self._json_pair(grounding, skills_used)
         with self._connect() as conn:
