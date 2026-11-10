@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS token_revocations (
     revoked_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS token_revocations_expires_at
-    ON token_revocations (expires_at);
+-- (만료 행을 지우는 정리 작업이 코드에 없어 expires_at 색인은 두지 않는다. db/109_realign.sql 이 옛 DB의 색인을 지운다.
+--  정리 작업을 만들 때 DELETE ... WHERE expires_at < now() 와 함께 색인을 다시 만든다)
 
 ALTER TABLE token_revocations ENABLE ROW LEVEL SECURITY;

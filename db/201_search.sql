@@ -58,6 +58,8 @@ ALTER TABLE chunks ADD COLUMN IF NOT EXISTS line_end integer;
 -- 대상 페이지가 개정돼도 as_of에 맞는 판의 청크를 고른다. 자기 페이지·코퍼스 밖·비공개 주소는 넣지 않는다(links.py).
 ALTER TABLE chunks ADD COLUMN IF NOT EXISTS link_targets bigint[] NOT NULL DEFAULT '{}';
 CREATE INDEX IF NOT EXISTS chunks_page ON chunks (rule_seq, version_id);
+-- 링크 대상으로 찾는 질의(함께 볼 정책 찾기, backend/graph/recall/maintenance.py linked_from)가 `link_targets @> ARRAY[대상]` 로 이 색인을 쓴다.
+CREATE INDEX IF NOT EXISTS chunks_link_targets_gin ON chunks USING gin (link_targets);
 
 -- 색인 장부 (한 줄 = 지금 적재된 모델). status가 ready일 때만 api가 뜬다.
 CREATE TABLE IF NOT EXISTS index_meta (

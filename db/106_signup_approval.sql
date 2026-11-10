@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS signup_requests (
     reviewed_at timestamptz,
     reviewed_by uuid REFERENCES users(user_id)
 );
-CREATE INDEX IF NOT EXISTS signup_requests_status_requested_at ON signup_requests(status, requested_at);
+-- (status 로 거르는 질의가 코드에 없어(목록은 전체를 읽는다) status_requested_at 색인은 두지 않는다. db/109_realign.sql 이 옛 DB의 색인을 지운다)
 
 -- password_hash를 포함하므로 Supabase Data API의 public 접근을 막는다.
 ALTER TABLE signup_requests ENABLE ROW LEVEL SECURITY;

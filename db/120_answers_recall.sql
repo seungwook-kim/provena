@@ -11,9 +11,14 @@ CREATE TABLE IF NOT EXISTS answers (
     question    text NOT NULL,
     answer      text NOT NULL,
     as_of       text,
-    created_at  timestamptz NOT NULL DEFAULT now()
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    grounding   jsonb,                           -- 인용 검사 결과(밖으로 낼 수 있는 값만). MCP 도구 get_grounding 이 읽는다. NULL = 아직 기록하지 않음(옛 answer_grounding 표에 줄이 없던 것과 같다)
+    skills_used jsonb
 );
-CREATE INDEX IF NOT EXISTS answers_user_idx ON answers (user_id, created_at DESC);
+-- 먼저 만들어진 answers 표에도 칸을 더한다(옛 answer_grounding 표를 이 두 칸으로 합쳤다. 옮기기는 db/109_realign.sql)
+ALTER TABLE answers ADD COLUMN IF NOT EXISTS grounding   jsonb;
+ALTER TABLE answers ADD COLUMN IF NOT EXISTS skills_used jsonb;
+-- answers 를 user_id 로 찾는 질의는 코드에 없다(조회는 answer_id 기본키와 citations 조인). 그래서 user_id 색인을 두지 않는다.
 
 -- 인용. 답과 근거 판(커밋)을 묶어 둔다. 리콜은 (rule_seq, article)로 영향받는 답을 찾는다.
 CREATE TABLE IF NOT EXISTS citations (
@@ -27,13 +32,6 @@ CREATE TABLE IF NOT EXISTS citations (
     PRIMARY KEY (answer_id, chunk_id, version_id)
 );
 CREATE INDEX IF NOT EXISTS citations_article_idx ON citations (rule_seq, article);
-
--- 인용 검사 결과(밖으로 낼 수 있는 값만). MCP 도구 get_grounding 이 읽는다.
-CREATE TABLE IF NOT EXISTS answer_grounding (
-    answer_id   text PRIMARY KEY REFERENCES answers (answer_id) ON DELETE CASCADE,
-    grounding   jsonb NOT NULL DEFAULT '{}'::jsonb,
-    skills_used jsonb NOT NULL DEFAULT '[]'::jsonb
-);
 
 -- 리콜 처리 기록. 한 줄 = 바뀐 섹션 하나(event_key = changed_articles.event_id 와 같은 규칙). 같은 개정은 한 번만 판정한다(EC-06).
 CREATE TABLE IF NOT EXISTS recall_events (
@@ -76,10 +74,19 @@ CREATE TABLE IF NOT EXISTS recall_notices (
     old_text           text,
     new_text           text,
     created_at         timestamptz NOT NULL DEFAULT now(),
+    feedback_useful    boolean,                      -- 사용자 의견(도움 됨 true / 필요 없음 false). 아직 없으면 NULL. 알림당 한 줄(다시 보내면 덮어쓴다)
+    feedback_reason    text,
+    feedback_by        text,
+    feedback_at        timestamptz,
     UNIQUE (answer_id, event_key)
 );
+-- 먼저 만들어진 recall_notices 표에도 의견 칸을 더한다(옛 recall_feedback 표를 이 칸들로 합쳤다. 옮기기는 db/109_realign.sql)
+ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_useful boolean;
+ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_reason text;
+ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_by     text;
+ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_at     timestamptz;
 CREATE INDEX IF NOT EXISTS recall_notices_user_idx ON recall_notices (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS recall_notices_review_idx ON recall_notices (created_at DESC) WHERE review_status = 'pending';
+-- (검토함은 notices_all() 로 전부 읽어 앱에서 거르므로 review_status 부분 색인은 두지 않는다. db/109_realign.sql 이 옛 DB의 색인을 지운다)
 CREATE INDEX IF NOT EXISTS recall_notices_digest_idx ON recall_notices (created_at) WHERE digest_status = 'pending';
 
 -- 함께 볼 정책 후보(링크로 연결된 다른 정책). 관리자가 확인 필요(needed)·불필요(not_needed)를 판단한다.
@@ -124,22 +131,11 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
 );
 CREATE INDEX IF NOT EXISTS webhook_deliveries_notice_idx ON webhook_deliveries (notice_id);
 
--- 알림 한 건에 대한 사용자 의견(도움 됨/필요 없음). 알림당 한 줄(다시 보내면 덮어쓴다).
--- (user_id, rule_seq, article, pattern) 이 "같은 사용자·섹션·변경 유형" 집계 키다.
-CREATE TABLE IF NOT EXISTS recall_feedback (
-    notice_id  text PRIMARY KEY,
-    user_id    text NOT NULL,
-    answer_id  text NOT NULL,
-    rule_seq   bigint NOT NULL,
-    article    text NOT NULL,
-    pattern    text NOT NULL DEFAULT '',
-    severity   text,
-    useful     boolean NOT NULL,
-    reason     text NOT NULL DEFAULT '',
-    given_by   text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS recall_feedback_key_idx ON recall_feedback (user_id, rule_seq, article, pattern);
+-- 사용자 의견 집계 키 (user_id, 변경 유형, 섹션 article, 섹션 rule_seq) = "같은 사용자·섹션·변경 유형". 의견이 있는 알림만 색인한다.
+-- 질의: backend/graph/recall/store.py PgRecallStore.feedback_counts (식이 색인 식과 같아야 색인을 탄다).
+CREATE INDEX IF NOT EXISTS recall_notices_feedback_idx
+    ON recall_notices (user_id, change_pattern, (changed ->> 'article'), ((changed ->> 'rule_seq')::bigint))
+    WHERE feedback_useful IS NOT NULL;
 
 -- 하루 요약(RECALL_DIGEST=daily). payload 는 웹훅으로 보낸 요약 JSON(알림 목록 포함)이다.
 CREATE TABLE IF NOT EXISTS recall_digests (
@@ -165,12 +161,10 @@ CREATE TABLE IF NOT EXISTS change_monitoring (
 -- 앱은 DATABASE_URL 의 소유자 권한으로 읽고 쓰므로 RLS의 영향을 받지 않는다. 다시 실행해도 된다.
 ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE citations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE answer_grounding ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recall_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recall_notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_candidates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE recall_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recall_digests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE change_monitoring ENABLE ROW LEVEL SECURITY;
