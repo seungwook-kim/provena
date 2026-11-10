@@ -669,7 +669,7 @@ def _vote_key(task: str, obj: dict) -> tuple:
 
 def votes_settled(task: str, objs: list[dict]) -> bool:
     """결론이 같은 표가 둘 이상이면 확정이다(나머지 호출을 기다리지 않는다).
-    판정(judge)의 부족 2표(충분도 일부도 아님)는 셋째 표를 기다린다. 표가 갈렸는지 알아야 바로 거절할지 정할 수 있다(`votes_unanimous`, 사전 등록 62.C)."""
+    판정(judge)의 부족 2표(충분도 일부도 아님)는 셋째 표를 기다린다. 표가 갈렸는지 알아야 바로 거절할지 정할 수 있다(`votes_unanimous`, 사전 등록 62.33)."""
     keys = [_vote_key(task, o) for o in objs if o]
     return any(keys.count(k) >= 2 and not (task == "judge" and k == (False, False)) for k in keys) or len(objs) >= VOTES
 

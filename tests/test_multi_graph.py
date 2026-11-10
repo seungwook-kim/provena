@@ -1258,7 +1258,7 @@ def test_llm_router_reply_outside_the_allowed_set_is_replaced_even_with_poisoned
 BUILDERS = [("single", build_graph), ("multi", build_multi_graph)]
 BUILDER_IDS = [b[0] for b in BUILDERS]
 PROMPT_SHA256 = {  # 품질 수정(PREREGISTER #28)을 넣은 프롬프트. 스위치가 꺼져 있을 때 프롬프트는 이 값에서 한 글자도 달라지지 않는다
-    "CLASSIFY_SYSTEM": "1d0c2d7167fd14a3ecf9953cb2208fffccf9026f82d99b4fe261f645fc77ec17",  # 11/10: 도메인 밖 기준을 주제가 아니라 조직이 정한 것을 묻는지로 바꾸고 org_specific 칸을 더했다(62.A)
+    "CLASSIFY_SYSTEM": "1d0c2d7167fd14a3ecf9953cb2208fffccf9026f82d99b4fe261f645fc77ec17",  # 11/10: 도메인 밖 기준을 주제가 아니라 조직이 정한 것을 묻는지로 바꾸고 org_specific 칸을 더했다(62.30)
     "REWRITE_SYSTEM": "9bfc455ab98362ab486bc7cfccead687f0ab7c43bf4d9a11e20c4c7ef63e61ca",
     "JUDGE_SYSTEM": "0091429f0067887fe8587b9d3c46c1c2059f0b0c5db613cc4c6be3264bafc157",  # 11/6 정리: 겹친 판정 문장 셋을 둘로 합쳤다(아래 로그 값도 같이)
     "ANSWER_SYSTEM": "5341d824c47d708f0b8b6e23eade62bfa0acffc03e77726fd7c682eebc7e1ee0",  # 11/10: 질문 대상이 표의 행에 해당하는지를 자기 단서로 덧붙이지 않는 규칙 한 줄을 더했다(아래 로그 값도 같이)

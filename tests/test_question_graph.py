@@ -441,7 +441,7 @@ def test_ambiguous_or_broken_classification_goes_to_policy_path():
 
 
 def test_out_of_domain_is_not_followed_when_the_model_says_the_question_is_about_the_organization():
-    """62.A: 모델이 조직이 정한 것을 묻는 질문이라고 적고도 도메인 밖으로 분류하면 정책 경로로 보낸다(두 번째 확인 호출 없이)."""
+    """62.30: 모델이 조직이 정한 것을 묻는 질문이라고 적고도 도메인 밖으로 분류하면 정책 경로로 보낸다(두 번째 확인 호출 없이)."""
     fn, calls = counting_search()
     llm = normal_llm(classify=j(org_specific=True, route="out_of_domain"))
     out = run(graph(fn, llm=llm))

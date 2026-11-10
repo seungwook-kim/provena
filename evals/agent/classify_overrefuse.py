@@ -1,4 +1,4 @@
-"""분류 단계만 불러 도메인 밖(`out_of_domain`) 분류를 확인한다(사전 등록 62.A). 검색, 판정, 답 작성은 부르지 않는다.
+"""분류 단계만 불러 도메인 밖(`out_of_domain`) 분류를 확인한다(사전 등록 62.30). 검색, 판정, 답 작성은 부르지 않는다.
 
 질문 그래프의 `classify` 노드를 서버와 같은 서비스 설정(`apply_service_profile`)과 같은 모델(`get_chat_model`)로 한 질문씩 돌린다.
 접수 동시 호출은 끈다(재작성과 분해가 같이 나가지 않게). 그래서 질문 하나에 분류 1회, 도메인 밖이 나오면 확인 호출 1회가 더 나간다.
@@ -118,7 +118,7 @@ def plan(items: list[dict], repeats: int) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="분류 단계만 불러 도메인 밖 분류를 확인한다(62.A)")
+    p = argparse.ArgumentParser(description="분류 단계만 불러 도메인 밖 분류를 확인한다(62.30)")
     p.add_argument("--repeats", type=int, default=3)
     p.add_argument("--out", type=Path, default=None, help="rows.jsonl과 summary.json을 쓸 폴더")
     p.add_argument("--plan", action="store_true", help="호출하지 않고 문항 수와 예상 호출 수·비용만 낸다")

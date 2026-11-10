@@ -1,4 +1,4 @@
-"""분류 단계만 부르는 확인(evals/agent/classify_overrefuse.py, 사전 등록 62.A). 가짜 모델로 0원."""
+"""분류 단계만 부르는 확인(evals/agent/classify_overrefuse.py, 사전 등록 62.30). 가짜 모델로 0원."""
 from __future__ import annotations
 
 from evals.agent import classify_overrefuse as C

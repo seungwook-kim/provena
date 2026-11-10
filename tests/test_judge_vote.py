@@ -42,7 +42,7 @@ def test_votes_settle_on_two_same_conclusions():
     assert not F.votes_settled("judge", [s])
     assert not F.votes_settled("judge", [s, n])
     assert F.votes_settled("judge", [s, n, n]) and F.votes_settled("judge", [s, s])
-    assert not F.votes_settled("judge", [n, n])  # 부족 2표는 셋째 표를 기다린다(62.C)
+    assert not F.votes_settled("judge", [n, n])  # 부족 2표는 셋째 표를 기다린다(62.33)
     assert F.votes_settled("judge", [n, n, n]) and F.votes_settled("judge", [{"sufficient": False, "partial": True}] * 2)
     assert F.votes_settled("grounding", [{"grounded": True}, {"grounded": True}])
     assert not F.votes_settled("grounding", [{"grounded": True}, {"grounded": False}])
@@ -100,7 +100,7 @@ def test_vote_majority_of_ungrounded_rewrites(monkeypatch):
     assert out["grounding"].get("redrafted") or out["kind"] != "answer"  # 받쳐지지 않는다는 2표가 이긴다
 
 
-# ---------- 62.C: 첫 판정이 전무여도 표가 갈렸으면 바로 거절하지 않는다 ----------
+# ---------- 62.33: 첫 판정이 전무여도 표가 갈렸으면 바로 거절하지 않는다 ----------
 def test_votes_unanimous_reads_the_merged_vote():
     assert F.votes_unanimous({"sufficient": False})  # 다수결을 쓰지 않은 표
     assert F.votes_unanimous(F.merge_votes("judge", [{"sufficient": False}] * 3))
