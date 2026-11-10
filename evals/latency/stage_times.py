@@ -10,7 +10,7 @@
 
 계산(세션마다)
 - 검색: 이름이 `search`인 노드(GENERATION이 아닌 것)의 시간 합.
-- 생성: 한 세션의 모든 LLM 호출(위 이름의 GENERATION)의 시작~끝 구간을 합집합으로 합친 시간. 겹치는 구간은 한 번만 센다.
+- 생성: 한 세션의 모든 LLM 호출(위 이름의 GENERATION)의 시작~끝 구간을 합집합으로 합친 시간. 겹치는 구간은 한 번만 센다. 그래프 전체 구간 밖은 잘라 내고, 그래프가 끝난 뒤 시작한 호출은 세지 않는다.
 - 그래프 전체: 부모가 없는 관측(질문 그래프 전체)의 시작~끝. 하나로 정해지지 않으면 세션의 가장 이른 시작부터 가장 늦은 끝까지.
 - LLM 호출 밖: 그래프 전체 - 생성(검색 노드 시간이 여기에 들어 있다).
 
@@ -101,6 +101,8 @@ def main() -> int:
             b = max(ts(x["endTime"] or x["startTime"]) for x in xs)
         searches = [x["latency"] for x in xs if x["name"] == "search" and x["type"] != "GENERATION"]
         gens = [(max(ts(x["startTime"]), a), min(ts(x["endTime"]), b)) for x in xs if x["type"] == "GENERATION" and x["name"] == gname and x["endTime"]]
+        # 그래프가 끝난 뒤 시작한 호출(응답 뒤 끝나는 판정 후보 등)은 잘라 낸 구간이 시작 > 끝이 되어 합을 음수로 만든다 → 그래프 구간 안에 남는 것만 센다.
+        gens = [(s, e) for s, e in gens if e > s]
         gen = union(gens)
         out.append({
             "provider": tag, "revision": rev, "run": run, "question_id": qid,
