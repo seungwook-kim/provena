@@ -47,6 +47,9 @@ CREATE INDEX issue_tables_user_idx ON issue_tables (user_id, approved_at DESC);
 CREATE TABLE issue_table_rejections (approval_id text PRIMARY KEY, thread_id text NOT NULL, user_id text NOT NULL,
     reason text NOT NULL DEFAULT '', decided_by text, decided_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX admin_role_log_at ON admin_role_log (at);
+CREATE INDEX recall_notices_review_idx ON recall_notices (created_at DESC) WHERE review_status = 'pending';
+CREATE INDEX token_revocations_expires_at ON token_revocations (expires_at);
+CREATE INDEX signup_requests_status_requested_at ON signup_requests (status, requested_at);
 """
 
 
@@ -86,7 +89,7 @@ def _old_db(url: str):
 
     c = psycopg.connect(url, autocommit=True)
     c.execute("CREATE EXTENSION IF NOT EXISTS vector")
-    for f in ("101_auth_users.sql", "102_decision_approvals.sql", "105_admin_role_log.sql"):
+    for f in ("101_auth_users.sql", "102_decision_approvals.sql", "103_auth_token_revocations.sql", "105_admin_role_log.sql", "106_signup_approval.sql"):
         c.execute(_sql(f))
     c.execute(OLD_SHAPE)
     # 승인함: 쟁점표 반려 3건(둘은 사유 칸이 비어 있고 하나는 이미 사유가 있다), 그 밖의 줄 하나
@@ -112,7 +115,9 @@ def _old_db(url: str):
 def test_109_moves_data_renames_old_tables_and_is_repeatable(db):
     c = _old_db(db)
     before = _tables(c)
-    assert set(MERGED_AWAY) <= before and {"answers_user_idx", "issue_tables_thread_idx", "issue_tables_user_idx", "admin_role_log_at"} <= _indexes(c)
+    unused = {"answers_user_idx", "issue_tables_thread_idx", "issue_tables_user_idx", "admin_role_log_at", "recall_notices_review_idx",
+              "token_revocations_expires_at", "signup_requests_status_requested_at"}
+    assert set(MERGED_AWAY) <= before and unused <= _indexes(c)
 
     sql = _sql("109_realign.sql")
     c.execute(sql)
@@ -134,7 +139,7 @@ def test_109_moves_data_renames_old_tables_and_is_repeatable(db):
     assert appr["ap-r3"][0] == "승인함 사유" and appr["ap-ok"] == ("", None)
     # 색인
     idx = _indexes(c)
-    assert not {"answers_user_idx", "issue_tables_thread_idx", "issue_tables_user_idx", "admin_role_log_at"} & idx
+    assert not unused & idx
     assert {"issue_tables_thread_user_idx", "recall_notices_feedback_idx"} <= idx
     # 의견 집계가 부분 색인 식으로 같은 값을 준다
     n = c.execute("SELECT count(*) FROM recall_notices WHERE user_id = 'u1' AND change_pattern = 'amount' AND (changed ->> 'article') = 'Art' "
@@ -198,5 +203,6 @@ def test_fresh_database_gets_the_merged_structure_and_109_is_a_noop(db):
         assert {"grounding", "skills_used"} <= cols
         cols = {r[0] for r in c.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'recall_notices'")}
         assert {"feedback_useful", "feedback_reason", "feedback_by", "feedback_at"} <= cols
-        assert {"recall_notices_feedback_idx", "issue_tables_thread_user_idx"} <= _indexes(c)
-        assert not {"answers_user_idx", "admin_role_log_at", "issue_tables_user_idx", "issue_tables_thread_idx"} & _indexes(c)
+        assert {"recall_notices_feedback_idx", "issue_tables_thread_user_idx", "chunks_link_targets_gin"} <= _indexes(c)
+        assert not {"answers_user_idx", "admin_role_log_at", "issue_tables_user_idx", "issue_tables_thread_idx", "recall_notices_review_idx",
+                    "token_revocations_expires_at", "signup_requests_status_requested_at"} & _indexes(c)

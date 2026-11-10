@@ -86,7 +86,7 @@ ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_reason text;
 ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_by     text;
 ALTER TABLE recall_notices ADD COLUMN IF NOT EXISTS feedback_at     timestamptz;
 CREATE INDEX IF NOT EXISTS recall_notices_user_idx ON recall_notices (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS recall_notices_review_idx ON recall_notices (created_at DESC) WHERE review_status = 'pending';
+-- (검토함은 notices_all() 로 전부 읽어 앱에서 거르므로 review_status 부분 색인은 두지 않는다. db/109_realign.sql 이 옛 DB의 색인을 지운다)
 CREATE INDEX IF NOT EXISTS recall_notices_digest_idx ON recall_notices (created_at) WHERE digest_status = 'pending';
 
 -- 함께 볼 정책 후보(링크로 연결된 다른 정책). 관리자가 확인 필요(needed)·불필요(not_needed)를 판단한다.

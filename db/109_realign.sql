@@ -6,7 +6,8 @@
 --   1. answer_grounding  -> answers.grounding, answers.skills_used          (1:1 표 합침. /chat 한 번에 INSERT 한 문장이 준다)
 --   2. recall_feedback   -> recall_notices.feedback_useful/_reason/_by/_at  (알림당 1줄 표 합침. 집계 색인은 부분 색인 하나)
 --   3. issue_table_rejections -> approvals (comment, decided_by, decided_at)  (approvals 가 반려 사유·결정자·시각을 이미 갖는다)
---   4. 쓰이지 않은 색인 지움: answers_user_idx, issue_tables_thread_idx, issue_tables_user_idx(세 열 색인 하나로 대체), admin_role_log_at
+--   4. 쓰이지 않은 색인 7개 지움: answers_user_idx, issue_tables_thread_idx, issue_tables_user_idx(세 열 색인 하나로 대체), admin_role_log_at,
+--      token_revocations_expires_at, signup_requests_status_requested_at, recall_notices_review_idx. 색인 하나 추가: chunks_link_targets_gin(함께 볼 정책 찾기)
 --   5. public 표·시퀀스에서 anon, authenticated 권한 회수(역할이 있을 때만). 앱은 소유자 역할로 접속하므로 영향이 없다.
 --
 -- 되돌리기: 옛 표는 지우지 않고 이름만 바꿔 둔다(<이름>_old_20261110, 데이터 그대로). 되돌릴 때는 새 코드를 내리고
@@ -94,6 +95,20 @@ DROP INDEX IF EXISTS answers_user_idx;
 DROP INDEX IF EXISTS issue_tables_thread_idx;
 DROP INDEX IF EXISTS issue_tables_user_idx;
 DROP INDEX IF EXISTS admin_role_log_at;
+--   token_revocations_expires_at  ON token_revocations (expires_at)             (만료 행을 지우는 코드가 없다)
+--   signup_requests_status_requested_at ON signup_requests (status, requested_at) (status 로 거르는 질의가 없다)
+--   recall_notices_review_idx     ON recall_notices (created_at DESC) WHERE review_status = 'pending' (검토함은 전체를 읽어 앱에서 거른다)
+DROP INDEX IF EXISTS token_revocations_expires_at;
+DROP INDEX IF EXISTS signup_requests_status_requested_at;
+DROP INDEX IF EXISTS recall_notices_review_idx;
+-- 추가: chunks.link_targets GIN (maintenance.py linked_from 의 `link_targets @> ARRAY[대상]`. 합성 데이터에서 chunks 전체 훑기 8.969 ms 를 대체)
+DO $$
+BEGIN
+    IF to_regclass('public.chunks') IS NOT NULL THEN
+        CREATE INDEX IF NOT EXISTS chunks_link_targets_gin ON chunks USING gin (link_targets);
+    END IF;
+END
+$$;
 DO $$
 BEGIN
     IF to_regclass('public.issue_tables') IS NOT NULL THEN
