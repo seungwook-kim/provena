@@ -54,6 +54,9 @@ beforeEach(() => {
       server.user = null
       return new Response(null, { status: 204 })
     }
+    // 운영 현황(/admin)이 부르는 실제 API. 응답 모양은 백엔드와 같다(목록, 목록, {items}). 없으면 아래 401로 떨어져 세션 만료로 처리된다.
+    if (path === '/decision-tables' || path === '/approvals') return json([])
+    if (path === '/maintenance-candidates') return json({ items: [] })
     if (path === '/me/profile?view=edit') return server.profile ? json(server.profile) : json({ detail: '내 정보가 아직 없습니다.' }, 404)
     if (path === '/me/profile' && options?.method === 'PUT') {
       server.savedProfile = JSON.parse(options.body)
