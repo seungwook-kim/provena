@@ -23,6 +23,10 @@ class RecordingEmailSender:
 
     def send_verification_email(self, *, email: str, code: str, expires_minutes: int) -> None:
         self.deliveries.append({"email": email, "code": code, "expires_minutes": str(expires_minutes)})
+        # 로컬(PROVENA_ENV=local)에서만 서버 로그에 인증번호를 남긴다. 실제 메일이 가지 않으니 이 줄이 유일한 확인 수단이다(K-21).
+        # 기록용 발송기는 로컬에서만 만들어지지만(configured_email_sender), 배포 설정으로 잘못 쓰여도 인증번호가 로그에 나가지 않게 여기서도 막는다.
+        if os.getenv("PROVENA_ENV", "").strip().lower() == "local":
+            log.warning("[로컬 전용] 가입 인증번호 %s (받는 주소 %s, %d분 유효). 실제 메일은 보내지 않았다", code, email, expires_minutes)
 
 
 class EmailDeliveryUnavailable(RuntimeError):

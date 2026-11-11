@@ -171,6 +171,52 @@ def test_memory_profile_used_for_org():
     assert "TEST-finance" in rewrite_user
 
 
+def test_replay_demo_ignores_saved_profile(tmp_path):
+    """K-18: 키 없는 데모(재생 모델)는 저장한 기억을 입력에 넣지 않는다. 녹화는 기억 없는 요청이라 기억이 들어가면 녹화 키가 어긋난다."""
+    from backend.services.demo_replay import ReplayChatModel, ReplayStore
+
+    store = InMemoryStore()
+    put_profile(store, "u1", affiliation="TEST-finance", rank="매니저")
+    fn, calls = counting_search()
+    out = run(graph(fn, llm=ReplayChatModel(store=ReplayStore(tmp_path)), store=store))
+    assert out["profile"] == {}
+    assert calls and all(c.org is None for c in calls)
+    assert get_profile(store, "u1") == {"affiliation": "TEST-finance", "rank": "매니저"}  # 저장된 기억은 그대로
+
+
+def test_replay_demo_ignores_saved_profile_when_wrapped_like_server(tmp_path, monkeypatch):
+    """K-18: 서버(`backend/main.py`의 `build_question_graph`)는 모델을 `SharedChatModel`로 감싸 넘긴다. 감싼 재생 모델에서도 기억을 넣지 않는다."""
+    from backend.graph.service_profile import SharedChatModel
+    from backend.services.demo_replay import ReplayChatModel, ReplayStore
+
+    monkeypatch.setattr("backend.services.llm.get_chat_model", lambda: ReplayChatModel(store=ReplayStore(tmp_path)))
+    store = InMemoryStore()
+    put_profile(store, "u1", affiliation="TEST-finance", rank="매니저")
+    fn, calls = counting_search()
+    shared = SharedChatModel()
+    g = graph(fn, llm=shared, store=store)
+    assert shared._model is None  # 그래프를 만들 때는 모델을 만들지 않는다(키 없이도 서버가 뜬다)
+    out = run(g)
+    assert isinstance(shared._model, ReplayChatModel)
+    assert out["profile"] == {}
+    assert calls and all(c.org is None for c in calls)
+    assert get_profile(store, "u1") == {"affiliation": "TEST-finance", "rank": "매니저"}
+
+
+def test_wrapped_real_model_still_uses_saved_profile(monkeypatch):
+    """K-18: 감싼 모델이 재생 모델이 아니면(키 있는 서버) 기억을 그대로 쓴다."""
+    from backend.graph.service_profile import SharedChatModel
+
+    llm = normal_llm(rewrite=j(query="승인자 도입 승인", org=None, as_of=None))
+    monkeypatch.setattr("backend.services.llm.get_chat_model", lambda: llm)
+    store = InMemoryStore()
+    put_profile(store, "u1", affiliation="TEST-finance", rank="매니저")
+    fn, calls = counting_search()
+    out = run(graph(fn, llm=SharedChatModel(), store=store))
+    assert out["profile"] == {"affiliation": "TEST-finance", "rank": "매니저"}
+    assert calls[0].org == "TEST-finance"
+
+
 def test_store_namespace_is_per_user():
     store = InMemoryStore()
     put_profile(store, "alice", affiliation="TEST-security", rank="디렉터")

@@ -150,3 +150,22 @@ def test_unsupported_email_provider_fails_closed_outside_local(monkeypatch):
     monkeypatch.setenv("PROVENA_ENV", "production")
     with pytest.raises(RuntimeError, match="Unsupported EMAIL_PROVIDER configuration"):
         configured_email_sender()
+
+
+def test_recording_sender_logs_code_only_in_local_env(monkeypatch, caplog):
+    """K-21: 로컬 데모에서 인증번호를 서버 로그로 볼 수 있다. 로컬이 아니면 로그에 인증번호를 남기지 않는다."""
+    sender = RecordingEmailSender()
+    monkeypatch.setenv("PROVENA_ENV", "local")
+    with caplog.at_level(logging.WARNING, logger="backend.services.email_sender"):
+        sender.send_verification_email(email="a@example.com", code="123456", expires_minutes=10)
+    assert "123456" in caplog.text and "a@example.com" in caplog.text
+    caplog.clear()
+    monkeypatch.setenv("PROVENA_ENV", "production")
+    with caplog.at_level(logging.WARNING, logger="backend.services.email_sender"):
+        sender.send_verification_email(email="b@example.com", code="654321", expires_minutes=10)
+    assert "654321" not in caplog.text
+    monkeypatch.delenv("PROVENA_ENV")
+    with caplog.at_level(logging.WARNING, logger="backend.services.email_sender"):
+        sender.send_verification_email(email="c@example.com", code="777777", expires_minutes=10)
+    assert "777777" not in caplog.text
+    assert [d["code"] for d in sender.deliveries] == ["123456", "654321", "777777"]

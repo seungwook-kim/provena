@@ -6,8 +6,8 @@ import { createApiChatAdapter, createChatService, citationHref } from '../lib/ch
 import { DEMO_SUGGESTIONS } from '../lib/demo-suggestions'
 import { useSession } from '../lib/session'
 
-function CitationButtons({ citations, selectedCitation, onSelect }) {
-  return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => onSelect(citation)}>[{index + 1}] {citation.title}</button>)}</div>
+function CitationButtons({ citations, selectedCitation, messageIndex, onSelect }) {
+  return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id && selectedCitation?.messageIndex === messageIndex ? 'selected' : ''}`} onClick={() => onSelect({ ...citation, messageIndex })}>[{index + 1}] {citation.title}</button>)}</div>
 }
 
 function AttributionNotice({ attribution }) {
@@ -32,6 +32,9 @@ function threadTimestamp(thread) {
   if (directDate) return directDate
   return (thread?.messages ?? []).map(messageTimestamp).filter(Boolean).sort((left, right) => right - left)[0] ?? null
 }
+
+// backend ChatRequest.message 상한(422 방지, H-08)
+const MAX_MESSAGE_LENGTH = 4000
 
 export function isApprovalPending(thread) {
   return Boolean(thread?.messages?.some(message => message.role === 'assistant' && message.state === 'approval'))
@@ -73,7 +76,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
         {message.state === 'generating' && <p className="demo-answer-progress">답변을 생성하고 있습니다.</p>}
         {message.text && <p>{message.text}</p>}
-        {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} onSelect={onSelectCitation} />}
+        {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} messageIndex={index} onSelect={onSelectCitation} />}
         <AttributionNotice attribution={message.attribution} />
         {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}
       </article>}
@@ -92,6 +95,7 @@ export default function DemoChatPage({ api = false }) {
   const [selectedCitation, setSelectedCitation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)
+  const [sendError, setSendError] = useState('')
   const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
   const threadRequestRef = useRef(null)
 
@@ -105,14 +109,20 @@ export default function DemoChatPage({ api = false }) {
       .sort((left, right) => canSortByActivity ? right.activity - left.activity : 0)
       .map(item => item.thread)
   }, [canSortByActivity, filter, threadRecords])
+  // 근거 패널 번호는 대화 전체가 아니라 선택한 답 기준이다(H-32). 고른 인용이 없으면 마지막으로 근거가 있는 답.
+  const panelMessageIndex = useMemo(() => {
+    const messages = current?.messages ?? []
+    if (Number.isInteger(selectedCitation?.messageIndex) && messages[selectedCitation.messageIndex]?.citations?.length) return selectedCitation.messageIndex
+    return messages.findLastIndex(message => message.role === 'assistant' && message.citations?.length)
+  }, [current, selectedCitation])
   const citationOptions = useMemo(() => {
     const seen = new Set()
-    return (current?.messages ?? []).flatMap(message => message.citations ?? []).filter(citation => {
+    return (current?.messages?.[panelMessageIndex]?.citations ?? []).filter(citation => {
       if (seen.has(citation.id)) return false
       seen.add(citation.id)
       return true
     })
-  }, [current])
+  }, [current, panelMessageIndex])
   const activeCitation = citationOptions.find(citation => citation.id === selectedCitation?.id) ?? null
   const activeCitationId = activeCitation?.id ?? null
   const processing = processingId !== null
@@ -143,13 +153,26 @@ export default function DemoChatPage({ api = false }) {
     return () => service.dispose()
   }, [])
 
+  // 승인함에서 승인이 끝나고 돌아오면 입력창이 잠긴 채라, 화면으로 돌아올 때 서버 상태를 다시 받는다(H-15)
+  useEffect(() => {
+    if (!approvalPending || !selectedId) return undefined
+    const refresh = () => { serviceRef.current?.getThread(selectedId).catch(() => {}) }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [approvalPending, selectedId])
+
   useEffect(() => {
     if (typeof location.state?.question === 'string') setInput(location.state.question)
   }, [location.state])
 
-  const firstCitation = thread => thread?.messages?.findLast(message => message.role === 'assistant')?.citations?.[0] ?? null
+  const firstCitation = thread => {
+    const index = thread?.messages?.findLastIndex(message => message.role === 'assistant') ?? -1
+    const citation = index < 0 ? null : thread.messages[index].citations?.[0]
+    return citation ? { ...citation, messageIndex: index } : null
+  }
 
   async function selectThread(thread) {
+    setSendError('')
     setSelectedId(thread.id)
     setSelectedCitation(firstCitation(thread))
     if (!serviceRef.current) return
@@ -174,9 +197,17 @@ export default function DemoChatPage({ api = false }) {
   }
 
   async function ask(value) {
-    const message = value.trim()
-    if (!message || processing || approvalPending || !serviceRef.current) return
-    const result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
+    // 오류 말풍선의 '다시 시도'에 question이 없던 옛 말풍선이 와도 TypeError가 나지 않게 한다(H-08)
+    const message = typeof value === 'string' ? value.trim() : ''
+    if (!message || message.length > MAX_MESSAGE_LENGTH || processing || approvalPending || !serviceRef.current) return
+    setSendError('')
+    let result
+    try {
+      result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
+    } catch (error) {
+      setSendError(error?.message || '질문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      return
+    }
     if (!result) return
     setSelectedId(result.threadId)
     setSelectedCitation(null)
@@ -207,9 +238,10 @@ export default function DemoChatPage({ api = false }) {
       <div className="demo-messages">
         {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
-      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
+      {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
+      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
     </main>
-    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation(citation)}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd><dt>최종 수정일</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
+    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation({ ...citation, messageIndex: panelMessageIndex })}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd><dt>최종 수정일</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
   </div></div></DemoLayout>
 }
 
