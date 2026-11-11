@@ -49,6 +49,21 @@ def test_questions_file_contains_every_readme_demo_question_as_written():
         assert q in got, f"질문 파일에 README의 이 질문이 글자 그대로 없다: {q}"
 
 
+def test_first_screen_suggestions_are_readme_keyless_answer_questions():
+    """첫 화면 추천 질문(web/react-app/src/lib/demo-suggestions.js)은 README가 키 없이 인용 답이 나온다고 적은 질문이어야 하고 질문 파일(녹화 대상)에도 있어야 한다."""
+    import re
+
+    src = (ROOT / "web" / "react-app" / "src" / "lib" / "demo-suggestions.js").read_text(encoding="utf-8")
+    block = src.split("DEMO_SUGGESTIONS = [", 1)[1].split("]", 1)[0]
+    suggestions = re.findall(r"'([^']+)'", block)
+    assert len(suggestions) == 3
+    answers, _ = _readme_demo_questions()
+    got = _file_questions()
+    for s in suggestions:
+        assert s in answers, f"추천 질문이 README의 키 없이 인용 답이 나오는 질문에 없다: {s}"
+        assert s in got, f"추천 질문이 질문 파일(녹화)에 없다: {s}"
+
+
 # ---------------------------------------------------------------- 녹화 키 대조 (0원, 느림)
 _ENV_CLEAR = (
     "LLM_API_KEY", "VOYAGE_API_KEY", "DEMO_MODE", "LLM_RECORD", "LLM_PROVIDER", "LLM_MODEL", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY",
@@ -89,9 +104,27 @@ def keyless_db(pg_admin_url, tmp_path_factory):  # noqa: F811
             c.execute(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)")
 
 
+FAKE_ANSWER_MARK = "실제 LLM이 쓴 답이 아닙니다"   # backend/services/demo_replay.py demo_fallback의 발췌형 대체 답 머리 문장
+
+
+def _recorded_answer_text() -> str:
+    """녹화한 답 응답(역할 answer, answer_fast)의 글 전체. 재생한 답이 인용한 청크가 녹화 답에서 온 것인지 대조하는 데 쓴다."""
+    out = []
+    for line in (REPLAY_DIR / "recorded.jsonl").read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            if row["role"] in ("answer", "answer_fast"):
+                out.append(str(row["response"]))
+    return "\n".join(out)
+
+
+# 질문을 받은 뒤 추론 답을 기다릴 수 있는 시간(GRAPH_ANSWER_BUDGET_S). 서버에서는 검색이 따뜻하면 예산 안이고(추론 답도 보냄), 차가운 첫 질문은 예산을 넘겨 빠른 답만 보낸다.
+# 이 시험은 검색 속도에 기대지 않고 두 경우를 모두 고정해서 돌린다(예전에는 시험의 첫 질문이 늘 차가워 빠른 답 경로만 탔고, 서버의 첫 질문이 가짜 답으로 나오는 것을 놓쳤다).
 @pytest.mark.demo_replay
-def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db, monkeypatch):
-    """질문마다 서버와 같은 그래프를 키 없이 돌려, 재생 저장소에서 찾지 못한 요청 키(역할)를 모은다. 하나라도 있으면 녹화가 오래된 것이다."""
+@pytest.mark.parametrize("budget,slow_answers_sent", [("1000", True), ("0.001", False)], ids=["reasoning_answer_in_time", "reasoning_answer_skipped"])
+def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db, monkeypatch, budget, slow_answers_sent):
+    """질문마다 서버와 같은 그래프를 키 없이 돌려, 재생 저장소에서 찾지 못한 요청 키(역할)를 모은다. 하나라도 있으면 녹화가 오래된 것이다.
+    추론 답이 녹화에 없는 것(차가운 첫 질문으로 녹화된 질문)은 빠른 답으로 넘어가므로 허용하되, 답 글은 가짜 대체 답이 아니어야 하고 인용은 녹화 답에서 와야 한다."""
     from types import SimpleNamespace
 
     from langgraph.checkpoint.memory import InMemorySaver
@@ -135,6 +168,21 @@ def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db,
 
     monkeypatch.setattr(dr, "demo_fallback", spy_fallback)
     monkeypatch.setattr(search, "_searcher", None)     # 이 DB로 새로 연다. 끝나면 monkeypatch가 되돌린다
+    monkeypatch.setenv("GRAPH_ANSWER_BUDGET_S", budget)  # service_profile()은 비어 있는 값만 채운다
+
+    slow = {"sent": 0, "missed": 0}
+    real_generate = dr.ReplayChatModel._generate
+
+    def counting_generate(self, messages, *a, **kw):
+        sent = real_role(messages) == dr.SLOW_ANSWER_ROLE
+        slow["sent"] += sent
+        try:
+            return real_generate(self, messages, *a, **kw)
+        except dr.ReplayMiss:
+            slow["missed"] += 1
+            raise
+
+    monkeypatch.setattr(dr.ReplayChatModel, "_generate", counting_generate)
 
     results: list[dict] = []
     answers, _ = _readme_demo_questions()
@@ -152,7 +200,7 @@ def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db,
                 finally:
                     finish_run(cfg)
                 results.append({"question": q, "kind": out.get("kind"), "citations": len(out.get("citations") or []), "missed_roles": sorted(set(state["roles"])),
-                                "missed_calls": len(state["roles"])})
+                                "missed_calls": len(state["roles"]), "answer": out.get("answer") or "", "cited": [c.get("chunk_id") for c in out.get("citations") or []]})
     finally:
         s = search._searcher
         if s is not None and hasattr(s.store, "close"):
@@ -164,8 +212,14 @@ def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db,
         f"{RERECORD_HINT}\n녹화에 없는 요청이 있는 질문 {len(stale)}/{len(results)}개 (역할: {sorted({x for r in stale for x in r['missed_roles']})}).\n{report}"
     )
     # 요청 키가 다 맞으면 README가 적은 결과(인용 답 / 거절)도 나와야 한다: 키가 맞아도 녹화한 응답 자체가 README와 다르면 README를 고치거나 다시 녹화한다
+    assert bool(slow["sent"]) is slow_answers_sent, f"이 시험이 노린 경로(추론 답을 보냄={slow_answers_sent})를 타지 않았다: 추론 답 요청 {slow['sent']}건"
+    recorded_answers = _recorded_answer_text()
     for r in results:
         if r["question"] in answers:
             assert r["kind"] == "answer" and r["citations"] > 0, f"README는 인용 답이라고 적었는데 {r['kind']}(인용 {r['citations']}): {r['question']}"
+            # 발췌형 대체 답(녹화에 없을 때의 가짜 답)이 아니라 녹화한 LLM 답이어야 하고, 인용은 그 녹화 답이 가리킨 청크여야 한다
+            assert FAKE_ANSWER_MARK not in r["answer"], f"녹화 답이 아니라 발췌형 대체 답이 나왔다: {r['question']}\n{r['answer'][:300]}"
+            # (그래프가 인용 확장으로 같은 문서의 청크를 더 붙일 수 있으므로 전부가 아니라 하나 이상)
+            assert any(cid and cid in recorded_answers for cid in r["cited"]), f"녹화한 답이 인용한 청크가 하나도 없다: {r['question']} {r['cited']}"
         else:
             assert r["kind"] == "refuse", f"README는 거절이라고 적었는데 {r['kind']}: {r['question']}"
