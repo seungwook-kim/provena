@@ -258,6 +258,8 @@ def build_review_graph(
             raw = interrupt(payload)
             d = raw if isinstance(raw, dict) else {}
             action, by = d.get("action"), d.get("decided_by")
+            if d.get("approval_id") not in (None, state["approval_id"]):   # 앞 승인 건의 재개 값이 남아 들어온 것(아래 `approval` 참고): 받지 않고 같은 요청을 다시 올린다
+                continue
             if not isinstance(action, str) or action not in TEAM_ACTIONS:
                 payload = {**payload, "rejected_resume": "bad_action"}
             elif not isinstance(by, str) or not by.strip():
@@ -301,6 +303,10 @@ def build_review_graph(
         while True:
             raw = interrupt(payload)
             d = raw if isinstance(raw, dict) else {}
+            if d.get("approval_id") not in (None, state["approval_id"]):
+                # 팀 실패 알림 결정을 적은 뒤 다음 단계에서 오류가 나 같은 결정으로 이어 돌릴 때, 질문 그래프 아래 하위 그래프에서는 앞 승인 건의 재개 값이
+                # 이 멈춤의 재개 값으로 다시 들어온다. 그대로 두면 사람이 보지 않은 쟁점표가 반려로 끝난다. 다른 승인 건 번호의 값은 받지 않고 같은 요청을 다시 올린다.
+                continue
             decision = {
                 "approve": d.get("approve") is True,  # 불리언 True만 승인이다. "true", 1, 빈 값은 승인이 아니다
                 "comment": IT._clean(d.get("comment")),
