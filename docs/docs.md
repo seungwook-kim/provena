@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 O-06, O-07, O-15, O-19, O-21, O-27, O-35 확인. O-06·O-19·O-21·O-27은 해소(근거 파일:줄 확인), O-07(`SDD.md` 51행의 LangChain 임베딩·저장소·리트리버 표기를 실제 Voyage API 직접 호출·psycopg 직접 조회로), O-15(`ApprovalItem.kind`에 `team_review_failed`), O-35(`Chunk.kind` 주석에 실제 값 article·row와 나머지 값 보존 이유)를 `SDD.md`에서 고침. `backend/schemas/`는 건드리지 않음. `SDD.md` 5-0의 `db/` 줄을 실제 SQL 번호(01, 101~114, 120, 201~202)로 고치고 번호대 주인 배정은 팀장 확정 대기(B-16)로 적음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | SDD·Spec 값 반영(놓친 것 O-24, P-01, P-02, P-03, P-11, B-04): `SDD.md` 웹훅 두 경로의 방향 구분, 11-0에 LLM 제공자 기본값·판정 규칙 결과 추가, 11-1 결정표 실행 API 값 채움 / `specs/decision-approval.md` 실행 API 필드·응답 코드를 코드대로 / `specs/recall.md` 웹훅 제한 시간 env와 기본값 / `specs/team-review.md` 쟁점표 행 칸과 `issue_tables` 저장 모양. `rule_links`(B-04)는 이미 `chunks.link_targets`로 정리되어 있어 확인만 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 통합 PR 작업 내역 `docs/pr-notes/PR-131.md` 추가, `deliverables/ai_tools_log.md`에 통합 PR 한 줄 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 로컬 시험·측정 값에 로컬·배포 미확인 표기(`SDD.md` Google 로그인 설명, `specs/106`·`incremental.md`, `pr-notes/PR-127·130`, 포트폴리오 인용 정확도 행). 문구만, 숫자 재측정 없음 | #131 |

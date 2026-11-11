@@ -48,7 +48,7 @@ flowchart LR
 | `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜·웹훅·변경 감시 라우트는 `api/recalls.py`, `api/changes.py`) | FastAPI, OpenAPI 자동 문서 |
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
-| `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |
+| `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | 임베딩은 Voyage API(`voyage-4`)를 직접 호출하고, pgvector는 psycopg SQL로 직접 조회한다(LangChain 임베딩·저장소·리트리버는 쓰지 않는다). 리랭커는 로컬 모델(11-0, 현재 미사용). 인용 검사는 직접 구현 |
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
@@ -450,7 +450,7 @@ class Chunk(BaseModel):
     version_id: str        # 커밋 기반 판 id (5장 versions, citations와 같은 값)
     version_date: str      # 이 판(커밋)의 날짜 YYYY-MM-DD
     fetched_at: str        # 수집일 YYYY-MM-DD
-    kind: Literal["article", "annex", "row", "buchik", "pre"]  # article(섹션), row(권한표 행) 위주로 쓴다. 나머지 값은 남겨 둔다
+    kind: Literal["article", "annex", "row", "buchik", "pre"]  # 실제로 만드는 값은 article(섹션), row(권한표 행)뿐이다(backend/rag/ingest/chunk.py). annex, buchik, pre는 만드는 코드가 없고, 값 삭제는 3명 승인이라 남겨 둔다
     text: str
     source_url: str        # 핸드북 페이지 URL
     text_sha256: str | None = None   # 본문 sha256 (11-1 3-6)
@@ -474,7 +474,7 @@ class AgentEvent(BaseModel):
 # backend/schemas/approval.py  (에이전트 ↔ 화면)
 class ApprovalItem(BaseModel):
     approval_id: str
-    kind: Literal["decision_table", "issue_table"]
+    kind: Literal["decision_table", "issue_table", "team_review_failed"]
     summary: str
     created_at: datetime   # JSON에는 ISO 8601 문자열
 
