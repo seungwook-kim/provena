@@ -107,7 +107,9 @@ async function saveMemorySettings(team = '보안') {
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   await userEvent.click(screen.getByRole('button', { name: '저장하고 채팅 시작' }))
-  await screen.findByRole('button', { name: '내 계정' })
+  // '내 계정'·'로그아웃'은 설정 화면에도 있어 도착 신호가 못 된다. 채팅 화면에만 있는 질문 칸을 기다린다
+  // (설정 화면이 내려가기 전에 잡은 옛 '로그아웃' 버튼은 눌러도 반응이 없다).
+  await screen.findByRole('textbox', { name: '질문' })
 }
 
 describe('React authentication and session isolation', () => {
@@ -522,6 +524,7 @@ describe('React authentication and session isolation', () => {
     await authenticated()
     await saveMemorySettings('보안')
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+    await waitFor(() => expect(calls.some(call => call.path === '/auth/logout')).toBe(true))
     await signIn('B')
     await screen.findByRole('navigation', { name: '관리자 메뉴' })
     await openMemorySettings()
