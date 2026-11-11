@@ -2,6 +2,8 @@
 
 요청 원문: "로그인 성공했을 때 처음 계정 만들면 다른 화면 아무것도 못하고 내 정보 기재하는 화면으로 바로 보이게 하기. 이름, 담당부서나 소속, 전화번호, 주소 — 암호화 aes256, 전화번호는 마스킹까지. 기존에 있는 화면 순서 정리해서 사용하기 / 내 정보 수정 가능하게, db 테이블도 수정, 관리자가 일반 직원들 개인정보는 못 보게"
 
+> 현재 상태(2026-11-11): 이 문서는 2026-11-05 시안·제안 기록이다. 아래 시안 파일(`src/pages/MyInfoPage.jsx`, `src/lib/profile-preview.js`, `src/myinfo.css` 등)은 저장소에 없다. 실제 구현은 `backend/profile_api.py`(`/me/profile`)와 `web/react-app/src/pages/ProfileRequiredPage.jsx`, `profile.css`이고 커밋 75907e7(`feat: integrate profile and admin workflows`)이 들여왔다. 파일 이름·줄 번호는 제안 당시 값이다.
+
 이 문서는 **시안(화면)** 과 **실제 적용 방법(제안)** 을 담는다. 팀 코드는 고치지 않았다. 근거는 `class-3-main`(main `e847c88`) 기준 `파일:줄`.
 
 ## 1. 시안

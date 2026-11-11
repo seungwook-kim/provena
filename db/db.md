@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번호대는 파트마다 100번대씩 나눈다.
+pgvector 확장 생성(`01_init.sql`)과 앱 표 25개 생성(2026-11-10 `docs/db/ERD.md`·`TABLE_SPEC.md` 기준, `109_realign.sql`로 표 3개를 합치는 재정렬 포함). 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드한다(`101_auth_users.sql:4`, `backend/services/demo_seed.py`). SQL 파일 번호대는 파트마다 100번대씩 나눈다.
 
 - 주인: 김승욱
 - 입력: 없음
@@ -68,7 +68,7 @@ WHERE nsp.nspname = 'public'
   AND cls.relname IN ('users', 'token_revocations');
 ```
 
-운영 Supabase는 2026-11-09에 풀러 접속으로 읽기 전용 조회해 확인했다. public 스키마에 `users`, `threads`, `token_revocations`, `approvals`, `decision_tables`, `issue_tables`, `issue_table_rejections`, `docs`(1,512행), `chunks`(23,095행), `versions`, `index_meta`, `query_translations` 표가 있다. 따라서 인증 표(`users`, `token_revocations`)와 대화 표(`threads`, `111_threads.sql`)는 적용돼 있다. 같은 날 데모 계정 2개(일반 사용자 1개, 관리자 1개)를 `backend/services/auth_store.py`의 `upsert_user()`로 등록하고 다시 조회해 확인했다(비밀번호는 bcrypt 해시로만 저장). `threads`는 0행이어서 운영 경로로 대화한 적은 아직 없다. LangGraph 체크포인트·Store 표는 아직 없으며, `backend/graph/checkpoint.py`의 `setup()`이 앱 첫 기동 때 만든다. 위 SQL로 보는 RLS 활성화 상태, 앱 접속 역할의 소유 여부와 `rolbypassrls`, 운영 계정으로 한 실제 로그인은 확인하지 못했다(미확인).
+운영 Supabase는 2026-11-09에 풀러 접속으로 읽기 전용 조회해 확인했다. public 스키마에 `users`, `threads`, `token_revocations`, `approvals`, `decision_tables`, `issue_tables`, `issue_table_rejections`, `docs`(1,512행), `chunks`(23,095행), `versions`, `index_meta`, `query_translations` 표가 있다. 따라서 인증 표(`users`, `token_revocations`)와 대화 표(`threads`, `111_threads.sql`)는 적용돼 있다. 같은 날 데모 계정 2개(일반 사용자 1개, 관리자 1개)를 `backend/services/auth_store.py`의 `upsert_user()`로 등록하고 다시 조회해 확인했다(비밀번호는 bcrypt 해시로만 저장). `threads`는 0행이어서 운영 경로로 대화한 적은 아직 없다. LangGraph 체크포인트·Store 표는 이 11/9 조회 때는 없었으며(`backend/graph/checkpoint.py`의 `setup()`이 앱 첫 기동 때 만든다), 11/10 조회에는 6개가 있다(`docs/db/TABLE_SPEC.md:55-60`). 11/10 조회의 `chunks`는 30,171행(옛 판 포함, `docs/db/TABLE_SPEC.md:43`)이라 위 23,095행과 값이 다르다. 위 SQL로 보는 RLS 활성화 상태, 앱 접속 역할의 소유 여부와 `rolbypassrls`, 운영 계정으로 한 실제 로그인은 확인하지 못했다(미확인).
 
 ## DB 재정렬 (`109_realign.sql`, 결정 0090)
 
@@ -78,6 +78,7 @@ WHERE nsp.nspname = 'public'
 - `109_realign.sql`(1단계)은 옛 모양 DB를 올린다. 합칠 칸을 더하고 값을 복사만 하며 옛 표는 건드리지 않아서 옛 코드가 그대로 돈다. 쓰이지 않는 색인 7개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`, `token_revocations_expires_at`, `signup_requests_status_requested_at`, `recall_notices_review_idx`)를 지우고 `issue_tables_thread_user_idx`, `recall_notices_feedback_idx`, `chunks_link_targets_gin`을 만든다. `anon`, `authenticated` 역할이 있을 때만 public 표·뷰·시퀀스의 권한을 회수하고 앞으로 만드는 표의 기본 권한도 회수한다. 여러 번 실행해도 된다.
 - 2단계 `db/manual/109_retire_old.sql`은 새 코드가 배포되고 옛 리비전이 내려간 뒤 사람이 직접 실행한다. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 한 번 더 옮기고 옛 표 3개를 `<이름>_old_20261110`으로 이름만 바꾼다(되돌림은 이름을 되돌리면 된다). 이름이 바뀐 옛 표는 `db/manual/109_purge_old.sql`로 지운다. 백업 확인 뒤 직접 실행하며, 되돌릴 수 없다.
 - 운영 적용 순서: 백업, `109_realign.sql`(옛 코드가 그대로 돈다), 새 코드 배포, 옛 리비전 내림, `manual/109_retire_old.sql`, 두어 날 뒤 `manual/109_purge_old.sql`. 1단계 뒤 새 코드가 뜨기 전까지 옛 코드가 옛 표에 쓴 값은 2단계가 옮긴다. 새 코드가 뜬 뒤 2단계 전까지 옛 리비전이 아직 요청을 받으면 그 요청이 쓴 값이 새 칸에 안 보일 수 있다(2단계가 채운다).
+- 운영 적용 상태(2026-11-11 기준 `docs/worklog.md:10`): 1단계 11/10 밤, 새 코드 배포와 옛 리비전 내림 뒤 2단계 11/11 00:42, 옛 표는 새 칸에 빠진 행이 0건임을 확인한 뒤 11/11에 삭제해 `public` 표는 31개다. 위 "운영 Supabase는 2026-11-09에 … 조회" 문단은 그 날짜의 값이다.
 - 바꾸지 않은 것: LangGraph가 만드는 6개 표(구조 변경 금지), `users.groups`와 `chunks.acl`(문서 권한 F-06 연결 지점), `threads` 등의 `user_id` text 타입(결정 0091), 옛 판 `chunks` 행(결정 0092).
 
 ## 작업 기록 (최신이 위)
@@ -98,6 +99,8 @@ WHERE nsp.nspname = 'public'
 | 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |
 | 2026-11-05 | 강경희 (kyunghee) | 운영 Supabase에서는 `ensure_schema()`가 실행되지 않는 조건과 `101_auth_users.sql` → `103_auth_token_revocations.sql` 수동 적용·RLS·접속 역할·로그인 검증 절차를 문서화했다. 운영 DB는 미적용·미검증으로 기록 | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731) | `202_sync.sql`: `sync_runs`·`changed_articles`에 RLS 켜기(정책 없음, `201_search.sql` 91~95줄과 같은 방식). 조장 요청 | 이 PR |
+| 2026-11-05 | 김승욱 (커밋 작성자 기준 소급 기록) | `102_decision_approvals.sql`(결정표 `decision_tables`·사람 승인 `approvals`)과 `110_issue_tables.sql`(합동 검토 쟁점표 `issue_tables`) 추가. 11/10 `109_realign.sql`이 일부를 합쳤다 | 커밋 306ef24, PR #54 |
+| 2026-11-05 | 김승욱 (소급 기록. 커밋 1f19d53 작성자는 Seungwook Kim, 머지된 PR #53은 kyunghee 브랜치) | `103_auth_token_revocations.sql`(`token_revocations`, 로그아웃한 JWT 폐기 기록) 추가 | 커밋 1f19d53, PR #53 (`docs/specs/admin-roles.md` 번호 설명 기준) |
 | 2026-11-02 | 박진형 (jinyeong-731) | `201_search.sql`(검색 파트 200번대): `docs`·`versions`(판 유효 구간 `valid_from`·`valid_to`, `version_date_before`)·`chunks`(열쇠 (chunk_id, version_id), 줄 범위, 차원 없는 `vector`)·`index_meta`(색인 장부)·`query_translations`(번역 장부). 모두 `IF NOT EXISTS`라 compose 첫 기동(initdb)과 `loader`가 두 번 돌려도 같다 | 이 PR |
 | 2026-10-30 | 김승욱 (Claude Code) | `101_auth_users.sql`(users 테이블, SQL 번호대 100번대는 김승욱 파트로 잡음) 추가. 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다 | 미정 |
 

@@ -1,6 +1,7 @@
 # DB 107: 사용자 프로필 추가 필드 제안
 
-번호 107은 `db/107_email_signup_verification.sql`([107-email-signup-verification.md](./107-email-signup-verification.md))과 겹치지만 서로 다른 변경이다. 이 문서의 제안은 SQL 파일이 없고 코드에 사용처가 없어 적용하지 않으며, 이름은 바꾸지 않고 번호가 겹친다는 사실만 여기에 적는다. 실제 `db/107_*.sql`은 이메일 가입 인증이다.
+상태: **폐기된 제안(만들지 않음)**. 이 제안용 SQL 파일이 `db/`에 없고 `role_enc`·`service_enc`를 쓰는 코드도 없다(`grep -rn role_enc backend` 0건). 번호 107은 `db/107_email_signup_verification.sql`([107-email-signup-verification.md](./107-email-signup-verification.md))과 겹치지만 서로 다른 변경이다. 이름은 바꾸지 않고 번호가 겹친다는 사실만 여기에 적는다. 실제 `db/107_*.sql`은 이메일 가입 인증이다. 이 문서는 기록으로만 남기며, 파일 삭제 여부는 팀장 판단이다. 아래는 제안 당시 내용이다.
+
 
 이 문서는 사용자 프로필의 역할·담당 서비스 저장을 위한 스키마 제안이다. 실행용 migration이 아니며, 운영 DB나 Docker 초기화 과정에서 자동 적용하지 않는다.
 

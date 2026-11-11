@@ -1,6 +1,6 @@
 # Spec — 질문 그래프: 근거 답변 (김승욱, F-01 · G4)
 
-> 초안(2026-10-29). D0(10/30)에서 계약과 숫자 기준이 정해지면 고친다. 설계 원문은 `docs/SDD.md` 4-3장, 숫자 기준은 `docs/PRD.md` 13-2장.
+> 초안(2026-10-29)으로 시작해 D0 이후 구현·측정으로 갱신해 왔다(2026-11-11 기준 구현 완료, 이 파일의 EC-10·`save` 행도 현재 코드에 맞춤). 설계 원문은 `docs/SDD.md` 4-3장, 숫자 기준은 `docs/PRD.md` 13-2장.
 
 ## Why
 
@@ -15,7 +15,7 @@
 ## Goal
 
 - **해결 목표**: 한국어 정책 질문에 핸드북 섹션을 인용한 한국어 답을 판 날짜, 출처 URL과 함께 준다. 근거가 부족하면 되묻거나 거절한다.
-- **성공 기준** (`docs/PRD.md` 13-2, D0에 동결 전 초안):
+- **성공 기준** (`docs/PRD.md` 13-2와 같은 값, 동결됨. 단 "재검색 최대 2회"는 코드 상한이고 서비스 기본은 1회다, `backend/graph/service_profile.py:54`):
   - 인용 정확도 0.85 이상
   - 판 날짜 표시 100%
   - 비관련 질문 거절 0.90 이상
@@ -59,7 +59,7 @@
 | EC-07 | 키 없음(`DEMO_MODE=1`) | 기록해 둔 응답을 재생한다. 오류 없이 done 이벤트까지 간다(G2) |
 | EC-08 | 검색 결과 본문 안의 지시문(간접 인젝션) | 본문은 데이터로만 다루고 지시로 따르지 않는다. 시험은 `evals/safety/` |
 | EC-09 | 비용 상한 도달 | 멈추고 error 이벤트를 보낸다 |
-| EC-10 | 질문 종류가 결정표나 합동 검토인데 해당 경로가 아직 없음 | 분류 결과는 남기고 정책 질문 경로로 처리한다(2026-11-02, `docs/decisions.md`) |
+| EC-10 | 질문 종류가 결정표나 합동 검토인데 해당 경로를 쓸 수 없음(결정표 저장소·승인된 표가 없거나 금액이 없음, 합동 검토 하위 그래프가 안 꽂힘) | 분류 결과는 남기고 정책 질문 경로로 처리한다(`backend/graph/build.py:554,579`). 경로 자체는 구현돼 있다: 결정표 `backend/graph/decision/`, 합동 검토 `backend/graph/departments/` |
 
 ## How
 
@@ -122,7 +122,7 @@
 | `write_answer` | 답 작성, 기준일과 판 날짜, 라이선스 표시 | `backend/graph/build.py`, `backend/graph/citations.py` |
 | `verify` | 인용 검사(코드) | `backend/graph/citations.py` |
 | `ground` | 근거 판정 | `backend/graph/grounding.py` |
-| `save` | 답과 인용 저장(지금은 메모리 구현, DB 표는 B-05) | `backend/graph/answer_store.py` |
+| `save` | 답과 인용 저장(`InMemoryAnswerStore`와 DB판 `PgAnswerStore`, 표는 `db/120_answers_recall.sql`의 `answers`·`citations`) | `backend/graph/answer_store.py:49,123` |
 
 - 프롬프트는 `backend/prompts/question.py`, 런타임 Skill은 `skills/`의 `citation-rules`, `grounding-check`, `glossary`입니다.
 - 비관련 질문(EC-02)은 답 단계에서 거릅니다.

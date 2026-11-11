@@ -9,7 +9,7 @@
 - 칼럼 표의 "키" 칸은 PK(기본키), FK(외래 키), UK(고유 제약)이다. "NULL" 칸의 `NO`는 NOT NULL이다.
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
 - 표마다 색인의 "이유가 되는 질의"는 `docs/db/QUERY_INDEX.md`의 질의-색인 대조표(코드의 SQL 약 150문장)와 같다. 대조 결과 색인이 없어 문제가 되는 질의는 없고, 쓰이지 않는 색인은 109가 지웠다.
-- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:108-131)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수한다.
+- RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:108-131)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수하고, `db/108_auth_privacy_hardening.sql`이 `users`와 `signup_requests`의 RLS와 권한 회수를 한 번 더 실행한다(3-3).
 - 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3). 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42), 옛 표 삭제(2026-11-11)를 모두 적용했고, 삭제 뒤 운영 `public` 표는 이 문서와 같은 31개(앱 25 + LangGraph 6)다(적용 기록은 2-3).
 
 ## 2. 요약
@@ -21,7 +21,7 @@
 | 표 이름 | 영역 | 만든 파일 | 한 줄 설명 | 2026-11-10 운영 조회 (행 / 크기) |
 |---|---|---|---|---|
 | `users` | 인증 | `db/101_auth_users.sql` | 로그인 계정(아이디, 비밀번호 해시, 역할, 활성, 문서 권한 그룹) | 2행 / 48 KB |
-| `signup_requests` | 인증 | `db/106_signup_approval.sql` | 회원가입 요청과 관리자 승인 기록(승인 전에는 `users` 행이 없다) | 1행 / 80 KB |
+| `signup_requests` | 인증 | `db/106_signup_approval.sql`, `db/107_email_signup_verification.sql`(칸 7개) | 회원가입 요청과 관리자 승인 기록(승인 전에는 `users` 행이 없다) | 1행 / 80 KB |
 | `user_identities` | 인증 | `db/114_google_identities.sql` | 구글 계정(`sub`)과 `users` 행의 연결 | 운영 미적용(114 적용 전) |
 | `user_profiles` | 인증 | `db/104_user_profiles.sql` | 내 정보(이름, 소속, 전화, 주소)의 AES-256-GCM 암호문 | 2행 / 32 KB |
 | `admin_role_log` | 인증 | `db/105_admin_role_log.sql` | 화면에서 한 관리자 등록·해제 기록(쓰기만 한다) | 2행 / 48 KB |
@@ -85,6 +85,8 @@
 | `db/104_user_profiles.sql` | `user_profiles` |
 | `db/105_admin_role_log.sql` | `admin_role_log` |
 | `db/106_signup_approval.sql` | `signup_requests` |
+| `db/107_email_signup_verification.sql` | 새 표를 만들지 않는다. `signup_requests`에 이메일 인증 칸 7개와 색인 2개를 더한다(`IF NOT EXISTS`) |
+| `db/108_auth_privacy_hardening.sql` | 새 표를 만들지 않는다. `users`, `signup_requests`와 `signup_requests_request_id_seq`의 RLS·권한 회수(3-3) |
 | `db/109_realign.sql` | 새 표를 만들지 않는다. 옛 모양 DB에 합친 칸을 더하고 값을 복사하며 색인을 정리한다(1단계, 3장) |
 | `db/manual/109_retire_old.sql` | 2단계. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 옮기고 옛 표 3개의 이름을 `_old_20261110`으로 바꾼다 |
 | `db/110_issue_tables.sql` | `issue_tables` |
@@ -123,8 +125,8 @@
 | 삭제 | `issue_tables_thread_idx` | `issue_tables (thread_id)` | 세 열 색인 하나로 대체 |
 | 삭제 | `issue_tables_user_idx` | `issue_tables (user_id, approved_at DESC)` | 세 열 색인 하나로 대체 |
 | 삭제 | `admin_role_log_at` | `admin_role_log (at)` | 이 표를 읽는 질의가 코드에 없다(`db/105_admin_role_log.sql:12`) |
-| 삭제 | `token_revocations_expires_at` | `token_revocations (expires_at)` | 만료 행을 지우는 코드가 없고 조회는 `jti` 기본키로 한다(`auth_store.py:402`). 정리 작업을 만들 때 다시 만든다 |
-| 삭제 | `signup_requests_status_requested_at` | `signup_requests (status, requested_at)` | `status`로 거르는 질의가 없다. 목록(`auth_store.py:298`)은 조건 없이 전체를 읽는다 |
+| 삭제 | `token_revocations_expires_at` | `token_revocations (expires_at)` | 만료 행을 지우는 코드가 없고 조회는 `jti` 기본키로 한다(`auth_store.py:768`). 정리 작업을 만들 때 다시 만든다 |
+| 삭제 | `signup_requests_status_requested_at` | `signup_requests (status, requested_at)` | `status`로 거르는 질의가 없다. 목록(`auth_store.py:635-636`)은 조건 없이 전체를 읽는다 |
 | 삭제 | `recall_notices_review_idx` | `recall_notices (created_at DESC) WHERE review_status = 'pending'` | 검토함은 `notices_all()`로 전부 읽어 앱에서 거른다(`recalls.py:181-185`). 쓰는 질의가 없다 |
 | 추가 | `chunks_link_targets_gin` | `chunks USING gin (link_targets)` | 함께 볼 정책 찾기 `maintenance.py:62-69`가 `link_targets @> ARRAY[대상]`로 찾는다. 로컬 합성 데이터(chunks 30,171행)에서 chunks 전체 훑기 8.969 ms, 버퍼 26,159에서 GIN 비트맵 스캔 버퍼 56으로 줄었다(`docs/db/QUERY_INDEX.md`) |
 | 추가 | `issue_tables_thread_user_idx` | `issue_tables (thread_id, user_id, approved_at DESC)` | 유일한 조회 `PgIssueTableStore.get_by_thread`의 조건과 정렬을 받는다(`backend/graph/departments/store.py:89-90`) |
@@ -138,6 +140,8 @@
 - 회수한 이유는 109:108-109에 적혀 있다. 운영 Supabase가 `public`의 모든 표에 두 역할 권한을 열어 두었고(RLS가 막고 있었다), RLS에 더해 권한도 거두어 이중으로 잠그는 것이다. 앱은 소유자 역할로 접속하므로 영향이 없다(109:13).
 - `ALTER DEFAULT PRIVILEGES`는 그 문장을 실행한 역할이 이후 만드는 객체에 적용되는 PostgreSQL 규칙이다. LangGraph 표를 만드는 앱 접속 역할이 109를 실행한 역할과 같은지는 코드에서 알 수 없다.
 - `signup_requests`는 비밀번호 해시를 담아서 106이 먼저 `PUBLIC`, `anon`, `authenticated`의 권한을 회수한다(`db/106_signup_approval.sql:14-28`).
+- `db/108_auth_privacy_hardening.sql`(PR #113)은 `users`와 `signup_requests`에 `ENABLE ROW LEVEL SECURITY`(14-15), `users`와 `signup_requests_request_id_seq`의 `PUBLIC` 권한 회수(17-18)를 실행하고, `anon`, `authenticated` 역할이 있을 때만 `users`, `signup_requests`, `signup_requests_request_id_seq`의 권한을 회수한다(`DO` 블록 20-32, 역할 확인 25). `signup_requests`의 `PUBLIC` 권한 회수는 108에 없고 106(`db/106_signup_approval.sql:16`)이 한다. 겹침: `users`의 RLS는 101(`db/101_auth_users.sql:16`)이, `signup_requests`의 RLS와 표 권한 회수는 106(`db/106_signup_approval.sql:15-27`)이 이미 하고, `anon`, `authenticated`의 표 권한은 109 단계 5(109:108-131)도 회수한다. 108만 새로 하는 일은 `users`의 `PUBLIC` 권한 회수와 `signup_requests_request_id_seq`의 권한 회수다(추정: 106에 시퀀스 회수가 없고 이 문서가 읽은 109 단계 5 설명도 시퀀스는 두 역할만 회수한다). 이미 회수한 권한을 다시 `REVOKE`해도 오류는 없다.
+- 108은 106·109와 같은 방식으로 역할이 있는지 확인한 뒤 회수한다(`pg_roles` 확인 `db/108_auth_privacy_hardening.sql:25`, 106은 `db/106_signup_approval.sql:21, 24`). 조장 커밋 da5b76a가 이렇게 고쳤다(`git diff 3f6e240 origin/main -- db/108_auth_privacy_hardening.sql`). 그 전 108은 역할을 확인하지 않아 `anon`, `authenticated`가 없는 일반 PostgreSQL에서 `role "anon" does not exist`로 멈췄고, `ensure_schema()`가 108을 실행하므로(`backend/services/auth_store.py:751`) 그런 DB에서 이 함수가 실패했다. 지금은 두 역할이 없어도 멈추지 않으며 몇 번을 돌려도 결과가 같다(`db/108_auth_privacy_hardening.sql:5-7`).
 
 ## 4. 앱 표 25개
 
@@ -147,9 +151,9 @@
 
 - 목적: 로그인 계정. 비밀번호는 bcrypt 해시로 저장하고(`db/101_auth_users.sql:1`) 역할은 `user`와 `admin` 둘뿐이다.
 - 만든 파일: `db/101_auth_users.sql:6-16`.
-- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresAuthStore`(192줄) — `get_by_login_id` 207-208, `get_by_user_id` 210-215, `upsert_user` 230-242(로컬 데모 시드, 호출은 `backend/services/demo_seed.py:53`), `create_user` 244-252, `set_password` 254-259, `review_signup_request`의 승인 시 `_insert_user` 304-343, `list_users` 345-351, `set_role` 353-380, `ensure_schema` 382-386.
-- `groups`: 읽는 SELECT를 코드에서 찾지 못했다. `auth_store.py:29`의 조회 칼럼 목록(`_COLUMNS`)에 `groups`가 없고, 인증 객체 `AuthUser.groups`(`backend/auth.py:500`)는 기본값 `()`이다. 이 값을 쓰는 곳은 `backend/api/recalls.py:126, 128`과 `backend/graph/recall/service.py:163-173`(알림 가시성)이다.
-- RLS와 권한: RLS 켬(`db/101_auth_users.sql:16`), 정책 없음.
+- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresAuthStore`(394줄) — `get_by_login_id` 375-382, `get_by_user_id` 384-389, `upsert_user` 405-418(로컬 데모 시드, 호출은 `backend/services/demo_seed.py:53`), `create_user` 420-428, `set_password` 430-436, `create_pending_user`의 중복 확인(`_user_exists`) 446-447·473-480, `review_signup_request`의 승인 시 `_insert_user` 호출 662와 정의 700-709, `list_users` 711-717, `set_role` 719-746, `ensure_schema` 748-752. 구글 로그인 연결·가입은 `get_or_create_google_user` 482-506, `_google_resolve` 514-542.
+- `groups`: 읽는 SELECT를 코드에서 찾지 못했다. `auth_store.py:40`의 조회 칼럼 목록(`_COLUMNS`)에 `groups`가 없고, 인증 객체 `AuthUser.groups`(`backend/auth.py:526`)는 기본값 `()`이다. 이 값을 쓰는 곳은 `backend/api/recalls.py:126, 128`과 `backend/graph/recall/service.py:163-173`(알림 가시성)이다.
+- RLS와 권한: RLS 켬(`db/101_auth_users.sql:16`), 정책 없음. `db/108_auth_privacy_hardening.sql:14, 17`이 RLS 켜기와 `PUBLIC`의 권한 회수를, 역할이 있으면 `anon`, `authenticated`의 권한 회수(26)를 한 번 더 실행한다(3-3).
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|
@@ -163,17 +167,17 @@
 
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
-| `users_pkey` | `PRIMARY KEY (user_id)` | `auth_store.py:215`(`WHERE user_id = %s`), `375`(`UPDATE ... WHERE user_id = %s`) |
-| `users_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:208`, `235-237`(`ON CONFLICT (login_id)`), `250`, `265`, `321`, `365` |
-| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/113`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`create_pending_user`의 이메일 조회(`lower(login_id) = lower(%s)`) |
+| `users_pkey` | `PRIMARY KEY (user_id)` | `auth_store.py:389`(`WHERE user_id = %s`), `741`(`UPDATE ... WHERE user_id = %s`) |
+| `users_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:382`(이메일이 아닌 아이디 조회), `410-411`(`ON CONFLICT (login_id)`), `426`, `433`, `479`, `519`, `659`, `731` |
+| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/113`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`_user_exists`의 이메일 조회(`lower(login_id) = lower(%s)`, `auth_store.py:379`, `476`) |
 
 #### 4-1-2. `signup_requests`
 
-- 목적: 회원가입 요청과 관리자 승인 기록. 승인 전에는 `users` 행이 없어서 `user_id`가 NULL이다(`auth_store.py:278-282`). 비밀번호 해시를 담는다.
-- 만든 파일: `db/106_signup_approval.sql:2-12`(표와 색인), `:15`(RLS), `:16-28`(권한 회수).
-- 쓰는 코드: `backend/services/auth_store.py` — `get_signup_by_login_id` 217-228, `create_pending_user` 261-276, `get_signup_status` 278-293, `list_signup_requests` 295-302, `review_signup_request` 304-332. `ensure_schema`(382-386)는 106 파일도 실행한다.
-- 주석: PR #113(미머지)이 이 표에 이메일 인증 칸을 더하고 `db/107`, `db/108` 파일을 쓸 예정이다. 이 브랜치에는 그 칸과 파일이 없다.
-- RLS와 권한: RLS 켬(`db/106_signup_approval.sql:15`), 정책 없음. `PUBLIC`, `anon`, `authenticated` 권한을 106이 회수한다(16-28).
+- 목적: 회원가입 요청과 관리자 승인 기록. 승인 전에는 `users` 행이 없어서 `user_id`가 NULL이다(`auth_store.py:672`가 승인할 때 채움). 비밀번호 해시를 담는다.
+- 만든 파일: `db/106_signup_approval.sql:2-12`(표와 색인), `:15`(RLS), `:16-28`(권한 회수). 이메일 인증 칸 7개는 `db/107_email_signup_verification.sql:1-8`, 색인 2개는 `:10-16`. `db/108_auth_privacy_hardening.sql:15`(RLS)와 `:27`(역할이 있을 때 `anon`, `authenticated` 권한 회수)이 한 번 더 실행한다.
+- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresAuthStore` — `get_signup_by_login_id` 391-403, `create_pending_user` 438-471, `get_signup_status` 544-559, `get_signup_verification` 561-572, `issue_verification` 574-597, `save_verification` 599-606, `delete_pending_signup` 608-610, `verify_signup_code` 612-629, `list_signup_requests` 631-638, `review_signup_request` 640-675, `review_signup_request_by_id` 677-680, `reset_signup_verification_by_id` 682-698. 구글 신청은 `_google_resolve` 514-542가 넣는다. `ensure_schema`(748-752)는 106, 107, 108, 113, 114 파일도 실행한다(751).
+- 인증 칸 7개는 이메일로 가입한 신규 요청(`email_verification_required = true`)의 코드 확인 상태를 담는다. 코드는 평문이 아니라 해시(`verification_code_hash`)로 저장하고 확인되면 해시와 만료를 비운다(`auth_store.py:628`). 인증 전 승인은 막는다(`auth_store.py:656-657`). 기존 요청과 이메일이 아닌 아이디는 `email_verification_required`가 기본값 `false`다.
+- RLS와 권한: RLS 켬(`db/106_signup_approval.sql:15`, `db/108_auth_privacy_hardening.sql:15`), 정책 없음. `PUBLIC`, `anon`, `authenticated` 권한을 106이 회수하고(16-28) 108이 역할이 있을 때 `anon`, `authenticated`만 한 번 더 회수한다(108:27). 겹침은 3-3.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|
@@ -185,14 +189,22 @@
 | `requested_at` | `timestamptz` | NO | `now()` | | 요청 시각 |
 | `reviewed_at` | `timestamptz` | YES | | | 검토 시각 |
 | `reviewed_by` | `uuid` | YES | | FK `users(user_id)` | 검토한 관리자 |
+| `email_verification_required` | `boolean` | NO | `false` | | 이메일 코드 확인이 필요한 신규 요청인가(107). 필요하면 인증 전 승인이 막힌다 |
+| `email_verified_at` | `timestamptz` | YES | | | 코드 확인을 마친 시각(107). 인증 전에는 NULL |
+| `verification_code_hash` | `text` | YES | | | 인증 코드의 해시(107). 평문은 저장하지 않는다. 확인되면 NULL |
+| `verification_expires_at` | `timestamptz` | YES | | | 코드 만료 시각(107). 확인되면 NULL |
+| `verification_attempts` | `integer` | NO | `0` | | 현재 코드의 확인 시도 횟수(107). 새 코드를 보내면 0으로 돌린다 |
+| `verification_send_count` | `integer` | NO | `0` | | 코드를 보낸 횟수(107). 재발송 횟수 제한에 쓴다 |
+| `last_verification_sent_at` | `timestamptz` | YES | | | 마지막 코드 발송 시각(107). 재발송 간격 제한에 쓴다 |
 | `google_sub` | `text` | YES | | UK(부분) | 114가 더한 칸. 구글 가입 신청의 sub. 승인하면 `user_identities`로 옮긴다. `password_hash`와 둘 중 하나는 있어야 한다(CHECK `signup_requests_secret_or_google`) |
 
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
-| `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:329`(`WHERE request_id = %s`), `225`, `313`(`ORDER BY request_id DESC`) |
-| `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:290`(`WHERE user_id = %s AND status = 'approved'`) |
-| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(중복 아이디를 UNIQUE 위반으로 감지), `get_signup_by_login_id`·`review_signup_request`(`ORDER BY request_id DESC`) |
-| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체. 이 색인이 있으면 107을 다시 돌려도 옛 색인을 되살리지 않는다) | 이메일 대소문자 중복 가입 방지 |
+| `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:672`, `679`, `687`, `696`(`WHERE request_id = %s`), `400`, `557`, `566`, `582`, `618`, `649`(`ORDER BY request_id DESC`) |
+| `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:556-557`(`WHERE user_id = %s AND status = 'approved'`), `522`(`user_id = %s AND login_id = %s`) |
+| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(`463`, 중복 아이디를 UNIQUE 위반으로 감지 `467-469`), 조회는 `login_id =` 조건(`399`, `452`, `566`, `582`, `610`, `618`, `649`)과 `_google_resolve`의 `google_sub OR login_id`(`533`) |
+| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 읽는 질의가 아니라 쓰기 제약이다. 이메일을 소문자로 바꿔 넣고(`backend/auth.py:816`) 대소문자만 다른 이메일의 두 번째 INSERT를 DB가 막으며, 위반은 `create_pending_user`의 같은 `except`가 중복으로 처리한다(`auth_store.py:467-469`). `@`가 없는 옛 아이디는 적용 대상이 아니다 |
+| `signup_requests_verification_expiry` | `(verification_expires_at) WHERE email_verification_required AND email_verified_at IS NULL` (`db/107_email_signup_verification.sql:10-12`, 부분 색인) | 이 색인의 조건으로 `verification_expires_at`을 거르는 질의를 코드에서 찾지 못했다. 만료는 `login_id`로 읽은 행을 앱이 비교한다(`auth_store.py:612-629`). 만료 행 정리용으로 만든 것으로 보이나(추정) 정리 코드는 없다 |
 
 #### 4-1-2a. `user_identities`
 
@@ -218,7 +230,7 @@
 
 - 목적: 내 정보. 이름, 소속, 전화, 주소를 각각 nonce 12바이트 + AES-256-GCM 암호문 + 태그 16바이트로 저장하며 평문 칸은 없다(`db/104_user_profiles.sql:3`). 관리자 목록과 로그인 조회는 이 표를 읽지 않는다(104:4).
 - 만든 파일: `db/104_user_profiles.sql:6-16`.
-- 쓰는 코드: `backend/services/profile_store.py`의 `PostgresProfileStore`(57줄) — `ensure_schema` 65-67, `get` 69-72, `exists` 74-76, `upsert` 78-89. 암호화는 `backend/services/profile_crypto.py`, API는 `backend/profile_api.py:179, 194`. 생성은 `backend/main.py:286`.
+- 쓰는 코드: `backend/services/profile_store.py`의 `PostgresProfileStore`(57줄) — `ensure_schema` 65-67, `get` 69-72, `exists` 74-76, `upsert` 78-89. 암호화는 `backend/services/profile_crypto.py`, API는 `backend/profile_api.py:179, 194`. 생성은 `backend/main.py:302`.
 - RLS와 권한: RLS 켬(`db/104_user_profiles.sql:16`), 정책 없음.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
@@ -239,7 +251,7 @@
 
 - 목적: 화면(최고 관리자)에서 한 관리자 등록·해제 기록. 누가, 누구를, 무엇을, 언제만 남긴다. `create_account` 명령으로 만든 계정은 남지 않는다(`db/105_admin_role_log.sql:3-4`).
 - 만든 파일: `db/105_admin_role_log.sql:5-14`.
-- 쓰는 코드: 쓰기 `backend/services/auth_store.py:376-379`(`set_role` 안, 역할 변경과 한 트랜잭션). 이 표를 읽는 질의는 코드에서 찾지 못했다.
+- 쓰는 코드: 쓰기 `backend/services/auth_store.py:742-745`(`set_role` 안, 역할 변경과 한 트랜잭션). 이 표를 읽는 질의는 코드에서 찾지 못했다.
 - RLS와 권한: RLS 켬(`db/105_admin_role_log.sql:14`), 정책 없음.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
@@ -260,7 +272,7 @@
 
 - 목적: 로그아웃한 JWT의 `jti`를 토큰 만료까지 보관해서, 모든 API 인스턴스가 이미 로그아웃한 세션을 거부한다(`db/103_auth_token_revocations.sql:1-2`).
 - 만든 파일: `db/103_auth_token_revocations.sql:4-13`.
-- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresTokenRevocationStore`(389줄) — `is_revoked` 399-405, `revoke` 407-413. 생성은 `backend/main.py:283`.
+- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresTokenRevocationStore`(25줄) — `is_revoked` 765-771, `revoke` 773-779. 생성은 `backend/main.py:299`.
 - RLS와 권한: RLS 켬(`db/103_auth_token_revocations.sql:13`), 정책 없음.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
@@ -271,7 +283,7 @@
 
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
-| `token_revocations_pkey` | `PRIMARY KEY (jti)` | `auth_store.py:402`(`WHERE jti = %s AND expires_at > now()`), `410-411`(`ON CONFLICT (jti)`) |
+| `token_revocations_pkey` | `PRIMARY KEY (jti)` | `auth_store.py:768`(`WHERE jti = %s AND expires_at > now()`), `776-777`(`ON CONFLICT (jti)`) |
 
 ### 4-2. 승인
 
@@ -308,7 +320,7 @@
 |---|---|---|---|---|---|
 | `approval_id` | `text` | NO | | PK | 승인 건 id |
 | `kind` | `text` | NO | | | `decision_table`, `issue_table`, `team_review_failed`(CHECK `approvals_kind_check`) |
-| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:312`) |
+| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:327`) |
 | `status` | `text` | NO | `'pending'` | | `pending`, `approved`, `rejected`(CHECK). `team_review_failed`의 읽는 법은 `COMMENT ON COLUMN`(102:43)에 있다 |
 | `decided_by` | `text` | YES | | | 결정한 사용자 id |
 | `summary` | `text` | NO | `''` | | 승인함 화면(`ApprovalItem`) 요약 |
@@ -357,7 +369,7 @@
 
 - 목적: 사용자별 대화(thread) 목록(G4, SDD 4-4 `/threads`). 대화 내용 전체는 여기에 두지 않고 LangGraph 체크포인트에 있다. `last`는 마지막 답 `{kind, answer, answer_id, as_of}` 하나다(`db/111_threads.sql:4`). 모든 조회에 `user_id` 조건을 붙여 남의 대화는 보이지 않는다(111:2).
 - 만든 파일: `db/111_threads.sql:6-16`.
-- 쓰는 코드: `backend/api/threads.py`의 `PostgresThreadStore`(99줄) — `ensure_schema` 116-119(로컬 데모만), `thread_touch` 121-131, `thread_get` 133-135, `threads_of` 137-139. 호출은 `backend/api/routes.py:217, 255, 272, 281, 293, 301, 314`, 생성은 `backend/main.py:250`.
+- 쓰는 코드: `backend/api/threads.py`의 `PostgresThreadStore`(99줄) — `ensure_schema` 116-119(로컬 데모만), `thread_touch` 121-131, `thread_get` 133-135, `threads_of` 137-139. 호출은 `backend/api/routes.py:220, 267, 285, 294, 307, 316, 329`, 생성은 `backend/main.py:266`.
 - RLS와 권한: RLS 켬(`db/111_threads.sql:19`), 정책 없음.
 - `user_id`는 text이며 `users.user_id`(uuid)에 대한 외래 키가 없다.
 
@@ -384,7 +396,7 @@
 
 - 목적: 답. `as_of`는 질문의 기준일(YYYY-MM-DD, 없으면 NULL = 그때의 현재 판)이다. `thread_id`는 그래프 이름 `<user_id>:<thread_id>` 그대로다(`db/120_answers_recall.sql:6`). 재정렬 뒤에는 옛 `answer_grounding`의 인용 검사 결과를 `grounding`, `skills_used`로 갖는다.
 - 만든 파일: `db/120_answers_recall.sql:7-20`(표 7-17, 칼럼 추가 19-20), 옛 DB 이전 `db/109_realign.sql:21-33`.
-- 쓰는 코드: `backend/graph/answer_store.py`의 `PgAnswerStore`(123줄) — `save` 138-150, `save_with_grounding` 152-159, `_insert_answer` 174-194, `save_grounding` 196-199, `get_grounding` 201-207, `get` 209-219, `find_by_article` 221-228. 호출은 `backend/graph/build.py:1449-1454`, 생성은 `backend/graph/recall/runtime.py:39`.
+- 쓰는 코드: `backend/graph/answer_store.py`의 `PgAnswerStore`(123줄) — `save` 138-150, `save_with_grounding` 152-159, `_insert_answer` 174-194, `save_grounding` 196-199, `get_grounding` 201-207, `get` 209-219, `find_by_article` 221-228. 호출은 `backend/graph/build.py:1448-1453`, 생성은 `backend/graph/recall/runtime.py:39`.
 - `grounding`: 인용 검사 결과(밖으로 낼 수 있는 값만). MCP 도구 `get_grounding`이 읽는다(`answer_store.py:201-207`, 읽을 때 `grounding IS NOT NULL` 조건). NULL은 아직 기록하지 않았다는 뜻이며 옛 `answer_grounding`에 줄이 없던 것과 같다. 검사 결과를 JSON으로 만들 수 없으면 그 칼럼만 비우고 답과 인용은 남긴다(`answer_store.py:155`).
 - RLS와 권한: RLS 켬(`db/120_answers_recall.sql:162`), 정책 없음.
 - `user_id`는 text이며 `users.user_id`(uuid)에 대한 외래 키가 없다.
@@ -817,7 +829,7 @@
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|
-| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:86-87, 231`) |
+| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:89-90, 234`) |
 | `checkpoint_ns` | `text` | NO | `''` | PK | 체크포인트 네임스페이스 |
 | `checkpoint_id` | `text` | NO | | PK | 체크포인트 id |
 | `parent_checkpoint_id` | `text` | YES | | | 이전 체크포인트 id |
@@ -885,7 +897,7 @@
 
 LangGraph Store 항목. `backend/memory/profile.py`가 장기 기억으로 사용자 프로필(소속 `affiliation`, 직급 `rank`)을 넣는다. namespace는 `(user_id, "profile")`, 키는 `"me"`이다(`profile.py:14, 19-22`). 대화 내용과 질문과 검색 결과는 넣지 않는다(`profile.py:2-9`).
 
-- 쓰는 코드: `backend/memory/profile.py` — `get_profile` 25, `put_profile` 33(TTL을 지정하는 호출은 이 파일에서 찾지 못함), `delete_profile` 44. 호출은 `backend/graph/build.py:451`, `backend/api/routes.py:346`(조회), `354`(수정), `360`(삭제)이다. 생성은 `checkpoint.py:120, 137`의 `PostgresStore`다.
+- 쓰는 코드: `backend/memory/profile.py` — `get_profile` 25, `put_profile` 33(TTL을 지정하는 호출은 이 파일에서 찾지 못함), `delete_profile` 44. 호출은 `backend/graph/build.py:473`, `backend/api/routes.py:361`(조회), `369`(수정), `375`(삭제)이다. 생성은 `checkpoint.py:120, 137`의 `PostgresStore`다.
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|

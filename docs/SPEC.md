@@ -2,7 +2,7 @@
 
 > 이 문서가 "무엇을 만들고, 어떤 숫자로 잘 됐다고 말하나"의 정본이다(가이드 p.14, p.21). 코드를 바꾸면 이 문서도 같은 PR에서 바꾼다. 기능별 상세는 `docs/specs/`, 설계는 [SDD](./SDD.md), 요구사항은 [PRD](./PRD.md), 팀 규칙은 [TEAM_GUIDE](./TEAM_GUIDE.md), AI 도구 지침은 [AGENTS.md](../AGENTS.md)에 있다. 숫자 기준은 PRD 13-2를 그대로 옮겼고 여기서 새 숫자를 만들지 않는다.
 
-상태: 2026-11-10 갱신(D0 10/30 초안 이후). 숫자 기준은 D0 합의로 동결했고 이후 낮추지 않는다(가이드 p.14, p.19). 3장 결과 칸은 2026-11-10 현재 EVAL_REPORT.md와 vals/results/의 값이다.
+상태: 2026-11-11 갱신(D0 10/30 초안 이후). 숫자 기준은 D0 합의로 동결했고 이후 낮추지 않는다(가이드 p.14, p.19). 3장 결과 칸은 2026-11-11 현재 EVAL_REPORT.md와 evals/results/의 값이다.
 
 ## 1. 한 줄 정의
 
@@ -34,7 +34,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 
 기준 칸은 D0(10/30) 합의로 동결했고 낮추지 않는다. 결과 칸은 2026-11-10 현재 `EVAL_REPORT.md`와 `evals/results/`의 결과 파일에 있는 값만 옮겼고, 값마다 잰 조건과 리비전을 적었다. 재지 않은 지표는 `미측정`으로 두고 이유를 적었다. 응답 시간, 비용, 질문 쪽 주입 결과는 리비전이 바뀌면 값이 바뀌므로 리비전을 함께 읽는다. 아래 응답 시간과 비용 행의 "공식 값"은 최신 배포 `provena-api-00037-2jt`(11/11 09시 운영 배포판, 커밋 `c5ff52e`)의 v2 50건 3회 측정이고(`EVAL_REPORT.md` 8장 표와 같다), 다른 행의 값은 행에 적은 리비전의 측정이다.
 
-| 지표 | 기준 | 재는 법 (PRD 13-2) | 측정 명령 / 결과 파일 | 결과 (2026-11-10) |
+| 지표 | 기준 | 재는 법 (PRD 13-2) | 측정 명령 / 결과 파일 | 결과 (2026-11-11) |
 |---|---|---|---|---|
 | 검색 Recall@5 | 0.80 이상 | 평가셋 관련 문항, 사람이 정한 정답 섹션 기준 | `python -m evals.retrieval.compare ...`(`EVAL_REPORT.md` 9장), 결과 `evals/results/retrieval_v2_round2/`, `retrieval_fix_v1/` | v2 관련 25건 기본형(`voyage-4` 영어 문장 벡터, 리랭커 없음, 청크 800/120, k=5) 0.843(95% 구간 0.707~0.960). v1 관련 15건에서 질문 분해와 링크 확장(L1x2)을 더한 서비스 구성은 0.833에서 0.967(사후 등록 #9, `EVAL_REPORT.md` 3장). 서비스 구성의 v2 25건 Recall@5는 재지 않았다 |
 | 인용 정확도 | 0.85 이상 | 답이 인용한 섹션이 정답 섹션과 맞는 비율 | `python -m evals.agent.exp_multi_v2 run --store pg --llm anthropic --out <폴더>`(전체 인자는 결과 폴더 `compare.json`의 `meta`), 결과 `evals/results/agent_v2_q_d6151_r1~r3_bo2sda2_api/`, 배포 측정은 `python -m evals.latency.deploy_latency`와 `deploy_citation_gold`, 결과 `deploy_latency_provena-api-00037-2jt/`(이전 `deploy_latency_provena-api-00035-h69/`, `deploy_latency_provena-api-00032-zhs/`) | 최신 배포 `provena-api-00037-2jt`(11/11 09시 운영 배포판, 커밋 `c5ff52e`) v2 50건 3회: 인용 정확도 0.918, 정답 근거 인용률 0.936으로 기준은 충족하나 비교 기준 `provena-api-00032-zhs`의 0.989와 0.976보다 낮아졌다(직전 11/10 밤 운영 배포판 `provena-api-00035-h69`는 0.924와 0.929)(`EVAL_REPORT.md` 5장, README와 같은 값). 낮아진 원인 문항은 v2 38번(용어표 행을 뺀 뒤 정답 문서를 인용하지 않음)과 8·9번(정답 밖 인용이 더해짐)이며 두 판 모두에서 그대로이고 **수정 중(측정 뒤 수정)** 으로 아직 고치지 않았고 고친 뒤 재측정하지 않았다. 참고로 v2 50건 최종 3회 평균(사전 등록 61.51, 로컬)은 단일 1.000, 멀티 0.992이다. v2와 겹치지 않는 검증 20건(관련 10건)은 `00037-2jt`에서 인용 정확도 0.751, 정답 근거 인용률 0.750이고 `00035-h69`에서는 0.822와 0.800, `00032-zhs`에서는 0.772와 0.750으로 세 리비전 모두 기준에 못 미친다(`deploy_latency_holdout_provena-api-00037-2jt/`, `deploy_latency_holdout_provena-api-00035-h69/`, `deploy_latency_holdout_provena-api-00032-zhs/`). v2 값은 같은 50건을 보고 고친 뒤의 값이라 낙관적일 수 있다(`EVAL_REPORT.md` 4장) |

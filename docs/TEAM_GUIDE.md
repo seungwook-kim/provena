@@ -16,7 +16,7 @@
 | 반드시 | F-02 답변 리콜 | 정책이 개정되면 예전 답의 결론이 바뀌었는지 판정해 알린다 |
 | 반드시 | F-03 팀 합동 검토 | 보안·인프라(SRE)·IT 운영·재무 관점 쟁점표 (가이드 G4 Supervisor + 서브에이전트) |
 | 반드시 | 가산 3종 | 자동화, GraphRAG, MCP·Skill (가이드 p.20 인정 기준대로) |
-| 필수 뒤 진행 | F-05, F-06 | 빼지 않는다. 필수 작업이 끝나면 F-05, F-06 순서로 진행(결정 0059) |
+| 필수 뒤 진행 | F-05~F-08 | 빼지 않는다(결정 0059, 0066). 2026-11-11 코드 기준 F-05 영향 미리보기, F-07 git 없는 변경 감지, F-08 알림 피로 줄이기는 구현됐고 F-06 문서 권한은 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만이다(검색 단계 거르기 없음, `docs/SDD.md` 4-2) |
 | 반드시 | 공통 | 로그인, 사용자별 대화·기억 분리, 사람 승인, 데모 모드, 배포, 평가 |
 
 자세한 내용은 PRD를 본다.
@@ -75,7 +75,7 @@
 |---|---|---|
 | `backend/schemas/` | 공동 (3명 승인) | 파트 사이 데이터 형식 (6장) |
 | `backend/rag/`, `data/` | 박진형 (안) | 수집·파싱·청킹·적재(`backend/rag/ingest/`), 임베딩·검색·리랭킹(`retrieve/`). 수집은 로컬에서 한 번 하고 원문 스냅샷과 `data/manifest.jsonl`을 커밋한다(템플릿 SCAFFOLD) |
-| `backend/graph/`, `backend/memory/`, `backend/prompts/`, `skills/` | 김승욱 (안) | 그래프, 부서 에이전트(security, sre(인프라·SRE), it-ops(IT 운영), finance), 결정표, 리콜, 장기 기억, 런타임 Skill (delegation = 권한표 해석) |
+| `backend/graph/`, `backend/memory/`, `backend/prompts/`, `skills/` | 김승욱 (안) | 그래프, 부서 에이전트(security, infra(인프라·SRE), itops(IT 운영), finance), 결정표, 리콜, 장기 기억, 런타임 Skill (delegation = 권한표 해석) |
 | `backend/main.py`, `backend/services/`, `Dockerfile`, `docker-compose.yml`, `db/`, `.github/workflows/` | 김승욱 (안) | FastAPI 라우트, LLM 호출(`services/llm.py` 한 곳), compose·seed·CI |
 | `backend/auth.py` | 강경희 (안) | 로그인·사용자 식별. 첫 배포(`/health`)도 강경희 |
 | `extras/mcp_skill/` | 박진형 (안) | FastMCP 서버 |
@@ -84,9 +84,9 @@
 | `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
 | `evals/agent/`, `evals/latency/`, `evals/ci_compare.py` | 김승욱 (안) | 에이전트 평가, 배포 응답 시간 측정, CI 점수 비교. 지표별 실행 명령은 SPEC 3장 (`evals/run_all.py`는 만들지 않았다) |
 | `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
-| `mock_erp/` | 김승욱 (안) | 업무시스템 목업 (Spring, Python 예제) |
+| `mock_erp/` | 김승욱 (안) | 업무시스템 목업. 계획은 Spring과 Python 예제, 현재는 Python 예제만 있다(`mock_erp/mock_erp.md`) |
 | `data/LICENSES/` | 팀장 | 핸드북 원문 사용 시 CC BY-SA 4.0 고지와 출처. 원문 텍스트는 코드와 폴더를 나눈다 |
-| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장) |
+| 개발 도구 Skill 폴더, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장). 2026-11-11 `git ls-files` 기준 저장소에 두 곳 모두 없다 |
 | `docs/` | 팀장 (각자 자기 파트 절 작성) | SPEC.md, 리포트, 이 지침서 |
 
 폴더 구조는 강사 템플릿(`docs/SCAFFOLD.md`)을 따른다. 템플릿의 `backend/rag/ingest.py`·`retrieve.py` 자리는 `backend/rag/ingest/`·`retrieve/` 폴더로, `backend/memory.py` 자리는 `backend/memory/` 폴더로 쓴다.
@@ -106,56 +106,61 @@
 하위 폴더마다 맨 위에 폴더 이름과 같은 md 파일을 둔다(5-1장). 오른쪽 이름이 그 파일이다.
 
 ```
-repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
+repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` 기준으로 다시 썼다)
 ├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
 ├─ AGENTS.md, CLAUDE.md      # AI 코딩 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
-├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
-├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
-├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
+├─ (개발 도구 Skill 폴더, .mcp.json: 계획만 있고 저장소에 아직 없음. 5장 표 참고)
+├─ .github/                  # PR 양식, CI(ci.yml), 핸드북 동기화(handbook-sync.yml), 비밀값 검사(secret-scan.yml)
 ├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장). pyproject.toml과 Makefile은 두지 않는다
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
+├─ MYINFO_SPEC.md            # 내 정보 화면 시안 (정식 spec은 docs/specs/initial-registration.md). 루트 파일 규칙에서 벗어남, 처리는 팀장 판단
 │
-├─ docs/   (TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, SDD.md, TEAM_GUIDE.md, specs/, deliverables/)
+├─ docs/   (TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, PRD.md, SDD.md, TEAM_GUIDE.md, why_langgraph.md, decisions.md, worklog.md, embedding_measurement.md, api/, db/, specs/, deliverables/)
 │
 ├─ backend/
 │  ├─ backend.md
-│  ├─ main.py                     # FastAPI 진입점(/health), 라우트: 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅
-│  ├─ auth.py                     # 로그인, 사용자 식별 (bcrypt + JWT 쿠키)
-│  ├─ persistence.py              # 체크포인터·Store (DATABASE_URL이면 Postgres)
+│  ├─ main.py                     # FastAPI 진입점(/health), 라우터 연결, /mcp 마운트(MCP_TOKEN이 있을 때)
+│  ├─ auth.py                     # 로그인·가입 신청·Google 로그인·사용자 식별 (bcrypt + JWT 쿠키)
+│  ├─ admin_api.py, profile_api.py   # 관리자 라우터(사용자 권한·가입 승인), 내 정보 `/me/profile`
+│  ├─ api/          api.md        # /chat, /threads, /me/memory(routes.py), /recalls*(recalls.py), /changes*(changes.py), 오류·요청 ID(errors.py, middleware.py)
 │  ├─ schemas/      schemas.md    # 파트 사이 데이터 형식 (3명 승인): chunk.py events.py approval.py recall.py decision.py
-│  ├─ services/                   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기)
-│  ├─ backend/rag/          rag.md
-│  │  ├─ backend/rag/ingest/    ingest.md     # 템플릿 ingest.py 자리
+│  ├─ services/     services.md   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기), auth_store.py, profile_store.py 등
+│  ├─ rag/          rag.md
+│  │  ├─ ingest/    ingest.md     # 템플릿 ingest.py 자리
 │  │  │     handbook.py           # 핸드북 git 수집(고른 절만), 2023 권한표 판 고정
 │  │  │     history.py            # git 커밋 이력에서 판 목록 (리콜 시험 데이터)
 │  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
+│  │  │     pdf.py                # PDF 파싱(서비스 색인 전용 청크)
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
-│  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
+│  │  │     diff.py, compare.py, changes.py  # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지 (가산: 자동화)
+│  │  │     snapshot.py, snapshot_diff.py  # git 없는 변경 감지(F-07)
 │  │  └─ retrieve/  retrieve.md   # 템플릿 retrieve.py 자리
-│  │        embed.py              # 다국어 로컬 임베딩 (11장)
-│  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
-│  │        rerank.py             # bge-reranker-v2-m3
-│  │        link_graph.py         # 핸드북 페이지 링크 그래프 (가산: GraphRAG)
-│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장
+│  │        embed.py              # 임베딩(기본 voyage-4 API, 로컬 모델은 비교용)
+│  │        search.py             # 검색(기본 dense_en), 판·절 필터, 링크 확장, 금액 구간 조회
+│  │        translate.py, ranges.py   # 한→영 질의 변환, 금액 구간 재료
+│  │        rerank.py             # 리랭커 불러오기(기본은 쓰지 않음)
+│  │        links.py              # 핸드북 페이지 링크 추출 (가산: GraphRAG)
+│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장, checkpoint.py(체크포인터·Store)
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
-│  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
-│  │  └─ recall/    recall.md     # 리콜 판정 (F-02)
-│  ├─ memory/       memory.md     # Store 장기 기억 (팀·역할·담당 서비스). 템플릿 memory.py 자리
+│  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환·실행 (F-04)
+│  │  └─ recall/    recall.md     # 리콜 판정·알림·웹훅·검토함·요약·영향 미리보기 (F-02, F-05, F-08)
+│  ├─ memory/       memory.md     # Store 장기 기억 (현재 칸은 소속·직급, docs/specs/memory.md). 템플릿 memory.py 자리
 │  └─ prompts/      prompts.md
 │
-├─ skills/          skills.md     # 런타임 Skill (가산: MCP와 Skill). 상세는 MCP·Skill 설계
+├─ skills/          skills.md     # 런타임 Skill 13개 (가산: MCP와 Skill)
 │     ├─ delegation/SKILL.md      # 권한표 해석
-│     ├─ security/ finance/ (sre/ it-ops/: 이름은 D0 판단, 11장)
-│     └─ citation-rules/ grounding-check/ glossary/   # 공통 Skill 3개
-├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py)
-├─ web/   (pages/: login, chat, approvals, recalls, admin)
-├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
-├─ db/    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
-├─ data/  (corpus/ 원문 스냅샷, manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
-├─ evals/ (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, retrieval/, agent/, safety/, results/)
+│     ├─ security/ infra/ itops/ finance/   # 팀 관점 Skill 4개
+│     ├─ citation-rules/ grounding-check/ glossary/   # 공통 Skill 3개
+│     └─ report-writing/ chat-tool-guide/ mail-templates/ retrieval-slots/ search-terms/   # 조건부
+├─ extras/mcp_skill/  mcp_skill.md   # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py). mcp_client/client.py, NOT_BUILT.md
+├─ web/   web.md   (react-app/src/pages/: 로그인, 가입, 내 정보, 채팅, 승인함, 리콜, 변경 감시, 관리자, 사용자 관리, 기억 설정)
+├─ mock_erp/ mock_erp.md   (python_example/. src/는 설명 문서뿐이라 Spring Boot 목업은 만들지 않음)
+├─ db/    db.md    (01_init.sql, 101~120 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 앱 시작 때 시드. SQL 번호대는 100번대 로그인·그래프, 200번대 검색)
+├─ data/  data.md  (corpus.tar.gz 원문 스냅샷, index.tar.gz, manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
+├─ evals/ evals.md (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, ci_compare.py, retrieval/, agent/, safety/, latency/, results/)
 └─ tests/
 ```
 
@@ -213,8 +218,8 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 |---|---|
 | `backend/requirements.txt` | 파트 구분 없이 한 파일이다(시험 도구 pytest·httpx는 `backend/requirements-dev.txt`). 자기 파트가 쓰는 줄만 더하고 남의 줄과 기존 버전은 바꾸지 않는다. Dockerfile과 CI(Python 3.12)가 이 파일로 설치한다 |
 | `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
-| `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
-| 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
+| `db/` | SQL 파일 번호대를 파트마다 나눈다. 현재 100번대는 로그인·결정표·내 정보·가입·쟁점표·대화·답변과 리콜(`101`~`120`), 200번대는 검색·동기화(`201`, `202`), 처음 만드는 `01_init.sql`, 수동 적용은 `db/manual/`(`db/db.md`) |
+| 설정 | 계획은 파트마다 자기 폴더의 `config.py`였으나 만들지 않았다(2026-11-11 `ls` 기준 `config.py` 0개). 설정은 환경 변수(`.env.example`)와 각 모듈이 읽는다 |
 
 **Git**
 
@@ -234,7 +239,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 class Chunk(BaseModel):
     chunk_id: str          # sha256 앞 16자
     org: str               # 핸드북 절 (예: "security", "finance")
-    rule_seq: int          # 페이지 id (경로 해시 등, D0에 정함)
+    rule_seq: int          # 페이지 id (경로 sha256 앞 8자리 16진수를 정수로, 0..4294967295, DB는 BIGINT. `handbook.py:rule_seq`)
     rule_title: str        # 페이지 제목
     article: str | None    # 제목 경로 (예: "Incident Management > Severities")
     version_id: str        # 커밋 기반 판 id (SDD 5장 versions, citations와 같은 값)
@@ -245,12 +250,15 @@ class Chunk(BaseModel):
     source_url: str        # 핸드북 페이지 URL
     text_sha256: str | None = None   # 본문 sha256 (SDD 11-1 3-6)
     version_date_before: bool = False   # True면 판 날짜를 정확히 모르고 version_date 이전이라는 뜻(얕은 이력, I-001). 화면은 "YYYY-MM-DD 이전"으로 보인다
+    line_start: int | None = None   # 원본 페이지 줄 범위(1부터, 끝 포함). 평가셋 `경로#L523` 정답 대조와 출처 링크용. 3명 승인 사항이었고 `backend/schemas/chunk.py`에 반영됨
+    line_end: int | None = None
 
 class SearchQuery(BaseModel):
     query: str
     org: str | None = None     # 절
     as_of: str | None = None   # 이 날짜 기준 핸드북 판(커밋)만
-    k: int = 8
+    k: int = 5                 # DEFAULT_K (확정 조합 k=5, docs/specs/search.md)
+    sub_queries: list[str] | None = None   # 질문 분해 결과(2~3개), 있으면 하위 질문마다 검색
 
 # backend/schemas/events.py  (에이전트 → 화면)
 class AgentEvent(BaseModel):
@@ -305,7 +313,7 @@ Claude Code·Codex·Cursor 등을 써도 된다. 도구에 주는 규칙은 저�
 
 **데이터·라이선스 규칙.** 핸드북 본문은 CC BY-SA 4.0이다. 코드와 원문 텍스트는 폴더를 나누고, 원문 폴더(`data/LICENSES/` 포함)에만 라이선스와 출처를 적는다. 답에 원문을 보일 때는 페이지 URL, CC BY-SA 4.0 링크, 수정 여부를 함께 표시한다. README와 발표에는 "GitLab Inc.와 제휴·보증 관계 없음"을 적는다. 자세한 내용은 SDD 8장.
 
-**개발용 Skill·MCP.** 저장소의 `.claude/skills/`와 `.mcp.json`을 `git pull`로 받아 모두 같은 것을 쓴다. 필수·조건부 목록은 MCP·Skill 설계 4장에 있다. 새 외부 Skill은 팀장이 내용을 확인한 뒤 넣는다.
+**개발용 Skill·MCP.** 계획은 저장소의 개발 도구 Skill 폴더와 `.mcp.json`을 `git pull`로 받아 모두 같은 것을 쓰는 것이다(2026-11-11 현재 저장소에 이 파일들은 아직 없다). 필수·조건부 목록은 MCP·Skill 설계 4장에 있다. 새 외부 Skill은 팀장이 내용을 확인한 뒤 넣는다.
 
 **AI 결과를 그대로 믿지 않는다.** 범용 챗봇 비교에서도 확인했듯이 AI 도구는 없는 섹션이나 정책 이름을 지어낼 수 있다. PR을 올리기 전에 직접 실행해 보고, 데이터·섹션은 핸드북 원문과 대조한다.
 

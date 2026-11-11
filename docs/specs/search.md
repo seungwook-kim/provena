@@ -78,7 +78,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `backend/rag/retrieve/rerank.py` | 리랭커 불러오기, int8(CPU) 선택 |
 | `backend/rag/retrieve/translate.py` | 한국어 질문 → 영어 검색어·영어 문장. LLM은 `backend/services/llm.py`로만 부른다. 번역은 질문 sha256과 모델 이름을 키로 `query_translations` 표에 저장하고, 같은 키가 있으면 LLM을 다시 부르지 않는다 |
 | `backend/rag/retrieve/index.py` | 색인 만들기(오프라인, 모델 필요): `data/chunks/chunks.jsonl`에서 `data/index/`(`meta.json`: 임베더·차원·청크 수·원본 sha256, `chunks.jsonl`, `vectors.npy`)를 만든다. 가이드 p.12 4-3 "인덱스는 오프라인에서 만들어 벡터DB에 적재"와 해시가 바뀐 청크만 다시 임베딩. `refresh`: 청크 id·판·본문(지문)과 줄 순서가 같고 다른 칸(판 날짜 등)만 바뀐 청크 파일로 갈아 끼운다. 벡터는 본문과 모델로만 정해지므로 다시 계산하지 않고, 지문이나 순서가 다르면 멈춘다(I-011). 청크 sha256이 바뀌므로 `load_snapshot`이 다시 적재한다. `translations --from <1차 비교 translations.json>` 은 번역을 `data/index/query_translations.jsonl`(meta.json에 sha256)로 옮긴다 — `load_snapshot` 이 DB 장부에, `make_search` 가 메모리 장부에 넣어 1차 비교와 같은 번역으로 돈다(번역은 부를 때마다 달라 재현의 근거가 된다). `links`: 청크마다 링크 대상 페이지 → `data/index/links.jsonl`(줄 순서 = chunks.jsonl, meta.json에 sha256) |
-| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB, 링크를 아직 안 실은 DB는 다시 넣는다). 링크는 `chunks.link_targets bigint[]`, 장부 `index_meta.links_sha256`. 증분(`schedule.py`)도 새 판 청크에 같은 규칙으로 링크를 넣는다. 스냅샷을 새로 만드는 순서는 `index import --from data/index_exp --embedder voyage-4`, `index links`, `load_snapshot`이다. 배치 사이의 커밋을 넘어 임시 표(`chunks_in`)를 쓰므로 Supabase에 적재할 때는 세션 포트(5432)로 접속한다. 2026-11-05에 이 방법으로 23,095청크를 20.7초에 적재했고(generation 1), 트랜잭션 포트(6543)로 적재하는 경우는 시험하지 않았다. 검색 자체는 6543에서 동작을 확인했다 |
+| `backend/rag/retrieve/load_snapshot.py` | 적재(모델 불필요): `data/index/`를 DB에 넣는다. `docker compose up`의 `loader` 서비스가 db가 뜬 뒤 한 번 돌린다. DB가 아직 접속을 받지 않으면(새 DB 첫 기동의 초기화 중) 2초 간격으로 60초까지 다시 접속하고, 그 뒤에도 안 되면 마지막 접속 오류로 끝난다. 접속 오류(`OperationalError`)가 아닌 예외는 다시 시도하지 않는다(`_connect`, PR #95, `tests/test_index_snapshot.py`). chunk_id로 upsert(멱등), 배치마다 커밋, 이미 같은 스냅샷이면 건너뛴다(줄 범위 칸이 빈 옛 DB, 링크를 아직 안 실은 DB는 다시 넣는다). 링크는 `chunks.link_targets bigint[]`, 장부 `index_meta.links_sha256`. 증분(`schedule.py`)도 새 판 청크에 같은 규칙으로 링크를 넣는다. 스냅샷을 새로 만드는 순서는 `index import --from data/index_exp --embedder voyage-4`, `index links`, `load_snapshot`이다. 배치 사이의 커밋을 넘어 임시 표(`chunks_in`)를 쓰므로 Supabase에 적재할 때는 세션 포트(5432)로 접속한다. 2026-11-05에 이 방법으로 23,095청크를 20.7초에 적재했고(generation 1), 트랜잭션 포트(6543)로 적재하는 경우는 시험하지 않았다. 검색 자체는 6543에서 동작을 확인했다 |
 | `backend/schemas/chunk.py` | `SearchQuery`, `Chunk` (바꾸지 않는다. 필드 추가는 SDD 6장 절차. `line_start`·`line_end` 추가는 열린 항목 8, 승인 대기) |
 | `data/chunks/chunks.jsonl` | 색인 입력(PR #23) |
 | `data/index/` | 색인 스냅샷. 23,095청크 × 1024차원 float32 `vectors.npy`가 약 95MB다. 압축 한 파일 `data/index.tar.gz`(약 94.5MB)로 저장소에 커밋하고(2026-11-07), 풀린 `data/index/`는 커밋하지 않는다(`.gitignore`). 쓰는 법과 고치는 순서는 `data/data.md`의 "검색 색인 스냅샷 쓰는 법", 정한 내용은 "열린 항목" 6 |
@@ -103,7 +103,10 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `EMBED_REVISION` | 모델별 고정 커밋 | 재현용. 1차 비교를 돌린 PC 캐시의 커밋(11/2 조장 확인): bge-m3 `5617a9f6`, arctic-l-v2 `ac6544c8`, voyage-4-nano `5fb34e87`, Qwen3-Embedding `97b0c614`, e5-large `3d7cfbda`, bge-reranker `953dc6f6`, Qwen3-Reranker `e61197ed`, mMiniLM `1427fd65`(전체 해시는 `embed.py`·`rerank.py` 명부). 1차 비교는 임베딩 로드 정밀도를 지정하지 않아 기록이 없다(config: nano·Qwen3 bfloat16, 나머지 float32). 서비스는 float32로 고정한다(I-008). Qwen3 리랭커는 GPU fp16·CPU fp32, int8은 CPU |
 | `SEARCH_MODE` | `dense_en` | 위 표 |
 | `SEARCH_POOL` | `100` | 벡터·BM25 각각 가져오는 후보 수 |
-| `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 아직 운영 기본값이 아니다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다 |
+| `SEARCH_HNSW` | 꺼짐 | `1`일 때만 `PgStore`가 `HNSW_DIMS`에 있는 모델(voyage-4)에 HNSW 색인 질의를 쓴다. 그 밖에는 전수 비교다. 서비스 설정(61.51, `backend/graph/service_profile.py`)이 켠다. 색인 없이 켜면 느리다. 색인은 `db/manual/chunks_hnsw_voyage4.sql`을 수동으로 실행해 만든다. 색인이 없는 DB(로컬 compose 등)에서는 `SEARCH_HNSW=off`로 끈다 |
+| `SEARCH_SUB_MERGE` | 꺼짐 | `1`이면 분해 검색에서 전체 질문도 후보에 넣고, 하위 질문 목록을 번갈아 합치는 대신 질의별 점수 중 가장 높은 값(`merge_by_score`)으로 합친다. 서비스 설정은 켜지 않는다 |
+| `SEARCH_PARALLEL_SUBS` | 꺼짐 | `1`이면 하위 질문을 동시에 찾는다. 합치는 순서는 하위 질문 순서 그대로라 순위는 같다. 벡터만 쓰는 방식이고 리랭커가 없을 때만 동시에 한다(BM25·리랭커는 프로세스 안 계산이라 빨라지지 않는다). 서비스 설정이 켠다 |
+| `EMBED_KEEPALIVE` | 꺼짐 | `1`이면 voyage-4 질문 임베딩이 HTTP 연결을 다시 쓰고(httpx), 질문이 2~8개면 하나씩 동시에 보낸다(`VOYAGE_PARALLEL_QUERIES`). 순서는 입력과 같다. 서비스 설정이 켠다 |
 | `RERANK_MODEL` | `none` | 확정 조합은 리랭커 없음. 비교 후보: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`(비교용, 서비스 이미지에는 넣지 않음 — `--build-arg`와 `requirements-local-models.txt`로, CPU p95 0.59초), `BAAI/bge-reranker-v2-m3`, `bge-int8`, `Qwen/Qwen3-Reranker-0.6B`. bge는 CPU p95 7.0초라 GPU가 있을 때만 |
 | `RERANK_TOP` | `10` | 리랭킹할 후보 수 |
 | `QUERY_TRANSLATE` | `1` | `0`이면 번역 없이 `dense_ko` |
@@ -115,6 +118,8 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
 - 고정값: RRF k=60, 임베딩 `max_seq_length` 512, 정규화한 벡터의 내적. 1차 비교와 같게 둔다.
+- 그래프 전용 보조 검색(#67, 각각 그래프 `GRAPH_*` 스위치로 켜고 기본 검색 `search()`의 결과는 바꾸지 않는다): `search_pages`(페이지 범위 재검색), `sibling_sections`(형제 절), `intro_fill`(도입부 채우기, 같은 페이지 청크 `INTRO_MIN`=3개 이상일 때)(`backend/rag/retrieve/search.py:873, 846, 917`). `closest_to_query`(질문 벡터와 가까운 순)와 `search_headings`(제목 경로 검색)는 결정 0101(커밋 `e1e37e1`)에서 스위치와 함께 지워 현재 코드에 없다. 저장소가 `page_chunks`를 모르면 `intro_fill`은 빈 목록이다(`search.py:930-932`).
+- 질문 벡터 기억: 검색기 하나가 (방식, 질문) → 벡터를 최대 `QVEC_CACHE`=512개 프로세스 안에 기억해, 같은 질문을 보조 검색에서 다시 임베딩하지 않는다. 프로세스를 다시 띄우면 비워진다(질문 벡터 장부와는 별개).
 - 번역 프롬프트는 1차 비교의 `keywords`·`sentence` 두 가지를 그대로 쓴다(`experiment_v1.py`의 `PROMPTS`). 데모 모드는 `llm.py`가 입력 해시로 기록을 재생한다.
 - 응답 시간 참고(노트북 CPU, 후보 10): 질문 임베딩 86~215ms, 리랭킹 bge 5.3초·int8 2.3초·Qwen3 12.2초·mMiniLM 0.42초. CPU에서 3초를 지키는 조합은 11/6에 정한다. 측정 스크립트와 결과는 평가셋 v1 동결 뒤 올린다.
 

@@ -2,7 +2,7 @@
 
 > 상태: 구현 후 보완 문서
 >
-> 이 문서는 Spec-first 원칙에 따라 구현 전에 작성된 원본 Spec이 아니다. 현재 브랜치에 구현된 D6 프론트엔드 동작을 기준으로 계약과 범위를 명시한 보완 문서이며, 구현 전 합의가 필요한 항목과 아직 확인되지 않은 백엔드 계약을 구분한다.
+> 이 문서는 Spec-first 원칙에 따라 구현 전에 작성된 원본 Spec이 아니다. 구현된 D6 프론트엔드 동작을 기준으로 계약과 범위를 명시한 보완 문서다. 작성 당시(2026-11-07)에는 백엔드 계약이 미확정이었으나 PR #60이 머지돼(`docs/worklog.md:228-230`) 백엔드 계약은 `docs/SDD.md` 4-4(`/chat`·`/threads` 표)와 6장 이벤트 표가 정한다. 아래 "미확정" 표기는 작성 당시 기록이며 각 곳에 현재 값을 덧붙였다.
 >
 > 기존 기능 목록과 전체 제품 기준은 [`docs/SPEC.md`](../SPEC.md)를 참조한다. 이 문서는 D6 React 채팅 화면과 프론트 어댑터의 세부 동작만 다룬다.
 
@@ -14,8 +14,8 @@
   1. 데모 어댑터와 실제 API 어댑터를 화면에서 구분해 직접 다루면 호출 계약이 분산된다.
   2. SSE 이벤트가 여러 청크로 나뉘거나 ping 주석을 포함할 수 있어 단순 청크 단위 처리가 안전하지 않다.
   3. 승인 대기 중인 대화만 입력을 막아야 하며, 다른 대화나 새 대화까지 잠기면 안 된다.
-  4. `/threads`와 SSE 이벤트의 백엔드 계약이 아직 PR #60과 완전히 검증되지 않았다.
-- **측정 기준**: 프론트 단위 테스트와 production build가 통과하고, PR #60 반영 후 실제 백엔드 통합 테스트에서 계약이 일치하는지 확인한다. 실제 API 통합 테스트는 현재 미완료다.
+  4. (작성 당시) `/threads`와 SSE 이벤트의 백엔드 계약이 PR #60과 완전히 검증되지 않았다. 지금은 PR #60 머지로 계약이 확정됐다(`backend/api/routes.py` `/chat`, `/threads`, `docs/SDD.md` 4-4).
+- **측정 기준**: 프론트 단위 테스트와 production build가 통과하고, 실제 백엔드 통합 테스트에서 계약이 일치하는지 확인한다. (PR #60은 머지됐다. 화면과 실제 백엔드를 브라우저로 이은 통합 검증 기록은 이 spec·`web/web.md`에서 찾지 못했다. 배포 서비스의 API 수준 실측은 `EVAL_REPORT.md` 6장·`docs/deliverables/ai_tools_log.md` 11/9 행에 있다.)
 
 ## Goal
 
@@ -56,7 +56,7 @@
 | `error` | 일반 오류와 `data.code === "limit_exceeded"`를 구분할 수 있는 오류 상태로 처리 |
 | `done` | 기본 상태는 `done`, `data.code === "no_results"`이면 `no-evidence`로 처리; attribution이 있으면 기존 citation과 중복 없이 출처에 반영 |
 
-위 표는 현재 프론트 구현의 처리 기준이다. 백엔드가 각 이벤트의 정확한 `data` 중첩 위치, attribution의 상세 타입, 승인 완료·거절 이벤트를 공식적으로 확정했는지는 PR #60 반영 후 확인한다.
+위 표는 현재 프론트 구현의 처리 기준이다. 백엔드가 각 이벤트의 정확한 `data` 중첩 위치, attribution의 상세 타입, 승인 완료·거절 이벤트를 공식적으로 확정했는지는 확인해야 한다. 이벤트 `data` 구조는 `docs/SDD.md` 6장 표(`backend/api/routes.py`·`backend/graph/stream.py`)가 정본이다.
 
 ### Edge Cases
 
@@ -95,17 +95,30 @@
 
 | 호출 | 확인된 프론트 기준 | 아직 확정하지 않은 항목 |
 |---|---|---|
-| `GET /threads` | `thread_id`, `title`, `updated_at` → `id`, `title`, `lastActivityAt` | 최상위 array/object 구조, 전체 메시지 구조 |
-| `GET /threads/{id}` | thread 상세를 UI 대화로 변환 | 실제 상세 응답의 최상위 구조와 필드 중첩 |
-| `POST /chat` | JSON 요청 및 text/event-stream 처리 | PR #60 반영 전의 최종 요청·이벤트 계약 |
+| `GET /threads` | `thread_id`, `title`, `updated_at` → `id`, `title`, `lastActivityAt` | 확정(작성 당시 미확정): 최상위는 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(`backend/api/routes.py:346`, SDD 4-4). 목록에는 메시지가 없다 |
+| `GET /threads/{id}` | thread 상세를 UI 대화로 변환 | 확정: 최상위에 thread 필드와 `messages`(질문 체크포인트에서 되살린 대화 이력)를 평평하게 둔다(`backend/api/routes.py:356`) |
+| `POST /chat` | JSON 요청 및 text/event-stream 처리 | 확정: 요청 `{thread_id?, message, as_of?, org?}`, 이벤트 `AgentEvent`(`{type, thread_id, data}`), 승인 대기 중 새 질문은 409 `approval_pending`(`backend/api/routes.py:321-328`, SDD 6장) |
 
-백엔드에서 확인되지 않은 내용을 새 스키마로 만들지 않는다. PR #60의 변경 파일과 실제 백엔드 스키마를 반영한 뒤 통합 검증에서 확정한다.
+백엔드에서 확인되지 않은 내용을 새 스키마로 만들지 않는다. 위 표의 "확정" 값은 PR #60 머지 뒤 백엔드 코드에서 확인한 값이다.
+
+### 의존 파일·환경변수
+
+| 구분 | 이름 | 쓰는 곳 |
+|---|---|---|
+| 파일 | `web/react-app/src/lib/chat-service.js`, `web/react-app/src/lib/api.js` | 위 "프론트 서비스 경계"의 실제 API adapter, 요청·SSE 처리 |
+| 파일 | `web/react-app/src/pages/DemoChatPage.jsx` | 대화 화면, 승인 대기 표시 |
+| 파일 | `web/react-app/vite.config.js` | 개발 서버가 `/auth`, `/me` 등을 백엔드로 넘기는 프록시 |
+| 빌드 변수 | `VITE_API_BASE_URL` | API 기본 주소. 비우면 같은 origin(`src/lib/api.js:1`, `web/react-app/README.md`) |
+| 빌드 변수 | `VITE_API_PROXY_TARGET` | 개발 서버 프록시 대상. 비우면 Docker 안에서는 `http://host.docker.internal:8000`, 아니면 `http://127.0.0.1:8000`(`vite.config.js:10-11`) |
+| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx:10`) |
+| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx:222, 230`) |
+| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py:94, 123`) |
 
 ### 검증 계획
 
 - 현재 완료된 범위: 프론트 단위 테스트와 production build 검증.
-- 현재 미완료 범위: 실제 백엔드와의 API 통합 테스트.
-- PR #60 반영 후 검증할 항목:
+- 작성 당시 미완료 범위: 실제 백엔드와의 API 통합 테스트(PR #60 머지 뒤의 브라우저 통합 검증 기록은 찾지 못함, 팀 확인 필요).
+- PR #60 머지 뒤 검증할 항목:
   1. `GET /threads` 및 `GET /threads/{id}` 실제 응답 매핑
   2. `POST /chat` 요청 body와 SSE event/data 구조
   3. `error`, `done`, `attribution`, `approval_request`의 실제 data 구조
@@ -163,6 +176,6 @@
 
 ### AC-09 실제 API 통합 검증 보류
 
-- **GIVEN** PR #60이 아직 반영되지 않았다.
+- **GIVEN** 화면과 실제 백엔드를 브라우저로 이은 통합 검증 기록이 없다.
 - **WHEN** D6 검증 결과를 보고한다.
-- **THEN** 실제 백엔드 통합 테스트는 미완료이며, PR #60 반영 후 검증 예정이라고 명시한다.
+- **THEN** 그 통합 검증은 미완료라고 명시한다. (PR #60은 머지됐으므로 "PR #60 반영 후"는 더 이상 조건이 아니다. 기록이 생기면 이 AC를 "완료"로 바꾼다.)

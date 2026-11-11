@@ -497,11 +497,11 @@ def test_react_entry_and_spa_fallback_do_not_shadow_api(monkeypatch):
 
 
 # ---- 진짜 Postgres (선택) ---------------------------------------------------
-@pytest.mark.skipif(not os.getenv("PROVENA_TEST_DATABASE_URL"), reason="PROVENA_TEST_DATABASE_URL 없음")
+@pytest.mark.skipif(not (os.getenv("PROVENA_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")), reason="PROVENA_TEST_DATABASE_URL·TEST_DATABASE_URL 없음")
 def test_real_postgres_roundtrip():
     from backend.auth import hash_password
 
-    store = PostgresAuthStore(os.environ["PROVENA_TEST_DATABASE_URL"])
+    store = PostgresAuthStore(os.getenv("PROVENA_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL"))
     store.ensure_schema()
     store.ensure_schema()  # 두 번 돌려도 된다
     login = f"pytest-{secrets.token_hex(4)}"
