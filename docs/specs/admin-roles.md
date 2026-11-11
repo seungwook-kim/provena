@@ -206,7 +206,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 
 | 일 | 파일 | 담당 (`docs/TEAM_GUIDE.md:79-82`) |
 |---|---|---|
-| 이 Spec, 시험 `tests/test_admin_roles.py` | `docs/specs/`, `tests/` | 박진형 |
+| 이 Spec, 시험 `tests/test_admin_api.py`, `tests/test_admin_store_pg.py` | `docs/specs/`, `tests/` | 박진형 |
 | 최고 관리자 확인, 관리자 라우터 3개, `/me`의 `is_owner` | `backend/auth.py` | 강경희 |
 | 저장소 메서드, `create_account`, `105` SQL, `ensure_schema`, `main.py` 배선·시작 확인, `.env.example` | `backend/services/`, `db/`, `backend/main.py` | 김승욱 |
 | 사용자 관리 화면 | `web/` | 강경희 (시안: 박진형) |
