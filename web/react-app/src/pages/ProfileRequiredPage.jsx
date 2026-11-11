@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, getProfileForEdit, saveProfile } from '../lib/api'
+import { ApiError, getMemory, getProfileForEdit, patchMemory, saveProfile } from '../lib/api'
 import { useSession } from '../lib/session'
 import '../profile.css'
 
@@ -8,6 +8,26 @@ const EMPTY_FORM = { team: '', role: '', service: '', name: '', phone: '', addre
 const PHONE_PATTERN = /^010\d{8}$/
 const TEAM_OPTIONS = ['보안', '인프라·SRE', 'IT 운영', '재무', '개발']
 const ROLE_OPTIONS = ['개발자', 'SRE', '관리자', '정책 담당자']
+const SERVICE_MAX_LENGTH = 100   // backend/api/routes.py MemoryPatch
+const MEMORY_FAILED = '기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(소속 팀·업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.'
+
+// AI 기억(GET /me/memory)의 affiliation·rank·service 를 화면의 소속 팀·업무 역할·담당 서비스로 옮긴다.
+function memoryToForm(memory) {
+  const profile = memory?.profile && typeof memory.profile === 'object' ? memory.profile : {}
+  const text = value => (typeof value === 'string' ? value : '')
+  return { affiliation: text(profile.affiliation), role: text(profile.rank), service: text(profile.service) }
+}
+
+// 기억 저장 본문: 바뀐 칸만 보낸다(서버는 보낸 칸만 갱신). 기준 값과 같으면 보내지 않는다.
+function memoryChanges(form, base) {
+  const next = { affiliation: form.team, rank: form.role, service: form.service.trim() }
+  const prev = { affiliation: base.affiliation, rank: base.role, service: base.service }
+  return Object.fromEntries(Object.entries(next).filter(([key, value]) => value !== prev[key]))
+}
+
+function roleOptions(role) {
+  return !role || ROLE_OPTIONS.includes(role) ? ROLE_OPTIONS : [...ROLE_OPTIONS, role]
+}
 
 function formatPhone(value) {
   const digits = String(value ?? '').replace(/\D/g, '').slice(0, 11)
@@ -48,8 +68,7 @@ function isBasicProfileComplete(form) {
   return Boolean(form.name.trim()) && PHONE_PATTERN.test(phoneDigits)
 }
 
-// 업무 역할과 담당 서비스는 저장할 칸이 서버에 없다(PUT /me/profile은 name·dept·phone·address, /me/memory는 affiliation·rank만 받는다).
-// 저장되지 않는 값이 저장·가입을 막지 않도록 필수 조건에서 뺐다.
+// 업무 역할·담당 서비스는 AI 기억(/me/memory)에 저장되는 선택 칸이다. 내 정보 필수 조건에는 넣지 않는다(MYINFO_SPEC.md 2장: AI 기억은 선택).
 function isProfileEditComplete(form) {
   return Boolean(form.team) && isBasicProfileComplete(form)
 }
@@ -59,6 +78,7 @@ function ProfileEditPage() {
   const { user } = useSession()
   const [form, setForm] = useState(EMPTY_FORM)
   const [initialForm, setInitialForm] = useState(EMPTY_FORM)
+  const [memoryBase, setMemoryBase] = useState(null)   // 불러온 AI 기억. null이면 불러오지 못한 것 → 기억 칸은 저장하지 않는다
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -67,12 +87,14 @@ function ProfileEditPage() {
 
   useEffect(() => {
     let active = true
-    getProfileForEdit()
-      .then(profile => {
+    Promise.all([getProfileForEdit(), getMemory().then(memoryToForm, () => null)])
+      .then(([profile, memory]) => {
         if (!active) return
-        const nextForm = { team: profile.dept || '', role: '', service: '', name: profile.name || '', phone: formatPhone(profile.phone), address: profile.address || '' }
+        const nextForm = { team: profile.dept || '', role: memory?.role || '', service: memory?.service || '', name: profile.name || '', phone: formatPhone(profile.phone), address: profile.address || '' }
         setForm(nextForm)
         setInitialForm(nextForm)
+        setMemoryBase(memory)
+        if (!memory) setError('AI 기억(업무 역할·담당 서비스)을 불러오지 못해 이 두 칸은 저장되지 않습니다. 새로고침 후 다시 시도해 주세요.')
       })
       .catch(loadError => { if (active) setError(loadError.message || '회원정보를 불러오지 못했습니다.') })
       .finally(() => { if (active) setLoading(false) })
@@ -96,12 +118,9 @@ function ProfileEditPage() {
   async function submit(event) {
     event.preventDefault()
     if (!canSave || saving) return
-    const memoryChanged = form.role !== initialForm.role || form.service !== initialForm.service
     const profileChanged = form.team !== initialForm.team || form.name !== initialForm.name || form.phone !== initialForm.phone || form.address !== initialForm.address
-    if (!profileChanged && memoryChanged) {
-      setError('업무 역할과 담당 서비스는 영구 저장 API가 아직 없어 저장할 수 없습니다.')
-      return
-    }
+    const memoryBody = memoryBase ? memoryChanges(form, memoryBase) : {}
+    const memoryChanged = Object.keys(memoryBody).length > 0
     const localAddressError = addressError(form.address)
     if (localAddressError) {
       setFieldErrors({ address: localAddressError })
@@ -111,17 +130,23 @@ function ProfileEditPage() {
     setSaving(true)
     setError('')
     setFieldErrors({})
+    let profileSaved = false
     try {
-      await saveProfile({ name: form.name, dept: form.team, phone: form.phone, address: form.address })
-      const savedForm = { ...form, role: initialForm.role, service: initialForm.service }
-      setForm(savedForm)
-      setInitialForm(savedForm)
-      setNotice(memoryChanged ? '소속 팀과 기본 정보만 저장했습니다. 업무 역할과 담당 서비스는 영구 저장 API 연동 전이라 반영되지 않았습니다.' : '변경사항을 저장했습니다.')
+      // 내 정보(PUT /me/profile) → AI 기억(PATCH /me/memory) 순서. 앞이 실패하면 뒤는 보내지 않아 아무것도 저장되지 않은 상태가 된다.
+      if (profileChanged) await saveProfile({ name: form.name, dept: form.team, phone: form.phone, address: form.address })
+      profileSaved = true
+      if (memoryChanged) setMemoryBase(memoryToForm(await patchMemory(memoryBody)))
+      setInitialForm(form)
+      setNotice('변경사항을 저장했습니다.')
     } catch (saveError) {
-      if (saveError instanceof ApiError && saveError.status === 422) {
+      if (profileSaved) {
+        // 내 정보는 저장됐고 AI 기억만 실패했다. 내 정보 칸의 기준 값만 새로 맞춘다(기억 칸은 그대로 두어 다시 저장하면 다시 보낸다).
+        setInitialForm(current => ({ ...current, team: form.team, name: form.name, phone: form.phone, address: form.address }))
+        setError(MEMORY_FAILED)
+      } else if (saveError instanceof ApiError && saveError.status === 422) {
         setFieldErrors(toFormFieldErrors(saveError.fields))
-        setError('입력한 내용을 확인해 주세요.')
-      } else setError(saveError.message || '회원정보를 저장하지 못했습니다.')
+        setError(memoryChanged ? '입력한 내용을 확인해 주세요. 아무것도 저장되지 않았습니다.' : '입력한 내용을 확인해 주세요.')
+      } else setError((saveError.message || '회원정보를 저장하지 못했습니다.') + (memoryChanged ? ' 아무것도 저장되지 않았습니다.' : ''))
     } finally {
       setSaving(false)
     }
@@ -132,13 +157,13 @@ function ProfileEditPage() {
       <button type="button" className="profile-back-button profile-back-button-real" onClick={goBack}><span aria-hidden="true">←</span><span>뒤로가기</span></button>
       <p className="profile-eyebrow">MY INFORMATION</p>
       <h1 id="profile-edit-title">회원정보 수정</h1>
-      <p className="profile-description">소속 팀과 기본 정보를 수정할 수 있습니다.</p>
+      <p className="profile-description">소속 팀·업무 역할·담당 서비스와 기본 정보를 수정할 수 있습니다.</p>
       {loading ? <p role="status">회원정보를 불러오는 중입니다.</p> : <form className="profile-form profile-form-edit" onSubmit={submit} noValidate>
         <label><span>소속 팀 <em aria-hidden="true">*</em></span><select required value={form.team} onChange={event => update('team', event.target.value)} {...fieldProps(fieldErrors, 'team')}><option value="" disabled>소속 팀을 선택해 주세요.</option>{TEAM_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
         <FieldError id="profile-error-team" message={fieldErrors.team} />
-        <label><span>업무 역할 <small>(선택 · 저장 연동 준비 중)</small></span><select value={form.role} onChange={event => update('role', event.target.value)}><option value="">설정하지 않음</option>{ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label><span>담당 서비스 <small>(선택 · 저장 연동 준비 중)</small></span><input value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>
-        <p className="profile-storage-notice">업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없으며, 현재 저장되지 않습니다. 담당 서비스도 현재 영구 저장 API가 없어 저장되지 않습니다.</p>
+        <label><span>업무 역할 <small>(선택)</small></span><select value={form.role} disabled={!memoryBase} onChange={event => update('role', event.target.value)}><option value="">설정하지 않음</option>{roleOptions(form.role).map(option => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label><span>담당 서비스 <small>(선택)</small></span><input value={form.service} disabled={!memoryBase} maxLength={SERVICE_MAX_LENGTH} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>
+        <p className="profile-storage-notice">업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없습니다. 업무 역할·담당 서비스는 AI 기억에 저장되어 답변을 맞추는 데 쓰입니다.</p>
         <label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} autoComplete="name" {...fieldProps(fieldErrors, 'name')} /></label>
         <FieldError id="profile-error-name" message={fieldErrors.name} />
         <label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" autoComplete="tel" placeholder="예시) 010-1234-5678" {...fieldProps(fieldErrors, 'phone')} /></label>
@@ -175,18 +200,18 @@ function ProfileOnboardingPage() {
   useEffect(() => {
     let active = true
     setLoading(true)
-    getProfileForEdit()
-      .then(profile => {
+    Promise.all([getProfileForEdit().catch(loadError => (loadError?.status === 404 ? {} : Promise.reject(loadError))), getMemory().then(memoryToForm, () => null)])
+      .then(([profile, memory]) => {
         if (!active) return
-        setForm({ team: profile.dept || '', role: '', service: '', name: profile.name || '', phone: formatPhone(profile.phone), address: profile.address || '' })
+        setForm({ team: profile.dept || '', role: memory?.role || '', service: memory?.service || '', name: profile.name || '', phone: formatPhone(profile.phone), address: profile.address || '' })
       })
-      .catch(loadError => { if (active && loadError?.status !== 404) setError(loadError.message || '회원정보를 불러오지 못했습니다.') })
+      .catch(loadError => { if (active) setError(loadError.message || '회원정보를 불러오지 못했습니다.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [user?.user_id])
 
   const current = steps[step]
-  const optionalStep = step === 1 || step === 2   // 업무 역할·담당 서비스: 저장되지 않는 선택 항목이라 비워도 다음으로 간다
+  const optionalStep = step === 1 || step === 2   // 업무 역할·담당 서비스: AI 기억에 저장되는 선택 항목이라 비워도 다음으로 간다
   const canContinue = step === 0 ? Boolean(form.team) : step === 3 ? isBasicProfileComplete(form) : true
 
   function update(field, value) {
@@ -212,19 +237,26 @@ function ProfileOnboardingPage() {
     setSaving(true)
     setError('')
     setFieldErrors({})
+    let profileSaved = false
     try {
       await saveProfile({ name: form.name, dept: form.team, phone: form.phone, address: form.address })
+      profileSaved = true
+      // 처음 등록이라 사용자가 이 화면에서 정한 값만 보낸다(빈 칸은 보내지 않아 이미 있는 기억을 지우지 않는다).
+      await patchMemory({ affiliation: form.team, ...(form.role ? { rank: form.role } : {}), ...(form.service.trim() ? { service: form.service.trim() } : {}) })
       await refresh()
       navigate('/chat', { replace: true })
     } catch (saveError) {
-      if (saveError instanceof ApiError && saveError.status === 422) {
+      if (profileSaved) {
+        // 내 정보는 저장됐다. 다시 눌러도 같은 값을 덮어쓸 뿐이다.
+        setError(MEMORY_FAILED)
+      } else if (saveError instanceof ApiError && saveError.status === 422) {
         // 오류 칸이 있는 단계로 돌려보내 그 칸 아래에 이유를 보여 준다 (소속 팀 = 0단계, 이름·전화·주소 = 3단계).
         const errors = toFormFieldErrors(saveError.fields)
         setFieldErrors(errors)
         setError('입력한 내용을 확인해 주세요.')
         if (errors.team) setStep(0)
         else if (errors.name || errors.phone || errors.address) setStep(3)
-      } else setError(saveError.message || '회원정보를 저장하지 못했습니다.')
+      } else setError((saveError.message || '회원정보를 저장하지 못했습니다.') + ' 아무것도 저장되지 않았습니다.')
     } finally {
       setSaving(false)
     }
@@ -236,15 +268,15 @@ function ProfileOnboardingPage() {
       <div className="profile-stepper" aria-label="등록 단계">{steps.map((item, index) => <span key={item.label} className={index <= step ? 'active' : ''}>{index + 1}</span>)}</div>
       <h1 id="profile-title">{current.title}</h1>
       <p className="profile-step-description">{current.description}</p>
-      <p className="profile-storage-notice">소속 팀은 등록 완료 시 저장됩니다. 업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없으며, 현재 저장되지 않습니다. 담당 서비스도 이 화면에서만 사용되며 저장되지 않습니다.</p>
+      <p className="profile-storage-notice">소속 팀·업무 역할·담당 서비스는 등록 완료 시 저장됩니다. 업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없습니다.</p>
       {loading ? <p role="status">회원정보를 불러오는 중입니다.</p> : <>
         {step === 0 && <div className="profile-choice-grid">{TEAM_OPTIONS.map(option => <button type="button" key={option} className={form.team === option ? 'selected' : ''} onClick={() => update('team', option)}>{option}</button>)}</div>}
         {step === 0 && <FieldError id="profile-error-team" message={fieldErrors.team} />}
-        {step === 1 && <div className="profile-choice-grid">{ROLE_OPTIONS.map(option => <button type="button" key={option} className={form.role === option ? 'selected' : ''} onClick={() => update('role', option)}>{option}</button>)}</div>}
-        {optionalStep && <p className="profile-storage-notice">선택 항목입니다. 저장되지 않으므로 고르지 않고 넘어가도 됩니다.</p>}
-        {step === 2 && <label className="profile-field"><span>담당 서비스</span><input value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>}
+        {step === 1 && <div className="profile-choice-grid">{roleOptions(form.role).map(option => <button type="button" key={option} className={form.role === option ? 'selected' : ''} onClick={() => update('role', option)}>{option}</button>)}</div>}
+        {optionalStep && <p className="profile-storage-notice">선택 항목입니다. 고르지 않고 넘어가도 됩니다. 나중에 내 정보 수정에서 넣을 수 있습니다.</p>}
+        {step === 2 && <label className="profile-field"><span>담당 서비스</span><input value={form.service} maxLength={SERVICE_MAX_LENGTH} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>}
         {step === 3 && <div className="profile-form profile-form-wizard"><label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} autoComplete="name" {...fieldProps(fieldErrors, 'name')} /></label><FieldError id="profile-error-name" message={fieldErrors.name} /><label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" autoComplete="tel" placeholder="예시) 010-1234-5678" {...fieldProps(fieldErrors, 'phone')} /></label><FieldError id="profile-error-phone" message={fieldErrors.phone} /><label><span>근무지 주소 <em aria-hidden="true">*</em> <small>(5~100자)</small></span><textarea required className="profile-address-field" value={form.address} onChange={event => update('address', event.target.value)} autoComplete="street-address" {...fieldProps(fieldErrors, 'address')} /></label><FieldError id="profile-error-address" message={fieldErrors.address} /></div>}
-        {step === 4 && <dl className="profile-summary"><dt>소속 팀</dt><dd>{form.team}</dd><dt>업무 역할 (저장되지 않음)</dt><dd>{form.role || '설정하지 않음'}</dd><dt>담당 서비스 (저장되지 않음)</dt><dd>{form.service.trim() || '설정하지 않음'}</dd><dt>이름</dt><dd>{form.name}</dd><dt>전화번호</dt><dd>{form.phone}</dd><dt>근무지 주소</dt><dd>{form.address}</dd></dl>}
+        {step === 4 && <dl className="profile-summary"><dt>소속 팀</dt><dd>{form.team}</dd><dt>업무 역할</dt><dd>{form.role || '설정하지 않음'}</dd><dt>담당 서비스</dt><dd>{form.service.trim() || '설정하지 않음'}</dd><dt>이름</dt><dd>{form.name}</dd><dt>전화번호</dt><dd>{form.phone}</dd><dt>근무지 주소</dt><dd>{form.address}</dd></dl>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className={`profile-wizard-actions${step === 0 ? ' first-step' : ''}`}>{step > 0 && <button type="button" className="profile-confirm-cancel" disabled={saving} onClick={() => setStep(currentStep => currentStep - 1)}>이전</button>}{step < steps.length - 1 ? <button type="button" className="button button-dark" disabled={!canContinue || saving} onClick={next}>다음</button> : <button type="button" className="button button-dark" disabled={saving} onClick={submit}>{saving ? '저장 중입니다.' : '등록 완료'}</button>}</div>
       </>}
