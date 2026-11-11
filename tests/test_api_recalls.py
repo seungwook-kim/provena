@@ -181,6 +181,15 @@ def test_feedback_counts_and_stats(env):
 # ---------------------------------------------------------------- 검토함
 
 
+def test_feedback_useful_must_be_real_boolean(env):
+    """C-22: 'true'·'yes'·1 같은 값을 불리언으로 바꿔 받지 않는다."""
+    ids = seed(env)
+    c = env.client(env.alice)
+    for bad in ("true", "yes", "false", 1, 0, None):
+        assert c.post(f"/recalls/{ids['alice']}/feedback", json={"useful": bad}).status_code == 422, bad
+    assert c.post(f"/recalls/{ids['alice']}/feedback", json={"useful": True}).status_code == 200
+
+
 def test_review_queue_hidden_until_released(env, monkeypatch):
     """F-08: 확신도가 낮은 알림은 관리자 검토함에만 있고, 풀어 주면 사용자에게 보이고 웹훅이 나간다."""
     monkeypatch.setenv("RECALL_WEBHOOK_SECRET", SECRET)
