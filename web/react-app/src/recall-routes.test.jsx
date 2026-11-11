@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, configure, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { resetLiveServices } from './lib/live-services'
+
+// 전체 실행 부하에서 findBy/waitFor 기본 1초가 모자라 가끔 실패했다(리뷰 6번). 이 파일의 기다림 한도를 5초로 둔다.
+configure({ asyncUtilTimeout: 5000 })
+vi.setConfig({ testTimeout: 15000 })
 
 const USER = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', profile_completed: true }
 const ADMIN = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin', profile_completed: true }
@@ -116,7 +120,7 @@ describe('live recall route', () => {
   it('feeds the navigation badge from unread on other screens without logging out on failure', async () => {
     open('/chat')
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    await waitFor(() => expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')?.textContent).toBe('1'))
+    await waitFor(() => expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')?.textContent).toBe('1'), { timeout: 5000 })
     expect(requestsTo('GET', '/recalls')).toHaveLength(1)
 
     cleanup()
@@ -125,7 +129,7 @@ describe('live recall route', () => {
     server.recallsResponse = () => apiError(401, 'unauthorized', '로그인이 필요합니다.')
     open('/chat')
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    await waitFor(() => expect(requestsTo('GET', '/recalls')).toHaveLength(1))
+    await waitFor(() => expect(requestsTo('GET', '/recalls')).toHaveLength(1), { timeout: 5000 })
     expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')).toBeNull()
   })
@@ -269,7 +273,8 @@ describe('live recall route for administrators', () => {
   it('decides a maintenance candidate and shows who decided', async () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '함께 볼 정책 후보' })).closest('section')
-    expect(within(panel).getByText(/조달 정책에서 링크로 연결됩니다/)).toBeTruthy()
+    // 제목은 후보 목록을 받기 전에도 그려지므로(그땐 '후보가 없습니다') 후보 문장은 도착을 기다린다.
+    expect(await within(panel).findByText(/조달 정책에서 링크로 연결됩니다/)).toBeTruthy()
     await userEvent.click(within(panel).getByRole('button', { name: '정비 필요' }))
     await within(panel).findByText('판단한 관리자: admin-1')
     expect(JSON.parse(requestsTo('POST', '/maintenance-candidates/c1')[0].options.body)).toEqual({ status: 'needed' })
@@ -417,7 +422,7 @@ describe('live change monitoring route', () => {
     open('/changes')
     await screen.findByRole('button', { name: /Procurement/ })
     const card = screen.getByLabelText('변경 유형 분포')
-    await waitFor(() => expect(card.textContent).toContain('총 318건'))
+    await waitFor(() => expect(card.textContent).toContain('총 318건'), { timeout: 5000 })
     expect(card.textContent).toContain('수정280건')
     expect(card.textContent).toContain('추가28건')
     expect(card.textContent).toContain('삭제10건')
@@ -427,7 +432,7 @@ describe('live change monitoring route', () => {
   it('does not offer a recall link when no answers are impacted', async () => {
     open('/changes')
     await userEvent.click(await screen.findByRole('button', { name: /Vendor guide/ }))
-    await waitFor(() => expect(requestsTo('GET', '/changes/e2')).toHaveLength(1))
+    await waitFor(() => expect(requestsTo('GET', '/changes/e2')).toHaveLength(1), { timeout: 5000 })
     expect(screen.queryByRole('link', { name: '관련 리콜 알림 보기' })).toBeNull()
   })
 
