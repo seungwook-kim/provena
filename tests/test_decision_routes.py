@@ -244,7 +244,9 @@ def test_approve_fills_decided_by_from_login_and_ignores_body(ctx):
     assert body["status"] == "approved" and body["decided_by"] == str(ctx.admin.user_id) and body["comment"] == "대조함"
     table = ctx.repo.get_table(req["table_id"])
     assert table.status == "approved" and table.approved_by == str(ctx.admin.user_id)
-    assert ctx.client(ctx.admin).get("/approvals").json() == []
+    listed = ctx.client(ctx.admin).get("/approvals")
+    assert listed.json() == []
+    assert listed.headers["cache-control"] == "no-store" and listed.headers["vary"] == "Accept"  # 화면 주소와 같은 API(캐시 금지)
     run = ctx.client(ctx.user).post(f"/decision-tables/{req['table_id']}/run", json={"task_type": EXPENSE, "amount_usd": 30000})
     assert run.status_code == 200 and run.json()["approvers"] == ["Director", PAO]
 

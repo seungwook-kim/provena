@@ -429,6 +429,19 @@ def test_fetch_with_json_accept_gets_api(env, spa_index, path):
     assert env.client().get(path, headers={"Accept": "application/json"}).status_code == 401
 
 
+@pytest.mark.parametrize("path", ["/recalls", "/recalls/rn-x", "/changes", "/changes/ev-x"])
+def test_screen_html_is_not_cached_and_varies_by_accept(env, spa_index, path):
+    """화면 주소와 API 주소가 같아 브라우저가 HTML을 캐시하면 화면의 fetch 가 HTML을 받는다 -> no-store, Vary: Accept."""
+    r = env.client().get(path, headers={"Accept": "text/html"})
+    assert r.headers["cache-control"] == "no-store" and r.headers["vary"] == "Accept"
+
+
+@pytest.mark.parametrize("path", ["/recalls", "/changes"])
+def test_screen_api_json_is_not_cached_and_varies_by_accept(env, spa_index, path):
+    r = env.client(env.alice).get(path, headers={"Accept": "application/json"})
+    assert r.status_code == 200
+    assert r.headers["cache-control"] == "no-store" and "Accept" in r.headers["vary"]
+
 def test_fixed_recall_paths_are_not_taken_as_notice_id(env):
     """`/recalls/digests`, `/recalls/feedback-stats`는 `/recalls/{notice_id}`보다 먼저 잡힌다."""
     assert env.client(env.alice).get("/recalls/digests").json() == {"digests": []}
