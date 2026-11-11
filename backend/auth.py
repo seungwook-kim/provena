@@ -84,6 +84,9 @@ def _is_missing_signup_table_error(exc: Exception) -> bool:
 
 SIGNUP_PENDING_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다."
 SIGNUP_REJECTED_MESSAGE = "가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요."
+# 가입(POST /auth/signup) 201 응답 문구. 가입은 "완료"가 아니라 신청 접수다(code 로 화면이 분기할 수 있다)
+SIGNUP_VERIFICATION_SENT_MESSAGE = "가입 신청이 접수되었습니다. 메일로 받은 인증번호를 입력해 주세요."
+SIGNUP_RECEIVED_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다."
 # 이메일 인증을 마치지 않은 대기 신청: 관리자 승인 대기가 아니라 인증이 먼저다(오류 code signup_unverified)
 SIGNUP_UNVERIFIED_CODE = "signup_unverified"
 SIGNUP_UNVERIFIED_MESSAGE = "이메일 인증을 먼저 마쳐 주세요. 로그인 화면의 '이메일 인증 이어하기'에서 인증번호를 다시 받을 수 있습니다."
@@ -968,7 +971,8 @@ def create_auth_router(
         status_code=201,
         description=("Email signup. An unverified pending request for the same email is replaced only after its code expired more than "
                      "24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS); until then the same email returns 409. Verified or approved requests "
-                     "and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again."),
+                     "and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again."
+                     " The 201 body has code verification_sent (email: enter the emailed code, then wait for approval) or approval_pending (non-email ID), and a message; signing up does not log the user in."),
         responses={409: {"description": "Email already has an account, or a non-stale pending request or an approved request exists"},
                    503: {"description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"}},
     )
@@ -1007,7 +1011,11 @@ def create_auth_router(
                     raise HTTPException(status_code=409, detail="회원가입을 완료할 수 없습니다. 입력값을 확인하거나 이메일 인증 이어하기를 이용해 주세요.") from None
                 raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
             raise HTTPException(status_code=503, detail="회원가입을 처리할 수 없습니다.") from None
-        response = {"message": "회원가입이 완료되었습니다. 로그인해 주세요."}
+        # 가입은 신청 접수일 뿐이다: 이메일은 인증번호 입력 → 관리자 승인, 그 밖은 관리자 승인 뒤에 로그인할 수 있다.
+        if issued is not None:
+            response = {"code": "verification_sent", "message": SIGNUP_VERIFICATION_SENT_MESSAGE}
+        else:
+            response = {"code": "approval_pending", "message": SIGNUP_RECEIVED_MESSAGE}
         if issued is not None:
             response["verification_expires_at"] = issued[0].isoformat()
             response["verification_resend_available_at"] = issued[1].isoformat()

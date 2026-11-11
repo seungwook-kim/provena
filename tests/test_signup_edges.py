@@ -76,6 +76,19 @@ def test_verified_pending_cannot_be_overwritten(monkeypatch):
     assert verify_password(OLD, store._signup_requests["done@example.com"]["password_hash"])
 
 
+def test_signup_response_says_request_received_not_completed(monkeypatch):
+    from backend.auth import SIGNUP_RECEIVED_MESSAGE, SIGNUP_VERIFICATION_SENT_MESSAGE
+
+    client, _store, _sender = build(monkeypatch)
+    email = signup(client, "fresh@example.com", OLD)
+    assert email.status_code == 201
+    assert email.json()["code"] == "verification_sent" and email.json()["message"] == SIGNUP_VERIFICATION_SENT_MESSAGE
+    assert "verification_expires_at" in email.json()
+    plain = signup(client, "plain-id", OLD)
+    assert plain.status_code == 201
+    assert plain.json() == {"code": "approval_pending", "message": SIGNUP_RECEIVED_MESSAGE}
+    assert "완료" not in email.json()["message"] + plain.json()["message"]
+
 def test_login_before_email_verification_says_verify_first(monkeypatch):
     """인증 전 대기 신청으로 로그인하면 '관리자 승인 대기'가 아니라 '이메일 인증 먼저'(code signup_unverified)."""
     from backend.api.errors import install_error_handlers

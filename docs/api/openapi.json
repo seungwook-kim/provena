@@ -1846,7 +1846,7 @@
     },
     "/auth/signup": {
       "post": {
-        "description": "Email signup. An unverified pending request for the same email is replaced only after its code expired more than 24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS); until then the same email returns 409. Verified or approved requests and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again.",
+        "description": "Email signup. An unverified pending request for the same email is replaced only after its code expired more than 24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS); until then the same email returns 409. Verified or approved requests and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again. The 201 body has code verification_sent (email: enter the emailed code, then wait for approval) or approval_pending (non-email ID), and a message; signing up does not log the user in.",
         "operationId": "signup_auth_signup_post",
         "requestBody": {
           "content": {
