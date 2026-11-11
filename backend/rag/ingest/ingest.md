@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-`handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `pdf.py`(글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱·청킹, 서비스 색인 전용, 현재 7건, Spec `docs/specs/parse.md`의 PDF 절), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화). 수집은 로컬에서 한 번 하고 원문 스냅샷(`snapshot.py`로 `data/corpus.tar.gz` 한 파일)과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
+`handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `compare.py`(원문 대조표: 파싱 결과 옆에 원본 줄·GitLab 링크, 출력 `data/parsed/compare/`, 커밋 안 함), `pdf.py`(글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱·청킹, 서비스 색인 전용, 현재 7건, Spec `docs/specs/parse.md`의 PDF 절), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화). 수집은 로컬에서 한 번 하고 원문 스냅샷(`snapshot.py`로 `data/corpus.tar.gz` 한 파일)과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
 
 - 주인: 박진형
 - 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표)
