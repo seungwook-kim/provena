@@ -550,6 +550,11 @@ class SignupVerificationRequest(BaseModel):
     code: str
 
 
+class SignupResendRequest(BaseModel):
+    """재발송은 코드가 없는 요청이다(C-21). 옛 화면이 `code`를 같이 보내도 무시한다."""
+    login_id: str
+
+
 class UserResponse(BaseModel):
     user_id: str
     role: str
@@ -1035,7 +1040,7 @@ def create_auth_router(
         description="Resends only for pending, unverified email signup requests. Missing, completed, and rate-limited requests are intentionally returned as status unavailable.",
         responses={503: {"description": "Email verification storage or provider unavailable (also returned when EMAIL_PROVIDER is not configured or delivery fails)"}},
     )
-    def resend_signup(request: Request, payload: SignupVerificationRequest) -> dict[str, str]:
+    def resend_signup(request: Request, payload: SignupResendRequest) -> dict[str, str]:
         require_csrf(request)
         _check_signup_ip_rate_limit(request)
         login_id = _normalise_signup_login(payload.login_id)
