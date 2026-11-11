@@ -11,3 +11,15 @@ d1a262d0cfee2dc231994a222fed6c4df67c6dcb:tests/test_signup_postgres_integration.
 bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:98
 bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:99
 bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:100
+
+# 시험용 가짜 비밀번호(가입 보안 시험의 임시 계정 값, 2026-11-11 원문 줄을 확인함)
+da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:140
+da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:141
+
+# 위에 이미 등록한 6건의 현재 작업 폴더 검사(gitleaks dir)용 지문. 같은 줄이라 같은 이유의 오탐이다.
+backend/rag/ingest/handbook.py:generic-api-key:52
+tests/test_db_realign.py:generic-api-key:96
+tests/test_signup_postgres_integration.py:generic-api-key:174
+evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:98
+evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:99
+evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:100

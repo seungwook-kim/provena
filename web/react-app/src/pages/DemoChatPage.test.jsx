@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import App from '../App'
+import { PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
+import { DEMO_SUGGESTIONS } from '../lib/demo-suggestions'
 import { isApprovalPending } from './DemoChatPage'
 
 describe('DemoChatPage approval state', () => {
@@ -94,5 +96,35 @@ describe('DemoChatPage leaving while an answer is streaming', () => {
     expect(container.textContent.trim().length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: /채팅/ })).toBeTruthy()
     expect(consoleError.mock.calls.flat().join(' ')).not.toContain('abort is not a function')
+  })
+})
+
+// 강사 코멘트 11/11: 키 없는 데모 첫 화면 추천 질문 3개가 녹화에 없어 거절됐다. 서버에 연결된 채팅(/chat)의 빈 화면은 녹화 질문을 추천한다.
+describe('DemoChatPage first-screen suggestions in api mode', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('suggests the three recorded questions and sends the clicked one as is', async () => {
+    window.history.replaceState({}, '', '/chat')
+    document.cookie = 'provena_csrf=test-token'
+    const sent = []
+    vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([])
+      if (path === '/auth/csrf') return new Response(null, { status: 204 })
+      if (path === '/chat') {
+        sent.push(JSON.parse(options.body).message)
+        return new Response(new ReadableStream({ start(controller) { options.signal?.addEventListener('abort', () => controller.close()) } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      }
+      return json({ items: [], threads: [] })
+    }))
+    const { container } = render(<App />)
+    await screen.findByRole('textbox', { name: '질문' })
+    await vi.waitFor(() => expect(container.querySelectorAll('.demo-suggestions button')).toHaveLength(3))
+    const shown = [...container.querySelectorAll('.demo-suggestions button')].map(button => button.textContent)
+    expect(shown).toEqual(DEMO_SUGGESTIONS)
+    expect(shown).toHaveLength(3)
+    expect(shown).not.toContain(PREVIEW_SUGGESTIONS[0])        // 녹화에 없는 미리보기 질문은 서버 연결 화면에 나오지 않는다
+    fireEvent.click(screen.getByRole('button', { name: DEMO_SUGGESTIONS[1] }))
+    await vi.waitFor(() => expect(sent).toEqual([DEMO_SUGGESTIONS[1]]))
   })
 })

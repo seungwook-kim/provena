@@ -137,8 +137,8 @@ def test_unverified_request_past_expiry_plus_window_is_overwritten(monkeypatch):
     old_id = store._signup_requests["squat@example.com"]["request_id"]
     store._signup_requests["squat@example.com"]["verification_expires_at"] = (
         datetime.now(timezone.utc) - timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS, minutes=1))
-    again = client.post("/auth/signup", json={"login_id": "squat@example.com", "password": "other-pass-456",
-                                              "password_confirmation": "other-pass-456"}, headers=csrf(client))
+    again = client.post("/auth/signup", json={"login_id": "squat@example.com", "password": "other-pass-456",  # gitleaks:allow (가짜 비밀번호 시험 값)
+                                              "password_confirmation": "other-pass-456"}, headers=csrf(client))  # gitleaks:allow (가짜 비밀번호 시험 값)
     assert again.status_code == 201
     assert store._signup_requests["squat@example.com"]["request_id"] != old_id
     assert len(sender.deliveries) == 2
