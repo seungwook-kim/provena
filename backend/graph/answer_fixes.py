@@ -592,11 +592,24 @@ def quotable_phrases(question: str, corpus: str) -> list[str]:
     return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "", whole_sentence=True)[0]), corpus)
 
 
+_ECHO_MAX = 40  # 되묻기에 되풀이할 영문 구의 최대 길이. 이보다 길면 이름이 아니라 붙여 넣은 문장이다
+_ECHO_URL = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|net|org|io|kr|dev)\b", re.I)
+_ECHO_SQL = re.compile(r"\b(?:select|insert|update|delete|drop|union|alter|truncate|exec)\b.*\b(?:from|into|table|set|select|where|database)\b|;\s*--|--\s|/\*", re.I | re.S)
+
+
+def echo_safe(phrase: str) -> bool:
+    """되묻기 글에 되풀이해도 되는 구인지. 길거나, 줄바꿈·주소·SQL 꼴이 든 구는 이름이 아니라 붙여 넣은 글이다(J-11)."""
+    return len(phrase) <= _ECHO_MAX and "\n" not in phrase and not _ECHO_URL.search(phrase) and not _ECHO_SQL.search(phrase)
+
+
 def unknown_name_message(phrases: list[str]) -> str:
     """phrases가 비면(모르는 구가 지시 절에만 있었다) 문자열을 인용하지 않는 일반 문구로 되묻는다."""
     if not phrases:
         return "질문에 핸드북 자료에서 찾지 못한 표현이 있습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
-    names = ", ".join(f"'{p}'" for p in phrases[:3])
+    shown = [p for p in phrases if echo_safe(p)][:3]
+    if not shown:
+        return "질문에 핸드북 자료에서 찾지 못한 표현이 있습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
+    names = ", ".join(f"'{p}'" for p in shown)
     return f"질문의 {names}은(는) 핸드북 자료에서 찾지 못했습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
 
 
