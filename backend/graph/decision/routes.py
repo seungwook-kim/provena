@@ -34,7 +34,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import FileResponse
 from langgraph.types import Command
 from pydantic import BaseModel, model_serializer
@@ -423,12 +423,15 @@ def create_decision_router(
             raise HTTPException(status_code=503, detail={"reason": "convert_failed", "message": "결정표 초안을 만들지 못했다"}) from None
 
     @router.get("/approvals", response_model=None)
-    def list_approvals(request: Request) -> list[ApprovalView] | FileResponse:
+    def list_approvals(request: Request, response: Response) -> list[ApprovalView] | FileResponse:
+        # 화면 주소와 API 주소가 같으므로 HTML·JSON 둘 다 캐시 금지와 Accept별 구분(/admin/users 와 같은 규칙)
         if "text/html" in request.headers.get("accept", ""):
             react_index = getattr(request.app.state, "react_index", None)
             if react_index is not None:
-                return FileResponse(react_index)
+                return FileResponse(react_index, headers={"Cache-Control": "no-store", "Vary": "Accept"})
         require_admin(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Vary"] = "Accept"
         repo = _state(request, "decision_repo")
         review = getattr(request.app.state, "review_graph", None)
         graphs = {KIND: _state(request, "decision_graph"), ISSUE_KIND: review, TEAM_FAILED_KIND: review}

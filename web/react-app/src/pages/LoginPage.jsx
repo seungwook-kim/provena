@@ -5,19 +5,30 @@ import AuthIllustration from '../components/AuthIllustration'
 import Logo from '../components/Logo'
 import { Eye, EyeOff } from 'lucide-react'
 
+const GOOGLE_ERRORS = {
+  google_login_failed: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
+  google_signup_pending: '가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다.',
+  google_signup_rejected: '가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요.',
+  google_unavailable: 'Google 로그인을 지금은 사용할 수 없습니다. 아이디와 비밀번호로 로그인해 주세요.',
+}
+
 export default function LoginPage() {
   const { signIn } = useSession()
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const oauthCode = params.get('oauth_error')
+  const oauthMessage = Object.hasOwn(GOOGLE_ERRORS, oauthCode) ? GOOGLE_ERRORS[oauthCode] : ''
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [unverified, setUnverified] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event) {
     event.preventDefault()
     setError('')
+    setUnverified(false)
     if (!loginId.trim() || !password) {
       setError('이메일 또는 아이디와 비밀번호를 입력해 주세요.')
       return
@@ -29,6 +40,7 @@ export default function LoginPage() {
       navigate(user?.profile_completed === false ? '/myinfo' : '/chat', { replace: true })
     } catch (loginError) {
       setError(loginError.message || '로그인에 실패했습니다.')
+      setUnverified(loginError.code === 'signup_unverified')
       setPassword('')
     } finally {
       setSubmitting(false)
@@ -45,14 +57,14 @@ export default function LoginPage() {
           <h1>로그인</h1>
           <form onSubmit={submit} noValidate className="login-form">
             <label>
-              <span>이메일</span>
+              <span>이메일 또는 아이디</span>
               <input
-                aria-label="이메일"
+                aria-label="이메일 또는 아이디"
                 value={loginId}
                 onChange={event => setLoginId(event.target.value)}
                 type="text"
                 autoComplete="username"
-                placeholder="이메일을 입력하세요"
+                placeholder="이메일 또는 아이디"
               />
             </label>
             <label>
@@ -78,9 +90,10 @@ export default function LoginPage() {
                 </button>
               </div>
             </label>
-            {(error || params.get('oauth_error') === 'google_login_failed') && (
+            {(error || oauthMessage) && (
               <p className="form-error" role="alert">
-                {error || 'Google 로그인에 실패했습니다. 다시 시도해 주세요.'}
+                {error || oauthMessage}
+                {error && unverified && <> <Link to="/signup?resume=1">인증번호 다시 받기</Link></>}
               </p>
             )}
             <button

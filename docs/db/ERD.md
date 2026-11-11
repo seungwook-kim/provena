@@ -17,7 +17,7 @@
 
 ## 2. 영역 도식
 
-앱 표 25개를 영역으로 묶고 LangGraph 표 6개를 따로 두었다. 실선은 외래 키, 점선은 외래 키 없이 코드가 값으로 맞추는 관계(대표적인 것만)다. 점선의 전체 목록과 근거는 4장에 있다.
+앱 표 26개를 영역으로 묶고 LangGraph 표 6개를 따로 두었다. 실선은 외래 키, 점선은 외래 키 없이 코드가 값으로 맞추는 관계(대표적인 것만)다. 점선의 전체 목록과 근거는 4장에 있다.
 
 ```mermaid
 flowchart LR
@@ -26,6 +26,7 @@ flowchart LR
         user_profiles["user_profiles"]
         admin_role_log["admin_role_log"]
         signup_requests["signup_requests"]
+        user_identities["user_identities"]
         token_revocations["token_revocations"]
     end
     subgraph APPROVAL["승인"]
@@ -100,6 +101,7 @@ erDiagram
     users ||--o{ admin_role_log : "target_user_id"
     users |o--o| signup_requests : "user_id"
     users |o--o{ signup_requests : "reviewed_by"
+    users ||--o| user_identities : "user_id ON DELETE CASCADE"
 
     users {
         uuid user_id PK "기본값 gen_random_uuid()"
@@ -129,12 +131,20 @@ erDiagram
     signup_requests {
         bigint request_id PK "GENERATED ALWAYS AS IDENTITY"
         uuid user_id FK, UK "승인 전에는 NULL"
-        text login_id UK
+        text login_id "거절되지 않은 행만 UK(113)"
         text password_hash
         text status "pending, approved, rejected"
         timestamptz requested_at
         timestamptz reviewed_at
         uuid reviewed_by FK
+        text google_sub UK "구글 가입 신청의 sub, 114가 더한 칸"
+    }
+    user_identities {
+        text provider PK, UK "google"
+        text subject PK "구글 sub"
+        uuid user_id FK, UK
+        text email
+        timestamptz created_at
     }
     token_revocations {
         uuid jti PK
