@@ -205,6 +205,27 @@ describe('live recall route', () => {
   })
 })
 
+describe('recall and change screens follow the real backend responses', () => {
+  it("does not offer the acknowledge button on another user's notice to an administrator", async () => {
+    // backend: POST /recalls/{id}/ack is owner-only, an admin gets 404 (tests/test_api_recalls.py:165)
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: USER.user_id })], unread: 0, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    expect(screen.queryByRole('button', { name: '확인' })).toBeNull()
+    expect(screen.getByText('다른 사용자의 알림입니다.')).toBeTruthy()
+  })
+
+  it('still lets an administrator acknowledge their own notice', async () => {
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: ADMIN.user_id })], unread: 1, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    await userEvent.click(screen.getByRole('button', { name: '확인' }))
+    await screen.findByText('미확인 0건')
+  })
+})
+
 describe('live recall route for administrators', () => {
   beforeEach(() => {
     server.user = ADMIN

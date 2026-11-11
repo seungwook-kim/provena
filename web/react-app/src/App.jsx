@@ -35,7 +35,7 @@ function Protected({ children, admin = false }) {
 
 function LiveRecallRoute() {
   const { user } = useSession()
-  return <RecallPage service={getLiveServices(user.user_id).recalls} isAdmin={user.role === 'admin'} />
+  return <RecallPage service={getLiveServices(user.user_id).recalls} isAdmin={user.role === 'admin'} userId={user.user_id} />
 }
 
 function LiveChangeRoute() {

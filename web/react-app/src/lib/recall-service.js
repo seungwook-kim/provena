@@ -68,6 +68,7 @@ export function mapNotice(notice = {}) {
   return {
     id: notice?.notice_id == null ? '' : String(notice.notice_id),
     answerId: notice?.answer_id ?? null,
+    userId: notice?.user_id == null ? null : String(notice.user_id).toLowerCase(),
     threadId: notice?.thread_id ?? null,
     title: article ?? ruleSeq ?? '바뀐 정책 섹션',
     question: typeof notice?.question === 'string' ? notice.question : '',
