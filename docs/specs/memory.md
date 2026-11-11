@@ -52,7 +52,7 @@
 - 구현: `backend/memory/profile.py`. Store는 LangGraph `BaseStore`이며 `backend/graph/checkpoint.py`의 `open_persistence()`가 체크포인터와 함께 연다. `DATABASE_URL`이 있고 `CHECKPOINTER`가 `memory`가 아니면 `PostgresStore`(표 `store`, 앱 시작 때 `setup()`이 만들고 RLS를 켠다), 그렇지 않으면 `InMemoryStore`다. `build_graph(store=None)`도 `InMemoryStore`를 쓴다.
 - namespace는 `(user_id, "profile")`이고 첫 요소가 사용자 id다. 키는 `me` 하나이며 값은 `{"affiliation": str, "rank": str}` 형태의 dict다. 사용자마다 namespace가 달라 다른 사용자의 값을 읽을 수 없다.
 - 허용 칸은 `ALLOWED_FIELDS = ("affiliation", "rank")`이다. `get_profile()`은 이 밖의 칸과 빈 값을 걸러서 돌려준다.
-- State와 Store의 경계(SDD 5장): 질문, 검색 결과, 재검색 횟수, 초안 답은 State(체크포인트)에 두고, 다음 대화에도 쓸 소속·직급만 Store에 둔다. 기억 값과 질문 내용은 로그에 쓰지 않는다(`backend/api/routes.py`).
+- State와 Store의 경계는 아래 "State와 Store 경계" 표(SDD 5장). 기억 값과 질문 내용은 로그에 쓰지 않는다(`backend/api/routes.py`).
 
 ### 기억 기준
 
@@ -78,7 +78,9 @@
 | 쓰는 곳 | 그래프 노드 | `/me/memory` API만 |
 | 읽는 곳 | 그래프 노드 | 첫 노드 `load_memory` |
 
-CP 증거 파일명 `memory.py`는 저장소의 `backend/memory/` 패키지(`__init__.py`, `profile.py`)에 해당한다.
+CP 증거 파일명 `memory.py`는 저장소의 `backend/memory/` 패키지(`__init__.py`, `profile.py`)에 해당한다(강사 템플릿의 `backend/memory.py` 자리를 폴더로 쓴다, `docs/TEAM_GUIDE.md:92`).
+
+**thread_id (E-04, 일부: 팀장 판단 필요)**: 바깥 `thread_id`는 요청 본문에서 받는다(없으면 서버가 `t-`+12자리를 만든다, `backend/api/routes.py:77,326`). 그래프·체크포인트의 thread는 `<인증 user_id>:<thread_id>`이고 앞의 user_id는 로그인 쿠키에서만 얻는다(`routes.py:89-90`). 같은 `thread_id`를 쓰는 두 계정이 섞이지 않음은 `tests/test_api_isolation.py:12`가 확인한다. 다만 팀장 기준("요청 본문에서 받지 않음")과 달리 본문에서 받으므로, 이 방식으로 충족인지는 팀장이 판정한다.
 
 ### 읽기
 
