@@ -20,7 +20,7 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 | F-04 | 결정표 | 승인 권한표를 결정표로 바꾸고, 관리자가 원문과 대조해 승인한 결정표만 실행한다. 실행에는 LLM을 쓰지 않는다 | 결정표 실행 전 | [decision-approval](./specs/decision-approval.md) |
 | P-01 | 로그인과 사용자별 기억 | 로그인, 사용자 id로 대화(thread)와 장기 기억(Store namespace) 분리 | 해당 없음 | [login](./specs/login.md), [memory](./specs/memory.md) |
 | P-02 | 문서 적재 | Markdown 파싱, 청킹, 임베딩, `data/manifest.jsonl`, 증분 수집 | 해당 없음 | [collect](./specs/collect.md) |
-| P-03 | 업무시스템 연동 | REST(OpenAPI), 자동 생성 SDK, FastMCP 서버, 웹훅, `mock_erp/` | 해당 없음 | [mcp](./specs/mcp.md), 업무시스템 쪽 REST는 [api](./api/api.md) |
+| P-03 | 업무시스템 연동 | REST(OpenAPI), FastMCP 서버, 웹훅, `mock_erp/`의 Python 예제. 자동 생성 SDK(Java·Python)와 Java 목업은 예정(아직 없음) | 해당 없음 | [erp-integration](./specs/erp-integration.md), [mcp](./specs/mcp.md), 업무시스템 쪽 REST는 [api](./api/api.md) |
 | P-04 | 데모 모드 | `docker compose up` 한 줄, 키 없이 기동, 데모 계정 2개 시드 | 해당 없음 | 이 문서 4장 |
 | 가산 | 자동화, GraphRAG, MCP·Skill | 증분 수집과 정시 실행, 페이지 링크 그래프, FastMCP와 런타임 Skill (가이드 p.20) | 해당 없음 | [incremental](./specs/incremental.md), [mcp](./specs/mcp.md) |
 
