@@ -2,7 +2,9 @@ import { emptyMemory, readMemory, removeMemory, saveMemory } from './session-mem
 
 export const DEFAULT_SETTINGS = Object.freeze(emptyMemory())
 
-// Boundary for GET/PATCH/DELETE /me/memory (affiliation=team, rank=role, service=service).
+// Boundary for GET/PATCH/DELETE /me/memory (rank=role, service=service; GET maps affiliation to team).
+// PATCH never sends affiliation: the screen's Korean team name differs from corpus section names (security, finance ...)
+// and affiliation becomes the search scope, so sending it empties every search. Same as ProfileRequiredPage (내 정보).
 // The preview adapter (no login) stays browser-session scoped and follows logout/user
 // switching cleanup implemented by SessionProvider.
 export function createMemoryService(adapter) {
@@ -44,7 +46,7 @@ export const apiMemoryService = createMemoryService({
   },
   saveMemorySettings: async (_ownerId, settings) => {
     const { patchMemory } = await import('./api')
-    const response = await patchMemory({ affiliation: settings.team, rank: settings.role, service: settings.service })
+    const response = await patchMemory({ rank: settings.role, service: settings.service })
     return mapApiMemoryResponse(response, settings)
   },
   resetMemorySettings: async () => {

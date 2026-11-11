@@ -197,3 +197,35 @@ def test_schedule_run_is_noop_when_paused():
                        log=lambda *a: None)
     assert res["status"] == "noop" and res["reason"] == "paused" and res["slot"] == schedule.slot_of(now)
     assert not any("sync_runs" in s and "INSERT" in s for s in conn.sql[1:])     # 슬롯을 차지하지 않는다
+
+
+def test_manual_sync_requires_login_and_admin(env):
+    assert env.client().post("/admin/sync", json={}).status_code == 401
+    assert env.client(env.alice).post("/admin/sync", json={}).status_code == 403
+    assert env.client(env.admin, csrf=False).post("/admin/sync", json={}).status_code == 403   # CSRF 없이는 거부
+
+
+def test_manual_sync_dry_run_is_default_and_starts_nothing(env, monkeypatch):
+    import subprocess
+    spawned = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    admin = env.client(env.admin)
+    for kwargs in ({}, {"json": {}}, {"json": {"dry_run": True}}):
+        r = admin.post("/admin/sync", **kwargs)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["dry_run"] is True and body["started"] is False and body["slot"].startswith("manual-")
+        assert body["monitoring"] == "active"
+    assert spawned == []
+
+
+def test_manual_sync_real_run_is_not_supported_and_spawns_nothing(env, monkeypatch):
+    import subprocess
+    spawned = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    admin = env.client(env.admin)
+    r = admin.post("/admin/sync", json={"dry_run": False})
+    assert r.status_code == 501 and r.json()["error"]["code"] == "manual_sync_not_supported"
+    assert "handbook-sync" in r.json()["error"]["message"]
+    assert spawned == []
+    assert admin.post("/admin/sync", json={"dry_run": "x", "extra": 1}).status_code == 422

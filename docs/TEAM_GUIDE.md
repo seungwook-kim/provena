@@ -26,8 +26,9 @@
 | 날짜 | 할 일 |
 |---|---|
 | 10/30 (D0) | 이 지침서·계약(`backend/schemas/`) 확정, 빈 서버 배포. 전원 README 조원 소개 표에 자기 줄 추가(브랜치 → PR → 리뷰 → merge, 템플릿 첫 과제). `docs/worklog.md`·`docs/decisions.md` 빈 파일 생성. GCP 결제 연결, API 활성화, 저장소 권한(가이드 p.5). 역할과 담당 축 확정(가이드 p.28) |
-| 11/4 (D3)까지 | 세로 한 줄 완성: 로그인(임시) → 질문 → 검색 → 인용 답이 배포 주소에서 동작 |
+| 11/5 (D4)까지 | 에이전트 그래프로 질문 → 검색 → 인용 답이 한 줄로 이어진다(가이드 일정 D4 에이전트) |
 | 11/6 (D5) | 중간 점검. 단일 대 멀티 재측정과 "무엇을 뺄 것인가" 확인(F-05, F-06은 결정 0059에 따라 유지), 로그인 방식 확정 |
+| 11/9 (D6)까지 | 서비스화: 로그인(사용자별 thread·Store)과 compose 기동, 배포 주소에서 질문 → 인용 답이 동작(가이드 일정 D6 서비스와 운영) |
 | 11/14~15 | 주말. 자동 실행이나 배포를 새로 두지 않는다. 필요하면 평가 파이프라인만 한 번(가이드 p.5) |
 | 11/16 (D11) 24:00 | 코드 동결. 이후 코드는 고치지 않는다 |
 | 11/17 (D12) 24:00 | 실패 사례 분석 글, 포트폴리오 1장, AI 코딩 도구 사용 기록, 발표 자료 제출(가이드 p.5) |
@@ -133,10 +134,12 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` �
 │  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
 │  │  │     pdf.py                # PDF 파싱(서비스 색인 전용 청크)
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
-│  │  │     diff.py, compare.py, changes.py  # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
+│  │  │     diff.py, changes.py  # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
+│  │  │     snapshot.py           # 원문·색인 압축 스냅샷 pack·unpack(corpus.tar.gz, index.tar.gz)
+│  │  │     compare.py            # 파싱 결과와 원본 줄 대조표(data/parsed/compare/, 커밋하지 않음)
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지 (가산: 자동화)
-│  │  │     snapshot.py, snapshot_diff.py  # git 없는 변경 감지(F-07)
+│  │  │     snapshot_diff.py            # git 없는 변경 감지(F-07)
 │  │  └─ retrieve/  retrieve.md   # 템플릿 retrieve.py 자리
 │  │        embed.py              # 임베딩(기본 voyage-4 API, 로컬 모델은 비교용)
 │  │        search.py             # 검색(기본 dense_en), 판·절 필터, 링크 확장, 금액 구간 조회
@@ -158,7 +161,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` �
 ├─ extras/mcp_skill/  mcp_skill.md   # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py). mcp_client/client.py, NOT_BUILT.md
 ├─ web/   web.md   (react-app/src/pages/: 로그인, 가입, 내 정보, 채팅, 승인함, 리콜, 변경 감시, 관리자, 사용자 관리, 기억 설정)
 ├─ mock_erp/ mock_erp.md   (python_example/. src/는 설명 문서뿐이라 Spring Boot 목업은 만들지 않음)
-├─ db/    db.md    (01_init.sql, 101~120 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 앱 시작 때 시드. SQL 번호대는 100번대 로그인·그래프, 200번대 검색)
+├─ db/    db.md    (01_init.sql, 101~120 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 앱 시작 때 시드. SQL 번호대는 100번대 로그인·그래프, 200번대 검색. 최초 작성자는 101·102·109~112·120 김승욱, 103·106~108 강경희, 104·105·113·114·201·202 박진형(`git log --follow` 이력 기준, 103은 처음 `102_auth_token_revocations.sql`이었다))
 ├─ data/  data.md  (corpus.tar.gz 원문 스냅샷, index.tar.gz, manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
 ├─ evals/ evals.md (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, ci_compare.py, retrieval/, agent/, safety/, latency/, results/)
 └─ tests/
@@ -223,7 +226,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` �
 
 **Git**
 
-- **브랜치는 한 사람당 하나, 자기 이름으로만 쓴다.** 예: `seunguk`. 다른 두 사람도 자기 이름 하나로 만든다(예: `jinhyung`, `kyunghee`). 작업 종류별 브랜치(`feat/…`, `fix/…`)는 만들지 않는다. `main`에서 바로 작업하지 않고 자기 브랜치에 커밋·push한 뒤 PR로 합친다(README 협업 규칙과 같다).
+- **브랜치는 한 사람당 하나, 자기 이름으로만 쓴다.** 예: `seunguk`. 다른 두 사람도 자기 이름 하나로 만든다(예: `jinhyeong`, `kyunghee`). 작업 종류별 브랜치(`feat/…`, `fix/…`)는 만들지 않는다. `main`에서 바로 작업하지 않고 자기 브랜치에 커밋·push한 뒤 PR로 합친다(README 협업 규칙과 같다).
 - 자기 브랜치에서 `main`으로 PR을 올리고, 머지된 뒤에도 같은 브랜치를 계속 쓴다. 다음 작업 전에 `git switch seunguk && git pull origin main`으로 `main`을 받는다.
 - PR 머지는 merge commit으로 한다(squash 쓰지 않음). 같은 브랜치를 계속 쓰기 때문에 squash로 합치면 다음 PR에서 이미 들어간 커밋이 다시 충돌한다.
 - 다른 사람 브랜치에는 push하지 않는다.

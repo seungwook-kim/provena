@@ -53,6 +53,8 @@ COPY db/ ./db/
 COPY skills/ ./skills/
 # MCP 도구(MCP_TOKEN이 있을 때만 /mcp/에 붙음, docs/specs/mcp.md)
 COPY extras/ ./extras/
+# 업무시스템 목업(mock_erp/): 서버가 실행하지 않는 클라이언트·웹훅 수신기 예제 코드와 설명(시연용으로 이미지에 함께 둔다)
+COPY mock_erp/ ./mock_erp/
 
 USER app
 EXPOSE 8000

@@ -12,12 +12,12 @@
 
 ## 명세에 들어가지 않는 경로
 
-2026-11-11 현재 명세는 경로 47개, 동작 53개이며 `backend/`의 경로 데코레이터 58개에서 아래를 뺀 수와 같다.
+2026-11-11 현재 명세는 경로 48개, 동작 54개이며 `backend/`의 경로 데코레이터 58개(grep `@<이름>.(get|post|put|patch|delete|head|api_route)(`)에서 아래 4개를 뺀 수와 같다. 58 - 4 = 54개 동작이다(`/mcp`는 데코레이터가 아니라 마운트라 따로 센다).
 
 | 경로 | 이유 |
 |---|---|
-| `GET /`, `GET /{path:path}`, `POST /{path:path}`, `POST /threads`(`backend/main.py`) | 화면 파일을 내주거나 화면 쪽 오류 응답을 위한 경로라 `include_in_schema=False`로 뺐다 |
-| `HEAD /health`(`backend/main.py`) | HEAD로 살아 있는지 보는 감시용 경로라 `include_in_schema=False`로 뺐다 (`GET /health`는 명세에 있다) |
+| `HEAD /health`(`backend/main.py:400`) | 감시용 HEAD 응답이라 `include_in_schema=False`로 뺐다. `GET /health`는 명세에 있다 |
+| `GET /`(`main.py:428`), `GET /{path:path}`(`main.py:454`), `POST·PUT·PATCH·DELETE /{path:path}`(`main.py:443`) | 화면 파일을 내주거나 화면 쪽 오류 응답을 위한 경로라 `include_in_schema=False`로 뺐다 |
 | `/mcp` | FastMCP 앱을 마운트한 것이라 OpenAPI에 나오지 않는다. 도구 목록은 `docs/specs/mcp.md` |
 
 경로 수가 코드와 다르면 먼저 `python docs/api/export_openapi.py`를 다시 돌려 파일이 낡았는지 본다.
@@ -26,7 +26,8 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 김승욱 (Claude Code) | 명세를 다시 만들어 46개에서 47개 경로가 됐다. 더해진 것은 평가 전용 `POST /admin/eval/review`(관리자 전용, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 열림, 사전 등록 62.41)뿐이다 | 미정 |
+| 2026-11-11 | 김승욱 (Claude Code) | 명세를 다시 만들어(#132 병합 뒤) 47개에서 48개 경로, 53개에서 54개 동작이 됐다. 더해진 것은 평가 전용 `POST /admin/eval/review`(관리자 전용, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 열림, 사전 등록 62.41)뿐이다 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `openapi.json` 재생성: `POST /admin/sync`(수집 수동 실행, 관리자만, dry-run만 동작·dry_run=false는 501) 추가(C-14), 경로·동작 수와 제외 경로 표를 현재 값으로 정정 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 C-20·C-21 반영으로 `openapi.json`을 다시 만들었다(422 응답 모양, `SignupResendRequest`) | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11 · H-12/H-13: `openapi.json`을 갱신했다. `MeResponse`에 `login_id`(H-13), `MemoryPatch`에 `service`(H-12)가 더해졌다. 경로 수는 그대로다 | #131 |
 | 2026-11-11 | 김승욱 (Claude Code) | `python docs/api/export_openapi.py`로 명세를 다시 만들었다(42개에서 46개 경로). `POST /admin/signup-requests/by-id/{request_id}/reset-verification`이 더해졌고, `GET /admin/signup-requests` 응답에 `request_id`·`email_verified`, 검토·초기화 응답에 `request_id`가 들어갔다. 손으로 고쳐 두었던 오류 응답 설명(401·403·404·409·503, `/auth/signup/verify`·`/auth/signup/resend`의 설명)은 생성 때 사라지므로 라우트 데코레이터(`description`, `responses`)와 응답 모델로 옮겨 코드에서 만들어지게 했다 | 미정 |

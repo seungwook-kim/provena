@@ -33,7 +33,7 @@ beforeEach(() => {
     if (path === '/auth/login') {
       const body = JSON.parse(options.body)
       if (body.password !== 'test-password') return json({ detail: '로그인 정보가 올바르지 않습니다.' }, 401)
-      server.user = body.login_id === 'B' ? B : A
+      server.user = body.login_id === 'B' ? B : body.login_id === 'C' ? { ...A, profile_completed: false } : A
       return json(server.user)
     }
     if (path === '/me/memory' && options?.method === 'PATCH') {
@@ -292,7 +292,7 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByText('결제 API')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '저장하고 채팅 시작' }))
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    expect(server.memoryPatches).toEqual([{ affiliation: '개발', rank: 'SRE', service: '결제 API' }])
+    expect(server.memoryPatches).toEqual([{ rank: 'SRE', service: '결제 API' }])   // 팀(affiliation)은 보내지 않는다 (#131 리뷰 ①)
   })
 
   it('lets registration finish without choosing a role or a service', async () => {
@@ -477,6 +477,31 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByRole('button', { name: '내 계정' })).toBeNull()
   })
 
+  // H-02: 로그인 뒤 이동. 화면은 돌아갈 주소(?next=)를 받지 않으므로 바깥 주소로 보낼 길이 없다는 것을 시험으로 고정한다.
+  it('lands a completed user on the chat screen after login (H-02)', async () => {
+    render(<App />)
+    await signIn()
+    await screen.findByRole('textbox', { name: '질문' })
+    expect(window.location.pathname).toBe('/chat')
+  })
+
+  it('lands a user with an incomplete profile on the first registration step after login (H-02)', async () => {
+    render(<App />)
+    await signIn('C')
+    await waitFor(() => expect(window.location.pathname).toBe('/myinfo'))
+  })
+
+  it.each(['https://evil.example/phish', '//evil.example', '/admin', 'javascript:alert(1)'])('ignores a ?next=%s return path and lands on the default screen (H-02)', async next => {
+    window.history.replaceState({}, '', '/login?next=' + encodeURIComponent(next))
+    render(<App />)
+    await signIn()
+    await screen.findByRole('textbox', { name: '질문' })
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)) })   // 로그인 화면의 이동 호출이 끝난 뒤의 주소를 본다
+    expect(window.location.origin).toBe('http://localhost:3000')
+    expect(window.location.pathname).toBe('/chat')
+    expect(window.location.search).toBe('')
+  })
+
   it('links the Google login control to the server-side OAuth start route', async () => {
     window.history.replaceState({}, '', '/login')
     render(<App />)
@@ -513,7 +538,9 @@ describe('React authentication and session isolation', () => {
     view = render(<App />)
     await screen.findByRole('button', { name: '내 계정' })
     await openMemorySettings()
-    expect(screen.getByRole('button', { name: '보안' }).className).toContain('selected')
+    // 팀은 기억(affiliation)으로 저장하지 않으므로(#131 리뷰 ①) 새로고침 뒤 선택이 비어 있고, 저장한 업무 역할만 돌아온다.
+    expect(screen.getByRole('button', { name: '보안' }).className).not.toContain('selected')
+    expect(server.memory[A.user_id]).toEqual({ rank: '개발자', service: '' })
     expect(localStorage.getItem('provena-memory')).toBeNull()
     view.unmount()
   })
