@@ -261,10 +261,10 @@ function ImpactPreviewPanel({ service }) {
 
   return <section className="recall-admin-section" aria-labelledby="impact-preview-title">
     <div className="recall-admin-heading"><h2 id="impact-preview-title">변경 전 영향 미리보기</h2><span>저장·알림 없음</span></div>
-    <p className="recall-admin-lede">개정안의 바뀐 섹션 목록이나 MR diff를 넣으면 무효가 될 답변과 알림 대상 수를 미리 계산합니다.</p>
+    <p className="recall-admin-lede">개정안의 바뀐 섹션 목록이나 개정 전후 본문을 넣으면 무효가 될 답변과 알림 대상 수를 미리 계산합니다.</p>
     <form className="impact-preview-form" onSubmit={run}>
-      <div className="recall-filter-row" role="group" aria-label="입력 형식">{[['changes', '바뀐 섹션 목록(JSON)'], ['diff', 'MR diff']].map(([key, label]) => <button type="button" key={key} className={mode === key ? 'selected' : ''} onClick={() => setMode(key)}>{label}</button>)}</div>
-      <label><textarea aria-label={mode === 'diff' ? 'MR diff' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'diff' ? 'diff --git a/... b/...' : '[{"rule_seq": "...", "article": "...", "old_version_date": "...", "new_version_date": "...", "change_type": "modified"}]'} /></label>
+      <div className="recall-filter-row" role="group" aria-label="입력 형식">{[['changes', '바뀐 섹션 목록(JSON)'], ['pages', '개정 전후 본문(JSON)']].map(([key, label]) => <button type="button" key={key} className={mode === key ? 'selected' : ''} onClick={() => setMode(key)}>{label}</button>)}</div>
+      <label><textarea aria-label={mode === 'pages' ? '개정 전후 본문(JSON)' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'pages' ? '{"old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "pages": [{"path": "handbook/a.md", "old": "이전 본문", "new": "새 본문"}]}' : '[{"rule_seq": 12, "article": "조항 이름", "old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "change_type": "modified"}]'} /></label>
       <div className="recall-admin-actions"><button type="submit" className="demo-dark-button" disabled={running}>{running ? '계산 중입니다.' : '미리보기 실행'}</button></div>
     </form>
     {error && <p role="alert" className="recall-action-error">{error}</p>}

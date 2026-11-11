@@ -160,13 +160,19 @@ export function describeApiError(error, notFoundMessage = '알림을 찾을 수 
 
 export function parseImpactInput(mode, value) {
   const raw = String(value ?? '').trim()
-  if (!raw) throw new Error(mode === 'diff' ? 'diff 내용을 입력해 주세요.' : '바뀐 섹션 목록을 입력해 주세요.')
-  if (mode === 'diff') return { diff: raw }
+  if (!raw) throw new Error(mode === 'pages' ? '개정 전후 본문을 입력해 주세요.' : '바뀐 섹션 목록을 입력해 주세요.')
   let parsed
   try { parsed = JSON.parse(raw) } catch { throw new Error('JSON 형식이 올바르지 않습니다.') }
-  if (Array.isArray(parsed)) return { changes: parsed }
-  if (parsed && Array.isArray(parsed.changes)) return { changes: parsed.changes }
-  if (parsed && typeof parsed === 'object') return { changes: [parsed] }
+  // 서버(POST /impact-preview)는 changes 또는 pages(+두 판 날짜)만 받고 그 밖의 칸은 422다. rule_seq는 정수다.
+  if (mode === 'pages') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.pages) || parsed.pages.length === 0) throw new Error('pages 배열이 필요합니다.')
+    if (!parsed.old_version_date || !parsed.new_version_date) throw new Error('old_version_date와 new_version_date가 필요합니다.')
+    return { old_version_date: parsed.old_version_date, new_version_date: parsed.new_version_date, pages: parsed.pages }
+  }
+  const withIntSeq = list => list.map(item => item && typeof item === 'object' && typeof item.rule_seq === 'string' && /^[0-9]+$/.test(item.rule_seq.trim()) ? { ...item, rule_seq: Number(item.rule_seq.trim()) } : item)
+  if (Array.isArray(parsed)) return { changes: withIntSeq(parsed) }
+  if (parsed && Array.isArray(parsed.changes)) return { changes: withIntSeq(parsed.changes) }
+  if (parsed && typeof parsed === 'object') return { changes: withIntSeq([parsed]) }
   throw new Error('바뀐 섹션 목록은 배열 또는 changes 배열을 가진 객체여야 합니다.')
 }
 

@@ -141,9 +141,17 @@ describe('recall notice mapping', () => {
     expect(parseImpactInput('changes', '[{"rule_seq":"a"}]')).toEqual({ changes: [{ rule_seq: 'a' }] })
     expect(parseImpactInput('changes', '{"changes":[{"rule_seq":"a"}]}')).toEqual({ changes: [{ rule_seq: 'a' }] })
     expect(parseImpactInput('changes', '{"rule_seq":"a"}')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('diff', ' diff --git a b ')).toEqual({ diff: 'diff --git a b' })
     expect(() => parseImpactInput('changes', '{oops')).toThrow('JSON 형식이 올바르지 않습니다.')
-    expect(() => parseImpactInput('diff', '  ')).toThrow('diff 내용을 입력해 주세요.')
+    expect(() => parseImpactInput('changes', '  ')).toThrow('바뀐 섹션 목록을 입력해 주세요.')
+  })
+
+  it('sends rule_seq as an integer and never sends the unsupported diff field (H-10)', () => {
+    expect(parseImpactInput('changes', '[{"rule_seq":"12","article":"a"},{"rule_seq":7,"article":"b"}]')).toEqual({ changes: [{ rule_seq: 12, article: 'a' }, { rule_seq: 7, article: 'b' }] })
+    const pages = '{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}'
+    expect(parseImpactInput('pages', pages)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
+    expect(() => parseImpactInput('pages', '[{"path":"a.md"}]')).toThrow('pages')
+    expect(() => parseImpactInput('pages', '{"pages":[{"path":"a.md"}]}')).toThrow('old_version_date')
+    expect(Object.keys(parseImpactInput('pages', pages))).not.toContain('diff')
   })
 })
 

@@ -258,6 +258,18 @@ describe('live recall route for administrators', () => {
     expect(await screen.findByText('하루 요약을 불러오지 못했습니다.')).toBeTruthy()
   })
 
+  it('sends the page-pair form of the impact preview with integer rule_seq only (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '개정 전후 본문(JSON)' }))
+    await userEvent.click(within(panel).getByLabelText('개정 전후 본문(JSON)'))
+    await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    await within(panel).findByText(/무효가 될 답변 3건/)
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
+    expect(within(panel).queryByRole('button', { name: 'MR diff' })).toBeNull()
+  })
+
   it('rejects invalid impact preview JSON before calling the server', async () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
