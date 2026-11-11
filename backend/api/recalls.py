@@ -25,7 +25,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from backend.api.errors import ApiError
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, create_require_admin_dependency, require_csrf
@@ -52,7 +52,7 @@ class ReviewBody(BaseModel):
 
 class FeedbackBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    useful: bool
+    useful: StrictBool
     reason: str | None = Field(default=None, max_length=500)
 
 

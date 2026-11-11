@@ -68,6 +68,7 @@ export function mapNotice(notice = {}) {
   return {
     id: notice?.notice_id == null ? '' : String(notice.notice_id),
     answerId: notice?.answer_id ?? null,
+    userId: notice?.user_id == null ? null : String(notice.user_id).toLowerCase(),
     threadId: notice?.thread_id ?? null,
     title: article ?? ruleSeq ?? '바뀐 정책 섹션',
     question: typeof notice?.question === 'string' ? notice.question : '',
@@ -113,9 +114,10 @@ export function mapDigest(digest = {}) {
   return {
     id: digest?.digest_id == null ? '' : String(digest.digest_id),
     day: typeof digest?.day === 'string' ? digest.day : '',
-    count: Number.isFinite(digest?.count) ? digest.count : notices.length,
-    high: Number.isFinite(digest?.high) ? digest.high : 0,
-    low: Number.isFinite(digest?.low) ? digest.low : 0,
+    count: Number.isFinite(digest?.count) ? digest.count : Array.isArray(digest?.notice_ids) ? digest.notice_ids.length : notices.length,
+    // 서버 하루 요약 행에는 중요/참고 구분이 없다(backend/api/recalls.py list_digests). 0으로 지어내지 않고 null로 두어 화면에서 숨긴다.
+    high: Number.isFinite(digest?.high) ? digest.high : null,
+    low: Number.isFinite(digest?.low) ? digest.low : null,
     notices,
   }
 }
@@ -159,13 +161,25 @@ export function describeApiError(error, notFoundMessage = '알림을 찾을 수 
 
 export function parseImpactInput(mode, value) {
   const raw = String(value ?? '').trim()
-  if (!raw) throw new Error(mode === 'diff' ? 'diff 내용을 입력해 주세요.' : '바뀐 섹션 목록을 입력해 주세요.')
-  if (mode === 'diff') return { diff: raw }
+  if (!raw) throw new Error(mode === 'pages' ? '개정 전후 본문을 입력해 주세요.' : '바뀐 섹션 목록을 입력해 주세요.')
   let parsed
   try { parsed = JSON.parse(raw) } catch { throw new Error('JSON 형식이 올바르지 않습니다.') }
-  if (Array.isArray(parsed)) return { changes: parsed }
-  if (parsed && Array.isArray(parsed.changes)) return { changes: parsed.changes }
-  if (parsed && typeof parsed === 'object') return { changes: [parsed] }
+  // 서버(POST /impact-preview)는 changes 또는 pages(+두 판 날짜)만 받고 그 밖의 칸은 422다. rule_seq는 정수다.
+  if (mode === 'pages') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.pages) || parsed.pages.length === 0) throw new Error('pages 배열이 필요합니다.')
+    if (!parsed.old_version_date || !parsed.new_version_date) throw new Error('old_version_date와 new_version_date가 필요합니다.')
+    return { old_version_date: parsed.old_version_date, new_version_date: parsed.new_version_date, pages: parsed.pages }
+  }
+  // 서버(backend/api/recalls.py ImpactChange)는 rule_seq를 0 이상 정수로만 받아 그 밖의 값은 422다. 보내기 전에 막는다.
+  const withIntSeq = list => list.map(item => {
+    const seq = item && typeof item === 'object' ? item.rule_seq : undefined
+    if (Number.isInteger(seq) && seq >= 0) return item
+    if (typeof seq === 'string' && /^[0-9]+$/.test(seq.trim())) return { ...item, rule_seq: Number(seq.trim()) }
+    throw new Error('rule_seq는 0 이상의 정수(숫자)여야 합니다. 경로 문자열은 보낼 수 없습니다.')
+  })
+  if (Array.isArray(parsed)) return { changes: withIntSeq(parsed) }
+  if (parsed && Array.isArray(parsed.changes)) return { changes: withIntSeq(parsed.changes) }
+  if (parsed && typeof parsed === 'object') return { changes: withIntSeq([parsed]) }
   throw new Error('바뀐 섹션 목록은 배열 또는 changes 배열을 가진 객체여야 합니다.')
 }
 
@@ -264,7 +278,7 @@ export function createApiRecallAdapter(api = apiClient) {
       return candidate
     },
     async listDigests() {
-      const digests = listOf(await api.getRecallDigests(), 'items').map(mapDigest)
+      const digests = listOf(await api.getRecallDigests(), 'digests').map(mapDigest)
       update({ digests })
       return digests
     },
