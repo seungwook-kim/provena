@@ -16,12 +16,13 @@
 
 "2026-11-10 운영 조회" 열은 같은 날 읽기 전용으로 조회한 운영 Supabase의 행 수와 총 크기(표와 색인과 TOAST 합)다. 조회 시점은 109 적용 전이어서 `answers`, `recall_notices`, `approvals`에는 합쳐진 칼럼의 값이 아직 없다(운영 DB에는 이후 2026-11-10 밤부터 2026-11-11까지 109를 적용했다. 2-3). 이 열 외에 운영 값은 이 문서에 쓰지 않았다.
 
-### 2-1. 앱 표 25개
+### 2-1. 앱 표 26개
 
 | 표 이름 | 영역 | 만든 파일 | 한 줄 설명 | 2026-11-10 운영 조회 (행 / 크기) |
 |---|---|---|---|---|
 | `users` | 인증 | `db/101_auth_users.sql` | 로그인 계정(아이디, 비밀번호 해시, 역할, 활성, 문서 권한 그룹) | 2행 / 48 KB |
 | `signup_requests` | 인증 | `db/106_signup_approval.sql` | 회원가입 요청과 관리자 승인 기록(승인 전에는 `users` 행이 없다) | 1행 / 80 KB |
+| `user_identities` | 인증 | `db/114_google_identities.sql` | 구글 계정(`sub`)과 `users` 행의 연결 | 운영 미적용(114 적용 전) |
 | `user_profiles` | 인증 | `db/104_user_profiles.sql` | 내 정보(이름, 소속, 전화, 주소)의 AES-256-GCM 암호문 | 2행 / 32 KB |
 | `admin_role_log` | 인증 | `db/105_admin_role_log.sql` | 화면에서 한 관리자 등록·해제 기록(쓰기만 한다) | 2행 / 48 KB |
 | `token_revocations` | 인증 | `db/103_auth_token_revocations.sql` | 로그아웃한 JWT 식별자(`jti`)와 만료 시각 | 35행 / 40 KB |
@@ -92,6 +93,7 @@
 | `db/120_answers_recall.sql` | `answers`, `citations`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_digests`, `change_monitoring` |
 | `db/201_search.sql` | `docs`, `versions`, `chunks`, `index_meta`, `query_translations` |
 | `db/202_sync.sql` | `sync_runs`, `changed_articles` |
+| `db/114_google_identities.sql` | `user_identities`(새 표), `signup_requests.google_sub` 칸, `users`·`signup_requests`의 `password_hash` NULL 허용 |
 | `db/manual/chunks_hnsw_voyage4.sql` | `chunks` 부분 HNSW 색인 `chunks_emb_hnsw_half` |
 | `db/manual/109_purge_old.sql` | 이름이 바뀐 옛 표 3개를 `DROP TABLE IF EXISTS`로 지운다 |
 
@@ -153,7 +155,7 @@
 |---|---|---|---|---|---|
 | `user_id` | `uuid` | NO | `gen_random_uuid()` | PK | 사용자 id |
 | `login_id` | `text` | NO | | UK | 로그인 아이디 |
-| `password_hash` | `text` | NO | | | bcrypt 해시 |
+| `password_hash` | `text` | NO(114 적용 뒤 YES) | | | bcrypt 해시. 구글로만 만든 계정은 NULL |
 | `role` | `text` | NO | | | `user` 또는 `admin`(CHECK) |
 | `is_active` | `boolean` | NO | `true` | | 활성 여부 |
 | `groups` | `text[]` | NO | `'{}'` | | 문서 권한 그룹. F-06(문서 권한) 연결 지점이다 |
@@ -163,6 +165,7 @@
 |---|---|---|
 | `users_pkey` | `PRIMARY KEY (user_id)` | `auth_store.py:215`(`WHERE user_id = %s`), `375`(`UPDATE ... WHERE user_id = %s`) |
 | `users_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:208`, `235-237`(`ON CONFLICT (login_id)`), `250`, `265`, `321`, `365` |
+| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/113`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`create_pending_user`의 이메일 조회(`lower(login_id) = lower(%s)`) |
 
 #### 4-1-2. `signup_requests`
 
@@ -177,17 +180,39 @@
 | `request_id` | `bigint` | NO | `GENERATED ALWAYS AS IDENTITY` | PK | 요청 번호 |
 | `user_id` | `uuid` | YES | | FK `users(user_id)`, UK | 승인되어 `users` 행이 생긴 뒤에만 채운다 |
 | `login_id` | `text` | NO | | UK | 요청한 로그인 아이디 |
-| `password_hash` | `text` | NO | | | 요청 때 받은 비밀번호 해시 |
+| `password_hash` | `text` | NO(114 적용 뒤 YES) | | | 요청 때 받은 비밀번호 해시. 구글 가입 신청은 NULL |
 | `status` | `text` | NO | | | `pending`, `approved`, `rejected`(CHECK) |
 | `requested_at` | `timestamptz` | NO | `now()` | | 요청 시각 |
 | `reviewed_at` | `timestamptz` | YES | | | 검토 시각 |
 | `reviewed_by` | `uuid` | YES | | FK `users(user_id)` | 검토한 관리자 |
+| `google_sub` | `text` | YES | | UK(부분) | 114가 더한 칸. 구글 가입 신청의 sub. 승인하면 `user_identities`로 옮긴다. `password_hash`와 둘 중 하나는 있어야 한다(CHECK `signup_requests_secret_or_google`) |
 
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
 | `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:329`(`WHERE request_id = %s`), `225`, `313`(`ORDER BY request_id DESC`) |
 | `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:290`(`WHERE user_id = %s AND status = 'approved'`) |
-| `signup_requests_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:225`, `312-313`, `270-275`(중복 아이디를 UNIQUE 위반으로 감지) |
+| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(중복 아이디를 UNIQUE 위반으로 감지), `get_signup_by_login_id`·`review_signup_request`(`ORDER BY request_id DESC`) |
+| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체. 이 색인이 있으면 107을 다시 돌려도 옛 색인을 되살리지 않는다) | 이메일 대소문자 중복 가입 방지 |
+
+#### 4-1-2a. `user_identities`
+
+- 목적: 구글 계정(`sub`)과 `users` 행의 연결. 구글이 인증한 이메일이 기존 계정 로그인 아이디와 정확히 같을 때 한 줄을 더하고, 구글 가입 신청을 승인할 때도 한 줄을 더한다. 로그인할 때는 `(provider, subject)`로만 계정을 찾고 `email`은 참고용이다.
+- 만든 파일: `db/114_google_identities.sql`(표, RLS, 권한 회수).
+- 쓰는 코드: `backend/services/auth_store.py` — `get_or_create_google_user`, `_google_resolve`, `review_signup_request`(구글 신청 승인).
+- RLS와 권한: RLS 켬, 정책 없음. `PUBLIC`과(역할이 있을 때만) `anon`, `authenticated` 권한을 114가 회수한다.
+
+| 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
+|---|---|---|---|---|---|
+| `provider` | `text` | NO | | PK, UK, CHECK(`google`) | 로그인 방식 |
+| `subject` | `text` | NO | | PK | 구글 `sub` |
+| `user_id` | `uuid` | NO | | UK, FK `users(user_id)` `ON DELETE CASCADE` | 연결된 계정 |
+| `email` | `text` | NO | | | 마지막으로 본 구글 이메일 |
+| `created_at` | `timestamptz` | NO | `now()` | | 만든 시각 |
+
+| 색인 이름 | 정의 | 그 이유가 되는 질의 |
+|---|---|---|
+| `user_identities_pkey` | `PRIMARY KEY (provider, subject)` | 로그인 때 `WHERE provider = %s AND subject = %s`, 동시 첫 로그인의 `ON CONFLICT` |
+| `user_identities_provider_user_id_key` | `UNIQUE (provider, user_id)` | 한 계정에 구글 계정 하나만 연결(다른 구글 계정의 연결 시도 차단) |
 
 #### 4-1-3. `user_profiles`
 

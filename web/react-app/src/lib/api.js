@@ -25,6 +25,9 @@ export async function apiRequest(path, options = {}) {
   const { suppressUnauthorized = false, ...requestOptions } = options
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
+    // 화면 주소와 API 주소가 같은 곳(/admin/users, /recalls, /approvals)은 새로고침 때 받은 HTML이 브라우저 캐시에 남아
+    // fetch가 그 HTML을 받으면 '서버 응답 형식이 올바르지 않습니다'가 된다 → API 요청은 캐시를 쓰지 않는다
+    cache: 'no-store',
     ...requestOptions,
     headers: {
       ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),

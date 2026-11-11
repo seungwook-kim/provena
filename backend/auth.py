@@ -53,6 +53,9 @@ GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_OAUTH_FAILURE_PATH = "/login?oauth_error=google_login_failed"
+GOOGLE_OAUTH_PENDING_PATH = "/login?oauth_error=google_signup_pending"
+GOOGLE_OAUTH_REJECTED_PATH = "/login?oauth_error=google_signup_rejected"
+GOOGLE_OAUTH_UNAVAILABLE_PATH = "/login?oauth_error=google_unavailable"
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_BYTES = 72
 MIN_AUTH_SECRET_BYTES = 32
@@ -81,6 +84,12 @@ def _is_missing_signup_table_error(exc: Exception) -> bool:
 
 SIGNUP_PENDING_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다."
 SIGNUP_REJECTED_MESSAGE = "가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요."
+# 가입(POST /auth/signup) 201 응답 문구. 가입은 "완료"가 아니라 신청 접수다(code 로 화면이 분기할 수 있다)
+SIGNUP_VERIFICATION_SENT_MESSAGE = "가입 신청이 접수되었습니다. 메일로 받은 인증번호를 입력해 주세요."
+SIGNUP_RECEIVED_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다."
+# 이메일 인증을 마치지 않은 대기 신청: 관리자 승인 대기가 아니라 인증이 먼저다(오류 code signup_unverified)
+SIGNUP_UNVERIFIED_CODE = "signup_unverified"
+SIGNUP_UNVERIFIED_MESSAGE = "이메일 인증을 먼저 마쳐 주세요. 로그인 화면의 '이메일 인증 이어하기'에서 인증번호를 다시 받을 수 있습니다."
 
 
 class AuthError(Exception):
@@ -101,6 +110,22 @@ class RevocationStoreUnavailableError(AuthError):
 
 class GoogleOAuthError(AuthError):
     """Google OAuth could not prove the browser or identity request is valid."""
+
+
+class GoogleLoginUnavailableError(AuthConfigurationError):
+    """The user store cannot serve Google login yet (e.g. db/114 user_identities·google_sub not applied)."""
+
+
+class GoogleAccountLinkError(GoogleOAuthError):
+    """A verified Google e-mail cannot be linked (inactive, unverified or already linked account)."""
+
+
+class GoogleSignupPendingError(AuthError):
+    """A verified Google identity exists but its signup request is awaiting approval."""
+
+
+class GoogleSignupRejectedError(AuthError):
+    """A verified Google identity's signup request was rejected."""
 
 
 @dataclass(frozen=True)
@@ -124,12 +149,13 @@ class GoogleOAuthConfig:
 @dataclass(frozen=True)
 class GoogleIdentity:
     subject: str
+    email: str  # email_verified=true 로 검증된 이메일(소문자 정규화는 저장소가 한다)
 
 
 class GoogleOAuthStore(Protocol):
     """Persistence boundary for verified Google identities only."""
 
-    def get_or_create_google_user(self, provider: str, subject: str) -> "AuthUser": ...
+    def get_or_create_google_user(self, provider: str, subject: str, email: str) -> "AuthUser": ...
 
 
 class GoogleTokenExchanger(Protocol):
@@ -302,8 +328,8 @@ def _delete_google_oauth_request_cookie(response: Response) -> None:
     )
 
 
-def _google_oauth_failure_response() -> Response:
-    response = Response(status_code=303, headers={"Location": GOOGLE_OAUTH_FAILURE_PATH})
+def _google_oauth_failure_response(location: str = GOOGLE_OAUTH_FAILURE_PATH) -> Response:
+    response = Response(status_code=303, headers={"Location": location})
     _delete_google_oauth_request_cookie(response)
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -375,7 +401,7 @@ class GoogleJwkIdTokenVerifier:
             or not hmac.compare_digest(claims["nonce"], nonce)
         ):
             raise GoogleOAuthError("Google ID token claims are invalid")
-        return GoogleIdentity(subject=subject)
+        return GoogleIdentity(subject=subject, email=claims["email"])
 
 
 def _revocation_store(
@@ -504,7 +530,7 @@ def current_user_id(request: Request) -> str:
 class AuthUser:
     user_id: UUID
     login_id: str
-    password_hash: str = field(repr=False)
+    password_hash: str | None = field(repr=False)  # Google 계정은 None (비밀번호 로그인 불가)
     role: str
     is_active: bool = True
     groups: tuple[str, ...] = ()
@@ -785,6 +811,10 @@ def create_auth_router(
             raise AuthConfigurationError("Google OAuth user store is not configured")
         if google_id_token_verifier is None and not getattr(jwt.algorithms, "has_crypto", False):
             raise AuthConfigurationError("Google ID token verification dependency is not configured")
+        available = getattr(resolved_google_store, "google_login_available", None)
+        if callable(available) and not available():
+            # 운영 DB에 Google 연결 표(db/114)가 아직 없으면 Google 로그인만 끄고 비밀번호 로그인은 그대로 둔다.
+            raise GoogleLoginUnavailableError("Google login schema is not applied")
         return config, resolved_google_store
 
     @router.get("/auth/csrf", status_code=204)
@@ -794,15 +824,36 @@ def create_auth_router(
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    @router.post("/auth/login", response_model=UserResponse)
+    def _signup_unverified(login_id: str) -> bool:
+        """비밀번호가 맞은 대기 신청이 이메일 인증 전인지. 확인하지 못하면 False(기존 승인 대기 안내)."""
+        get_verification = getattr(store, "get_signup_verification", None)
+        if not callable(get_verification):
+            return False
+        try:
+            row = get_verification(login_id)
+        except Exception:
+            return False
+        return bool(row and row.get("status") == "pending" and row.get("email_verification_required")
+                    and row.get("email_verified_at") is None)
+
+    @router.post(
+        "/auth/login",
+        response_model=UserResponse,
+        responses={403: {"description": "Signup request is pending approval or rejected, or (error code signup_unverified) its email verification is not finished yet"}},
+    )
     def login(request: Request, payload: LoginRequest, response: Response) -> UserResponse:
         require_csrf(request)
-        login_id = payload.login_id.strip().lower() if "@" in payload.login_id else payload.login_id
+        # 가입은 모든 아이디를 소문자로 저장한다(_normalise_signup_login). 로그인도 같은 규칙으로 찾되, 그 규칙 전에
+        # 대문자로 만든 비이메일 계정(데모 시드·create_account 의 'Admin' 등)이 막히지 않게 입력 그대로 먼저 찾는다.
+        typed = payload.login_id if "@" not in payload.login_id else payload.login_id.strip().lower()
+        login_id = _normalise_signup_login(payload.login_id)  # 시도 제한 키와 신청 조회는 가입과 같은 규칙
         client_ip = _client_ip(request)
         if limiter.is_limited(login_id, client_ip):
             raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
         try:
-            user = store.get_by_login_id(login_id)
+            user = store.get_by_login_id(typed)
+            if user is None and typed != login_id:
+                user = store.get_by_login_id(login_id)
         except Exception:
             raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
         signup = None
@@ -814,7 +865,7 @@ def create_auth_router(
                 except Exception as exc:
                     if not _is_missing_signup_table_error(exc):
                         raise HTTPException(status_code=503, detail="authentication storage unavailable") from None
-        password_hash = user.password_hash if user is not None else (signup[1] if signup else DUMMY_PASSWORD_HASH)
+        password_hash = (user.password_hash if user is not None else (signup[1] if signup else None)) or DUMMY_PASSWORD_HASH
         password_valid = verify_password(payload.password, password_hash)
         get_status = getattr(store, "get_signup_status", None)
         if callable(get_status) and user is not None and password_valid:
@@ -830,6 +881,8 @@ def create_auth_router(
                 raise HTTPException(status_code=403, detail=SIGNUP_REJECTED_MESSAGE)
         elif signup is not None and password_valid:
             approval_status = signup[0]
+            if approval_status == "pending" and _signup_unverified(login_id):
+                raise HTTPException(status_code=403, detail={"reason": SIGNUP_UNVERIFIED_CODE, "message": SIGNUP_UNVERIFIED_MESSAGE})
             if approval_status == "pending":
                 raise HTTPException(status_code=403, detail=SIGNUP_PENDING_MESSAGE)
             if approval_status == "rejected":
@@ -921,7 +974,12 @@ def create_auth_router(
     @router.post(
         "/auth/signup",
         status_code=201,
-        responses={503: {"description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"}},
+        description=("Email signup. An unverified pending request for the same email is replaced only after its code expired more than "
+                     "24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS); until then the same email returns 409. Verified or approved requests "
+                     "and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again."
+                     " The 201 body has code verification_sent (email: enter the emailed code, then wait for approval) or approval_pending (non-email ID), and a message; signing up does not log the user in."),
+        responses={409: {"description": "Email already has an account, or a non-stale pending request or an approved request exists"},
+                   503: {"description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"}},
     )
     def signup(request: Request, payload: SignupRequest) -> dict[str, str]:
         require_csrf(request)
@@ -958,7 +1016,11 @@ def create_auth_router(
                     raise HTTPException(status_code=409, detail="회원가입을 완료할 수 없습니다. 입력값을 확인하거나 이메일 인증 이어하기를 이용해 주세요.") from None
                 raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
             raise HTTPException(status_code=503, detail="회원가입을 처리할 수 없습니다.") from None
-        response = {"message": "회원가입이 완료되었습니다. 로그인해 주세요."}
+        # 가입은 신청 접수일 뿐이다: 이메일은 인증번호 입력 → 관리자 승인, 그 밖은 관리자 승인 뒤에 로그인할 수 있다.
+        if issued is not None:
+            response = {"code": "verification_sent", "message": SIGNUP_VERIFICATION_SENT_MESSAGE}
+        else:
+            response = {"code": "approval_pending", "message": SIGNUP_RECEIVED_MESSAGE}
         if issued is not None:
             response["verification_expires_at"] = issued[0].isoformat()
             response["verification_resend_available_at"] = issued[1].isoformat()
@@ -1022,7 +1084,8 @@ def create_auth_router(
         try:
             config, _google_store = configured_google_oauth()
         except AuthConfigurationError:
-            raise HTTPException(status_code=503, detail="Google 로그인 서비스를 사용할 수 없습니다.") from None
+            # 브라우저가 주소창으로 오는 길이라 JSON 글자 대신 로그인 화면으로 돌려보낸다.
+            return Response(status_code=303, headers={"Location": GOOGLE_OAUTH_UNAVAILABLE_PATH, "Cache-Control": "no-store"})
         state = secrets.token_urlsafe(32)
         nonce = secrets.token_urlsafe(32)
         code_verifier = secrets.token_urlsafe(64)
@@ -1076,12 +1139,18 @@ def create_auth_router(
                 config=config,
                 nonce=pending["nonce"],
             )
-            user = oauth_store.get_or_create_google_user("google", identity.subject)
+            user = oauth_store.get_or_create_google_user("google", identity.subject, identity.email)
             if user is None or not user.is_active or user.role not in {"user", "admin"}:
                 raise GoogleOAuthError("OAuth user is not active")
             token = create_access_token(user.user_id, user.role, secret=resolved_secret)
             if _is_revoked(_revocation_store(request, revocation_store), decode_access_token(token, secret=resolved_secret)["jti"]):
                 raise RevocationStoreUnavailableError("new token identifier is already revoked")
+        except GoogleSignupPendingError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_PENDING_PATH)
+        except GoogleSignupRejectedError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_REJECTED_PATH)
+        except GoogleLoginUnavailableError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_UNAVAILABLE_PATH)
         except (AuthConfigurationError, GoogleOAuthError, RevocationStoreUnavailableError, InvalidTokenError, Exception):
             # OAuth failures must not disclose token, provider, storage, or configuration details.
             return _google_oauth_failure_response()

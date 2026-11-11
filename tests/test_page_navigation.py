@@ -50,6 +50,10 @@ def test_browser_navigation_gets_react_page(app):
     assert r.text == PAGE
 
 
+def test_approvals_page_is_not_cached_and_varies_by_accept(app):
+    r = TestClient(app).get("/approvals", headers=NAVIGATE, follow_redirects=False)
+    assert r.headers["cache-control"] == "no-store" and r.headers["vary"] == "Accept"
+
 @pytest.mark.parametrize("accept", [None, "*/*", "application/json"])
 def test_fetch_gets_api_not_page(app, accept):
     headers = {"Accept": accept} if accept else {}

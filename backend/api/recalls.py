@@ -23,7 +23,7 @@ import os
 import uuid
 from typing import Any, Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -105,6 +105,15 @@ def service_of(request: Request) -> Any:
     return svc
 
 
+# 화면 주소와 API 주소가 같으므로 브라우저 캐시가 HTML과 JSON을 섞지 않게 한다(/admin/users 와 같은 규칙, backend/admin_api.py)
+SCREEN_API_HEADERS = {"Cache-Control": "no-store", "Vary": "Accept"}
+
+
+def no_store(response: Response) -> None:
+    """화면 주소와 같은 API의 JSON 응답에 캐시 금지·Accept별 구분 헤더를 단다."""
+    response.headers.update(SCREEN_API_HEADERS)
+
+
 def spa_page(request: Request) -> FileResponse | None:
     """브라우저가 화면 주소(/recalls, /changes)를 직접 열거나 새로 고치면 API JSON 대신 화면(index.html)을 준다(`/approvals`와 같은 규칙).
     Accept에 text/html이 있으면 화면이다. 로그인 확인보다 먼저 보므로 로그인하지 않은 사람도 화면을 받고, 화면이 로그인으로 보낸다.
@@ -113,7 +122,7 @@ def spa_page(request: Request) -> FileResponse | None:
     if index is None:
         return None
     if "text/html" in request.headers.get("accept", "") or request.headers.get("sec-fetch-mode") == "navigate":
-        return FileResponse(index)
+        return FileResponse(index, headers=dict(SCREEN_API_HEADERS))
     return None
 
 
@@ -167,9 +176,10 @@ def create_recall_router(*, store: AuthStore, secret: str | None = None, revocat
 
     # ---------------------------------------------------------------- 목록·집계 (경로가 /recalls/{notice_id}보다 먼저다)
     @router.get("/recalls", response_model=None)
-    def list_recalls(request: Request, limit: int = Query(100, ge=1, le=500)):
+    def list_recalls(request: Request, response: Response, limit: int = Query(100, ge=1, le=500)):
         if (page := spa_page(request)) is not None:
             return page
+        no_store(response)
         user = current_user(request)
         svc = service_of(request)
         me = str(user.user_id)
@@ -223,9 +233,10 @@ def create_recall_router(*, store: AuthStore, secret: str | None = None, revocat
 
     # ---------------------------------------------------------------- 알림 한 건
     @router.get("/recalls/{notice_id}", response_model=None)
-    def get_recall(notice_id: str, request: Request):
+    def get_recall(notice_id: str, request: Request, response: Response):
         if (page := spa_page(request)) is not None:
             return page
+        no_store(response)
         user = current_user(request)
         svc = service_of(request)
         return notice_json(_notice_for(svc, notice_id, user))

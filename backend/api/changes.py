@@ -14,11 +14,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict
 
 from backend.api.errors import ApiError
-from backend.api.recalls import spa_page
+from backend.api.recalls import no_store, spa_page
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, create_require_admin_dependency, require_csrf
 from backend.graph.answer_store import count_by_articles
 from backend.rag.retrieve.section import check_date
@@ -116,10 +116,11 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
     admin_user = create_require_admin_dependency(store=store, secret=secret, revocation_store=revocation_store)
 
     @router.get("/changes", response_model=None, responses={200: {"model": ChangesResponse, "description": "화면 주소를 직접 열면 HTML이 온다."}})
-    def list_changes(request: Request, since: str | None = Query(None, max_length=10),
+    def list_changes(request: Request, response: Response, since: str | None = Query(None, max_length=10),
                      limit: int = Query(50, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0, le=1_000_000)):
         if (page := spa_page(request)) is not None:   # 화면 주소를 직접 열면 로그인 확인 전에 화면을 준다(/approvals와 같은 규칙)
             return page
+        no_store(response)
         current_user(request)
         st = _store(request)
         since = since or (datetime.now(timezone.utc).date() - timedelta(days=DEFAULT_DAYS)).isoformat()
@@ -150,9 +151,10 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
         return {"status": rec["status"], "updated_by": rec.get("updated_by"), "updated_at": str(rec.get("updated_at") or "") or None}
 
     @router.get("/changes/{event_id}", response_model=None)
-    def get_change(event_id: str, request: Request):
+    def get_change(event_id: str, request: Request, response: Response):
         if (page := spa_page(request)) is not None:
             return page
+        no_store(response)
         current_user(request)
         row = _store(request).get(event_id)
         if row is None:
