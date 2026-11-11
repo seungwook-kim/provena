@@ -32,7 +32,8 @@ def test_dot_dot_thread_id_is_not_a_thread(env):
 
 
 def test_head_threads_has_request_id_and_no_body(env):
-    """C-24: HEAD 응답은 규격상 본문이 없다(봉투를 실을 수 없다). 상태는 404·405 중 하나이고 X-Request-ID는 붙는다."""
+    """C-24: `/threads`는 GET 전용이라 FastAPI가 HEAD 경로를 만들지 않는다. 그래서 HEAD가 `backend/main.py` 끝의 `app.mount("/", StaticFiles)`로 떨어져 404가 난다(서버는 봉투를 만들지만 HEAD라 본문이 전송되지 않는다).
+    규격상 더 맞는 응답은 405(`Allow: GET`)이고 동결 뒤 개선 후보다. 지금은 상태 404·405 중 하나, 본문 없음, X-Request-ID 붙음만 확인한다."""
     r = env.client(env.alice).head("/threads")
     assert r.status_code in (404, 405) and r.content == b"" and r.headers.get("x-request-id")
 
