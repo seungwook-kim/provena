@@ -32,6 +32,7 @@ ADMIN_LOG_SCHEMA_FILE = SCHEMA_FILE.with_name("105_admin_role_log.sql")
 SIGNUP_SCHEMA_FILE = SCHEMA_FILE.with_name("106_signup_approval.sql")
 EMAIL_VERIFICATION_SCHEMA_FILE = SCHEMA_FILE.with_name("107_email_signup_verification.sql")
 PRIVACY_SCHEMA_FILE = SCHEMA_FILE.with_name("108_auth_privacy_hardening.sql")
+SIGNUP_EDGES_SCHEMA_FILE = SCHEMA_FILE.with_name("112_signup_edges.sql")
 GOOGLE_SCHEMA_FILE = SCHEMA_FILE.with_name("203_google_identities.sql")
 GOOGLE_PROVIDER = "google"
 ROLES = frozenset({"user", "admin"})
@@ -69,10 +70,8 @@ def _to_user(row: tuple | None) -> AuthUser | None:
     )
 
 
-# 인증번호가 만료된 뒤 이 시간이 지나도록 인증하지 않은 이메일 가입 신청은 같은 이메일로 다시 가입할 때 덮어쓴다
-# (인증하지 않은 채 남은 신청이 그 이메일을 계속 선점하지 못하게 한다). 만료 기준은 verification_expires_at 이고,
-# 코드를 한 번도 보내지 못한 신청은 requested_at 을 쓴다. 새 열은 필요 없다.
-STALE_UNVERIFIED_SIGNUP_HOURS = 24
+# 이메일 가입 신청이 인증 전(미인증 pending)이면 같은 이메일로 다시 가입할 때 새 비밀번호로 덮어쓴다(create_pending_user).
+# 인증을 마친 신청, 승인된 신청, 이미 있는 계정은 덮어쓰지 않는다.
 
 
 class AccountExistsError(Exception):
@@ -95,18 +94,6 @@ class SignupRequestRow:
     email_verified: bool = False
 
 
-def _is_stale_unverified(row: dict[str, Any], now: datetime) -> bool:
-    """인증번호 만료 뒤 STALE_UNVERIFIED_SIGNUP_HOURS 가 지난 미인증 대기 신청인지."""
-    if row.get("status") != "pending" or not row.get("email_verification_required"):
-        return False
-    if row.get("email_verified_at") is not None:
-        return False
-    since = row.get("verification_expires_at") or row.get("requested_at")
-    if since is None:
-        return False
-    return now - since > timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS)
-
-
 class MemoryAuthStore:
     """Explicit in-process AuthStore for tests and opt-in local use only."""
 
@@ -119,7 +106,11 @@ class MemoryAuthStore:
 
     def get_by_login_id(self, login_id: str) -> AuthUser | None:
         with self._lock:
-            return self._users.get(login_id)
+            found = self._users.get(login_id)
+            if found is None and "@" in login_id:
+                # 이메일은 대소문자를 가리지 않는다(소문자화 규칙 전에 대문자로 저장된 계정도 찾는다)
+                found = next((u for k, u in self._users.items() if "@" in k and k.lower() == login_id.lower()), None)
+            return found
 
     def get_by_user_id(self, user_id: UUID | str) -> AuthUser | None:
         try:
@@ -212,15 +203,24 @@ class MemoryAuthStore:
             self._users[login_id] = user
             return user
 
-    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> None:
-        """Store a pending request only; no users record or user ID is made."""
+    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> str | None:
+        """Store a pending request only; no users record or user ID is made.
+
+        새 신청이면 None, 인증 전 이메일 신청을 새 비밀번호로 덮어썼으면 "replaced"를 돌려준다.
+        거절된 신청은 새 신청으로 대체한다. 인증을 마친·승인된 신청과 이미 있는 계정은 AccountExistsError.
+        """
         with self._lock:
-            if login_id in self._users:
+            if self.get_by_login_id(login_id) is not None:
                 raise AccountExistsError("login_id already exists")
             now = datetime.now(timezone.utc)
-            stale = self._signup_requests.get(login_id)
-            if stale is not None and _is_stale_unverified(stale, now):
+            existing = self._signup_requests.get(login_id)
+            if existing is not None and existing["status"] == "rejected":
                 del self._signup_requests[login_id]
+            elif (existing is not None and email_verification_required and existing["status"] == "pending"
+                  and existing["email_verification_required"] and existing["email_verified_at"] is None):
+                existing.update(password_hash=password_hash, requested_at=now, verification_code_hash=None,
+                                verification_expires_at=None, verification_attempts=0)
+                return "replaced"
             if login_id in self._signup_requests:
                 raise AccountExistsError("login_id already exists")
             request_id = self._next_signup_request_id
@@ -373,6 +373,12 @@ class PostgresAuthStore:
         return _to_user(row)
 
     def get_by_login_id(self, login_id: str) -> AuthUser | None:
+        if "@" in login_id:
+            # 이메일은 대소문자를 가리지 않는다. db/112 가 users 의 이메일 소문자 유니크 색인(같은 조건)을 둔다.
+            return self._fetch_one(
+                f"SELECT {_COLUMNS} FROM users WHERE position('@' in login_id) > 0 AND lower(login_id) = lower(%s)",
+                (login_id,),
+            )
         return self._fetch_one(f"SELECT {_COLUMNS} FROM users WHERE login_id = %s", (login_id,))
 
     def get_by_user_id(self, user_id: UUID | str) -> AuthUser | None:
@@ -429,19 +435,29 @@ class PostgresAuthStore:
             (password_hash, login_id),
         )
 
-    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> None:
-        """Store a pending request only; no users record or user ID is made."""
+    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> str | None:
+        """Store a pending request only; no users record or user ID is made.
+
+        새 신청이면 None, 인증 전 이메일 신청을 새 비밀번호로 덮어썼으면 "replaced"를 돌려준다(한 트랜잭션).
+        거절된 신청 행은 남기고 새 행을 만든다(db/112 의 부분 유니크 색인이 거절 행을 제외한다).
+        인증을 마친·승인된 신청과 이미 있는 계정은 AccountExistsError.
+        """
         with self._connect() as conn:
             with conn.transaction():
-                existing = conn.execute("SELECT 1 FROM users WHERE login_id = %s", (login_id,)).fetchone()
-                if existing is not None:
+                if self._user_exists(conn, login_id):
                     raise AccountExistsError("login_id already exists")
-                conn.execute(
-                    "DELETE FROM signup_requests WHERE login_id = %s AND status = 'pending' "
-                    "AND email_verification_required AND email_verified_at IS NULL "
-                    "AND COALESCE(verification_expires_at, requested_at) < now() - make_interval(hours => %s)",
-                    (login_id, STALE_UNVERIFIED_SIGNUP_HOURS),
-                )
+                if email_verification_required:
+                    open_row = conn.execute(
+                        "SELECT request_id, email_verification_required, email_verified_at FROM signup_requests "
+                        "WHERE login_id = %s AND status = 'pending' FOR UPDATE", (login_id,)
+                    ).fetchone()
+                    if open_row is not None and open_row[1] and open_row[2] is None:
+                        conn.execute(
+                            "UPDATE signup_requests SET password_hash = %s, requested_at = now(), "
+                            "verification_code_hash = NULL, verification_expires_at = NULL, verification_attempts = 0 "
+                            "WHERE request_id = %s", (password_hash, open_row[0])
+                        )
+                        return "replaced"
                 try:
                     conn.execute(
                         "INSERT INTO signup_requests (login_id, password_hash, status, email_verification_required) VALUES (%s, %s, 'pending', %s)",
@@ -451,6 +467,17 @@ class PostgresAuthStore:
                     if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
                         raise AccountExistsError("login_id already exists") from None
                     raise
+        return None
+
+    @staticmethod
+    def _user_exists(conn: Any, login_id: str) -> bool:
+        if "@" in login_id:
+            row = conn.execute(
+                "SELECT 1 FROM users WHERE position('@' in login_id) > 0 AND lower(login_id) = lower(%s)", (login_id,)
+            ).fetchone()
+        else:
+            row = conn.execute("SELECT 1 FROM users WHERE login_id = %s", (login_id,)).fetchone()
+        return row is not None
 
     def get_or_create_google_user(self, provider: str, subject: str, email: str) -> AuthUser:
         """구글 sub 한 개 -> 계정 하나. 한 트랜잭션 안에서 아래 순서로 본다.
@@ -593,12 +620,12 @@ class PostgresAuthStore:
                 if row is None or not row[0]: return "not_required"
                 if row[1] is not None: return "already_verified"
                 if row[3] is None or row[3] <= now:
-                    conn.execute("UPDATE signup_requests SET verification_code_hash = NULL WHERE login_id = %s", (login_id,))
+                    conn.execute("UPDATE signup_requests SET verification_code_hash = NULL WHERE login_id = %s AND status = 'pending'", (login_id,))
                     return "expired"
                 if row[4] >= max_attempts: return "too_many_attempts"
-                conn.execute("UPDATE signup_requests SET verification_attempts = verification_attempts + 1 WHERE login_id = %s", (login_id,))
+                conn.execute("UPDATE signup_requests SET verification_attempts = verification_attempts + 1 WHERE login_id = %s AND status = 'pending'", (login_id,))
                 if not hmac.compare_digest(str(row[2] or ""), code_hash): return "invalid"
-                conn.execute("UPDATE signup_requests SET email_verified_at = %s, verification_code_hash = NULL, verification_expires_at = NULL, verification_attempts = 0 WHERE login_id = %s", (now, login_id))
+                conn.execute("UPDATE signup_requests SET email_verified_at = %s, verification_code_hash = NULL, verification_expires_at = NULL, verification_attempts = 0 WHERE login_id = %s AND status = 'pending'", (now, login_id))
                 return "verified"
 
     def list_signup_requests(self) -> list[SignupRequestRow]:
@@ -721,7 +748,7 @@ class PostgresAuthStore:
     def ensure_schema(self) -> None:
         """`CREATE TABLE IF NOT EXISTS`로 users, token_revocations, admin_role_log, signup_requests 표를 만들고 203 Google 연결 표(user_identities)를 더한다(이 순서, 외래키). 이미 있으면 아무것도 바꾸지 않는다."""
         with self._connect() as conn:
-            for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE, ADMIN_LOG_SCHEMA_FILE, SIGNUP_SCHEMA_FILE, EMAIL_VERIFICATION_SCHEMA_FILE, PRIVACY_SCHEMA_FILE, GOOGLE_SCHEMA_FILE):
+            for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE, ADMIN_LOG_SCHEMA_FILE, SIGNUP_SCHEMA_FILE, EMAIL_VERIFICATION_SCHEMA_FILE, PRIVACY_SCHEMA_FILE, SIGNUP_EDGES_SCHEMA_FILE, GOOGLE_SCHEMA_FILE):
                 conn.execute(schema_file.read_text(encoding="utf-8"))
 
 

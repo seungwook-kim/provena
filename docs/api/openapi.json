@@ -1264,7 +1264,7 @@
     },
     "/admin/signup-requests/by-id/{request_id}/reset-verification": {
       "post": {
-        "description": "Owner-admin only; requires a valid CSRF token. Clears the verification state of an unverified pending email signup request so a new code can be issued.",
+        "description": "Owner-admin only; requires a valid CSRF token. Clears the verification code and resets the attempt and send counters of an unverified pending email signup request so a new code can be issued.",
         "operationId": "reset_signup_verification_admin_signup_requests_by_id__request_id__reset_verification_post",
         "parameters": [
           {
@@ -1738,6 +1738,7 @@
     },
     "/auth/signup": {
       "post": {
+        "description": "Email signup. An unverified pending request for the same email is overwritten with the new password and a new code is sent (only someone who receives the email can finish verification). Verified or approved requests and existing accounts return 409. A rejected request does not block signing up again.",
         "operationId": "signup_auth_signup_post",
         "requestBody": {
           "content": {
@@ -1764,6 +1765,9 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "description": "Email already has an account, or its pending request is already verified/approved"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1774,8 +1778,11 @@
             },
             "description": "Validation Error"
           },
+          "429": {
+            "description": "Too many signup requests, or the verification email send limit (interval or count) for an existing unverified request was reached; the existing request is left unchanged"
+          },
           "503": {
-            "description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"
+            "description": "Signup storage unavailable, or the verification email could not be sent (a request created by this call is removed so the same email can sign up again; an overwritten existing unverified request is kept)"
           }
         },
         "summary": "Signup"

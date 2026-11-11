@@ -131,7 +131,7 @@ erDiagram
     signup_requests {
         bigint request_id PK "GENERATED ALWAYS AS IDENTITY"
         uuid user_id FK, UK "승인 전에는 NULL"
-        text login_id UK
+        text login_id "거절되지 않은 행만 UK(112)"
         text password_hash
         text status "pending, approved, rejected"
         timestamptz requested_at
