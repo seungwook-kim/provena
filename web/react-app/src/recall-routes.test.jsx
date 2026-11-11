@@ -246,10 +246,20 @@ describe('live recall route for administrators', () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
     await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
-    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.paste('[{"rule_seq":"12","article":"Approval limits"}]')
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText(/무효가 될 답변 3건/)
-    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 'handbook/finance/procurement', article: 'Approval limits' }] })
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 12, article: 'Approval limits' }] })
+  })
+
+  it('blocks a non-numeric rule_seq before sending, because the server answers 422 (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect(await within(panel).findByText(/rule_seq는 0 이상의 정수/)).toBeTruthy()
+    expect(requestsTo('POST', '/impact-preview')).toHaveLength(0)
   })
 
   it('shows an error instead of an empty list when the digests cannot be loaded (H-11)', async () => {

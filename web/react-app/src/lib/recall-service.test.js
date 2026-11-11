@@ -138,9 +138,14 @@ describe('recall notice mapping', () => {
   })
 
   it('parses impact preview input', () => {
-    expect(parseImpactInput('changes', '[{"rule_seq":"a"}]')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('changes', '{"changes":[{"rule_seq":"a"}]}')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('changes', '{"rule_seq":"a"}')).toEqual({ changes: [{ rule_seq: 'a' }] })
+    expect(parseImpactInput('changes', '[{"rule_seq":1}]')).toEqual({ changes: [{ rule_seq: 1 }] })
+    expect(parseImpactInput('changes', '{"changes":[{"rule_seq":1}]}')).toEqual({ changes: [{ rule_seq: 1 }] })
+    expect(parseImpactInput('changes', '{"rule_seq":1}')).toEqual({ changes: [{ rule_seq: 1 }] })
+    // 서버는 rule_seq 정수만 받는다(ImpactChange.rule_seq: int, ge=0) — 문자열 경로·음수·소수·없음은 보내기 전에 막는다
+    for (const bad of ['"handbook/finance/procurement"', '"a"', '-1', '1.5', 'null']) {
+      expect(() => parseImpactInput('changes', `[{"rule_seq":${bad},"article":"x"}]`)).toThrow('rule_seq')
+    }
+    expect(() => parseImpactInput('changes', '[{"article":"x"}]')).toThrow('rule_seq')
     expect(() => parseImpactInput('changes', '{oops')).toThrow('JSON 형식이 올바르지 않습니다.')
     expect(() => parseImpactInput('changes', '  ')).toThrow('바뀐 섹션 목록을 입력해 주세요.')
   })

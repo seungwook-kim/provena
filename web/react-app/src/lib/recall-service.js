@@ -169,7 +169,13 @@ export function parseImpactInput(mode, value) {
     if (!parsed.old_version_date || !parsed.new_version_date) throw new Error('old_version_date와 new_version_date가 필요합니다.')
     return { old_version_date: parsed.old_version_date, new_version_date: parsed.new_version_date, pages: parsed.pages }
   }
-  const withIntSeq = list => list.map(item => item && typeof item === 'object' && typeof item.rule_seq === 'string' && /^[0-9]+$/.test(item.rule_seq.trim()) ? { ...item, rule_seq: Number(item.rule_seq.trim()) } : item)
+  // 서버(backend/api/recalls.py ImpactChange)는 rule_seq를 0 이상 정수로만 받아 그 밖의 값은 422다. 보내기 전에 막는다.
+  const withIntSeq = list => list.map(item => {
+    const seq = item && typeof item === 'object' ? item.rule_seq : undefined
+    if (Number.isInteger(seq) && seq >= 0) return item
+    if (typeof seq === 'string' && /^[0-9]+$/.test(seq.trim())) return { ...item, rule_seq: Number(seq.trim()) }
+    throw new Error('rule_seq는 0 이상의 정수(숫자)여야 합니다. 경로 문자열은 보낼 수 없습니다.')
+  })
   if (Array.isArray(parsed)) return { changes: withIntSeq(parsed) }
   if (parsed && Array.isArray(parsed.changes)) return { changes: withIntSeq(parsed.changes) }
   if (parsed && typeof parsed === 'object') return { changes: withIntSeq([parsed]) }
