@@ -113,7 +113,7 @@ class GoogleOAuthError(AuthError):
 
 
 class GoogleLoginUnavailableError(AuthConfigurationError):
-    """The user store cannot serve Google login yet (e.g. db/203 user_identities·google_sub not applied)."""
+    """The user store cannot serve Google login yet (e.g. db/114 user_identities·google_sub not applied)."""
 
 
 class GoogleAccountLinkError(GoogleOAuthError):
@@ -813,7 +813,7 @@ def create_auth_router(
             raise AuthConfigurationError("Google ID token verification dependency is not configured")
         available = getattr(resolved_google_store, "google_login_available", None)
         if callable(available) and not available():
-            # 운영 DB에 Google 연결 표(db/203)가 아직 없으면 Google 로그인만 끄고 비밀번호 로그인은 그대로 둔다.
+            # 운영 DB에 Google 연결 표(db/114)가 아직 없으면 Google 로그인만 끄고 비밀번호 로그인은 그대로 둔다.
             raise GoogleLoginUnavailableError("Google login schema is not applied")
         return config, resolved_google_store
 

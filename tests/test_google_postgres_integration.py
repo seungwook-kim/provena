@@ -55,7 +55,7 @@ def _query(sql: str, params: tuple = ()):
         return cur.fetchall() if cur.description else []
 
 
-def test_migration_203_can_run_repeatedly(ctx):
+def test_migration_114_can_run_repeatedly(ctx):
     store, _prefix, _reviewer = ctx
     store.ensure_schema()
     store.ensure_schema()

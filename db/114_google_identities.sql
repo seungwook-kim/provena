@@ -1,5 +1,5 @@
 -- 운영 적용은 팀장 승인 뒤
--- Google 로그인 계정 연결. 101·106 다음에 적용한다(번호는 기존 파일 뒤에 오도록 203).
+-- Google 로그인 계정 연결. 101·106 다음에 적용한다(번호: 인증 파트 100번대, 113 다음 114).
 -- 방식: 구글이 인증한(email_verified=true) 이메일이 기존 계정의 login_id(이메일)와 정확히 같으면 그 계정에 연결한다.
 -- 연결은 user_identities 한 줄이고 users 의 role·is_active 는 바꾸지 않는다. 계정이 없으면 signup_requests 에 대기 신청을 만든다.
 -- 여러 번 돌려도 된다. 일반 PostgreSQL 에서도 통과한다(anon·authenticated 는 역할이 있을 때만 쓴다).

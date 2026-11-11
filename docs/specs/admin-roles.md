@@ -49,7 +49,7 @@
 
 | 길 | 지금 상태 | 근거 |
 |---|---|---|
-| Google 로그인 첫 접속 때 자동 생성(role user) | 구현됨(로그인 아이디 = 구글이 인증한 이메일, role `user`, 비밀번호 없음). 새 계정은 비밀번호 가입처럼 **승인 대기**로 시작하고 `/admin/signup-requests`에서 승인한다. 이미 인증·승인된 같은 이메일 계정은 새로 만들지 않고 연결한다(`docs/specs/login.md` "Google 로그인 계정 연결"). 운영은 `db/203_google_identities.sql` 적용과 Cloud Run Google 키 설정(조장) 뒤에 켜진다 | `backend/services/auth_store.py`의 `get_or_create_google_user` / `db/203_google_identities.sql` / `tests/test_google_oauth.py`, `tests/test_google_postgres_integration.py` |
+| Google 로그인 첫 접속 때 자동 생성(role user) | 구현됨(로그인 아이디 = 구글이 인증한 이메일, role `user`, 비밀번호 없음). 새 계정은 비밀번호 가입처럼 **승인 대기**로 시작하고 `/admin/signup-requests`에서 승인한다. 이미 인증·승인된 같은 이메일 계정은 새로 만들지 않고 연결한다(`docs/specs/login.md` "Google 로그인 계정 연결"). 운영은 `db/114_google_identities.sql` 적용과 Cloud Run Google 키 설정(조장) 뒤에 켜진다 | `backend/services/auth_store.py`의 `get_or_create_google_user` / `db/114_google_identities.sql` / `tests/test_google_oauth.py`, `tests/test_google_postgres_integration.py` |
 | `create_account` 명령(이 Spec) | 새로 만듦 | 아래 How |
 | 로컬 데모 시드 | 로컬 전용, 바꾸지 않음 | `backend/services/demo_seed.py:3` |
 

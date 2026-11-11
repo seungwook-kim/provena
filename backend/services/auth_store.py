@@ -10,7 +10,7 @@
   그 계정이 활성이며 이메일 인증을 마친 가입 승인 계정이면 같은 계정에 연결한다(역할은 그대로, `user_identities` 한 줄).
   계정이 없으면 **가입 승인 대기**(`signup_requests`, 비밀번호 가입과 같은 목록)를 만들고 `GoogleSignupPendingError`·거절은
   `GoogleSignupRejectedError`, 연결할 수 없는 경우는 `GoogleAccountLinkError`를 던진다(콜백이 JWT 대신 /login 으로 보냄).
-- 스키마는 `db/101_auth_users.sql`, `db/105_admin_role_log.sql`, `db/203_google_identities.sql`이다. 도커 `db`는 처음 만들 때 적용하고, 이미 있는 볼륨은 `ensure_schema()`가 만든다.
+- 스키마는 `db/101_auth_users.sql`, `db/105_admin_role_log.sql`, `db/114_google_identities.sql`이다. 도커 `db`는 처음 만들 때 적용하고, 이미 있는 볼륨은 `ensure_schema()`가 만든다.
 """
 from __future__ import annotations
 
@@ -34,13 +34,13 @@ SIGNUP_SCHEMA_FILE = SCHEMA_FILE.with_name("106_signup_approval.sql")
 EMAIL_VERIFICATION_SCHEMA_FILE = SCHEMA_FILE.with_name("107_email_signup_verification.sql")
 PRIVACY_SCHEMA_FILE = SCHEMA_FILE.with_name("108_auth_privacy_hardening.sql")
 SIGNUP_EDGES_SCHEMA_FILE = SCHEMA_FILE.with_name("113_signup_edges.sql")
-GOOGLE_SCHEMA_FILE = SCHEMA_FILE.with_name("203_google_identities.sql")
+GOOGLE_SCHEMA_FILE = SCHEMA_FILE.with_name("114_google_identities.sql")
 GOOGLE_PROVIDER = "google"
 ROLES = frozenset({"user", "admin"})
 
 _COLUMNS = "user_id, login_id, password_hash, role, is_active"
 
-# db/203 이 적용됐는지(signup_requests.google_sub 열과 user_identities 표가 둘 다 있는지). 운영 DB는 203 전일 수 있다.
+# db/114가 적용됐는지(signup_requests.google_sub 열과 user_identities 표가 둘 다 있는지). 운영 DB는 114 전일 수 있다.
 _GOOGLE_SCHEMA_SQL = (
     "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = ANY (current_schemas(false)) "
     "AND table_name = 'signup_requests' AND column_name = 'google_sub') "
@@ -394,7 +394,7 @@ class PostgresAuthStore:
                 raise ValueError("dsn 또는 connect가 필요하다")
             connect = _default_connect(dsn)
         self._connect = connect
-        self._google_schema: bool | None = None  # db/203 적용 여부. 저장소마다 한 번만 확인한다(ensure_schema 뒤에는 다시 본다)
+        self._google_schema: bool | None = None  # db/114 적용 여부. 저장소마다 한 번만 확인한다(ensure_schema 뒤에는 다시 본다)
 
     def _has_google_schema(self, conn: Any) -> bool:
         """signup_requests.google_sub 열과 user_identities 표가 있는지. 처음 한 번만 information_schema 를 본다."""
@@ -404,7 +404,7 @@ class PostgresAuthStore:
         return self._google_schema
 
     def google_login_available(self) -> bool:
-        """203 전 DB면 False(콜백·시작이 Google 로그인 사용 불가 안내로 보낸다). 확인 중 저장소 오류도 False(캐시하지 않음)."""
+        """114 전 DB면 False(콜백·시작이 Google 로그인 사용 불가 안내로 보낸다). 확인 중 저장소 오류도 False(캐시하지 않음)."""
         if self._google_schema is None:
             try:
                 with self._connect() as conn:
@@ -441,7 +441,7 @@ class PostgresAuthStore:
         before a users record exists.
         """
         with self._connect() as conn:
-            google_filter = " AND google_sub IS NULL" if self._has_google_schema(conn) else ""  # 203 전에는 구글 신청 행이 없다
+            google_filter = " AND google_sub IS NULL" if self._has_google_schema(conn) else ""  # 114 전에는 구글 신청 행이 없다
             row = conn.execute(
                 f"SELECT status, password_hash FROM signup_requests WHERE login_id = %s{google_filter} "
                 "ORDER BY request_id DESC LIMIT 1",
@@ -693,7 +693,7 @@ class PostgresAuthStore:
         status = "approved" if action == "approve" else "rejected"
         reviewer = UUID(str(reviewed_by))
         with self._connect() as conn:
-            google_col = "google_sub" if self._has_google_schema(conn) else "NULL"  # 203 전 DB에는 열이 없다
+            google_col = "google_sub" if self._has_google_schema(conn) else "NULL"  # 114 전 DB에는 열이 없다
             with conn.transaction():
                 row = conn.execute(
                     "SELECT request_id, login_id, status, password_hash, email_verification_required, email_verified_at, "
@@ -792,11 +792,11 @@ class PostgresAuthStore:
         return "changed"
 
     def ensure_schema(self) -> None:
-        """`CREATE TABLE IF NOT EXISTS`로 users, token_revocations, admin_role_log, signup_requests 표를 만들고 203 Google 연결 표(user_identities)를 더한다(이 순서, 외래키). 이미 있으면 아무것도 바꾸지 않는다."""
+        """`CREATE TABLE IF NOT EXISTS`로 users, token_revocations, admin_role_log, signup_requests 표를 만들고 114 Google 연결 표(user_identities)를 더한다(이 순서, 외래키). 이미 있으면 아무것도 바꾸지 않는다."""
         with self._connect() as conn:
             for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE, ADMIN_LOG_SCHEMA_FILE, SIGNUP_SCHEMA_FILE, EMAIL_VERIFICATION_SCHEMA_FILE, PRIVACY_SCHEMA_FILE, SIGNUP_EDGES_SCHEMA_FILE, GOOGLE_SCHEMA_FILE):
                 conn.execute(schema_file.read_text(encoding="utf-8"))
-        self._google_schema = None  # 방금 203 을 적용했을 수 있으니 다음 호출에서 다시 확인한다
+        self._google_schema = None  # 방금 114를 적용했을 수 있으니 다음 호출에서 다시 확인한다
 
 
 class PostgresTokenRevocationStore:

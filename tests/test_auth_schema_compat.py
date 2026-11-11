@@ -33,7 +33,7 @@ GOOGLE_CONFIG = GoogleOAuthConfig(client_id="test-client-id", client_secret="tes
                                   redirect_uri="https://example.test/auth/google/callback")
 
 
-# --- 가짜 연결: 203 전 스키마 -------------------------------------------------------
+# --- 가짜 연결: 114 전 스키마 -------------------------------------------------------
 
 class _PreGoogleConn:
     """information_schema 확인에는 '없음'(False)을, 나머지는 빈 결과를 돌려주고 SQL 을 모두 적어 둔다."""
@@ -63,7 +63,7 @@ class _PreGoogleConn:
         return Result()
 
 
-def test_store_omits_google_sub_and_checks_schema_once_when_203_is_missing():
+def test_store_omits_google_sub_and_checks_schema_once_when_114_is_missing():
     log: list[str] = []
     store = PostgresAuthStore(connect=lambda: _PreGoogleConn(log))
     reviewer = "00000000-0000-0000-0000-000000000001"
@@ -110,10 +110,10 @@ pg = pytest.mark.skipif(not DB, reason="TEST_DATABASE_URL 없음(전용 Postgres
 
 @pytest.fixture
 def pre_google_store():
-    """새 스키마에 101·103·105·106·107·108 만 적용한다(113·203 없음). 끝나면 스키마를 지운다."""
+    """새 스키마에 101·103·105·106·107·108 만 적용한다(113·114 없음). 끝나면 스키마를 지운다."""
     import psycopg
 
-    schema = f"pre203_{secrets.token_hex(4)}"
+    schema = f"pre114_{secrets.token_hex(4)}"
 
     def connect():
         return psycopg.connect(DB, autocommit=True, connect_timeout=5, prepare_threshold=None,
@@ -190,5 +190,5 @@ def test_pg_password_signup_login_and_review_work_before_google_and_113_sql(pre_
 def test_pg_google_becomes_available_after_ensure_schema(pre_google_store):
     store, _connect = pre_google_store
     assert store.google_login_available() is False
-    store.ensure_schema()  # 113·203 적용(로컬 데모와 같은 길). 캐시를 비우고 다시 확인한다
+    store.ensure_schema()  # 113·114 적용(로컬 데모와 같은 길). 캐시를 비우고 다시 확인한다
     assert store.google_login_available() is True

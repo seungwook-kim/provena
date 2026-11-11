@@ -137,7 +137,7 @@ erDiagram
         timestamptz requested_at
         timestamptz reviewed_at
         uuid reviewed_by FK
-        text google_sub UK "구글 가입 신청의 sub, 203이 더한 칸"
+        text google_sub UK "구글 가입 신청의 sub, 114가 더한 칸"
     }
     user_identities {
         text provider PK, UK "google"
