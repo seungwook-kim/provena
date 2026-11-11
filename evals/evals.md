@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | `uncited_answers.py` 추가(저장된 `rows.jsonl`만 읽어 인용 없는 답의 건수와 답 기준·전체 기준 분모를 계산, LLM·네트워크 없음. 하위 질문별 후보 목록은 저장돼 있지 않아 '하나 빼기'는 `merge_by_score` 시험으로 따로 봄). `retrieval/experiment_v1.py`의 bge int8 리랭커가 점수 저장 값을 쓰지 않게 고침(I-013, 서비스 경로는 그대로, 이미 낸 v1 값은 다시 재지 않음). 측정·호출 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 26행 표기를 EVAL_REPORT 6장 실제 행 번호 27로 고침(문구만, 측정 없음) | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 측정 결과 옆 설명 문서 추가(측정·호출 없음): `results/d8_stage_report/approval_latency_postgres.md`(승인 대기 로컬 Postgres 측정의 방법·숫자·한계·재현 명령, 숫자는 json에서 다시 계산해 `EVAL_REPORT.md` 8장과 대조), `results/fail_types_00035/README.md`(배포본 실패 유형 세기의 이유·전후·한계). `EVAL_REPORT.md` 6장 표에 27행(2026-11-10 로컬 실제 모델 인젝션 30건, 참고값) 추가 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | D8 운영 측정분 정리 문서 `results/deploy_latency_provena-api-00035-h69/stage_times.md`: 00035 단계별 시간(64세션)과 00020 대비 전후, 리비전별 전체 응답 시간·비용, 한계, 재현 명령. 값은 커밋된 `stage_times.json` 두 개에서 다시 계산해 8장과 같음을 확인, 새 호출 없음 | - |
