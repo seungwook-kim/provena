@@ -148,7 +148,7 @@ POST {등록한 업무시스템 주소}/webhooks/recall
 - secret은 `webhook_subscriptions.secret_ref`가 가리키는 환경변수(`RECALL_WEBHOOK_SECRET` 또는 `RECALL_WEBHOOK_SECRET_<이름>`)의 값이고 저장소에 적지 않는다. 주소는 http·https만 받고, 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다.
 - 하루 요약(`RECALL_DIGEST=daily`)이면 알림마다 보내지 않고 사용자별 요약 한 건(`{"type": "recall_digest", "digest_id", "day", "count", "high", "low", "notices": [...]}`)으로 묶어 같은 서명 규칙으로 보낸다.
 - 판 비교: 같은 페이지의 두 커밋을 제목 경로로 정렬해 본문을 비교한다. 리콜은 개정 전후 같은 섹션 원문이 필요하므로, 검색과 따로 섹션 단위 조회(`get_section(rule_seq, article, as_of)`)를 쓴다.
-- 연결 정책: 핸드북 페이지 사이 링크로 만든 참조 그래프(`rule_links`: from_rule, to_rule, kind)를 쓴다. 비공개 주소로 가는 링크는 뺀다.
+- 연결 정책: 핸드북 페이지 사이 링크로 만든 참조 그래프를 쓴다. 링크는 `chunks.link_targets`(링크가 가리키는 페이지 rule_seq 배열, GIN 색인 `chunks_link_targets_gin`, `db/201_search.sql:59-62`, `db/109_realign.sql:96`)에 있고 별도 `rule_links` 표는 없다(`docs/SDD.md:390`). 비공개 주소로 가는 링크는 뺀다.
 - 증분 수집(가산 자동화): 마지막 커밋 이후 새 커밋만 받고, 중복 실행을 막고, 정해진 시각 실행 기록과 실패 알림을 남긴다. 바뀐 섹션은 `changed_articles`에 쌓이고, `python -m backend.graph.recall.process_pending`이나 관리자 `POST /recalls/process-pending`이 같은 처리 경로로 리콜에 넘긴다(`event_key`는 수집의 `event_id`와 같다).
 - git 없는 변경 감지(F-07): `python -m backend.rag.ingest.snapshot_diff`가 두 시점 문서 묶음을 섹션 단위로 비교해 같은 형식의 바뀐 섹션 목록을 만든다. `--feed`를 주면 `changed_articles`에 넣고 이후는 같은 경로로 처리한다.
 - 판정기: LLM 키(`LLM_API_KEY`)가 있으면 LLM 판정(`recall_explain` 작업, `mail-templates` Skill, 답마다 따로 비용 집계), 키가 없거나 데모 모드이면 섹션 낱말 차이 규칙 판정이다. 규칙 판정은 재현율을 앞세워 정밀도가 LLM보다 낮을 수 있다.

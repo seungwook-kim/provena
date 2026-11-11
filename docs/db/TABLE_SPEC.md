@@ -919,7 +919,7 @@ Store 표 마이그레이션 버전 기록. 라이브러리가 쓴다.
 
 다른 문서와 다른 점은 이 문서에서 고치지 않았다.
 
-- `docs/SDD.md` 5장(385-403줄)은 합쳐진 칼럼을 이미 반영했다. 그러나 `rule_links`(390줄)는 `db/*.sql`에 정의가 없고, `signup_requests`, `user_profiles`, `admin_role_log`, `token_revocations`, `issue_tables`, `threads`, `index_meta`, `query_translations`, `sync_runs`, `changed_articles`는 5장 표에 없다.
+- `docs/SDD.md` 5장(385-403줄)은 합쳐진 칼럼을 이미 반영했다. `rule_links`는 만들지 않았고 같은 일을 `chunks.link_targets`(`db/201_search.sql:59`)가 하며 SDD 390줄이 그렇게 적혀 있다. 5장 표에 없는 것은 `signup_requests`, `user_profiles`, `admin_role_log`, `token_revocations`, `issue_tables`, `threads`, `index_meta`, `query_translations`, `sync_runs`, `changed_articles`는 5장 표에 없다.
 - `db/db.md`는 재정렬 절(73-80줄)을 갖고 있다. 다만 71줄(2026-11-09 운영 확인 문단)은 `issue_table_rejections`를 표 목록에 넣고 있고, 91줄(작업 기록)은 `120_answers_recall.sql`이 `answer_grounding`, `recall_feedback`을 만든다고 적고 있다. 둘 다 당시 기록이다.
 - `users.groups`를 읽는 SQL은 코드에서 찾지 못했다(4-1-1). `chunks.acl`은 `backend/graph/recall/acl.py:40-41`이 읽는다.
 - `issue_tables.thread_id`가 화면용 바깥 이름인지 그래프 이름 `<user_id>:<thread_id>`인지는 확인하지 못했다. 쓰는 값은 그래프 상태의 `thread_id`(`backend/graph/departments/review.py:316`)이고, 그 값이 어느 쪽인지는 호출부까지 따라가지 않았다.
