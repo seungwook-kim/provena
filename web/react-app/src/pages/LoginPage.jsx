@@ -45,14 +45,14 @@ export default function LoginPage() {
           <h1>로그인</h1>
           <form onSubmit={submit} noValidate className="login-form">
             <label>
-              <span>이메일</span>
+              <span>이메일 또는 아이디</span>
               <input
-                aria-label="이메일"
+                aria-label="이메일 또는 아이디"
                 value={loginId}
                 onChange={event => setLoginId(event.target.value)}
                 type="text"
                 autoComplete="username"
-                placeholder="이메일을 입력하세요"
+                placeholder="이메일 또는 아이디"
               />
             </label>
             <label>
