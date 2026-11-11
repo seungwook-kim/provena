@@ -87,7 +87,7 @@
 | `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
 | `mock_erp/` | 김승욱 (안) | 업무시스템 목업 (Spring, Python 예제) |
 | `data/LICENSES/` | 팀장 | 핸드북 원문 사용 시 CC BY-SA 4.0 고지와 출처. 원문 텍스트는 코드와 폴더를 나눈다 |
-| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장). `.mcp.json`은 예정이며 아직 저장소에 없다 |
+| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장). 둘 다 예정이며 아직 저장소에 없다(조장 놓친 것 목록 A-13, 팀장 작업) |
 | `docs/` | 팀장 (각자 자기 파트 절 작성) | SPEC.md, 리포트, 이 지침서 |
 
 폴더 구조는 강사 템플릿(`docs/SCAFFOLD.md`)을 따른다. 템플릿의 `backend/rag/ingest.py`·`retrieve.py` 자리는 `backend/rag/ingest/`·`retrieve/` 폴더로, `backend/memory.py` 자리는 `backend/memory/` 폴더로 쓴다.
@@ -110,7 +110,7 @@
 repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
 ├─ AGENTS.md, CLAUDE.md      # AI 코딩 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
-├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
+├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2). 예정, 아직 없음
 ├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4). 예정, 아직 없음
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
 ├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장). pyproject.toml과 Makefile은 두지 않는다
@@ -306,7 +306,7 @@ Claude Code·Codex·Cursor 등을 써도 된다. 도구에 주는 규칙은 저�
 
 **데이터·라이선스 규칙.** 핸드북 본문은 CC BY-SA 4.0이다. 코드와 원문 텍스트는 폴더를 나누고, 원문 폴더(`data/LICENSES/` 포함)에만 라이선스와 출처를 적는다. 답에 원문을 보일 때는 페이지 URL, CC BY-SA 4.0 링크, 수정 여부를 함께 표시한다. README와 발표에는 "GitLab Inc.와 제휴·보증 관계 없음"을 적는다. 자세한 내용은 SDD 8장.
 
-**개발용 Skill·MCP.** 저장소의 `.claude/skills/`와 `.mcp.json`을 `git pull`로 받아 모두 같은 것을 쓴다. 필수·조건부 목록은 MCP·Skill 설계 4장에 있다. 새 외부 Skill은 팀장이 내용을 확인한 뒤 넣는다.
+**개발용 Skill·MCP.** (예정, 아직 없음: 조장 놓친 것 목록 A-13, 팀장 작업) 저장소에 `.claude/skills/`와 `.mcp.json`이 들어오면 `git pull`로 받아 모두 같은 것을 쓴다. 필수·조건부 목록은 MCP·Skill 설계 4장에 있다. 새 외부 Skill은 팀장이 내용을 확인한 뒤 넣는다.
 
 **AI 결과를 그대로 믿지 않는다.** 범용 챗봇 비교에서도 확인했듯이 AI 도구는 없는 섹션이나 정책 이름을 지어낼 수 있다. PR을 올리기 전에 직접 실행해 보고, 데이터·섹션은 핸드북 원문과 대조한다.
 
