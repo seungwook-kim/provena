@@ -241,6 +241,39 @@ describe('createApiChatAdapter HTTP errors (H-08)', () => {
     await expect(adapter.sendMessage({ threadId: null, message: '첫 질문' })).rejects.toMatchObject({ status: 503 })
   })
 
+  it('turns a stream that closes without an end event into an error answer, keeping the partial text', async () => {
+    const { snapshots, service } = setup([{ type: 'token', thread_id: 't1', data: { text: '답변 일부' } }])
+    const result = await service.sendMessage({ threadId: 't1', message: '질문' })
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer).toMatchObject({ state: 'error', errorCode: 'stream_incomplete', text: '답변 일부', question: '질문' })
+    expect(answer.error).toContain('연결이 끊겼습니다')
+    expect(result).toMatchObject({ threadId: 't1', error: answer.error })
+  })
+
+  it('turns a stream that closes with no event at all into an error answer in the open thread', async () => {
+    const { getThreads } = await import('./api')
+    getThreads.mockResolvedValueOnce([listedThread])
+    streamChatMessage.mockImplementationOnce(async () => {})
+    const snapshots = []
+    const adapter = createApiChatAdapter({ onThreadsChange: value => snapshots.push(value) })
+    await adapter.listThreads()
+    await adapter.sendMessage({ threadId: 't1', message: '새 질문' })
+    expect(snapshots.at(-1)[0].messages.at(-1)).toMatchObject({ state: 'error', errorCode: 'stream_incomplete', question: '새 질문' })
+  })
+
+  it('throws when a brand-new conversation stream closes with no event (no bubble to mark)', async () => {
+    streamChatMessage.mockImplementationOnce(async () => {})
+    const adapter = createApiChatAdapter()
+    await expect(adapter.sendMessage({ threadId: null, message: '첫 질문' })).rejects.toMatchObject({ code: 'stream_incomplete' })
+  })
+
+  it('does not mark a stream that ended with done as an error', async () => {
+    const { snapshots, service } = setup([{ type: 'token', thread_id: 't1', data: { text: '답' } }, { type: 'done', thread_id: 't1', data: {} }])
+    const result = await service.sendMessage({ threadId: 't1', message: '질문' })
+    expect(snapshots.at(-1)[0].messages.at(-1).state).toBe('done')
+    expect(result.error).toBeUndefined()
+  })
+
   it('keeps the question on a streamed error event so retry can resend it', async () => {
     const { snapshots, service } = setup([{ type: 'error', thread_id: 't1', data: { code: 'limit_exceeded', message: 'x' } }])
     await service.sendMessage({ threadId: 't1', message: '질문' })

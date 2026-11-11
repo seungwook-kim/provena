@@ -105,6 +105,7 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       const answer = { role: 'assistant', text: '', citations: [], state: 'generating', question: message, timestamp: new Date().toISOString() }
       const existing = threads.find(thread => thread.id === threadId)
       if (existing) upsert(threadId, { messages: [...(existing.messages ?? []), userMessage, answer] })
+      let finished = false
       try {
         await streamChatMessage(threadId, message, { signal: controller.signal, onEvent: event => {
           if (request.cancelled || controllers.get(streamId) !== request) return
@@ -127,8 +128,11 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
               draft.text = event.data?.message ?? draft.text
             }
           }
+          finished = draft.state !== 'generating'
           upsert(id, { title: current?.title ?? message, messages, lastActivityAt: new Date().toISOString() })
         }})
+        // 끝 이벤트(done·error·approval_request·no_results) 없이 스트림이 닫히면 생성 중 말풍선이 남는다 → 아래 오류 처리로 넘긴다(H-08)
+        if (!finished && !request.cancelled) throw Object.assign(new Error('응답이 끝나기 전에 연결이 끊겼습니다. 다시 시도해 주세요.'), { code: 'stream_incomplete' })
         return { threadId: threadId ?? threads[0]?.id }
       } catch (error) {
         if (request.cancelled || isAbortError(error)) return { threadId: request.activeThreadId ?? threadId }
