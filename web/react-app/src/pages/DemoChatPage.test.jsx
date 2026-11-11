@@ -199,3 +199,42 @@ describe('DemoChatPage citation numbering (H-32)', () => {
     expect(screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['출처 1: 문서A', '출처 2: 문서B'])
   })
 })
+
+// H-32 ①: 답 본문 [n]은 본문에 처음 나온 순서대로 다시 매긴다(본문과 근거 칩이 같이 바뀐다)
+describe('DemoChatPage citation order in the answer body (H-32)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('renumbers [1][3][2] to [1][2][3] and reorders the chips with it', async () => {
+    stubServer({ ...listed, messages: [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: '첫째 [1][3][2] 입니다.\n\n기준일 미지정 · 근거 판 날짜 2026-10-01', state: 'done', citations: [{ id: 'c1', rule_title: '문서A' }, { id: 'c2', rule_title: '문서B' }, { id: 'c3', rule_title: '문서C' }] },
+    ] })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText(/첫째 \[1\]\[2\]\[3\] 입니다\./)
+    expect(screen.getAllByRole('button', { name: /^\[\d\] 문서/ }).map(button => button.textContent)).toEqual(['[1] 문서A', '[2] 문서C', '[3] 문서B'])
+  })
+})
+
+// H-32 ②: 같은 제목의 대화가 둘이면 지난 날짜에도 시각이 보여 구분된다
+describe('DemoChatPage same-title threads (H-32)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('shows the time next to an older date so two same-title threads differ', async () => {
+    window.history.replaceState({}, '', '/chat')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([
+        { thread_id: 't1', title: '같은 질문', status: 'idle', updated_at: '2026-10-01T01:00:00Z' },
+        { thread_id: 't2', title: '같은 질문', status: 'idle', updated_at: '2026-10-01T05:30:00Z' },
+      ])
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    await screen.findAllByRole('button', { name: '같은 질문' })
+    const stamps = Array.from(document.querySelectorAll('.demo-thread time')).map(node => node.textContent)
+    expect(stamps).toHaveLength(2)
+    expect(stamps.every(text => /^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/.test(text))).toBe(true)
+    expect(new Set(stamps).size).toBe(2)
+  })
+})

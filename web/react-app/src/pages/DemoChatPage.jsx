@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
-import { createApiChatAdapter, createChatService, citationHref } from '../lib/chat-service'
+import { createApiChatAdapter, createChatService, citationHref, renumberByAppearance } from '../lib/chat-service'
 import { DEMO_SUGGESTIONS } from '../lib/demo-suggestions'
 import { useSession } from '../lib/session'
 
@@ -49,7 +49,8 @@ function formatActivity(value) {
   const time = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
   if (today) return `오늘 ${time}`
   if (yesterday) return `어제 ${time}`
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+  // 같은 제목의 대화(같은 질문을 새 대화로 다시 물은 경우)를 구분하도록 지난 날짜에도 시각을 붙인다(H-32 ②)
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${time}`
 }
 
 function dateKey(value) {
@@ -99,7 +100,10 @@ export default function DemoChatPage({ api = false }) {
   const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
   const threadRequestRef = useRef(null)
 
-  const current = useMemo(() => threads.find(thread => thread.id === selectedId) ?? null, [selectedId, threads])
+  const current = useMemo(() => {
+    const thread = threads.find(item => item.id === selectedId)
+    return thread ? { ...thread, messages: (thread.messages ?? []).map(renumberByAppearance) } : null
+  }, [selectedId, threads])
   const threadRecords = useMemo(() => threads.map(thread => ({ thread, activity: threadTimestamp(thread) })), [threads])
   const canSortByActivity = threadRecords.length > 0 && threadRecords.every(item => item.activity)
   const visibleThreads = useMemo(() => {
