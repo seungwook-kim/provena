@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11: `GATES.md` G7 칸의 '10장 미작성' 문구를 `EVAL_REPORT.md` 10장 작성 사실에 맞게 고침(O-47, 시연 영상 미작성은 그대로). 측정·호출 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | #127·#129·#130 기록 보강: ai_tools_log 추가, 폴더 md PR 칸 채움, PR별 작업 내역 md(docs/pr-notes/) 추가 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): `specs/107-email-signup-verification.md` 24시간 규칙 복구(S2), `specs/login.md` 113·114 전 DB 동작(S1), `specs/admin-roles.md` by-id 승인은 그 행만(M1). `specs/admin-roles.md` 이메일 최고 관리자 대소문자 무시(M3). `specs/login.md` AC-08 인증 전 로그인 안내, `api/openapi.json` 로그인 403 설명. `specs/107-email-signup-verification.md` 가입 201 응답 문구·code, openapi 가입 설명. `specs/login.md` AC-09 비이메일 아이디 대소문자. Google 연결 SQL 이름 203 → 114(`db/ERD.md`·`db/TABLE_SPEC.md`·`db/QUERY_INDEX.md`·`specs/login.md`·`specs/admin-roles.md`). | #127 |
 | 2026-11-11 | 김승욱 (Claude Code) | D8 후속 정정(측정·호출 없음): `SPEC.md` 3장 응답 시간·비용 행의 공식 값을 `EVAL_REPORT.md` 8장 표와 같은 최신 배포 `provena-api-00035-h69`로 맞춤(전체 p95 평균 8.942초, 검색 p95 1.22초, 요청당 0.0074달러, 단계별 비용 위치). 이전에는 `00032-zhs` 값과 `00020`의 검색 p95 1.40초가 섞여 있었다 | |
