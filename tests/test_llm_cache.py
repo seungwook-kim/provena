@@ -87,3 +87,50 @@ def test_flag_wraps_real_model_only_when_on(monkeypatch):
     assert llm.get_chat_model() is fake
     monkeypatch.setenv("LLM_RESPONSE_CACHE", "1")
     assert isinstance(llm.get_chat_model(), CachingChatModel)
+
+
+class _UsageInner(CountingModel):
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        from langchain_core.outputs import ChatGeneration, ChatResult
+        self.calls += 1
+        msg = AIMessage("x", usage_metadata={"input_tokens": 1000, "output_tokens": 0, "total_tokens": 1000})
+        return ChatResult(generations=[ChatGeneration(message=msg)])
+
+
+def _tracked(model, n):
+    """그래프처럼 RunnableLambda 안에서 CostTracker 콜백을 달고 n번 부른다. (calls, input_tokens)를 돌려준다."""
+    from langchain_core.runnables import RunnableLambda
+    from backend.services.cost import CostTracker
+    tracker = CostTracker(100.0, default_model="claude-haiku-5-5")
+    chain = RunnableLambda(lambda q: model.invoke([HumanMessage(q)]))
+    for _ in range(n):
+        chain.invoke("q", {"callbacks": [tracker]})
+    s = tracker.summary()
+    return s["calls"], s["input_tokens"]
+
+
+def test_cost_counted_once_per_miss_and_zero_on_hit():
+    assert _tracked(_UsageInner(responses=["x"]), 1) == (1, 1000)             # 감싸지 않은 값
+    assert _tracked(CachingChatModel(inner=_UsageInner(responses=["x"])), 1) == (1, 1000)   # 미스 1번 = 같은 값
+    calls, tokens = _tracked(CachingChatModel(inner=_UsageInner(responses=["x"])), 2)       # 적중은 사용량 0
+    assert tokens == 1000 and calls == 2
+
+
+def test_eval_bypass_counts_cost_once():
+    from langchain_core.runnables import RunnableLambda
+    from backend.services.cost import CostTracker
+    tracker = CostTracker(100.0, default_model="claude-haiku-5-5")
+    m = CachingChatModel(inner=_UsageInner(responses=["x"]))
+    RunnableLambda(lambda q: m.invoke([HumanMessage(q)])).invoke("q", {"callbacks": [tracker], "metadata": {"eval": True}})
+    assert tracker.summary()["calls"] == 1 and tracker.summary()["input_tokens"] == 1000
+
+
+def test_key_distinguishes_tool_calls_and_tool_call_id():
+    from langchain_core.messages import ToolMessage
+    m = CachingChatModel(inner=_inner())
+    a = [AIMessage("", tool_calls=[{"name": "f", "args": {"x": 1}, "id": "1"}])]
+    b = [AIMessage("", tool_calls=[{"name": "f", "args": {"x": 2}, "id": "1"}])]
+    assert m._cache_key(a, None, {}) != m._cache_key(b, None, {})
+    t1, t2 = [ToolMessage("r", tool_call_id="1")], [ToolMessage("r", tool_call_id="2")]
+    assert m._cache_key(t1, None, {}) != m._cache_key(t2, None, {})
+    assert m._cache_key([AIMessage("a", id="i1")], None, {}) == m._cache_key([AIMessage("a", id="i2")], None, {})  # id는 키에서 뺌
