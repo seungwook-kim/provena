@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { apiRequest } from './lib/api'
 
-const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user' }
+const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', login_id: 'a-user@example.com' }
 const B = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin' }
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 let server
@@ -354,7 +354,8 @@ describe('React authentication and session isolation', () => {
     expect(request.options.credentials).toBe('include')
     expect(request.options.headers['X-CSRF-Token']).toBe('fresh-csrf')
     await userEvent.click(screen.getByRole('button', { name: '내 계정' }))
-    expect(screen.getByText(A.user_id)).toBeTruthy()
+    expect(screen.getByText(A.login_id)).toBeTruthy()
+    expect(screen.queryByText(A.user_id)).toBeNull()
     expect(calls.some(call => call.path === '/me')).toBe(true)
   })
 

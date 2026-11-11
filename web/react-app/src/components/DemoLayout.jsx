@@ -55,7 +55,7 @@ export default function DemoLayout({ active, children }) {
   const isOwner = user?.is_owner === true || demoMode
   const actualPaths = { chat: '/chat', recalls: '/recalls', changes: '/changes', approvals: '/approvals' }
   const visibleLinks = links.filter(([key]) => key !== 'approvals' || isAdmin)
-  const accountId = user?.email || user?.name || user?.user_id || 'demo-user'
+  const accountId = user?.login_id || user?.email || user?.name || (user ? '확인할 수 없음' : 'demo-user')
   const roleLabel = user?.role === 'admin' ? '관리자' : user ? '일반 사용자' : '데모 사용자'
   const conversationLink = demoMode ? '/demo/chat' : '/chat'
 
