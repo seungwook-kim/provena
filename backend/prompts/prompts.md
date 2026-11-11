@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | H-13: 분류·재작성 프롬프트에 넣는 프로필 칸을 affiliation·rank로 고정(`PROMPT_PROFILE_FIELDS`). 기억의 service 칸은 저장만 하고 프롬프트에 넣지 않아 측정(main) 때와 입력이 같다. 시험 `test_prompt_profile_has_only_measured_fields_not_service` | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | `seen_titles`(재작성 입력의 이미 찾은 문서 제목)가 입력 정화를 거치게 하고 `format_materials`의 기본 꺼짐 주석을 기본 켬으로 바로잡음(사전 등록 62.26) | - |
 | 2026-11-02 | 김승욱 (Claude Code) | 질문 그래프 프롬프트 `question.py` | 이번 PR |
 
