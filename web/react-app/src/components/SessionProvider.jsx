@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getCurrentUser, invalidateAuthRequests, login, logout, subscribeUnauthorized } from '../lib/api'
 import { clearSessionMemory, selectMemoryOwner } from '../lib/session-memory'
 import { SessionContext } from '../lib/session'
+import { saveDraft } from '../lib/draft'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MOCK_USER = { user_id: '00000000-0000-4000-8000-000000000001', role: 'admin', profile_completed: true }
@@ -36,15 +37,16 @@ export function SessionProvider({ children }) {
     invalidateAuthRequests()
     selectMemoryOwner(user.user_id)
     confirmedUser.current = user
-    setSession({ status: 'authenticated', user, error: '' })
+    setSession({ status: 'authenticated', user, error: '', expired: false })
   }, [])
 
-  const expire = useCallback(() => {
+  const expire = useCallback((byServer = false) => {
+    const wasSignedIn = confirmedUser.current !== null
     invalidateAuthRequests()
     sequence.current += 1
     clearSessionMemory()
     confirmedUser.current = null
-    setSession({ status: 'anonymous', user: null, error: '' })
+    setSession({ status: 'anonymous', user: null, error: '', expired: byServer && wasSignedIn })
   }, [])
 
   const refresh = useCallback(async () => {
@@ -64,14 +66,14 @@ export function SessionProvider({ children }) {
       if (request === sequence.current) acceptChanged(user)
     } catch (error) {
       if (request !== sequence.current) return
-      if (error.status === 401) expire()
+      if (error.status === 401) expire(true)
       else if (!background) setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
       // A failed background check (offline, 5xx, bad payload) keeps the confirmed session; the next focus retries.
     }
   }, [accept, expire])
 
   useEffect(() => {
-    const unsubscribe = subscribeUnauthorized(() => { if (!mutating.current) expire() })
+    const unsubscribe = subscribeUnauthorized(() => { if (!mutating.current) expire(true) })
     let active = true
     queueMicrotask(() => { if (active) refresh() })
     const onFocus = () => refresh()
@@ -110,6 +112,7 @@ export function SessionProvider({ children }) {
         return
       }
       await logout()
+      saveDraft('')
       expire() // Do not clear a valid session or pretend success when the server failed.
     } finally { mutating.current = false }
   }

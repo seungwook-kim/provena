@@ -442,6 +442,18 @@ describe('React authentication and session isolation', () => {
     await screen.findByLabelText('이메일 또는 아이디')
   })
 
+  it('tells the user the session expired and keeps the typed question (H-29)', async () => {
+    await authenticated()
+    await waitFor(() => expect(screen.getByLabelText('질문').disabled).toBe(false))
+    await userEvent.type(screen.getByLabelText('질문'), '쓰던 질문')
+    server.user = null
+    act(() => window.dispatchEvent(new Event('focus')))
+    await screen.findByLabelText('이메일 또는 아이디')
+    expect(screen.getByRole('status').textContent).toContain('만료')
+    expect(window.location.search).toBe('?reason=expired')
+    expect(sessionStorage.getItem('provena-chat-draft')).toBe('쓰던 질문')
+  })
+
   it('offers retry on /me server failure instead of pretending the user logged out', async () => {
     server.meStatus = 503
     render(<App />)

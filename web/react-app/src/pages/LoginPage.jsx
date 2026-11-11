@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [params] = useSearchParams()
   const oauthCode = params.get('oauth_error')
   const oauthMessage = Object.hasOwn(GOOGLE_ERRORS, oauthCode) ? GOOGLE_ERRORS[oauthCode] : ''
+  const expiredNotice = params.get('reason') === 'expired' ? '로그인 시간이 만료되어 다시 로그인이 필요합니다. 쓰던 질문은 로그인 후 그대로 남아 있습니다.' : ''
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -87,6 +88,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </label>
+            {expiredNotice && !error && <p className="form-notice" role="status">{expiredNotice}</p>}
             {(error || oauthMessage) && (
               <p className="form-error" role="alert">
                 {error || oauthMessage}

@@ -564,5 +564,6 @@
 .approval-service-layout aside>button:not([class]){margin-top:8px;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);padding:8px 12px;font-size:12px}
 .auth-page .login-card > .google-button{margin-top:16px}
 .verification-timer{margin:0;color:var(--muted);font-variant-numeric:tabular-nums}.signup-verified{gap:12px}.signup-verified p{margin:0;color:var(--muted);line-height:1.6}.signup-verified .button{margin-top:8px}
+.form-notice{margin:0;padding:10px 16px;border-radius:12px;background:var(--change-soft);color:var(--change);font-size:13px}
 @media(max-width:1000px){.demo-chat-page .demo-chat-grid{grid-template-columns:200px minmax(0,1fr);grid-template-rows:minmax(480px,calc(100vh - 56px)) auto;height:auto}.demo-chat-page .demo-citation-sidebar{display:block;grid-column:1/-1;max-height:50vh;border-left:0;border-top:1px solid var(--line)}}
 @media(max-width:640px){.demo-chat-page .demo-chat-grid{display:flex;flex-direction:column;height:auto}.demo-chat-page .demo-thread-sidebar{display:flex;max-height:200px;overflow-y:auto;border-right:0;border-bottom:1px solid var(--line)}.demo-chat-page .demo-chat-main{min-height:calc(100vh - 56px)}.demo-chat-page .demo-citation-sidebar{max-height:none}}

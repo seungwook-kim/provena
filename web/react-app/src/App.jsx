@@ -23,11 +23,11 @@ export default function App() {
 }
 
 function Protected({ children, admin = false }) {
-  const { status, user, error, refresh } = useSession()
+  const { status, user, error, refresh, expired } = useSession()
   const location = useLocation()
   if (status === 'checking') return <main role="status" className="status-page">세션을 확인하고 있습니다.</main>
   if (status === 'error') return <main className="status-page"><p role="alert">{error}</p><button type="button" className="button button-dark" onClick={refresh}>다시 시도</button></main>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={expired ? '/login?reason=expired' : '/login'} replace />
   if (user.profile_completed === false && location.pathname !== '/myinfo') return <Navigate to="/myinfo" replace />
   if (admin && user.role !== 'admin') return <main role="alert" className="status-page">접근 권한이 없습니다. <Link to="/chat">채팅으로 돌아가기</Link></main>
   return children

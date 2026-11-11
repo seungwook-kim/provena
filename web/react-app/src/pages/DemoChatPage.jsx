@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { loadDraft, saveDraft } from '../lib/draft'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
@@ -87,7 +88,8 @@ export default function DemoChatPage({ api = false }) {
   const [threads, setThreads] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('')
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(() => loadDraft())
+  useEffect(() => { saveDraft(input) }, [input])
   const [selectedCitation, setSelectedCitation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)

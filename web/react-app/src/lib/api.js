@@ -74,6 +74,9 @@ export async function apiRequest(path, options = {}, csrfRetried = false) {
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }
+    // 429에 Retry-After(초)가 있으면 남은 시간을 문구에 붙인다(H-29)
+    const wait = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+    if (response.status === 429 && wait > 0) detail = `${detail} (약 ${wait}초 뒤 가능)`
     throw new ApiError(detail, response.status, errorCode ?? (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed'), fieldReasons)
   }
 
