@@ -26,7 +26,8 @@
 | 날짜 | 할 일 |
 |---|---|
 | 10/30 (D0) | 이 지침서·계약(`backend/schemas/`) 확정, 빈 서버 배포. 전원 README 조원 소개 표에 자기 줄 추가(브랜치 → PR → 리뷰 → merge, 템플릿 첫 과제). `docs/worklog.md`·`docs/decisions.md` 빈 파일 생성. GCP 결제 연결, API 활성화, 저장소 권한(가이드 p.5). 역할과 담당 축 확정(가이드 p.28) |
-| 11/4 (D3)까지 | 세로 한 줄 완성: 로그인(임시) → 질문 → 검색 → 인용 답이 배포 주소에서 동작 |
+| 11/5 (D4)까지 | 에이전트 그래프로 질문 → 검색 → 인용 답이 한 줄로 이어진다(가이드 일정 D4 에이전트) |
+| 11/9 (D6)까지 | 서비스화: 로그인(사용자별 thread·Store)과 compose 기동, 배포 주소에서 질문 → 인용 답이 동작(가이드 일정 D6 서비스와 운영) |
 | 11/6 (D5) | 중간 점검. 단일 대 멀티 재측정과 "무엇을 뺄 것인가" 확인(F-05, F-06은 결정 0059에 따라 유지), 로그인 방식 확정 |
 | 11/14~15 | 주말. 자동 실행이나 배포를 새로 두지 않는다. 필요하면 평가 파이프라인만 한 번(가이드 p.5) |
 | 11/16 (D11) 24:00 | 코드 동결. 이후 코드는 고치지 않는다 |
@@ -86,7 +87,7 @@
 | `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
 | `mock_erp/` | 김승욱 (안) | 업무시스템 목업 (Spring, Python 예제) |
 | `data/LICENSES/` | 팀장 | 핸드북 원문 사용 시 CC BY-SA 4.0 고지와 출처. 원문 텍스트는 코드와 폴더를 나눈다 |
-| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장) |
+| `.claude/skills/`, `.mcp.json` | 팀장 | 개발용 Skill·MCP (MCP·Skill 설계 4장). `.mcp.json`은 예정이며 아직 저장소에 없다 |
 | `docs/` | 팀장 (각자 자기 파트 절 작성) | SPEC.md, 리포트, 이 지침서 |
 
 폴더 구조는 강사 템플릿(`docs/SCAFFOLD.md`)을 따른다. 템플릿의 `backend/rag/ingest.py`·`retrieve.py` 자리는 `backend/rag/ingest/`·`retrieve/` 폴더로, `backend/memory.py` 자리는 `backend/memory/` 폴더로 쓴다.
@@ -110,7 +111,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
 ├─ AGENTS.md, CLAUDE.md      # AI 코딩 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
 ├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
-├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
+├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4). 예정, 아직 없음
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
 ├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장). pyproject.toml과 Makefile은 두지 않는다
 ├─ Dockerfile, docker-compose.yml, .env.example
@@ -153,8 +154,8 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py)
 ├─ web/   (pages/: login, chat, approvals, recalls, admin)
 ├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
-├─ db/    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
-├─ data/  (corpus/ 원문 스냅샷, manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
+├─ db/    (01_init.sql, 101~114 인증·승인·가입·대화·이슈표 SQL, 120 답·리콜, 201~202 검색·동기화. 최초 작성자는 101~103·109~112·120 김승욱, 106~108 강경희, 104·105·113·114·201·202 박진형(git 이력 기준). 번호대 주인 배정은 팀장 확정 대기(B-16). 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다)
+├─ data/  (corpus.tar.gz 원문 스냅샷(풀면 corpus/, 풀린 폴더는 커밋하지 않는다), manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
 ├─ evals/ (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, retrieval/, agent/, safety/, results/)
 └─ tests/
 ```
@@ -213,12 +214,12 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 |---|---|
 | `backend/requirements.txt` | 파트 구분 없이 한 파일이다(시험 도구 pytest·httpx는 `backend/requirements-dev.txt`). 자기 파트가 쓰는 줄만 더하고 남의 줄과 기존 버전은 바꾸지 않는다. Dockerfile과 CI(Python 3.12)가 이 파일로 설치한다 |
 | `docker-compose.yml`, `.env.example` | 팀장만 고친다. 필요하면 이슈로 요청 |
-| `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후 |
-| 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`) |
+| `db/` | SQL 파일 번호대를 파트마다 나눈다 (100번대, 200번대, 300번대). 배정은 3장 확정 후. 지금 있는 번호는 5-0의 `db/` 줄 |
+| 설정 | 파트마다 자기 폴더의 `config.py` (`backend/rag/config.py`, `backend/graph/config.py`, `backend/config.py`). 예정이며 세 파일 모두 아직 없다 |
 
 **Git**
 
-- **브랜치는 한 사람당 하나, 자기 이름으로만 쓴다.** 예: `seunguk`. 다른 두 사람도 자기 이름 하나로 만든다(예: `jinhyung`, `kyunghee`). 작업 종류별 브랜치(`feat/…`, `fix/…`)는 만들지 않는다. `main`에서 바로 작업하지 않고 자기 브랜치에 커밋·push한 뒤 PR로 합친다(README 협업 규칙과 같다).
+- **브랜치는 한 사람당 하나, 자기 이름으로만 쓴다.** 예: `seunguk`. 다른 두 사람도 자기 이름 하나로 만든다(예: `jinhyeong`, `kyunghee`). 작업 종류별 브랜치(`feat/…`, `fix/…`)는 만들지 않는다. `main`에서 바로 작업하지 않고 자기 브랜치에 커밋·push한 뒤 PR로 합친다(README 협업 규칙과 같다).
 - 자기 브랜치에서 `main`으로 PR을 올리고, 머지된 뒤에도 같은 브랜치를 계속 쓴다. 다음 작업 전에 `git switch seunguk && git pull origin main`으로 `main`을 받는다.
 - PR 머지는 merge commit으로 한다(squash 쓰지 않음). 같은 브랜치를 계속 쓰기 때문에 squash로 합치면 다음 PR에서 이미 들어간 커밋이 다시 충돌한다.
 - 다른 사람 브랜치에는 push하지 않는다.
