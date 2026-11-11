@@ -64,11 +64,11 @@
 ## S-04 인용 없는 답 분모 + 질의 하나 빼기
 ### 무엇을 바꿨나
 - `evals/uncited_answers.py`: 저장된 `rows.jsonl`만 읽어 전체·답·인용 없는 답·답 기준 비율·전체 기준 비율·하위 질문 둘 이상 문항 수를 낸다. 답이 0이면 비율을 정하지 않음(0 나눗셈 없음).
-- `tests/test_uncited_and_drop_one.py`(5개): 분모 계산, 답 0건, 저장된 `agent_v1_final_cite`는 인용 없는 답 0건, `merge_by_score`에서 하위 질문 하나를 빼도 1등이 그대로인지(대조 시험 포함).
+- `tests/test_uncited_and_drop_one.py`(6개): 분모 계산, 답 0건, 저장된 `agent_v1_final_cite`는 인용 없는 답 0건, `merge_by_score`에서 하위 질문 하나를 빼도 1등이 그대로인지(대조 시험 포함).
 ### 왜
 - 목록 S-04 행(강의 1주 13, 1주 01). 근거: 문서(목록)·코드(`backend/rag/retrieve/search.py:483` `merge_by_score`).
 ### 확인한 것 (로컬)
-- 실행 결과(실측, 저장된 결과): `agent_v1_final_cite` 전체 30·답 13·인용 없는 답 0, `agent_v1_fix2_pg` 30·15·0, `agent_v1_service_pg` 30·15·0. 시험 통과 5개. 변이 25번(`lists[1:]`→`lists[2:]`) 뒤 2개 실패.
+- 실행 결과(실측, 저장된 결과): `agent_v1_final_cite` 전체 30·답 13·인용 없는 답 0, `agent_v1_fix2_pg` 30·15·0, `agent_v1_service_pg` 30·15·0. 시험 통과 6개(커밋 `280e798c` 메시지의 5개는 잘못 센 값). 변이 25번(`lists[1:]`→`lists[2:]`) 뒤 2개 실패.
 ### 한계
 - 저장된 결과에는 하위 질문을 합친 뒤 목록(`retrieved`)만 있고 하위 질문별 목록이 없어서, **실제 결과로 "하나 빼고 다시 계산"은 못 한다**. 하나 빼기 시험은 `merge_by_score`에 만든 목록을 넣은 것이다.
 - 비율 0은 이 평가셋 30건에서 답 13~15건의 값이다. 모집단 전체 주장은 아니다.
