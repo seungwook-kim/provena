@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { deleteMemory, patchMemory, streamChatMessage } from './api'
+import { apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
 
 function sseResponse(...chunks) {
   const encoder = new TextEncoder()
@@ -53,5 +53,16 @@ describe('streamChatMessage', () => {
     await deleteMemory()
     expect(fetchMock.mock.calls.filter(([url]) => url.includes('/auth/csrf'))).toHaveLength(2)
     expect(fetchMock.mock.calls.find(([url]) => url.includes('/me/memory'))[1].headers['X-CSRF-Token']).toBe('memory-token')
+  })
+})
+
+describe('apiRequest cache', () => {
+  it('never lets the browser reuse a cached page for an API URL that is also a screen URL', async () => {
+    // /admin/users·/recalls·/approvals 새로고침 뒤 캐시된 HTML을 fetch가 받던 문제(11/11)
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"users":[]}', { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await apiRequest('/admin/users')
+    expect(fetchMock.mock.calls[0][1].cache).toBe('no-store')
+    vi.unstubAllGlobals()
   })
 })

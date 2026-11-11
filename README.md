@@ -182,10 +182,23 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `VOYAGE_API_KEY` | 질문 임베딩 키. 없으면 검색은 빈 결과(`no_key`)로 끝난다 |
 | `SEARCH_WARMUP` | 시작할 때 검색 준비를 끝날 때까지 기다릴지(`1` 기다림, `0` 끔, `background` 기다리지 않고 스레드로). 비우면 운영(`PROVENA_ENV`가 local·demo가 아니고 DB와 LLM 키가 있음)에서는 `1`, 로컬 데모·키 없는 데모·DB 없음에서는 꺼짐. 기다리는 시간은 최대 60초이고 넘거나 실패해도 서버는 뜬다. 기다릴 때는 현재 `LLM_PROVIDER`의 첫 호출용 모듈도 미리 올린다. compose는 비우면 `background` |
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 Google 로그인은 설정 오류가 된다 |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 `/auth/google/start`가 `/login?oauth_error=google_unavailable`로 돌려보낸다(설정 방법은 아래 "Google 로그인 설정") |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
 | `PROFILE_ENC_KEYS` | 내 정보(`/me/profile`) AES-256-GCM 키(`backend/services/profile_crypto.py`). 형식 `번호:base64(32바이트)`, 쉼표로 여러 개. 없거나 형식이 틀리면 배포 모드에서는 서버가 시작하지 않는다 |
 | `PROVENA_OWNER_LOGIN_ID` | 최고 관리자 로그인 아이디(`/admin/users`, `docs/specs/admin-roles.md`). 비었거나 그 계정이 admin·활성이 아니면 사용자 관리만 403이고 나머지는 정상 |
+
+#### Google 로그인 설정
+
+코드는 구현돼 있다(`backend/auth.py`의 OAuth 흐름, `backend/services/auth_store.py`의 `get_or_create_google_user`, `db/114_google_identities.sql`). **아래 설정과 운영 마이그레이션 적용은 조장이 한다.** 이 저장소의 코드 변경만으로는 배포에서 Google 로그인이 켜지지 않는다.
+
+1. Google Cloud 콘솔 > API 및 서비스 > 사용자 인증 정보에서 OAuth 클라이언트 ID(웹 애플리케이션)를 만든다.
+2. 승인된 리디렉션 URI에 아래 두 개를 넣는다.
+   - 배포: `https://provena-api-cttaanqntq-du.a.run.app/auth/google/callback`
+   - 로컬: `http://localhost:8000/auth/google/callback`
+3. OAuth 동의 화면이 "테스트" 상태이면 **테스트 사용자**에 로그인할 Google 계정을 추가한다(없으면 그 계정은 동의 화면에서 막힌다).
+4. Cloud Run에 환경 변수 3개를 넣는다: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`(Secret Manager 권장), `GOOGLE_REDIRECT_URI`(위 배포 URI와 같은 값). 로컬은 같은 3개를 `.env`에 둔다(`GOOGLE_REDIRECT_URI`는 로컬 URI).
+5. 운영 DB에 `db/114_google_identities.sql`을 적용한다(`101`·`106` 다음. 다시 돌려도 된다). 적용 전에는 Google 로그인 버튼이 "지금은 사용할 수 없습니다" 안내로 가고 비밀번호 로그인·가입·승인은 그대로 된다. 적용한 뒤 서버를 다시 시작한다.
+6. 구글이 인증한 이메일이 이미 인증·승인된 계정의 이메일과 정확히 같으면 그 계정에 연결돼 바로 로그인된다(역할은 그대로). 같은 이메일 계정이 없으면 **관리자 승인 대기**로 시작하고(`/login?oauth_error=google_signup_pending`), 최고 관리자가 `/admin/signup-requests`에서 승인하면 다음 로그인부터 들어간다. 연결 조건은 `docs/specs/login.md`의 "Google 로그인 계정 연결".
 
 내 정보·사용자 관리를 쓰려면 배포 전에 운영 DB에 `db/104_user_profiles.sql`, `db/105_admin_role_log.sql`을 적용한다. `user_profiles` 표가 없으면 `/me`가 503이 되어 로그인 뒤 화면이 열리지 않는다.
 

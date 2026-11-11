@@ -1,6 +1,7 @@
 """사용자 관리 API — 최고 관리자 1명만 관리자를 등록·해제한다 (요청 2번, 방식 B, docs/specs/admin-roles.md).
 
-- 최고 관리자 = DB `role='admin'` + 활성 + `login_id` 가 설정값 `PROVENA_OWNER_LOGIN_ID` 와 정확히 같음(대소문자 구분).
+- 최고 관리자 = DB `role='admin'` + 활성 + `login_id` 가 설정값 `PROVENA_OWNER_LOGIN_ID` 와 같음. 이메일(`@` 포함)은 대소문자 무시
+  (db/113 이 이메일 아이디를 소문자로 맞추고 로그인도 소문자로 찾는다), 이메일이 아닌 아이디는 정확히 같아야 한다(대소문자 구분).
   DB 역할은 지금처럼 user/admin 둘뿐이다(db/101_auth_users.sql:10). 설정값은 main.py 가 시작할 때 한 번 읽어 넘긴다.
 - 설정값이 비었거나 Google 자동 아이디 머리글자로 시작하면 아무도 통과하지 못한다(닫힘이 기본).
 - 검사 순서: 인증(401) → 최고 관리자(403) → CSRF(403) → 대상 조회(404) → 대상이 최고 관리자·비활성(409) → 쓰기.
@@ -84,6 +85,13 @@ def owner_configured(owner_login_id: str | None) -> bool:
     return bool(owner_login_id) and not owner_login_id.startswith(GOOGLE_LOGIN_PREFIX)
 
 
+def same_owner_login(login_id: str, owner_login_id: str) -> bool:
+    """아이디가 최고 관리자 설정값과 같은지. 이메일은 소문자로 비교하고, 그 밖은 정확히 비교한다(상수 시간)."""
+    if "@" in owner_login_id:
+        login_id, owner_login_id = login_id.lower(), owner_login_id.lower()
+    return hmac.compare_digest(login_id.encode("utf-8"), owner_login_id.encode("utf-8"))
+
+
 def is_owner(user: AuthUser | None, owner_login_id: str | None) -> bool:
     """이 사람이 지금 최고 관리자인가. user 는 요청마다 DB에서 다시 읽은 값이어야 한다."""
     if user is None or not owner_configured(owner_login_id):
@@ -91,7 +99,7 @@ def is_owner(user: AuthUser | None, owner_login_id: str | None) -> bool:
     return (
         user.role == "admin"
         and user.is_active
-        and hmac.compare_digest(user.login_id.encode("utf-8"), owner_login_id.encode("utf-8"))
+        and same_owner_login(user.login_id, owner_login_id)
     )
 
 
@@ -154,9 +162,12 @@ def create_admin_router(
     def list_users(request: Request, response: Response) -> dict[str, list[dict[str, Any]]] | FileResponse:
         page = html_page() if html_page is not None else None
         if page is not None and "text/html" in request.headers.get("accept", "").lower():
-            return FileResponse(page)   # 화면 새로고침·주소 직접 입력
+            # 화면 새로고침·주소 직접 입력. 화면과 API 주소가 같으므로 브라우저가 이 HTML을 캐시하면
+            # 화면의 fetch(/admin/users)가 HTML을 받아 "서버 응답 형식이 올바르지 않습니다"가 된다 → 캐시 금지·Accept별 구분
+            return FileResponse(page, headers={"Cache-Control": "no-store", "Vary": "Accept"})
         owner_guard(request)   # 401·403·503. 화면 요청이 아닐 때만(위) 권한을 본다
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Vary"] = "Accept"
         try:
             rows = list(store.list_users())
         except Exception as exc:
@@ -167,7 +178,7 @@ def create_admin_router(
             {
                 "login_id": row.login_id,
                 "role": row.role,
-                "is_owner": owner_configured(owner_login_id) and row.login_id == owner_login_id and row.role == "admin",
+                "is_owner": owner_configured(owner_login_id) and same_owner_login(row.login_id, owner_login_id) and row.role == "admin",
                 "created_at": _iso(row.created_at),
             }
             for row in rows
@@ -183,7 +194,7 @@ def create_admin_router(
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
         if target is None:
             raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
-        if hmac.compare_digest(target.login_id.encode("utf-8"), owner_login_id.encode("utf-8")):
+        if owner_login_id and same_owner_login(target.login_id, owner_login_id):
             raise HTTPException(status_code=409, detail=OWNER_TARGET, headers=NO_STORE)
         if not target.is_active:
             raise HTTPException(status_code=409, detail=INACTIVE_TARGET, headers=NO_STORE)

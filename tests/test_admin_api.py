@@ -168,6 +168,20 @@ def test_misconfigured_owner_closes_user_management_for_everyone(monkeypatch, co
     assert login(app, OWNER).get("/approvals-like").status_code == 200
 
 
+def test_email_owner_setting_matches_case_insensitively(monkeypatch):
+    """설정값이 대문자 이메일이어도 db/113 이 소문자로 바꾼 계정이 최고 관리자다(이메일만, 비이메일은 위 시험대로 구분)."""
+    monkeypatch.setenv("PROVENA_ENV", "local")
+    monkeypatch.setenv("PROVENA_DEV_MODE", "1")
+    app, store = build("Boss@Example.com", extra=(make_user("boss@example.com", "admin"),))
+    c = login(app, "boss@example.com")
+    r = c.get("/admin/users")
+    assert r.status_code == 200
+    assert [u["login_id"] for u in r.json()["users"] if u["is_owner"]] == ["boss@example.com"]
+    assert c.get("/me").json()["is_owner"] is True
+    assert post(c, "boss@example.com", "revoke").status_code == 409   # 최고 관리자는 대상이 될 수 없다
+    assert post(c, "member", "promote").status_code == 200
+    assert login(app, OWNER).get("/admin/users").status_code == 403
+
 # ---- AC-04 등록 / AC-05 다시 로그인 없이 / AC-06 해제 ------------------------------
 def test_promote_then_revoke_takes_effect_on_next_request_without_relogin(env):
     app, store = env
@@ -388,6 +402,8 @@ def test_browser_navigation_gets_react_page_and_fetch_gets_api(env, tmp_path):
     anon = TestClient(app)
     html = anon.get("/admin/users", headers=NAVIGATE)
     assert html.status_code == 200 and '<div id="root"></div>' in html.text   # 화면이 뜨고, 화면이 /me·API로 권한을 본다
+    # 같은 주소의 HTML이 브라우저 캐시에 남으면 화면 fetch가 HTML을 받아 '응답 형식 오류'가 난다(11/11 새로고침 재현)
+    assert html.headers["cache-control"] == "no-store" and "accept" in html.headers["vary"].lower()
     assert anon.get("/admin/users").status_code == 401                        # fetch 기본 Accept(*/*)는 API
     assert anon.get("/admin/users", headers={"Accept": "application/json"}).status_code == 401
     member = login(app, "member")
@@ -396,6 +412,7 @@ def test_browser_navigation_gets_react_page_and_fetch_gets_api(env, tmp_path):
     owner = login(app, OWNER)
     r = owner.get("/admin/users", headers={"Accept": "*/*"})
     assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+    assert "accept" in r.headers["vary"].lower()
     assert {row["login_id"] for row in r.json()["users"]} >= {OWNER, "member"}
 
 

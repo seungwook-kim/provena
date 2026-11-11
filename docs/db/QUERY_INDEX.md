@@ -120,8 +120,9 @@
 | departments/store.py:81 | approvals | UPDATE approval_id, kind='issue_table', comment='' | approvals_pkey | Seq Scan 11행 0.017 ms | 충분 |
 | departments/store.py:89 | issue_tables | thread_id, user_id ORDER BY approved_at DESC LIMIT 1 | issue_tables_thread_user_idx | Seq Scan + Sort + Limit 3행, 0.049 ms | 정의 일치 |
 | auth_store.py:208, 215, 250, 265, 321, 365 | users | login_id, user_id | users_login_id_key, users_pkey | Seq Scan 2행, 0.03-0.057 ms | 충분 (인증된 모든 요청이 users_pkey 조회) |
-| auth_store.py:225, 290, 312 | signup_requests | login_id, user_id | UNIQUE 2개 | 빈 표 | 충분 |
+| auth_store.py:225, 290, 312 | signup_requests | login_id, user_id | user_id UNIQUE, login_id 부분 UNIQUE(`db/113`, 거절 행 제외) | 빈 표 | 충분 |
 | auth_store.py:298 | signup_requests | 조건 없음 ORDER BY requested_at, login_id | 없음 | 빈 표 | 전체 읽기, 생략 (옛 status_requested_at 색인은 이 질의에 못 쓰여 제거) |
+| auth_store.py `_google_resolve` | user_identities, users, signup_requests | `(provider, subject)`, `users.login_id FOR UPDATE`, `signup_requests (user_id, login_id)`, `google_sub OR login_id` | user_identities_pkey, users_login_id_key, signup_requests_google_sub_key, signup_requests_login_id_key | 새 표(114 적용 전), 구글 로그인 때만 | 충분 (줄 번호는 다른 정리 때 맞춘다) |
 | auth_store.py:349 | users | 조건 없음 ORDER BY created_at | 없음 | Seq Scan 2행, 0.071 ms | 생략 |
 | auth_store.py:402 | token_revocations | jti=, expires_at > now() | token_revocations_pkey | Seq Scan 35행, 0.033 ms | 충분 (인증된 모든 요청마다 1회) |
 | auth_store.py:410, 375, 377, 330, 270 | token_revocations, users, admin_role_log, signup_requests | INSERT/UPDATE by key | pkey/UNIQUE | 쓰기 | 충분. admin_role_log를 읽는 질의는 없다 |
