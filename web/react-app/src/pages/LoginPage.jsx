@@ -22,11 +22,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [unverified, setUnverified] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event) {
     event.preventDefault()
     setError('')
+    setUnverified(false)
     if (!loginId.trim() || !password) {
       setError('이메일 또는 아이디와 비밀번호를 입력해 주세요.')
       return
@@ -38,6 +40,7 @@ export default function LoginPage() {
       navigate(user?.profile_completed === false ? '/myinfo' : '/chat', { replace: true })
     } catch (loginError) {
       setError(loginError.message || '로그인에 실패했습니다.')
+      setUnverified(loginError.code === 'signup_unverified')
       setPassword('')
     } finally {
       setSubmitting(false)
@@ -90,6 +93,7 @@ export default function LoginPage() {
             {(error || oauthMessage) && (
               <p className="form-error" role="alert">
                 {error || oauthMessage}
+                {error && unverified && <> <Link to="/signup?resume=1">인증번호 다시 받기</Link></>}
               </p>
             )}
             <button
