@@ -29,7 +29,7 @@ REST(업무시스템 -> 플랫폼)
 4. 그 밖의 경로(`/recalls`, `/approvals`, `/decision-tables/*` 등)는 `docs/api/openapi.json`에 있다(46개 경로, `docs/api/api.md`).
 
 SDK
-5. 명세 `docs/api/openapi.json`이 SDK 생성기의 입력이다. 생성기로 만든 Java·Python SDK는 **예정(미착수, 담당·기한 없음)**이다(없음). 지금 있는 것은 손으로 쓴 Python 예제 `mock_erp/python_example/provena_client.py`다.
+5. 명세 `docs/api/openapi.json`이 SDK 생성기의 입력이다. 생성기로 만든 Java·Python SDK는 **예정(미착수, 담당·기한 없음)**이다(없음). 지금 있는 것은 손으로 쓴 Python 예제 `mock_erp/python_example/provena_client.py`와 모의 업무시스템 정적 화면 `mock_erp/erp_screen.html`(`mock_erp/serve_screen.py`로 같은 주소에 띄움)이다.
 
 웹훅(두 방향, 서로 다른 것)
 6. 수집 -> 플랫폼: `POST /webhooks/regulation-updated`. 서비스 키(`X-Service-Key` 또는 `Authorization: Bearer`, 환경변수 `SERVICE_API_KEY`)가 맞아야 하고 비어 있으면 항상 401. 성공은 202(`accepted`, `event_ids`).

@@ -142,7 +142,7 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 ### 키 없이 뜨는 데모 모드
 
 - 화면 둘러보기: 18080(compose)의 `/demo/*` 화면(정책 변경 감시·운영 현황 등 정적 미리보기)은 열리지 않고 `/login`으로 돌아간다. 이 화면은 vite 개발 서버(`npm run dev`, `web/react-app`)에서만 열리며, 빌드에 넣으려면 빌드할 때 `VITE_ENABLE_LOCAL_DEMO=true`를 준다(`DemoPages.jsx` 라우트 가드). 평가는 `/chat`, `/recalls`, `/approvals` 같은 실제 화면으로 한다(H-25).
-- 키 없는 데모에서 만들어지지 않는 것: 결정표 변환(`/decision-tables/convert`, 502), 합동 검토, 리콜 알림 생성은 LLM 호출이 필요한데 녹화에 없어 실제 화면으로 확인할 수 없다. 이 세 화면은 vite 목업(`npm run dev`의 `/demo/*`)으로만 본다. LLM 키를 넣으면 실제로 동작한다(L-23, 알려진 한계).
+- 키 없는 데모에서 만들어지지 않는 것: 합동 검토와 리콜 알림 생성은 LLM 호출이 필요한데 녹화에 없어 실제 화면으로 확인할 수 없다. 이 두 화면은 vite 목업(`npm run dev`의 `/demo/*`)으로만 본다. 결정표 변환(`/decision-tables/convert`)은 "예시 응답"이라고 표시된 고정 응답을 낸다(권한표 칸에서 코드로 만든 기준 규칙이며 저장·승인되지 않는다). LLM 키를 넣고 `DEMO_MODE=0`으로 바꾸면 실제로 동작한다(L-23, 알려진 한계).
 - 확인하지 못한 경로(L-24, 2026-11-11 브라우저 E2E·API 전수 점검의 공백): 브라우저는 결정표 승인·합동 검토 쟁점표의 실서비스 경로, 리콜 알림 실데이터와 피드백, 되묻기 후속 문맥, 실제 세션 만료. API는 SSE `approval_request`·`error` 이벤트, MCP `tools/list` 전체, SPA 폴백(dist 미빌드), Google 로그인, 배포 쿠키 `Secure`(코드로만 확인), 결정표 convert의 실제 LLM, 유지보수 후보 결정. 이 경로들은 "동작한다"고 적지 않으며 실행해 확인한 결과가 없다.
 - 첫 화면의 추천 질문 3개는 위 녹화 질문과 같은 글자라 키 없이도 인용 답이 나온다(K-20). 로그인 사용자의 기억(`/onboarding`)은 키 없는 데모에서 질문 입력에 넣지 않는다(녹화에 기억이 없어 넣으면 녹화한 질문까지 거절된다, K-18). 가입 인증번호는 로컬에서 서버 로그(`docker compose logs api`의 `[로컬 전용] 가입 인증번호`)에 남는다(K-21).
 - 규정 변경 웹훅(`POST /webhooks/regulation-updated`)은 `.env`의 `SERVICE_API_KEY`가 비면 항상 401이다. 로컬에서 리콜 알림 흐름을 보려면 `.env`에 아무 값이나 넣고 요청 헤더 `X-Service-Key`에 같은 값을 보낸다(`backend/graph/recall/recall.md:37`, K-21).
