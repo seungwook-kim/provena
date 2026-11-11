@@ -58,6 +58,7 @@ from backend.graph.departments.store import InMemoryIssueTableStore, PgIssueTabl
 from backend.rag.ingest.handbook import AUTHZ_COMMIT, AUTHZ_PATH, rule_seq
 from backend.schemas import Decision
 from backend.services.auth_store import _default_connect
+from backend.services.llm import is_demo_mode
 
 log = logging.getLogger(__name__)
 
@@ -256,6 +257,18 @@ def _table_item(table) -> DecisionTableItem:
                              status=table.status, cells=[{**r, "band_label": R.band_label(r, cells)} for r in cells])
 
 
+EXAMPLE_LABEL = "예시 응답"
+
+
+def _example_view(category: str, cells: list[dict]) -> ApprovalView:
+    """키 없는 데모(`is_demo_mode()`)에서 결정표 변환 대신 내는 고정 응답(L-23). 승인함에 올리지 않고 저장도 하지 않는다.
+    초안은 LLM이 아니라 권한표 칸에서 코드로 만든 기준 규칙(`rules_from_cells`)이라 지어낸 값이 없고, 쓸 수 있는 결정표가 아니다."""
+    rules = R.rules_from_cells(cells)
+    return ApprovalView(approval_id="example-convert", kind=KIND, summary=f"{EXAMPLE_LABEL}: {category} 결정표 초안 (키 없는 데모, 저장·승인되지 않음)",
+                        created_at=datetime.now(), status="example",
+                        draft=[{**r, "band_label": R.band_label(r, rules)} for r in rules])
+
+
 def _paused(graph, rec) -> tuple[dict | None, dict | None]:
     """(승인을 기다리는 interrupt 값, 저장 실패로 멈춘 상태 값). 이 승인 건의 것이 아니면 버린다: 같은 대화에서 그래프가 이미 다른 일로 넘어간 경우다."""
     pending = pending_interrupt(graph, rec.thread_id)
@@ -402,12 +415,16 @@ def create_decision_router(
         repo, graph = _state(request, "decision_repo"), _state(request, "decision_graph")
         category = _parse_convert(body)
         thread_id = new_id("convert")
+        cells, cells_ok = [], False
         try:
             cells = _authz_cells(category)
             category = cells[0]["category"]                    # 원문 글자 그대로. 그래프가 칸의 업무 종류와 대조한다
             _check_convertible(repo, category)
+            cells_ok = True
             out = graph.invoke({"category": category, "rule_seq": rule_seq(AUTHZ_PATH), "version_id": AUTHZ_VERSION_ID, "source_cells": cells,
                                 "requested_by": str(admin.user_id)}, {"configurable": {"thread_id": thread_id}})
+            if out.get("error") and is_demo_mode():            # L-23: 키 없는 데모는 녹화에 초안이 없어 늘 여기로 온다
+                return _example_view(category, cells)
             if out.get("error"):                               # EC-05: 재시도 없이 실패로 끝낸다. 승인함에 올라가지 않는다
                 raise HTTPException(status_code=502, detail={"reason": out["error"], "message": "초안을 읽지 못해 승인함에 올리지 않았다" if out["error"] == ERR_DRAFT else "권한표 칸을 읽지 못했다"})
             pending = pending_interrupt(graph, thread_id)
@@ -420,6 +437,8 @@ def create_decision_router(
             raise
         except Exception as exc:  # noqa: BLE001 - LLM·DB 오류. 메시지에 접속 문자열이 섞일 수 있어 종류만 남긴다
             log.warning("결정표 변환 실패: %s", type(exc).__name__)
+            if is_demo_mode() and cells_ok:
+                return _example_view(category, cells)
             raise HTTPException(status_code=503, detail={"reason": "convert_failed", "message": "결정표 초안을 만들지 못했다"}) from None
 
     @router.get("/approvals", response_model=None)
