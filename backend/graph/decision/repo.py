@@ -19,6 +19,7 @@
 """
 from __future__ import annotations
 
+import logging
 import threading
 import uuid
 from collections.abc import Iterator
@@ -26,10 +27,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Literal, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from backend.graph.decision.rules import AlreadyDecided, Conflict, DecisionError, NotFound, norm
 from backend.schemas import DecisionTable
+
+log = logging.getLogger(__name__)
 
 KIND = "decision_table"
 ISSUE_KIND = "issue_table"
@@ -331,7 +334,14 @@ class PostgresDecisionRepo:
         return self._table(rows[0])
 
     def list_pending(self) -> list[ApprovalRecord]:
-        return [ApprovalRecord(**r) for r in self._rows("SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at")]
+        """대기 건 목록. 깨진 행(예: target_id가 NULL) 하나가 목록 전체를 500으로 만들지 않게 그 행만 건너뛰고 로그를 남긴다(C-18)."""
+        out = []
+        for r in self._rows("SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at"):
+            try:
+                out.append(ApprovalRecord(**r))
+            except ValidationError as e:
+                log.warning("깨진 승인 행을 건너뜀 approval_id=%s 칸=%s", r.get("approval_id"), [".".join(map(str, x["loc"])) for x in e.errors()])
+        return out
 
     def list_approved(self) -> list[DecisionTable]:
         return [self._table(r) for r in self._rows("SELECT * FROM decision_tables WHERE status = 'approved' ORDER BY table_id")]

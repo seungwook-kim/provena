@@ -35,3 +35,18 @@ def test_head_threads_has_request_id_and_no_body(env):
     """C-24: HEAD 응답은 규격상 본문이 없다(봉투를 실을 수 없다). 상태는 404·405 중 하나이고 X-Request-ID는 붙는다."""
     r = env.client(env.alice).head("/threads")
     assert r.status_code in (404, 405) and r.content == b"" and r.headers.get("x-request-id")
+
+
+def test_broken_approval_row_is_skipped_not_500():
+    """C-18: target_id가 NULL인 승인 행 하나가 `/approvals`·`/threads`의 대기 목록 전체를 깨뜨리던 것."""
+    from datetime import datetime, timezone
+
+    from backend.graph.decision.repo import PostgresDecisionRepo
+
+    now = datetime.now(timezone.utc)
+    good = {"approval_id": "ap-good", "kind": "decision_table", "thread_id": "t1", "status": "pending", "summary": "s", "target_id": "tbl-1",
+            "created_at": now, "decided_by": None, "comment": "", "decided_at": None}
+    bad = {**good, "approval_id": "ap-bad", "target_id": None}
+    repo = PostgresDecisionRepo.__new__(PostgresDecisionRepo)
+    repo._rows = lambda sql, params=(): [bad, good]
+    assert [r.approval_id for r in repo.list_pending()] == ["ap-good"]
