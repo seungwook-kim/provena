@@ -18,11 +18,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -229,6 +231,30 @@ def render_markdown(report: ImpactReport, *, max_rows: int = 15) -> str:
     return "\n".join(lines)
 
 
+def post_mr_comment(markdown: str, *, project_id: str | int, mr_iid: str | int, api_url: str | None = None, token: str | None = None,
+                    post=None, timeout: float = 10.0) -> bool:
+    """`render_markdown` 요약을 GitLab MR 댓글로 게시한다(I-08, F-05). 게시했으면 True.
+
+    환경변수 `GITLAB_API_URL`(예: https://gitlab.example.com/api/v4)이나 `GITLAB_TOKEN`이 없으면 아무것도 보내지 않고 False(건너뜀).
+    요청은 GitLab 노트 API(`POST {api}/projects/{id}/merge_requests/{iid}/notes`, 본문 `{"body": ...}`, 머리글 `PRIVATE-TOKEN`).
+    `post(url, json_body, headers, timeout) -> status`는 시험이 바꿔 끼운다(기본은 httpx). 2xx가 아니면 예외를 던진다."""
+    api_url = (api_url if api_url is not None else os.environ.get("GITLAB_API_URL", "")).strip().rstrip("/")
+    token = (token if token is not None else os.environ.get("GITLAB_TOKEN", "")).strip()
+    if not api_url or not token:
+        return False
+    url = f"{api_url}/projects/{quote(str(project_id), safe='')}/merge_requests/{int(mr_iid)}/notes"
+    headers = {"PRIVATE-TOKEN": token, "Content-Type": "application/json"}
+    if post is None:
+        def post(u: str, body: dict, h: dict, t: float) -> int:
+            import httpx
+
+            return httpx.post(u, json=body, headers=h, timeout=t, follow_redirects=False).status_code
+    status = post(url, {"body": markdown}, headers, timeout)
+    if not 200 <= status < 300:
+        raise RuntimeError(f"GitLab MR 댓글 게시 실패: HTTP {status}")
+    return True
+
+
 def changes_from_pages(pages: list[dict], *, old_date: str, new_date: str) -> tuple[list[ChangedArticle], dict]:
     """[{path, old, new}] -> (바뀐 섹션, 개정 전후 본문). 수집과 같은 섹션 비교를 쓴다(서식만 바뀐 섹션은 뺀다)."""
     from backend.rag.ingest.snapshot_diff import diff_snapshots
@@ -265,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prefix", default="")
     ap.add_argument("--answers", type=Path, help="답 JSON 파일(없으면 RECALL_STORE에 따른 답 저장소)")
     ap.add_argument("--format", choices=("md", "json"), default="md")
+    ap.add_argument("--post-mr", nargs=2, metavar=("PROJECT_ID", "MR_IID"), help="요약(md)을 GitLab MR 댓글로 게시(GITLAB_API_URL·GITLAB_TOKEN이 없으면 건너뜀)")
     a = ap.parse_args(argv)
     texts: dict = {}
     if a.changes:
@@ -285,6 +312,9 @@ def main(argv: list[str] | None = None) -> int:
     report = preview_impact(changes, answers=answers, read_section=section_reader(), texts=texts)
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
     print(report.model_dump_json(indent=1) if a.format == "json" else render_markdown(report))
+    if a.post_mr:
+        posted = post_mr_comment(render_markdown(report), project_id=a.post_mr[0], mr_iid=a.post_mr[1])
+        print("MR 댓글 게시함" if posted else "MR 댓글 건너뜀(GITLAB_API_URL 또는 GITLAB_TOKEN 없음)", file=sys.stderr)
     return 0
 
 
