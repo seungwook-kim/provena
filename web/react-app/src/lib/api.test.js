@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
+import { ApiError, apiJson, apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
 
 function sseResponse(...chunks) {
   const encoder = new TextEncoder()
@@ -98,5 +98,24 @@ describe('CSRF token race (H-18)', () => {
     vi.stubGlobal('fetch', fetchMock)
     await expect(patchMemory({ a: 1 })).rejects.toMatchObject({ code: 'csrf_failed' })
     expect(fetchMock.mock.calls.filter(([url]) => url.includes('/me/memory'))).toHaveLength(2)
+  })
+})
+
+describe('network failure', () => {
+  it('turns a browser fetch failure into a Korean ApiError instead of the English "Failed to fetch"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const error = await apiJson('/me').catch(e => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.message).toBe('서버에 연결하지 못했습니다. 네트워크를 확인하고 잠시 후 다시 시도해 주세요.')
+    expect(error.status).toBe(0)
+    expect(error.code).toBe('network_error')
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps an aborted request as an AbortError so cancelling is not reported as a failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError')))
+    const error = await apiJson('/me').catch(e => e)
+    expect(error.name).toBe('AbortError')
+    vi.unstubAllGlobals()
   })
 })

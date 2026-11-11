@@ -33,17 +33,24 @@ function fetchCsrfCookie() {
 export async function apiRequest(path, options = {}, csrfRetried = false) {
   const requestEpoch = authEpoch
   const { suppressUnauthorized = false, ...requestOptions } = options
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: 'include',
-    // 화면 주소와 API 주소가 같은 곳(/admin/users, /recalls, /approvals)은 새로고침 때 받은 HTML이 브라우저 캐시에 남아
-    // fetch가 그 HTML을 받으면 '서버 응답 형식이 올바르지 않습니다'가 된다 → API 요청은 캐시를 쓰지 않는다
-    cache: 'no-store',
-    ...requestOptions,
-    headers: {
-      ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
-      ...requestOptions.headers,
-    },
-  })
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: 'include',
+      // 화면 주소와 API 주소가 같은 곳(/admin/users, /recalls, /approvals)은 새로고침 때 받은 HTML이 브라우저 캐시에 남아
+      // fetch가 그 HTML을 받으면 '서버 응답 형식이 올바르지 않습니다'가 된다 → API 요청은 캐시를 쓰지 않는다
+      cache: 'no-store',
+      ...requestOptions,
+      headers: {
+        ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
+        ...requestOptions.headers,
+      },
+    })
+  } catch (error) {
+    // 서버가 꺼졌거나 네트워크가 끊기면 브라우저가 영어 "Failed to fetch"를 던진다 → 한국어 안내로 바꾼다. 취소(AbortError)는 그대로 둔다.
+    if (error?.name === 'AbortError') throw error
+    throw new ApiError('서버에 연결하지 못했습니다. 네트워크를 확인하고 잠시 후 다시 시도해 주세요.', 0, 'network_error')
+  }
 
   if (!response.ok) {
     // 다른 요청이 쿠키를 바꿔 토큰이 어긋났으면(403 csrf_failed) 새 토큰으로 한 번만 다시 보낸다.
