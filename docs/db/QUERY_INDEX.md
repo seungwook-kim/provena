@@ -8,7 +8,7 @@
 
 ## 0. 운영 검색 경로
 
-- 운영 Cloud Run 환경변수(`live_00032.json`, 저장소에 없음: 커밋된 적이 없는 로컬 덤프)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
+- 운영 Cloud Run 환경변수(`live_00032.json`, 저장소에 없음: 커밋된 적이 없는 로컬 덤프)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:317`이 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
 - 운영 `chunks_emb_hnsw_half`는 64 MB이고 `idx_scan` 66,239로 조회됐다(2026-11-10 운영 읽기 전용 조회에서 읽은 값).
 
 ## 1. 벡터 질의 (search.py vector_top)

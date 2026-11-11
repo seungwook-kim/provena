@@ -32,7 +32,7 @@ VITE_API_BASE_URL=
 ## 현재 인증·연동 상태
 
 - 로그인 UI는 아이디와 비밀번호를 받고, 서버 요청 본문에 기존 계약 그대로 `login_id`와 `password`를 전달합니다.
-- 회원가입은 서버 `POST /auth/signup`(backend/auth.py:813)에 연결되어 있고(`src/lib/signup.js:21`), 가입 신청 계정은 관리자 승인 대기 상태로 저장됩니다. Google 로그인은 서버 라우트(`/auth/google/start`·`callback`, backend/auth.py:835·875)와 화면 버튼(`LoginPage.jsx:48`, `SignupPage.jsx:48`)이 있습니다. 다만 사용자 생성 함수 `get_or_create_google_user`는 `backend/auth.py:122`에 Protocol(껍데기)로만 선언되어 있고, `PostgresAuthStore`·`MemoryAuthStore`(backend/services/auth_store.py)에는 구현이 없습니다(구현은 tests/test_google_oauth.py의 가짜 저장소뿐). 이 상태에서는 Google 로그인이 설정 오류로 끝나며 실제 로그인은 되지 않습니다(코드로 확인, 실행은 하지 않음).
+- 회원가입은 서버 `POST /auth/signup`(backend/auth.py:953-954)에 연결되어 있고(`src/lib/signup.js:21`), 가입 신청 계정은 관리자 승인 대기 상태로 저장됩니다. Google 로그인은 서버 라우트(`/auth/google/start`·`callback`, backend/auth.py:1061·1102)와 화면 버튼(`LoginPage.jsx:48`, `SignupPage.jsx:48`)이 있습니다. 사용자 생성 함수 `get_or_create_google_user`는 `backend/auth.py:148`에 Protocol로 선언되어 있고 `MemoryAuthStore`·`PostgresAuthStore`에 구현이 있습니다(backend/services/auth_store.py:135, 482). 실제 Google 로그인은 실행해 보지 않았습니다(코드로만 확인).
 - 실제 API·DB 연동, 권한별 접근 제한, Cloud Run 배포 동작은 별도로 검증해야 합니다.
 
 ## 사후 구현 상태 정정

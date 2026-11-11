@@ -587,7 +587,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 데모 (G2) | 로컬 pgvector 컨테이너 + 스냅샷 | 키 없음: 기록해 둔 응답 재생 | 데모 전용 2개 시드 (평가용과 다른 값) | `docker compose up` (10분 안) |
 | 운영 (G1) | Supabase Postgres + pgvector | 생성 LLM (11장) | 평가용 테스트 계정 2개 (비공개 제출) | GCP Cloud Run |
 
-- 기본 임베딩은 `voyage-4` API이고(`backend/rag/retrieve/embed.py:49`), 리랭커는 쓰지 않는다(`.env.example:156`, `backend/rag/retrieve/retrieve.md:5`). 로컬 모델(`HF_HUB_OFFLINE=1` 기본, `backend/requirements-local-models.txt`)은 비교용이다. 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재하고(`data/index.tar.gz`), 키 없는 데모는 기록된 질문 벡터·응답만 재생한다(`docs/specs/search.md`, `embed.py` 질문 벡터 재생, PR #81).
+- 기본 임베딩은 `voyage-4` API이고(`backend/rag/retrieve/embed.py:51, 53`), 리랭커는 쓰지 않는다(`.env.example:156`, `backend/rag/retrieve/retrieve.md:5`). 로컬 모델(`HF_HUB_OFFLINE=1` 기본, `backend/requirements-local-models.txt`)은 비교용이다. 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재하고(`data/index.tar.gz`), 키 없는 데모는 기록된 질문 벡터·응답만 재생한다(`docs/specs/search.md`, `embed.py` 질문 벡터 재생, PR #81).
 - 데모 모드는 키가 없으므로 한→영 질의 변환과 질문 벡터도 기록된 것을 재생한다. 기록에 없는 질문은 재생할 수 없다(`README.md`·`docs/GATES.md` G2의 한계 설명).
 - 모든 LLM 호출은 `backend/services/llm.py` 한 곳을 거친다. 데모 모드 재생, Langfuse 트레이스, 비용 상한을 이곳에서 처리한다.
 - Cloud Run 메모리와 이미지 크기는 D0에 확인한다(11장).

@@ -118,7 +118,7 @@ def search(q: SearchQuery) -> list[Chunk]: ...   # 입력·출력 형식은 back
 | `DATABASE_URL`, `DEMO_MODE`, `LLM_PROVIDER`, `LLM_API_KEY` | `.env.example` | 기존 값 그대로 |
 
 - 고정값: RRF k=60, 임베딩 `max_seq_length` 512, 정규화한 벡터의 내적. 1차 비교와 같게 둔다.
-- 그래프 전용 보조 검색(#67, 각각 그래프 `GRAPH_*` 스위치로 켜고 기본 검색 `search()`의 결과는 바꾸지 않는다): `search_pages`(페이지 범위 재검색), `sibling_sections`(형제 절), `intro_fill`(도입부 채우기, 같은 페이지 청크 `INTRO_MIN`=3개 이상일 때), `closest_to_query`(질문 벡터와 가까운 순, 캐시된 질문 벡터만 씀), `search_headings`(제목 경로에 문구가 그대로 든 청크, 임베딩·LLM 호출 없음). 저장소가 `heading_top`·`page_chunks`를 모르면 빈 목록이다.
+- 그래프 전용 보조 검색(#67, 각각 그래프 `GRAPH_*` 스위치로 켜고 기본 검색 `search()`의 결과는 바꾸지 않는다): `search_pages`(페이지 범위 재검색), `sibling_sections`(형제 절), `intro_fill`(도입부 채우기, 같은 페이지 청크 `INTRO_MIN`=3개 이상일 때)(`backend/rag/retrieve/search.py:873, 846, 917`). `closest_to_query`(질문 벡터와 가까운 순)와 `search_headings`(제목 경로 검색)는 결정 0101(커밋 `e1e37e1`)에서 스위치와 함께 지워 현재 코드에 없다. 저장소가 `page_chunks`를 모르면 `intro_fill`은 빈 목록이다(`search.py:930-932`).
 - 질문 벡터 기억: 검색기 하나가 (방식, 질문) → 벡터를 최대 `QVEC_CACHE`=512개 프로세스 안에 기억해, 같은 질문을 보조 검색에서 다시 임베딩하지 않는다. 프로세스를 다시 띄우면 비워진다(질문 벡터 장부와는 별개).
 - 번역 프롬프트는 1차 비교의 `keywords`·`sentence` 두 가지를 그대로 쓴다(`experiment_v1.py`의 `PROMPTS`). 데모 모드는 `llm.py`가 입력 해시로 기록을 재생한다.
 - 응답 시간 참고(노트북 CPU, 후보 10): 질문 임베딩 86~215ms, 리랭킹 bge 5.3초·int8 2.3초·Qwen3 12.2초·mMiniLM 0.42초. CPU에서 3초를 지키는 조합은 11/6에 정한다. 측정 스크립트와 결과는 평가셋 v1 동결 뒤 올린다.
