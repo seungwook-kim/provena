@@ -76,6 +76,18 @@ def search_text(team: Team, request: str) -> str:
     return f"{request} {team.focus}"
 
 
+MAX_SEARCH_CHARS = 1000   # `backend.rag.retrieve.search.MAX_QUERY_CHARS`와 같다(시험이 대조). 하위 질문 한 항목의 길이 한도
+
+
+def search_subs(team: Team, request: str) -> list[str] | None:
+    """팀 검색의 하위 질문 둘: [요청 + 보조어, 팀 보조어]. 검색은 둘을 번갈아 합쳐 `SEARCH_K`개를 돌려준다(사전 등록 62.41).
+
+    요청 문장이 검색을 끌고 가도 팀이 늘 봐야 하는 절(보조어)이 결과 안에 들도록 한다. 새 문구는 없다(보조어는 팀 정의에 이미 있다).
+    "요청 + 보조어"가 하위 질문 한도(`MAX_SEARCH_CHARS`)를 넘으면 검색이 실패하므로 None(나누지 않은 지금 방식)으로 내린다."""
+    base = search_text(team, request)
+    return [base, team.focus] if len(base) <= MAX_SEARCH_CHARS else None
+
+
 def load_team_skill(team: Team, *, enabled: bool | None = None) -> str:
     """팀 Skill 본문(머리말 제외). 꺼져 있으면 "". 파일이 없으면 FileNotFoundError(호출한 팀이 '검토하지 못함'으로 처리한다).
 

@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_HOST = "https://cloud.langfuse.com"
 DEFAULT_TIMEOUT_S = 2
+SAMPLER_ENV = "OTEL_TRACES_SAMPLER"   # OpenTelemetry SDK가 TracerProvider를 만들 때 읽는 표준 환경 변수
 CONTENT_CAPTURE_ENABLED_DEFAULT = False
 
 _lock = threading.Lock()
@@ -58,11 +59,37 @@ def _timeout() -> int:
         return DEFAULT_TIMEOUT_S
 
 
+def _keep_all_traces() -> None:
+    """요청 헤더의 추적 표시와 상관없이 모든 실행을 기록하게 한다. Langfuse 클라이언트를 만들기 전에 부른다.
+
+    Langfuse SDK는 `sample_rate`가 1이면 샘플러를 주지 않아 OpenTelemetry 기본값(부모 따름)이 된다. FastAPI 내장 추적이 요청의
+    `traceparent` 헤더를 부모로 삼기 때문에, Cloud Run이 "추적 안 함"으로 표시한 요청(초당 0.1건 넘는 몫)은 그래프의 span이 전부 버려졌다
+    (운영 `/chat` 284건 중 116건만 Langfuse에 남음). `always_on`이면 부모 표시를 보지 않는다. 운영자가 값을 직접 넣었으면 그대로 둔다."""
+    if not _env(SAMPLER_ENV):
+        os.environ[SAMPLER_ENV] = "always_on"
+
+
+def _warn_if_sampling() -> None:
+    """만들어진 TracerProvider가 일부만 기록하는 샘플러면 경고를 남긴다(다른 코드가 먼저 TracerProvider를 등록한 경우 등)."""
+    try:
+        from opentelemetry import trace
+
+        sampler = getattr(trace.get_tracer_provider(), "sampler", None)
+        desc = sampler.get_description() if sampler is not None else ""
+        if desc and desc != "AlwaysOnSampler":
+            log.warning("Langfuse 트레이스가 일부만 기록될 수 있다: 샘플러=%s (%s로 바꿀 수 있다)", desc[:80], SAMPLER_ENV)
+    except Exception as e:  # noqa: BLE001 - 확인 실패가 실행을 막지 않는다
+        log.warning("트레이스 샘플러 확인 실패: %s", type(e).__name__)
+
+
 def _make_client(public_key: str, secret_key: str, host: str) -> Any:
     """Langfuse 클라이언트. 같은 public_key로 `get_client`/`CallbackHandler`가 찾아 쓴다. 시험에서는 이 함수를 바꿔 끼운다."""
     from langfuse import Langfuse
 
-    return Langfuse(public_key=public_key, secret_key=secret_key, host=host, timeout=_timeout())
+    _keep_all_traces()
+    client = Langfuse(public_key=public_key, secret_key=secret_key, host=host, timeout=_timeout())
+    _warn_if_sampling()
+    return client
 
 
 def _make_handler(public_key: str) -> Any:

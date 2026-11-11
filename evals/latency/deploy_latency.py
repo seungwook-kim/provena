@@ -9,7 +9,7 @@
 - 답 본문(`answer`, `token` 이벤트의 글을 이은 것). 배포 결과의 RAGAS 채점(`evals/latency/deploy_ragas.py`)이 입력으로 읽는다. 검색한 청크 본문은 스트림에 없어 남기지 않는다.
 
 규칙
-- 문항은 1번부터 순서대로 하나씩 보낸다(동시 요청 없음). thread_id를 주지 않으므로 서버가 문항마다 새 대화를 만든다.
+- 문항은 1번부터 순서대로 하나씩 보낸다(동시 요청 없음). thread_id를 주지 않으므로 서버가 문항마다 새 대화를 만든다. 서버가 `/chat` 이벤트에 실어 보내는 그 대화 id를 행의 `thread_id`에 남긴다(운영 Langfuse의 sessionId는 `<user_id>:<thread_id>`라, 행과 관측을 시간이 아니라 이 id로 짝짓는다. `evals/latency/lf_recall.py`).
 - `as_of`는 평가셋의 값을 그대로 보낸다(`2023-05`처럼 달만 있으면 그 달 마지막 날). 최종 측정 때와 같은 기준일이다.
 - 네트워크 오류, 타임아웃(기본 120초), 502·503·504는 1회 다시 보내고 그래도 실패하면 실패로 적고 계속한다. 401이면 다시 로그인해 같은 문항을 다시 보낸다.
 - 시간 통계는 성공한 문항만으로 낸다. 실패는 개수와 사유를 따로 적는다.
@@ -20,6 +20,7 @@
 (`--dataset`을 주지 않으면 평가셋 v2 50건. 준 평가셋의 경로와 sha256은 summary.json의 meta에 적는다.)
 
 결과: evals/results/deploy_latency_v2/run1~3/rows.jsonl, 같은 폴더의 summary.json, summary.md.
+요약에는 관련(relevant)·비관련(irrelevant) 문항별 전체 시간 평균·p50·p95·최대와 답을 낸 문항만의 같은 통계를 전체와 회차별로 낸다(`by_dataset_kind`, 사전 등록 62.40부터).
 """
 from __future__ import annotations
 
@@ -98,7 +99,7 @@ def iter_sse(lines: Iterable[str]) -> Iterator[tuple[str, str]]:
 def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], float], deadline_s: float | None = None) -> dict[str, Any]:
     """`/chat`의 SSE 줄을 읽어 시간과 결과를 계산한다. `t0`는 요청을 보낸 시각(`clock()` 기준)."""
     out: dict[str, Any] = {"status": "no_done", "first_token_s": None, "total_s": None, "result": None, "citations": 0,
-                           "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0, "answer": "",
+                           "thread_id": None, "cited_chunk_ids": [], "cited_version_dates": [], "cost_usd": None, "input_tokens": None, "output_tokens": None, "llm_calls": None, "error_code": None, "answer_chars": 0, "answer": "",
                            **{k: None for k in STEP_FIELDS}}   # 서버가 done에 실은 단계별 비용·Voyage 토큰·거절 단계(옛 서버면 None)
 
     def guarded(src: Iterable[str]) -> Iterator[str]:
@@ -114,6 +115,8 @@ def consume_chat_stream(lines: Iterable[str], *, t0: float, clock: Callable[[], 
         except ValueError:
             continue
         etype = name if name != "message" else (payload.get("type") or name)
+        if out["thread_id"] is None and payload.get("thread_id"):   # 이벤트마다 같은 대화 id가 실려 온다. Langfuse 관측과 정확히 짝짓는 데 쓴다
+            out["thread_id"] = str(payload["thread_id"])
         data = payload.get("data") or {}
         if etype == "token":
             if out["first_token_s"] is None:
@@ -189,6 +192,32 @@ def summarize_rows(rows: list[dict]) -> dict[str, Any]:
     }
 
 
+DATASET_KINDS = ("relevant", "irrelevant")
+
+
+def row_kind(r: dict) -> str:
+    """행의 평가셋 종류. `dataset_kind` 칸이 있으면 그것, 없으면(옛 행) 거절 기대 여부로 정한다."""
+    kind = r.get("dataset_kind")
+    return kind if kind in DATASET_KINDS else ("irrelevant" if r.get("expect_refusal") else "relevant")
+
+
+def kind_time_stats(rows: list[dict]) -> dict[str, Any]:
+    """한 묶음 행의 시간 통계(성공한 행만): 전체 시간 평균·p50·p95·최대(`percentile`과 같은 가장 가까운 순위), 답을 낸 행(`result == "answer"`)만의 같은 통계."""
+    ok = [r for r in rows if r.get("status") == "ok" and r.get("total_s") is not None]
+    return {"n": len(rows), "n_ok": len(ok), "total_s": stats([r["total_s"] for r in ok]),
+            "answered_total_s": stats([r["total_s"] for r in ok if r.get("result") == "answer"])}
+
+
+def kind_summary(runs: dict[int, list[dict]]) -> dict[str, Any]:
+    """`dataset_kind`(관련 relevant, 비관련 irrelevant)별 시간 통계: 전체(`all_runs`)와 회차별(`per_run`)."""
+    out: dict[str, Any] = {}
+    for kind in DATASET_KINDS:
+        by_run = {n: [r for r in runs[n] if row_kind(r) == kind] for n in sorted(runs)}
+        out[kind] = {"all_runs": kind_time_stats([r for n in sorted(by_run) for r in by_run[n]]),
+                     "per_run": [{"run": n, **kind_time_stats(by_run[n])} for n in sorted(by_run)]}
+    return out
+
+
 def build_summary(runs: dict[int, list[dict]], meta: dict[str, Any]) -> dict[str, Any]:
     all_rows = [r for n in sorted(runs) for r in runs[n]]
     rel = [r for r in all_rows if not r.get("expect_refusal")]
@@ -196,7 +225,8 @@ def build_summary(runs: dict[int, list[dict]], meta: dict[str, Any]) -> dict[str
     return {"meta": meta,
             "per_run": [{"run": n, **summarize_rows(runs[n])} for n in sorted(runs)],
             "all_runs": summarize_rows(all_rows),
-            "relevant_only": summarize_rows(rel), "irrelevant_only": summarize_rows(irr)}
+            "relevant_only": summarize_rows(rel), "irrelevant_only": summarize_rows(irr),
+            "by_dataset_kind": kind_summary(runs)}
 
 
 def _f(v: float | None, nd: int = 3) -> str:
@@ -223,7 +253,17 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines += [row(f"{p['run']}회차", p) for p in summary["per_run"]]
     lines.append(row("3회 합" if len(summary["per_run"]) == 3 else f"{len(summary['per_run'])}회 합", summary["all_runs"]))
     a = summary["all_runs"]
-    lines += ["", f"회차별 전체 시간 p95의 평균: {_f(_mean([p['total_s']['p95'] for p in summary['per_run']]))}초(평가 보고서 4장의 '3회 평균' 방식).", "",
+    lines += ["", f"회차별 전체 시간 p95의 평균: {_f(_mean([p['total_s']['p95'] for p in summary['per_run']]))}초(평가 보고서 4장의 '3회 평균' 방식).", ""]
+    if summary.get("by_dataset_kind"):
+        lines += ["## 관련·비관련 문항별 시간 (초, `dataset_kind`별, 성공한 문항만)", "",
+                  "| 종류 | 회차 | 성공/전체 | 전체 p50 | 전체 p95 | 전체 평균 | 전체 최대 | 답을 낸 문항 p50 | 답을 낸 문항 p95 |", "|---|---|---|---|---|---|---|---|---|"]
+        for kind, label in (("relevant", "관련"), ("irrelevant", "비관련")):
+            block = summary["by_dataset_kind"][kind]
+            for name, s in [*[(f"{p['run']}회차", p) for p in block["per_run"]], ("전체", block["all_runs"])]:
+                t, an = s["total_s"], s["answered_total_s"]
+                lines.append(f"| {label} | {name} | {s['n_ok']}/{s['n']} | {_f(t['p50'])} | {_f(t['p95'])} | {_f(t['mean'])} | {_f(t['max'])} | {_f(an['p50'])} | {_f(an['p95'])} |")
+        lines.append("")
+        lines += [
               "## 결과 종류와 비용", "", "| 구분 | 성공/전체 | answer | clarify | refuse | 인용 평균 | 요청당 비용(달러) | 비용 합(달러) |", "|---|---|---|---|---|---|---|---|"]
 
     def kind_row(label: str, s: dict) -> str:

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -34,7 +35,12 @@ def run_review(stage: str, url: str, thread_id: str, shape: str, saver) -> dict:
     """첫 프로세스에서는 infra 팀의 응답을 읽을 수 없고, 그 뒤 프로세스에서는 읽을 수 있다."""
     Review.TEAM_RETRY_WAIT_SECONDS = 0
     cfg = {"configurable": {"thread_id": thread_id}}
-    llm = review_llm(team_infra=BAD_REPLY) if stage == "review_start" else review_llm()
+    # 환경변수는 팀 실패 알림 재시작 시험(tests/test_team_failure_restart.py)이 쓴다. 없으면 이전과 같다: 시작 때만 infra 응답이 깨진다
+    bad = os.environ.get("PV_TF_BAD_START" if stage == "review_start" else "PV_TF_BAD_RESUME", "infra" if stage == "review_start" else "")
+    over: dict = {f"team_{t}": BAD_REPLY for t in bad.split(",") if t}
+    if os.environ.get("PV_TF_DIE") and stage != "review_start":    # 이 팀의 모델을 부르는 순간 프로세스를 갑자기 끝낸다(종료 처리 없음)
+        over[f"team_{os.environ['PV_TF_DIE']}"] = lambda _u: os._exit(7)
+    llm = review_llm(**over)
     repo, issues = PostgresDecisionRepo(saver.conn), PgIssueTableStore(_default_connect(url))
     if shape == "sub":
         p = StateGraph(Review.ReviewState)
@@ -49,9 +55,12 @@ def run_review(stage: str, url: str, thread_id: str, shape: str, saver) -> dict:
         res = graph.invoke({"question": REQUEST, "user_id": "u1", "thread_id": thread_id, "as_of": "2026-11-05"}, cfg)
     elif stage == "review_resume":
         res = graph.invoke(Command(resume=json.loads(sys.argv[5])), cfg)
+    elif stage == "review_continue":     # 결정은 적혔지만 다음 단계에서 프로세스가 끝난 건: 서버가 하는 대로 재개 값 없이 이어 간다(routes._resume)
+        res = graph.invoke(None, cfg)
     rows = [r for r in repo._rows("SELECT approval_id FROM approvals WHERE thread_id = %s ORDER BY created_at", (thread_id,))]
     records = [repo.get_approval(r["approval_id"]) for r in rows]
     return {"restart_safe": is_restart_safe(saver), "pending": pending_interrupt(graph, thread_id), "review_status": res.get("review_status"),
+            "approval_ids": [r.approval_id for r in records],
             "llm": {t: llm.count(f"team_{t}") for t in TEAMS}, "supervisor": llm.count("supervisor"),
             "saved": issues.get_by_thread(thread_id, "u1"),
             "approvals": [{"kind": r.kind, "status": r.status, "resolution": team_resolution(r), "decided_by": r.decided_by} for r in records]}

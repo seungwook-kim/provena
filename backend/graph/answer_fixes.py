@@ -305,7 +305,8 @@ def _value_lines(body: str, keys: set[tuple[str, str]]) -> list[tuple[set[tuple[
 
 def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[tuple[dict, int]]:
     """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지.
-    겹침은 청크 전체가 아니라 같은 값을 담은 줄끼리 잰다: 값(숫자, 단위)만 같고 그 값이 가리키는 대상이 다른 줄은 같은 사실이 아니다."""
+    겹침은 청크 전체가 아니라 같은 값을 담은 줄끼리 잰다: 값(숫자, 단위)만 같고 그 값이 가리키는 대상이 다른 줄은 같은 사실이 아니다.
+    줄 겹침만 보면 값과 단위 단어만 같은 다른 문서의 짧은 줄이 붙는다(운영 00035·00037의 v2 8·9번). 청크 전체 겹침도 같이 넘어야 한다."""
     if not cited or len(cited) >= cap:
         return []
     keys = set().union(*(value_keys(_body(c)) for c in cited))
@@ -313,6 +314,7 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[
         return []
     have = {c["chunk_id"] for c in cited}
     cited_lines = [_value_lines(_body(c), keys) for c in cited]
+    cited_tokens = [_tokens(_body(c)) for c in cited]
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
@@ -326,8 +328,11 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[
                     if t and k & k2 and len(t & t2) / len(t) > score:
                         anchor, score = i, len(t & t2) / len(t)
         if score >= MIN_OVERLAP:
-            added.append((c, anchor))
-            have.add(c["chunk_id"])
+            ct = _tokens(_body(c))
+            whole = max((len(ct & x) / len(ct) for x in cited_tokens), default=0.0) if ct else 0.0
+            if whole >= MIN_OVERLAP:
+                added.append((c, anchor))
+                have.add(c["chunk_id"])
     return added
 
 
@@ -628,6 +633,18 @@ def judge_vote_enabled() -> bool:
 
 def judge_quote_enabled() -> bool:
     return _flag("GRAPH_JUDGE_QUOTE")
+
+
+def judge_retry_fast_enabled() -> bool:
+    """JRF `GRAPH_JUDGE_RETRY_FAST=1`(기본 꺼짐): 나뉜 질문(하위 질문 2개 이상)이고 앞 판정이 일부(partial)였을 때, 재검색 뒤 판정만 단계 표지를 `judge_retry`로 바꿔 추론을 끈다.
+    프롬프트 본문과 입력은 그대로이고 첫 판정과 미리 돌리는 판정(재검색 0회)은 바뀌지 않는다."""
+    return _flag("GRAPH_JUDGE_RETRY_FAST")
+
+
+def revise_ahead_enabled() -> bool:
+    """RA `GRAPH_REVISE_AHEAD=1`(기본 꺼짐, `GRAPH_SPECULATE_GROUND`가 켜져 있어야 동작): 근거 확인이 받쳐지지 않는 주장을 지적하면, 답 다시 쓰기와 동시에
+    문장 빼기 뒤 재확인을 같은 입력으로 미리 부른다. 어느 답을 쓸지의 순서는 그대로이고, 다시 쓴 답이 쓰이면 미리 부른 결과는 버린다."""
+    return _flag("GRAPH_REVISE_AHEAD")
 
 
 def _vote_key(task: str, obj: dict) -> tuple:

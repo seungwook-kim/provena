@@ -6,6 +6,9 @@
   `create_user`(덮어쓰지 않음)·`set_password`(역할 그대로)를 쓴다(docs/specs/admin-roles.md).
 - 사용자 관리(최고 관리자, backend/admin_api.py): `list_users`(아이디·역할·만든 날짜만, 해시 없음), `set_role`(역할 변경 + 기록 한 트랜잭션).
 - 연결은 호출마다 열고 닫는다(MVP). 풀러(transaction 모드)에서도 문제없도록 준비된 문장을 쓰지 않는다.
+  예외: 요청마다 도는 인증 조회 둘(`PostgresAuthStore.get_by_user_id`·`get_by_login_id`의 `_fetch_one`, `PostgresTokenRevocationStore.is_revoked`)은
+  `ANSWER_STORE_REUSE_CONN=1`이면 답 저장소와 같은 방식으로 연결을 다시 쓰고(`graph/answer_store.py` `_ConnectionReuse`) 서버가 끊은 연결이면 한 번 더 부른다
+  (읽기뿐이라 두 번 불러도 같다). 가입·승인·역할 변경 같은 쓰기와 여러 문장 트랜잭션은 그대로 호출마다 연결한다(사전 등록 62.40).
 - Google 로그인: `get_or_create_google_user(provider, sub, email)`. 구글이 인증한 이메일이 **기존 계정의 로그인 아이디(이메일)와 정확히 같고**
   그 계정이 활성이며 이메일 인증을 마친 가입 승인 계정이면 같은 계정에 연결한다(역할은 그대로, `user_identities` 한 줄).
   계정이 없으면 **가입 승인 대기**(`signup_requests`, 비밀번호 가입과 같은 목록)를 만들고 `GoogleSignupPendingError`·거절은
@@ -64,6 +67,19 @@ def _default_connect(dsn: str) -> Callable[[], Any]:
         return psycopg.connect(dsn, autocommit=True, connect_timeout=5, prepare_threshold=None)
 
     return connect
+
+
+def _reusable_reads(dsn: str | None) -> Callable[[], Any]:
+    """요청마다 도는 읽기용 연결. `ANSWER_STORE_REUSE_CONN`이 꺼져 있으면 `_default_connect`와 같은 호출마다 연결, 켜져 있으면 연결을 다시 쓴다."""
+    from backend.graph.answer_store import reuse_if_enabled
+
+    return reuse_if_enabled(_default_connect(dsn))
+
+
+def _run_again(connect: Callable[[], Any], fn: Callable[[], Any]) -> Any:
+    from backend.graph.answer_store import run_again
+
+    return run_again(connect, fn)
 
 
 def _to_user(row: tuple | None) -> AuthUser | None:
@@ -389,11 +405,13 @@ class PostgresAuthStore:
     """`connect`는 시험에서 가짜 연결을 넣기 위한 자리다. 비우면 `dsn`으로 psycopg 연결을 만든다."""
 
     def __init__(self, dsn: str | None = None, *, connect: Callable[[], Any] | None = None) -> None:
+        connect_was_default = connect is None
         if connect is None:
             if not dsn:
                 raise ValueError("dsn 또는 connect가 필요하다")
             connect = _default_connect(dsn)
         self._connect = connect
+        self._read_connect = _reusable_reads(dsn) if connect_was_default else connect   # 요청마다 도는 읽기만 연결을 다시 쓴다
         self._google_schema: bool | None = None  # db/114 적용 여부. 저장소마다 한 번만 확인한다(ensure_schema 뒤에는 다시 본다)
 
     def _has_google_schema(self, conn: Any) -> bool:
@@ -414,9 +432,11 @@ class PostgresAuthStore:
         return bool(self._google_schema)
 
     def _fetch_one(self, sql: str, params: tuple) -> AuthUser | None:
-        with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
-        return _to_user(row)
+        def run() -> tuple | None:
+            with self._read_connect() as conn:
+                return conn.execute(sql, params).fetchone()
+
+        return _to_user(_run_again(self._read_connect, run))
 
     def get_by_login_id(self, login_id: str) -> AuthUser | None:
         if "@" in login_id:
@@ -803,18 +823,23 @@ class PostgresTokenRevocationStore:
     """Durable ``TokenRevocationStore`` implementation backed by PostgreSQL."""
 
     def __init__(self, dsn: str | None = None, *, connect: Callable[[], Any] | None = None) -> None:
+        connect_was_default = connect is None
         if connect is None:
             if not dsn:
                 raise ValueError("dsn or connect is required")
             connect = _default_connect(dsn)
         self._connect = connect
+        self._read_connect = _reusable_reads(dsn) if connect_was_default else connect   # is_revoked는 인증된 요청마다 돈다
 
     def is_revoked(self, jti: str) -> bool:
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT EXISTS (SELECT 1 FROM token_revocations WHERE jti = %s AND expires_at > now())",
-                (jti,),
-            ).fetchone()
+        def run() -> tuple | None:
+            with self._read_connect() as conn:
+                return conn.execute(
+                    "SELECT EXISTS (SELECT 1 FROM token_revocations WHERE jti = %s AND expires_at > now())",
+                    (jti,),
+                ).fetchone()
+
+        row = _run_again(self._read_connect, run)
         return bool(row and row[0])
 
     def revoke(self, jti: str, expires_at: datetime) -> None:

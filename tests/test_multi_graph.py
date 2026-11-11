@@ -1258,7 +1258,7 @@ def test_llm_router_reply_outside_the_allowed_set_is_replaced_even_with_poisoned
 BUILDERS = [("single", build_graph), ("multi", build_multi_graph)]
 BUILDER_IDS = [b[0] for b in BUILDERS]
 PROMPT_SHA256 = {  # 품질 수정(PREREGISTER #28)을 넣은 프롬프트. 스위치가 꺼져 있을 때 프롬프트는 이 값에서 한 글자도 달라지지 않는다
-    "CLASSIFY_SYSTEM": "1d0c2d7167fd14a3ecf9953cb2208fffccf9026f82d99b4fe261f645fc77ec17",  # 11/10: 도메인 밖 기준을 주제가 아니라 조직이 정한 것을 묻는지로 바꾸고 org_specific 칸을 더했다(62.30)
+    "CLASSIFY_SYSTEM": "220848c848015944730061418e0a2147be08dcbd91624ee6fadd9654a79fdcbd",  # 11/11: review를 검토 요청 문구가 아니라 하려는 안건을 서술하고 묻지 않는 요청으로 넓히고, 안건만 설명하면 금액이 있어도 decision이 아니라고 했다(62.39 초안). 11/10: 도메인 밖 기준(62.30)
     "REWRITE_SYSTEM": "9bfc455ab98362ab486bc7cfccead687f0ab7c43bf4d9a11e20c4c7ef63e61ca",
     "JUDGE_SYSTEM": "0091429f0067887fe8587b9d3c46c1c2059f0b0c5db613cc4c6be3264bafc157",  # 11/6 정리: 겹친 판정 문장 셋을 둘로 합쳤다(아래 로그 값도 같이)
     "ANSWER_SYSTEM": "5341d824c47d708f0b8b6e23eade62bfa0acffc03e77726fd7c682eebc7e1ee0",  # 11/10: 질문 대상이 표의 행에 해당하는지를 자기 단서로 덧붙이지 않는 규칙 한 줄을 더했다(아래 로그 값도 같이)
@@ -1653,14 +1653,14 @@ def _chunk(i, text="x", **over):
 # ---- 꺼짐이면 품질 수정(PREREGISTER #28)을 넣은 코드와 바이트까지 같다 ----
 # 스위치를 끄고 낸 값이다. 재검색이 없는 경로는 프롬프트 상수만 PR #54(84cd02d) 것으로 되돌리면 그 커밋의 값(2c155781)과 같았다. 프롬프트를 일부러 고치면 이 값도 같이 새로 낸다
 PROMPT_LOG_SHA256 = {
-    "answer": (dict(decompose=NO_SPLIT, grounding=j(grounded=True)), "53cb7a64e155f9ced1489c1d4177c3a921b94088343dbf71b58467ce43d4eb3d",
+    "answer": (dict(decompose=NO_SPLIT, grounding=j(grounded=True)), "b4384bd8555e546fbdb320e85ad1cc59da08964dff5b7e0b5a8c128d0dd8406c",
                ["classify", "rewrite", "decompose", "judge", "answer", "grounding"]),
-    "refuse": (dict(decompose=NO_SPLIT, judge=NO, rewrite=True), "8b36183f79ea05bd1edb6456a6064257b1247dd4ca1dcd8997545b0fd5948679",
+    "refuse": (dict(decompose=NO_SPLIT, judge=NO, rewrite=True), "06c06a653ab5d9cafc0e62f103a726c7aa6b60759d3d5c3d7e010f631d78d4a8",
                ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "rewrite", "judge"]),
-    "recover": (dict(decompose=TWO_FACTS, judge=[NO, j(sufficient=True)], rewrite=True, grounding=j(grounded=True)), "3f990df5866f22327c1a21d8ad3831f987eafbf6c90552631a426c35e2e37cfe",
+    "recover": (dict(decompose=TWO_FACTS, judge=[NO, j(sufficient=True)], rewrite=True, grounding=j(grounded=True)), "a05208bb5c200e96095bc441a8a4a7daa22c21236a31396d351b33ecc5f6f35b",
                 ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "answer", "grounding"]),
     "partial": (dict(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=True, grounding=j(grounded=True)),
-                "7dedad83d174bf92a1568fd3cbc0ad3afe9ef5f78eb0be0511ce19ced56c7726",
+                "8bb8cb094b5f6e1a87d331b925869df47166463245321ce9b54170ad4085cad6",
                 ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "rewrite", "judge", "answer", "grounding"]),
 }
 
@@ -2322,6 +2322,12 @@ def test_classifier_keeps_questions_out_of_the_connected_routes():
     assert "절차, 승인자, 시기, 시작 지점을 묻는 질문은 rule이다" in P.CLASSIFY_SYSTEM
 
 
+def test_classifier_treats_a_described_plan_as_a_review_request_without_the_word_review():
+    """합동 검토 평가셋의 부분·쟁점 적음 문항이 검토 요청 문구가 없어 정책 질문이나 결정표로 새던 것(운영 00037)을 막는 문구(62.39 초안)."""
+    assert "검토해 달라\"는 말이 없어도 안건을 설명하기만 하고 아무것도 묻지 않으면 검토를 맡긴 것이다" in P.CLASSIFY_SYSTEM
+    assert "안건을 설명하기만 하고 승인자나 협조 부서를 묻지 않으면 금액이 있어도 decision이 아니다" in P.CLASSIFY_SYSTEM
+
+
 # ---------- 자료에 없다고 밝힌 문장의 인용과 묻지 않은 문장 ----------
 _ID1, _ID2 = f"{1:016x}", f"{2:016x}"
 
@@ -2449,6 +2455,10 @@ def test_grounding_input_says_the_answer_is_partial():
     ("배포 전에 변경 승인을 받아야 하나요?", "rule"),
     ("이 도입안을 검토해 주세요. 보안 평가도 필요한가요?", "review"),   # 검토를 맡기는 말이 있으면 그대로 합동 검토
     ("새 도구 도입에 보안 검토가 필요한지 합동 검토해줘", "review"),
+    ("편집기 유료 플러그인(연 300달러)을 법인 결제 수단으로 구매하려 한다. 팀 공용 도구는 아니다.", "review"),   # 안건만 서술한 평서문: 검토 요청 문구가 없어도 합동 검토(62.39 초안)
+    ("법인카드로 회식비를 결제하려는데 1인당 금액 제한이 있어?", "rule"),   # 안건을 적었어도 물음표로 끝나고 검토라는 말이 없으면 정책 질문
+    ("노드 풀을 늘리려 한다. 변경 절차가 맞을까?", "rule"),
+    ("외부 컨설턴트 계약을 검토해 줄 수 있어?", "review"),   # 물음표로 끝나도 검토라는 말이 있으면 그대로(62.34의 필요 여부 질문만 되돌린다)
 ])
 def test_question_asking_a_fact_does_not_stop_at_review(_off2, label, build, question, route):
     llm = review_llm(classify=j(route="review"))

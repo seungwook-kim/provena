@@ -65,6 +65,7 @@ MAX_CHUNKS = 10  # 재검색 결과를 합친 근거 목록의 최대 길이
 MAX_SECTION_CHARS = 6000  # 섹션을 통째로 읽어 넓힐 수 있는 본문 길이. 넘으면 넓히지 않는다
 AUTHZ_TITLE = "Authorization Matrix"  # 현재 페이지와 고정 판(2023-05)의 공통 제목
 SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5)
+SPLIT_K = 8  # 나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 하위 질문과 링크 확장으로 7자리 + 끝 1자리는 원 질문 목록(`search.FULL_TAIL`). 나뉘지 않은 질문과 재검색은 `SEARCH_K` 그대로(사전 등록 62.38)
 MAX_CITATIONS = P.MAX_CITATIONS  # 답 하나가 인용할 수 있는 청크 수의 상한. 답 프롬프트와 같은 값이다
 JSON_ATTEMPTS = 2  # LLM 응답 형식이 깨지면 1회 다시 요청한다 (Spec EC-06)
 ROUTES = ("rule", "decision", "review", "out_of_domain")
@@ -84,6 +85,7 @@ _REVIEW_WORD = re.compile(r"검토|리뷰|review|평가해|봐\s*줘|맡아|맡�
 # 규정상 필요한지·해야 하는지를 예·아니오로 묻는 말로 끝나는 질문("~가 필요한가요?", "~해야 하나요?", "~있어야 하나요?"). 이때 "검토"는 맡기는 일이 아니라 묻는 대상이다
 _ASKS_NEED = re.compile(r"(필요|필수|의무|\S야\s*(하|되|돼|합|할|한))[^.!?\n]{0,8}(\?|가요|나요|까요|한가|하나|인가|니|냐|까)\s*\??\s*$")
 _REVIEW_REQUEST = re.compile(r"(검토|리뷰|review|평가)[를을]?\s*(해\s*[줘주]|부탁|바랍|요청|맡)|봐\s*[줘주]|맡아|맡길", re.I)  # 검토를 해 달라고 맡기는 말
+_ENDS_ASKING = re.compile(r"[?？]\s*$")  # 물음표로 끝나는 질문. 안건을 서술하고 아무것도 묻지 않는 합동 검토 요청은 평서문이다
 _AMOUNT_WORD = re.compile(r"[천만억]\s*(?:달러|원|불)|구간|금액")
 # 값이 아니라 이름 안의 숫자: 글자로 시작하는 S1, Sev1, IPv4와 숫자로 시작하는 2FA. USD500, 5K, 10MB, 3GB처럼 값과 단위인 것은 남긴다
 _NAME_WITH_DIGIT = re.compile(r"(?<![$A-Za-z0-9.,])(?:(?!(?:USD|KRW|EUR|GBP|JPY)\d)[A-Za-z]+\d[A-Za-z0-9]*|\d+(?!(?:USD|KRW|EUR|GBP|JPY|KB|MB|GB|TB|PB|MS|SEC|MIN|HRS?|DAYS?)(?![A-Za-z0-9]))[A-Z]{2,}(?![A-Za-z0-9]))")
@@ -115,8 +117,8 @@ REFUSE_REASON_BY_MESSAGE = {
 
 def asks_fact_not_review(question: str) -> bool:
     """합동 검토로 분류된 질문이 검토를 맡기는 요청이 아니라 사실을 묻는 질문인가.
-    의문사로 묻고 검토라는 말이 없거나, 규정상 필요 여부를 예·아니오로 묻고 검토를 해 달라는 말이 없으면 사실 질문이다."""
-    if _ASKS_FACT.search(question) and not _REVIEW_WORD.search(question):
+    의문사로 묻고 검토라는 말이 없거나, 물음표로 끝나고 검토라는 말이 없거나, 규정상 필요 여부를 예·아니오로 묻고 검토를 해 달라는 말이 없으면 사실 질문이다."""
+    if (_ASKS_FACT.search(question) or _ENDS_ASKING.search(question.strip())) and not _REVIEW_WORD.search(question):
         return True
     return bool(_ASKS_NEED.search(question.strip())) and not _REVIEW_REQUEST.search(question)
 
@@ -165,6 +167,11 @@ def finish_answer(answer: str, citations: list[dict], as_of: str | None) -> str:
 
 
 mentions_period = G.mentions_period  # 질문에 시점 표현이 있는지. 없는 질문에 재작성이 기준일을 채워 내면(오늘 날짜 등) 그 값은 쓰지 않는다. 근거 판정(grounding.recode_vote)과 같은 판별이다
+
+
+def chunk_cap(sub_queries) -> int:
+    """근거 목록의 최대 길이. 나뉜 질문(하위 질문 2개 이상)은 첫 검색이 `SPLIT_K`라 그만큼 상한을 올려야 재검색이 새 청크를 받는다."""
+    return MAX_CHUNKS + (SPLIT_K - SEARCH_K if len(sub_queries or ()) >= 2 else 0)
 
 
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
@@ -335,6 +342,8 @@ def build_graph(
     grounding_system = P.GROUNDING_SYSTEM_BRIEF if brief else P.GROUNDING_SYSTEM
     structured = P.structured_stages()
     judge_quote = AF.judge_quote_enabled()  # 인용 먼저 판정(`GRAPH_JUDGE_QUOTE`, 기본 꺼짐): 사실마다 원문 구절을 먼저 복사하고 결론은 코드가 그 목록에서 정한다
+    judge_retry_fast = AF.judge_retry_fast_enabled()  # JRF(`GRAPH_JUDGE_RETRY_FAST`, 기본 꺼짐): 나뉜 질문이고 앞 판정이 일부일 때, 재검색 뒤 판정만 추론을 끈다(단계 표지 judge_retry)
+    revise_ahead_on = AF.revise_ahead_enabled()  # RA(`GRAPH_REVISE_AHEAD`, 기본 꺼짐, SG 필요): 답 다시 쓰기와 동시에 문장 빼기 뒤 재확인을 미리 부른다
     judge_vote = AF.judge_vote_enabled()  # 판정 다수결(`GRAPH_JUDGE_VOTE`, 기본 꺼짐): 판정과 근거 확인을 병렬 3번 부르고 2표가 같으면 확정한다
     if judge_quote:
         judge_system = P.judge_quoted(judge_system, query=judge_query_on)
@@ -827,7 +836,7 @@ def build_graph(
             except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
                 log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
         mixed = [c for group in zip_longest(*lists) for c in group if c is not None]
-        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=MAX_CHUNKS + SEARCH_K)}
+        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries")) + SEARCH_K)}
 
     def page_requery(state: AgentState) -> dict:
         """가(`GRAPH_RESEARCH_SAME_PAGE`): 재검색어(`search_query`)로 지금 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서만 찾는다. 전체 검색은 하지 않는다.
@@ -846,7 +855,7 @@ def build_graph(
                 found = [c for c in found if c.get("chunk_id") not in have][:REQUERY_NEW]
         except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
             log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
-        return {"chunks": merge_chunks(chunks, found), "search_stats": stats}
+        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"))), "search_stats": stats}
 
     def with_intro(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
         """R3(`GRAPH_INTRO_FILL`): 첫 검색 문맥에 같은 페이지 판 청크가 3개 이상인 페이지의 도입부 절 청크(질문 벡터와 가장 가까운 1개, 절이 2개 이하 청크면 절 전체)를 뒤에 더한다.
@@ -893,7 +902,7 @@ def build_graph(
             query, subs = plan.query, plan.subs
             extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"),
-                        k=SEARCH_K, sub_queries=subs or None)
+                        k=SPLIT_K if first and len(subs) >= 2 else SEARCH_K, sub_queries=subs or None)  # 나뉜 질문의 첫 검색만 SPLIT_K
         _forget_search_trace()
         try:
             found, memo = memo_search(state, q)
@@ -903,7 +912,7 @@ def build_graph(
         if not found and _search_fallback_reason() == "no_key":  # 키 없는 데모: 같은 검색을 되풀이하지 않고 끝낸다
             return {**extra, **memo, "kind": "refuse", "answer": MSG_REFUSE_NO_KEY, "citations": [], "search_error": "no_key"}
         # 재검색은 앞 결과를 버리지 않고 합친다. 판단, 인용 검사, 근거 판정은 모두 이 합친 목록과 대조한다
-        merged = merge_chunks(state.get("chunks", []), found)
+        merged = merge_chunks(state.get("chunks", []), found, limit=chunk_cap(subs if first else state.get("sub_queries")))
         return {"chunks": with_intro(state, merged, query) if first else merged, **memo, **extra}  # R3는 첫 검색에만 붙인다
 
     def judge(state: AgentState) -> dict:
@@ -915,6 +924,8 @@ def build_graph(
         guide = skill("chat-tool-guide")  # 켜져 있을 때만 판정이 다음 도구를 고른다. 호출 수는 그대로다
         terms = skill("search-terms") if requery_terms else ""  # `GRAPH_REQUERY_TERMS=1`일 때만 재검색어 용어표를 붙인다(기본 꺼짐)
         guided = P.with_skills(judge_system, [("도구 고르기 Skill", guide), ("용어 Skill", terms)])
+        if judge_retry_fast and state.get("retries", 0) and state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2:
+            guided = P.judge_retry(guided)  # JRF: 나뉜 질문의 재검색 뒤 판정은 단계 표지만 바꿔 추론을 끈다. 본문과 입력은 그대로
         names = [*(["chat-tool-guide"] if guide else []), *(["search-terms"] if terms else [])]
         used = {"skills_used": note_skills(state, *names)} if names else {}
         if stop_stalled and state.get("retries", 0) and state.get("judged_chunks") == len(chunks):  # 재검색이 근거를 더하지 못했다. 입력이 같으므로 앞 판정을 그대로 두고 더 찾지 않는다
@@ -1002,7 +1013,7 @@ def build_graph(
         if state.get("sub_research_phase") == "due":  # B1, B4: 빠진 하위 질문 한 번 더(그때만 재검색 상한 +1)
             return "rewrite"
         # 근거 목록이 차면 `merge_chunks`가 새 청크를 받지 못해 재검색이 아무것도 바꾸지 못한다
-        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= MAX_CHUNKS)  # 섹션 읽기는 목록을 늘리지 않는다
+        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries")))  # 섹션 읽기는 목록을 늘리지 않는다
         if state.get("retries", 0) <= research_limit + (state.get("section_reads", 0) if section_extra else 0) and not stalled:
             return "rewrite"
         # 재검색이 끝나도 일부 근거만 있으면 그 부분을 답한다. 나뉜 질문(사실 둘 이상)일 때만이다. 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 된다
@@ -1046,7 +1057,7 @@ def build_graph(
     def answer_skills_used(state: AgentState, blocks: list[tuple[str, str]]) -> list[str]:
         return note_skills(state, *[name for name, (_, body) in zip(("citation-rules", "delegation"), blocks) if body])
 
-    def draft_reply(state: AgentState, careful: bool = False) -> dict:
+    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None) -> dict:
         blocks = answer_blocks(state)
         system = P.with_skills(answer_base if careful else answer_system, blocks)
         used = answer_skills_used(state, blocks)
@@ -1062,7 +1073,8 @@ def build_graph(
             if again is not None:
                 obj, raw = again, raw2
         out = draft_fields(obj, raw, used)
-        ground_ahead(state, out)
+        if abandoned is None or not abandoned.is_set():  # 추론 답이 대기 시간을 넘겨 빠른 답으로 넘어갔으면 이 답의 근거 판정은 쓰이지 않으므로 미리 부르지 않는다
+            ground_ahead(state, out)
         return out
 
     def verdict_key(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool) -> str:
@@ -1124,11 +1136,13 @@ def build_graph(
             return draft_reply(state)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer")
         try:
-            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True))
+            gave_up = threading.Event()  # 추론 답을 쓰지 않기로 하면 세운다. 늦게 끝난 추론 답이 쓰이지 않을 근거 판정을 부르지 않게 한다
+            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up))
             fast = in_background(pool, "write_answer", lambda: draft_reply(state))
             done, _ = wait_futures([slow], timeout=wait_s)
             if done and slow.exception() is None and slow.result().get("raw_citations"):
                 return slow.result()
+            gave_up.set()
             return fast.result()
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
@@ -1252,7 +1266,7 @@ def build_graph(
         if not again.ok:
             rec["result"] = f"rules:{again.reason}"
             return None
-        second = llm_verdict(question, cleaned, valid, as_of, body, chunks)
+        second = verdict_for(question, cleaned, valid, as_of, body, chunks)  # RA가 미리 불렀으면 그 결과(같은 입력), 아니면 지금처럼 부른다
         info["rejudge"] = second["state"]
         if second["state"] != "grounded":  # 더 빼지 않는다. 결론이 없어도 거절 쪽으로 둔다
             rec["result"] = f"rejudge_{second['state']}"
@@ -1260,6 +1274,44 @@ def build_graph(
         info.update(revised=True, draft_answer=state["answer"], removed=[{"sentence": x, "reason": verdict["detail"]} for x in pruned.removed])
         # 뺀 문장이 있으면 답이 일부만 남았다고 밝힌다. 말없이 빼면 질문 전체에 답한 것처럼 보인다
         return {"kind": "answer", "answer": finish_answer(f"{cleaned} {MSG_PARTIAL_NOTE}", valid, as_of), "citations": valid, "grounding": info, "skills_used": used}
+
+    def revise_ahead(state: AgentState, cited: list[dict], verdict: dict, body: str) -> str | None:
+        """RA: `revise_answer`가 부를 재확인(문장 빼기 뒤 답)을 답 다시 쓰기와 동시에 미리 시작한다. LLM이 없는 앞부분(문장 빼기, 인용 검사, 누출 검사, 코드 규칙)은
+        `revise_answer`와 같은 계산을 먼저 하고, 모두 통과했을 때만 같은 입력으로 `llm_verdict`를 `ground_pool`에 넣는다(`ground_runs`에 등록). 돌려주는 값은 등록 열쇠(없으면 None).
+        실패하면 아무 일도 없다(그때는 `revise_answer`가 지금처럼 부른다)."""
+        if not revise_ahead_on or not speculate_ground or ground_pool is None or not verdict.get("claims"):
+            return None
+        try:
+            as_of, question, chunks = state.get("as_of"), state["question"], state.get("chunks", [])
+            pruned = G.prune_answer(state["answer"], verdict["claims"])
+            if not pruned.ok:
+                return None
+            cited_ids = {c["chunk_id"] for c in cited}
+            raw = [{"chunk_id": i} for i in dict.fromkeys(_MARK.findall(pruned.answer)) if i in cited_ids]
+            valid, dropped, cleaned = check_citations(raw, chunks, pruned.answer)
+            if not valid or not cleaned or dropped or leaks_internal(cleaned) or U.leaks_instruction(cleaned, chunks, question):
+                return None
+            if not G.check_rules(question, valid, chunks).ok:
+                return None
+            key = verdict_key(question, cleaned, valid, as_of, body, chunks, False)
+            now = time.monotonic()
+            with ground_lock:
+                if key in ground_runs or len(ground_runs) >= 64:
+                    return None
+                ground_runs[key] = (now, in_background(ground_pool, "ground", lambda: llm_verdict(question, cleaned, valid, as_of, body, chunks)))
+            return key
+        except Exception as e:  # noqa: BLE001 - 미리 하는 일이 실패해도 답 경로는 그대로 간다
+            log.debug("문장 빼기 재확인 미리 부르기 실패: %s", type(e).__name__)
+            return None
+
+    def drop_ahead(key: str | None) -> None:
+        """RA: 다시 쓴 답이 쓰이게 되어 미리 부른 재확인이 필요 없다. 아직 시작 전이면 취소하고 등록을 지운다(이미 간 호출은 결과를 버린다)."""
+        if key is None:
+            return
+        with ground_lock:
+            run = ground_runs.pop(key, None)
+        if run is not None:
+            run[1].cancel()
 
     def redraft_answer(state: AgentState, verdict: dict, info: dict, body: str, used: list[str]) -> dict | None:
         """받쳐지지 않는 주장이 있으면 판정 사유를 주고 답을 한 번 다시 쓴다. 문장 빼기보다 먼저 한다. 빼면 틀린 말이 섞인 핵심 문장까지 사라져 질문에 답하지 못하는 말이 남을 수 있다.
@@ -1381,7 +1433,10 @@ def build_graph(
                 reason, detail = verdict["code"], verdict["detail"]
                 revised = None
                 if reason == G.UNSUPPORTED:
+                    ahead_key = revise_ahead(state, cited, verdict, body)  # RA: 켜져 있을 때만 문장 빼기 재확인을 다시 쓰기와 동시에 시작한다
                     revised = redraft_answer(state, verdict, info, body, used)
+                    if revised is not None:
+                        drop_ahead(ahead_key)
                     if revised is None and verdict["claims"]:
                         revised = revise_answer(state, cited, verdict, info, body, used)
                     if revised is not None:

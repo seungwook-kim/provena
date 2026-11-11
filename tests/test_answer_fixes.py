@@ -80,6 +80,37 @@ def test_expand_ignores_the_head_copied_from_the_cited_chunk():
     assert [c["chunk_id"] for c in out] == [A, C]
 
 
+def test_expand_skips_a_short_matching_line_inside_a_long_chunk_of_another_page():
+    """값과 단위 단어만 같은 다른 팀 절의 긴 청크는, 값이 든 줄 하나의 겹침이 넘어도 청크 전체 겹침이 모자라 더하지 않는다(운영 v2 8번)."""
+    cited = [ch(A, "The review-response SLO for merge requests authored by team members is 2 business days. "
+                   "Reviewers should notify the author within 36 hours if they cannot review.")]
+    long_other = ch(B, "\n".join([
+        "The usual code-review turnaround is two business days.",
+        "The release manager schedules the production window for every release candidate.",
+        "Approval from the platform owner is required before the release branch is merged.",
+        "Hotfix releases follow the emergency procedure and need a post-release summary.",
+        "Rollback plans are attached to the deployment ticket by the release engineer.",
+        "Deployment freezes are announced by the operations group at the start of a quarter.",
+    ]), title="Release", head="Release & Deploy > Merge Requests")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], long_other])
+    assert out == cited
+    assert F.pick_extra(cited, [cited[0], long_other]) == []
+
+
+def test_expand_skips_a_table_line_with_the_same_value_but_another_subject_in_a_long_chunk():
+    """표 줄에서 값(30 days)만 같고 대상이 다른 줄이 든 다른 페이지 청크는 더하지 않는다. 같은 대상의 짧은 청크는 그대로 더한다."""
+    cited = [ch(A, "Vulnerability SLO: critical findings are remediated within 30 days of the case investigation start.")]
+    other_table = ch(B, "\n".join([
+        "Phase: Pre-Release | Activity: Security review of the design | Target: before code freeze",
+        "Phase: Release | Activity: Sign off by the release manager | Target: release day",
+        "Phase: Post-Release | Activity: Monitoring review | Target: 30 days from release",
+        "Phase: Retirement | Activity: Archive artifacts and notify customers | Target: end of life",
+    ]), title="Secure Development", head="Secure Development > Release Phases")
+    same_fact = ch(C, "Critical findings are remediated within 30 days of the case investigation start for every product.", title="PSIRT")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], other_table, same_fact])
+    assert [c["chunk_id"] for c in out] == [A, C]
+
+
 def test_expand_numbered_continues_the_numbers():
     body = "Merge requests should receive a review response within 2 business days for team members."
     cited = [ch(A, "Incidents are paged within 15 minutes by the on-call engineer."), ch(B, body)]
@@ -337,6 +368,60 @@ def test_pick_best2_absence_rule_leaves_other_cases_alone():
     assert F.pick_best2(absent, dict(absent), [A])[1]["why"] == "동점, 첫 후보"       # 둘 다 없다는 말
     assert F.pick_best2(absent, uncited, [A])[1]["why"] == "S 안 인용 청크 수"        # 다른 쪽에 인용이 없으면 기존 규칙
     assert F.pick_best2(a1, a2, [A])[1]["why"] == "S 밖 인용 수"                      # 둘 다 답이면 기존 규칙
+
+
+# ---- 인용 더하기 문턱(0.3) 경계 사례 고정 (사용자 결정 23 ④, 동작 불변) ----
+# 운영 기록에서 정답 추가 인용 둘이 문턱을 0.002~0.004 차이로 넘는다: v2 36번(청크 전체 겹침 0.304), 검증 101번(0.302).
+# 아래 시험은 같은 값 근처의 합성 청크로 문턱 양쪽을 고정한다. 토큰화나 문턱을 건드리는 수정이 이 둘을 놓치지 않게 한다.
+
+def _boundary_case(shared: int, unique: int) -> tuple[list[dict], dict, float]:
+    """인용 청크 하나와 후보 하나. 후보의 값 줄은 인용 청크의 값 줄과 단어가 모두 같고(줄 겹침 1.0),
+    후보에 값 없는 줄이 하나 더 있어 청크 전체 겹침 = (2 + shared) / (2 + shared + unique)가 된다(2 = 값 "30"과 단위 "days")."""
+    words = " ".join(f"zq{i:03d}" for i in range(shared))
+    extra = " ".join(f"zu{i:03d}" for i in range(unique))
+    cited = [ch(A, f"30 days {words}")]
+    cand = ch(B, f"30 days {words}\n{extra}", title="Other page")
+    whole = len(F._tokens(F._body(cand)) & F._tokens(F._body(cited[0]))) / len(F._tokens(F._body(cand)))
+    return cited, cand, whole
+
+
+@pytest.mark.parametrize("shared, unique, whole_milli, added", [
+    (5, 16, 304, True),     # 7/23 = 0.3043: 운영 v2 36번의 정답 추가 인용과 같은 자리(0.304)
+    (5, 17, 292, False),    # 7/24 = 0.2917: 같은 줄 겹침이어도 청크 전체 겹침이 모자라면 더하지 않는다
+    (11, 30, 302, True),    # 13/43 = 0.3023: 운영 검증 101번의 정답 추가 인용과 같은 자리(0.302)
+    (11, 31, 295, False),   # 13/44 = 0.2955
+    (4, 14, 300, True),     # 6/20 = 0.3 정확히 문턱: 이상이면 더한다
+    (4, 15, 286, False),    # 6/21 = 0.2857
+])
+def test_pick_extra_whole_chunk_overlap_boundary(shared, unique, whole_milli, added):
+    cited, cand, whole = _boundary_case(shared, unique)
+    assert F.MIN_OVERLAP == 0.3 and round(whole * 1000) == whole_milli
+    got = F.pick_extra(cited, [cited[0], cand])
+    assert [(c["chunk_id"], i) for c, i in got] == ([(B, 0)] if added else [])
+    # 줄 겹침은 모두 같아야 하므로 후보의 값 줄만 보면 둘 다 넘는다(청크 전체 겹침이 가르는 경계다)
+    assert F._value_lines(F._own_body(cand, cited), F.value_keys(F._body(cited[0])))[0][1] == F._tokens(f"30 days {' '.join(f'zq{i:03d}' for i in range(shared))}")
+
+
+@pytest.mark.parametrize("shared, unique, added", [
+    (1, 7, True),     # 후보 값 줄 단어 10개(30, days, 공통 1, 고유 7) 중 3개가 인용 줄과 같다 = 0.3 정확히 문턱
+    (1, 8, False),    # 3/11 = 0.2727
+])
+def test_pick_extra_value_line_overlap_boundary(shared, unique, added):
+    """값 줄끼리의 겹침 문턱. 후보는 한 줄이라 청크 전체 겹침도 같은 값이다."""
+    common = " ".join(f"zq{i:03d}" for i in range(shared))
+    cited = [ch(A, f"30 days {common} " + " ".join(f"zc{i:03d}" for i in range(40)))]
+    cand = ch(B, f"30 days {common} " + " ".join(f"zo{i:03d}" for i in range(unique)), title="Other page")
+    assert len(F._tokens(F._body(cand))) == 2 + shared + unique
+    got = F.pick_extra(cited, [cited[0], cand])
+    assert [c["chunk_id"] for c, _ in got] == ([B] if added else [])
+
+
+def test_pick_extra_boundary_behavior_is_unchanged_for_caps_and_repeats():
+    """경계에서 더해진 청크도 인용 합계 cap과 MAX_ADD, 이미 인용한 청크 건너뛰기를 그대로 따른다."""
+    cited, cand, _ = _boundary_case(5, 16)
+    assert F.pick_extra(cited, [cited[0], cand], cap=1) == []
+    assert F.pick_extra(cited, [cited[0], cand, cand]) == F.pick_extra(cited, [cited[0], cand])     # 같은 청크를 두 번 더하지 않는다
+    assert F.expand_citations(f"x [{A}]", cited, [cited[0], cand])[0] == f"x [{A}][{B}]"
 
 
 def test_unknown_name_message_does_not_echo_urls_sql_or_long_text():

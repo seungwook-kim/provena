@@ -56,9 +56,42 @@ def expected_env() -> dict[str, str]:
     return env
 
 
+# 사전 등록 62.40 속도 묶음 중 서비스 값으로 올린 셋(측정 실행기 인자에는 없다. 서비스 경로만)
+SPEED_6240 = {"ANSWER_STORE_REUSE_CONN": "1", "GRAPH_REVISE_AHEAD": "1", "LLM_DEADLINE_BY_TASK": "judge=12"}
+# 사전 등록 62.16 그래프 밖 왕복 줄이기 둘(서비스 경로만, 측정 실행기 인자에는 없다)
+GRAPH_OUTSIDE_6216 = {"CHAT_FINAL_FROM_STREAM": "1", "ANSWER_SAVE_ONE_CONN": "1"}
+# 사전 등록 62.14 검색 hedge: 운영 Cloud Run 값(SEARCH_HEDGE=1, SEARCH_HEDGE_S=1.5, 2026-11-11 확인)을 서비스 값으로(사용자 결정 11/11 26). 측정 실행기 인자에는 없다
+SEARCH_HEDGE_6214 = {"SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
+
+
+def test_62_40_speed_values_are_service_defaults_and_retry_fast_is_not():
+    assert {k: SP.SERVICE_ENV.get(k) for k in SPEED_6240} == SPEED_6240
+    assert SP.SERVICE_ENV["GRAPH_SPECULATE_GROUND"] == "1"          # GRAPH_REVISE_AHEAD가 쓰는 앞선 근거 확인
+    assert "GRAPH_JUDGE_RETRY_FAST" not in SP.SERVICE_ENV and "GRAPH_JUDGE_RETRY_FAST" in SP.CANDIDATE_ENV   # 추론 끔은 기본 꺼짐
+    assert "EVAL_REVIEW_SINGLE" not in SP.SERVICE_ENV and "EVAL_REVIEW_SINGLE" not in SP.CANDIDATE_ENV      # 평가용 단일 모드는 배포 때 따로 켠다
+    assert not set(SPEED_6240) & set(SP.CANDIDATE_ENV)
+    assert {k: SP.SERVICE_ENV.get(k) for k in GRAPH_OUTSIDE_6216} == GRAPH_OUTSIDE_6216 and not set(GRAPH_OUTSIDE_6216) & set(SP.CANDIDATE_ENV)   # 사용자 결정 11/11 19: 후보에서 서비스 값으로
+    assert {k: SP.SERVICE_ENV.get(k) for k in SEARCH_HEDGE_6214} == SEARCH_HEDGE_6214 and not set(SEARCH_HEDGE_6214) & set(SP.CANDIDATE_ENV)   # 사용자 결정 11/11 26
+
+
+def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(monkeypatch):
+    from backend.rag.retrieve import hedge
+
+    monkeypatch.delenv("SEARCH_HEDGE", raising=False)
+    monkeypatch.delenv("SEARCH_HEDGE_S", raising=False)
+    assert hedge.enabled() is False                                    # 서비스 값을 채우기 전(코드 기본)은 꺼짐
+    env: dict = {}
+    SP.apply_service_profile(env)
+    assert (env["SEARCH_HEDGE"], env["SEARCH_HEDGE_S"]) == ("1", "1.5")
+    assert hedge.enabled(env) is True and hedge.hedge_seconds(env) == 1.5
+    given: dict = {"SEARCH_HEDGE": "", "SEARCH_HEDGE_S": "2.5"}
+    SP.apply_service_profile(given)                                    # 값을 직접 준 변수는 그대로(빈 값은 서비스 값, 준 값은 유지)
+    assert given["SEARCH_HEDGE_S"] == "2.5"
+
+
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS")}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214)}
     assert have == want
     assert SP.SERVICE_ENV["SEARCH_HNSW"] == "1"  # 측정 환경 변수
     # openrouter 공급자는 같은 수준을 LLM_REASONING*로 읽는다
@@ -88,7 +121,8 @@ def test_values_are_valid_for_the_readers(clean_env):
     assert llm.reasoning_by_task() == {"decompose": "low", "answer": "low", "judge": "low"}
     assert llm._openrouter_extra_body() == {"reasoning": {"effort": "none"}}
     assert llm._client_options() == {"max_retries": 2}
-    assert llm.deadline_skip_tasks() == ("decision_draft", "supervisor", "team_*")
+    assert llm.deadline_skip_tasks() == ("decision_draft", "supervisor", "team_*", "single")
+    assert llm.deadline_by_task() == {"judge": 12.0}
 
 
 def test_deadline_skip_tasks_cover_only_long_calls_outside_the_question_graph():
@@ -103,6 +137,9 @@ def test_deadline_skip_tasks_cover_only_long_calls_outside_the_question_graph():
     skip = tuple(SP.SERVICE_ENV["LLM_DEADLINE_SKIP_TASKS"].split(","))
     long_calls = [convert.DRAFT_SYSTEM, teams.SUPERVISOR_SYSTEM, *(teams.team_system(t, "") for t in teams.TEAMS)]
     assert len(long_calls) >= 3 and all(task_matches(_TASK_MARK.search(s).group(1), skip) for s in long_calls)
+    from backend.graph.departments import single_review
+
+    assert task_matches(_TASK_MARK.search(single_review.SINGLE_SYSTEM).group(1), skip)   # 평가용 단일 검토자도 팀과 같은 조건(시간 상한·hedge 없음)
     question = [P.TASK_CLASSIFY, P.TASK_REWRITE, P.TASK_JUDGE, P.TASK_ANSWER, "answer_fast", P.TASK_GROUNDING, P.TASK_SUPERVISOR_ROUTE,
                 P.TASK_JUDGE_ANSWER, decompose.TASK, decompose.GATE_TASK, TASK_PARAMS]
     assert not [t for t in question if task_matches(t, skip)]

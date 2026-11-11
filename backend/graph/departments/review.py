@@ -43,7 +43,6 @@ from backend.graph.parsing import parse_json_obj
 from backend.prompts import question as P
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
-from backend.schemas.chunk import DEFAULT_K
 from backend.services.llm import get_chat_model
 
 log = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ TEAM_ATTEMPTS = 3  # 팀 하나의 시도 상한(첫 시도 포함). 모델 호�
 TEAM_RETRY_WAIT_SECONDS = 1.0  # 일시 오류 뒤 다시 시도하기 전에 기다리는 시간
 TEAM_ACTIONS = ("retry", "mark_unreviewed")  # 재시도 상한까지 실패한 팀을 두고 사람이 고르는 것
 RETRY_NOTE = "\n\n[다시 요청] 직전 응답을 쓸 수 없었다. JSON 한 개만 출력하고, 쟁점의 chunk_id는 위 자료 머리말에 있는 값만 그대로 쓴다. 자료가 받쳐 주지 않는 쟁점은 내지 않는다."
-SEARCH_K = DEFAULT_K  # 팀마다 한 번 검색한다(재검색 없음)
+SEARCH_K = 10  # 팀마다 검색 한 번, 하위 질문 둘(요청 + 보조어, 팀 보조어)을 번갈아 합쳐 10개(재검색 없음, 사전 등록 62.41)
 MSG_NO_ISSUES = "쟁점 없음: 네 팀 모두 이 요청에서 쟁점을 찾지 못했습니다."
 MSG_SAVED = "승인되어 쟁점표를 저장했습니다."
 MSG_REJECTED = "반려되어 쟁점표를 저장하지 않았습니다."
@@ -177,7 +176,7 @@ def build_review_graph(
     def review_team(team: T.Team, state: ReviewState) -> dict:
         request = state["question"].strip()
         skill_body = T.team_skills(team, enabled=use_skills)  # 설정 오류는 다시 해도 같다. 바깥에서 "검토하지 못함"이 된다
-        query = SearchQuery(query=T.search_text(team, request), org=team.org, as_of=state.get("as_of"), k=SEARCH_K)
+        query = SearchQuery(query=T.search_text(team, request), sub_queries=T.search_subs(team, request), org=team.org, as_of=state.get("as_of"), k=SEARCH_K)
         found: list[dict] | None = None  # 검색이 한 번 되면 그 결과로 모델만 다시 돌린다. 인용 검사도 같은 자료와 맞댄다
         failure: dict = {}
         note = ""
