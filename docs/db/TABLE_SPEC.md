@@ -89,6 +89,7 @@
 | `db/manual/109_retire_old.sql` | 2단계. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 옮기고 옛 표 3개의 이름을 `_old_20261110`으로 바꾼다 |
 | `db/110_issue_tables.sql` | `issue_tables` |
 | `db/111_threads.sql` | `threads` |
+| `db/112_approval_resume_log.sql` | 새 표를 만들지 않는다. `approvals`에 칸 4개(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`)를 더한다. 승인 결정이 그래프를 재개한 횟수와 같은 결정의 재전송이 무시된 횟수를 `GET /approvals/{approval_id}`로 읽는다. 적용 전에도 앱은 동작하고 재개 기록만 남지 않는다 |
 | `db/120_answers_recall.sql` | `answers`, `citations`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_digests`, `change_monitoring` |
 | `db/201_search.sql` | `docs`, `versions`, `chunks`, `index_meta`, `query_translations` |
 | `db/202_sync.sql` | `sync_runs`, `changed_articles` |

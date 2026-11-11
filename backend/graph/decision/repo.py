@@ -51,6 +51,24 @@ class ApprovalRecord(BaseModel):
     decided_by: str | None = None
     comment: str = ""
     decided_at: datetime | None = None
+    # 그래프 재개 기록(`record_resume`). 결정이 몇 번 그래프를 실제로 돌렸는지와 같은 결정의 재전송이 몇 번 무시됐는지를 API로 읽는다.
+    resume_count: int = 0
+    duplicate_ignored_count: int = 0
+    last_resumed_at: datetime | None = None
+    last_resume_result: str | None = None
+
+
+RESUME_RESULTS = ("resumed", "resume_failed", "rejected_value", "duplicate_ignored")
+"""재개 기록의 결과 값. `resumed` 그래프를 재개했고 끝까지 갔다, `resume_failed` 재개 도중 오류, `rejected_value` 그래프가 재개 값을 거절해 같은 승인 요청을 다시 올렸다,
+`duplicate_ignored` 이미 끝난 건의 같은 결정이라 그래프를 돌리지 않았다. 앞의 셋이 `resume_count`를, 마지막이 `duplicate_ignored_count`를 올린다."""
+
+
+def _bump_resume(rec: ApprovalRecord, result: str) -> ApprovalRecord:
+    if result not in RESUME_RESULTS:
+        raise DecisionError(f"알 수 없는 재개 결과: {result}")
+    if result == "duplicate_ignored":
+        return rec.model_copy(update={"duplicate_ignored_count": rec.duplicate_ignored_count + 1, "last_resume_result": result})
+    return rec.model_copy(update={"resume_count": rec.resume_count + 1, "last_resumed_at": datetime.now(timezone.utc), "last_resume_result": result})
 
 
 def team_resolution(rec: ApprovalRecord) -> str | None:
@@ -74,6 +92,7 @@ class DecisionRepo(Protocol):
     def queue_review_item(self, thread_id: str, approval_id: str, summary: str, kind: str = ISSUE_KIND) -> ApprovalRecord: ...
     def decide_review_item(self, approval_id: str, approve: bool, decided_by: str | None, comment: str = "",
                            table_id: str | None = None) -> ApprovalRecord: ...
+    def record_resume(self, approval_id: str, result: str) -> ApprovalRecord: ...
 
 
 def new_id(prefix: str) -> str:
@@ -186,6 +205,11 @@ class InMemoryDecisionRepo:
             self._approvals[approval_id] = rec.model_copy(update={
                 "status": "approved" if approve else "rejected", "decided_by": decided_by, "comment": comment,
                 "decided_at": datetime.now(timezone.utc), "target_id": table_id or rec.target_id})
+            return self._approvals[approval_id]
+
+    def record_resume(self, approval_id: str, result: str) -> ApprovalRecord:
+        with self._lock:
+            self._approvals[approval_id] = _bump_resume(self.get_approval(approval_id), result)
             return self._approvals[approval_id]
 
     def get_approval(self, approval_id: str) -> ApprovalRecord:
@@ -317,6 +341,20 @@ class PostgresDecisionRepo:
             cur.execute("UPDATE approvals SET status = %s, decided_by = %s, comment = %s, decided_at = now(), target_id = COALESCE(%s, target_id) "
                         "WHERE approval_id = %s RETURNING *", (want, decided_by, comment, table_id, approval_id))
             return ApprovalRecord(**cur.fetchone())
+
+    def record_resume(self, approval_id: str, result: str) -> ApprovalRecord:
+        """재개 기록을 한 문장으로 올린다(읽고 쓰는 사이에 다른 요청이 끼지 않는다). 칸은 `db/112_approval_resume_log.sql`이 만든다."""
+        if result not in RESUME_RESULTS:
+            raise DecisionError(f"알 수 없는 재개 결과: {result}")
+        if result == "duplicate_ignored":
+            sql = "UPDATE approvals SET duplicate_ignored_count = duplicate_ignored_count + 1, last_resume_result = %s WHERE approval_id = %s RETURNING *"
+        else:
+            sql = ("UPDATE approvals SET resume_count = resume_count + 1, last_resumed_at = now(), last_resume_result = %s "
+                   "WHERE approval_id = %s RETURNING *")
+        rows = self._rows(sql, (result, approval_id))
+        if not rows:
+            raise NotFound("승인 건이 없다")
+        return ApprovalRecord(**rows[0])
 
     def get_approval(self, approval_id: str) -> ApprovalRecord:
         rows = self._rows("SELECT * FROM approvals WHERE approval_id = %s", (approval_id,))

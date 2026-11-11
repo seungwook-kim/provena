@@ -152,3 +152,27 @@ def test_rejected_review_frees_the_thread(monkeypatch):
         assert env.app.state.issue_store.tables == {}
         r, _ = ask(env.client(env.alice), Q, "rv", as_of="2025-06-01")
         assert r.status_code == 200
+
+
+def test_concurrent_same_approval_resume_log_shows_one_resume(monkeypatch):
+    """같은 건에 동시 결정 2번: 재개는 1회이고, 나머지 한 번은 재전송으로 무시된 것이 API(`GET /approvals/{id}`)로 읽힌다."""
+    for _ in range(5):
+        with review_env(monkeypatch) as env:
+            aid = start_review(env)
+            resumes, gate, codes = count_resumes(env), threading.Barrier(2), []
+
+            def send(c):
+                gate.wait()
+                codes.append(c.post(f"/approvals/{aid}", json={"approve": True, "comment": "확인함"}).status_code)
+
+            workers = [threading.Thread(target=send, args=(env.client(env.admin),)) for _ in range(2)]
+            for w in workers:
+                w.start()
+            for w in workers:
+                w.join(timeout=30)
+            got = env.client(env.admin).get(f"/approvals/{aid}")
+            assert sorted(codes) == [200, 200] and got.status_code == 200, got.text
+            log = got.json()
+            assert len(resumes) == 1 and log["resume_count"] == 1 and log["duplicate_ignored_count"] == 1
+            assert log["last_resume_result"] == "duplicate_ignored" and log["last_resumed_at"] and log["status"] == "approved"
+            assert env.client(env.alice).get(f"/approvals/{aid}").status_code == 403                  # 관리자만 읽는다

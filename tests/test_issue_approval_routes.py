@@ -84,9 +84,9 @@ class Parent(TypedDict, total=False):
 
 
 class Ctx:
-    def __init__(self, *, wrap_store=None, wrap_repo=None, subgraph: bool = False, llm=None, saver=None, repo=None, store=None):
+    def __init__(self, *, wrap_store=None, wrap_repo=None, subgraph: bool = False, llm=None, saver=None, repo=None, store=None, admin=None):
         self.secret = secrets.token_urlsafe(32)
-        self.admin = AuthUser(user_id=uuid4(), login_id="admin", password_hash="x", role="admin")
+        self.admin = admin or AuthUser(user_id=uuid4(), login_id="admin", password_hash="x", role="admin")   # 재시작 뒤에도 같은 관리자가 같은 결정을 다시 보내려면 넘긴다
         self.user = AuthUser(user_id=uuid4(), login_id="user", password_hash="x", role="user")
         self.repo = repo if repo is not None else InMemoryDecisionRepo()
         self.store = store if store is not None else InMemoryIssueTableStore()
@@ -812,3 +812,178 @@ def test_new_review_while_a_team_failure_waits_closes_it():
     new = ctx.pending_id()
     assert new != old and ctx.repo.get_approval(old).comment == SUPERSEDED_COMMENT
     assert [x["kind"] for x in ctx.client(ctx.admin).get("/approvals").json()] == [ISSUE_KIND]
+
+
+# --- 그래프 재개 기록 (강사 코멘트 11/11 ③: 재개 횟수를 API로 볼 수 없다) ------------------------------------
+
+def resume_log(ctx, aid: str) -> dict:
+    r = ctx.client(ctx.admin).get(f"/approvals/{aid}")
+    assert r.status_code == 200, r.text
+    b = r.json()
+    return {k: b[k] for k in ("resume_count", "duplicate_ignored_count", "last_resume_result")} | {"has_time": b["last_resumed_at"] is not None}
+
+
+def test_resume_log_counts_one_resume_and_ignores_the_resend(ctx):
+    aid = ctx.pending_id()
+    assert ctx.client(ctx.admin).get("/approvals").json()[0]["resume_count"] == 0                     # 승인 대기 중에는 재개한 적이 없다
+    assert resume_log(ctx, aid) == {"resume_count": 0, "duplicate_ignored_count": 0, "last_resume_result": None, "has_time": False}
+    first = ctx.post(aid, approve=True)
+    assert resume_log(ctx, aid) == {"resume_count": 1, "duplicate_ignored_count": 0, "last_resume_result": "resumed", "has_time": True}
+    assert ctx.post(aid, approve=True).json() == first.json()                                         # 결정 응답은 재전송에도 그대로
+    assert resume_log(ctx, aid) == {"resume_count": 1, "duplicate_ignored_count": 1, "last_resume_result": "duplicate_ignored", "has_time": True}
+    assert ctx.post(aid, approve=False).status_code == 409                                            # 다른 결정은 거절이지 재전송이 아니다
+    assert resume_log(ctx, aid)["resume_count"] == 1 and resume_log(ctx, aid)["duplicate_ignored_count"] == 1
+    got = ctx.client(ctx.admin).get(f"/approvals/{aid}").json()
+    assert got["status"] == "approved" and got["decided_by"] == str(ctx.admin.user_id) and got["kind"] == ISSUE_KIND and got["decided_at"]
+
+
+def test_resume_log_endpoint_is_admin_only_and_404_for_unknown(ctx):
+    aid = ctx.pending_id()
+    assert ctx.client(None).get(f"/approvals/{aid}").status_code == 401
+    assert ctx.client(ctx.user).get(f"/approvals/{aid}").status_code == 403
+    assert ctx.client(ctx.admin).get("/approvals/없는번호").status_code == 404
+
+
+def test_resume_log_marks_failed_resume_then_resumed():
+    ctx = Ctx(wrap_store=lambda s: FailingOnce(s, "save"))
+    aid = ctx.pending_id()
+    assert ctx.post(aid, approve=True).status_code == 503
+    assert resume_log(ctx, aid) == {"resume_count": 1, "duplicate_ignored_count": 0, "last_resume_result": "resume_failed", "has_time": True}   # 저장 노드가 오류를 내 그래프가 끝까지 가지 못했다
+    assert ctx.post(aid, approve=True).status_code == 200
+    assert resume_log(ctx, aid)["resume_count"] == 2 and resume_log(ctx, aid)["last_resume_result"] == "resumed"
+
+
+def test_resume_log_marks_a_graph_error_as_resume_failed():
+    class Boom(Exception):
+        pass
+
+    ctx = Ctx()
+    aid = ctx.pending_id()
+    real = ctx.graph.invoke
+
+    def broken(inp, *a, **k):
+        if isinstance(inp, Command):
+            raise Boom("그래프 오류")
+        return real(inp, *a, **k)
+
+    ctx.graph.invoke = broken
+    assert ctx.post(aid, approve=True).status_code == 503
+    assert resume_log(ctx, aid) == {"resume_count": 1, "duplicate_ignored_count": 0, "last_resume_result": "resume_failed", "has_time": True}
+
+
+def test_resume_log_marks_a_rejected_resume_value():
+    ctx = Ctx(llm=bad_infra())
+    aid = ctx.pending_id()
+    assert ctx.post(aid, action="다른 값").status_code == 400
+    assert resume_log(ctx, aid)["last_resume_result"] == "rejected_value"
+    assert ctx.post(aid, action="mark_unreviewed").status_code == 200
+    assert resume_log(ctx, aid)["resume_count"] == 2 and resume_log(ctx, aid)["last_resume_result"] == "resumed"
+
+
+def test_resume_log_failure_does_not_block_the_decision(ctx):
+    aid = ctx.pending_id()
+    ctx.app.state.decision_repo = FailingOnce(ctx.repo, "record_resume", times=5)
+    r = ctx.post(aid, approve=True)
+    assert r.status_code == 200 and r.json()["status"] == "approved" and ctx.repo.get_approval(aid).resume_count == 0
+    assert "secret-password" not in r.text
+
+
+def test_in_memory_repo_resume_log_rules():
+    repo = InMemoryDecisionRepo()
+    rec = repo.queue_review_item("t", "ap", "s")
+    assert (rec.resume_count, rec.duplicate_ignored_count, rec.last_resumed_at, rec.last_resume_result) == (0, 0, None, None)
+    repo.record_resume("ap", "resume_failed")
+    repo.record_resume("ap", "resumed")
+    at = repo.get_approval("ap").last_resumed_at
+    out = repo.record_resume("ap", "duplicate_ignored")
+    assert (out.resume_count, out.duplicate_ignored_count, out.last_resume_result, out.last_resumed_at) == (2, 1, "duplicate_ignored", at)   # 재전송은 시각을 바꾸지 않는다
+    with pytest.raises(DecisionError):
+        repo.record_resume("ap", "아무거나")
+    from backend.graph.decision.rules import NotFound
+
+    with pytest.raises(NotFound):
+        repo.record_resume("없음", "resumed")
+
+
+def test_postgres_repo_resume_log_statements():
+    pool = FakePool([[row(resume_count=1, last_resume_result="resumed")], [row(duplicate_ignored_count=1, last_resume_result="duplicate_ignored")]])
+    repo = PostgresDecisionRepo(pool)
+    a = repo.record_resume("ap", "resumed")
+    b = repo.record_resume("ap", "duplicate_ignored")
+    assert a.resume_count == 1 and b.duplicate_ignored_count == 1
+    (s1, args1), (s2, args2) = pool.log
+    assert "resume_count = resume_count + 1" in s1 and "last_resumed_at = now()" in s1 and args1 == ("resumed", "ap")      # 읽고 쓰는 사이 없이 한 문장
+    assert "duplicate_ignored_count = duplicate_ignored_count + 1" in s2 and "last_resumed_at" not in s2 and args2 == ("duplicate_ignored", "ap")
+    with pytest.raises(DecisionError):
+        repo.record_resume("ap", "아무거나")
+    with pytest.raises(Exception, match="승인 건이 없다"):
+        PostgresDecisionRepo(FakePool([[]])).record_resume("ap", "resumed")
+    assert ApprovalRecord(**row()).resume_count == 0       # 112 적용 전의 행(칸 없음)도 읽힌다
+
+
+def test_resume_log_sql_only_adds_columns_to_approvals():
+    sql = (ROOT / "db" / "112_approval_resume_log.sql").read_text(encoding="utf-8")
+    for col in ("resume_count", "duplicate_ignored_count", "last_resumed_at", "last_resume_result"):
+        assert f"ALTER TABLE approvals ADD COLUMN IF NOT EXISTS {col}" in sql
+    assert "CREATE TABLE" not in sql and "DROP " not in sql.upper().replace("-- ", "")   # 표를 새로 만들거나 지우지 않는다. 여러 번 실행해도 된다
+
+
+# --- 재시작 뒤 재개 (팀 실패 알림 경로). 체크포인터·승인 저장소만 서버 밖에 남고 그래프는 새로 만든다 ---------------
+
+TEAMS = ("security", "infra", "itops", "finance")
+
+
+@pytest.mark.parametrize("subgraph", [False, True], ids=["alone", "as_subgraph"])
+def test_restart_then_mark_unreviewed_continues_from_the_same_state(subgraph):
+    saver, repo, store = InMemorySaver(), InMemoryDecisionRepo(), InMemoryIssueTableStore()
+    before = Ctx(saver=saver, repo=repo, store=store, llm=bad_infra(), subgraph=subgraph)
+    aid = before.pending_id("restart")
+    assert before.repo.get_approval(aid).kind == TEAM_FAILED_KIND
+    (kept,) = before.client(before.admin).get("/approvals").json()
+    after = Ctx(saver=saver, repo=repo, store=store, llm=bad_infra(), subgraph=subgraph)         # 서버 재시작: 그래프를 새로 만든다
+    (again,) = after.client(after.admin).get("/approvals").json()
+    assert again["approval_id"] == aid and again["failed_teams"] == kept["failed_teams"] and again["summary"] == kept["summary"]   # 같은 상태가 보인다
+    r = after.post(aid, action="mark_unreviewed", comment="재시작 뒤 결정")
+    assert r.status_code == 200 and r.json()["resolution"] == "mark_unreviewed" and r.json()["next_approval"]["kind"] == ISSUE_KIND
+    assert all(after.llm.count(f"team_{t}") == 0 for t in TEAMS)                                  # 이미 돈 팀을 다시 돌리지 않는다
+    (issue,) = after.client(after.admin).get("/approvals").json()
+    assert [u["team"] for u in issue["issue_table"]["unreviewed"]] == ["infra"] and len(issue["issue_table"]["rows"]) == 3 and store.tables == {}
+    assert after.post(issue["approval_id"], approve=True).status_code == 200 and len(store.tables) == 1
+    assert repo.get_approval(aid).resume_count == 1 and repo.get_approval(aid).last_resume_result == "resumed"      # 재개는 한 번
+
+
+@pytest.mark.parametrize("subgraph", [False, True], ids=["alone", "as_subgraph"])
+def test_restart_between_decision_and_next_step_continues_without_rerunning_teams(subgraph):
+    """결정은 적혔지만 다음 단계에서 멈춘 채 서버가 다시 뜬다. 같은 결정을 다시 보내면 체크포인트의 같은 상태에서 이어 간다."""
+    class CostCapExceeded(Exception):
+        pass
+
+    n = {"i": 0}
+
+    def infra(user):
+        from team_review_fakes import issue_for
+
+        n["i"] += 1
+        if n["i"] <= TEAM_ATTEMPTS:
+            return "이건 JSON이 아님"
+        if n["i"] == TEAM_ATTEMPTS + 1:
+            raise CostCapExceeded("상한")
+        return issue_for(user, topic="oncall-impact", text="호출 경로 반영이 필요하다.")
+
+    saver, repo, store = InMemorySaver(), InMemoryDecisionRepo(), InMemoryIssueTableStore()
+    before = Ctx(saver=saver, repo=repo, store=store, llm=review_llm(team_infra=infra), subgraph=subgraph)
+    aid = before.pending_id("restart")
+    assert before.post(aid, action="retry").status_code == 503 and repo.get_approval(aid).status == "approved"
+    assert before.llm.count("team_security") == 1
+    after = Ctx(saver=saver, repo=repo, store=store, llm=review_llm(team_infra=fixed_after(0)), subgraph=subgraph, admin=before.admin)
+    ok = after.post(aid, action="retry")
+    assert ok.status_code == 200 and ok.json()["resolution"] == "retry" and ok.json()["next_approval"]["kind"] == ISSUE_KIND, ok.text
+    assert after.llm.count("team_infra") == 1 and all(after.llm.count(f"team_{t}") == 0 for t in ("security", "itops", "finance"))
+    (issue,) = after.client(after.admin).get("/approvals").json()
+    assert issue["approval_id"] == ok.json()["next_approval"]["approval_id"] and [r["team"] for r in issue["issue_table"]["rows"]] == list(TEAMS)
+    assert repo.get_approval(issue["approval_id"]).status == "pending" and store.tables == {} and store.rejections == {}   # 앞 결정의 재개 값이 쟁점표를 반려로 끝내지 않는다
+    log = resume_log(after, aid)
+    assert log["resume_count"] == 2 and log["last_resume_result"] == "resumed" and log["duplicate_ignored_count"] == 0   # 실패한 한 번과 이어 간 한 번
+    again = after.post(aid, action="retry")
+    assert again.status_code == 200 and after.llm.count("team_infra") == 1                          # 끝난 뒤 재전송은 아무것도 다시 돌리지 않는다
+    assert resume_log(after, aid)["resume_count"] == 2 and resume_log(after, aid)["duplicate_ignored_count"] == 1

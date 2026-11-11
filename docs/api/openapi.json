@@ -25,6 +25,29 @@
             "title": "Created At",
             "type": "string"
           },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
           "draft": {
             "anyOf": [
               {
@@ -39,6 +62,11 @@
               }
             ],
             "title": "Draft"
+          },
+          "duplicate_ignored_count": {
+            "default": 0,
+            "title": "Duplicate Ignored Count",
+            "type": "integer"
           },
           "failed_teams": {
             "anyOf": [
@@ -71,6 +99,29 @@
             "title": "Kind",
             "type": "string"
           },
+          "last_resume_result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resume Result"
+          },
+          "last_resumed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resumed At"
+          },
           "rejected_resume": {
             "anyOf": [
               {
@@ -93,10 +144,26 @@
             ],
             "title": "Resolution"
           },
+          "resume_count": {
+            "default": 0,
+            "title": "Resume Count",
+            "type": "integer"
+          },
           "save_failed": {
             "default": false,
             "title": "Save Failed",
             "type": "boolean"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           },
           "summary": {
             "title": "Summary",
@@ -1546,6 +1613,44 @@
       }
     },
     "/approvals/{approval_id}": {
+      "get": {
+        "description": "승인 건 하나의 상태와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`). 끝난 건도 읽는다.\n결정 응답은 같은 결정을 다시 보내도 같게 유지하므로 재개 횟수는 여기서 읽는다.",
+        "operationId": "get_approval_approvals__approval_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Approval"
+      },
       "post": {
         "operationId": "decide_approvals__approval_id__post",
         "parameters": [

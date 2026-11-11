@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from auth_test_support import MemoryRevocationStore
 from backend.auth import CSRF_COOKIE_NAME, create_auth_router
-from backend.services.auth_store import MemoryAuthStore
+from backend.services.auth_store import STALE_UNVERIFIED_SIGNUP_HOURS, MemoryAuthStore
 from backend.services.email_sender import (
     EmailDeliveryUnavailable,
     RecordingEmailSender,
@@ -128,19 +128,28 @@ def test_resend_failure_is_503_and_request_stays_resumable(monkeypatch):
     assert again.status_code == 200 and again.json()["status"] == "sent"
 
 
-# --- 미인증 신청 덮어쓰기(상세는 tests/test_signup_edges.py) --------------------------
+# --- 미인증 신청 만료 -------------------------------------------------------
 
-def test_unverified_request_is_overwritten_even_when_code_never_expired(monkeypatch):
+def test_unverified_request_past_expiry_plus_window_is_overwritten(monkeypatch):
     sender = RecordingEmailSender()
     client, store = build(monkeypatch, sender)
     assert signup(client, "squat@example.com").status_code == 201
     old_id = store._signup_requests["squat@example.com"]["request_id"]
-    store._signup_requests["squat@example.com"]["last_verification_sent_at"] = datetime.now(timezone.utc) - timedelta(hours=1)
-    again = client.post("/auth/signup", json={"login_id": "squat@example.com", "password": "other-pass-456",
-                                              "password_confirmation": "other-pass-456"}, headers=csrf(client))
+    store._signup_requests["squat@example.com"]["verification_expires_at"] = (
+        datetime.now(timezone.utc) - timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS, minutes=1))
+    again = client.post("/auth/signup", json={"login_id": "squat@example.com", "password": "other-pass-456",  # gitleaks:allow (가짜 비밀번호 시험 값)
+                                              "password_confirmation": "other-pass-456"}, headers=csrf(client))  # gitleaks:allow (가짜 비밀번호 시험 값)
     assert again.status_code == 201
-    assert store._signup_requests["squat@example.com"]["request_id"] == old_id  # 같은 행을 덮어쓴다
+    assert store._signup_requests["squat@example.com"]["request_id"] != old_id
     assert len(sender.deliveries) == 2
+
+
+def test_unverified_request_inside_window_still_conflicts(monkeypatch):
+    client, store = build(monkeypatch, RecordingEmailSender())
+    assert signup(client, "fresh@example.com").status_code == 201
+    store._signup_requests["fresh@example.com"]["verification_expires_at"] = (
+        datetime.now(timezone.utc) - timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS - 1))
+    assert signup(client, "fresh@example.com").status_code == 409
 
 
 def test_verified_or_reviewed_requests_are_never_overwritten(monkeypatch):
@@ -153,13 +162,14 @@ def test_verified_or_reviewed_requests_are_never_overwritten(monkeypatch):
     assert signup(client, "done@example.com").status_code == 409
 
 
-def test_request_without_any_code_is_overwritten(monkeypatch):
+def test_request_without_any_code_uses_requested_at(monkeypatch):
     client, store = build(monkeypatch, RecordingEmailSender())
     store.create_pending_user("nocode@example.com", "hash", email_verification_required=True)
+    store._signup_requests["nocode@example.com"]["requested_at"] = datetime.now(timezone.utc) - timedelta(hours=25)
     assert signup(client, "nocode@example.com").status_code == 201
 
 
-def test_postgres_store_overwrites_unverified_row_in_one_transaction():
+def test_postgres_store_deletes_stale_rows_before_insert_in_one_transaction():
     from backend.services.auth_store import PostgresAuthStore
 
     statements: list[tuple[str, tuple]] = []
@@ -176,22 +186,19 @@ def test_postgres_store_overwrites_unverified_row_in_one_transaction():
 
         def execute(self, sql, params=()):
             statements.append((" ".join(sql.split()), params))
-            text = statements[-1][0]
 
             class Result:
                 def fetchone(self_inner):
-                    # 계정은 없고, 인증 전 대기 신청 한 행이 있다
-                    return (7, True, None) if text.startswith("SELECT request_id") else None
+                    return None
             return Result()
 
-    result = PostgresAuthStore(connect=lambda: Conn()).create_pending_user("pg@example.com", "hash", email_verification_required=True)
-    assert result == "replaced"
+    PostgresAuthStore(connect=lambda: Conn()).create_pending_user("pg@example.com", "hash", email_verification_required=True)
     kinds = [s.split()[0] for s, _ in statements]
-    assert kinds == ["SELECT", "SELECT", "UPDATE"]
-    select_sql = statements[1][0]
-    assert "status = 'pending'" in select_sql and "FOR UPDATE" in select_sql
-    update_sql, params = statements[2]
-    assert "verification_code_hash = NULL" in update_sql and params == ("hash", 7)
+    assert kinds == ["SELECT", "DELETE", "INSERT"]
+    delete_sql, params = statements[1]
+    assert "status = 'pending'" in delete_sql and "email_verified_at IS NULL" in delete_sql
+    assert "COALESCE(verification_expires_at, requested_at)" in delete_sql
+    assert params == ("pg@example.com", STALE_UNVERIFIED_SIGNUP_HOURS)
 
 
 # --- 108 SQL, 명세 -----------------------------------------------------------

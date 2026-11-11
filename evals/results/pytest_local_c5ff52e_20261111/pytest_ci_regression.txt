@@ -1,0 +1,40 @@
+# pytest 평가 회귀 시험
+# 명령: python -m pytest tests/test_ci_compare.py tests/test_ci_workflows.py -v
+# 시작: 2026-11-11 09:44:53 +09:00
+# 끝: 2026-11-11 09:44:55 +09:00
+# python: Python 3.13.15
+# pytest: pytest 9.2.0
+# HEAD: c5ff52edde4821effd2243308f48f67a8097ad2d (main 기준, 작업 브랜치 d8-pytest-record, 커밋 없음)
+# 종료 코드: 0
+# 환경 변수 OPENROUTER_API_KEY, ANTHROPIC_API_KEY, VOYAGE_API_KEY, DATABASE_URL, LANGFUSE_* 는 이 프로세스에서 지우고 실행
+# 개인 경로는 <HOME>으로 가림
+------------------------------------------------------------------------
+============================= test session starts =============================
+platform win32 -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0 -- <HOME>\Desktop\학원\메인프로젝트\3.main_project\provena\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: <HOME>\AppData\Local\Temp\pv_d8_pytest
+configfile: pytest.ini
+plugins: anyio-4.15.1, langsmith-0.14.16, platformdirs-4.14.5
+collecting ... collected 19 items
+
+tests/test_ci_compare.py::test_passes_when_results_equal_the_baseline PASSED [  5%]
+tests/test_ci_compare.py::test_fails_below_the_spec_floor PASSED         [ 10%]
+tests/test_ci_compare.py::test_fails_when_a_metric_drops_below_the_baseline_even_above_the_floor PASSED [ 15%]
+tests/test_ci_compare.py::test_fails_when_a_lower_is_better_metric_rises PASSED [ 21%]
+tests/test_ci_compare.py::test_fails_when_p95_exceeds_the_spec_ceiling PASSED [ 26%]
+tests/test_ci_compare.py::test_result_with_an_old_dataset_hash_is_left_out_of_the_average PASSED [ 31%]
+tests/test_ci_compare.py::test_fails_when_every_result_of_an_arm_has_an_old_hash PASSED [ 36%]
+tests/test_ci_compare.py::test_fails_when_a_summary_file_is_missing PASSED [ 42%]
+tests/test_ci_compare.py::test_wrong_item_count_is_excluded PASSED       [ 47%]
+tests/test_ci_compare.py::test_writes_the_table_to_the_github_step_summary PASSED [ 52%]
+tests/test_ci_compare.py::test_committed_final_results_pass_against_the_committed_baseline PASSED [ 57%]
+tests/test_ci_workflows.py::test_workflow_parses[ci.yml] PASSED          [ 63%]
+tests/test_ci_workflows.py::test_workflow_parses[secret-scan.yml] PASSED [ 68%]
+tests/test_ci_workflows.py::test_workflow_parses[handbook-sync.yml] PASSED [ 73%]
+tests/test_ci_workflows.py::test_ci_runs_pytest_then_the_score_comparison_on_pull_requests PASSED [ 78%]
+tests/test_ci_workflows.py::test_ci_installs_from_an_existing_requirements_file_and_python_version_is_pinned PASSED [ 84%]
+tests/test_ci_workflows.py::test_ci_limits_token_and_cancels_superseded_runs PASSED [ 89%]
+tests/test_ci_workflows.py::test_secret_scan_checks_the_full_history_with_gitleaks PASSED [ 94%]
+tests/test_ci_workflows.py::test_handbook_sync_does_not_run_on_pull_requests PASSED [100%]
+
+============================= 19 passed in 0.68s ==============================
