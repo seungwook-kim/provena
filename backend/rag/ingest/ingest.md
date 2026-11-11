@@ -14,6 +14,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | F-10: `source.py`에 `DocumentSource` 추상화(SDD 3장). `HandbookGitSource`는 `handbook.py` 함수를 그대로 불러 감싸고, `DirectorySnapshotSource`는 폴더의 `.md`. `schedule.py`는 건드리지 않음. 시험 `tests/test_ingest_source.py`(구현체 출력 = handbook 출력) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `schedule.py`에 `monitoring_paused`를 더해 변경 감시가 멈춰 있으면 실행 자리(슬롯)를 차지하지 않고 `{"status": "noop", "reason": "paused"}`로 끝나게 했다. `snapshot_diff.py`(F-07, git 없이 두 시점 문서 묶음 비교, `--feed`로 `changed_articles`에 넣음)를 추가했다. 시험 `tests/test_snapshot_diff.py`, `tests/test_api_changes.py` | 미정 |
 | 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | 바뀐 섹션 목록 읽기 `changes.py`(`list_changed`, docs/specs/mcp.md How 2): `changed_articles` SELECT만, 실행 기록이 없으면 `LastRun=None`(not_ready), 쪽 통째 삭제는 `new_version_date`가 빈 칸이라 적은 날로 거름(EC-13). 시험 `tests/test_ingest_changes.py` 16개(DB 5개 포함), 상태 칸을 안 바꾸는지 표 지문으로 확인 | (이번 PR) |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | PDF 파싱 추가: `pdf.py`(`collect`로 고정 커밋 원본을 크기·sha256·git blob id 대조 후 `data/pdf/`에 둠, `run`으로 Docling(OCR 끔, `backend/requirements-ingest-pdf.txt`) 변환 → 요소 800개 → 청크 205개, PDF 7건). 원본 목록에 파일을 추가하면 같은 코드로 처리한다. `chunk.py`는 줄 번호가 없는 요소를 비운 채 청킹하도록 `line_span()`만 추가했고 기존 `chunks.jsonl` 해시는 그대로다. 산출물 `data/parsed/pdf_ir.jsonl`, `data/chunks/pdf_chunks.jsonl`은 평가 색인과 분리, 임베딩·DB 적재는 아직 하지 않음. 시험 `tests/test_ingest_pdf.py` 27건 | |
