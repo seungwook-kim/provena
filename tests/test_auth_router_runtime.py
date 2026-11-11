@@ -182,6 +182,7 @@ def test_rate_limit_and_validation_do_not_expose_password(auth_context):
         headers=headers,
     )
     assert response.status_code == 429
+    assert 1 <= int(response.headers["Retry-After"]) <= 60
 
     validation_app = FastAPI()
     validation_app.include_router(create_auth_router(store=_store, secret=secret, cookie_secure=False))

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { loadDraft, saveDraft } from '../lib/draft'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { createPreviewChatAdapter, PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
@@ -91,7 +92,18 @@ export default function DemoChatPage({ api = false }) {
   const [threads, setThreads] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('')
-  const [input, setInput] = useState('')
+  const draftUserId = useSession().user?.user_id
+  const draftOwner = useRef(draftUserId)
+  const [input, setInput] = useState(() => loadDraft(draftUserId))
+  useEffect(() => {
+    // 화면이 떠 있는 채로 계정이 바뀌면 앞 계정의 질문을 새 계정 이름으로 저장하지 않고 입력칸을 바꾼다(H-29).
+    if (draftOwner.current !== draftUserId) {
+      draftOwner.current = draftUserId
+      setInput(loadDraft(draftUserId))
+      return
+    }
+    saveDraft(draftUserId, input)
+  }, [draftUserId, input])
   const [selectedCitation, setSelectedCitation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)
@@ -241,11 +253,7 @@ export default function DemoChatPage({ api = false }) {
       {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
       <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
     </main>
-<<<<<<< HEAD
     <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation({ ...citation, messageIndex: panelMessageIndex })}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
-=======
-    <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation(citation)}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
->>>>>>> gap-account
   </div></div></DemoLayout>
 }
 

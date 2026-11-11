@@ -6,6 +6,7 @@ The caller supplies an AuthStore; PostgreSQL integration remains pending.
 
 from __future__ import annotations
 
+import math
 import os
 import secrets
 import hmac
@@ -607,6 +608,19 @@ class LoginRateLimiter:
             or len(self._failures_by_ip.get(client_ip, [])) >= self.max_ip_attempts
         )
 
+    def retry_after_seconds(self, login_id: str, client_ip: str) -> int:
+        """Seconds until the oldest failure of an exhausted bucket leaves the window (at least 1)."""
+
+        now = time.monotonic()
+        waits = []
+        for stamps, limit in (
+            (self._failures_by_login_id.get(login_id, []), self.max_attempts),
+            (self._failures_by_ip.get(client_ip, []), self.max_ip_attempts),
+        ):
+            if len(stamps) >= limit:
+                waits.append(self.window_seconds - (now - min(stamps)))
+        return max(1, math.ceil(max(waits))) if waits else 1
+
     def record_failure(self, login_id: str, client_ip: str) -> None:
         stamp = time.monotonic()
         self._prune_expired(stamp)
@@ -851,7 +865,13 @@ def create_auth_router(
         login_id = _normalise_signup_login(payload.login_id)  # 시도 제한 키와 신청 조회는 가입과 같은 규칙
         client_ip = _client_ip(request)
         if limiter.is_limited(login_id, client_ip):
-            raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+            retry_after = getattr(limiter, "retry_after_seconds", None)
+            wait = retry_after(login_id, client_ip) if callable(retry_after) else None
+            raise HTTPException(
+                status_code=429,
+                detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+                headers={"Retry-After": str(wait)} if wait else None,
+            )
         try:
             user = store.get_by_login_id(typed)
             if user is None and typed != login_id:

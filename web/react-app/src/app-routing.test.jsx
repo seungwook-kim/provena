@@ -38,3 +38,15 @@ describe('chat route adapter selection', () => {
     expect(window.location.pathname).toBe('/demo/chat')
   })
 })
+
+describe('unknown address (H-27)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('shows a 404 page instead of silently redirecting', async () => {
+    window.history.replaceState({}, '', '/no/such/page')
+    vi.stubGlobal('fetch', vi.fn(async () => json({}, 401)))
+    render(<App />)
+    await screen.findByRole('heading', { name: '페이지를 찾을 수 없습니다.' })
+    expect(window.location.pathname).toBe('/no/such/page')
+  })
+})
