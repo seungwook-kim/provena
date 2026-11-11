@@ -12,7 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 | 키 없는 데모(재생 모델)는 저장된 사용자 기억을 입력에 넣지 않음(`build.py`, K-18): 기억이 들어가면 녹화 키가 어긋나 녹화 질문도 거절됐다. 시험 추가. | 이번 PR |
+| 2026-11-11 | 박진형 (jinyeong-731) | 키 없는 데모(재생 모델)는 저장된 사용자 기억을 입력에 넣지 않음(`build.py`, K-18): 기억이 들어가면 녹화 키가 어긋나 녹화 질문도 거절됐다. 시험 추가. | 이번 PR |
 | 2026-11-11 | 박진형 (jinyeong-731) | K-18 보완: 서버는 모델을 `SharedChatModel`로 감싸 넘겨 재생 모델 판정이 늘 거짓이었다. 요청 때 감싼 안쪽 모델을 보게 고치고(`build.py`), 서버와 같은 감싼 형태의 시험 2개 추가. | 이번 PR |
 | 2026-11-10 | 김승욱 (Claude Code) | 신뢰 경계 경로별 보강(사전 등록 62.26): 재작성 입력의 이미 찾은 제목에 입력 정화, 재작성 검색어와 되묻기 문장에 출력 검사(`build.py` `rewrite_reply`, `give_up`), 청크 절 이름(org) 정화, 제목 꼬리 토막을 출력 검사 의심 절로 처리(`untrusted.py`), `sanitize_cell` 추가 | - |
 | 2026-11-10 | 김승욱 (Claude Code) | 근거 판정 단서 구제를 사유 out_of_period인 표에도 적용(운영 트레이스 bfd7bdbc, 1만 달러). 같은 단서 문장("현재 판의 값은 자료에서 확인할 수 없습니다")을 표마다 unsupported 또는 out_of_period로 달리 불러, 사유가 unsupported인 표에만 걸리던 `grounding.caveat_only_vote`가 out_of_period 표 둘에 걸리지 않아 2:1로 거절됐다. out_of_period 표도 꼽은 문장이 모두 단서 문장이고 답에 값 문장이 남아 있으며 질문 자체가 코드 규칙(`check_rules`의 기간 판정)으로 근거의 기간 밖이 아닐 때만 받쳐진 표로 센다(`build.py`가 인용·검색 청크를 `cited`, `retrieved`로 넘김). 질문이 기간 밖이거나 값 문장을 꼽은 표, 꼽은 문장 없이 NOTHING FOUND 요약만 있는 out_of_period 표는 그대로 거절이다. 시험 `tests/test_ground_caveat.py`(`test_other_reasons_are_not_affected` 기준 정정), `tests/test_ground_caveat_votes.py`(bfd7bdbc 재연) | 미정 |
