@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 로컬 시험·측정 값에 로컬·배포 미확인 표기(`SDD.md` Google 로그인 설명, `specs/106`·`incremental.md`, `pr-notes/PR-127·130`, 포트폴리오 인용 정확도 행). 문구만, 숫자 재측정 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11: `GATES.md` G7 칸의 '10장 미작성' 문구를 `EVAL_REPORT.md` 10장 작성 사실에 맞게 고침(O-47, 시연 영상 미작성은 그대로). 측정·호출 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | #127·#129·#130 기록 보강: ai_tools_log 추가, 폴더 md PR 칸 채움, PR별 작업 내역 md(docs/pr-notes/) 추가 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): `specs/107-email-signup-verification.md` 24시간 규칙 복구(S2), `specs/login.md` 113·114 전 DB 동작(S1), `specs/admin-roles.md` by-id 승인은 그 행만(M1). `specs/admin-roles.md` 이메일 최고 관리자 대소문자 무시(M3). `specs/login.md` AC-08 인증 전 로그인 안내, `api/openapi.json` 로그인 403 설명. `specs/107-email-signup-verification.md` 가입 201 응답 문구·code, openapi 가입 설명. `specs/login.md` AC-09 비이메일 아이디 대소문자. Google 연결 SQL 이름 203 → 114(`db/ERD.md`·`db/TABLE_SPEC.md`·`db/QUERY_INDEX.md`·`specs/login.md`·`specs/admin-roles.md`). | #127 |

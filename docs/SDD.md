@@ -293,7 +293,7 @@ flowchart TD
 | GET | `/auth/csrf` | 누구나 | CSRF 쿠키 발급(204). 로그인·가입·쓰기 요청의 `X-CSRF-Token` 값으로 쓴다 |
 | POST | `/auth/login` | 누구나, CSRF | 로그인 (방식은 11장). 대기·거절 가입 신청 계정은 로그인되지 않는다 |
 | POST | `/auth/signup` | 누구나, CSRF | 가입 신청 `{login_id, password, password_confirmation}` → 201. `users` 행은 만들지 않고 `signup_requests`에 `pending`으로 저장한다. 오류 409(이미 있는 아이디)·422·503 (`docs/specs/106-signup-approval.md`) |
-| GET | `/auth/google/start`, `/auth/google/callback` | 누구나 | Google 로그인(PKCE). 운영 배선에는 Google 사용자 저장소가 없어 503이다(`docs/specs/login.md`) |
+| GET | `/auth/google/start`, `/auth/google/callback` | 누구나 | Google 로그인(PKCE). 운영 동작 미확인. 코드상 Google 설정이나 114가 없으면 `/login?oauth_error=google_unavailable`로 이동한다(`docs/specs/login.md`) |
 | POST | `/auth/logout` | 로그인 | |
 | GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, login_id, profile_completed, is_owner}`(`login_id`는 화면 계정 메뉴 표시용). `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
 | GET, PUT | `/me/profile` | 로그인 (PUT은 CSRF) | 내 정보(이름 `name`, 부서 `dept`, 전화 `phone`, 주소 `address`, 칸마다 암호화 저장). GET은 전화번호를 가린 `{name, dept, phone_masked, address, updated_at}`(아직 없으면 404), `?view=edit`일 때만 원래 `phone`. PUT은 네 칸 전부를 받아 검사하고(틀리면 422 `{message, fields}`, 입력값은 되풀이하지 않음) GET과 같은 모양으로 답한다. 남의 내 정보를 주는 경로는 없다 (`backend/profile_api.py`, `db/104_user_profiles.sql`) |

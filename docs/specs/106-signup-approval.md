@@ -1,6 +1,6 @@
 # 가입 승인 (DB 106 `signup_requests`)
 
-상태: 구현·운영 반영됨(2026-11-11 코드 기준). 이 파일은 처음 DB 제안으로 시작했으나 지금은 가입 신청과 관리자 승인의 기능 spec이다. 관리자 쪽 권한·검사 순서는 `admin-roles.md`, 로그인 쪽은 `login.md`, 이메일 인증(PR #113)은 [107-email-signup-verification.md](./107-email-signup-verification.md)가 정한다.
+상태: 구현됨(2026-11-11 코드 기준). 운영 적용 상태는 `db/db.md`를 따른다(113·114 미적용). 이 파일은 처음 DB 제안으로 시작했으나 지금은 가입 신청과 관리자 승인의 기능 spec이다. 관리자 쪽 권한·검사 순서는 `admin-roles.md`, 로그인 쪽은 `login.md`, 이메일 인증(PR #113)은 [107-email-signup-verification.md](./107-email-signup-verification.md)가 정한다.
 
 ## Why
 
