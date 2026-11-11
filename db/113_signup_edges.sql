@@ -1,5 +1,5 @@
 -- 113_signup_edges.sql
--- 이메일 가입의 모서리 두 가지를 DB 쪽에서 맞춘다. 몇 번을 돌려도 같은 결과(멱등)이고 일반 Postgres에서도 돈다
+-- 이메일 가입의 모서리 세 가지를 DB 쪽에서 맞춘다. 몇 번을 돌려도 같은 결과(멱등)이고 일반 Postgres에서도 돈다
 -- (anon·authenticated 역할을 쓰지 않는다). 적용 순서: 106 -> 107 -> 108 -> 113 (docker initdb 는 이름 순서로 돌린다).
 --
 -- 1) 거절된 이메일도 다시 가입 신청할 수 있게 한다.
@@ -23,6 +23,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS signup_requests_login_id_open_unique
 CREATE UNIQUE INDEX IF NOT EXISTS signup_requests_login_id_lower_open_unique
     ON signup_requests (lower(login_id))
     WHERE position('@' in login_id) > 0 AND status <> 'rejected';
+
+-- 3) signup_requests 의 이메일 아이디도 소문자로 맞춘다(구글 연결 증명은 소문자 이메일로 정확히 찾는다).
+--    대소문자만 다른 다른 신청 행(거절 행 포함)이 있으면 그 행들은 건드리지 않는다(users 와 같은 방식). 이미 소문자면 0행이라 다시 돌려도 같다.
+UPDATE signup_requests s
+   SET login_id = lower(s.login_id)
+ WHERE position('@' in s.login_id) > 0
+   AND s.login_id <> lower(s.login_id)
+   AND NOT EXISTS (
+        SELECT 1 FROM signup_requests o
+         WHERE o.request_id <> s.request_id
+           AND position('@' in o.login_id) > 0
+           AND lower(o.login_id) = lower(s.login_id));
 
 DO $$
 DECLARE

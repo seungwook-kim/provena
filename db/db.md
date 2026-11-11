@@ -86,7 +86,7 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·203 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`). | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·203 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`). L1 `113_signup_edges.sql`이 `signup_requests`의 이메일 `login_id`도 겹치지 않을 때 소문자로 바꾼다(겹치는 쌍은 그대로, 다시 돌려도 같음). | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `113_signup_edges.sql` 추가: `signup_requests`의 `login_id` UNIQUE와 107의 소문자 유니크 색인을 거절 행을 뺀 부분 유니크 색인(`signup_requests_login_id_open_unique`, `signup_requests_login_id_lower_open_unique`)으로 바꿔 거절된 이메일도 다시 가입할 수 있게 했고, 겹치지 않는 이메일 `users.login_id`를 소문자로 바꾸고 `users_login_id_lower_unique`를 걸었다(대소문자만 다른 쌍이 있으면 그 쌍과 색인은 건너뛰고 NOTICE). 새 Postgres 컨테이너에 `db/` 전체를 이름 순서로 적용해 오류 0, 113을 두 번 돌려도 같음을 확인했다. 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-11 | 김승욱 (Claude Code) | `108_auth_privacy_hardening.sql`의 `REVOKE ... FROM anon, authenticated`를 역할이 있을 때만 실행하는 `DO` 블록으로 바꾸고 106과 겹치는 줄을 정리했다. 새 Postgres 16 컨테이너에 `db/`의 SQL을 compose와 같은 순서로 전부 실행해 오류 0, 108 뒤의 109 이후 파일까지 실행됨을 확인했고, 108을 한 번 더 돌리고 `anon`·`authenticated` 역할을 만든 뒤에도 돌려 오류 없이 권한 0건임을 확인했다. 운영 DB의 107·108 적용 여부는 이 저장소에서 확인하지 못했고 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | `109_realign.sql`(표 3개 합침, 색인 정리, `anon`·`authenticated` 권한 회수), `manual/109_purge_old.sql` 추가, `105`·`110`·`120`을 합친 모양으로 수정, `docs/db/ERD.md`, `TABLE_SPEC.md` 추가. 운영에는 적용하지 않았다(미적용) | 미정 |

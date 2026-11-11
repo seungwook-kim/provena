@@ -246,3 +246,19 @@ def test_pg_migration_lowercases_legacy_emails_and_skips_collisions():
         finally:
             conn.execute("DELETE FROM users WHERE login_id ILIKE %s", (f"{prefix}%",))
             conn.execute(sql)  # 색인 복구
+
+
+@pg
+def test_pg_migration_lowercases_signup_request_emails_and_skips_collisions(pgstore):
+    import psycopg
+
+    _value, prefix = pgstore
+    sql = (ROOT / "db" / "113_signup_edges.sql").read_text(encoding="utf-8")
+    rows = [(f"{prefix}-Solo@X.com", "approved"), (f"{prefix}-Dup@X.com", "rejected"), (f"{prefix}-dup@x.com", "pending")]
+    with psycopg.connect(DB, autocommit=True) as conn:
+        for login_id, status in rows:
+            conn.execute("INSERT INTO signup_requests (login_id, password_hash, status) VALUES (%s, 'h', %s)", (login_id, status))
+        conn.execute(sql)
+        conn.execute(sql)  # 다시 돌려도 같다
+        got = {r[0] for r in conn.execute("SELECT login_id FROM signup_requests WHERE login_id ILIKE %s", (f"{prefix}%",)).fetchall()}
+    assert got == {f"{prefix}-solo@x.com", f"{prefix}-Dup@X.com", f"{prefix}-dup@x.com"}  # 겹치는 쌍은 그대로
