@@ -162,6 +162,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     handbook.py           # 핸드북 git 수집(고른 절만), 2023 권한표 판 고정
 │  │  │     history.py            # git 커밋 이력에서 판 목록 (리콜 시험 데이터)
 │  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
+│  │  │     compare.py            # 원문 대조표: 파싱 결과 옆에 원본 줄·GitLab 원본 링크를 붙인다(사람이 눈으로 대조)
 │  │  │     pdf.py                # PDF 파싱(Docling, OCR 끔) → 같은 요소 형식, 쪽 번호 보존, 서비스 색인 전용 청크
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기

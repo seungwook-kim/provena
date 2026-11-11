@@ -592,11 +592,26 @@ def quotable_phrases(question: str, corpus: str) -> list[str]:
     return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "", whole_sentence=True)[0]), corpus)
 
 
+_ECHO_MAX = 40  # 되묻기에 되풀이할 영문 구의 최대 길이. 이보다 길면 이름이 아니라 붙여 넣은 문장이다
+# 주소 꼴: 스킴(`이름://`), `www.`, 점으로 이은 이름 + 2자 이상 영문 끝자리(TLD 목록 없음), IPv4. 끝자리가 숫자·1자면(`v1.2`, `e.g`) 주소가 아니다.
+# `config.yml`·`Node.js` 같은 파일·제품 이름은 도메인과 꼴이 같아 함께 막힌다. 막혀도 인용 없는 일반 문구로 되물을 뿐이라 안전한 쪽을 택했다
+_ECHO_URL = re.compile(r"[a-z][a-z0-9+.\-]*://|www\.|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])|(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])", re.I)
+_ECHO_SQL = re.compile(r"\b(?:select|insert|update|delete|drop|union|alter|truncate|exec)\b.*\b(?:from|into|table|set|select|where|database)\b|;\s*--|--\s|/\*", re.I | re.S)
+
+
+def echo_safe(phrase: str) -> bool:
+    """되묻기 글에 되풀이해도 되는 구인지. 길거나, 줄바꿈·주소·SQL 꼴이 든 구는 이름이 아니라 붙여 넣은 글이다(J-11)."""
+    return len(phrase) <= _ECHO_MAX and "\n" not in phrase and not _ECHO_URL.search(phrase) and not _ECHO_SQL.search(phrase)
+
+
 def unknown_name_message(phrases: list[str]) -> str:
     """phrases가 비면(모르는 구가 지시 절에만 있었다) 문자열을 인용하지 않는 일반 문구로 되묻는다."""
     if not phrases:
         return "질문에 핸드북 자료에서 찾지 못한 표현이 있습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
-    names = ", ".join(f"'{p}'" for p in phrases[:3])
+    shown = [p for p in phrases if echo_safe(p)][:3]
+    if not shown:
+        return "질문에 핸드북 자료에서 찾지 못한 표현이 있습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
+    names = ", ".join(f"'{p}'" for p in shown)
     return f"질문의 {names}은(는) 핸드북 자료에서 찾지 못했습니다. 정확한 이름이나 다른 표현으로 다시 물어봐 주세요."
 
 

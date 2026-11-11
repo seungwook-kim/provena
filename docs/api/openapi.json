@@ -649,15 +649,51 @@
         "type": "object"
       },
       "HTTPValidationError": {
+        "description": "422 오류 봉투. `detail`은 `error.message`와 같은 고정 문구이고 입력값은 담지 않는다.",
         "properties": {
           "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
             "title": "Detail",
-            "type": "array"
+            "type": "string"
+          },
+          "error": {
+            "properties": {
+              "code": {
+                "const": "validation_error",
+                "type": "string"
+              },
+              "details": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "description": "칸별 검사 결과. 예: 프로필 422는 `{\"fields\": {칸: 이유}}`",
+                    "type": "object"
+                  }
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
+            "type": "object"
           }
         },
+        "required": [
+          "detail",
+          "error"
+        ],
         "title": "HTTPValidationError",
         "type": "object"
       },
@@ -1150,6 +1186,20 @@
         "title": "SignupRequestList",
         "type": "object"
       },
+      "SignupResendRequest": {
+        "description": "재발송은 코드가 없는 요청이다(C-21). 옛 화면이 `code`를 같이 보내도 무시한다.",
+        "properties": {
+          "login_id": {
+            "title": "Login Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login_id"
+        ],
+        "title": "SignupResendRequest",
+        "type": "object"
+      },
       "SignupReviewByIdResult": {
         "properties": {
           "changed": {
@@ -1256,33 +1306,19 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
+              "type": "string"
             },
-            "title": "Location",
+            "title": "Loc",
             "type": "array"
           },
           "msg": {
-            "title": "Message",
+            "title": "Msg",
             "type": "string"
           },
           "type": {
-            "title": "Error Type",
+            "title": "Type",
             "type": "string"
           }
         },
@@ -1901,7 +1937,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SignupVerificationRequest"
+                "$ref": "#/components/schemas/SignupResendRequest"
               }
             }
           },

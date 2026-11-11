@@ -4,6 +4,7 @@
 - 요청이 끝나면 한 줄을 남긴다: 요청 ID, 메서드, 경로, 상태, 걸린 시간(ms). SSE 응답은 스트림이 끝난 뒤의 시간이다.
   질의 문자열과 본문은 로그에 쓰지 않는다(질문 내용, 비밀번호 보호).
 - 순수 ASGI 미들웨어다. `BaseHTTPMiddleware`는 응답 본문을 감싸 SSE를 버퍼링할 수 있어 쓰지 않는다.
+- 경로에 NUL 문자(`%00`)가 있으면 라우터·DB에 닿기 전에 404 `not_found`로 답한다(Postgres는 NUL이 든 문자열을 못 받아 500·503이 났다).
 - 예외 처리기 밖으로 나온 오류는 `internal_error` 500으로 마무리하고, 내용은 로그에만 남긴다.
 - 사용 모델, 토큰 수, 비용은 LLM을 부르는 엔드포인트가 `log_llm_usage`로 따로 남긴다.
 - 모든 응답에 보안 헤더를 붙인다: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
@@ -81,6 +82,9 @@ class RequestContextMiddleware:
             await send(message)
 
         try:
+            if "\x00" in scope.get("path", "") or b"%00" in scope.get("raw_path", b"").lower():
+                await _send_not_found(send_wrapper, rid)
+                return
             await self.app(scope, receive, send_wrapper)
         except Exception:  # noqa: BLE001 - 예외 처리기 밖으로 나온 오류도 요청 ID가 붙은 500으로 마무리한다
             log.exception("처리되지 않은 오류 request_id=%s", rid)
@@ -96,6 +100,14 @@ class RequestContextMiddleware:
             log.info("request id=%s method=%s path=%s status=%s ms=%.1f",
                      rid, scope.get("method"), scope.get("path"), status, (time.perf_counter() - started) * 1000)
             _request_id.reset(token)
+
+
+async def _send_not_found(send, rid: str) -> None:
+    msg = "요청한 경로를 찾을 수 없습니다."
+    body = json.dumps({"detail": msg, "error": {"code": "not_found", "message": msg, "request_id": rid}}, ensure_ascii=False).encode("utf-8")
+    await send({"type": "http.response.start", "status": 404,
+                "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]})
+    await send({"type": "http.response.body", "body": body})
 
 
 def log_llm_usage(*, model: str, summary: dict, latency_ms: float, route: str, request_id: str | None = None) -> None:

@@ -62,7 +62,7 @@ beforeEach(() => {
       if (server.putFields) {
         const fields = server.putFields
         server.putFields = null
-        return json({ detail: { message: '입력한 내용을 확인해 주세요.', fields } }, 422)
+        return json({ detail: '입력한 내용을 확인해 주세요.', error: { code: 'validation_error', message: '입력한 내용을 확인해 주세요.', request_id: 'test', details: { fields } } }, 422)   // 운영 오류 처리기 모양
       }
       server.savedProfile = JSON.parse(options.body)
       if (server.user) server.user = { ...server.user, profile_completed: true }

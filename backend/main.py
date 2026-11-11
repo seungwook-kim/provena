@@ -315,7 +315,10 @@ def create_app(
                         async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
                             yield
 
-    app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
+    # PROVENA_DOCS_PUBLIC=0 이면 /docs·/redoc·/openapi.json 을 끈다(A-07). 비우면 기존대로 공개
+    docs_off = {} if os.environ.get("PROVENA_DOCS_PUBLIC", "1").strip().lower() not in ("0", "false", "no", "off") \
+        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan, **docs_off)
     app.add_middleware(RequestContextMiddleware)     # 요청 ID와 요청 로그(순수 ASGI, SSE를 버퍼링하지 않는다)
     install_error_handlers(app)                      # 오류 응답 규약
 
