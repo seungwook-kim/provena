@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from backend.rag.ingest import handbook
+from backend.rag.ingest.snapshot_diff import MD_SUFFIXES
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,7 @@ class HandbookGitSource:
 
 
 class DirectorySnapshotSource:
-    """폴더 안 `.md` 파일(점으로 시작하는 폴더 제외). 판 정보는 만든 쪽이 정해 준다(git 이력이 없다)."""
+    """폴더 안 `.md`·`.markdown` 파일. 폴더 걸러내기 규칙은 `snapshot_diff.read_snapshot`과 같음(점으로 시작하는 폴더 제외), 원문은 bytes(BOM·CRLF 정리는 하지 않음). 판 정보는 만든 쪽이 정해 준다(git 이력이 없다)."""
 
     name = "directory-snapshot"
 
@@ -61,8 +62,8 @@ class DirectorySnapshotSource:
 
     def pages(self) -> list[SourcePage]:
         out = []
-        for p in sorted(self.root.rglob("*.md")):
+        for p in sorted(self.root.rglob("*")):
             rel = p.relative_to(self.root)
-            if p.is_file() and not any(x.startswith(".") for x in rel.parts):
+            if p.is_file() and p.suffix.lower() in MD_SUFFIXES and not any(x.startswith(".") for x in rel.parts):
                 out.append(SourcePage(rel.as_posix(), p.read_bytes(), self.version_id, self.version_date))
         return out

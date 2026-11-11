@@ -24,9 +24,10 @@ def test_directory_snapshot_source_reads_md_only(tmp_path):
     (tmp_path / "a").mkdir()
     (tmp_path / "a" / "x.md").write_bytes(b"x\r\n")
     (tmp_path / "y.txt").write_text("no")
+    (tmp_path / "w.markdown").write_bytes(b"w")
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "z.md").write_text("no")
     src = DirectorySnapshotSource(tmp_path, version_id="v1", version_date="2026-11-01")
     assert isinstance(src, DocumentSource)
     pages = src.pages()
-    assert [(p.path, p.data, p.version_id, p.version_date) for p in pages] == [("a/x.md", b"x\r\n", "v1", "2026-11-01")]
+    assert [(p.path, p.data, p.version_id, p.version_date) for p in pages] == [("a/x.md", b"x\r\n", "v1", "2026-11-01"), ("w.markdown", b"w", "v1", "2026-11-01")]
