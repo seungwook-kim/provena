@@ -49,7 +49,7 @@
 - 구현: `backend/auth.py`, 라우터: `create_auth_router(*, store, secret=None, cookie_secure=None, rate_limiter=None)`
 - 비밀번호: bcrypt, 최소 8자·UTF-8 기준 최대 72바이트. 원문·hash·JWT를 응답이나 로그에 남기지 않는다.
 - JWT: `HS256`, `user_id`, `role`, `iat`, `exp`를 포함하며 `AUTH_SECRET`은 최소 32바이트여야 한다.
-- 인증 쿠키: `provena_auth`, `HttpOnly`, `SameSite=Lax`, `Path=/`, 기본 30분. CSRF 쿠키는 `provena_csrf`이며 읽기 가능하다.
+- 인증 쿠키: `provena_auth`, `HttpOnly`, `SameSite=Lax`, `Path=/`, 수명 30분(`AUTH_TOKEN_EXPIRES_MINUTES = 30`, `AUTH_COOKIE_MAX_AGE = 30 * 60초`, `backend/auth.py:48-49`; JWT `exp`도 같은 값). CSRF 쿠키는 `provena_csrf`이며 읽기 가능하다.
 - 쿠키 `Secure` 기본값은 True이며, `PROVENA_ENV=local` 및 `PROVENA_DEV_MODE=1`일 때만 로컬 HTTP용 False를 허용한다.
 - `current_user_id(request: Request) -> str`: 쿠키 JWT의 정규화된 UUID 문자열만 반환한다. 요청 본문·query string의 `user_id`는 신뢰하지 않으며 인증 실패는 401이다.
 - `GET /me`는 JWT 검증 뒤 `AuthStore`에서 활성 상태와 role을 다시 확인한다.
@@ -62,7 +62,8 @@
 - Uvicorn 동작 참고: [공식 ProxyHeadersMiddleware 구현](https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py).
 - ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.
-- 프로세스 로컬 기록은 재시작 시 사라지고 Cloud Run 다중 인스턴스 간 공유되지 않는다. 공유 저장소 전환과 Cloud Run 실제 원본 IP 식별·신뢰 프록시 정책은 후속 검증 사항이다. PostgreSQL 사용자 DB 연동 시 Redis 또는 PostgreSQL 등의 공유 저장소 전환을 검토한다.
+- 실제 접속 IP는 환경 변수 `TRUSTED_PROXY_HOPS`(기본 0 = `X-Forwarded-For` 무시)로 정한다. N > 0이면 `X-Forwarded-For`의 오른쪽에서 N번째 값을 쓰고 헤더가 짧거나 형식이 틀리면 peer 주소로 돌아간다(`backend/auth.py:642-675`, Cloud Run은 1). 위 Dockerfile 설명과 함께 읽을 것.
+- 로그인 실패 제한은 프로세스 메모리 기준이라 재시작 시 사라지고 인스턴스 사이에서 공유되지 않는다. 배포는 `--max-instances 1`이다(`README.md:170`). 인스턴스를 늘리려면 공유 저장소 전환이 먼저다. 공유 저장소 전환과 Cloud Run 실제 원본 IP 식별·신뢰 프록시 정책은 후속 검증 사항이다. PostgreSQL 사용자 DB 연동 시 Redis 또는 PostgreSQL 등의 공유 저장소 전환을 검토한다.
 - 팀 저장소에는 자동 사용자 seed나 `backend/user_store.py`가 없다. 테스트는 `tests/test_auth_router_runtime.py`의 `FakeAuthStore`가 실행 중 생성한 UUID·비밀번호를 사용한다.
 
 ### 의존성과 검증
@@ -75,7 +76,7 @@
 ## 백엔드 구현 및 연동 현황 (강경희)
 
 - `backend/auth.py`에 FastAPI 일반 로그인, bcrypt 검증, HttpOnly JWT 쿠키, CSRF, ID·IP별 로그인 실패 제한과 현재 사용자·관리자 권한 검증 의존성을 구현했다.
-- JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. J-05(로그아웃 뒤 동일 JWT 재사용)는 PostgreSQL 공유 폐기 저장소와 `main.py` 연결 전까지 열림이다.
+- JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. DATABASE_URL이 있으면 `main.py:282-283`이 `PostgresTokenRevocationStore`를 연결한다. 로그아웃 뒤 같은 JWT는 401임을 `tests/test_auth_revocation.py::test_same_user_logins_issue_unique_jti_and_logout_revokes_only_one_session`이 확인한다(가짜 저장소 기준). 운영 DB에서 한 로그아웃 뒤 재사용 시험 기록은 없다.
 - Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider·`sub`와 **`email_verified=true`인 이메일**만 Google 사용자 저장소 계약에 전달한다. 이메일은 아래 "Google 로그인 계정 연결"의 조건을 모두 만족할 때만 기존 계정을 찾는 데 쓰고, 이메일로 관리자 권한을 새로 주지는 않는다.
 - Mock OAuth·인증·보안 계약 테스트 26건과 DB 환경변수를 제거한 Python 전체 테스트 **215 passed, 1 skipped**를 확인했다.
 - 실제 PostgreSQL OAuth·JWT 폐기 저장소, `main.py` 운영 연결, Cloud Run callback 및 실제 Google 브라우저 로그인은 미완료·미검증이다.
