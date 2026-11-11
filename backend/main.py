@@ -46,7 +46,7 @@ from contextlib import asynccontextmanager, contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -341,6 +341,10 @@ def create_app(
                 background.add_task(lambda: ping_database())   # 응답을 보낸 뒤 돈다. 시험이 바꿔 끼울 수 있게 부를 때 찾는다
         return {"status": "ok"}
 
+    @app.head("/health", include_in_schema=False)   # HEAD로 살아 있는지 보는 감시도 200을 받게 한다
+    def health_head(background: BackgroundTasks) -> dict:
+        return health(background)
+
     if store is not None:
         app.include_router(create_auth_router(store=store, secret=auth_secret, profile_completed=profile_store.exists if profile_store is not None else None,
                                               owner_check=owner_check_for(owner_login_id)))
@@ -386,15 +390,20 @@ def create_app(
 
         if web_root != WEB_DIR:
             @app.get("/{path:path}", include_in_schema=False)
-            def spa_fallback(path: str) -> FileResponse:
+            def spa_fallback(path: str, request: Request) -> FileResponse:
                 first_segment = path.partition("/")[0]
                 if first_segment in api_prefixes:
-                    raise HTTPException(status_code=404, detail="Not Found")
+                    raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")   # 아래 404와 같은 한국어 문구
                 candidate = (web_root / path).resolve()
                 if web_root_resolved in candidate.parents and candidate.is_file():
                     return FileResponse(candidate)
                 if first_segment in spa_prefixes:
                     return FileResponse(web_root / "index.html")
+                if path == "favicon.ico" and (web_root / "favicon.svg").is_file():
+                    return FileResponse(web_root / "favicon.svg", media_type="image/svg+xml")
+                # 브라우저가 주소창으로 연 없는 화면 주소는 React 화면(404 안내)을 404 상태로 내준다. API 호출은 아래 JSON 규약 그대로(H-27)
+                if "text/html" in request.headers.get("accept", ""):
+                    return FileResponse(web_root / "index.html", status_code=404)
                 raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
         app.mount("/", StaticFiles(directory=web_root), name="web")
 

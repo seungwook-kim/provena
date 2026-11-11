@@ -15,6 +15,7 @@ import ChangeMonitoringPage from './pages/ChangeMonitoringPage'
 import ApprovalsPage from './pages/ApprovalsPage'
 import AdminPage, { AdminLivePage } from './pages/AdminPage'
 import RecallPage from './pages/RecallPage'
+import NotFoundPage from './pages/NotFoundPage'
 import { DevAdminUsersPreview, DevProfilePreview } from './pages/DevPreviewPages'
 import { getLiveServices, resetLiveServices } from './lib/live-services'
 
@@ -94,6 +95,6 @@ function SessionRoutes() {
     <Route path="/demo/blocked" element={<AdminRouteGuard><DemoAdminBlocked /></AdminRouteGuard>} />
     <Route path="/dev-preview/myinfo" element={import.meta.env.DEV ? <DevProfilePreview /> : <Navigate to="/login" replace />} />
     <Route path="/dev-preview/admin-users" element={import.meta.env.DEV ? <DevAdminUsersPreview /> : <Navigate to="/login" replace />} />
-    <Route path="*" element={<Navigate to="/" replace />} />
+    <Route path="*" element={<NotFoundPage />} />
   </Routes>
 }

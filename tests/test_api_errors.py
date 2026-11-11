@@ -165,3 +165,20 @@ def test_health_without_database_url_does_not_ping(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(main, "ping_database", lambda: pytest.fail("DB가 없으면 부르지 않는다"))
     assert TestClient(main.create_app()).get("/health").status_code == 200
+
+
+def test_browser_navigation_to_unknown_path_gets_spa_404_but_api_calls_keep_json(monkeypatch, tmp_path):
+    dist = tmp_path / "react-app" / "dist"
+    dist.mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><title>spa</title>", encoding="utf-8")
+    (dist / "favicon.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8")
+    monkeypatch.setattr(main, "WEB_DIR", tmp_path)
+    with Env(monkeypatch) as env:
+        client = env.client(None)
+        page = client.get("/no/such", headers={"accept": "text/html,application/xhtml+xml"})
+        assert page.status_code == 404 and "<title>spa</title>" in page.text
+        api = client.get("/no/such", headers={"accept": "*/*"})
+        assert api.status_code == 404 and api.json()["error"]["code"] == "not_found"
+        assert client.get("/threads/x/none", headers={"accept": "text/html"}).headers["content-type"].startswith("application/json")
+        icon = client.get("/favicon.ico")
+        assert icon.status_code == 200 and icon.headers["content-type"].startswith("image/svg+xml")
