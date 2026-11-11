@@ -43,6 +43,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(() => requestedId ?? records[0]?.id ?? null)
   const [actionError, setActionError] = useState('')
+  const [digestError, setDigestError] = useState('')
   const [busy, setBusy] = useState(false)
   const [missingId, setMissingId] = useState(null)
   const scoped = useMemo(() => filterByChange(records, { ruleSeq, article }), [article, records, ruleSeq])
@@ -53,7 +54,8 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
   useEffect(() => {
     if (!live) return
     service.listRecalls().catch(() => {})
-    service.listDigests?.().catch(() => {})
+    setDigestError('')
+    service.listDigests?.().catch(() => setDigestError('하루 요약을 불러오지 못했습니다.'))
   }, [live, service])
 
   useEffect(() => {
@@ -118,6 +120,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         {service.sendFeedback && <FeedbackControls key={selected.id} record={selected} service={service} />}
       </> : selectedId && selectedId === missingId ? <div className="recall-empty-detail" role="alert"><h2>{NOT_FOUND}</h2><p>삭제되었거나 접근할 수 없는 알림입니다. 목록에서 다른 알림을 선택해 주세요.</p></div>
         : <div className="recall-empty-detail"><h2>아직 알림이 없습니다.</h2><p>정책 변경으로 다시 확인이 필요한 답변이 생기면 알려드립니다.</p></div>}</article></section>
+    {live && digestError && <p className="recall-action-error" role="alert">{digestError}</p>}
     {live && snapshot.digests?.length > 0 && <DigestPanel digests={snapshot.digests} />}
     {live && isAdmin && <>
       <ReviewQueue items={snapshot.reviewQueue ?? []} service={service} />
@@ -161,7 +164,7 @@ function FeedbackControls({ record, service }) {
 function DigestPanel({ digests }) {
   return <section className="recall-admin-section recall-digest" aria-labelledby="recall-digest-title">
     <div className="recall-admin-heading"><h2 id="recall-digest-title">하루 요약</h2><span>최근 {Math.min(digests.length, 7)}일</span></div>
-    <ul>{digests.slice(0, 7).map(digest => <li key={digest.id || digest.day}><strong>{digest.day}</strong><span>알림 {digest.count}건 · 중요 {digest.high}건 · 참고 {digest.low}건</span></li>)}</ul>
+    <ul>{digests.slice(0, 7).map(digest => <li key={digest.id || digest.day}><strong>{digest.day}</strong><span>{[`알림 ${digest.count}건`, digest.high != null && `중요 ${digest.high}건`, digest.low != null && `참고 ${digest.low}건`].filter(Boolean).join(' · ')}</span></li>)}</ul>
   </section>
 }
 

@@ -54,7 +54,7 @@ beforeEach(() => {
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
     if (path === '/recalls' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
-    if (path === '/recalls/digests') return json([{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, high: 1, low: 1, notices: [] }])
+    if (path === '/recalls/digests') return server.digestsResponse ? server.digestsResponse() : json({ digests: [{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })
     if (path === '/impact-preview' && method === 'POST') return json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
     let match = path.match(/^\/recalls\/([^/]+)\/(ack|review|feedback)$/)
     if (match && method === 'POST') {
@@ -103,6 +103,7 @@ describe('live recall route', () => {
     expect(screen.queryByRole('heading', { name: '함께 볼 정책 후보' })).toBeNull()
     expect(screen.queryByRole('heading', { name: '변경 전 영향 미리보기' })).toBeNull()
     await screen.findByRole('heading', { name: '하루 요약' })
+    expect(await screen.findByText(/알림 2건/)).toBeTruthy()
     const recallLink = screen.getByRole('link', { name: /리콜 알림/ })
     expect(recallLink.getAttribute('href')).toBe('/recalls')
     expect(recallLink.querySelector('b')?.textContent).toBe('1')
@@ -249,6 +250,12 @@ describe('live recall route for administrators', () => {
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText(/무효가 될 답변 3건/)
     expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 'handbook/finance/procurement', article: 'Approval limits' }] })
+  })
+
+  it('shows an error instead of an empty list when the digests cannot be loaded (H-11)', async () => {
+    server.digestsResponse = () => apiError(500, 'internal_error', '서버 오류')
+    open('/recalls')
+    expect(await screen.findByText('하루 요약을 불러오지 못했습니다.')).toBeTruthy()
   })
 
   it('rejects invalid impact preview JSON before calling the server', async () => {

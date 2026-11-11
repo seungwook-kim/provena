@@ -113,9 +113,10 @@ export function mapDigest(digest = {}) {
   return {
     id: digest?.digest_id == null ? '' : String(digest.digest_id),
     day: typeof digest?.day === 'string' ? digest.day : '',
-    count: Number.isFinite(digest?.count) ? digest.count : notices.length,
-    high: Number.isFinite(digest?.high) ? digest.high : 0,
-    low: Number.isFinite(digest?.low) ? digest.low : 0,
+    count: Number.isFinite(digest?.count) ? digest.count : Array.isArray(digest?.notice_ids) ? digest.notice_ids.length : notices.length,
+    // 서버 하루 요약 행에는 중요/참고 구분이 없다(backend/api/recalls.py list_digests). 0으로 지어내지 않고 null로 두어 화면에서 숨긴다.
+    high: Number.isFinite(digest?.high) ? digest.high : null,
+    low: Number.isFinite(digest?.low) ? digest.low : null,
     notices,
   }
 }
@@ -264,7 +265,7 @@ export function createApiRecallAdapter(api = apiClient) {
       return candidate
     },
     async listDigests() {
-      const digests = listOf(await api.getRecallDigests(), 'items').map(mapDigest)
+      const digests = listOf(await api.getRecallDigests(), 'digests').map(mapDigest)
       update({ digests })
       return digests
     },

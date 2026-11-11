@@ -250,6 +250,20 @@ describe('API recall service', () => {
     expect(result.markdown).toContain('무효 답변 3건')
   })
 
+  it('reads the digests key the server returns and keeps count from the server (H-11)', async () => {
+    const api = fakeApi({ getRecallDigests: vi.fn(async () => ({ digests: [{ digest_id: 'd1', user_id: 'u1', day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })) })
+    const service = createApiRecallService(api)
+    await service.listRecalls()
+    const digests = await service.listDigests()
+    expect(digests).toHaveLength(1)
+    expect(digests[0]).toMatchObject({ id: 'd1', day: '2026-11-03', count: 2, high: null, low: null })
+  })
+
+  it('does not swallow a digest load failure (H-11)', async () => {
+    const api = fakeApi({ getRecallDigests: vi.fn(async () => { throw new Error('boom') }) })
+    await expect(createApiRecallService(api).listDigests()).rejects.toThrow('boom')
+  })
+
   it('leaves the preview service without live-only actions', () => {
     expect(previewRecallService.live).toBe(false)
     expect(previewRecallService.sendFeedback).toBeNull()
