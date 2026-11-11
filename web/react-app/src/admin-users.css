@@ -91,3 +91,4 @@
 .privacy-completed-dialog .privacy-detail-footer { width: 100%; min-width: 0; box-sizing: border-box; margin: 14px 0 0; }
 .privacy-completed-dialog .privacy-detail-footer button { min-height: 40px; height: 40px; padding: 0 16px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 @media (max-width: 640px) { .privacy-detail-list { grid-template-columns: 1fr; gap: 4px; } .privacy-detail-list dd { margin-bottom: 8px; } .privacy-completed-summary dl { grid-template-columns: 1fr; gap: 12px; } }
+@media (max-width: 640px) { .admin-users-table th, .admin-users-table td { padding: 12px 8px; white-space: normal; overflow-wrap: anywhere; font-size: 13px; } .admin-users-table td:last-child button { white-space: nowrap; } }
