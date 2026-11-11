@@ -222,6 +222,12 @@ export function getMaintenanceCandidates() { return apiJson('/maintenance-candid
 export async function decideMaintenanceCandidate(candidateId, status) {
   return apiJson(`/maintenance-candidates/${encodeURIComponent(candidateId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
 }
+export async function flushRecallDigests() { return apiJson('/recalls/digest/flush', { method: 'POST', headers: await csrfHeaders() }) }
+export async function processPendingRecalls() { return apiJson('/recalls/process-pending', { method: 'POST', headers: await csrfHeaders() }) }
+export function getWebhookSubscriptions() { return apiJson('/webhook-subscriptions') }
+export async function addWebhookSubscription(url) {
+  return apiJson('/webhook-subscriptions', { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ url }) })
+}
 export async function postImpactPreview(payload) {
   return apiJson('/impact-preview', { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(payload) })
 }
