@@ -203,7 +203,7 @@ def test_me_profile_completed_false_then_true(env):
     assert c.get("/me").json()["profile_completed"] is False
     put(c, GOOD)
     me = c.get("/me").json()
-    assert me == {"user_id": str(env["users"]["A"].user_id), "role": "user", "profile_completed": True}
+    assert me == {"user_id": str(env["users"]["A"].user_id), "role": "user", "login_id": "A", "profile_completed": True}
 
 
 def test_login_response_is_unchanged(env):
@@ -339,7 +339,7 @@ def test_me_without_callback_has_no_profile_completed(monkeypatch):
     c = TestClient(app)
     login = c.post("/auth/login", json={"login_id": "solo", "password": password}, headers=csrf(c))
     assert login.json() == {"user_id": str(user.user_id), "role": "user"}
-    assert c.get("/me").json() == {"user_id": str(user.user_id), "role": "user"}
+    assert c.get("/me").json() == {"user_id": str(user.user_id), "role": "user", "login_id": "solo"}   # H-13: /me만 login_id가 더 있다
 
 
 def test_me_callback_bad_value_is_503(monkeypatch):
