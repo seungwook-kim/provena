@@ -70,8 +70,10 @@ def _to_user(row: tuple | None) -> AuthUser | None:
     )
 
 
-# 이메일 가입 신청이 인증 전(미인증 pending)이면 같은 이메일로 다시 가입할 때 새 비밀번호로 덮어쓴다(create_pending_user).
-# 인증을 마친 신청, 승인된 신청, 이미 있는 계정은 덮어쓰지 않는다.
+# 인증번호가 만료된 뒤 이 시간이 지나도록 인증하지 않은 이메일 가입 신청은 같은 이메일로 다시 가입할 때 덮어쓴다
+# (인증하지 않은 채 남은 신청이 그 이메일을 계속 선점하지 못하게 한다). 만료 기준은 verification_expires_at 이고,
+# 코드를 한 번도 보내지 못한 신청은 requested_at 을 쓴다. 새 열은 필요 없다.
+STALE_UNVERIFIED_SIGNUP_HOURS = 24
 
 
 class AccountExistsError(Exception):
@@ -92,6 +94,18 @@ class SignupRequestRow:
     status: str
     request_id: int | None = None
     email_verified: bool = False
+
+
+def _is_stale_unverified(row: dict[str, Any], now: datetime) -> bool:
+    """인증번호 만료 뒤 STALE_UNVERIFIED_SIGNUP_HOURS 가 지난 미인증 대기 신청인지."""
+    if row.get("status") != "pending" or not row.get("email_verification_required"):
+        return False
+    if row.get("email_verified_at") is not None:
+        return False
+    since = row.get("verification_expires_at") or row.get("requested_at")
+    if since is None:
+        return False
+    return now - since > timedelta(hours=STALE_UNVERIFIED_SIGNUP_HOURS)
 
 
 class MemoryAuthStore:
@@ -203,24 +217,19 @@ class MemoryAuthStore:
             self._users[login_id] = user
             return user
 
-    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> str | None:
+    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> None:
         """Store a pending request only; no users record or user ID is made.
 
-        새 신청이면 None, 인증 전 이메일 신청을 새 비밀번호로 덮어썼으면 "replaced"를 돌려준다.
-        거절된 신청은 새 신청으로 대체한다. 인증을 마친·승인된 신청과 이미 있는 계정은 AccountExistsError.
+        거절된 신청과 STALE_UNVERIFIED_SIGNUP_HOURS 가 지난 미인증 신청은 새 신청으로 대체한다.
+        그 밖의 대기·승인 신청과 이미 있는 계정(이메일은 대소문자 무시)은 AccountExistsError.
         """
         with self._lock:
             if self.get_by_login_id(login_id) is not None:
                 raise AccountExistsError("login_id already exists")
             now = datetime.now(timezone.utc)
             existing = self._signup_requests.get(login_id)
-            if existing is not None and existing["status"] == "rejected":
+            if existing is not None and (existing["status"] == "rejected" or _is_stale_unverified(existing, now)):
                 del self._signup_requests[login_id]
-            elif (existing is not None and email_verification_required and existing["status"] == "pending"
-                  and existing["email_verification_required"] and existing["email_verified_at"] is None):
-                existing.update(password_hash=password_hash, requested_at=now, verification_code_hash=None,
-                                verification_expires_at=None, verification_attempts=0)
-                return "replaced"
             if login_id in self._signup_requests:
                 raise AccountExistsError("login_id already exists")
             request_id = self._next_signup_request_id
@@ -435,29 +444,23 @@ class PostgresAuthStore:
             (password_hash, login_id),
         )
 
-    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> str | None:
+    def create_pending_user(self, login_id: str, password_hash: str, *, email_verification_required: bool = False) -> None:
         """Store a pending request only; no users record or user ID is made.
 
-        새 신청이면 None, 인증 전 이메일 신청을 새 비밀번호로 덮어썼으면 "replaced"를 돌려준다(한 트랜잭션).
-        거절된 신청 행은 남기고 새 행을 만든다(db/113 의 부분 유니크 색인이 거절 행을 제외한다).
-        인증을 마친·승인된 신청과 이미 있는 계정은 AccountExistsError.
+        STALE_UNVERIFIED_SIGNUP_HOURS 가 지난 미인증 신청은 같은 트랜잭션에서 지우고 새로 넣는다.
+        거절된 신청 행은 남기고 새 행을 만든다(db/113 의 부분 유니크 색인이 거절 행을 제외한다. 113 전이면 409).
+        그 밖의 대기·승인 신청과 이미 있는 계정(이메일은 대소문자 무시)은 AccountExistsError.
         """
         with self._connect() as conn:
             with conn.transaction():
                 if self._user_exists(conn, login_id):
                     raise AccountExistsError("login_id already exists")
-                if email_verification_required:
-                    open_row = conn.execute(
-                        "SELECT request_id, email_verification_required, email_verified_at FROM signup_requests "
-                        "WHERE login_id = %s AND status = 'pending' FOR UPDATE", (login_id,)
-                    ).fetchone()
-                    if open_row is not None and open_row[1] and open_row[2] is None:
-                        conn.execute(
-                            "UPDATE signup_requests SET password_hash = %s, requested_at = now(), "
-                            "verification_code_hash = NULL, verification_expires_at = NULL, verification_attempts = 0 "
-                            "WHERE request_id = %s", (password_hash, open_row[0])
-                        )
-                        return "replaced"
+                conn.execute(
+                    "DELETE FROM signup_requests WHERE login_id = %s AND status = 'pending' "
+                    "AND email_verification_required AND email_verified_at IS NULL "
+                    "AND COALESCE(verification_expires_at, requested_at) < now() - make_interval(hours => %s)",
+                    (login_id, STALE_UNVERIFIED_SIGNUP_HOURS),
+                )
                 try:
                     conn.execute(
                         "INSERT INTO signup_requests (login_id, password_hash, status, email_verification_required) VALUES (%s, %s, 'pending', %s)",
@@ -467,7 +470,6 @@ class PostgresAuthStore:
                     if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
                         raise AccountExistsError("login_id already exists") from None
                     raise
-        return None
 
     @staticmethod
     def _user_exists(conn: Any, login_id: str) -> bool:

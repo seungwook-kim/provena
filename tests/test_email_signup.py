@@ -52,15 +52,11 @@ def test_email_signup_verification_and_approval(monkeypatch):
     assert login.status_code == 200
 
 
-def test_duplicate_email_signup_does_not_claim_verified_application(monkeypatch):
-    app, _store, _owner, sender, _secret = build(monkeypatch)
+def test_duplicate_email_signup_does_not_claim_pending_application(monkeypatch):
+    app, _store, _owner, _sender, _secret = build(monkeypatch)
     client = TestClient(app)
     payload = {"login_id": "existing@example.com", "password": "signup-pass-123", "password_confirmation": "signup-pass-123"}
     assert client.post("/auth/signup", json=payload, headers=csrf(client)).status_code == 201
-    # 인증 전 신청은 덮어쓰기 대상이다(발송 간격 안이면 429, 상세는 test_signup_edges.py). 인증을 마친 신청은 409.
-    assert client.post("/auth/signup", json=payload, headers=csrf(client)).status_code == 429
-    verified = client.post("/auth/signup/verify", json={"login_id": "existing@example.com", "code": sender.deliveries[-1]["code"]}, headers=csrf(client))
-    assert verified.status_code == 200
 
     duplicate = client.post("/auth/signup", json=payload, headers=csrf(client))
 

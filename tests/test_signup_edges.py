@@ -1,4 +1,4 @@
-"""가입 모서리 3건: 미인증 신청 덮어쓰기, 거절 뒤 재가입, 대문자 이메일 로그인.
+"""가입 모서리: 미인증 신청은 24시간 규칙 전에는 덮어쓰지 않음(계정 가로채기 방지), 거절 뒤 재가입, 대문자 이메일 로그인.
 
 메모리 저장소 시험은 항상 돈다. Postgres 시험은 TEST_DATABASE_URL 이 있을 때만 돈다(전용 DB).
 """
@@ -52,46 +52,20 @@ def cool_down(store, email):
     store._signup_requests[email]["last_verification_sent_at"] = datetime.now(timezone.utc) - timedelta(hours=1)
 
 
-# --- 1. 미인증 신청 덮어쓰기 -------------------------------------------------
+# --- 1. 미인증 신청은 24시간 규칙(STALE_UNVERIFIED_SIGNUP_HOURS) 전에는 덮어쓰지 않는다 ------------
 
-def test_unverified_pending_is_overwritten_with_new_password_and_new_code(monkeypatch):
+def test_second_signup_cannot_replace_password_of_unverified_request(monkeypatch):
+    """피해자 가입 뒤 다른 사람이 같은 이메일로 자기 비밀번호를 넣어도 409, 피해자 비밀번호·코드는 그대로다."""
     client, store, sender = build(monkeypatch)
-    assert signup(client, "squat@example.com", OLD).status_code == 201
-    first_code = sender.deliveries[-1]["code"]
-    cool_down(store, "squat@example.com")
+    assert signup(client, "victim@example.com", OLD).status_code == 201
+    victim_code = sender.deliveries[-1]["code"]
+    cool_down(store, "victim@example.com")  # 재발송 간격(60초)이 지난 뒤에도
 
-    assert signup(client, "Squat@Example.com", NEW).status_code == 201
-    assert len(sender.deliveries) == 2
-    row = store._signup_requests["squat@example.com"]
-    assert verify_password(NEW, row["password_hash"]) and not verify_password(OLD, row["password_hash"])
-    # 옛 코드로는 인증되지 않고, 새 코드로만 된다(실제로 받은 사람만 끝낼 수 있다)
-    if sender.deliveries[-1]["code"] != first_code:
-        assert verify(client, "squat@example.com", first_code).status_code == 400
-    assert verify(client, "squat@example.com", sender.deliveries[-1]["code"]).status_code == 200
-
-
-def test_overwrite_inside_resend_cooldown_is_429_and_keeps_old_request(monkeypatch):
-    client, store, sender = build(monkeypatch)
-    assert signup(client, "fast@example.com", OLD).status_code == 201
-    again = signup(client, "fast@example.com", NEW)
-    assert again.status_code == 429
-    row = store._signup_requests["fast@example.com"]
-    assert verify_password(OLD, row["password_hash"])  # 발송 제한에 걸리면 비밀번호도 바꾸지 않는다
+    assert signup(client, "Victim@Example.com", NEW).status_code == 409
+    row = store._signup_requests["victim@example.com"]
+    assert verify_password(OLD, row["password_hash"]) and not verify_password(NEW, row["password_hash"])
     assert len(sender.deliveries) == 1
-
-
-def test_overwrite_mail_failure_keeps_existing_request(monkeypatch):
-    client, store, sender = build(monkeypatch)
-    assert signup(client, "keep@example.com", OLD).status_code == 201
-    cool_down(store, "keep@example.com")
-    request_id = store._signup_requests["keep@example.com"]["request_id"]
-
-    def boom(**_):
-        raise RuntimeError("smtp down")
-    sender.send_verification_email = boom
-    assert signup(client, "keep@example.com", NEW).status_code == 503
-    # 덮어쓰기 중 실패해도 원래 신청을 지우지 않는다(처음 만든 경우만 지운다)
-    assert store._signup_requests["keep@example.com"]["request_id"] == request_id
+    assert verify(client, "victim@example.com", victim_code).status_code == 200
 
 
 def test_verified_pending_cannot_be_overwritten(monkeypatch):
@@ -157,24 +131,22 @@ def pgstore():
 
 
 @pg
-def test_pg_unverified_pending_overwrite_keeps_one_row(pgstore):
+def test_pg_unverified_pending_is_not_overwritten_inside_24h(pgstore):
     import psycopg
 
     value, prefix = pgstore
     email = f"{prefix}-a@example.com"
     value.create_pending_user(email, hash_password(OLD), email_verification_required=True)
-    assert value.create_pending_user(email, hash_password(NEW), email_verification_required=True) == "replaced"
+    with pytest.raises(AccountExistsError):
+        value.create_pending_user(email, hash_password(NEW), email_verification_required=True)
     status, password_hash = value.get_signup_by_login_id(email)
-    assert status == "pending" and verify_password(NEW, password_hash)
+    assert status == "pending" and verify_password(OLD, password_hash)
+    with psycopg.connect(DB, autocommit=True) as conn:  # 24시간이 지난 신청만 지우고 새로 받는다
+        conn.execute("UPDATE signup_requests SET requested_at = now() - interval '25 hours' WHERE login_id = %s", (email,))
+    value.create_pending_user(email, hash_password(NEW), email_verification_required=True)
+    assert verify_password(NEW, value.get_signup_by_login_id(email)[1])
     with psycopg.connect(DB) as conn:
         assert conn.execute("SELECT count(*) FROM signup_requests WHERE login_id = %s", (email,)).fetchone()[0] == 1
-    # 인증을 마친 신청은 덮어쓰지 않는다
-    code_hash = "h" * 64
-    now = datetime.now(timezone.utc)
-    assert value.issue_verification(email, code_hash, "000000", now, now + timedelta(minutes=5), 5, 0, lambda _c: None) == "sent"
-    assert value.verify_signup_code(email, code_hash, now, 5) == "verified"
-    with pytest.raises(AccountExistsError):
-        value.create_pending_user(email, hash_password(OLD), email_verification_required=True)
 
 
 @pg

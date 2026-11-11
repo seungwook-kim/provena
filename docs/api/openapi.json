@@ -1843,7 +1843,7 @@
     },
     "/auth/signup": {
       "post": {
-        "description": "Email signup. An unverified pending request for the same email is overwritten with the new password and a new code is sent (only someone who receives the email can finish verification). Verified or approved requests and existing accounts return 409. A rejected request does not block signing up again.",
+        "description": "Email signup. An unverified pending request for the same email is replaced only after its code expired more than 24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS); until then the same email returns 409. Verified or approved requests and existing accounts (email compared case-insensitively) return 409. A rejected request does not block signing up again.",
         "operationId": "signup_auth_signup_post",
         "requestBody": {
           "content": {
@@ -1871,7 +1871,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "Email already has an account, or its pending request is already verified/approved"
+            "description": "Email already has an account, or a non-stale pending request or an approved request exists"
           },
           "422": {
             "content": {
@@ -1883,11 +1883,8 @@
             },
             "description": "Validation Error"
           },
-          "429": {
-            "description": "Too many signup requests, or the verification email send limit (interval or count) for an existing unverified request was reached; the existing request is left unchanged"
-          },
           "503": {
-            "description": "Signup storage unavailable, or the verification email could not be sent (a request created by this call is removed so the same email can sign up again; an overwritten existing unverified request is kept)"
+            "description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"
           }
         },
         "summary": "Signup"
