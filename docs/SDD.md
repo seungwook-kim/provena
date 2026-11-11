@@ -344,7 +344,7 @@ flowchart TD
 | 409 | `conflict` | 지금 상태에서 받을 수 없는 요청(결정표) |
 | 409 | `already_decided` | 이미 끝난 승인 건에 다른 결정 |
 | 409 | `not_approved` | 승인되지 않은 결정표 실행 |
-| 409 | `ambiguous_table` | 업무 종류로 승인된 표가 0개이거나 2개 이상 |
+| 409 | `ambiguous_table` | 권한표에 있는 업무 종류인데 승인된 표가 0개이거나 2개 이상 (권한표에 없는 업무 종류는 404 `not_found`) |
 | 422 | `validation_error` | 본문·경로 검증 오류(`details`에 위치·사유), `/me/memory` PATCH의 빈 본문 |
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
