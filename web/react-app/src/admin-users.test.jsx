@@ -18,10 +18,13 @@ test('shows signup approval preview and confirms a local demo action', async () 
   expect(screen.getByText('pending-user-01')).toBeTruthy()
   await user.click(screen.getAllByRole('button', { name: '가입 승인' })[0])
   expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(screen.getByText(/가입을 승인합니다/)).toBeTruthy()   // H-31: 승인/거절 구분
   await user.click(screen.getByRole('button', { name: '확인' }))
   await user.selectOptions(screen.getByRole('combobox', { name: '가입 신청 보기' }), 'all')
   expect(screen.getByText('승인 완료')).toBeTruthy()
   expect(screen.getByText(/데모 상태에만 반영됩니다/)).toBeTruthy()
+  await user.click(screen.getByRole('tab', { name: '관리자 권한 관리' }))
+  expect(screen.queryByText(/데모 상태에만 반영됩니다/)).toBeNull()   // H-31: 다른 탭에 이전 성공 문구가 남지 않는다
 })
 
 afterEach(cleanup)

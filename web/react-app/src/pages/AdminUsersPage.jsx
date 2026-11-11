@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="profile-success" role="status">{message}</p>}
-    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} />
+    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} onTabChange={() => { setMessage(''); setError('') }} />
     {false && <div>
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
