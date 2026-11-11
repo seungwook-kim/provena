@@ -12,11 +12,12 @@
 
 ## 명세에 들어가지 않는 경로
 
-2026-11-11 현재 명세는 경로 47개, 동작 53개이며 `backend/`의 경로 데코레이터 56개에서 아래를 뺀 수와 같다.
+2026-11-11 현재 명세는 경로 47개, 동작 53개이며 `backend/`의 경로 데코레이터 57개(grep `@<이름>.(get|post|put|patch|delete|head|api_route)(`)에서 아래 4개를 뺀 수와 같다. 57 - 4 = 53개 동작이다(`/mcp`는 데코레이터가 아니라 마운트라 따로 센다).
 
 | 경로 | 이유 |
 |---|---|
-| `GET /`, `GET /{path:path}`, `POST·PUT·PATCH·DELETE /{path:path}`(`backend/main.py`) | 화면 파일을 내주거나 화면 쪽 오류 응답을 위한 경로라 `include_in_schema=False`로 뺐다 |
+| `HEAD /health`(`backend/main.py:366`) | 감시용 HEAD 응답이라 `include_in_schema=False`로 뺐다. `GET /health`는 명세에 있다 |
+| `GET /`(`main.py:392`), `GET /{path:path}`(`main.py:418`), `POST·PUT·PATCH·DELETE /{path:path}`(`main.py:407`) | 화면 파일을 내주거나 화면 쪽 오류 응답을 위한 경로라 `include_in_schema=False`로 뺐다 |
 | `/mcp` | FastMCP 앱을 마운트한 것이라 OpenAPI에 나오지 않는다. 도구 목록은 `docs/specs/mcp.md` |
 
 경로 수가 코드와 다르면 먼저 `python docs/api/export_openapi.py`를 다시 돌려 파일이 낡았는지 본다.
