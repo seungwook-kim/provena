@@ -59,6 +59,7 @@ python -m backend.graph.recall.process_pending [--limit 50] [--force]
 - 함께 볼 정책 후보의 이유는 코드로만 만든다(LLM 초안 없음). 판정 비용 집계는 답마다 따로 한다.
 - 영향 미리보기의 입력은 바뀐 섹션 목록(`changes`)과 두 판(`pages`)이다. git 커밋이나 unified diff를 직접 받지는 않는다.
 - 메모리 저장소는 프로세스가 끝나면 사라진다. 운영은 `RECALL_STORE=postgres`와 `db/120_answers_recall.sql` 적용이 필요하다.
+- 웹훅 IP 고정(J-12)은 프록시를 거치지 않는 직접 연결을 전제로 한다. `HTTPS_PROXY` 환경변수가 있으면 프록시 터널(httpcore `http_proxy`)이 `sni_hostname`을 쓰지 않고 IP로 TLS를 맺어 인증서 이름 불일치로 전송이 실패한다(내부로 새지 않고 막히는 쪽 실패). 주소가 IP로 바뀌어 있어 `NO_PROXY`의 이름 예외도 걸리지 않는다.
 
 ## 작업 기록 (최신이 위)
 

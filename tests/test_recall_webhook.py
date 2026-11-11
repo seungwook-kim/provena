@@ -285,3 +285,71 @@ def test_pinned_request_is_really_sent_by_httpx_to_the_ip(secret, rebinding_dns)
     with httpx.Client(transport=httpx.MockTransport(handler)) as c:
         assert c.post(url, content=BODY, headers=add, extensions=ext).status_code == 200
     assert got == {"url": "https://93.184.216.34/recall", "host": "hooks.example.com", "sni": "hooks.example.com"}
+
+
+def test_retries_reuse_the_checked_ip_without_resolving_again(secret, rebinding_dns, monkeypatch):
+    """J-12: 응답 실패로 다시 보낼 때도 이름을 다시 풀지 않는다. 세 번 모두 처음 검사한 IP로 간다."""
+    import httpx
+
+    seen = []
+
+    def fake_post(url, **kw):
+        seen.append(url)
+        return httpx.Response(503)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    s = WebhookSender(store_with(url="https://hooks.example.com/recall"), sleep=lambda s: None, max_tries=3, backoff=0.0, local_demo=False)
+    rec = s.send("rn-1", BODY)[0]
+    assert rec["status"] == "failed" and rec["tries"] == 3
+    assert seen == ["https://93.184.216.34/recall"] * 3 and len(rebinding_dns) == 1
+
+
+def test_digest_is_pinned_to_the_checked_ip_too(secret, rebinding_dns, httpx_seen):
+    """J-12: 하루 요약(kind="digest")도 같은 전송 함수라 검사한 IP로 간다."""
+    rec = _real_sender(store_with(url="https://hooks.example.com/recall")).send("digest-2026-11-11", BODY, kind="digest")[0]
+    assert rec["status"] == "success" and rec["kind"] == "digest"
+    assert httpx_seen[0]["url"] == "https://93.184.216.34/recall" and httpx_seen[0]["headers"]["Host"] == "hooks.example.com"
+    assert httpx_seen[0]["extensions"] == {"sni_hostname": "hooks.example.com"} and len(rebinding_dns) == 1
+
+
+def _send_through_httpx(monkeypatch, url):
+    """기본 전송 함수(`httpx.post`)를 가짜 transport가 달린 Client로 바꿔 끝까지 보낸다. 반환: (전송 기록, 받은 요청)."""
+    import httpx
+
+    got = {}
+
+    def handler(request):
+        got["url"], got["host"], got["sni"] = str(request.url), request.headers["host"], request.extensions.get("sni_hostname")
+        return httpx.Response(200)
+
+    def fake_post(url, **kw):
+        kw.pop("timeout"), kw.pop("follow_redirects")
+        with httpx.Client(transport=httpx.MockTransport(handler)) as c:
+            return c.post(url, **kw)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    return _real_sender(store_with(url=url)).send("rn-1", BODY)[0], got
+
+
+def test_idn_host_goes_out_as_punycode_host_and_sni(secret, rebinding_dns, monkeypatch):
+    """J-12: 움라우트·한글 이름은 Host·SNI에 punycode로 실린다(그대로 넣으면 헤더를 만들 때 UnicodeEncodeError)."""
+    import httpx
+
+    rec, got = _send_through_httpx(monkeypatch, "https://bücher.example:8443/recall")
+    assert rec["status"] == "success" and rec["last_error"] is None
+    assert got == {"url": "https://93.184.216.34:8443/recall", "host": "xn--bcher-kva.example:8443", "sni": "xn--bcher-kva.example"}
+    assert got["host"] == httpx.URL("https://bücher.example:8443/recall").netloc.decode("ascii")   # httpx가 원래 주소로 보낼 때와 같다
+
+
+def test_trailing_dot_is_dropped_from_sni_and_kept_in_host(secret, rebinding_dns, monkeypatch):
+    """J-12: 끝에 점이 붙은 이름은 SNI에서 점을 뺀다(RFC 6066). Host는 주소에 적힌 그대로 둔다(httpx가 원래 주소로 보낼 때와 같다)."""
+    rec, got = _send_through_httpx(monkeypatch, "https://hooks.example.com./recall")
+    assert rec["status"] == "success"
+    assert got == {"url": "https://93.184.216.34/recall", "host": "hooks.example.com.", "sni": "hooks.example.com"}
+    assert rebinding_dns == ["hooks.example.com"]
+
+
+def test_host_that_cannot_be_ascii_is_recorded_as_blocked(secret, rebinding_dns, httpx_seen):
+    """J-12: punycode로 바꿀 수 없는 이름은 보내지 않고 blocked_url로 남긴다(예외가 밖으로 새지 않는다)."""
+    rec = _real_sender(store_with(url="https://☃.example/recall")).send("rn-1", BODY)[0]
+    assert rec["status"] == "failed" and rec["last_error"].startswith("blocked_url") and httpx_seen == []

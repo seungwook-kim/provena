@@ -114,9 +114,17 @@ def check_target_url(url: str, *, strict: bool):
 
 
 def pin_request(url: str, ip) -> tuple[str, dict, dict]:
-    """검사를 통과한 IP로 직접 연결하도록 (바뀐 url, 추가 헤더, httpx extensions)를 만든다. IPv6는 대괄호로 감싼다."""
+    """검사를 통과한 IP로 직접 연결하도록 (바뀐 url, 추가 헤더, httpx extensions)를 만든다. IPv6는 대괄호로 감싼다.
+    `Host`와 SNI는 httpx가 원래 주소를 보낼 때와 같은 ASCII 이름(한글·움라우트 이름은 punycode)을 쓴다. SNI에서는 끝 점을 뺀다.
+    이름을 ASCII로 바꿀 수 없으면 ValueError."""
+    import httpx
+
     parts = urlsplit(url)
-    host = parts.hostname or ""
+    try:
+        origin = httpx.URL(url)
+    except httpx.InvalidURL:
+        raise ValueError("주소 이름을 해석할 수 없습니다") from None
+    host = origin.raw_host.decode("ascii")
     ip_text = f"[{ip}]" if ip.version == 6 else str(ip)
     netloc = ip_text + (f":{parts.port}" if parts.port else "")
     try:
@@ -124,8 +132,8 @@ def pin_request(url: str, ip) -> tuple[str, dict, dict]:
         literal = True
     except ValueError:
         literal = False
-    ext = {} if literal or parts.scheme != "https" else {"sni_hostname": host}
-    return urlunsplit(parts._replace(netloc=netloc)), {"Host": parts.netloc}, ext
+    ext = {} if literal or parts.scheme != "https" else {"sni_hostname": host.rstrip(".")}
+    return urlunsplit(parts._replace(netloc=netloc)), {"Host": origin.netloc.decode("ascii")}, ext
 
 
 _NUMERIC_HOST = re.compile(r"^(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+)){0,3}$", re.I)
@@ -208,14 +216,14 @@ class WebhookSender:
         elif not self.local_demo:   # 3-8: 배포 주소는 서명 필수. 서명 없는 웹훅은 보내지 않는다
             log.error("웹훅 비밀값이 비어 있어 보내지 않았습니다 sub=%s", sub["sub_id"])
             return self._finish(rec, "failed", None, "secret_missing")
+        url, extra = sub["url"], ()
         try:
             ip = check_target_url(sub["url"], strict=not self.local_demo)
+            if ip is not None and self._pins:
+                url, add, ext = pin_request(sub["url"], ip)
+                headers, extra = {**headers, **add}, (ext,)
         except ValueError as e:
             return self._finish(rec, "failed", None, f"blocked_url: {e}"[:200])
-        url, extra = sub["url"], ()
-        if ip is not None and self._pins:
-            url, add, ext = pin_request(sub["url"], ip)
-            headers, extra = {**headers, **add}, (ext,)
         for i in range(self.max_tries):
             code, error = None, None
             try:
