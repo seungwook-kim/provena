@@ -227,6 +227,17 @@ describe('DemoChatPage citation order in the answer body (H-32)', () => {
     await screen.findByText(/첫째 \[1\]\[2\]\[3\] 입니다\./)
     expect(screen.getAllByRole('button', { name: /^\[\d\] 문서/ }).map(button => button.textContent)).toEqual(['[1] 문서A', '[2] 문서C', '[3] 문서B'])
   })
+
+  it('selects the citation shown as [1] after renumbering when a thread is opened', async () => {
+    stubServer({ ...listed, messages: [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: '먼저 [2] 다음 [1] 입니다.', state: 'done', citations: [{ id: 'c1', rule_title: '문서A' }, { id: 'c2', rule_title: '문서B' }] },
+    ] })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText(/먼저 \[1\] 다음 \[2\] 입니다\./)
+    expect(document.querySelector('.demo-answer .citation-chip.selected')?.textContent).toBe('[1] 문서B')
+  })
 })
 
 // H-32 ②: 같은 제목의 대화가 둘이면 지난 날짜에도 시각이 보여 구분된다

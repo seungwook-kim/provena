@@ -183,7 +183,7 @@ export default function DemoChatPage({ api = false }) {
 
   const firstCitation = thread => {
     const index = thread?.messages?.findLastIndex(message => message.role === 'assistant') ?? -1
-    const citation = index < 0 ? null : thread.messages[index].citations?.[0]
+    const citation = index < 0 ? null : renumberByAppearance(thread.messages[index]).citations?.[0]   // 화면에 [1]로 보이는 근거(H-32)
     return citation ? { ...citation, messageIndex: index } : null
   }
 
