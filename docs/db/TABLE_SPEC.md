@@ -192,7 +192,7 @@
 | `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:329`(`WHERE request_id = %s`), `225`, `313`(`ORDER BY request_id DESC`) |
 | `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:290`(`WHERE user_id = %s AND status = 'approved'`) |
 | `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(중복 아이디를 UNIQUE 위반으로 감지), `get_signup_by_login_id`·`review_signup_request`(`ORDER BY request_id DESC`) |
-| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 이메일 대소문자 중복 가입 방지 |
+| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체. 이 색인이 있으면 107을 다시 돌려도 옛 색인을 되살리지 않는다) | 이메일 대소문자 중복 가입 방지 |
 
 #### 4-1-2a. `user_identities`
 

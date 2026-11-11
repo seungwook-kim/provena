@@ -317,3 +317,62 @@ def test_pg_migration_lowercases_signup_request_emails_and_skips_collisions(pgst
         conn.execute(sql)  # 다시 돌려도 같다
         got = {r[0] for r in conn.execute("SELECT login_id FROM signup_requests WHERE login_id ILIKE %s", (f"{prefix}%",)).fetchall()}
     assert got == {f"{prefix}-solo@x.com", f"{prefix}-Dup@X.com", f"{prefix}-dup@x.com"}  # 겹치는 쌍은 그대로
+
+
+@pg
+def test_pg_ensure_schema_reruns_after_rejected_email_signs_up_again():
+    """로컬은 시작할 때마다 ensure_schema 가 107 을 다시 돌린다. 거절 행과 같은 이메일의 새 신청이 있어도 통과해야 한다.
+
+    새 스키마에서 한다(끝나면 지운다). 107 은 113 전에는 옛 소문자 색인을 만들고, 113 뒤에는 되살리지 않는다.
+    """
+    import psycopg
+
+    schema = f"reboot_{secrets.token_hex(4)}"
+    old_index, new_index = "signup_requests_login_id_lower_unique", "signup_requests_login_id_lower_open_unique"
+
+    def connect():
+        return psycopg.connect(DB, autocommit=True, connect_timeout=5, prepare_threshold=None,
+                               options=f"-c search_path={schema}")
+
+    def indexes():
+        with connect() as conn:
+            return {r[0] for r in conn.execute(
+                "SELECT indexname FROM pg_indexes WHERE schemaname = %s AND tablename = 'signup_requests'", (schema,)).fetchall()}
+
+    def read(name):
+        return (ROOT / "db" / name).read_text(encoding="utf-8")
+
+    with psycopg.connect(DB, autocommit=True) as conn:
+        conn.execute(f'CREATE SCHEMA "{schema}"')
+    try:
+        with connect() as conn:  # 113 전: 107 은 전과 같이 옛 색인을 만든다(두 번 돌려도 같다)
+            for name in ("101_auth_users.sql", "103_auth_token_revocations.sql", "105_admin_role_log.sql",
+                         "106_signup_approval.sql", "107_email_signup_verification.sql", "107_email_signup_verification.sql"):
+                conn.execute(read(name))
+        assert old_index in indexes() and new_index not in indexes()
+
+        value = PostgresAuthStore(connect=connect)
+        value.ensure_schema()  # 113 이 옛 색인을 새 색인으로 바꾼다
+        assert old_index not in indexes() and new_index in indexes()
+
+        reviewer = value.create_user("reboot-admin", hash_password(OLD), "admin")
+        email = "reboot@example.com"
+        value.create_pending_user(email, hash_password(OLD), email_verification_required=True)
+        assert value.review_signup_request(email, "reject", reviewer.user_id) == "changed"
+        value.create_pending_user(email, hash_password(NEW), email_verification_required=True)
+
+        value.ensure_schema()  # 다시 시작: 107 이 옛 색인을 되살리면 여기서 UniqueViolation
+        value.ensure_schema()
+        with connect() as conn:  # 107·113·114 를 손으로 두 번 더 돌려도 오류가 없다
+            for _round in range(2):
+                for name in ("107_email_signup_verification.sql", "113_signup_edges.sql", "114_google_identities.sql"):
+                    conn.execute(read(name))
+            statuses = [r[0] for r in conn.execute(
+                "SELECT status FROM signup_requests WHERE login_id = %s ORDER BY request_id", (email,)).fetchall()]
+        assert statuses == ["rejected", "pending"]
+        assert old_index not in indexes() and new_index in indexes()
+        with pytest.raises(AccountExistsError):  # 거절되지 않은 신청은 여전히 하나뿐
+            value.create_pending_user(email, hash_password(NEW), email_verification_required=True)
+    finally:
+        with psycopg.connect(DB, autocommit=True) as conn:
+            conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
