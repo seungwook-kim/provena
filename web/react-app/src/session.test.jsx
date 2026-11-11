@@ -33,7 +33,7 @@ beforeEach(() => {
     if (path === '/auth/login') {
       const body = JSON.parse(options.body)
       if (body.password !== 'test-password') return json({ detail: '로그인 정보가 올바르지 않습니다.' }, 401)
-      server.user = body.login_id === 'B' ? B : A
+      server.user = body.login_id === 'B' ? B : body.login_id === 'C' ? { ...A, profile_completed: false } : A
       return json(server.user)
     }
     if (path === '/me/memory' && options?.method === 'PATCH') {
@@ -475,6 +475,31 @@ describe('React authentication and session isolation', () => {
     await signIn('A', 'wrong-password')
     expect((await screen.findByRole('alert')).textContent).toContain('올바르지')
     expect(screen.queryByRole('button', { name: '내 계정' })).toBeNull()
+  })
+
+  // H-02: 로그인 뒤 이동. 화면은 돌아갈 주소(?next=)를 받지 않으므로 바깥 주소로 보낼 길이 없다는 것을 시험으로 고정한다.
+  it('lands a completed user on the chat screen after login (H-02)', async () => {
+    render(<App />)
+    await signIn()
+    await screen.findByRole('textbox', { name: '질문' })
+    expect(window.location.pathname).toBe('/chat')
+  })
+
+  it('lands a user with an incomplete profile on the first registration step after login (H-02)', async () => {
+    render(<App />)
+    await signIn('C')
+    await waitFor(() => expect(window.location.pathname).toBe('/myinfo'))
+  })
+
+  it.each(['https://evil.example/phish', '//evil.example', '/admin', 'javascript:alert(1)'])('ignores a ?next=%s return path and lands on the default screen (H-02)', async next => {
+    window.history.replaceState({}, '', '/login?next=' + encodeURIComponent(next))
+    render(<App />)
+    await signIn()
+    await screen.findByRole('textbox', { name: '질문' })
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)) })   // 로그인 화면의 이동 호출이 끝난 뒤의 주소를 본다
+    expect(window.location.origin).toBe('http://localhost:3000')
+    expect(window.location.pathname).toBe('/chat')
+    expect(window.location.search).toBe('')
   })
 
   it('links the Google login control to the server-side OAuth start route', async () => {
