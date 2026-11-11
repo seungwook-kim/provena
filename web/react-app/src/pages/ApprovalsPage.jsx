@@ -6,6 +6,7 @@ const label = { all: '전체', pending: '승인 대기', approved: '승인 완�
 const kindLabel = { decision: '결정표', issue: '쟁점표', team_failed: '팀 검토 실패', unknown: '승인 요청' }
 const roleLabel = { approver: '업무 승인', financial: '재무 승인', cooperating: '협조(승인 아님)', none: '없음' }
 const stanceLabel = { allow: '가능', condition: '조건부 가능', block: '불가' }
+const reviewResultLabel = { possible: '가능', conditional: '조건부 가능', blocked: '불가' }
 const confidenceLabel = { high: '높음', medium: '보통', low: '낮음' }
 const actionByConfirm = { approved: 'approve', rejected: 'reject', revision: 'revision', retry: 'retry', mark_unreviewed: 'mark_unreviewed' }
 const doneMessage = {
@@ -14,6 +15,7 @@ const doneMessage = {
   retry: '실패한 팀의 검토를 다시 요청했습니다.',
   mark_unreviewed: '실패한 팀을 검토하지 못한 팀으로 표시하고 다음 단계로 넘겼습니다.',
 }
+const confirmTitle = { approved: '승인하시겠습니까?', rejected: '반려하시겠습니까?', revision: '보완을 요청하시겠습니까?', retry: '다시 검토를 요청하시겠습니까?', mark_unreviewed: '검토하지 못한 팀으로 표시하시겠습니까?' }
 const LOAD_ERROR = '승인 요청을 불러오지 못했습니다.'
 const EMPTY_DRAFT = { id: null, text: '' }
 const draftFor = (draft, item) => (item && draft.id === item.id ? draft.text : '')
@@ -170,7 +172,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
               <div className="department-review-head"><h3>부서별 검토</h3><span>{allReviewed ? '최종 승인 대기' : `검토 완료 ${reviewed}/${reviewDepartments.length}`}</span></div>
               {reviewDepartments.map(item => <div className="department-item" key={item.id}>
                 <div><strong>{item.name}</strong><small>{item.question}</small></div>
-                {reviews[item.id] ? <p><b>검토 완료 · {reviews[item.id].result}</b><br />{reviews[item.id].opinion}</p> : <span className="department-pending">검토 대기</span>}
+                {reviews[item.id] ? <p><b>검토 완료 · {reviewResultLabel[reviews[item.id].result] ?? reviews[item.id].result}</b><br />{reviews[item.id].opinion}</p> : <span className="department-pending">검토 대기</span>}
               </div>)}
               <div className="review-form">
                 <label>담당 부서<select value={department} onChange={event => setDepartment(event.target.value)} disabled={busy}>{reviewDepartments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -198,7 +200,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     </section>
     {confirm && <div className="approval-dialog" role="dialog" aria-modal="true">
       <section>
-        <h2>처리하시겠습니까?</h2>
+        <h2>{confirmTitle[confirm] ?? '처리하시겠습니까?'}</h2>
         <p>{selected?.title}</p>
         <div>
           <button type="button" disabled={busy} onClick={() => setConfirm(null)}>취소</button>

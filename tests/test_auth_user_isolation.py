@@ -82,7 +82,7 @@ def test_ab_have_distinct_uuid_and_independent_roles(accounts):
     assert ids[0] != ids[1]
     for client, name in ((a, "A"), (b, "B")):
         assert client.get("/me").json() == {
-            "user_id": str(users[name].user_id), "role": users[name].role
+            "user_id": str(users[name].user_id), "role": users[name].role, "login_id": name
         }
     assert a.get("/test/admin").status_code == 403
     assert b.get("/test/admin").json() == {"user_id": str(users["B"].user_id)}
@@ -104,7 +104,7 @@ def test_failed_cross_account_login_does_not_switch_identity(accounts):
     users, passwords, _, a, _ = accounts
     assert login(a, "A", passwords["A"]).status_code == 200
     assert login(a, "B", passwords["A"]).status_code == 401
-    assert a.get("/me").json() == {"user_id": str(users["A"].user_id), "role": "user"}
+    assert a.get("/me").json() == {"user_id": str(users["A"].user_id), "role": "user", "login_id": "A"}
 
 
 def test_logout_then_switch_to_b_without_logging_out_other_client(accounts):
@@ -116,7 +116,7 @@ def test_logout_then_switch_to_b_without_logging_out_other_client(accounts):
     assert a.get("/me").status_code == 401
     assert b.get("/me").json()["user_id"] == str(users["B"].user_id)
     assert login(a, "B", passwords["B"]).status_code == 200
-    assert a.get("/me").json() == {"user_id": str(users["B"].user_id), "role": "admin"}
+    assert a.get("/me").json() == {"user_id": str(users["B"].user_id), "role": "admin", "login_id": "B"}
 
 
 def test_b_role_and_active_status_are_read_from_store_not_old_jwt(accounts):
@@ -126,7 +126,7 @@ def test_b_role_and_active_status_are_read_from_store_not_old_jwt(accounts):
     uid = str(users["B"].user_id)
     store.users[uid] = replace(users["B"], role="user")
     assert b.get("/test/admin").status_code == 403
-    assert b.get("/me").json() == {"user_id": uid, "role": "user"}
+    assert b.get("/me").json() == {"user_id": uid, "role": "user", "login_id": "B"}
     store.users[uid] = replace(store.users[uid], is_active=False)
     assert b.get("/me").status_code == 401
     assert a.get("/me").json()["user_id"] == str(users["A"].user_id)

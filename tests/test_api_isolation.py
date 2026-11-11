@@ -38,7 +38,7 @@ def test_long_term_memory_is_per_user(monkeypatch):
         a, b = env.client(env.alice), env.client(env.bob)
         r = a.patch("/me/memory", json={"affiliation": "TEST-security"})
         assert r.status_code == 200 and r.json() == {"user_id": str(env.alice.user_id), "profile": {"affiliation": "TEST-security"}}
-        assert b.get("/me/memory").json() == {"user_id": str(env.bob.user_id), "profile": {}, "allowed_fields": ["affiliation", "rank"]}
+        assert b.get("/me/memory").json() == {"user_id": str(env.bob.user_id), "profile": {}, "allowed_fields": ["affiliation", "rank", "service"]}
         b.patch("/me/memory", json={"affiliation": "TEST-finance"})
         assert a.get("/me/memory").json()["profile"] == {"affiliation": "TEST-security"}
         store = env.app.state.store                                        # 저장 위치도 직접 본다
@@ -60,7 +60,7 @@ def test_memory_patch_is_partial_and_delete_only_clears_own(monkeypatch):
 def test_memory_accepts_only_allowed_fields(monkeypatch):
     with Env(monkeypatch) as env:
         a = env.client(env.alice)
-        for body in ({}, {"team": "x"}, {"affiliation": "A", "question": "대화 내용"}, {"affiliation": "x" * 101}):
+        for body in ({}, {"team": "x"}, {"affiliation": "A", "question": "대화 내용"}, {"affiliation": "x" * 101}, {"service": "x" * 101}):
             r = a.patch("/me/memory", json=body)
             assert r.status_code == 422 and r.json()["error"]["code"] == "validation_error", body
         assert a.get("/me/memory").json()["profile"] == {}
@@ -97,3 +97,17 @@ def test_memory_is_read_by_the_next_question(monkeypatch):
         g = env.app.state.question_graph
         assert g.get_state({"configurable": {"thread_id": f"{env.alice.user_id}:t1"}}).values["profile"] == {"affiliation": "TEST-finance", "rank": "매니저"}
         assert g.get_state({"configurable": {"thread_id": f"{env.bob.user_id}:t1"}}).values["profile"] == {}
+
+
+def test_memory_service_field_saves_reads_and_deletes(monkeypatch):
+    with Env(monkeypatch) as env:
+        a = env.client(env.alice)
+        r = a.patch("/me/memory", json={"service": "결제 서비스"})   # service만 보내도 통과
+        assert r.status_code == 200 and r.json()["profile"] == {"service": "결제 서비스"}
+        r = a.patch("/me/memory", json={"affiliation": "TEST-security", "rank": "매니저"})   # 다른 칸을 고쳐도 service는 그대로
+        assert r.json()["profile"] == {"service": "결제 서비스", "affiliation": "TEST-security", "rank": "매니저"}
+        assert a.get("/me/memory").json()["profile"]["service"] == "결제 서비스"
+        assert a.patch("/me/memory", json={"service": "x" * 100}).status_code == 200      # 100자는 통과, 101자는 위 시험에서 422
+        assert env.client(env.bob).get("/me/memory").json()["profile"] == {}               # 다른 사용자에게 안 보임
+        assert a.delete("/me/memory").json()["profile"] == {}
+        assert a.get("/me/memory").json()["profile"] == {}

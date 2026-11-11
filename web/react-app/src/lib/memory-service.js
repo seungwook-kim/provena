@@ -2,8 +2,8 @@ import { emptyMemory, readMemory, removeMemory, saveMemory } from './session-mem
 
 export const DEFAULT_SETTINGS = Object.freeze(emptyMemory())
 
-// Stable boundary for future GET/PATCH/DELETE /me/memory. Until that contract
-// exists, preview state remains browser-session scoped and follows logout/user
+// Boundary for GET/PATCH/DELETE /me/memory (affiliation=team, rank=role, service=service).
+// The preview adapter (no login) stays browser-session scoped and follows logout/user
 // switching cleanup implemented by SessionProvider.
 export function createMemoryService(adapter) {
   return {
@@ -33,6 +33,7 @@ export function mapApiMemoryResponse(value = {}, fallback = DEFAULT_SETTINGS) {
     ...fallback,
     team: typeof profile.affiliation === 'string' ? profile.affiliation : fallback.team,
     role: typeof profile.rank === 'string' ? profile.rank : fallback.role,
+    service: typeof profile.service === 'string' ? profile.service : fallback.service,
   }
 }
 
@@ -43,7 +44,7 @@ export const apiMemoryService = createMemoryService({
   },
   saveMemorySettings: async (_ownerId, settings) => {
     const { patchMemory } = await import('./api')
-    const response = await patchMemory({ affiliation: settings.team, rank: settings.role })
+    const response = await patchMemory({ affiliation: settings.team, rank: settings.role, service: settings.service })
     return mapApiMemoryResponse(response, settings)
   },
   resetMemorySettings: async () => {

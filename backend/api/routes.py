@@ -2,7 +2,7 @@
 
 - `POST /chat`: 로그인과 CSRF. `{thread_id?, message, as_of?, org?}` -> SSE로 `AgentEvent`(token, citation, approval_request, error, done).
 - `GET /threads`, `GET /threads/{thread_id}`: 로그인. 내 대화 목록과 상세(마지막 답 `last`, 체크포인트에서 되살린 대화 이력 `messages`: 질문·답·근거). 남의 것은 404 `not_found`.
-- `GET /me/memory`: 로그인. `PATCH`, `DELETE /me/memory`: 로그인과 CSRF. 소속(affiliation)·직급(rank) 두 칸만 다룬다.
+- `GET /me/memory`: 로그인. `PATCH`, `DELETE /me/memory`: 로그인과 CSRF. 소속(affiliation)·직급(rank)·담당 서비스(service) 세 칸만 다룬다.
 
 규칙
 - 사용자 id는 로그인 쿠키에서만 얻는다(`create_current_user_dependency`). 본문의 `user_id`는 422(`extra="forbid"`), `?user_id=`는 읽지 않는다.
@@ -81,9 +81,10 @@ class ChatRequest(BaseModel):
 
 
 class MemoryPatch(BaseModel):
-    model_config = ConfigDict(extra="forbid")  # 기억해도 되는 칸(affiliation, rank) 밖의 값은 422
+    model_config = ConfigDict(extra="forbid")  # 기억해도 되는 칸(affiliation, rank, service) 밖의 값은 422
     affiliation: str | None = Field(default=None, max_length=100)
     rank: str | None = Field(default=None, max_length=100)
+    service: str | None = Field(default=None, max_length=100)  # 상한은 다른 두 칸과 같게 100자(화면 입력칸도 같은 한도)
 
 
 def internal_thread(user_id: str, thread_id: str) -> str:
@@ -363,10 +364,11 @@ def create_api_router(
     @router.patch("/me/memory")
     def memory_patch(body: MemoryPatch, request: Request, user: AuthUser = Depends(current_user),
                      _csrf: None = Depends(require_csrf)) -> dict:
-        if body.affiliation is None and body.rank is None:
-            raise ApiError(422, "validation_error", "고칠 칸(affiliation, rank)이 없습니다.")
+        if body.affiliation is None and body.rank is None and body.service is None:
+            raise ApiError(422, "validation_error", "고칠 칸(affiliation, rank, service)이 없습니다.")
         user_id = str(user.user_id)
-        profile = put_profile(_need(request, "store"), user_id, affiliation=body.affiliation, rank=body.rank)
+        profile = put_profile(_need(request, "store"), user_id, affiliation=body.affiliation, rank=body.rank,
+                              service=body.service)
         return {"user_id": user_id, "profile": profile}
 
     @router.delete("/me/memory")

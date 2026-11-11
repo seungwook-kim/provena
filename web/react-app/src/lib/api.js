@@ -106,6 +106,10 @@ function readCsrfToken() {
   return document.cookie.split('; ').find(cookie => cookie.startsWith('provena_csrf='))?.split('=')[1]
 }
 
+// 전화번호를 가린 보기(phone_masked). 화면에 보여 주기만 할 때 쓴다.
+export function getProfile() { return apiJson('/me/profile') }
+
+// 원래 전화번호가 담긴 보기. 내 정보를 고치는 화면에서만 쓴다.
 export function getProfileForEdit() { return apiJson('/me/profile?view=edit') }
 
 export async function saveProfile(profile) {

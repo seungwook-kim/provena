@@ -17,13 +17,14 @@ function validateUser(user) {
   return {
     user_id: user.user_id.toLowerCase(),
     role: user.role,
+    ...(typeof user.login_id === 'string' && user.login_id ? { login_id: user.login_id } : {}),
     ...(typeof user.profile_completed === 'boolean' ? { profile_completed: user.profile_completed } : {}),
     ...(typeof user.is_owner === 'boolean' ? { is_owner: user.is_owner } : {}),
   }
 }
 
 function sameUser(left, right) {
-  return Boolean(left && right) && ['user_id', 'role', 'profile_completed', 'is_owner'].every(key => left[key] === right[key])
+  return Boolean(left && right) && ['user_id', 'role', 'login_id', 'profile_completed', 'is_owner'].every(key => left[key] === right[key])
 }
 
 export function SessionProvider({ children }) {
