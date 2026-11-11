@@ -55,5 +55,23 @@
 | 15 | `backend/graph/build.py`의 `search`에서 `EmbedUnavailable` 처리를 다른 예외로 바꿈 | `test_embed_unavailable_ends_with_a_fixed_refusal_not_an_exception` | 실패(2개) | 2026-11-05 |
 | 16 | `backend/graph/build.py`의 `search`에서 키 없음 판정 `== "no_key"`를 다른 값으로 | `test_no_key_search_result_ends_at_once_with_a_fixed_refusal` | 실패(1개) | 2026-11-05 |
 | 17 | `backend/graph/build.py`의 상수 `SEARCH_K`(검색 k)를 3으로 | `test_k_is_five_for_every_search` | 실패(7개) | 2026-11-05 |
+| 18 | `backend/graph/decision/execute.py`의 승인 재개 조건 `table.status != "approved" or not (table.approved_by or "").strip()`를 `False`로 | `tests/test_decision_approval.py` 묶음 | 실패(3개) | 2026-11-11 |
+| 19 | `backend/graph/multi.py`의 `writer` 다음 단계 `("verifier",)`를 `("end",)`로 | `tests/test_multi_graph.py` 묶음 | 실패(118개) | 2026-11-11 |
+| 20 | `backend/graph/multi.py`의 재조사 한도 조건 `trace.count("retriever") <= max_research and ...`를 항상 참으로 | `tests/test_multi_graph.py` 묶음 | 실패(20개) | 2026-11-11 |
+| 21 | `backend/graph/grounding.py`의 `values_backed`에서 값이 표시한 청크에 있는지 검사 `all(_value_in_source(...))`를 건너뜀 | `tests/test_values_backed.py` 묶음(`test_value_missing_from_the_marked_chunk_is_not_backed`) | 실패(1개) | 2026-11-11 |
+| 22 | `backend/graph/grounding.py`의 기간 미포함 거절 `period_covered is False`를 건너뜀 | `tests/test_question_graph.py`, `tests/test_answer_fixes_graph.py`, `tests/test_d7_fixes.py` 묶음 | 실패(3개) | 2026-11-11 |
+| 23 | `backend/graph/grounding.py`의 `prune`에서 문장을 다 지울 때의 거절 `len(drop) >= len(sentences)`를 건너뜀 | `tests/test_question_graph.py`, `tests/test_multi_graph.py` 묶음 | 실패(1개) | 2026-11-11 |
+| 24 | `backend/graph/build.py`의 `if not chunks:`(근거가 비면 LLM 없이 부족 처리)를 `if False:`로 | `tests/test_empty_evidence.py` (단일·멀티 그래프, 지어낸 답 3종) | 실패(6개) | 2026-11-11 |
+| 25 | `backend/rag/retrieve/search.py`의 `merge_by_score`에서 하위 질문 순회 `lists[1:]`를 `lists[2:]`로 | `tests/test_uncited_and_drop_one.py` | 실패(2개) | 2026-11-11 |
+| 26 | `backend/graph/recall/digest.py`의 하루 요약 중요도 `"high" if high else "low"`를 항상 `"high"`로 | `tests/test_digest_contract.py` | 실패(1개) | 2026-11-11 |
+| 27 | `backend/graph/recall/digest.py`의 `any(n.get("conclusion_changed") ...)`를 `all(...)`로 | `tests/test_digest_contract.py` | 실패(1개) | 2026-11-11 |
+| 28 | `backend/graph/recall/impact.py`의 요약 `answers_checked=len(seen_answers)`를 0으로 | `tests/test_impact_preview_contract.py` | 실패(1개) | 2026-11-11 |
+| 29 | `backend/graph/recall/impact.py`의 `render_markdown`에서 출처 문구 `ATTRIBUTION` 줄을 뺌 | `tests/test_impact_preview_contract.py` | 실패(1개) | 2026-11-11 |
+| 30 | `backend/graph/recall/impact.py`의 `changes_from_pages`에서 옛 본문 모음 조건을 `b.md`만 남기도록 | `tests/test_impact_preview_contract.py` | 실패(2개) | 2026-11-11 |
+| 31 | `evals/retrieval/experiment_v1.py`의 `_Scores.score`에서 int8는 저장 값을 쓰지 않는 분기를 끔 | `tests/test_exp_int8_scores.py` | 실패(2개) | 2026-11-11 |
+| 32 | `backend/services/auth_store.py`의 `_review_locked`에서 승인 분기 `if action == "approve":`를 `if True:`로(거절도 계정 생성) | `tests/test_round_trip_app.py` | 실패(1개) | 2026-11-11 |
+| 33 | `backend/services/auth_store.py`의 `_review_locked`에서 승인 분기를 `if False:`로(승인해도 계정 없음) | `tests/test_round_trip_app.py` | 실패(1개) | 2026-11-11 |
 
 각 변이 뒤 파일은 원래대로 되돌렸고 SHA-256이 변이 전과 같음을 확인했다. 17건은 Claude Code 서브에이전트가 실행한 결과이고, 그중 1번과 16번은 김승욱 세션에서 임시 복사본에 같은 변이를 넣어 다시 실패를 확인했다. 확인한 시험 묶음은 `tests/test_question_graph.py`, `tests/test_graph_search_wiring.py`, `tests/test_exp_confirmed.py`, `tests/test_exp_service.py`이다.
+
+18번부터는 D5 이후 코드(승인 재개, 멀티, 판정 단계)와 이 PR에서 더한 시험의 변이이고 `tests/mutation_d5.py`가 변이마다 원본을 `try/finally`로 복구하며 실행한 로컬 결과이다(변이 전 통과, 변이 뒤 실패 수를 같이 출력). 18~23번은 기존 시험, 24~33번은 새 시험이 잡는다.
