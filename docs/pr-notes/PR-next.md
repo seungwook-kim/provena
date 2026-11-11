@@ -1,22 +1,25 @@
-# PR #(번호 미정) — 놓친 것 목록(11/11 점검 50개) 남은 35개: 보안·API, 화면 마감, 수집·문서, 기록 표기
+# PR #(번호 미정) — 놓친 것 목록(11/11 점검 50개) 남은 34개: 보안·API, 화면 마감, 수집·문서, 기록 표기
 - 작업자: 박진형 (jinyeong-731) / 머지: 아직 안 함 / 기준: `origin/main` `a611610`, 통합 브랜치 `integ-1111` HEAD `6c24c0a` / 파일 이름 `PR-next.md`는 번호가 나오면 `PR-<번호>.md`로 바꿈
 
 ## 배포 상태 (맨 위 확인)
 | 대상 | 상태 | 근거 |
 |---|---|---|
+| 지금 트래픽 100% 판 | `provena-api-00043-lzr` (Cloud Console 배포) | 배포 시각은 11/11 #130 머지(16:33) 이전. 콘솔 표시는 20:23 기준 "4시간 전". 배포 화면 파일 `index-DvEEAMqg.js` 빌드 시각 14:24(index.html last-modified 05:24 GMT 실측) |
 | #127·#129 | 배포됨 | 진형 직접 확인: 구글 로그인 → 비밀번호 입력 → 인증 → 관리자 승인 → 로그인 됨(11/11, 화면 캡처 없음) |
-| #130 | **배포 안 됨** | 배포 번들(`index-DvEEAMqg.js`)에 #130 코드(`approval_pending`, `findLastIndex`)가 없음. 배포 실측(11/11 19:32) |
+| #130 | **배포 안 됨** | 배포 번들(`index-DvEEAMqg.js`)에 #130 코드(`approval_pending`, `findLastIndex`)가 없음. 배포 실측(11/11 19:32). 빌드 시각 14:24가 머지 16:33보다 앞 |
 | 이 PR | 배포 안 됨 | 아직 머지 전 |
 
-- 판정: 배포는 #129 수준. 이 문서의 모든 시험·측정 값은 로컬 시험이고, 배포에서 안 본 것은 "배포 미확인"으로 적었다.
+- 판정: 지금 배포(00043-lzr)는 #130 이전 코드다. #130과 이 PR을 머지한 뒤 main으로 이미지를 **새로 빌드**해서 배포해야 한다. 콘솔에서 "다시 배포"만 누르면 같은 이미지가 그대로 올라간다.
+- 이 문서의 모든 시험·측정 값은 로컬 시험이고, 배포에서 안 본 것은 "배포 미확인"으로 적었다.
 - 배포 수정 전 값(배포 실측 11/11 19:32, `https://provena-api-cttaanqntq-du.a.run.app`): HEAD `/health` 처음 000(응답 없음), 다시 두 번 재면 404 / HEAD `/threads` 404 / `/favicon.ico` 404 / `/zz-no-such-page` 404(전부 JSON) / `/recalls/zz` 401 / `/threads/%00` 401 / `/me` 401. 이 값이 아래 H-27·C-24·C-16 "머지 뒤 확인" 행의 비교 기준이다.
 
 ## 닫는 항목
 | 구분 | 번호 | 수 |
 |---|---|---|
-| 이 PR이 닫는 것 | H-10·H-11·H-12·H-13·H-16·H-18·H-19·H-20·H-21·H-22·H-23·H-26·H-27·H-29·H-30·H-31·H-32·H-33 (18) / J-11·J-12·J-13·J-14 (4) / C-16~C-25 (10) / O-47·L-22 (2) | 34 |
+| 이 PR이 닫는 것 | H-10·H-11·H-12·H-13·H-16·H-18·H-19·H-20·H-22·H-23·H-26·H-27·H-29·H-30·H-31·H-32·H-33 (17) / J-11·J-12·J-13·J-14 (4) / C-16~C-25 (10) / O-47·L-22 (2) | 33 |
 | 기록만 | L-24 (점검이 못 본 경로 11개를 README에 "미확인"으로 적음, 실행 확인 아님) | 1 |
-| **합계** | 50개 중 35개 | 35 |
+| **합계** | 50개 중 34개 | 34 |
+| 일부만 (합계에 안 넣음) | H-21 (인증 재설정·리콜 수동 실행·웹훅 목록·추가만 연결. 결정표 변환 화면과 웹훅 삭제 경로는 없음) | 1 |
 | 이미 main(#127·#130) | H-08·H-09·H-14·H-15·H-17·H-24·H-25·H-28·J-15·K-17·K-18·K-21·L-23 | 13 |
 | 따로 처리 | K-19(별도 PR), K-20(조장 PR #126에 같은 기능) | 2 |
 
@@ -64,7 +67,7 @@
 - 웹훅 NAT64 주소(`64:ff9b::/96`)는 아직 막지 않는다.
 - 웹훅 주소에 IDN(ß 등)이 있으면 검사할 때와 연결할 때의 이름이 달라 TLS가 실패할 수 있다(SSRF는 아님).
 - C-23 권한표 파일에 깨진 줄이 있으면 500이 난다.
-- CSRF 서명 키 우선순위가 발급(라우터 secret)과 검사(AUTH_SECRET 우선)에서 다르다. 운영은 `main.py`가 둘을 같게 맞춰 영향 없음.
+- CSRF 서명 키 우선순위가 발급(라우터 secret)과 검사(AUTH_SECRET 우선)에서 다르다. 운영은 `main.py`가 둘을 같게 맞춰 영향 없음. 서명 키가 프로세스 전역(`_registered_secret`)이고 `AUTH_SECRET` 환경변수를 먼저 쓴다. 환경변수와 다른 secret으로 앱을 만드는 시험·도구에서는 발급·검사 키가 어긋날 수 있다.
 - CSRF 토큰이 세션에 묶여 있지 않다(참고).
 - 전부 로컬 시험, 배포 미확인.
 
@@ -117,7 +120,7 @@
 - 흔들리는 시험: 고친 뒤 단독 20회 통과, 전체 3회 실패 0.
 - 고친 줄을 되돌리면 시험 실패(PR④ 초안 기록: H-29 최대 4개, H-22 1개).
 ### 한계·남은 것
-- H-21 일부: 웹훅 삭제는 서버에 경로가 없고, 결정표 변환(`/decision-tables/convert`)은 LLM 호출과 새 결정표 화면이 필요해 연결하지 않음.
+- H-21 일부(위 닫는 항목 표에서 "일부만"으로 뺌): 웹훅 삭제는 서버에 경로가 없고, 결정표 변환(`/decision-tables/convert`)은 LLM 호출과 새 결정표 화면이 필요해 연결하지 않음.
 - H-13: 계정 메뉴에 email 칸 없음(로그인 아이디가 이메일이라 같은 값이 보임).
 - H-32 ③: 3초 고정 지연의 출처 미상.
 - H-27·H-33·H-26 등은 로컬 시험이고 배포 주소 확인 전.
@@ -153,13 +156,17 @@
 ## 남의 폴더를 고친 곳
 | 폴더 | 주인 | 고친 내용 |
 |---|---|---|
-| `docs/`(GATES·PRD 요청·specs·deliverables 등), `README.md` | 조장 | 기록·현행화(O-47·L-22·L-24, gap-docs 줄 번호), `docs/specs/login·admin-roles·decision-approval` |
+| `docs/`(GATES·PRD 요청·specs·deliverables 등) | 조장(팀장) | 기록·현행화(O-47·L-22·L-24, gap-docs 줄 번호), `docs/specs/login·admin-roles·decision-approval` |
+| `docs/SPEC.md`, `docs/GATES.md`, `docs/specs/*`, `README.md` | 조장(docs) / 김승욱(README, 5장 '폴더로 나뉘지 않는 일') | 측정 문장에 '로컬 실행기/배포 미확인' 표기만 추가, 수치는 그대로(`b2fbb9a`·`6c24c0a`). 줄 번호 인용 정정(`1eba0dc` 15파일, `64cd6ef`) |
+| `db/db.md`, `backend/backend.md`, `evals/evals.md`, `backend/graph/decision/decision.md` | 김승욱(db/·backend/·graph/). `evals/evals.md`는 evals 루트라 5장 표에 주인 없음 | 폴더 md의 '로컬/배포 미확인' 표기(`b2fbb9a`), `decision.md` 줄 번호(`64cd6ef`) |
+| `web/web.md`, `web/react-app/README.md` | 경희님 | 같은 표기·줄 번호 정정(`b2fbb9a`·`1eba0dc`·`64cd6ef`) |
+| `docs/deliverables/portfolio-박진형.md`, `MYINFO_SPEC.md`(루트) | 본인 / `MYINFO_SPEC.md`는 5장 표에 주인 없음 | 표기·줄 번호 정정 |
 | `web/` | 경희님 | H-10~H-33 화면 마감, 시험 |
 | `backend/graph/`(answer_fixes·recall/webhook·decision/routes·repo·service·build 쪽) | 조장 | J-11·J-12·J-13·C-18·C-23 |
 | `backend/services/`, `backend/main.py`(A-07 +4/−1, C-16·H-27) | 조장 | 보안·스위치·404 |
 | `backend/prompts/question.py` | 조장 | H-13 후속 |
 | `evals/agent/approval_latency.py`, `tests/test_approval_latency.py` | 김승욱님 | J-14로 깨진 승인 지연 HTTP 측정 줄을 서명된 CSRF 토큰으로 고침(조장 지시 11/11 목록 작업 중), `evals/agent/agent.md`에 한 줄 |
-| `db/` | 조장 | 이 PR에서 변경 없음(113·114는 #127) |
+| `db/` | 김승욱(5장 표) | 코드·SQL 변경 없음(113·114는 #127), `db/db.md` 문장만 위 행 |
 | 팀장 전용 `.env.example`·`docker-compose.yml` | 팀장 | 건드리지 않음(A-07 설명 줄은 요청으로 기록) |
 
 ## 머지·재배포 뒤 배포 주소에서 확인할 항목
