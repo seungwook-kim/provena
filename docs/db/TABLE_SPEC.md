@@ -164,7 +164,7 @@
 |---|---|---|
 | `users_pkey` | `PRIMARY KEY (user_id)` | `auth_store.py:215`(`WHERE user_id = %s`), `375`(`UPDATE ... WHERE user_id = %s`) |
 | `users_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:208`, `235-237`(`ON CONFLICT (login_id)`), `250`, `265`, `321`, `365` |
-| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/112`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`create_pending_user`의 이메일 조회(`lower(login_id) = lower(%s)`) |
+| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/113`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`create_pending_user`의 이메일 조회(`lower(login_id) = lower(%s)`) |
 
 #### 4-1-2. `signup_requests`
 
@@ -190,8 +190,8 @@
 |---|---|---|
 | `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:329`(`WHERE request_id = %s`), `225`, `313`(`ORDER BY request_id DESC`) |
 | `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:290`(`WHERE user_id = %s AND status = 'approved'`) |
-| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/112`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(중복 아이디를 UNIQUE 위반으로 감지), `get_signup_by_login_id`·`review_signup_request`(`ORDER BY request_id DESC`) |
-| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/112`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 이메일 대소문자 중복 가입 방지 |
+| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(중복 아이디를 UNIQUE 위반으로 감지), `get_signup_by_login_id`·`review_signup_request`(`ORDER BY request_id DESC`) |
+| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 이메일 대소문자 중복 가입 방지 |
 
 #### 4-1-2a. `user_identities`
 

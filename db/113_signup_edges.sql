@@ -1,6 +1,6 @@
--- 112_signup_edges.sql
+-- 113_signup_edges.sql
 -- 이메일 가입의 모서리 두 가지를 DB 쪽에서 맞춘다. 몇 번을 돌려도 같은 결과(멱등)이고 일반 Postgres에서도 돈다
--- (anon·authenticated 역할을 쓰지 않는다). 적용 순서: 106 -> 107 -> 108 -> 112 (docker initdb 는 이름 순서로 돌린다).
+-- (anon·authenticated 역할을 쓰지 않는다). 적용 순서: 106 -> 107 -> 108 -> 113 (docker initdb 는 이름 순서로 돌린다).
 --
 -- 1) 거절된 이메일도 다시 가입 신청할 수 있게 한다.
 --    106 의 signup_requests.login_id UNIQUE 와 107 의 lower(login_id) 유니크 색인은 거절된 행까지 막는다.
@@ -44,7 +44,7 @@ BEGIN
          WHERE position('@' in login_id) > 0
          GROUP BY lower(login_id) HAVING count(*) > 1) d;
     IF clash > 0 THEN
-        RAISE NOTICE 'users: 대소문자만 다른 이메일 계정 % 쌍이 있어 소문자 유니크 색인을 만들지 않았습니다. 정리 뒤 112를 다시 실행하세요.', clash;
+        RAISE NOTICE 'users: 대소문자만 다른 이메일 계정 % 쌍이 있어 소문자 유니크 색인을 만들지 않았습니다. 정리 뒤 113을 다시 실행하세요.', clash;
     ELSE
         CREATE UNIQUE INDEX IF NOT EXISTS users_login_id_lower_unique
             ON users (lower(login_id))
