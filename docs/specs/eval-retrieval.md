@@ -20,9 +20,9 @@
 
 **Happy Path**
 1. 판정자 두 명이 판정 시트(v1: `evals/judge_sheet_v1.csv`)에 Y/N과 정답 위치를 적는다. 둘 다 Y이고 위치가 같거나 `final_gold`가 있으면 `python evals/judge_sheet.py --to-jsonl ...`로 평가셋 파일을 만든다.
-2. `python -m evals.retrieval.run --dataset evals/dataset_v1.jsonl --search-fn <모듈:함수> --chunks data/chunks/chunks.jsonl --out evals/results/<이름>.json`
+2. `python -m evals.retrieval.run --dataset evals/dataset_v1.jsonl --search-fn <모듈:함수> --chunks data/chunks/chunks.jsonl --out evals/results/<이름>.json` (청크 파일은 `backend.rag.ingest.chunk`가 만든 `data/chunks/chunks.jsonl`, 새로 받은 저장소에서는 커밋된 `data/index.tar.gz`를 푼 `data/index/chunks.jsonl`)
 3. 문항마다 `SearchQuery(query, as_of, k)`로 검색하고, 정답 위치와 맞는 청크의 순위로 지표를 낸다. 비관련은 빈 결과를 거절로 센다.
-4. `python -m evals.retrieval.compare --dataset ... --factory <모듈:함수> --grid grid.json --out evals/results/<이름>/`로 조합마다 같은 채점을 하고 `compare.md` 표를 만든다.
+4. `python -m evals.retrieval.compare --dataset ... --factory <모듈:함수> --grid evals/retrieval/grid_v1.json --out evals/results/<이름>/`로 조합마다 같은 채점을 하고 `compare.md` 표를 만든다.
 
 **정답 위치 표기** (`evals/retrieval/gold.py`)
 

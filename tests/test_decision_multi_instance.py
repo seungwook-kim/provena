@@ -24,7 +24,7 @@ from decision_fixtures import EXPENSE_CELLS, FakeLLM, draft_json
 from team_review_fakes import REQUEST, Retriever, review_llm
 from test_decision_approval import OWNER, _role_url, pg_admin_url, pg_url  # noqa: F401  (같은 임시 Postgres 고르기와 표 소유자 접속 정보를 쓴다)
 
-from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, create_access_token
+from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, create_access_token, create_csrf_token
 from backend.graph.checkpoint import open_persistence
 from backend.graph.decision import rules as R
 from backend.graph.decision.convert import build_convert_graph, pending_interrupt
@@ -73,8 +73,9 @@ class Servers:
         for p, proc in zip(self.ports, self.procs):
             _wait_port(p, proc)
         token = create_access_token(self.admin_id, "admin", secret=self.secret)
-        self.clients = [httpx.Client(base_url=f"http://127.0.0.1:{p}", cookies={AUTH_COOKIE_NAME: token, CSRF_COOKIE_NAME: "csrf"},
-                                     headers={"X-CSRF-Token": "csrf"}, timeout=60) for p in self.ports]
+        csrf = create_csrf_token(self.secret)
+        self.clients = [httpx.Client(base_url=f"http://127.0.0.1:{p}", cookies={AUTH_COOKIE_NAME: token, CSRF_COOKIE_NAME: csrf},
+                                     headers={"X-CSRF-Token": csrf}, timeout=60) for p in self.ports]
         assert len({proc.pid for proc in self.procs}) == 2
         return self.clients
 

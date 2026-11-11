@@ -189,6 +189,82 @@ def test_parse_log():
     assert commits[1]["title"] == "typo"
 
 
+def test_parse_log_rename_keeps_old_path():
+    """F-11: -M 로 읽으면 R100<\t>옛<\t>새. 예전 코드는 경로가 '옛<\t>새' 한 덩어리가 됐다."""
+    text = f"{RS}abc{US}2026-03-02{US}move\n\nR100\tcontent/a/old.md\tcontent/a/new.md\nM\tcontent/a/x.md\n"
+    files = parse_log(text)[0]["files"]
+    assert files[0] == {"status": "R100", "path": "content/a/new.md", "old_path": "content/a/old.md"}
+    assert files[1] == {"status": "M", "path": "content/a/x.md"}
+
+
+def test_handbook_history_follow_renames_flag(tmp_path, monkeypatch):
+    import backend.rag.ingest.history as H
+    run, _, _ = _repo_with_history(tmp_path)
+    run("mv", "content/handbook/security/c.md", "content/handbook/security/c2.md")
+    run("commit", "-qm", "move", when=("2025-04-01", "2025-04-01"))
+    monkeypatch.setattr(H, "PINNED_COMMIT", run("rev-parse", "HEAD"))
+    moved = lambda r: next(c for c in r if c["title"] == "move")["files"]
+    default = moved(H.handbook_history(tmp_path, "2024-01-01"))
+    assert sorted(f["status"] for f in default) == ["A", "D"]   # 기본: 삭제+추가로 끊긴다(현재 동작 유지)
+    followed = moved(H.handbook_history(tmp_path, "2024-01-01", follow_renames=True))
+    assert len(followed) == 1 and followed[0]["status"] == "R100"
+    assert followed[0]["old_path"].endswith("security/c.md") and followed[0]["path"].endswith("security/c2.md")
+
+
+def _repo_moved_from_outside(tmp_path):
+    """I-006 꼴: 고른 폴더 밖(engineering/ 바로 밑)에 있던 쪽을 조금 고치며 고른 폴더(engineering/workflow/)로 옮긴다."""
+    run, _, _ = _repo_with_history(tmp_path)
+    old = tmp_path / "content/handbook/engineering/rca.md"
+    old.parent.mkdir(parents=True)
+    body = "".join(f"line {i} of the root cause analysis page\n" for i in range(40))
+    old.write_text(body)
+    run("add", ".")
+    run("commit", "-qm", "add outside", when=("2024-03-01", "2024-03-01"))
+    old.write_text(body + "rule: review within 5 days\n")
+    run("commit", "-qam", "edit outside", when=("2024-05-01", "2024-05-01"))
+    (tmp_path / "content/handbook/engineering/workflow").mkdir()
+    run("mv", "content/handbook/engineering/rca.md", "content/handbook/engineering/workflow/rca.md")
+    (tmp_path / "content/handbook/engineering/workflow/rca.md").write_text(body + "rule: review within 3 days\n")
+    run("commit", "-qam", "move in", when=("2025-04-01", "2025-04-01"))
+    return run
+
+
+def test_follow_renames_links_file_moved_in_from_outside_folder(tmp_path, monkeypatch):
+    """F-11·I-006: 경로 제한을 건 git log -M 은 폴더 밖에서 온 파일을 A 로만 보여 준다. 옛 경로를 찾아 R 로 잇는다."""
+    import backend.rag.ingest.history as H
+    run = _repo_moved_from_outside(tmp_path)
+    monkeypatch.setattr(H, "PINNED_COMMIT", run("rev-parse", "HEAD"))
+    new, old = "content/handbook/engineering/workflow/rca.md", "content/handbook/engineering/rca.md"
+    limited = run("log", "-1", "-M", "--format=", "--name-status", "--", *hb.all_folders())
+    assert limited == f"A\t{new}"   # 재현: 경로 제한만으로는 새 파일로 보인다
+
+    default = H.handbook_history(tmp_path, "2024-01-01")
+    moved = next(c for c in default if c["title"] == "move in")["files"]
+    assert moved == [{"status": "A", "path": new}]   # 기본(옵션 꺼짐)은 그대로
+    assert not any(f["path"] == old for c in default for f in c["files"])
+
+    followed = H.handbook_history(tmp_path, "2024-01-01", follow_renames=True)
+    moved = next(c for c in followed if c["title"] == "move in")["files"]
+    assert len(moved) == 1 and moved[0]["path"] == new and moved[0]["old_path"] == old
+    assert moved[0]["status"].startswith("R") and moved[0]["status"] != "R100"   # 고치며 옮겨 유사도가 100 아래
+    # old_path 를 읽어 옮기기 전 판까지 잇는다
+    assert [(h["date"], h["path"]) for h in H.page_history(followed, new)] == [
+        ("2025-04-01", new), ("2024-05-01", old), ("2024-03-01", old)]
+    link = H.rename_links(followed)
+    assert len(link) == 1 and link[0]["old_path"] == old and link[0]["date"] == "2025-04-01"
+    assert link[0]["prev_date"] == "2024-05-01" and link[0]["prev_sha"] == run("rev-parse", "HEAD~1")
+
+
+def test_rename_links_prev_unknown_when_old_path_has_no_history():
+    """옮기기 전 수정이 이력 범위(since) 밖이면 이전 판은 None 으로 둔다(지어내지 않는다)."""
+    import backend.rag.ingest.history as H
+    commits = [{"sha": "s2", "date": "2025-04-01", "title": "mv",
+                "files": [{"status": "R091", "path": "content/b.md", "old_path": "content/a.md"}]},
+               {"sha": "s1", "date": "2024-02-01", "title": "x", "files": [{"status": "M", "path": "content/c.md"}]}]
+    assert H.rename_links(commits) == [{"path": "content/b.md", "old_path": "content/a.md", "status": "R091",
+                                        "sha": "s2", "date": "2025-04-01", "prev_sha": None, "prev_date": None}]
+
+
 def test_missing_recall_commits_detected():
     full = [{"sha": s + "0" * 32} for s in RECALL_COMMITS]
     assert missing_recall(full) == []

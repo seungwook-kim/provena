@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react'
+
+// 전체 실행 부하에서 findBy/waitFor 기본 1초가 모자라 가끔 실패했다(리뷰 6번). 이 파일의 기다림 한도를 5초로 둔다.
+configure({ asyncUtilTimeout: 5000 })
+vi.setConfig({ testTimeout: 15000 })
 import App from '../App'
 import { PREVIEW_SUGGESTIONS } from '../lib/chat-preview'
 import { DEMO_SUGGESTIONS } from '../lib/demo-suggestions'
@@ -83,18 +87,22 @@ describe('DemoChatPage leaving while an answer is streaming', () => {
     }))
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { container } = render(<App />)
-    fireEvent.change(await screen.findByRole('textbox', { name: '질문' }), { target: { value: '연차는 며칠인가요?' } })
-    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    const box = await screen.findByRole('textbox', { name: '질문' })
+    await waitFor(() => expect(box.disabled).toBe(false))   // 목록을 받는 동안 잠긴 버튼은 눌러도 반응이 없다
+    fireEvent.change(box, { target: { value: '연차는 며칠인가요?' } })
+    const send = screen.getByRole('button', { name: '보내기' })
+    await waitFor(() => expect(send.disabled).toBe(false))
+    fireEvent.click(send)
     // 새 대화는 답이 끝나야 본문에 열린다 → 받는 중임은 목록에 생긴 대화와 '답변 중지' 버튼으로 확인
     expect(await screen.findByRole('button', { name: '연차는 며칠인가요?' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '답변 중지' })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('link', { name: /변경 감시/ }))
 
-    await vi.waitFor(() => expect(window.location.pathname).toBe('/changes'))
-    expect(chatSignal.aborted).toBe(true)
+    await vi.waitFor(() => expect(window.location.pathname).toBe('/changes'), { timeout: 5000 })
+    await waitFor(() => expect(chatSignal.aborted).toBe(true))
     expect(container.textContent.trim().length).toBeGreaterThan(0)
-    expect(screen.getByRole('link', { name: /채팅/ })).toBeTruthy()
+    expect(await screen.findByRole('link', { name: /채팅/ })).toBeTruthy()
     expect(consoleError.mock.calls.flat().join(' ')).not.toContain('abort is not a function')
   })
 })
@@ -119,13 +127,13 @@ describe('DemoChatPage first-screen suggestions in api mode', () => {
     }))
     const { container } = render(<App />)
     await screen.findByRole('textbox', { name: '질문' })
-    await vi.waitFor(() => expect(container.querySelectorAll('.demo-suggestions button')).toHaveLength(3))
+    await vi.waitFor(() => expect(container.querySelectorAll('.demo-suggestions button')).toHaveLength(3), { timeout: 5000 })
     const shown = [...container.querySelectorAll('.demo-suggestions button')].map(button => button.textContent)
     expect(shown).toEqual(DEMO_SUGGESTIONS)
     expect(shown).toHaveLength(3)
     expect(shown).not.toContain(PREVIEW_SUGGESTIONS[0])        // 녹화에 없는 미리보기 질문은 서버 연결 화면에 나오지 않는다
     fireEvent.click(screen.getByRole('button', { name: DEMO_SUGGESTIONS[1] }))
-    await vi.waitFor(() => expect(sent).toEqual([DEMO_SUGGESTIONS[1]]))
+    await vi.waitFor(() => expect(sent).toEqual([DEMO_SUGGESTIONS[1]]), { timeout: 5000 })
   })
 })
 
@@ -159,7 +167,7 @@ describe('DemoChatPage chat errors (H-08)', () => {
     expect(await screen.findByText('승인이 끝나야 다음 질문을 할 수 있습니다.')).toBeTruthy()
     expect(screen.queryByText('답변을 생성하고 있습니다.')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
-    await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(2))
+    await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(2), { timeout: 5000 })
     const bodies = fetchMock.mock.calls.filter(([path]) => path === '/chat').map(([, options]) => JSON.parse(options.body).message)
     expect(bodies).toEqual(['다음 질문', '다음 질문'])
   })
@@ -167,8 +175,13 @@ describe('DemoChatPage chat errors (H-08)', () => {
   it('shows the error for a first question in a new conversation too', async () => {
     stubChat(() => json({ error: { code: 'not_configured', message: '채팅이 설정되지 않았습니다.' } }, 503))
     render(<App />)
-    fireEvent.change(await screen.findByRole('textbox', { name: '질문' }), { target: { value: '첫 질문' } })
-    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    const box = await screen.findByRole('textbox', { name: '질문' })
+    // 목록을 받는 동안 입력칸과 보내기 버튼이 잠겨 있다. 잠긴 버튼을 누르면 아무 일도 없어 알림이 영영 안 뜬다.
+    await waitFor(() => expect(box.disabled).toBe(false))
+    fireEvent.change(box, { target: { value: '첫 질문' } })
+    const send = screen.getByRole('button', { name: '보내기' })
+    await waitFor(() => expect(send.disabled).toBe(false))
+    fireEvent.click(send)
     expect((await screen.findByRole('alert')).textContent).toContain('채팅이 설정되지 않았습니다.')
   })
 
@@ -197,5 +210,55 @@ describe('DemoChatPage citation numbering (H-32)', () => {
     expect(screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['출처 1: 문서C', '출처 2: 문서D'])
     fireEvent.click(screen.getByRole('button', { name: /문서A/ }))
     expect(screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['출처 1: 문서A', '출처 2: 문서B'])
+  })
+})
+
+// H-32 ①: 답 본문 [n]은 본문에 처음 나온 순서대로 다시 매긴다(본문과 근거 칩이 같이 바뀐다)
+describe('DemoChatPage citation order in the answer body (H-32)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('renumbers [1][3][2] to [1][2][3] and reorders the chips with it', async () => {
+    stubServer({ ...listed, messages: [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: '첫째 [1][3][2] 입니다.\n\n기준일 미지정 · 근거 판 날짜 2026-10-01', state: 'done', citations: [{ id: 'c1', rule_title: '문서A' }, { id: 'c2', rule_title: '문서B' }, { id: 'c3', rule_title: '문서C' }] },
+    ] })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText(/첫째 \[1\]\[2\]\[3\] 입니다\./)
+    expect(screen.getAllByRole('button', { name: /^\[\d\] 문서/ }).map(button => button.textContent)).toEqual(['[1] 문서A', '[2] 문서C', '[3] 문서B'])
+  })
+
+  it('selects the citation shown as [1] after renumbering when a thread is opened', async () => {
+    stubServer({ ...listed, messages: [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: '먼저 [2] 다음 [1] 입니다.', state: 'done', citations: [{ id: 'c1', rule_title: '문서A' }, { id: 'c2', rule_title: '문서B' }] },
+    ] })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText(/먼저 \[1\] 다음 \[2\] 입니다\./)
+    expect(document.querySelector('.demo-answer .citation-chip.selected')?.textContent).toBe('[1] 문서B')
+  })
+})
+
+// H-32 ②: 같은 제목의 대화가 둘이면 지난 날짜에도 시각이 보여 구분된다
+describe('DemoChatPage same-title threads (H-32)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('shows the time next to an older date so two same-title threads differ', async () => {
+    window.history.replaceState({}, '', '/chat')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([
+        { thread_id: 't1', title: '같은 질문', status: 'idle', updated_at: '2026-10-01T01:00:00Z' },
+        { thread_id: 't2', title: '같은 질문', status: 'idle', updated_at: '2026-10-01T05:30:00Z' },
+      ])
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    await screen.findAllByRole('button', { name: '같은 질문' })
+    const stamps = Array.from(document.querySelectorAll('.demo-thread time')).map(node => node.textContent)
+    expect(stamps).toHaveLength(2)
+    expect(stamps.every(text => /^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/.test(text))).toBe(true)
+    expect(new Set(stamps).size).toBe(2)
   })
 })

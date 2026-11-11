@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-Recall@5, MRR 측정. 한 줄 재현 명령을 남긴다.
+Recall@5, MRR 측정. 한 줄 재현 명령을 남긴다. 실험 스크립트(평가 전용, 서비스 `search()`와 별개): `exp_chunk_size_v1.py`(청크 크기, 사전 등록 #4), `exp_filter_v1.py`(메타데이터 필터, #3, LLM·DB 없음), `exp_decompose_v1.py`(질문 분해·링크 확장, #6·#7), `exp_answer_v1.py`(검색 결과로 Haiku 5.5가 답하게 하고 인용을 셈).
 
 - 주인: 박진형
 - 입력: 평가셋, `search()`
@@ -42,7 +42,9 @@ Recall@5, MRR 측정. 한 줄 재현 명령을 남긴다.
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | `fail_types.py`가 결과 json의 `results` 칸에 저장소 기준 상대 경로를 쓰게 고침(작업 PC 폴더 경로가 들어가던 것), `fail_types_00035/fail_types.json`의 같은 칸을 같은 값으로 고침. 숫자는 그대로. 시험 `tests/test_fail_types.py` 통과 | #131 |
 | 2026-11-09 | 박진형 (jinyeong-731) | "재현 자료" 절: 검색 회귀 고정 자료와 v2 재현 시험의 입력(재현 zip, `REPRO_DATA`)을 한 곳에 적고 쓰는 파일 4개의 머리 주석이 이 절을 가리키게 함(#94 리뷰 3) | |
+| 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `deploy_range_answers.py`가 done 이벤트의 새 칸을 저장(커밋 0a15fc2), `range_context.py`를 검색어 표 붙이기 스위치 삭제에 맞춤(e1e37e1) | #119 |
 | 2026-11-09 | 김승욱 (Claude Code) | `range_context.py`: 금액 구간 조회(사전 등록 62.7)의 검색만 재현(`demo`: 녹화 질문 틀 3 x 금액 5)과 회귀(`regress`: v2·검증 문항의 저장된 첫 검색 호출을 다시 검색해 수정 전후 문맥 비교, 금액 문구를 붙인 압박 점검 포함). LLM 호출 없음, 질문 벡터만 Voyage, 번역은 저장된 값. 결과 `evals/results/range_retrieval_62_7/` | 미정 |
 | 2026-11-02 | 김승욱(팀장) | v1 30건에서 후보 12조합의 Haiku 5.5 답변 확인(EVAL_REPORT 3-0-1, `evals/results/retrieval_v1_answers_haiku/`). 중복 가중치 파일을 받지 않게 고침 | #38 |
 | 2026-11-02 | 김승욱(팀장) | 비교 입구 `make_search`가 번역 실패 때 멈추도록 고침. 번역이 있으면 점수는 같음 | #37 |

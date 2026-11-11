@@ -4,11 +4,11 @@
 - 합성 데이터 규모(운영 2026-11-10 조회와 맞춤): chunks 30,171행(전부 `voyage-4` 1024차원, 현재 판 23,095 + 닫힌 판 7,076), versions 1,798(현재 1,516 + 닫힌 282), docs 1,516, query_translations 692, threads 850, answers 315, citations 559, recall_events 318, changed_articles 318, maintenance_candidates 964(전부 pending), recall_notices 3, approvals 11, issue_tables 3, token_revocations 35, users 2. 크기는 chunks 240 MB(운영 264 MB), HNSW 65 MB(운영 64 MB).
 - 한계: 분포가 균일하다(org 6종 각 약 1/6, 사용자 3명 각 1/3). `chunk_id`가 판마다 유일하고(운영은 판 사이에 공유), `link_targets`와 `line_start`는 비어 있었다(GIN 시험에서만 3,352행에 값을 넣었다). 작은 표는 계획기가 Seq Scan을 고르는 것이 정상이라 "색인을 탄다"는 EXPLAIN으로 직접 보이지 않는 곳이 많다. 그 곳은 색인 정의와 질의 조건을 대조해 판정했다(각 행에 표시).
 - 실행 방식: SELECT에만 `EXPLAIN (ANALYZE, BUFFERS)`를 1회 실행했다. INSERT/UPDATE/DELETE는 실행하지 않았고 WHERE 조건을 같은 조건의 SELECT로 바꿔 쟀거나 계획만 봤다. 시간은 Execution Time이다.
-- 조사 범위: ackend/, vals/(결과 폴더 제외)의 SQL 약 150문장. scripts/에는 파일이 없다. LangGraph 표의 SQL은 라이브러리 내부라 포함하지 않았다.
+- 조사 범위: backend/, evals/(결과 폴더 제외)의 SQL 약 150문장. scripts/에는 파일이 없다. LangGraph 표의 SQL은 라이브러리 내부라 포함하지 않았다.
 
 ## 0. 운영 검색 경로
 
-- 운영 Cloud Run 환경변수(`live_00032.json`)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:299`가 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
+- 운영 Cloud Run 환경변수(`live_00032.json`, 저장소에 없음: 커밋된 적이 없는 로컬 덤프)에는 `SEARCH_HNSW`가 없다. 그러나 앱 기동 때 `backend/main.py:317`이 `service_profile`로 `SEARCH_HNSW=1`을 채우므로(`service_profile.py:66`) `/chat`의 벡터 검색은 HNSW 질의(`search.py:351-355`)를 보낸다. 실제 프로세스 값은 보지 못했고 코드와 환경변수 목록으로 추론한 것이다.
 - 운영 `chunks_emb_hnsw_half`는 64 MB이고 `idx_scan` 66,239로 조회됐다(2026-11-10 운영 읽기 전용 조회에서 읽은 값).
 
 ## 1. 벡터 질의 (search.py vector_top)
@@ -26,7 +26,7 @@
 | org=hr, as_of=2026-09-01 | 측정 안 함 | HNSW를 쓰지 않음, 9.7 ms |
 
 - org 필터가 있으면 HNSW 색인 스캔의 추정 비용(40,835)이 전수 계획(약 1,000)보다 높게 잡혀 색인을 쓰지 않는다. `enable_seqscan=off`로도 바뀌지 않았다. org가 `docs`에 있어 `chunks` 색인이 모르기 때문이다. 합성 분포 기준 29-33 ms이며 운영의 org 분포는 알지 못한다. 이 경우를 줄이려면 `chunks`에 org를 복사해 org별 부분 HNSW를 만드는 스키마 변경이 필요한데 효과를 운영 분포로 확인하지 못해 하지 않았다.
-- 옛 판 행이 HNSW에 들어 있어도 현재 판 질의는 5행 만에 끝난다(옛 판 후보는 versions 조건에서 걸러지고 반복 스캔이 더 걷는다). 이 합성 데이터에서는 `chunks` 30,171행 중 7,076행이 옛 판이어도 1 ms 안팎이었다. 운영 실측은 `run_db_chunks_check.ps1` 결과가 필요하다.
+- 옛 판 행이 HNSW에 들어 있어도 현재 판 질의는 5행 만에 끝난다(옛 판 후보는 versions 조건에서 걸러지고 반복 스캔이 더 걷는다). 이 합성 데이터에서는 `chunks` 30,171행 중 7,076행이 옛 판이어도 1 ms 안팎이었다. 운영 실측은 `run_db_chunks_check.ps1`(저장소에 없음: 커밋된 적이 없는 로컬 도구) 결과가 필요하다.
 
 ## 2. 검색·수집 질의 (backend/rag, evals)
 
@@ -119,13 +119,18 @@
 | departments/store.py:67 | issue_tables | INSERT ON CONFLICT (approval_id) | issue_tables_approval_id_key | 쓰기 | 충분 |
 | departments/store.py:81 | approvals | UPDATE approval_id, kind='issue_table', comment='' | approvals_pkey | Seq Scan 11행 0.017 ms | 충분 |
 | departments/store.py:89 | issue_tables | thread_id, user_id ORDER BY approved_at DESC LIMIT 1 | issue_tables_thread_user_idx | Seq Scan + Sort + Limit 3행, 0.049 ms | 정의 일치 |
-| auth_store.py:208, 215, 250, 265, 321, 365 | users | login_id, user_id | users_login_id_key, users_pkey | Seq Scan 2행, 0.03-0.057 ms | 충분 (인증된 모든 요청이 users_pkey 조회) |
-| auth_store.py:225, 290, 312 | signup_requests | login_id, user_id | user_id UNIQUE, login_id 부분 UNIQUE(`db/113`, 거절 행 제외) | 빈 표 | 충분 |
-| auth_store.py:298 | signup_requests | 조건 없음 ORDER BY requested_at, login_id | 없음 | 빈 표 | 전체 읽기, 생략 (옛 status_requested_at 색인은 이 질의에 못 쓰여 제거) |
-| auth_store.py `_google_resolve` | user_identities, users, signup_requests | `(provider, subject)`, `users.login_id FOR UPDATE`, `signup_requests (user_id, login_id)`, `google_sub OR login_id` | user_identities_pkey, users_login_id_key, signup_requests_google_sub_key, signup_requests_login_id_key | 새 표(114 적용 전), 구글 로그인 때만 | 충분 (줄 번호는 다른 정리 때 맞춘다) |
-| auth_store.py:349 | users | 조건 없음 ORDER BY created_at | 없음 | Seq Scan 2행, 0.071 ms | 생략 |
-| auth_store.py:402 | token_revocations | jti=, expires_at > now() | token_revocations_pkey | Seq Scan 35행, 0.033 ms | 충분 (인증된 모든 요청마다 1회) |
-| auth_store.py:410, 375, 377, 330, 270 | token_revocations, users, admin_role_log, signup_requests | INSERT/UPDATE by key | pkey/UNIQUE | 쓰기 | 충분. admin_role_log를 읽는 질의는 없다 |
+| auth_store.py:425, 428, 435, 473, 480, 519, 561, 710, 777 | users | login_id, user_id (이메일은 `lower(login_id) = lower(%s)`, 425·516) | users_login_id_key, users_pkey, users_login_id_lower_unique(113) | Seq Scan 2행, 0.03-0.057 ms (107 반영 전 질의 모양으로 쟀고 이메일 소문자 조회는 다시 재지 않았다) | 충분 (인증된 모든 요청이 users_pkey 조회) |
+| auth_store.py:446, 608, 624, 660, 700 | signup_requests | login_id= ORDER BY request_id DESC LIMIT 1 (624, 660, 700은 FOR UPDATE) | signup_requests_login_id_open_unique(113) | 측정 안 함(107·113 반영 뒤 EXPLAIN은 하지 않았다) | 구조 일치 |
+| auth_store.py:598-599 | signup_requests | user_id=, status='approved' ORDER BY request_id DESC LIMIT 1 | signup_requests_user_id_key | 측정 안 함 | 구조 일치 |
+| auth_store.py:634-636, 644-646, 652, 665, 668, 670, 740-742 | signup_requests | UPDATE/DELETE login_id= 또는 request_id= (107의 인증 칸 갱신) | signup_requests_login_id_open_unique, signup_requests_pkey | 쓰기, 측정 안 함 | 구조 일치. `verification_expires_at` 값이 바뀔 때 부분 색인 `signup_requests_verification_expiry`도 갱신된다(쓰기 비용, 추정) |
+| auth_store.py:504 | signup_requests | INSERT (login_id, password_hash, status, email_verification_required) | signup_requests_login_id_open_unique, signup_requests_login_id_lower_open_unique | 쓰기, 측정 안 함 | 113의 `lower(login_id)` 부분 UNIQUE는 대소문자만 다른 이메일의 중복을 막는 제약이며 읽는 질의에 쓰이지 않는다 |
+| 없음 | signup_requests | verification_expires_at 조건 | signup_requests_verification_expiry (107, 부분 색인) | 해당 질의를 코드에서 찾지 못함 | 쓰이는 곳 없음. 만료 판정은 `login_id`로 읽은 행을 앱이 비교한다(`auth_store.py:654-671`) |
+| auth_store.py:723, 700, 733 | signup_requests | request_id= (UPDATE, SELECT, FOR UPDATE) | signup_requests_pkey | 측정 안 함 | 구조 일치 |
+| auth_store.py:677-678 | signup_requests | 조건 없음 ORDER BY requested_at, login_id | 없음 | 빈 표 | 전체 읽기, 생략 (옛 status_requested_at 색인은 이 질의에 못 쓰여 제거) |
+| auth_store.py:519, 564, 575, 580 | user_identities, users, signup_requests | `(provider, subject)`, `users.login_id FOR UPDATE`, `signup_requests (user_id, login_id)`, `google_sub OR login_id` | user_identities_pkey, users_login_id_key, signup_requests_google_sub_key, signup_requests_login_id_key | 새 표(114 적용 전), 구글 로그인 때만 | 충분 (줄 번호는 다른 정리 때 맞춘다) |
+| auth_store.py:761 | users | 조건 없음 ORDER BY created_at, login_id | 없음 | Seq Scan 2행, 0.071 ms | 생략 |
+| auth_store.py:815 | token_revocations | jti=, expires_at > now() | token_revocations_pkey | Seq Scan 35행, 0.033 ms | 충분 (인증된 모든 요청마다 1회) |
+| auth_store.py:823, 787, 789, 723, 504 | token_revocations, users, admin_role_log, signup_requests | INSERT/UPDATE by key | pkey/UNIQUE | 쓰기 | 충분. admin_role_log를 읽는 질의는 없다 |
 | profile_store.py:71, 76, 81 | user_profiles | user_id | user_profiles_pkey | 빈 표 | 충분 |
 
 ## 5. 결론

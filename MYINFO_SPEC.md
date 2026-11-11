@@ -2,6 +2,8 @@
 
 요청 원문: "로그인 성공했을 때 처음 계정 만들면 다른 화면 아무것도 못하고 내 정보 기재하는 화면으로 바로 보이게 하기. 이름, 담당부서나 소속, 전화번호, 주소 — 암호화 aes256, 전화번호는 마스킹까지. 기존에 있는 화면 순서 정리해서 사용하기 / 내 정보 수정 가능하게, db 테이블도 수정, 관리자가 일반 직원들 개인정보는 못 보게"
 
+> 현재 상태(2026-11-11): 이 문서는 2026-11-05 시안·제안 기록이다. 아래 시안 파일(`src/pages/MyInfoPage.jsx`, `src/lib/profile-preview.js`, `src/myinfo.css` 등)은 저장소에 없다. 실제 구현은 `backend/profile_api.py`(`/me/profile`)와 `web/react-app/src/pages/ProfileRequiredPage.jsx`, `profile.css`이고 커밋 75907e7(`feat: integrate profile and admin workflows`)이 들여왔다. 파일 이름·줄 번호는 제안 당시 값이다.
+
 이 문서는 **시안(화면)** 과 **실제 적용 방법(제안)** 을 담는다. 팀 코드는 고치지 않았다. 근거는 `class-3-main`(main `e847c88`) 기준 `파일:줄`.
 
 ## 1. 시안
@@ -25,7 +27,7 @@
 
 | | AI 기억 | 내 정보 (이번 요청) |
 |---|---|---|
-| 담는 것 | 팀·역할·담당 서비스 | 이름·소속·전화번호·주소 |
+| 담는 것 | 팀·역할·담당 서비스 (`affiliation`·`rank`·`service`) | 이름·소속·전화번호·주소 |
 | 저장 | LangGraph Store `(user_id, "profile")` (`docs/SDD.md:253`, `:333`) | 새 표 `user_profiles` (암호화) |
 | LLM에 들어가나 | 들어감(답 맞춤) | **안 들어감** — 그래프·Store·Langfuse 어디에도 넣지 않는다 |
 | 길 | `GET/PATCH/DELETE /me/memory` (`docs/SDD.md:285`) | `GET/PUT /me/profile` (제안) |
@@ -95,7 +97,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 | 파일(제안) | 확인 |
 |---|---|
 | `tests/test_profile_crypto.py` | 잠갔다 풀면 같음 / 같은 값도 nonce가 달라 암호문이 다름 / 한 바이트 바꾸면 실패 / 다른 user_id(AAD)로 못 풂 / 옛 key_version으로 잠근 줄도 풀림 |
-| `tests/test_profile_api.py` | 로그인 없이 401 / CSRF 없이 PUT 403 / 형식 틀리면 422이고 응답에 입력값 없음 / GET은 가린 번호만 / `view=edit`만 원래 번호 / `/me`의 `profile_completed`가 저장 전 false, 뒤 true |
+| `tests/test_profile_api.py` | 로그인 없이 401 / CSRF 없이 PUT 403 / 형식 틀리면 422이고 `error.details.fields`에 칸별 이유가 있고 응답에 입력값 없음(운영과 같은 `install_error_handlers`를 단 앱으로 시험) / GET은 가린 번호만 / `view=edit`만 원래 번호 / `/me`의 `profile_completed`가 저장 전 false, 뒤 true |
 | `tests/test_auth_user_isolation.py`(있음)에 추가 | A가 저장 → B의 `GET /me/profile`은 404(A 값 안 나옴) / 관리자도 자기 것만 |
 | 경로 목록 시험 | 앱의 모든 경로 중 `profile`이 들어간 것은 `/me/profile` 하나 |
 | DB 시험 | 저장 뒤 `user_profiles` 줄을 그대로 읽어 전화번호·이름 문자열이 없음 |
@@ -110,7 +112,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 | 시안·이 문서 | 박진형 | — |
 
 ## 8. 정할 것 (조장님·경희님께)
-1. **"처음 계정 만들면"은 어느 길인가?** 회원가입은 범위 밖이다(`docs/specs/login.md:18`). 지금 계정은 데모 시드뿐이고, Google 첫 로그인은 계정을 만드는 자리(`backend/auth.py:780` `get_or_create_google_user`)만 있고 저장소 구현은 없다 → 관리자가 만든 계정의 첫 로그인으로 볼지, Google 첫 로그인으로 볼지.
+1. **"처음 계정 만들면"은 어느 길인가?** 회원가입은 범위 밖이다(`docs/specs/login.md:18`). 지금 계정은 데모 시드뿐이고, Google 첫 로그인은 계정을 만드는 자리(`backend/auth.py:159` `get_or_create_google_user`)만 있고 저장소 구현은 없다 → 관리자가 만든 계정의 첫 로그인으로 볼지, Google 첫 로그인으로 볼지.
 2. **주소가 정말 필요한가?** 서비스(정책 질문·결정표)에 주소를 쓰는 곳이 없다. 안 쓰는 개인정보는 안 받는 게 원칙(최소 수집) → 빼거나 선택 칸으로. 전화번호도 쓰는 곳(예: 승인 알림)을 정해야 한다.
 3. 관리자가 못 보면, 승인함·결정표에 이름을 보여 줘야 할 때는? (이름만 따로 공개 범위를 둘지)
 4. 수정 화면에서 원래 전화번호를 보여 줄지, 칸을 비워 두고 "비우면 그대로"로 할지(더 안전).
@@ -137,7 +139,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 
 만든 대로의 응답:
 - `GET /me/profile` → `{name, dept, phone_masked, address, updated_at}`, 없으면 404. `view=edit`이면 `phone_masked` 대신 `phone`. 둘 다 `Cache-Control: no-store`. `view`에 다른 값은 422.
-- `PUT /me/profile` → 로그인 + CSRF. 본문의 `user_id`는 무시. 틀리면 422 `{"detail": {"message", "fields": {칸: 이유}}}`(입력값 없음). 성공하면 가린 보기로 응답.
+- `PUT /me/profile` → 로그인 + CSRF. 본문의 `user_id`는 무시. 틀리면 422 팀 표준 오류 `{"detail": message, "error": {"code": "validation_error", "message", "request_id", "details": {"fields": {칸: 이유}}}}`(입력값 없음, `ApiError`로 냄 — `HTTPException`의 dict detail은 운영 오류 처리기가 message·칸별 이유를 버린다). 성공하면 가린 보기로 응답.
 - 저장소·암호 실패 → 503(이유 숨김). 저장소가 다른 사람 줄을 주거나 암호문을 옮겨 붙이면 풀리지 않아 503.
 - 화면 검사는 따로 두지 않고 서버 422의 칸별 이유를 그대로 보여 준다(규칙이 한 곳).
 

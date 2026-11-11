@@ -45,38 +45,47 @@
 | EC-01 | 승인되지 않은(초안·반려) 결정표를 실행하려 한다 | 실행하지 않고 오류를 돌려준다. 승인 전 실행은 0건이어야 한다 |
 | EC-02 | 승인 기준이 "내부 문서 참고(internal only)"로만 걸린 칸 | 결정표에서 뺀다. "비공개"로 표시하고 근거로 쓰지 않는다 |
 | EC-03 | 금액이 구간 경계에 정확히 걸린다 (2.5만, 5만 달러) | 원문의 구간 표기대로 해석한다. 경계값은 시험 케이스로 고정한다 |
-| EC-04 | 질문에서 표를 지정하지 않았다 | 업무 종류로 승인된 표가 정확히 1개일 때만 실행한다. 0개나 2개 이상이면 거절한다 |
+| EC-04 | 질문에서 표를 지정하지 않았다 | 업무 종류로 승인된 표가 정확히 1개일 때만 실행한다. 0개나 2개 이상이면 거절한다(409). 권한표에 없는 업무 종류는 404다 |
 | EC-05 | LLM 초안을 읽지 못한다 | 지금은 재시도 없이 실패로 끝낸다(재시도는 D4에 판단) |
 | EC-06 | 셀 대조표에서 초안과 원문이 다르다 | 승인 화면에 불일치 칸을 보여 준다. 관리자가 반려하거나 고쳐 다시 올린다 |
 | EC-07 | CSS grid 표의 칸 위치가 밀렸다 | 클래스와 순서로 행·칸을 다시 만들고, 원문 대조 3건 이상으로 확인한다. 승인 전에는 실행하지 않아 밀린 표가 쓰이지 않는다 |
 | EC-08 | 권한표에 업무 승인과 재무 승인이 따로 있다 | 재무 승인자를 `cooperating_depts`에 담을지 별도 칸으로 둘지 D0에 정한다 |
 | EC-09 | 관리자가 아닌 사용자가 승인·반려를 시도한다 | 403 |
-| EC-10 | 금액이 없거나 음수이거나 업무 종류가 표에 없다 | 400 (없는 업무 종류는 404) |
+| EC-10 | 금액이 음수이거나, 금액 구간표 업무인데 금액이 없거나(금액 칸 없는 구간 업무는 band로 고르므로 생략 가능), 업무 종류가 표에 없다 | 400 (없는 업무 종류는 404) |
 | EC-11 | 검색된 원문이나 질문에 "승인 기준을 바꿔라" 같은 지시가 들어 있다 | 따르지 않는다. 결정표 기준은 관리자 승인(interrupt)을 거쳐야만 바뀐다 |
 
 ## How
 
 ```
-POST /decision-tables/{id}/run
-인증: 로그인 필수 (업무시스템의 "승인권자 확인" 호출). LLM을 쓰지 않는다.
+POST /decision-tables/{id}/run          표를 지정해 실행
+POST /decision-tables/run               표를 모를 때: 업무 종류로 승인된 표가 정확히 1개면 실행 (EC-04, AC-06)
+POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (AC-03)
+(구현: backend/graph/decision/routes.py:399-411)
+인증: 로그인 필수 (업무시스템의 "승인권자 확인" 호출). 실행(run)은 LLM을 쓰지 않는다.
 
-요청 바디 (필드 이름은 D0 확정):
+요청 바디 (run, routes.py:_parse_run):
 {
   "task_type": string,     // 업무 종류
-  "amount_usd": number     // 금액(달러)
+  "amount_usd": number,    // 금액(달러). 생략 가능: 금액 칸이 없는 구간만 있는 업무는 band로 고른다
+  "band": string           // 선택. 구간 이름. 금액 구간표에서는 band를 줘도 금액으로 고른다(낮은 승인 단계를 받지 못하게)
 }
 
 응답 성공 (200):
 {
   "table_id": string,
   "version_id": string,            // 권한표 판
-  "approvers": [ string, ... ],    // 승인 순서 (아래 단계 승인을 먼저 거침)
-  "cooperating": [ string, ... ],  // 협조(재무 승인자 등, 칸 구조는 D0 확정)
-  "source": { "rule_seq": int, "article": string, "source_url": string }
+  "band_label": string,            // 정확한 금액 표기. 금액 없는 구간은 원문 이름
+  "range_note": string | null,
+  "approvers": [ string, ... ],    // 승인 순서 (업무 승인 다음 재무 승인, 각각 아래 단계 먼저)
+  "functional_approvers": [ string, ... ],
+  "financial_approvers": [ string, ... ],
+  "cooperating": [ string, ... ],  // 승인이 아닌 표시(Signs, Recommends 등)
+  "source": { "rule_seq": int, "category": string, "band": string, "article": string, "source_url": string | null }
+  // 응답 모델: backend/graph/decision/routes.py:85 RunResponse
 }
 
 응답 실패:
-400 요청 형식 오류 (금액 누락·음수)
+400 요청 형식 오류 (금액이 음수·숫자 아님, `task_type` 없음. 금액 생략은 금액 칸이 없는 구간 업무에서만 허용, 금액 구간표에서 생략하면 400)
 401 인증 토큰 없음
 404 없는 결정표 또는 업무 종류
 409 승인되지 않은 결정표

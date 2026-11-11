@@ -391,8 +391,15 @@ def with_skills(system: str, skills: list[tuple[str, str]]) -> str:
     return system + ("\n\n" + "\n\n".join(blocks) if blocks else "")
 
 
+PROMPT_PROFILE_FIELDS = ("affiliation", "rank")  # 측정(main) 때 프롬프트에 들어간 칸. service 등 다른 칸은 저장만 하고 넣지 않는다.
+
+
+def _profile_for_prompt(profile: dict | None) -> dict:
+    return {k: v for k, v in (profile or {}).items() if k in PROMPT_PROFILE_FIELDS}
+
+
 def classify_user(question: str, profile: dict) -> str:
-    return f"소속·직급: {profile or '없음'}\n질문: {question}"
+    return f"소속·직급: {_profile_for_prompt(profile) or '없음'}\n질문: {question}"
 
 
 def seen_titles(chunks: Iterable[dict]) -> list[str]:
@@ -419,7 +426,7 @@ def rewrite_user(question: str, profile: dict, feedback: str | None, missing: It
     titles = list(seen)
     if titles:
         fb += "\n이미 찾은 문서 제목:\n" + "\n".join(f"- {t}" for t in titles)
-    return f"소속·직급: {profile or '없음'}\n질문: {question}{fb}"
+    return f"소속·직급: {_profile_for_prompt(profile) or '없음'}\n질문: {question}{fb}"
 
 
 def supervisor_route_user(facts: dict, allowed: Iterable[str]) -> str:

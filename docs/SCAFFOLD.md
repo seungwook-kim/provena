@@ -1,5 +1,7 @@
 # 이 저장소에 미리 들어 있는 것
 
+> 현재 상태(2026-11-11): 이 문서는 강사 템플릿이 처음 준 뼈대 설명이라 아래 파일 이름 중 일부는 3조 저장소와 다르다. `backend/rag/ingest.py`·`retrieve.py`는 `backend/rag/ingest/`·`backend/rag/retrieve/` 폴더로, `backend/memory.py`는 `backend/memory/profile.py`로, `db/init.sql`은 `db/01_init.sql`과 번호 SQL 파일들로 나뉘었고, `backend/`에는 `api/`·`schemas/`·`prompts/` 등이 더 있다. 지금 구조는 각 폴더의 `<폴더>.md`와 `docs/ARCHITECTURE.md`를 본다.
+
 처음 열면 낯선 폴더가 여럿 보일 겁니다. **전부 비어 있는 뼈대**이고, 여러분이 채우는 자리입니다.
 "어디에 둬야 하나"를 고민하는 데 시간을 쓰지 말라고 미리 잡아 두었습니다.
 쓰지 않는 것은 **지워도 됩니다.** 폴더를 남겨두는 것 자체로 점수를 받지는 않습니다.

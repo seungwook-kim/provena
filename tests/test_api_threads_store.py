@@ -107,9 +107,9 @@ def test_env_example_lists_the_direct_database_url_name_without_a_value():
     assert "DATABASE_DIRECT_URL=" in lines
 
 
-@pytest.mark.skipif(not os.getenv("PROVENA_TEST_DATABASE_URL"), reason="PROVENA_TEST_DATABASE_URL 없음")
+@pytest.mark.skipif(not (os.getenv("PROVENA_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")), reason="PROVENA_TEST_DATABASE_URL·TEST_DATABASE_URL 없음")
 def test_postgres_store_against_a_real_database():
-    store = T.PostgresThreadStore(os.environ["PROVENA_TEST_DATABASE_URL"])
+    store = T.PostgresThreadStore(os.getenv("PROVENA_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL"))
     store.ensure_schema()
     prefix = uuid.uuid4().hex[:8]
 

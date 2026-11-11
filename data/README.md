@@ -7,7 +7,9 @@ G3: **서로 다른 청크 1만 개 이상, 서로 다른 문서 50건 이상**(
 | 위치 | 내용 |
 |---|---|
 | `corpus.tar.gz` (`corpus/`) | 수집한 원문 스냅샷. 수집은 로컬에서 한 번 하고 **저장소에 커밋**합니다. 3조는 원문을 압축 한 파일로 커밋하고 쓸 때 `corpus/`로 풉니다(`data/data.md`) |
-| `manifest.jsonl` | 문서와 청크 목록. 인덱스를 만들 때마다 갱신합니다 |
+| `manifest.jsonl` | 문서와 청크 목록. 인덱스를 만들 때마다 갱신합니다. 3조: 문서 1,565줄, 청크 수 합 23,095(`python -m backend.rag.ingest.load --manifest`가 씀) |
+| `chunks_index.jsonl` | 3조의 청크 단위 기록(본문 없음). 23,095줄, 서로 다른 `chunk_sha256` 22,378개(직접 센 값). 필드는 아래 |
+| `index.tar.gz` | 3조의 검색 색인 스냅샷(`data/data.md`) |
 
 수집한 날짜와 출처 주소를 기록하세요. 서버에서 호출이 막히는 소스를 피하고, 평가자가 같은 코퍼스로 재현하기 위해서입니다. 파일 합계가 수십 MB를 넘으면 강사에게 먼저 물어보세요.
 
@@ -17,13 +19,21 @@ G3: **서로 다른 청크 1만 개 이상, 서로 다른 문서 50건 이상**(
 {"doc_id": "doc-0001", "source_url": "https://...", "collected_at": "2026-11-02", "parser": "pdf", "chunks": 214, "chars_original": 53210, "chars_kept": 53210, "truncated": false}
 ```
 
+위는 강사 템플릿의 예시 형식입니다. 3조의 실제 첫 줄은 다음과 같습니다(`backend/rag/ingest/load.py`의 `build_manifest`). `doc_id`는 정수(쪽 id), `org`·`title`·`version_id`가 있고, 모든 줄이 같은 파서 이름은 `parser` 칸 대신 `data/parsed/parse_report.json`에 적습니다. 값이 있을 때만 `skipped` 칸이 붙습니다.
+
+```json
+{"doc_id":1105982571,"org":"business-technology","title":"IT Enterprise Applications","source_url":"https://handbook.gitlab.com/handbook/business-technology/","version_id":"b134e1901e48","collected_at":"2026-10-31","chunks":12,"chars_original":8231,"chars_kept":5530,"truncated":false}
+```
+
 원문이 길어서 잘라 넣었다면 `chars_original`과 `chars_kept`가 다르고 `truncated`가 true여야 합니다. 얼마나 잘랐는지 숨기면 파싱 대조가 의미가 없어집니다.
 
 청크 단위 기록이 필요하면 `chunks.jsonl`을 따로 두고 `doc_id`와 `chunk_id`, 위치, 본문 해시(`chunk_sha256`)를 적으세요. 청크 수의 합이 1만을 넘고 **서로 다른 `chunk_sha256`이 1만 개 이상**이라는 것이 G3의 증거입니다. 정정공시처럼 본문이 같은 문서는 해시가 같으므로 한 개로 셉니다.
 
+3조는 이 청크 단위 기록을 `chunks.jsonl`이 아니라 `chunks_index.jsonl`에 둡니다. 필드는 `chunk_id`, `doc_id`, `seq`, `kind`, `line_start`, `line_end`, `chunk_sha256`, `body_chars`입니다(`load.py`). 본문이 든 `chunks.jsonl`은 로컬 생성물이고 `data/index.tar.gz` 안에 있습니다(`data/data.md`).
+
 ## 임베딩 시간과 비용의 기준 (참고)
 
-DART 공시 11,022청크(평균 762토큰) 기준입니다. 조 코퍼스에서는 반드시 100건으로 먼저 재 보세요.
+아래 표는 강사 템플릿이 든 DART 공시 11,022청크(평균 762토큰) 기준 참고값이며 3조 코퍼스의 값이 아닙니다(3조 임베딩은 `voyage-4` API이고 속도·비용은 `docs/embedding_measurement.md`와 `EVAL_REPORT.md`). 조 코퍼스에서는 반드시 100건으로 먼저 재 보세요.
 
 | 방식 | 시간 또는 비용 |
 |---|---|
@@ -34,4 +44,4 @@ DART 공시 11,022청크(평균 762토큰) 기준입니다. 조 코퍼스에서�
 
 ## 저장소 크기 주의
 
-벡터는 1024차원이면 1만 개에 약 41MB입니다. 본문과 manifest는 저장소에 두고, 벡터는 `db/` 아래 SQL로 적재하는 방법을 강사와 상의하세요.
+벡터는 1024차원이면 1만 개에 약 41MB입니다. 본문과 manifest는 저장소에 두고, 벡터는 `db/` 아래 SQL로 적재하는 방법을 강사와 상의하세요. 3조는 벡터를 `data/index.tar.gz`(약 94.5MB, 안의 `vectors/voyage-4.npy`)로 커밋하고 DB 적재는 로더가 합니다(`data/data.md`).

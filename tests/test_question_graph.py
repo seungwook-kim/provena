@@ -1171,3 +1171,14 @@ def test_grounding_prompt_asks_for_the_reason_before_the_verdict():
     examples = re.findall(r"\{.*?\}", GROUNDING_SYSTEM.split("JSON 한 개만 출력한다", 1)[1])
     assert len(examples) == 3 and all(e.index('"reason"') < e.index('"grounded"') for e in examples)
     assert "reason을 먼저 써서" in GROUNDING_SYSTEM
+
+
+def test_prompt_profile_has_only_measured_fields_not_service():
+    """service 칸은 저장만 한다. 분류·재작성 프롬프트에는 측정(main) 때와 같은 affiliation·rank만 들어간다(H-13)."""
+    from backend.prompts.question import classify_user, rewrite_user
+
+    profile = {"affiliation": "TEST-finance", "rank": "TEST-lead", "service": "TEST-SVC-NAME"}
+    for text in (classify_user("질문", profile), rewrite_user("질문", profile, None)):
+        assert "TEST-SVC-NAME" not in text and "service" not in text
+        assert "TEST-finance" in text and "TEST-lead" in text
+    assert classify_user("질문", {"service": "TEST-SVC-NAME"}) == classify_user("질문", {})

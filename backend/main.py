@@ -46,7 +46,7 @@ from contextlib import asynccontextmanager, contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -68,6 +68,22 @@ from backend.services.profile_crypto import ProfileCipher
 from backend.services.profile_store import PostgresProfileStore
 
 log = logging.getLogger(__name__)
+
+
+def warn_if_silent_demo() -> bool:
+    """키가 없어 데모 모드(가짜 모델)로 떨어졌는데 그게 의도로 보이지 않으면 시작 로그에 경고를 남긴다. 남겼으면 True.
+    의도로 보는 경우: `PROVENA_ENV`가 local·demo, `DEMO_MODE`를 켬, `LLM_PROVIDER=claude_cli`(키 없이 실제 모델).
+    동작은 바꾸지 않는다(시험·로컬 데모가 키 없이 앱을 만든다). 배포에서 `LLM_API_KEY`가 빠진 것을 로그로 바로 알게 하려는 것이다."""
+    from backend.services.demo_replay import env_flag
+    from backend.services.llm import is_demo_mode
+
+    if (os.getenv("PROVENA_ENV") or "").strip().lower() in ("local", "demo") or env_flag("DEMO_MODE"):
+        return False
+    if not is_demo_mode():
+        return False
+    log.warning("LLM_API_KEY가 없어 데모 모드(가짜 모델)로 동작합니다. 배포라면 LLM_API_KEY를 넣고 다시 배포하세요. "
+                "의도한 데모라면 DEMO_MODE=1 또는 PROVENA_ENV=demo로 두면 이 경고가 사라집니다.")
+    return True
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
 BOOTSTRAP_TRIES = 10
@@ -296,6 +312,8 @@ def create_app(
     async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         from backend.graph.service_profile import service_profile
         configure_app_logging()   # backend.* 로그를 INFO로(요청 로그·LLM 지연 로그가 운영 로그에 나오게)
+        if graph_factory is None:
+            warn_if_silent_demo()   # 배포에서 키가 빠져 조용히 가짜 모델로 도는 것을 시작 로그로 알린다(동작은 그대로)
         with service_profile(enabled=graph_factory is None):   # 서비스 기본 설정(61.51)을 환경 변수로 채운다. 시험이 그래프를 꽂으면 바꾸지 않는다
             if store is not None and is_local_demo():
                 bootstrap_local_auth(store, profile_store)
@@ -315,7 +333,10 @@ def create_app(
                         async with mcp_app.lifespan(app_) if mcp_app is not None else nullcontext():   # MCP 세션 관리자를 앱과 같이 켜고 끈다
                             yield
 
-    app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan)
+    # PROVENA_DOCS_PUBLIC=0 이면 /docs·/redoc·/openapi.json 을 끈다(A-07). 비우면 기존대로 공개
+    docs_off = {} if os.environ.get("PROVENA_DOCS_PUBLIC", "1").strip().lower() not in ("0", "false", "no", "off") \
+        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    app = FastAPI(title="3차 프로젝트 API", lifespan=lifespan, **docs_off)
     app.add_middleware(RequestContextMiddleware)     # 요청 ID와 요청 로그(순수 ASGI, SSE를 버퍼링하지 않는다)
     install_error_handlers(app)                      # 오류 응답 규약
 
@@ -340,6 +361,10 @@ def create_app(
             if due:
                 background.add_task(lambda: ping_database())   # 응답을 보낸 뒤 돈다. 시험이 바꿔 끼울 수 있게 부를 때 찾는다
         return {"status": "ok"}
+
+    @app.head("/health", include_in_schema=False)   # HEAD로 살아 있는지 보는 감시도 200을 받게 한다
+    def health_head(background: BackgroundTasks) -> dict:
+        return health(background)
 
     if store is not None:
         app.include_router(create_auth_router(store=store, secret=auth_secret, profile_completed=profile_store.exists if profile_store is not None else None,
@@ -386,15 +411,20 @@ def create_app(
 
         if web_root != WEB_DIR:
             @app.get("/{path:path}", include_in_schema=False)
-            def spa_fallback(path: str) -> FileResponse:
+            def spa_fallback(path: str, request: Request) -> FileResponse:
                 first_segment = path.partition("/")[0]
                 if first_segment in api_prefixes:
-                    raise HTTPException(status_code=404, detail="Not Found")
+                    raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")   # 아래 404와 같은 한국어 문구
                 candidate = (web_root / path).resolve()
                 if web_root_resolved in candidate.parents and candidate.is_file():
                     return FileResponse(candidate)
                 if first_segment in spa_prefixes:
                     return FileResponse(web_root / "index.html")
+                if path == "favicon.ico" and (web_root / "favicon.svg").is_file():
+                    return FileResponse(web_root / "favicon.svg", media_type="image/svg+xml")
+                # 브라우저가 주소창으로 연 없는 화면 주소는 React 화면(404 안내)을 404 상태로 내준다. API 호출은 아래 JSON 규약 그대로(H-27)
+                if "text/html" in request.headers.get("accept", ""):
+                    return FileResponse(web_root / "index.html", status_code=404)
                 raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
         app.mount("/", StaticFiles(directory=web_root), name="web")
 

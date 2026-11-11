@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
+import { ApiError, apiJson, apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
 
 function sseResponse(...chunks) {
   const encoder = new TextEncoder()
@@ -78,5 +78,57 @@ describe('streamChatMessage many events (H-17)', () => {
     let count = 0
     await streamChatMessage('t1', 'q', { onEvent: event => { count += 1; if (event.type !== 'token') throw new Error('type') } })
     expect(count).toBe(30000)
+  })
+})
+
+describe('CSRF token race (H-18)', () => {
+  it('shares one token fetch between concurrent mutations', async () => {
+    document.cookie = 'provena_csrf=tok'
+    const fetchMock = vi.fn(async url => url.includes('/auth/csrf') ? new Response(null, { status: 204 }) : new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await Promise.all([patchMemory({ a: 1 }), patchMemory({ a: 2 }), patchMemory({ a: 3 })])
+    expect(fetchMock.mock.calls.filter(([url]) => url.includes('/auth/csrf'))).toHaveLength(1)
+  })
+
+  it('retries once with a fresh token when the server answers csrf_failed', async () => {
+    document.cookie = 'provena_csrf=old'
+    let posts = 0
+    const fetchMock = vi.fn(async (url, init) => {
+      if (url.includes('/auth/csrf')) { document.cookie = 'provena_csrf=fresh'; return new Response(null, { status: 204 }) }
+      posts += 1
+      if (init.headers['X-CSRF-Token'] !== 'fresh') return new Response(JSON.stringify({ error: { code: 'csrf_failed', message: 'CSRF 검증에 실패했습니다.' } }), { status: 403, headers: { 'content-type': 'application/json' } })
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    document.cookie = 'provena_csrf=old'
+    await expect(patchMemory({ a: 1 })).resolves.toBeDefined()
+    expect(posts).toBeLessThanOrEqual(2)
+  })
+
+  it('gives up after one retry', async () => {
+    document.cookie = 'provena_csrf=old'
+    const fetchMock = vi.fn(async url => url.includes('/auth/csrf') ? new Response(null, { status: 204 }) : new Response(JSON.stringify({ error: { code: 'csrf_failed', message: 'x' } }), { status: 403, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(patchMemory({ a: 1 })).rejects.toMatchObject({ code: 'csrf_failed' })
+    expect(fetchMock.mock.calls.filter(([url]) => url.includes('/me/memory'))).toHaveLength(2)
+  })
+})
+
+describe('network failure', () => {
+  it('turns a browser fetch failure into a Korean ApiError instead of the English "Failed to fetch"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const error = await apiJson('/me').catch(e => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.message).toBe('서버에 연결하지 못했습니다. 네트워크를 확인하고 잠시 후 다시 시도해 주세요.')
+    expect(error.status).toBe(0)
+    expect(error.code).toBe('network_error')
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps an aborted request as an AbortError so cancelling is not reported as a failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError')))
+    const error = await apiJson('/me').catch(e => e)
+    expect(error.name).toBe('AbortError')
+    vi.unstubAllGlobals()
   })
 })

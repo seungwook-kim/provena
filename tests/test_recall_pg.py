@@ -1,4 +1,4 @@
-"""리콜 저장소의 진짜 Postgres 시험. PROVENA_TEST_DATABASE_URL이 있을 때만 돈다(없으면 건너뜀).
+"""리콜 저장소의 진짜 Postgres 시험. PROVENA_TEST_DATABASE_URL(또는 TEST_DATABASE_URL)이 있을 때만 돈다(없으면 건너뜀).
 
 시험용 DB에 db/01_init.sql, 1xx, 201, 202, 120을 차례로 적용해 둔다. 시험은 자기 키(접두어 pgt-)로만 쓰고 끝나면 지운다.
 """
@@ -10,8 +10,8 @@ import uuid
 import pytest
 from recall_test_support import ARTICLE, NEW_DATE, OLD_DATE, SEQ, answers_with, changed, chunk, reader, save_answer
 
-DSN = os.environ.get("PROVENA_TEST_DATABASE_URL")
-pytestmark = pytest.mark.skipif(not DSN, reason="PROVENA_TEST_DATABASE_URL 없음")
+DSN = (os.getenv("PROVENA_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL"))
+pytestmark = pytest.mark.skipif(not DSN, reason="PROVENA_TEST_DATABASE_URL·TEST_DATABASE_URL 없음")
 
 from backend.graph.answer_store import PgAnswerStore, count_by_articles  # noqa: E402
 from backend.graph.recall.acl import PgAcl  # noqa: E402

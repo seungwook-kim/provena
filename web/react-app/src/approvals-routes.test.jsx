@@ -136,6 +136,7 @@ describe('live approvals route', () => {
     expect(screen.getByText('원문과 다른 칸이 없습니다. (원문 칸 3개)')).toBeTruthy()
     expect(screen.getByRole('button', { name: '승인하기' }).disabled).toBe(false)
     await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: '승인하시겠습니까?' })).toBeTruthy()   // H-31
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('승인했습니다.')
     expect(JSON.parse(requestsTo('POST', '/approvals/dec-2')[0].options.body)).toEqual({ approval_id: 'dec-2', approve: true, comment: '' })
@@ -146,6 +147,7 @@ describe('live approvals route', () => {
     await screen.findByRole('heading', { name: '원문 대조' })
     await userEvent.type(screen.getByLabelText(/^사유/), '원문과 다릅니다.')
     await userEvent.click(screen.getByRole('button', { name: '반려하기' }))
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: '반려하시겠습니까?' })).toBeTruthy()   // H-31
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('반려했습니다.')
     expect(JSON.parse(requestsTo('POST', '/approvals/dec-1')[0].options.body)).toEqual({ approval_id: 'dec-1', approve: false, comment: '원문과 다릅니다.' })

@@ -1,6 +1,8 @@
 """`evals/agent/approval_latency.py` 시험: 메모리 체크포인터로 짧게 돌려 잰 구간이 맞는 노드를 덮는지 본다(Postgres·키 없음)."""
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from evals.agent import approval_latency as A
@@ -27,3 +29,10 @@ def test_question_graph_runs_without_and_with_checkpointer():
     for kind in ("none", "memory"):
         r = A.run_question_bench(kind, 2, None)
         assert r["n"] == 2 and r["total_s"]["p50"] > 0
+
+
+@pytest.mark.skipif(not os.environ.get("APPROVAL_PG_URL"), reason="APPROVAL_PG_URL 없음(결정표 스키마를 적용한 빈 DB 필요)")
+def test_http_bench_passes_signed_csrf():
+    """J-14: 서명된 CSRF가 아니면 변환 요청이 403이라 SystemExit로 끝난다. 그 DB의 결정표·승인 건을 지운다."""
+    r = A.run_http_bench(1, os.environ["APPROVAL_PG_URL"])
+    assert r["n"] == 1 and r["convert_s"]["p50"] > 0

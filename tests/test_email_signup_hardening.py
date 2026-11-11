@@ -224,3 +224,18 @@ def test_openapi_lists_reset_verification_and_new_response_fields(monkeypatch):
     assert "request_id" in schemas["SignupVerificationResetResult"]["properties"]
     assert "request_id" in schemas["SignupReviewByIdResult"]["properties"]
     assert importlib.util.find_spec("backend.admin_api") is not None
+
+
+def test_resend_does_not_need_a_code(monkeypatch):
+    """C-21: 재발송 본문에 `code`가 없어도 된다(있어도 무시). 명세에도 필수가 아니다."""
+    import json
+
+    sender = FailingSender(failures=0)
+    client, store = build(monkeypatch, sender)
+    assert signup(client, "nocode@example.com").status_code == 201
+    store._signup_requests["nocode@example.com"]["last_verification_sent_at"] = datetime.now(timezone.utc) - timedelta(minutes=5)
+    r = client.post("/auth/signup/resend", json={"login_id": "nocode@example.com"}, headers=csrf(client))
+    assert r.status_code == 200 and r.json()["status"] == "sent"
+    spec = json.loads((ROOT / "docs" / "api" / "openapi.json").read_text(encoding="utf-8"))
+    body = spec["paths"]["/auth/signup/resend"]["post"]["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    assert spec["components"]["schemas"][body.rsplit("/", 1)[1]]["required"] == ["login_id"]

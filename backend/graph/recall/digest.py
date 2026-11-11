@@ -58,7 +58,7 @@ def flush_digests(service: Any, *, day: str | None = None, send: bool = True, de
     """쌓인 알림을 사용자별 요약으로 묶고(send면) 웹훅을 보낸다. 만든 요약 목록.
     `deliver(digest_id, body_bytes)`를 주면 바로 보내지 않고 그 함수에 넘긴다(API는 응답 뒤 백그라운드로 보낸다)."""
     from backend.graph.recall.service import notice_json
-    from backend.graph.recall.webhook import encode_body
+    from backend.graph.recall.webhook import encode_body, webhook_view
 
     if deliver is None and service.sender is not None:
         def deliver(did: str, body: bytes) -> Any:
@@ -76,7 +76,7 @@ def flush_digests(service: Any, *, day: str | None = None, send: bool = True, de
         for n in body["notices"]:
             store.notice_update(n["notice_id"], digest_status="sent")
         if created and send and deliver is not None:
-            deliver(did, encode_body(body))
+            deliver(did, encode_body(webhook_view(body)))
         out.append(rec)
     return out
 
