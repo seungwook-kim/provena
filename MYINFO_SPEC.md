@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 | 파일(제안) | 확인 |
 |---|---|
 | `tests/test_profile_crypto.py` | 잠갔다 풀면 같음 / 같은 값도 nonce가 달라 암호문이 다름 / 한 바이트 바꾸면 실패 / 다른 user_id(AAD)로 못 풂 / 옛 key_version으로 잠근 줄도 풀림 |
-| `tests/test_profile_api.py` | 로그인 없이 401 / CSRF 없이 PUT 403 / 형식 틀리면 422이고 응답에 입력값 없음 / GET은 가린 번호만 / `view=edit`만 원래 번호 / `/me`의 `profile_completed`가 저장 전 false, 뒤 true |
+| `tests/test_profile_api.py` | 로그인 없이 401 / CSRF 없이 PUT 403 / 형식 틀리면 422이고 `error.details.fields`에 칸별 이유가 있고 응답에 입력값 없음(운영과 같은 `install_error_handlers`를 단 앱으로 시험) / GET은 가린 번호만 / `view=edit`만 원래 번호 / `/me`의 `profile_completed`가 저장 전 false, 뒤 true |
 | `tests/test_auth_user_isolation.py`(있음)에 추가 | A가 저장 → B의 `GET /me/profile`은 404(A 값 안 나옴) / 관리자도 자기 것만 |
 | 경로 목록 시험 | 앱의 모든 경로 중 `profile`이 들어간 것은 `/me/profile` 하나 |
 | DB 시험 | 저장 뒤 `user_profiles` 줄을 그대로 읽어 전화번호·이름 문자열이 없음 |
@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 
 만든 대로의 응답:
 - `GET /me/profile` → `{name, dept, phone_masked, address, updated_at}`, 없으면 404. `view=edit`이면 `phone_masked` 대신 `phone`. 둘 다 `Cache-Control: no-store`. `view`에 다른 값은 422.
-- `PUT /me/profile` → 로그인 + CSRF. 본문의 `user_id`는 무시. 틀리면 422 `{"detail": {"message", "fields": {칸: 이유}}}`(입력값 없음). 성공하면 가린 보기로 응답.
+- `PUT /me/profile` → 로그인 + CSRF. 본문의 `user_id`는 무시. 틀리면 422 팀 표준 오류 `{"detail": message, "error": {"code": "validation_error", "message", "request_id", "details": {"fields": {칸: 이유}}}}`(입력값 없음, `ApiError`로 냄 — `HTTPException`의 dict detail은 운영 오류 처리기가 message·칸별 이유를 버린다). 성공하면 가린 보기로 응답.
 - 저장소·암호 실패 → 503(이유 숨김). 저장소가 다른 사람 줄을 주거나 암호문을 옮겨 붙이면 풀리지 않아 503.
 - 화면 검사는 따로 두지 않고 서버 422의 칸별 이유를 그대로 보여 준다(규칙이 한 곳).
 

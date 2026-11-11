@@ -13,6 +13,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.api.errors import install_error_handlers
 from backend.auth import CSRF_COOKIE_NAME, AuthUser, hash_password
 from backend.profile_api import create_profile_router, mask_phone, normalize_phone, validate_profile
 from backend.services.profile_crypto import KEY_ENV, ProfileCipher
@@ -44,6 +45,7 @@ def env(monkeypatch):
     cipher = ProfileCipher({1: os.urandom(32)})
     secret = secrets.token_urlsafe(48)
     app = FastAPI()
+    install_error_handlers(app)   # 운영 앱(backend/main.py)과 같은 오류 처리기. 없이 시험하면 칸별 이유가 사라지는 것을 못 잡는다
     app.state.token_revocation_store = revocations_for(auth_store)
     app.include_router(create_test_auth_router(store=auth_store, secret=secret, cookie_secure=False,
                                                profile_completed=profiles.exists))
@@ -91,8 +93,10 @@ def test_invalid_input_is_422_with_fields_and_no_echo(env):
     bad = {"name": "이영희1", "dept": "부서" * 21, "phone": "1234-99887", "address": "부산"}
     r = put(c, bad)
     assert r.status_code == 422
-    detail = r.json()["detail"]
-    assert set(detail["fields"]) == {"name", "dept", "phone", "address"} and detail["message"]
+    error = r.json()["error"]
+    assert error["code"] == "validation_error" and error["message"]
+    assert set(error["details"]["fields"]) == {"name", "dept", "phone", "address"}
+    assert r.json()["detail"] == error["message"]
     for value in bad.values():
         assert value not in r.text
     assert "99887" not in r.text
@@ -101,7 +105,7 @@ def test_invalid_input_is_422_with_fields_and_no_echo(env):
 
 def test_empty_body_reports_every_field(env):
     r = put(env["client"]("A"), {})
-    assert r.status_code == 422 and set(r.json()["detail"]["fields"]) == {"name", "dept", "phone", "address"}
+    assert r.status_code == 422 and set(r.json()["error"]["details"]["fields"]) == {"name", "dept", "phone", "address"}
 
 
 @pytest.mark.parametrize("raw", [b"not json 01055556666", b"[1, 2]", b'"01055556666"', b'{"name": 12345678}'])
@@ -110,7 +114,7 @@ def test_malformed_bodies_are_422_without_echo(env, raw):
     r = c.put("/me/profile", content=raw, headers={**csrf(c), "Content-Type": "application/json"})
     assert r.status_code == 422
     assert "01055556666" not in r.text and "12345678" not in r.text
-    assert isinstance(r.json()["detail"]["fields"], dict)
+    assert isinstance(r.json()["error"]["details"]["fields"], dict)
 
 
 def test_oversized_body_is_rejected(env):
