@@ -1,0 +1,123 @@
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 1: answer 재시도 0 LLM 16회 검색 1+0 8.924초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 2: answer 재시도 1 LLM 42회 검색 1+0 15.567초
+[single] 문항 3: answer 재시도 0 LLM 22회 검색 1+0 5.935초
+[single] 문항 4: answer 재시도 0 LLM 22회 검색 2+0 7.541초
+[single] 문항 5: answer 재시도 0 LLM 22회 검색 1+0 8.518초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 6: answer 재시도 0 LLM 22회 검색 2+0 9.827초
+[single] 문항 7: answer 재시도 0 LLM 22회 검색 1+0 7.214초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 8: answer 재시도 0 LLM 22회 검색 1+0 7.375초
+[single] 문항 9: answer 재시도 0 LLM 22회 검색 2+0 7.638초
+[single] 문항 10: answer 재시도 0 LLM 22회 검색 1+0 6.99초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 11: answer 재시도 0 LLM 22회 검색 1+0 7.71초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 12: answer 재시도 0 LLM 22회 검색 1+0 7.502초
+[single] 문항 13: answer 재시도 0 LLM 22회 검색 1+0 7.746초
+[single] 문항 14: answer 재시도 0 LLM 22회 검색 1+0 5.127초
+[single] 문항 15: answer 재시도 0 LLM 19회 검색 1+0 6.865초
+[single] 문항 16: refuse 재시도 0 LLM 4회 검색 0+0 1.952초
+[single] 문항 17: refuse 재시도 0 LLM 4회 검색 0+0 1.553초
+[single] 문항 18: refuse 재시도 0 LLM 4회 검색 0+0 1.702초
+[single] 문항 19: refuse 재시도 0 LLM 4회 검색 0+0 1.644초
+[single] 문항 20: refuse 재시도 1 LLM 10회 검색 1+0 3.643초
+[single] 문항 21: refuse 재시도 1 LLM 10회 검색 1+0 3.939초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 22: refuse 재시도 1 LLM 19회 검색 1+0 6.032초
+[single] 문항 23: refuse 재시도 0 LLM 4회 검색 0+0 1.79초
+[single] 문항 24: refuse 재시도 1 LLM 10회 검색 1+0 5.404초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 25: clarify 재시도 0 LLM 3회 검색 0+0 1.911초
+[single] 문항 26: refuse 재시도 1 LLM 10회 검색 1+0 5.3초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 27: refuse 재시도 1 LLM 10회 검색 1+0 4.916초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 28: refuse 재시도 1 LLM 10회 검색 1+0 5.503초
+[single] 문항 29: refuse 재시도 1 LLM 10회 검색 1+0 4.564초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 30: refuse 재시도 1 LLM 10회 검색 2+0 7.013초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 31: answer 재시도 0 LLM 29회 검색 1+0 12.835초
+[single] 문항 32: refuse 재시도 0 LLM 10회 검색 1+0 3.485초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 33: answer 재시도 0 LLM 22회 검색 1+0 4.974초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 34: answer 재시도 0 LLM 22회 검색 1+0 7.714초
+[single] 문항 35: answer 재시도 0 LLM 22회 검색 1+0 6.18초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 36: answer 재시도 0 LLM 16회 검색 2+0 8.042초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+[single] 문항 37: answer 재시도 0 LLM 25회 검색 1+0 8.019초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 38: answer 재시도 0 LLM 19회 검색 1+0 8.053초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer_fast elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 39: answer 재시도 0 LLM 25회 검색 1+0 8.225초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=answer elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 40: answer 재시도 0 LLM 22회 검색 1+0 8.025초
+[single] 문항 41: refuse 재시도 0 LLM 7회 검색 0+0 2.584초
+[single] 문항 42: refuse 재시도 0 LLM 4회 검색 0+0 1.715초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 43: refuse 재시도 1 LLM 13회 검색 1+0 6.022초
+[single] 문항 44: refuse 재시도 1 LLM 10회 검색 1+0 3.156초
+[single] 문항 45: refuse 재시도 1 LLM 10회 검색 1+0 3.967초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 46: refuse 재시도 1 LLM 16회 검색 1+0 6.353초
+[single] 문항 47: refuse 재시도 1 LLM 10회 검색 1+0 5.86초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 48: refuse 재시도 1 LLM 10회 검색 1+0 5.145초
+[single] 문항 49: refuse 재시도 1 LLM 10회 검색 1+0 4.972초
+LLM 무응답: 같은 요청을 하나 더 보냄 request_id=- stage=judge elapsed_s=3.5 attempt=0
+[single] 문항 50: refuse 재시도 1 LLM 10회 검색 1+0 5.203초
+{
+  "totals": {
+    "single": {
+      "items": 50,
+      "llm_calls": 775,
+      "first_searches": 47,
+      "requery_searches": 0,
+      "latency_mean_s": 5.957
+    }
+  }
+}

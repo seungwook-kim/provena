@@ -33,6 +33,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from backend.graph import untrusted as U
 from backend.graph.departments import issue_table as IT
 from backend.graph.departments import teams as T
 from backend.graph.decision.repo import TEAM_FAILED_KIND
@@ -203,7 +204,8 @@ def build_review_graph(
             if obj is None or not isinstance(obj.get("issues"), list):
                 failure = not_reviewed(team, "모델 응답을 읽지 못했습니다.", private_excluded=len(private), attempts=attempt, gave_up=True)
                 continue
-            rows, dropped = IT.build_rows(team.team_id, team.label, obj["issues"], public, leaks=leaks_internal)
+            rows, dropped = IT.build_rows(team.team_id, team.label, obj["issues"], public,
+                                          leaks=lambda t: leaks_internal(t) or U.leaks_instruction(t, public, request))  # 출력 검사(GRAPH_SCRUB_OUTPUT): 원문 지시에서 온 표식을 옮긴 쟁점은 행이 되지 못한다
             if obj["issues"] and not rows:  # 쟁점을 냈지만 인용 검사에서 모두 걸렸다: 쟁점 없음으로 위장하지 않는다
                 failure = not_reviewed(team, f"쟁점 {len(obj['issues'])}개가 근거 인용 검사를 통과하지 못했습니다.", private_excluded=len(private),
                                        dropped=len(dropped), attempts=attempt, gave_up=True)

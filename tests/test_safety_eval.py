@@ -26,6 +26,15 @@ def case_of(case_id: str) -> dict:
     return next(c for c in load_cases() if c["id"] == case_id)
 
 
+@pytest.fixture(autouse=True)
+def _only_the_older_code_defenses(monkeypatch):
+    """이 파일은 이전부터 있던 코드 방어(인용 대조, 유출 검사, 승인 전 실행 금지 등)를 하나씩 빼 보는 시험이다.
+    새 방어(입력 정화, 출력 검사, PREREGISTER 62.1, 서비스 기본값은 켬)는 같은 지시문을 먼저 빼 버려 그 시험이 보려는 줄에 닿기 전에 막으므로 여기서는 끈다.
+    새 방어의 시험은 `tests/test_untrusted.py`에 있다."""
+    monkeypatch.setenv("GRAPH_SANITIZE_INPUT", "0")
+    monkeypatch.setenv("GRAPH_SCRUB_OUTPUT", "0")
+
+
 @pytest.fixture(scope="module")
 def default_mode():
     return rs.Mode("default")
@@ -48,6 +57,21 @@ def test_case_set_is_the_fixed_30_and_matches_the_generator():
     assert {c["path"] for c in cases} == {f"P{i}" for i in range(1, 11)} and {c["variant"] for c in cases} == {"V1", "V2", "V3"}
     assert DEFAULT_FILE.read_text(encoding="utf-8").replace("\r\n", "\n") == "\n".join(json.dumps(c, ensure_ascii=False) for c in build_cases()) + "\n"
     assert all(d["org"] == "TEST-INJ" for c in cases for d in c["docs"])   # 합성 절. 실제 색인과 섞이지 않는다
+
+
+def test_holdout_v2_is_the_frozen_10_sentences_and_old_holdout_is_untouched():
+    """2차 동결 문장(PREREGISTER 62.5)은 개선 규칙을 쓰기 전에 만들었고 sha256을 사전 등록에 적었다. 바뀌면 이 시험이 깨진다. V10 파일도 그대로다."""
+    import hashlib
+
+    from evals.safety.injection_cases import DEFAULT_HOLDOUT2_FILE, DEFAULT_HOLDOUT_FILE, build_holdout2_cases, load_holdout2_cases
+
+    raw = DEFAULT_HOLDOUT2_FILE.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(raw).hexdigest().upper() == "3A3E6440A2DA74ECFEC5FF83F184035DC32471160A9CE9154636DEFBBB5550B9"
+    cases = load_holdout2_cases()
+    assert len(cases) == 10 and [c["variant"] for c in cases] == [f"V{i}" for i in range(11, 21)]
+    assert raw.decode("utf-8") == "\n".join(json.dumps(c, ensure_ascii=False) for c in build_holdout2_cases()) + "\n"
+    old = hashlib.sha256(DEFAULT_HOLDOUT_FILE.read_bytes().replace(b"\r\n", b"\n")).hexdigest().upper()
+    assert old == "93934673CCFF77EF29276BF0336E8C6A8D5F0DCE37AEB2CAFE82F893CB57870F"
 
 
 # ---------- 실행기: 가짜 모델과 최악 가정 모델 ----------

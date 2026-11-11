@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import secrets
@@ -69,7 +70,7 @@ def test_service_values_match_the_measured_arguments():
 def test_measured_args_are_the_61_51_setting():
     _, args = measured_args()
     assert (args.effort, args.effort_by_task) == ("none", "decompose=low,answer=low,judge=low")
-    assert (args.llm_deadline, args.llm_hedge, args.llm_retries, args.answer_wait, args.answer_budget) == ("8", "3.5", "2", 5.5, 8.0)
+    assert (args.llm_deadline, args.llm_hedge, args.llm_retries, args.answer_wait, args.answer_budget) == ("8", "3.5", "2", 4.0, 6.5)
     assert args.judge_quote and args.answer_best2 and args.best2_samedoc and args.judge_vote and args.max_research == 1
 
 
@@ -173,14 +174,6 @@ def test_service_searches_call_the_service_searcher(monkeypatch):
             calls.append(("pages", a))
             return ["p"]
 
-        def search_headings(self, *a):
-            calls.append(("headings", a))
-            return ["h"]
-
-        def closest_to_query(self, *a):
-            calls.append(("rank", a))
-            return None
-
         def intro_fill(self, *a):
             calls.append(("intro", a))
             return ["i"]
@@ -188,11 +181,9 @@ def test_service_searches_call_the_service_searcher(monkeypatch):
     monkeypatch.setattr(S, "_searcher", FakeSearcher())
     parts = SP.service_searches()
     assert parts["page_search"]("q", [1, 2], None, "2026-11-09", 8) == ["p"]
-    assert parts["heading_search"]("Security Review", "org", None, 6) == ["h"]
-    assert parts["heading_search"].rank("q", [{"chunk_id": "a"}], None, None) == []
     assert parts["intro_search"]([{"chunk_id": "a"}], "q", None, None) == ["i"]
-    assert [c[0] for c in calls] == ["pages", "headings", "rank", "intro"]
-    assert calls[0][1] == ("q", [1, 2], None, "2026-11-09", 8) and calls[1][1] == ("Security Review", "org", None, 6)
+    assert [c[0] for c in calls] == ["pages", "intro"]
+    assert calls[0][1] == ("q", [1, 2], None, "2026-11-09", 8)
 
 
 def _app(monkeypatch, **kw):
@@ -204,6 +195,9 @@ def _app(monkeypatch, **kw):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:1/x")
     monkeypatch.setenv("AUTH_SECRET", secrets.token_urlsafe(32))
+    # 배포 모드에선 내 정보 키가 없으면 시작하지 않는다(backend/main.py). AUTH_SECRET처럼 시험마다 새로 만든다
+    monkeypatch.setenv("PROFILE_ENC_KEYS", "1:" + base64.b64encode(secrets.token_bytes(32)).decode())
+    monkeypatch.delenv("PROVENA_OWNER_LOGIN_ID", raising=False)
     monkeypatch.setenv("CHECKPOINTER", "memory")
     monkeypatch.setattr("backend.main.create_auth_router", create_test_auth_router)
     return create_app(**kw)
@@ -229,7 +223,7 @@ def test_app_builds_the_service_graph_with_the_profile_and_restores_env(clean_en
         assert app.state.question_graph is not None
         assert os.environ["GRAPH_ANSWER_BEST2"] == "1"
     assert seen["env"] == {**SP.SERVICE_ENV, "GRAPH_JUDGE_VOTE": ""}
-    assert {"page_search", "heading_search", "intro_search"} <= set(seen) and isinstance(seen["llm"], SP.SharedChatModel)
+    assert {"page_search", "intro_search"} <= set(seen) and isinstance(seen["llm"], SP.SharedChatModel)
     assert seen["decision_repo"] is not None and seen["review_graph"] is not None  # --connected: 결정표와 합동 검토가 연결돼 있다
     assert "GRAPH_ANSWER_BEST2" not in os.environ and os.environ["GRAPH_JUDGE_VOTE"] == "off"  # 앱이 내려가면 되돌린다
 

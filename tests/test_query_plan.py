@@ -1,6 +1,6 @@
-"""첫 검색어 코드 보강(`GRAPH_QUERY_TERMS`, `GRAPH_QUERY_BRANCHES`) 시험. 가짜 모델과 가짜 검색기만 쓴다(키와 네트워크 없음).
+"""첫 검색어 코드 보강(`GRAPH_QUERY_BRANCHES`) 시험. 가짜 모델과 가짜 검색기만 쓴다(키와 네트워크 없음).
 
-두 스위치는 기본 꺼짐이고, 꺼져 있으면 첫 검색어, 하위 질문, 답 입력이 #44 측정 구성과 같아야 한다.
+스위치는 기본 꺼짐이고, 꺼져 있으면 첫 검색어, 하위 질문, 답 입력이 #44 측정 구성과 같아야 한다.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ NOTE = "대상에 따라 절차가 갈린다"
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in ("GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS", 
+    for name in ("GRAPH_QUERY_BRANCHES", "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS", 
                  "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
@@ -56,19 +56,6 @@ def run(g, question):
 
 
 # ---------- 표 ----------
-@pytest.mark.parametrize("text,want", [
-    ("새 SaaS 도구 도입 요청은 어디서 시작해?", "새 SaaS 도구 도입 요청은 어디서 시작해? (procurement, purchase request, new vendor)"),
-    ("보안 검토(TPRM)는 언제 필요해?", "보안 검토(TPRM)는 언제 필요해? (TPRM, third party risk management assessment)"),
-    ("소프트웨어를 구매하려면 어떻게 해?", "소프트웨어를 구매하려면 어떻게 해? (procurement, purchase request, new vendor)"),
-    ("별도 데이터베이스나 마이크로서비스를 새로 도입하자고 제안하려면 누구 승인을 받아야 해?", None),  # 도구, 소프트웨어, 업체가 없다
-    ("같은 벤더와 계약을 한 번 승인받은 뒤 추가 계약 금액은?", None),  # 구매, 도입이 없다
-    ("EU DORA 규정에서 요구하는 ICT 제3자 계약 필수 조항이 뭐야?", None),
-    ("x (procurement, purchase request, new vendor) 도구 도입", None),  # 이미 다 있으면 붙이지 않는다
-])
-def test_term_rows(text, want):
-    assert QP.add_terms(text) == (want or text)
-
-
 def test_branch_rule_needs_topic_without_audience():
     assert QP.branch_rule(ACCOUNT_Q) is not None
     assert QP.branch_rule("비밀번호를 잊어버렸어") is not None
@@ -78,29 +65,22 @@ def test_branch_rule_needs_topic_without_audience():
 
 
 def test_plan_is_identity_when_both_switches_are_off():
-    p = QP.plan_first_search(ACCOUNT_Q, "계정 2FA 초기화 요청은 어떻게 처리해?", ["a 도구 도입", "b"], terms=False, branches=False)
+    p = QP.plan_first_search(ACCOUNT_Q, "계정 2FA 초기화 요청은 어떻게 처리해?", ["a 도구 도입", "b"], branches=False)
     assert (p.query, p.subs, p.targets) == ("계정 2FA 초기화 요청은 어떻게 처리해?", ["a 도구 도입", "b"], [])
 
 
 def test_plan_splits_an_unsplit_question_by_target():
-    p = QP.plan_first_search(ACCOUNT_Q, "계정 2FA 초기화 요청은 어떻게 처리해?", [], terms=False, branches=True)
+    p = QP.plan_first_search(ACCOUNT_Q, "계정 2FA 초기화 요청은 어떻게 처리해?", [], branches=True)
     assert p.subs == ["계정 2FA 초기화 요청은 어떻게 처리해? (대상: GitLab 팀원)", "계정 2FA 초기화 요청은 어떻게 처리해? (대상: GitLab.com 사용자, 고객)"]
     assert p.targets == ["GitLab 팀원", "GitLab.com 사용자(고객)"]
 
 
 def test_plan_splits_only_the_matching_sub_and_keeps_the_sub_limit():
-    p = QP.plan_first_search("계정 잠김은 어떻게 풀고 온콜은 누가 해?", "q", ["계정 잠김은 어떻게 풀어?", "온콜은 누가 해?"], terms=False, branches=True)
+    p = QP.plan_first_search("계정 잠김은 어떻게 풀고 온콜은 누가 해?", "q", ["계정 잠김은 어떻게 풀어?", "온콜은 누가 해?"], branches=True)
     assert p.subs == ["계정 잠김은 어떻게 풀어? (대상: GitLab 팀원)", "계정 잠김은 어떻게 풀어? (대상: GitLab.com 사용자, 고객)", "온콜은 누가 해?"]
     three = ["계정 잠김은 어떻게 풀어?", "온콜은 누가 해?", "릴리스는 언제야?"]
-    p = QP.plan_first_search("계정 잠김, 온콜, 릴리스", "q", three, terms=False, branches=True)
+    p = QP.plan_first_search("계정 잠김, 온콜, 릴리스", "q", three, branches=True)
     assert p.subs == three and p.targets == []  # 4개가 되면 나누지 않는다
-
-
-def test_plan_terms_apply_to_subs_or_the_query():
-    p = QP.plan_first_search("q", "새 도구 도입은?", [], terms=True, branches=False)
-    assert p.query.endswith("(procurement, purchase request, new vendor)") and p.subs == []
-    p = QP.plan_first_search("q", "전체", ["새 도구 도입은?", "TPRM은 언제?"], terms=True, branches=False)
-    assert p.query == "전체" and p.subs[0].endswith("new vendor)") and p.subs[1].endswith("assessment)")
 
 
 def test_missing_targets_and_note():
@@ -140,22 +120,12 @@ def _args(argv):
 
 def test_runner_maps_the_new_flags():
     off = M.chosen_model_switches(_args([]))
-    assert off["GRAPH_QUERY_TERMS"] == "" and off["GRAPH_QUERY_BRANCHES"] == ""
-    on = M.chosen_model_switches(_args(["--query-terms", "--query-branches"]))
-    assert on["GRAPH_QUERY_TERMS"] == "1" and on["GRAPH_QUERY_BRANCHES"] == "1"
+    assert off["GRAPH_QUERY_BRANCHES"] == ""
+    on = M.chosen_model_switches(_args(["--query-branches"]))
+    assert on["GRAPH_QUERY_BRANCHES"] == "1"
 
 
 # ---------- 그래프: 켬 ----------
-def test_query_terms_reach_the_first_search_only(monkeypatch):
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
-    fn, seen = recording_search()
-    m = make_llm(subs=["새 SaaS 도구 도입 요청은 어디서 시작해?", "보안 검토(TPRM)는 언제 필요해?"])
-    run(build_graph(fn, llm=m, decompose=True), "새 SaaS 도구를 도입하고 싶은데 요청은 어디서 시작하고, 보안 검토(TPRM)는 언제 필요해?")
-    assert seen[0].sub_queries[0].endswith("(procurement, purchase request, new vendor)")
-    assert seen[0].sub_queries[1].endswith("(TPRM, third party risk management assessment)")
-    assert all(q.sub_queries is None for q in seen[1:])  # 재검색은 그대로다
-
-
 @pytest.mark.parametrize("multi", [False, True])
 def test_query_branches_split_the_search_and_check_the_answer(monkeypatch, multi):
     monkeypatch.setenv("GRAPH_QUERY_BRANCHES", "1")
@@ -179,7 +149,6 @@ def test_query_branches_do_not_redraft_a_complete_answer(monkeypatch):
 
 def test_query_branches_leave_other_questions_alone(monkeypatch):
     monkeypatch.setenv("GRAPH_QUERY_BRANCHES", "1")
-    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
     fn, seen = recording_search()
     m = make_llm()
     out = run(build_graph(fn, llm=m, decompose=True), "SEV2 장애 최초 대응은 몇 분 이내인가요?")

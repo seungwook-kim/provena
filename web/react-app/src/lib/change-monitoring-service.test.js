@@ -7,7 +7,9 @@ import {
   mapChange,
   mapChangeType,
   mapChangesResponse,
+  mapTypeCounts,
   previewChangeMonitoringService,
+  versionText,
 } from './change-monitoring-service'
 
 const change = (overrides = {}) => ({
@@ -60,7 +62,7 @@ describe('change mapping', () => {
       oldPolicy: null,
       newPolicy: null,
     })
-    expect(record.summary).toContain('2024-01-01 → 2024-03-01')
+    expect(record.summary).toContain('2024-01-01 판 → 2024-03-01 판')
     expect(record.detectedAt).toMatch(/^2026-11-0\d \d\d:\d\d$/)
   })
 
@@ -84,8 +86,26 @@ describe('change mapping', () => {
     expect(heldRecordFor(null)).toBeNull()
   })
 
+  it('says which edition a section was added in or removed from when only one side has a date', () => {
+    expect(versionText('2026-08-13', '')).toBe('2026-08-13 판에서 삭제')
+    expect(versionText(null, '2026-11-04')).toBe('2026-11-04 판에서 추가')
+    expect(versionText('2024-01-01', '2024-03-01')).toBe('2024-01-01 판 → 2024-03-01 판')
+    expect(versionText(null, '')).toBe('')
+    const removed = mapChange(change({ change_type: 'removed', old_version_date: '2026-08-13', new_version_date: '' }))
+    expect(removed.summary).toBe('정책 섹션이 삭제되었습니다. (2026-08-13 판에서 삭제)')
+    expect(removed.summary).not.toMatch(/핀|→|없음/)
+    expect(mapChange(change({ change_type: 'added', old_version_date: null, new_version_date: '2026-11-04' })).summary).toContain('(2026-11-04 판에서 추가)')
+  })
+
+  it('merges server counts into screen types and ignores a missing table', () => {
+    expect(mapTypeCounts({ modified: 9, added: 28, removed: 13, weird: 2 })).toEqual({ MODIFIED: 11, ADDED: 28, REMOVED: 13 })
+    expect(mapTypeCounts(null)).toBeNull()
+    expect(mapTypeCounts([])).toBeNull()
+    expect(mapChangesResponse(listResponse({ counts: { modified: 300, added: 18 }, total: 318 })).typeCounts).toEqual({ MODIFIED: 300, ADDED: 18, REMOVED: 0 })
+  })
+
   it('treats empty or missing payloads as no changes', () => {
-    expect(mapChangesResponse({})).toEqual({ records: [], lastRun: null, more: false, monitoring: null })
+    expect(mapChangesResponse({})).toEqual({ records: [], lastRun: null, more: false, monitoring: null, typeCounts: null })
     expect(mapChangesResponse(null).records).toEqual([])
   })
 
@@ -106,6 +126,13 @@ describe('API change monitoring service', () => {
     expect(service.getSnapshot()).toMatchObject({ status: 'ready', more: false, monitoring: { status: 'active' } })
     expect(service.getSnapshot().records.map(record => record.id)).toEqual(['e1', 'e2'])
     expect(service.getMonitoringStatus()).toBe('active')
+  })
+
+  it('keeps the server-wide type counts while only one page of records is loaded', async () => {
+    const service = createApiChangeMonitoringService(fakeApi({ getChanges: vi.fn(async () => listResponse({ more: true, total: 318, counts: { modified: 280, added: 28, removed: 10 } })) }), { pageSize: 2 })
+    await service.listChanges()
+    expect(service.getSnapshot().records).toHaveLength(2)
+    expect(service.getSnapshot().typeCounts).toEqual({ MODIFIED: 280, ADDED: 28, REMOVED: 10 })
   })
 
   it('prepends the held notice when the last run list is incomplete', async () => {

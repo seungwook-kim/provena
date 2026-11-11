@@ -15,20 +15,22 @@ const doneMessage = {
   mark_unreviewed: '실패한 팀을 검토하지 못한 팀으로 표시하고 다음 단계로 넘겼습니다.',
 }
 const LOAD_ERROR = '승인 요청을 불러오지 못했습니다.'
+const EMPTY_DRAFT = { id: null, text: '' }
+const draftFor = (draft, item) => (item && draft.id === item.id ? draft.text : '')
 
 export default function ApprovalsPage({ service = previewApprovalsService }) {
   const live = service.live === true
   const [items, setItems] = useState([])
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(null)
-  const [reason, setReason] = useState('')
+  const [reasonDraft, setReasonDraft] = useState(EMPTY_DRAFT)
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [reviews, setReviews] = useState({})
   const [department, setDepartment] = useState('security')
   const [result, setResult] = useState('possible')
-  const [opinion, setOpinion] = useState('')
-  const [evidence, setEvidence] = useState('')
+  const [opinionDraft, setOpinionDraft] = useState(EMPTY_DRAFT)
+  const [evidenceDraft, setEvidenceDraft] = useState(EMPTY_DRAFT)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -66,6 +68,14 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
 
   const visible = useMemo(() => items.filter(item => filter === 'all' || item.status === filter), [filter, items])
   const selected = items.find(item => item.id === selectedId) ?? visible[0] ?? null
+  // Typed text belongs to the item it was typed for: switching items shows that item's own (empty) text,
+  // so a reason written for A can never be sent as B's reason.
+  const reason = draftFor(reasonDraft, selected)
+  const opinion = draftFor(opinionDraft, selected)
+  const evidence = draftFor(evidenceDraft, selected)
+  const setReason = text => setReasonDraft({ id: selected?.id ?? null, text })
+  const setOpinion = text => setOpinionDraft({ id: selected?.id ?? null, text })
+  const setEvidence = text => setEvidenceDraft({ id: selected?.id ?? null, text })
   const reviewed = Object.keys(reviews).length
   const allReviewed = reviewed === reviewDepartments.length
   const canDecide = selected?.status === 'pending' && (!live || selected.hasDetail)

@@ -131,7 +131,7 @@ describe('request body', () => {
   })
 
   it('rejects an action the backend does not know, such as a revision request', () => {
-    expect(() => toApprovalRequestBody('revision', '보완')).toThrow('지원하지 않는 처리입니다.')
+    expect(() => toApprovalRequestBody('revision', '보완')).toThrow('보완 요청 API가 아직 연결되지 않았습니다.')
   })
 })
 
@@ -180,7 +180,7 @@ describe('API approvals service', () => {
 
   it('does not call the API for an unsupported action', async () => {
     const api = fakeApi()
-    await expect(createApiApprovalsService(api).decideApproval('dec-1', { action: 'revision', reason: 'x' })).rejects.toThrow('지원하지 않는 처리입니다.')
+    await expect(createApiApprovalsService(api).decideApproval('dec-1', { action: 'revision', reason: 'x' })).rejects.toThrow('보완 요청 API가 아직 연결되지 않았습니다.')
     expect(api.postApprovalDecision).not.toHaveBeenCalled()
   })
 
@@ -215,6 +215,26 @@ describe('API approvals service', () => {
   })
 })
 
+describe('server error reason through the real API client', () => {
+  // main's api.js reads detail.reason into error.code; this checks that the approvals service maps that code to its Korean message.
+  it.each([
+    ['comment_required', 400, '사유를 입력해야 합니다'],
+    ['already_decided', 409, '이미 다른 결정이 처리된 요청'],
+    ['not_found', 404, '승인 요청을 찾을 수 없습니다'],
+    ['save_failed', 503, '같은 결정을 다시 보내면'],
+  ])('reads detail.reason %s from the response body and shows the mapped Korean message', async (reason, status, snippet) => {
+    document.cookie = 'provena_csrf=test-csrf; path=/'
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: { reason, message: 'english backend text' } }), { status, headers: { 'content-type': 'application/json' } })))
+    const error = await createApiApprovalsService().decideApproval('dec-1', { action: 'approve' }).catch(caught => caught)
+    vi.unstubAllGlobals()
+    document.cookie = 'provena_csrf=; Max-Age=0; path=/'
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.code).toBe(reason)
+    expect(error.status).toBe(status)
+    expect(error.message).toContain(snippet)
+    expect(error.message).not.toContain('english')
+  })
+})
 describe('describeApprovalError', () => {
   it('falls back by status and returns an empty string without an error', () => {
     expect(describeApprovalError(null)).toBe('')

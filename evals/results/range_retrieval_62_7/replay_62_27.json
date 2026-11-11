@@ -1,0 +1,900 @@
+{
+ "kind": "replay_62_27",
+ "date": "2026-11-10",
+ "note": "사전 등록 62.27의 0원 재현. 저장된 운영 첫 검색 14건(00030 분해·번역)과 캐시된 질문 벡터(voyage-4)로 수정 전(main e235509 search.py)과 수정 후(이 PR)의 검색 단계를 다시 돌린 것. LLM·임베딩 호출 없음. runs14: 운영 첫 검색 14건(전/후 정답 구간 행 검색·문맥 포함, 구간 행 표 구성, 청크 id). grid70: 14건의 분해에 금액만 바꾼 70칸. demo15: 데모 녹화 3틀 x 5금액. regress: v2 50·검증 20 저장 질문(금액 없음, 금액 문구 붙인 압박 점검 포함)의 첫 검색 문맥 전후 비교.",
+ "range_n": 3,
+ "runs14": {
+  "rows": [
+   {
+    "label": "201r1",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Bad debt write off",
+      "Non Billable Expenses",
+      "Approving expense"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "a90eeb621028228a",
+      "2790f31df70593f1",
+      "72b09f608ddee143"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "a90eeb621028228a",
+      "2790f31df70593f1",
+      "72b09f608ddee143",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": true
+   },
+   {
+    "label": "202r1",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "d274ab428dae444d",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "d274ab428dae444d",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "d274ab428dae444d",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "d274ab428dae444d",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "203r1",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "204r1",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "2d54cd9cb28ce74a",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "2d54cd9cb28ce74a",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "2d54cd9cb28ce74a",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "2d54cd9cb28ce74a",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "205r1",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Non Billable Expenses",
+      "Approving Payment"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": true
+   },
+   {
+    "label": "201r2",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Non Billable Expenses",
+      "Approving expense",
+      "Bad debt write off"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "2790f31df70593f1",
+      "72b09f608ddee143",
+      "a90eeb621028228a"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "2790f31df70593f1",
+      "72b09f608ddee143",
+      "a90eeb621028228a",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "changed": true
+   },
+   {
+    "label": "202r2",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "203r2",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "f7b2279a86888e7c",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "204r2",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "96eff1a8c833ff33",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "205r2",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Non Billable Expenses",
+      "Approving Payment"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": true
+   },
+   {
+    "label": "201r3",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Bad debt write off",
+      "Non Billable Expenses",
+      "Approving expense"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "a90eeb621028228a",
+      "2790f31df70593f1",
+      "72b09f608ddee143"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "a90eeb621028228a",
+      "2790f31df70593f1",
+      "72b09f608ddee143",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "9d81119a0f98e780",
+      "72b09f608ddee143",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": true
+   },
+   {
+    "label": "202r3",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "9d81119a0f98e780",
+      "905520380353f37a",
+      "9b386ea93519a5a3",
+      "68ef17df6892a0de",
+      "2790f31df70593f1",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "203r3",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving Payment",
+      "Approving expense",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1"
+     ],
+     "context_ids": [
+      "374e90086f57050a",
+      "d5b22544ecea134b",
+      "68ef17df6892a0de",
+      "9b386ea93519a5a3",
+      "2790f31df70593f1",
+      "a94e4222885c1e82",
+      "7275b0b9f027798b",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b",
+      "f09eee1e65796fe5",
+      "8c381ff60408dda9"
+     ]
+    },
+    "changed": false
+   },
+   {
+    "label": "205r3",
+    "before": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Non Billable Expenses",
+      "Approving Payment"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "8da0bc489f2c58e4",
+      "68ef17df6892a0de",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "after": {
+     "search": true,
+     "context": true,
+     "bands": [
+      "Approving expense",
+      "Approving Payment",
+      "Non Billable Expenses"
+     ],
+     "search_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4"
+     ],
+     "context_ids": [
+      "905520380353f37a",
+      "d274ab428dae444d",
+      "fdde953c7bca6352",
+      "68ef17df6892a0de",
+      "8da0bc489f2c58e4",
+      "0acdc0bbc5942410",
+      "232c8b1253eb99ad",
+      "70a3a373cf8fd14b"
+     ]
+    },
+    "changed": true
+   }
+  ],
+  "before_search": 14,
+  "after_search": 14,
+  "before_context": 14,
+  "after_context": 14,
+  "n": 14
+ },
+ "grid70": {
+  "before": [
+   70,
+   70
+  ],
+  "after": [
+   70,
+   70
+  ],
+  "n": 70,
+  "skipped": 0,
+  "miss_before": [],
+  "miss_after": [],
+  "payment_before": 56,
+  "payment_after": 70,
+  "n_201": 14,
+  "201_payment_before": 0,
+  "201_payment_after": 14,
+  "201_baddebt_before": 14,
+  "201_baddebt_after": 0,
+  "set_changed_non201": []
+ },
+ "demo15": {
+  "before": [
+   15,
+   15
+  ],
+  "after": [
+   15,
+   15
+  ],
+  "n": 15,
+  "miss_before": [],
+  "miss_after": []
+ },
+ "regress": {
+  "v2": {
+   "n": 42,
+   "with_amount": 0,
+   "changed": [],
+   "worse": [],
+   "better": []
+  },
+  "v2+금액문구": {
+   "n": 42,
+   "with_amount": 42,
+   "changed": [],
+   "worse": [],
+   "better": []
+  },
+  "holdout": {
+   "n": 15,
+   "with_amount": 0,
+   "changed": [],
+   "worse": [],
+   "better": []
+  },
+  "holdout+금액문구": {
+   "n": 15,
+   "with_amount": 15,
+   "changed": [],
+   "worse": [],
+   "better": []
+  }
+ }
+}

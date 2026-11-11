@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import threading
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,10 +16,200 @@ from auth_test_support import create_test_auth_router
 
 from backend.main import WEB_DIR
 from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, verify_password
-from backend.services.auth_store import REVOCATION_SCHEMA_FILE, SCHEMA_FILE, PostgresAuthStore
+from backend.services.auth_store import REVOCATION_SCHEMA_FILE, SCHEMA_FILE, AccountExistsError, MemoryAuthStore, PostgresAuthStore
 from backend.services.demo_seed import seed_demo_accounts
 
 LOCAL = {"PROVENA_ENV": "local", "PROVENA_DEV_MODE": "1"}
+
+
+def test_memory_auth_store_signup_lifecycle_preserves_hash_and_metadata():
+    store = MemoryAuthStore()
+    reviewer = uuid4()
+    assert store.create_pending_user("pending-memory", "bcrypt-hash") is None
+    assert store.get_by_login_id("pending-memory") is None
+    assert store.get_signup_by_login_id("pending-memory") == ("pending", "bcrypt-hash")
+    assert store.get_signup_status(uuid4()) is None
+    assert store.list_signup_requests()[0].status == "pending"
+    assert store.review_signup_request("pending-memory", "approve", reviewer) == "changed"
+    user = store.get_by_login_id("pending-memory")
+    assert user is not None and user.password_hash == "bcrypt-hash"
+    assert store.get_signup_status(user.user_id) == "approved"
+    request = store._signup_requests["pending-memory"]
+    assert request["user_id"] == user.user_id
+    assert request["reviewed_by"] == reviewer
+    assert request["reviewed_at"] is not None
+    assert store.review_signup_request("pending-memory", "reject", reviewer) == "unchanged"
+
+
+def test_memory_signup_status_contract_separates_user_and_login_lookups():
+    store = MemoryAuthStore()
+    existing = store.create_user("existing", "existing-hash", "user")
+    assert store.get_signup_status(existing.user_id) is None
+    assert store.get_signup_status(uuid4()) is None
+
+    store.create_pending_user("pending", "pending-hash")
+    assert store.get_signup_by_login_id("pending") == ("pending", "pending-hash")
+    assert store.get_signup_status(uuid4()) is None
+
+    store.create_pending_user("rejected", "rejected-hash")
+    assert store.review_signup_request("rejected", "reject", uuid4()) == "changed"
+    assert store.get_signup_by_login_id("rejected") == ("rejected", "rejected-hash")
+
+
+def test_memory_approval_reuses_create_user_defaults_and_keeps_request_pending_on_failure(monkeypatch):
+    store = MemoryAuthStore()
+    direct = store.create_user("direct", "direct-hash", "user")
+    store.create_pending_user("approved", "approved-hash")
+    assert store.review_signup_request("approved", "approve", uuid4()) == "changed"
+    approved = store.get_by_login_id("approved")
+    assert approved is not None
+    assert (approved.role, approved.is_active, approved.groups) == (direct.role, direct.is_active, direct.groups)
+    assert approved.password_hash == "approved-hash"
+
+    store.create_pending_user("fails", "fails-hash")
+
+    def fail_create(*_args):
+        raise AccountExistsError("simulated create failure")
+
+    monkeypatch.setattr(store, "_create_user_locked", fail_create)
+    with pytest.raises(AccountExistsError):
+        store.review_signup_request("fails", "approve", uuid4())
+    assert store.get_signup_by_login_id("fails") == ("pending", "fails-hash")
+    assert store.get_by_login_id("fails") is None
+
+
+def test_memory_auth_store_serializes_concurrent_approval():
+    store = MemoryAuthStore()
+    store.create_pending_user("approve-once", "hash")
+    results = []
+
+    def approve():
+        results.append(store.review_signup_request("approve-once", "approve", uuid4()))
+
+    workers = [threading.Thread(target=approve) for _ in range(8)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+    assert results.count("changed") == 1
+    assert results.count("unchanged") == 7
+    assert store.get_by_login_id("approve-once") is not None
+
+
+def test_memory_auth_store_rejects_duplicates_and_invalid_actions():
+    store = MemoryAuthStore()
+    store.create_pending_user("duplicate-memory", "hash")
+    with pytest.raises(AccountExistsError):
+        store.create_pending_user("duplicate-memory", "other-hash")
+    assert store.review_signup_request("missing", "approve", uuid4()) == "missing"
+    with pytest.raises(ValueError):
+        store.review_signup_request("duplicate-memory", "unknown", uuid4())
+
+
+def test_memory_auth_store_serializes_concurrent_duplicate_signup():
+    store = MemoryAuthStore()
+    results = []
+
+    def submit():
+        try:
+            store.create_pending_user("concurrent-memory", "hash")
+            results.append("created")
+        except AccountExistsError:
+            results.append("duplicate")
+
+    workers = [threading.Thread(target=submit) for _ in range(8)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+    assert results.count("created") == 1
+    assert results.count("duplicate") == 7
+    assert len(store.list_signup_requests()) == 1
+
+
+def test_postgres_signup_request_list_uses_request_login_id_without_user_join():
+    from datetime import datetime, timezone
+
+    class Rows:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def fetchall(self):
+            return self.rows
+
+    class Conn:
+        def __init__(self, rows):
+            self.rows = rows
+            self.sql = ""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def execute(self, sql, params=None):
+            self.sql = sql
+            return Rows(self.rows)
+
+    rows = [
+        (1, "pending-user", datetime(2026, 1, 1, tzinfo=timezone.utc), "pending", False),
+        (2, "approved-user", datetime(2026, 1, 2, tzinfo=timezone.utc), "approved", True),
+        (3, "rejected-user", datetime(2026, 1, 3, tzinfo=timezone.utc), "rejected", False),
+    ]
+    connections = []
+
+    def connect():
+        connection = Conn(rows)
+        connections.append(connection)
+        return connection
+
+    store = PostgresAuthStore(connect=connect)
+    result = store.list_signup_requests()
+    assert [(row.login_id, row.status) for row in result] == [
+        ("pending-user", "pending"),
+        ("approved-user", "approved"),
+        ("rejected-user", "rejected"),
+    ]
+    assert "JOIN users" not in connections[0].sql
+    assert "password_hash" not in connections[0].sql
+
+
+def test_postgres_signup_status_contract_queries_only_approved_linked_users():
+    approved_user_id = uuid4()
+
+    class Cursor:
+        def __init__(self, row):
+            self.row = row
+
+        def fetchone(self):
+            return self.row
+
+    class Conn:
+        def __init__(self, row):
+            self.sql = ""
+            self.params = None
+            self.row = row
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def execute(self, sql, params=None):
+            self.sql, self.params = sql, params
+            return Cursor(self.row)
+
+    connection = Conn(("approved",))
+    store = PostgresAuthStore(connect=lambda: connection)
+    assert store.get_signup_status(approved_user_id) == "approved"
+    assert connection.params == (approved_user_id,)
+    assert "user_id = %s" in connection.sql and "status = 'approved'" in connection.sql
+
+    missing = PostgresAuthStore(connect=lambda: Conn(None))
+    assert missing.get_signup_status(uuid4()) is None
+    assert missing.get_signup_status("not-a-uuid") is None
 
 
 # ---- 가짜 연결 -------------------------------------------------------------
@@ -156,7 +347,7 @@ def test_seed_skips_account_with_empty_password():
 
 # ---- main.py 연결 ----------------------------------------------------------
 def _app(monkeypatch, **env):
-    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE"):
+    for key in ("DATABASE_URL", "AUTH_SECRET", "PROVENA_ENV", "PROVENA_DEV_MODE", "PROVENA_OWNER_LOGIN_ID"):
         monkeypatch.delenv(key, raising=False)
     for key, value in env.items():
         monkeypatch.setenv(key, value)
@@ -215,6 +406,9 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     uid, password = uuid4(), secrets.token_urlsafe(12)
     row = (uid, "demo-user", hash_password(password), "user", True)
     monkeypatch.setattr("backend.main.PostgresAuthStore", lambda dsn: fake_store(row)[0])
+    # 내 정보(요청 1번): main.py가 /me에 profile_completed를 더하므로 내 정보 저장소도 가짜로 둔다(DB 연결 안 함)
+    from profile_test_support import MemoryProfileStore
+    monkeypatch.setattr("backend.main.PostgresProfileStore", lambda dsn: MemoryProfileStore())
     app = _app(monkeypatch, DATABASE_URL="postgresql://u:p@db/x", AUTH_SECRET=secrets.token_urlsafe(32), **LOCAL)
     client = TestClient(app)
     assert client.get("/auth/csrf").status_code == 204
@@ -224,7 +418,8 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     ok = client.post("/auth/login", json={"login_id": "demo-user", "password": password}, headers=headers)
     assert ok.status_code == 200 and ok.json() == {"user_id": str(uid), "role": "user"}
     assert client.cookies.get(AUTH_COOKIE_NAME)
-    assert client.get("/me").json() == {"user_id": str(uid), "role": "user"}
+    # 사용자 관리(요청 2번): main.py가 /me에 is_owner를 더한다. PROVENA_OWNER_LOGIN_ID가 없으면 false(닫힘)
+    assert client.get("/me").json() == {"user_id": str(uid), "role": "user", "profile_completed": False, "is_owner": False}
     assert client.post("/auth/logout", headers=headers).status_code == 204
     assert client.get("/me").status_code == 401
 
@@ -267,6 +462,14 @@ def test_create_app_binds_revocation_store_for_login_me_logout_and_reuse_block(m
         monkeypatch.setenv(key, value)
     monkeypatch.setattr("backend.main.PostgresAuthStore", FakeAuthStore)
     monkeypatch.setattr("backend.main.PostgresTokenRevocationStore", FakeRevocationStore)
+    # 내 정보(요청 1번): main.py가 /me에 profile_completed를 더하므로 내 정보 저장소도 가짜로 둔다(DB 연결 안 함)
+    from profile_test_support import MemoryProfileStore
+
+    class FakeProfileStore(MemoryProfileStore):
+        def ensure_schema(self):   # 로컬 데모 시작(bootstrap_local_auth)이 부른다
+            pass
+
+    monkeypatch.setattr("backend.main.PostgresProfileStore", lambda dsn: FakeProfileStore())
 
     app = create_app()
     assert isinstance(app.state.token_revocation_store, FakeRevocationStore)

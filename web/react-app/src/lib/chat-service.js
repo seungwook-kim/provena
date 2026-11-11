@@ -13,6 +13,13 @@ export function createChatService(adapter) {
 }
 
 // Server citations (SSE `citation` and GET /threads/{id}) use rule_title/article/version_date; the panel reads title/path/version.
+// 원문 보기 링크는 https 주소일 때만 근거의 source_url을 쓴다(그 밖은 핸드북 첫 화면, #71 리뷰).
+export const DEFAULT_SOURCE_URL = 'https://handbook.gitlab.com/handbook/'
+export function citationHref(citation) {
+  const url = citation?.source_url
+  return typeof url === 'string' && url.startsWith('https://') ? url : DEFAULT_SOURCE_URL
+}
+
 export function normalizeCitation(citation, index = 0) {
   return { ...citation, id: citation.id ?? citation.chunk_id ?? `citation-${index}`, title: citation.title ?? citation.rule_title ?? '', path: citation.path ?? citation.article ?? '', version: citation.version ?? citation.version_date ?? '' }
 }
@@ -151,6 +158,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       return true
     },
     async searchThreads(query) { const q = query.trim().toLowerCase(); return threads.filter(thread => thread.title.toLowerCase().includes(q)) },
-    dispose() { controllers.forEach(controller => controller.abort()); controllers.clear() },
+    // controllers 값은 AbortController가 아니라 요청 기록 { controller, activeThreadId, cancelled }다.
+    // 예전 코드는 기록에 abort()를 불러 TypeError → 답을 받는 중 화면이 내려가면 React가 화면 전체를 지웠다(배포 실측 11/9).
+    dispose() { controllers.forEach(request => { request.cancelled = true; request.controller.abort() }); controllers.clear() },
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { History, UserRound, UserRoundPen } from 'lucide-react'
 import { useSession } from '../lib/session'
 import { previewRecallService } from '../lib/recall-service'
@@ -28,7 +28,8 @@ function SessionExitControl({ demoMode }) {
     try {
       await signOut()
     } catch (logoutError) {
-      const message = `로그아웃 종료를 확인하지 못했습니다. ${logoutError.message || '다시 시도해 주세요.'}`
+      const detail = logoutError.message
+      const message = !detail ? '로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.' : detail.includes('로그아웃') ? detail : `로그아웃하지 못했습니다. ${detail}`
       navigate(returnTo, { replace: true, state: { logoutError: message } })
     }
   }
@@ -42,11 +43,10 @@ function SessionExitControl({ demoMode }) {
 
 export default function DemoLayout({ active, children }) {
   const location = useLocation()
-  const [params] = useSearchParams()
   const { user } = useSession()
   const [accountOpen, setAccountOpen] = useState(false)
   const accountMenuRef = useRef(null)
-  const demoMode = location.pathname.startsWith('/demo/') || params.get('demo') === '1'
+  const demoMode = location.pathname.startsWith('/demo/')
   const liveRecalls = !demoMode && user ? getLiveServices(user.user_id).recalls : null
   const { unread } = useServiceSnapshot(liveRecalls ?? previewRecallService)
   const showUnread = demoMode || Boolean(liveRecalls)

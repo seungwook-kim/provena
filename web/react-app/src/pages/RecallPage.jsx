@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { describeApiError, filterByChange, formatConfidence, parseImpactInput, previewRecallService } from '../lib/recall-service'
+import { versionText } from '../lib/change-monitoring-service'
 import { useServiceSnapshot } from '../lib/live-services'
 
 const SEVERITY_LABEL = { high: '중요', low: '참고' }
@@ -93,7 +94,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
 
   const loadingFirst = status === 'loading' && records.length === 0
   const failedFirst = status === 'error' && records.length === 0
-  const chatLink = live ? { pathname: '/chat' } : { pathname: '/chat', search: '?demo=1' }
+  const chatLink = live ? { pathname: '/chat' } : { pathname: '/demo/chat' }
 
   return <DemoLayout active="recalls"><main className="recall-service-page">
     <header className="recall-service-heading"><div><h1>리콜 알림</h1></div><span className="recall-unread">미확인 {unread}건</span></header>
@@ -106,7 +107,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
           : visible.length === 0 ? <p className="recall-empty">{records.length ? '해당하는 알림이 없습니다.' : '받은 알림이 없습니다.'}</p>
             : visible.map(record => <button type="button" key={record.id} className={`recall-service-item ${record.id === selected?.id ? 'selected' : ''} ${record.needsConfirmation ? 'needs-confirmation' : ''}`} onClick={() => select(record.id)}><div><strong>{record.title}</strong>{!record.acked && <i aria-label="미확인" />}</div><span>{record.question}</span><small>{[record.document, record.detectedAt].filter(Boolean).join(' · ')}</small>{live && (record.severity || record.needsConfirmation) && <span className="recall-item-badges"><JudgementBadges record={{ ...record, confidence: null }} /></span>}<em className={record.conclusionChanged ? 'changed' : ''}>{record.conclusionChanged ? '결론 변경' : record.acked ? '확인 완료' : '확인 필요'}</em></button>)}
     </aside>
-      <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{(selected.oldVersionDate || selected.newVersionDate) && ` · 판 ${selected.oldVersionDate ?? '없음'} → ${selected.newVersionDate ?? '없음'}`}</p></div><button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button></div>
+      <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{versionText(selected.oldVersionDate, selected.newVersionDate) && ` · ${versionText(selected.oldVersionDate, selected.newVersionDate)}`}</p></div><button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button></div>
         {actionError && <p className="recall-action-error" role="alert">{actionError}</p>}
         {selected.needsConfirmation && <p className="recall-confirm-needed" role="note">자동 판정에 실패한 알림입니다. 원문과 당시 답변을 직접 확인해 주세요.</p>}
         {live && selected.question && <section className="recall-answer recall-question"><small>당시 질문</small><p>{selected.question}</p></section>}

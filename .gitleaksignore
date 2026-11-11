@@ -1,2 +1,13 @@
 # AUTHZ_COMMIT은 공개 저장소의 Git 커밋 해시이며 비밀값이 아니다
 ec1376c9952d4f88311729ef54aa6106fd482a02:backend/rag/ingest/handbook.py:generic-api-key:47
+
+# 아래 6건은 비밀값이 아닌 오탐이다(2026-11-11 원문 줄을 확인함).
+# 시험 코드에 적은 SQL 파일 이름 목록(101_auth_users.sql 등)
+57e632fea76ab8e1b5a5b56131923dab5234be59:tests/test_db_realign.py:generic-api-key:92
+b30c273cef97bc475badd13a7ec73526d572c595:tests/test_db_realign.py:generic-api-key:89
+# 시험용 가짜 비밀번호(시험 안에서 만든 임시 계정)
+d1a262d0cfee2dc231994a222fed6c4df67c6dcb:tests/test_signup_postgres_integration.py:generic-api-key:174
+# 측정 실행 이름(agent_v2_q_..._api: eval-question-날짜)
+bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:98
+bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:99
+bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:100

@@ -82,7 +82,7 @@
 | `web/` | 강경희 (안) | 화면 (Vite + React + Tailwind, 빌드 결과를 FastAPI가 정적 파일로 내준다) |
 | `evals/dataset_v1.jsonl`·v2, `evals/freeze.py` | 공동 | 평가셋 v1(30건)·v2(50건). 템플릿 자리 그대로 |
 | `evals/retrieval/` | 박진형 (안) | Recall·MRR 측정 |
-| `evals/agent/`, `evals/run_all.py` | 김승욱 (안) | 에이전트 평가, 한 줄 재현 명령 |
+| `evals/agent/`, `evals/latency/`, `evals/ci_compare.py` | 김승욱 (안) | 에이전트 평가, 배포 응답 시간 측정, CI 점수 비교. 지표별 실행 명령은 SPEC 3장 (`evals/run_all.py`는 만들지 않았다) |
 | `evals/safety/` | 김승욱 (안) | 인젝션 시험 문장과 결과, 범용 챗봇 비교 |
 | `mock_erp/` | 김승욱 (안) | 업무시스템 목업 (Spring, Python 예제) |
 | `data/LICENSES/` | 팀장 | 핸드북 원문 사용 시 CC BY-SA 4.0 고지와 출처. 원문 텍스트는 코드와 폴더를 나눈다 |
@@ -95,9 +95,10 @@
 
 | 일 | 담당 |
 |---|---|
-| Langfuse 연결 | 박진형 (확정) |
+| Langfuse 연결 | 담당은 박진형으로 정했다(D0, 10/28 지침서). 구현은 커밋 이력 기준으로 강경희와 김승욱이 했다. `backend/services/tracing.py`는 김승욱이 처음 만들었고(1건, 11/1), 강경희가 3건(11/9)을 고쳤다. 커밋 제목은 "close CI approval and tracing privacy gaps", "preserve safe evaluation trace scoring", "address team review feedback"이다. 평가 점수 연결(`evals/agent/tracking.py`)은 김승욱이 만들고 강경희가 고쳤으며, 대시보드 스크린샷은 김승욱이 올렸다. 박진형의 커밋 가운데 Langfuse 코드를 바꾼 것은 없고, MCP Spec(`docs/specs/mcp.md`)에 Langfuse와의 관계를 적은 문서 커밋만 있다(`git log -S langfuse -i` 기준) |
 | 골든셋 2인 독립 판정 (v1 D2, v2 D5) | 박진형, 강경희 |
-| README, 시연 영상 3분, Langfuse 스크린샷 (G7) | 미정 |
+| README, Langfuse 스크린샷 (G7) | 김승욱 (작성 이력 기준: README 커밋, `docs/images/langfuse/`) |
+| 시연 영상 3분 (G7) | 아직 정하지 않음. 저장소에 영상이 없고 촬영은 D11(11/16) |
 | 실패 사례 분석, 발표 자료 (각자 자기 파트) | 전원 |
 
 ### 5-0. 디렉토리 구조
@@ -111,7 +112,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발용 Skill (MCP·Skill 설계 4-2)
 ├─ .mcp.json                 # 개발용 MCP (MCP·Skill 설계 4-4)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). pyproject.toml과 Makefile은 두지 않는다
+├─ pytest.ini                 # pytest 설정. 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장). pyproject.toml과 Makefile은 두지 않는다
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │

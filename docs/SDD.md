@@ -1,7 +1,7 @@
 ---
 type: sdd
 project: Provena
-updated: 2026-10-28
+updated: 2026-11-10
 tags: [project, sdd]
 ---
 
@@ -124,7 +124,7 @@ flowchart LR
 | `task-brief` | 작업 지시서 양식 (목적, 입출력, 인수 테스트, 건드릴 파일) |
 | `test-first` | 테스트를 먼저 쓰고 구현 |
 | `self-check` | "완료" 전에 테스트·린트를 실제로 실행하고 출력 확인 |
-| `run-eval` | 평가셋 실행과 지표 비교 (`python evals/run_all.py`, 예정) |
+| `run-eval` | 평가셋 실행과 지표 비교 (`python -m evals.agent.exp_multi_v2 run ...`, `python evals/ci_compare.py`. 명령은 SPEC 3장) |
 | `replay` | 데모 모드 녹화 응답 재생 |
 | `data-check` | 핸드북 git 수집기·권한표 파서 점검 |
 | `regression` | 지표가 기준선보다 떨어졌는지 확인 |
@@ -144,7 +144,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ .claude/skills/           # 개발 도구 Skill (2-4)
 ├─ .mcp.json                 # 개발용 MCP 연결 설정
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
-├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `python evals/run_all.py`(예정). 의존성은 backend/requirements.txt
+├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장, `evals/evals.md`). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
@@ -198,7 +198,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ evals/ evals.md
 │     ├─ dataset_v1.jsonl, dataset_v2.jsonl
 │     ├─ freeze.py, FROZEN.json, PREREGISTER.md
-│     ├─ run_all.py               # 한 줄 재현 명령
+│     ├─ ci_compare.py            # 커밋된 최종 측정 결과를 통과선과 견줌(CI)
 │     ├─ retrieval/ (retrieval.md)  agent/ (agent.md)  safety/ (safety.md)  results/
 └─ tests/
 ```
@@ -286,12 +286,16 @@ flowchart TD
 |---|---|---|---|
 | POST | `/auth/login` | 누구나 | 로그인 (방식은 11장) |
 | POST | `/auth/logout` | 로그인 | |
-| GET | `/me` | 로그인 | 사용자 정보, 역할 |
+| GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, profile_completed, is_owner}`. `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
+| GET, PUT | `/me/profile` | 로그인 (PUT은 CSRF) | 내 정보(이름 `name`, 부서 `dept`, 전화 `phone`, 주소 `address`, 칸마다 암호화 저장). GET은 전화번호를 가린 `{name, dept, phone_masked, address, updated_at}`(아직 없으면 404), `?view=edit`일 때만 원래 `phone`. PUT은 네 칸 전부를 받아 검사하고(틀리면 422 `{message, fields}`, 입력값은 되풀이하지 않음) GET과 같은 모양으로 답한다. 남의 내 정보를 주는 경로는 없다 (`backend/profile_api.py`, `db/104_user_profiles.sql`) |
 | POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
 | GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
+| GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
+| POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
+| POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
 | GET | `/recalls` | 로그인 | `{items, unread}`. 일반 사용자는 자기 알림 중 볼 수 있는 섹션의 것만, 관리자는 전체와 `review_queue`(관리자 검토함), `candidates`(함께 볼 정책 후보), `judge_failures`(판정이 깨진 알림)를 더 받는다 |
 | GET | `/recalls/{id}` | 로그인 | 알림 한 건. 남의 알림과 검토함·폐기된 알림은 404 `not_found`(관리자는 모두 봄) |
 | POST | `/recalls/{id}/ack` | 로그인, CSRF | 확인 표시. 본인만(남의 알림은 404). 갱신된 알림을 돌려준다 |
@@ -310,6 +314,8 @@ flowchart TD
 | GET | `/health` | 누구나 | 상태 확인 (Supabase 정지 방지 호출 포함: `DATABASE_URL`이 있으면 10분 간격으로 백그라운드 `SELECT 1`, 실패해도 200) |
 
 리콜·변경 감시 경로(`/recalls*`, `/changes*`)는 브라우저 주소 이동(`Accept: text/html` 또는 `Sec-Fetch-Mode: navigate`)이면 로그인 확인보다 먼저 화면 파일(`index.html`)을 주고, 그 밖의 요청은 API로 처리한다. `/recalls/feedback-stats`, `/recalls/digests`, `/changes/monitoring`은 `/{id}` 경로보다 먼저 등록한다.
+
+`/approvals`와 `/admin/users`는 화면 주소이기도 해서, GET에 `Accept: text/html`이 오면(브라우저 새로고침·주소 직접 입력) API 대신 React `index.html`을 내준다(빌드가 없으면 API 그대로). 화면의 fetch(`Accept: */*`)에는 API가 답한다.
 
 **오류 응답 규약.** HTTP 오류 본문은 모두 같은 모양이다: `{"detail": "...", "error": {"code", "message", "request_id"}}`. 검증 오류에는 `error.details`가 더해진다 (`backend/api/errors.py`). 화면과 업무시스템은 HTTP 상태가 아니라 `error.code`로 분기한다.
 
@@ -374,29 +380,37 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 
 ## 5. 데이터 모델
 
-테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장).
+테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장). 아래 표는 요약이고, 현재 DB(앱 표 25개 + LangGraph 표 6개 = 31개, 2026-11-10 `db/109` 재정렬 뒤)의 관계도는 [ERD](./db/ERD.md), 표와 칸의 정의는 [TABLE_SPEC](./db/TABLE_SPEC.md), 코드의 SQL과 색인 대조는 [QUERY_INDEX](./db/QUERY_INDEX.md), 마이그레이션 순서와 운영 적용 절차는 `db/db.md`에 있다.
 
 | 테이블 | 주요 칸 | 쓰는 곳 |
 |---|---|---|
 | `docs` | rule_seq(페이지 id), org(절), title(페이지 제목), fmt(md), source_url(핸드북 URL), fetched_at | ingest |
 | `versions` | version_id(커밋 sha 기반), rule_seq, version_date(커밋 날짜), version_date_before(판 날짜가 정확하지 않고 그 이전, I-001), file_sha256 | ingest, diff |
 | `chunks` | chunk_id, version_id, article(제목 경로), kind, text, text_sha256, acl(볼 수 있는 그룹, 비면 공개), embedding | ingest, rag |
-| `rule_links` | from_rule, to_rule, kind(페이지 링크) | GraphRAG (가산), F-02 연결 정책 리콜 |
+| (`chunks.link_targets`) | 본문 링크가 가리키는 페이지 rule_seq 배열(GIN 색인 `chunks_link_targets_gin`). 별도 `rule_links` 표는 만들지 않았고 이 칸이 같은 일을 한다 | 검색 링크 확장(GraphRAG 가산), F-02 연결 정책 리콜 |
 | `users` | user_id, login_id, password_hash, role(user, admin), groups(문서 권한 그룹) | api |
-| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at | graph |
+| `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at, grounding(json, 밖으로 낼 수 있는 인용 검사 결과), skills_used(json) | graph |
 | `citations` | answer_id, chunk_id, version_id | graph, recall |
 | `decision_tables` | table_id, rule_seq, version_id, cells(json), status(draft, approved, rejected), approved_by | graph, api |
-| `approvals` | approval_id, kind, thread_id, status, decided_by | graph, api |
-| `answer_grounding` | answer_id, grounding(json), skills_used | graph |
+| `approvals` | approval_id, kind(decision_table, issue_table, team_review_failed), thread_id, status, decided_by, comment(반려 사유), decided_at | graph, api |
 | `recall_events` | event_key(= 수집이 정한 event_id), changed(json), status(running, done, failed), 건수. 같은 개정은 한 번만 처리한다 | recall |
-| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked. UNIQUE (answer_id, event_key) | graph, api |
-| `recall_feedback` | notice_id, user_id, rule_seq, article, pattern, useful, reason. 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다 | api, recall |
+| `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked, feedback_useful·feedback_reason·feedback_by·feedback_at(사용자 의견: 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다). UNIQUE (answer_id, event_key) | graph, api |
 | `recall_digests` | digest_id, user_id, day, count, notice_ids, payload. 하루 요약(`RECALL_DIGEST=daily`) | recall |
 | `change_monitoring` | id(1), status(active, paused), updated_by. 변경 감시 스위치 | api, ingest |
 | `maintenance_candidates` | candidate_id, upper_rule(바뀐 정책), upper_version_id, rule_seq(연결된 정책), article, status, decided_by | graph, api |
 | `webhook_subscriptions` | sub_id, url, secret_ref, active | api |
 | `webhook_deliveries` | delivery_id, sub_id, notice_id, kind(notice, digest), status(pending, success, failed), tries, attempts(시도별 상태 코드·오류 종류·시각) | api |
-| LangGraph 체크포인트·Store | 라이브러리가 만든다 | graph |
+| `threads` | (user_id, thread_id), title, status(idle, running, pending_approval), last(json), created_at, updated_at. 사용자별 대화 목록 | api |
+| `issue_tables` | table_id, approval_id, thread_id, user_id, request, as_of, issue_rows(json), unreviewed(json), approved_by, approved_at. 사람 승인을 받은 합동 검토 쟁점표(F-03) | graph |
+| `signup_requests` | request_id, user_id, login_id, password_hash, status(pending, approved, rejected), requested_at, reviewed_at, reviewed_by. 가입 요청과 관리자 승인(결정 0082) | api |
+| `user_profiles` | user_id, 이름·소속·전화·주소의 암호문(AES-256-GCM), key_version, updated_at | api |
+| `admin_role_log` | log_id, at, by_user_id, target_user_id, action. 관리자 등록·해제 기록(쓰기 전용) | api |
+| `token_revocations` | jti, expires_at, revoked_at. 로그아웃한 토큰 | api |
+| `index_meta` | id(1), embedder, dim, n_chunks, status(loading, ready), generation 등. 색인 장부 | rag, ingest |
+| `query_translations` | query_sha256, model, keywords, sentence. 질문 번역 장부 | rag |
+| `sync_runs` | run_id, job, slot, trigger, status, started_at, finished_at, 건수. 정해진 시각 수집의 실행 기록과 중복 실행 방지 (job, slot) | ingest |
+| `changed_articles` | event_id(= `recall_events.event_key`), run_id, rule_seq, article, old_version_date, new_version_date, change_type, status(pending, sent, failed). 리콜에 넘길 바뀐 섹션 | ingest, recall |
+| LangGraph 체크포인트·Store | 라이브러리가 만든다(`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `store`, `store_migrations`) | graph |
 
 - 대화는 `thread_id`, 장기 기억은 Store namespace `(user_id, ...)`로 사용자마다 나눈다(P-01, G4).
 - Store 기억(가이드 p.10): 무엇을 기억할지 기준(팀·역할·담당 서비스처럼 답에 쓰는 사실만), State와 Store의 경계(대화 중 값은 State, 다음 대화에도 쓸 값만 Store), 틀린 기억을 고치는 절차(`GET/PATCH/DELETE /me/memory`), DB 기반 Store.
@@ -513,7 +527,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
 | `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
-| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution` |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
 
@@ -524,6 +538,11 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 
 - `done.attribution`은 고정 값이다: `source`(`GitLab Handbook`), `license`(`CC BY-SA 4.0`), `license_url`, `modified`(`true`), `notice`(GitLab Inc.와 제휴·보증 관계가 없다는 문구).
 - `kind`, `as_of`는 그래프의 최종 상태에서 읽는다. 최종 상태를 읽지 못하면 두 값이 `null`일 수 있다.
+- `done`의 측정용 칸(숫자와 코드뿐이고 질문·프롬프트·답 내용은 담지 않는다. 끄는 스위치 없이 항상 켜져 있고, 기존 칸의 이름과 모양은 그대로다. 구현은 `backend/services/step_cost.py`):
+  - `cost_by_step`: 단계 이름 -> `{calls, input_tokens, output_tokens, cost_usd, llm_s}`. 단계 이름은 그래프 노드와 호출 표지를 `/`로 이은 것(`classify/classify`, `rewrite/rewrite`, `search/decompose`, `judge/judge`, `write_answer/answer`, `ground/grounding` 등)이고 질문 번역 LLM은 `translate_keywords`, `translate_sentence`다. `llm_s`는 그 단계 LLM 호출 시간의 합이라 호출이 겹치면 실제 대기보다 길 수 있다.
+  - `usage`의 `calls`, `input_tokens`, `output_tokens`, `cost_usd`는 질문 번역을 뺀 그래프 합이다. `cost_by_step`의 번역 단계를 뺀 합과 같다(반올림 오차 안에서). `cost_by_step_total_usd`는 번역을 포함한 단계 비용 합이다.
+  - `embed_tokens`, `embed_calls`: 이 요청에서 부른 Voyage 임베딩 API 응답의 `usage.total_tokens` 합과 호출 수. 캐시 적중 등으로 호출이 없으면 0이다. `embed_cost_usd`는 `llm_prices.json`의 `embeddings`(voyage-4 100만 토큰당 0.06달러)로 환산한 값이며 계정 무료 한도는 반영하지 않는다.
+  - `refuse_stage`: 마지막으로 `kind`를 거절·되묻기로 낸 그래프 노드(`out_of_domain`, `search`, `give_up`, `verify`, `ground`, `decision_answer` 등). `refuse_reason`: 사유 코드. 그래프가 정한 `refuse_reason`(`no_evidence`, `out_of_period`, `nonexistent_entity`, `unsupported`)이 있으면 그 값, 없으면 `unavailable`/`no_key`/`unknown_name`(검색), `decision_error`, `out_of_domain`, `leak`, `citation_check`, `no_evidence`(`give_up`의 거절), `clarify`(되묻기), `index_not_ready`(색인 미준비). 답이면 두 칸 모두 없다.
 
 정상 종료 스트림의 예시다. 값은 형식을 보이기 위한 것이며 실제 값이 아니다.
 
@@ -535,7 +554,7 @@ event: citation
 data: {"type":"citation","thread_id":"t-1a2b3c4d5e6f","data":{"chunk_id":"0a1b2c3d4e5f6789","rule_title":"Incident Management","article":"Incident Management > Severities","version_date":"2026-10-12","version_date_before":false,"source_url":"https://handbook.gitlab.com/...","text":"..."}}
 
 event: done
-data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
+data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...","kind":"answer","as_of":"2026-10-12","usage":{"input_tokens":1200,"output_tokens":300,"cost_usd":0.004,"calls":3},"cost_by_step":{"judge/judge":{"calls":2,"input_tokens":900,"output_tokens":100,"cost_usd":0.0003,"llm_s":1.8},"write_answer/answer":{"calls":1,"input_tokens":300,"output_tokens":200,"cost_usd":0.0037,"llm_s":2.1}},"cost_by_step_total_usd":0.004,"embed_tokens":13,"embed_calls":1,"embed_cost_usd":7.8e-07,"attribution":{"source":"GitLab Handbook","license":"CC BY-SA 4.0","license_url":"https://creativecommons.org/licenses/by-sa/4.0/","modified":true,"notice":"..."}}}
 ```
 
 기다리지 않는 법: 주는 쪽은 D1에 고정 응답을 돌려주는 가짜 함수(`search()`, `run()`)를 먼저 올린다.
@@ -591,11 +610,28 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다 |
 | MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
-| 재현 | `evals/run_all.py` | 한 줄 재현 명령 |
+| 재현 | `EVAL_REPORT.md` 9장, SPEC 3장 | 지표마다 실행 명령을 적었다. 모든 지표를 한 번에 재는 `evals/run_all.py`는 만들지 않았다 |
 
-## 11. 미정 사항 (D0에 정함)
+## 11. 결정 사항과 남은 미정 사항 (D0 안건표, 2026-11-10 갱신)
 
-D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다.
+D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
+
+### 11-0. 2026-11-10 현재 확인되는 결과
+
+| 항목 | 현재 결과 | 근거 |
+|---|---|---|
+| 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
+| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다 | 결정 0078, 0086, `EVAL_REPORT.md` 8장 |
+| 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
+| 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
+| 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
+| 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
+| MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
+| F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
+| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/`(Java `src/`, `python_example/`)에 있고 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+
 
 ### 11-1. 파트 사이 계약
 
@@ -643,7 +679,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
 | 역할 배정, 폴더 주인 | 팀 작업 지침서 3장·5장 | 업무 분담안 그대로 확정 (가이드 p.28) | D0 |
-| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음, 담당을 정한다 | D0 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | 팀원 중 한 명 | 추천 없음. 현재 결과는 11-0 | D0 안건. 시연 영상 담당은 아직 정하지 않았다 |
 | 숫자 기준 | PRD 13-2 제안안 | 동결하고 중간에 낮추지 않는다 (가이드 p.14, p.19) | D0 |
 | 평가셋 정답 기준일(`as_of`) | 고정 커밋 날짜 하나로 통일 / 문항마다 다르게 | 고정 커밋 날짜 하나 | D0 |
 | 정답 판정 | 질문을 쓰지 않은 두 사람이 따로 판정하고, 다른 판정은 두 판정자가 합의한다(팀장은 형식만 확인) | 이 방식 | v1은 11/1 동결(기한 D2 11/3) |

@@ -1,0 +1,74 @@
+{
+  "state": "cleaned",
+  "date": "20261110",
+  "org": "TEST-INJ-DEPLOY-20261110",
+  "version_id": "TESTINJ20261110",
+  "updated": "2026-11-10T17:08:37+09:00",
+  "rows": [
+    {
+      "rule_seq": 9026111001,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D1",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111002,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D2",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111003,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D3",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111004,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D4",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111005,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D5",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111007,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D7",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111008,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D8",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111009,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D9",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111010,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-C1",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111011,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-C2",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111012,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-D6V3",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111013,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-C6",
+      "version_id": "TESTINJ20261110"
+    },
+    {
+      "rule_seq": 9026111014,
+      "chunk_id": "TEST-INJ-DEPLOY-20261110-C7",
+      "version_id": "TESTINJ20261110"
+    }
+  ]
+}

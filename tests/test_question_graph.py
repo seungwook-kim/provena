@@ -440,6 +440,52 @@ def test_ambiguous_or_broken_classification_goes_to_policy_path():
         assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1, raw
 
 
+def test_out_of_domain_is_not_followed_when_the_model_says_the_question_is_about_the_organization():
+    """62.30: 모델이 조직이 정한 것을 묻는 질문이라고 적고도 도메인 밖으로 분류하면 정책 경로로 보낸다(두 번째 확인 호출 없이)."""
+    fn, calls = counting_search()
+    llm = normal_llm(classify=j(org_specific=True, route="out_of_domain"))
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1 and llm.count("classify") == 1
+
+
+def test_out_of_domain_with_org_specific_false_still_refuses_without_search():
+    from backend.graph.build import MSG_REFUSE_OUT_OF_DOMAIN
+
+    fn, calls = counting_search()
+    llm = normal_llm(classify=j(org_specific=False, route="out_of_domain"))
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "out_of_domain" and out["answer"] == MSG_REFUSE_OUT_OF_DOMAIN and len(calls) == 0 and llm.count("classify") == 2
+    assert llm.count("rewrite") == 0 and llm.count("judge") == 0 and llm.count("answer") == 0
+
+
+def test_second_vote_saying_org_specific_sends_the_question_to_the_policy_path():
+    fn, calls = counting_search()
+    llm = normal_llm(classify=[j(org_specific=False, route="out_of_domain"), j(org_specific=True, route="out_of_domain")])
+    out = run(graph(fn, llm=llm))
+    assert out["route"] == "rule" and out["kind"] == "answer" and len(calls) == 1 and llm.count("classify") == 2
+
+
+def test_route_of_reads_the_reply_and_only_true_overrides_out_of_domain():
+    from backend.graph.build import route_of
+
+    assert route_of({"route": "out_of_domain"}) == "out_of_domain"  # 칸이 없으면 분류를 그대로 따른다
+    assert route_of({"org_specific": False, "route": "out_of_domain"}) == "out_of_domain"
+    assert route_of({"org_specific": True, "route": "out_of_domain"}) == "rule"
+    for loose in ("true", 1, "yes", None):  # 참 값 하나만 뒤집는다. 글자나 숫자는 뒤집지 않는다
+        assert route_of({"org_specific": loose, "route": "out_of_domain"}) == "out_of_domain", loose
+    for route in ("rule", "decision", "review"):  # 다른 경로는 이 칸과 무관하다
+        assert route_of({"org_specific": False, "route": route}) == route and route_of({"org_specific": True, "route": route}) == route
+    for broken in (None, {}, [], "rule", {"route": None}, {"route": "Out_Of_Domain"}, {"org_specific": False}):
+        assert route_of(broken) == "rule", broken
+
+
+def test_classify_prompt_separates_general_knowledge_from_what_the_organization_set():
+    from backend.prompts.question import CLASSIFY_SYSTEM
+
+    assert "주제가 아니라 무엇을 묻는지로 가린다" in CLASSIFY_SYSTEM and "검색한 뒤에 판정하므로 여기서 따지지 않는다" in CLASSIFY_SYSTEM
+    assert "org_specific" in CLASSIFY_SYSTEM and '{"org_specific": true, "route": "rule"}' in CLASSIFY_SYSTEM
+
+
 def test_classify_prompt_names_out_of_domain_and_defaults_to_rule():
     from backend.prompts.question import CLASSIFY_SYSTEM
 
@@ -575,8 +621,12 @@ def test_ungrounded_without_sentence_list_or_with_other_reason_is_refused_as_bef
     llm = normal_llm(grounding=j(grounded=False, reason_code="unsupported", reason="기한이 다름"))
     out = run(graph(llm=llm, grounding_llm=True))
     assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and llm.count("grounding") == 1
-    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=["근거에 따라 답합니다"]))
+    llm = normal_llm(grounding=j(grounded=False, reason_code="nonexistent_entity", reason="대상 없음", unsupported_sentences=["근거에 따라 답합니다"]))
     out = run(graph(llm=llm, grounding_llm=True))
+    assert out["kind"] == "refuse" and out["refuse_reason"] == "nonexistent_entity" and llm.count("grounding") == 1
+    # 질문에 시점 표현이 있으면 모델의 out_of_period 표는 그대로 거절 사유다(사전 등록 62.29)
+    llm = normal_llm(grounding=j(grounded=False, reason_code="out_of_period", reason="판 없음", unsupported_sentences=["근거에 따라 답합니다"]))
+    out = run(graph(llm=llm, grounding_llm=True), question="FY21 기준 " + Q)
     assert out["kind"] == "refuse" and out["refuse_reason"] == "out_of_period" and llm.count("grounding") == 1
 
 
@@ -967,10 +1017,17 @@ def test_rewrite_that_says_the_period_is_missing_is_refused():
 
 
 def test_only_unsupported_gets_a_rewrite():
-    for code in ("no_evidence", "out_of_period", "nonexistent_entity"):
+    """no_evidence, nonexistent_entity와, 질문에 시점 표현이 있을 때의 out_of_period는 다시 쓰지 않고 거절한다.
+    시점 표현이 없는 질문의 out_of_period는 unsupported로 읽어 다시 쓴다(사전 등록 62.29, `grounding.recode_vote`)."""
+    for code, question in (("no_evidence", Q), ("nonexistent_entity", Q), ("out_of_period", "FY21 기준 " + Q)):
+        llm = normal_llm(grounding=j(grounded=False, reason_code=code, reason="없음", unsupported_sentences=["근거에 따라 답합니다"]))
+        out = run(graph(llm=llm, grounding_llm=True), question=question)
+        assert out["kind"] == "refuse" and out["refuse_reason"] == code and llm.count("answer") == 1 and "redraft" not in out["grounding"]
+    for code in ("out_of_period",):
         llm = normal_llm(grounding=j(grounded=False, reason_code=code, reason="없음", unsupported_sentences=["근거에 따라 답합니다"]))
         out = run(graph(llm=llm, grounding_llm=True))
-        assert out["kind"] == "refuse" and out["refuse_reason"] == code and llm.count("answer") == 1 and "redraft" not in out["grounding"]
+        assert out["kind"] == "refuse" and out["refuse_reason"] == "unsupported" and llm.count("answer") == 2
+        assert out["grounding"]["recoded"] == [code] and out["grounding"]["redraft"]["result"] == "unchanged"
 
 
 def test_rewrite_that_dropped_an_asked_fact_says_so():

@@ -297,7 +297,8 @@ def test_same_stance_on_the_same_topic_is_not_a_conflict():
 
 
 # ---------- EC-07 원문 속 지시는 따르지 않는다 ----------
-def test_ec07_injected_text_is_data_and_saving_still_needs_the_interrupt():
+def test_ec07_injected_text_is_data_and_saving_still_needs_the_interrupt(monkeypatch):
+    monkeypatch.setenv("GRAPH_SANITIZE_INPUT", "0")  # 입력 정화(PREREGISTER 62.1, 기본 켬)를 끄고 본다: 지시가 모델까지 가도 저장은 interrupt 뒤에만 된다는 코드 경로 시험
     seen = {}
 
     def finance(u):
@@ -480,7 +481,7 @@ def test_pg_store_sends_parameters_not_string_formatting():
     assert tid == "11111111-1111-1111-1111-111111111111" and "INSERT INTO issue_tables" in sql and "ON CONFLICT (approval_id)" in sql
     assert "DROP TABLE" not in sql and params[0] == "ap1" and "DROP TABLE" in params[3] and '"한글"' in params[5]
     store.record_rejection(approval_id="ap1", thread_id="t", user_id="u", reason="사유", decided_by="a")
-    assert "INSERT INTO issue_table_rejections" in log[2][0] and log[2][1] == ("ap1", "t", "u", "사유", "a")
+    assert "UPDATE approvals SET comment" in log[2][0] and "issue_table_rejections" not in log[2][0] and log[2][1] == ("사유", "a", "ap1")
     assert log.count("close") == 2
 
 
@@ -498,8 +499,9 @@ def test_pg_store_get_by_thread_scopes_to_the_user_and_parses_json():
 def test_sql_file_defines_the_tables_and_its_number_is_unique():
     sql = (ROOT / "db" / "110_issue_tables.sql").read_text(encoding="utf-8")
     for needle in ("CREATE TABLE IF NOT EXISTS issue_tables", "approval_id  text NOT NULL UNIQUE", "issue_rows", "unreviewed",
-                   "CREATE TABLE IF NOT EXISTS issue_table_rejections"):
+                   "issue_tables_thread_user_idx"):
         assert needle in sql
+    assert "CREATE TABLE IF NOT EXISTS issue_table_rejections" not in sql      # 반려 기록은 approvals 줄이다(db/109_realign.sql)
     nums = [p.name.split("_")[0] for p in (ROOT / "db").glob("*.sql")]
     assert len(nums) == len(set(nums))
     for col in IT.ROW_FIELDS:  # SQL 머리 주석이 적은 행 필드와 코드의 ROW_FIELDS가 같다

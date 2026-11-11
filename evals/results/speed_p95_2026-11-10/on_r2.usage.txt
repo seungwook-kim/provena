@@ -1,0 +1,1 @@
+﻿usage_before=33.278412 usage_after=33.8979472 delta=0.6195352

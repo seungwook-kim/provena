@@ -15,7 +15,7 @@
 - `LLM_FALLBACK_MODEL`: 기본 모델이 (재시도 뒤에도) 실패하면 같은 제공자·같은 키로 이 모델을 한 번 더 부른다. 비용 상한 초과(`CostCapExceeded`)와 설정 오류(ValueError)는 폴백하지 않는다. 비우면 폴백 없음.
 - `LLM_REASONING`: openrouter 요청에 `reasoning.effort`를 붙인다(none, minimal, low, medium, high). 비우면 보내지 않는다. 다른 제공자에는 쓰지 않는다.
 - `LLM_EFFORT`, `LLM_EFFORT_BY_TASK`: anthropic 요청의 `effort`(none, low, medium, high, xhigh, max, none은 생각 끔 `thinking: disabled`). 기본 수준과 단계별 덮기(`answer=medium,grounding=medium`)이며 단계는 시스템 프롬프트의 `[[task:...]]`로 읽는다. 둘 다 비우면 보내지 않는다(API 기본). 다른 제공자에는 쓰지 않는다.
-- `LLM_DEADLINE_S`·`LLM_HEDGE_S`·`LLM_HEDGE_BY_TASK`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
+- `LLM_DEADLINE_S`·`LLM_HEDGE_S`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
 - `LLM_DEADLINE_SKIP_TASKS`: 쉼표 목록(끝 `*`는 접두어). 시스템 프롬프트의 `[[task:...]]`가 맞는 요청은 위 상한과 hedge 없이 그대로 보낸다. 비면 모든 요청에 건다.
 - `LLM_PROVIDER_SORT`: openrouter 요청에 `provider.sort`를 붙인다(latency, throughput, price). 비우면 보내지 않는다.
 - `LLM_BASE_URL`: openrouter의 API 주소를 바꾼다(기본 `https://openrouter.ai/api/v1`). OpenAI 호환 주소면 된다.
@@ -35,6 +35,7 @@ from concurrent.futures import TimeoutError as FutureTimeout
 
 import httpx
 
+import importlib
 import logging
 import json
 import re
@@ -118,10 +119,8 @@ class DeadlineTransport(httpx.BaseTransport):
 
     timeout_exc: Any = httpx.ReadTimeout  # 넘으면 내는 예외. SDK가 재시도하는 시간 초과 예외여야 한다(anthropic SDK는 httpx2, _deadline_transport_httpx2)
 
-    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, hedge_tasks: dict[str, float] | None = None,
-                 skip_tasks: tuple[str, ...] = ()) -> None:
+    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, skip_tasks: tuple[str, ...] = ()) -> None:
         self.inner, self.seconds, self.hedge = inner, seconds, hedge  # hedge(`LLM_HEDGE_S`): 이 시간 안에 답이 없으면 같은 요청을 하나 더 보내 먼저 온 답을 쓴다
-        self.hedge_tasks = dict(hedge_tasks or {})  # `LLM_HEDGE_BY_TASK`: 단계([[task:...]] 표지)마다 다른 hedge 시간. 없는 단계는 `hedge`
         self.skip_tasks = tuple(skip_tasks)  # `LLM_DEADLINE_SKIP_TASKS`: 이 단계는 상한과 hedge 없이 그대로 보낸다(답이 긴 결정표 초안, 합동 검토)
         self.pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix="llm-http")
 
@@ -142,16 +141,15 @@ class DeadlineTransport(httpx.BaseTransport):
                 return found.group(1)
         return None
 
-    def _hedge_for(self, request: httpx.Request) -> float:
-        return self._hedge_of(self._task_of(request) if self.hedge_tasks else None)
-
-    def _hedge_of(self, task: str | None) -> float:
-        return self.hedge_tasks.get(task, self.hedge) if task else self.hedge
-
     def _fetch(self, request: httpx.Request) -> httpx.Response:
         response = self.inner.handle_request(request)
         response.read()
         return response
+
+    def _log_event(self, message: str, request: httpx.Request, task: str | None, elapsed: float, attempt: int) -> None:
+        """운영에서 보이게 WARNING으로 남긴다. 요청 ID, 단계(`[[task:...]]` 표지 이름), 걸린 시간, 시도 번호만 쓴다. 프롬프트·키·주소는 쓰지 않는다."""
+        stage = task if task is not None else (self._task_of(request) or "-")
+        log.warning("%s request_id=%s stage=%s elapsed_s=%.1f attempt=%d", message, _current_request_id(), stage, elapsed, attempt)
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         try:
@@ -159,21 +157,22 @@ class DeadlineTransport(httpx.BaseTransport):
         except ValueError:
             attempt = 0
         limit = self.seconds * (attempt + 1)
-        task = self._task_of(request) if (self.hedge_tasks or self.skip_tasks) else None
+        task = self._task_of(request) if self.skip_tasks else None
         if task and task_matches(task, self.skip_tasks):
             return self.inner.handle_request(request)
-        hedge = self._hedge_of(task)
+        hedge = self.hedge
         future = self.pool.submit(self._fetch, request)
         if not hedge or hedge >= limit:
             try:
                 return future.result(timeout=limit)
             except FutureTimeout:
+                self._log_event("LLM 시간 상한 초과(SDK가 재시도)", request, task, limit, attempt)
                 raise self.timeout_exc(f"attempt over {limit}s", request=request) from None
         try:
             return future.result(timeout=hedge)
         except FutureTimeout:
             pass
-        log.info("LLM 요청 %.1f초 무응답: 같은 요청을 하나 더 보낸다", hedge)
+        self._log_event("LLM 무응답: 같은 요청을 하나 더 보냄", request, task, hedge, attempt)
         pending = {future, self.pool.submit(self._fetch, request)}
         left = limit - hedge
         error: BaseException | None = None
@@ -187,6 +186,7 @@ class DeadlineTransport(httpx.BaseTransport):
                 error = f.exception()
         if error is not None and not pending:
             raise error
+        self._log_event("LLM 시간 상한 초과(SDK가 재시도)", request, task, limit, attempt)
         raise self.timeout_exc(f"attempt over {limit}s", request=request)
 
     def close(self) -> None:
@@ -195,6 +195,15 @@ class DeadlineTransport(httpx.BaseTransport):
 
 
 _TASK_MARK = re.compile(r"\[\[task:([a-z_]+)\]\]")
+
+
+def _current_request_id() -> str:
+    """지금 처리 중인 /chat 요청의 ID(`backend.api.middleware`). 요청 밖이거나 못 읽으면 "-"."""
+    try:
+        from backend.api.middleware import current_request_id
+        return current_request_id()
+    except Exception:  # noqa: BLE001 - 로그 한 줄 때문에 LLM 호출이 실패하면 안 된다
+        return "-"
 
 
 def deadline_skip_tasks() -> tuple[str, ...]:
@@ -226,23 +235,6 @@ def reasoning_by_task() -> dict[str, str]:
         if not task or effort not in REASONING_EFFORTS:
             raise ValueError(f"LLM_REASONING_BY_TASK는 단계=수준 목록이고 수준은 {', '.join(REASONING_EFFORTS)} 중 하나다: {part!r}")
         out[task] = effort
-    return out
-
-
-def hedge_by_task() -> dict[str, float]:
-    """`LLM_HEDGE_BY_TASK`(예: `classify=1.5`). 단계마다 hedge 시간(초, 0보다 크다). 나머지 단계는 `LLM_HEDGE_S`를 따른다. 틀린 값은 ValueError다."""
-    out: dict[str, float] = {}
-    for part in (os.environ.get("LLM_HEDGE_BY_TASK") or "").split(","):
-        if not part.strip():
-            continue
-        task, _, value = part.partition("=")
-        try:
-            seconds = float(value)
-        except ValueError:
-            seconds = 0.0
-        if not task.strip() or seconds <= 0:
-            raise ValueError(f"LLM_HEDGE_BY_TASK는 단계=초 목록이고 초는 0보다 크다: {part!r}")
-        out[task.strip().lower()] = seconds
     return out
 
 
@@ -291,7 +283,7 @@ def _openrouter_client() -> dict[str, Any]:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, hedge_by_task(), deadline_skip_tasks())
+        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, deadline_skip_tasks())
     if efforts:
         opts["transport"] = TaskReasoningTransport(opts.get("transport") or httpx.HTTPTransport(), efforts)
     return {"http_client": httpx.Client(**opts)}
@@ -357,7 +349,7 @@ def anthropic_efforts() -> tuple[str | None, dict[str, str]]:
 
 
 def _anthropic_http_client() -> Any:
-    """anthropic 공급자의 HTTP 클라이언트. `LLM_DEADLINE_S`(시도별 상한)·`LLM_HEDGE_S`·`LLM_HEDGE_BY_TASK`(같은 요청 하나 더)와 `LLM_TRACE_DETAIL=1`(호출 기록)을
+    """anthropic 공급자의 HTTP 클라이언트. `LLM_DEADLINE_S`(시도별 상한)·`LLM_HEDGE_S`(같은 요청 하나 더)와 `LLM_TRACE_DETAIL=1`(호출 기록)을
     openrouter(`_openrouter_client`)와 같은 `DeadlineTransport`로 건다. 셋 다 비면 None이고 SDK 기본 클라이언트 그대로다."""
     from backend.services import llm_trace
 
@@ -370,14 +362,14 @@ def _anthropic_http_client() -> Any:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, hedge_by_task(), deadline_skip_tasks())
+        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, deadline_skip_tasks())
     return httpx2.Client(**opts)
 
 
 _deadline2_cls: Any = None
 
 
-def _deadline_transport_httpx2(seconds: float, hedge: float, hedge_tasks: dict[str, float], skip_tasks: tuple[str, ...] = ()) -> Any:
+def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[str, ...] = ()) -> Any:
     """`DeadlineTransport`와 같은 동작을 httpx2 전송으로. 넘으면 httpx2.ReadTimeout을 내 anthropic SDK가 재시도한다."""
     import httpx2
 
@@ -387,7 +379,7 @@ def _deadline_transport_httpx2(seconds: float, hedge: float, hedge_tasks: dict[s
             timeout_exc = httpx2.ReadTimeout
 
         _deadline2_cls = DeadlineTransport2
-    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, hedge_tasks, skip_tasks)
+    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, skip_tasks)
 
 
 _tuned_anthropic_cls: Any = None
@@ -432,6 +424,27 @@ def _tuned_anthropic() -> Any:
 
         _tuned_anthropic_cls = TaskEffortAnthropic
     return _tuned_anthropic_cls
+
+
+def preload_provider_modules() -> list[str]:
+    """현재 `LLM_PROVIDER`가 첫 호출에 쓰는 무거운 모듈을 미리 올린다(서버 시작 때). 안 올리면 첫 `/chat`이 import 시간(1 vCPU에서 수 초~십수 초)을 떠안는다.
+
+    데모 모드와 claude_cli는 올릴 것이 없다. 제공자에 필요한 것만 올린다(anthropic은 anthropic·langchain_anthropic, openai·openrouter는 langchain_openai).
+    모델 객체나 HTTP 연결은 만들지 않는다(키를 쓰지 않는다). 올린 모듈 이름을 돌려준다."""
+    if is_demo_mode():
+        return []
+    provider = (os.environ.get("LLM_PROVIDER") or "anthropic").strip().lower()
+    if provider == "anthropic":
+        names = ["anthropic", "langchain_anthropic"]
+    elif provider in ("openai", "openrouter"):
+        names = ["langchain_openai"]
+    else:
+        return []
+    for name in names:
+        importlib.import_module(name)
+    if provider == "anthropic":
+        _tuned_anthropic()   # ChatAnthropic 서브클래스 정의와 claude_cli_model import까지(처음 만들 때 한 번)
+    return names
 
 
 def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel:
@@ -505,14 +518,18 @@ def run_config(
     meta: dict[str, Any] = {"run_mode": mode, "graph": graph_name}
     if thread_id:
         meta["thread_id"] = str(thread_id)
-    meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name))
-    meta.update(metadata or {})
+    # Evaluation traces are explicitly opted into; ordinary requests remain
+    # fail-closed unless content capture is enabled by the operator.
+    evaluation_mode = bool(metadata and metadata.get("eval"))
+    meta.update(tracing.trace_metadata(session_id=session_id or thread_id, user_id=user_id, name=graph_name,
+                                      allow_evaluation=evaluation_mode))
+    meta.update(tracing.sanitize_metadata(metadata))
     tracker = CostTracker(
         cost_cap_usd if cost_cap_usd is not None else cost_cap_from_env(),
         default_model=os.environ.get("LLM_MODEL") or DEFAULT_ANTHROPIC_MODEL,
     )
     callbacks: list[Any] = [tracker]
-    handler = tracing.get_handler()
+    handler = tracing.get_handler(allow_evaluation=evaluation_mode)
     if handler is not None:
         callbacks.append(handler)
     recorder = llm_trace.handler()  # `llm_trace.capture()` 안에서만 있다. 평소에는 None
@@ -534,11 +551,12 @@ def finish_run(config: dict | None) -> dict:
 
     `run_config`가 만든 config가 아니면 빈 합계를 돌려준다. 예외를 던지지 않는다.
     """
-    summary = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0, "cap_usd": None, "trace_id": None}
+    summary = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0, "cap_usd": None, "trace_id": None, "cost_by_step": {}}
     try:
         for cb in (config or {}).get("callbacks") or []:
             if isinstance(cb, CostTracker):
                 summary.update(cb.summary())
+                summary["cost_by_step"] = cb.by_step()   # 단계별 합(숫자만, 항상). `/chat`의 done 이벤트가 실어 보낸다
         for cb in (config or {}).get("callbacks") or []:
             if isinstance(cb, CostTracker):
                 continue

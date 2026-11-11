@@ -1,0 +1,79 @@
+/* Login and signup colours, matched to the pre-login landing (src/pages/landing/ve.css):
+   light graphite ground, near-black ink, one signal-green accent.
+   Everything is scoped to .auth-page, so pages after login keep the shared warm palette. */
+
+.auth-page {
+  --paper: #f7f7f5;
+  --surface: #ffffff;
+  --ink: #16181b;
+  --ink-soft: #2b2e33;
+  --muted: #5f646c;
+  --faint: #969ba3;
+  --line: #e4e5e2;
+  --line-strong: #cdd0cc;
+  --auth-accent: #14a06e;
+  --auth-accent-soft: rgba(20, 160, 110, 0.14);
+  background:
+    radial-gradient(rgba(22, 24, 27, 0.05) 1px, transparent 1px) 0 0 / 22px 22px,
+    var(--paper);
+  color: var(--ink);
+}
+
+/* Card and form */
+.auth-page .login-card {
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(22, 24, 27, 0.03), 0 24px 60px -36px rgba(22, 24, 27, 0.32);
+}
+.auth-page .login-form input {
+  border-color: var(--line);
+  background: #fafaf9;
+}
+.auth-page .login-form input:focus {
+  border-color: var(--auth-accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--auth-accent-soft);
+}
+
+/* Buttons */
+.auth-page .button-dark { background: var(--ink); color: #fff; }
+.auth-page .button-dark:hover { background: #2b2e33; }
+.auth-page .button-dark:focus-visible,
+.auth-page .google-button:focus-visible,
+.auth-page .password-toggle:focus-visible {
+  outline: 2px solid var(--auth-accent);
+  outline-offset: 2px;
+}
+.auth-page .google-button { border-color: var(--line); background: var(--surface); color: var(--ink-soft); }
+.auth-page .google-button:hover { border-color: var(--line-strong); background: var(--paper); }
+
+/* Links */
+.auth-page .signup-link a {
+  color: var(--ink);
+  text-decoration-color: var(--auth-accent);
+  text-decoration-thickness: 2px;
+}
+.auth-page .signup-link a:hover { color: var(--auth-accent); }
+.auth-page .demo-login-link:hover { color: var(--auth-accent); }
+
+/* Right-hand illustration: cool graphite instead of warm gold (the panel itself stays transparent) */
+.auth-page .auth-illustration img {
+  filter: grayscale(0.9) contrast(1.04) brightness(1.02) drop-shadow(0 24px 30px rgba(22, 24, 27, 0.14));
+}
+.auth-page .auth-illustration-copy h2 { color: var(--ink); }
+.auth-page .illustration-caption {
+  color: var(--muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.auth-page .illustration-caption::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--auth-accent);
+  vertical-align: 1px;
+}

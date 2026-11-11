@@ -13,6 +13,8 @@
   - approval_request: `code = "approval_pending"`. 이 thread의 새 질문은 승인이 끝날 때까지 409 `approval_pending`이다.
   - error: `code`(`limit_exceeded` 또는 `internal_error`), 안내 `message`, `request_id`. 예외 원문은 로그에만 남긴다.
   - done: `kind`(answer | clarify | refuse), `as_of`, `usage`(토큰·비용), 거절이면 `code = "no_results"`, 답이면 `attribution`(출처 표시).
+    측정용 칸(숫자와 코드만, 항상 켬, 기존 칸은 그대로): `cost_by_step`(단계별 calls·input_tokens·output_tokens·cost_usd·llm_s), `cost_by_step_total_usd`(질문 번역 LLM 포함 합. `usage.cost_usd`는 번역을 뺀 그래프 합),
+    `embed_tokens`·`embed_calls`·`embed_cost_usd`(Voyage `usage.total_tokens` 합과 환산 비용, 호출이 없으면 0), 거절·되묻기면 `refuse_stage`(그 결과를 쓴 그래프 노드)·`refuse_reason`(사유 코드).
   - 검색 색인이 적재되지 않았으면(`index_not_ready`) error 대신 안내 문구 token과 거절 done(`code = "no_results"`)으로 끝낸다. 원인은 로그에만 남긴다.
 - 기억 값과 질문 내용은 로그에 쓰지 않는다. 대화 내용, 검색 결과, 답은 Store에 넣지 않는다(State와 Store의 경계, `backend/memory/profile.py`).
 """
@@ -38,6 +40,7 @@ from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_curre
 from backend.graph.stream import CITATION_KEYS, stream_events
 from backend.memory.profile import ALLOWED_FIELDS, delete_profile, get_profile, put_profile
 from backend.schemas import AgentEvent
+from backend.services import step_cost
 from backend.services.llm import DEFAULT_ANTHROPIC_MODEL, finish_run, is_demo_mode, run_config
 
 log = logging.getLogger(__name__)
@@ -112,6 +115,12 @@ def _final_values(graph: Any, internal: str) -> dict:
     except Exception as exc:  # noqa: BLE001 - 체크포인트를 못 읽어도 스트림은 이어 간다(추가 키만 비는다)
         log.warning("최종 상태를 읽지 못함: %s", type(exc).__name__)
         return {}
+
+
+def final_from_stream_enabled() -> bool:
+    """사전 등록 62.16 `CHAT_FINAL_FROM_STREAM=1`: `/chat`이 그래프가 끝난 뒤 체크포인트에서 최종 상태를 다시 읽지(`get_state`) 않고, 스트림이 모은 노드 갱신을 쓴다.
+    쓰는 칸(`kind`, `as_of`, `answer_id`, `citations`)은 질문마다 `load_memory`가 비우고 마지막으로 쓴 노드의 값이 남는 칸이라 두 값이 같다(시험이 대조한다). 기본 꺼짐."""
+    return (os.environ.get("CHAT_FINAL_FROM_STREAM") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _messages(graph: Any, internal: str) -> list[dict]:
@@ -225,10 +234,19 @@ def create_api_router(
         cfg = run_config("question", user_id=user_id, thread_id=internal, configurable={"thread_id": internal})
         graph_input = {"question": req.message, "user_id": user_id, "thread_id": internal, "as_of": req.as_of, "org": req.org}
         started = time.perf_counter()
+        meter, meter_token = step_cost.begin()   # 요청 단위 집계(단계별 비용, Voyage 토큰). 숫자만 모으고 항상 켜 둔다
         text: list[str] = []
         final: dict | None = None
         closed = False
         status = "running"
+
+        def step_fields(summary: dict) -> dict:
+            """done 이벤트에 더하는 칸: cost_by_step, cost_by_step_total_usd, embed_tokens, embed_calls, embed_cost_usd. 기존 칸(usage 등)은 건드리지 않는다."""
+            try:
+                return meter.snapshot(summary.get("cost_by_step"))
+            except Exception as exc:  # noqa: BLE001 - 집계 실패가 답을 막지 않는다
+                log.warning("단계별 비용 집계 실패: %s", type(exc).__name__)
+                return {}
 
         def close() -> dict:
             nonlocal closed
@@ -237,8 +255,9 @@ def create_api_router(
             log_llm_usage(model=model_name(), summary=summary, latency_ms=(time.perf_counter() - started) * 1000, route="/chat", request_id=request_id)
             return summary
 
+        streamed: dict | None = {} if final_from_stream_enabled() else None   # 62.16: 켜면 get_state 없이 스트림 값을 쓴다
         try:
-            for ev in stream_events(graph, graph_input, thread_id=internal, config=cfg):
+            for ev in stream_events(graph, graph_input, thread_id=internal, config=cfg, values_out=streamed):
                 data = dict(ev.data)
                 if ev.type == "error" and index_not_ready(data):
                     # 색인이 없는 새 환경(INDEX_URL 없음). 오류가 아니라 거절로 끝내고, 원인은 로그에만 남긴다
@@ -248,13 +267,14 @@ def create_api_router(
                     threads.thread_touch(user_id, thread_id, status=status,
                                          last={"kind": "refuse", "answer": MSG_INDEX_NOT_READY, "answer_id": None, "as_of": req.as_of})
                     done = {"answer_id": None, "kind": "refuse", "as_of": req.as_of, "code": "no_results",
-                            "usage": {k: summary.get(k) for k in ("input_tokens", "output_tokens", "cost_usd", "calls")}}
+                            "usage": {k: summary.get(k) for k in ("input_tokens", "output_tokens", "cost_usd", "calls")},
+                            "refuse_stage": "search", "refuse_reason": "index_not_ready", **step_fields(summary)}
                     for kind, payload in (("token", {"text": MSG_INDEX_NOT_READY}), ("done", done)):
                         out = AgentEvent(type=kind, thread_id=thread_id, data=payload)
                         yield {"event": out.type, "data": out.model_dump_json()}
                     continue
                 if ev.type in ("token", "citation", "done") and final is None:
-                    final = _final_values(graph, internal)
+                    final = dict(streamed) if streamed is not None else _final_values(graph, internal)
                 if ev.type == "token":
                     text.append(str(data.get("text") or ""))
                 elif ev.type == "citation":
@@ -278,6 +298,7 @@ def create_api_router(
                     summary = close()
                     data.update(kind=values.get("kind"), as_of=values.get("as_of"),
                                 usage={k: summary.get(k) for k in ("input_tokens", "output_tokens", "cost_usd", "calls")})
+                    data.update(step_fields(summary))
                     if values.get("kind") == "refuse":
                         data["code"] = "no_results"
                     elif values.get("kind") == "answer":
@@ -289,6 +310,7 @@ def create_api_router(
         finally:
             if not closed:
                 close()
+            step_cost.end(meter_token)
             if status == "running":   # 연결이 끊겨 끝나지 못했다. 다음 질문을 받을 수 있게 되돌린다
                 try:
                     threads.thread_touch(user_id, thread_id, status="idle")

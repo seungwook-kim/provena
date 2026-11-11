@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-from backend.services import llm_trace
+from backend.services import llm_trace, step_cost
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +82,10 @@ def _call(query: str, kind: str) -> str:
     try:
         msg = get_chat_model().invoke([SystemMessage(PROMPTS[kind]), HumanMessage(query)], config=cfg)
     finally:
-        finish_run(cfg)
+        summary = finish_run(cfg)
+        meter = step_cost.current()       # `/chat` 요청 안이면 번역 호출의 비용·토큰도 그 요청의 단계별 합에 보탠다(요청의 `usage`에는 들어가지 않는 별도 집계)
+        if meter is not None:
+            meter.merge_steps(summary.get("cost_by_step") or {})
     return _first_line(msg.content)
 
 
@@ -99,7 +102,7 @@ def translate(query: str, kind: str, store: TranslationStore, call=_call) -> Res
     reason = "error"
     for _ in range(1 if demo else ATTEMPTS):      # 재생은 같은 입력에 같은 답이라 다시 불러도 소용없다
         try:
-            text = _pool.submit(llm_trace.bind(call), query, kind).result(timeout=TIMEOUT_S)
+            text = _pool.submit(step_cost.bind(llm_trace.bind(call)), query, kind).result(timeout=TIMEOUT_S)
         except cf.TimeoutError:
             reason = "timeout"
             continue

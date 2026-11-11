@@ -168,7 +168,7 @@ def test_anthropic_effort_off_keeps_the_plain_request(monkeypatch):
     monkeypatch.setenv("LLM_FALLBACK_MODEL", "")
     monkeypatch.setenv("LLM_EFFORT", "")
     monkeypatch.setenv("LLM_EFFORT_BY_TASK", "")
-    for name in ("LLM_DEADLINE_S", "LLM_HEDGE_S", "LLM_HEDGE_BY_TASK", "LLM_TRACE_DETAIL"):
+    for name in ("LLM_DEADLINE_S", "LLM_HEDGE_S", "LLM_TRACE_DETAIL"):
         monkeypatch.setenv(name, "")
     model = L._real_chat_model()
     assert type(model).__name__ == "ChatAnthropic"
@@ -191,7 +191,7 @@ def test_anthropic_fast_settings_turn_thinking_off_and_use_the_deadline_transpor
 
     for name, value in (("LLM_PROVIDER", "anthropic"), ("LLM_MODEL", ""), ("LLM_API_KEY", "sk-ant-test-value"), ("LLM_FALLBACK_MODEL", ""),
                         ("LLM_EFFORT", "none"), ("LLM_EFFORT_BY_TASK", "decompose=low,answer=low"), ("LLM_DEADLINE_S", "8"), ("LLM_HEDGE_S", "3.5"),
-                        ("LLM_HEDGE_BY_TASK", ""), ("LLM_MAX_RETRIES", "2"), ("LLM_TRACE_DETAIL", "")):
+                        ("LLM_MAX_RETRIES", "2"), ("LLM_TRACE_DETAIL", "")):
         monkeypatch.setenv(name, value)
     model = L._real_chat_model()
     assert type(model).__name__ == "TaskEffortAnthropic" and model.max_retries == 2
@@ -233,7 +233,7 @@ def test_httpx2_deadline_transport_hedges_and_times_out():
                 _time.sleep(0.6)
             return httpx2.Response(200, json={"n": n}, request=request)
 
-    t = _deadline_transport_httpx2(2.0, 0.1, {})
+    t = _deadline_transport_httpx2(2.0, 0.1)
     t.inner = FirstSlow()
     with httpx2.Client(transport=t) as c:
         assert c.post("https://api.anthropic.com/v1/messages", json={"system": "x"}).json() == {"n": 2}
@@ -243,25 +243,25 @@ def test_httpx2_deadline_transport_hedges_and_times_out():
             _time.sleep(0.5)
             return httpx2.Response(200, request=request)
 
-    t2 = _deadline_transport_httpx2(0.1, 0.0, {})
+    t2 = _deadline_transport_httpx2(0.1, 0.0)
     t2.inner = Slow()
     with httpx2.Client(transport=t2) as c, pytest.raises(httpx2.ReadTimeout):
         c.post("https://api.anthropic.com/v1/messages", json={})
 
 
-def test_hedge_by_task_reads_the_anthropic_system_field():
-    """Anthropic 요청은 시스템 프롬프트가 맨 위 `system` 칸이다(글 또는 블록 목록). 단계별 hedge가 그 표지를 읽는다."""
+def test_deadline_transport_reads_the_task_from_the_anthropic_system_field():
+    """Anthropic 요청은 시스템 프롬프트가 맨 위 `system` 칸이다(글 또는 블록 목록). 단계 건너뛰기(`LLM_DEADLINE_SKIP_TASKS`)가 그 표지를 읽는다."""
     import json as _json
 
     import httpx
     from backend.services.llm import DeadlineTransport
 
-    t = DeadlineTransport(httpx.MockTransport(lambda r: httpx.Response(200)), 8.0, 3.5, {"classify": 1.5})
+    t = DeadlineTransport(httpx.MockTransport(lambda r: httpx.Response(200)), 8.0, 3.5)
     for system in ("[[task:classify]] 분류", [{"type": "text", "text": "[[task:classify]] 분류"}]):
         req = httpx.Request("POST", "https://api.anthropic.com/v1/messages", content=_json.dumps({"system": system, "messages": []}).encode())
-        assert t._hedge_for(req) == 1.5
+        assert t._task_of(req) == "classify"
     req = httpx.Request("POST", "https://api.anthropic.com/v1/messages", content=_json.dumps({"system": "[[task:judge]] 판정", "messages": []}).encode())
-    assert t._hedge_for(req) == 3.5
+    assert t._task_of(req) == "judge"
     t.close()
 
 
@@ -403,13 +403,14 @@ OFF = {"parallel_intake": False, "brief_output": False, "max_research": 2, "judg
 
 MODEL_OFF = {"LLM_REASONING": "", "LLM_PROVIDER_SORT": "", "LLM_DEADLINE_S": "", "LLM_MAX_RETRIES": "", "LLM_TRACE_DETAIL": "", "LLM_JSON_REMINDER": "", "LLM_REASONING_BY_TASK": "", "GRAPH_SECTION_KEEPS_RESEARCH": "", "LLM_HEDGE_S": "", "GRAPH_ANSWER_WAIT_S": "", "GRAPH_ANSWER_BUDGET_S": "", "LLM_STRUCTURED": "", "GRAPH_JUDGE_QUERY": "", "EMBED_KEEPALIVE": "", "SEARCH_PARALLEL_SUBS": "",
              "GRAPH_KEEP_PRODUCT_NAME": "", "GRAPH_REQUERY_TERMS": "", 
-             "GRAPH_QUERY_TERMS": "", "GRAPH_QUERY_BRANCHES": "",
+             "GRAPH_QUERY_BRANCHES": "",
              "GRAPH_CITE_EXPAND": "", "GRAPH_CITE_MULTI": "", "GRAPH_TEAM_LAST": "", "GRAPH_KEEP_CITES": "", "GRAPH_SUB_RESEARCH": "", "GRAPH_PAGE_RESEARCH": "",
              "GRAPH_REQUERY_VOCAB": "", "GRAPH_UNKNOWN_NAME": "", "GRAPH_DECOMPOSE_CAP_S": "", "GRAPH_REFUSE_ON_NONE": "", "GRAPH_RESEARCH_SAME_PAGE": "",
-             "GRAPH_CITE_PHRASE": "", "LLM_HEDGE_BY_TASK": "", "GRAPH_HEADING_TERMS": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
-             "GRAPH_HEADING_MARK": "", "GRAPH_INTRO_FILL": "", 
-             "GRAPH_HEADING_HEADS": "", "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
-             "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_HEADING_BEST": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": ""}
+             "GRAPH_CITE_PHRASE": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
+             "GRAPH_INTRO_FILL": "", 
+             "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
+             "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
+            "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": ""}
 
 
 def test_switches_default_to_off_and_ignore_the_environment(monkeypatch):
@@ -430,15 +431,12 @@ def test_switches_can_be_chosen_on_the_command_line():
     assert M.chosen_model_switches(args) == {**MODEL_OFF, "LLM_DEADLINE_S": "6", "LLM_MAX_RETRIES": "2", "LLM_TRACE_DETAIL": "1", "SEARCH_PARALLEL_SUBS": "1", "LLM_JSON_REMINDER": "1"}
     assert M.chosen_model_switches(_parse(["--decompose-cap", "2.5"])) == {**MODEL_OFF, "GRAPH_DECOMPOSE_CAP_S": "2.5"}
     assert M.chosen_model_switches(_parse(["--refuse-on-none", "--research-same-page"])) == {**MODEL_OFF, "GRAPH_REFUSE_ON_NONE": "1", "GRAPH_RESEARCH_SAME_PAGE": "1"}
-    assert M.chosen_model_switches(_parse(["--cite-phrase", "--llm-hedge-by-task", "classify=1.5"])) == {
-        **MODEL_OFF, "GRAPH_CITE_PHRASE": "1", "LLM_HEDGE_BY_TASK": "classify=1.5"}
-    assert M.chosen_model_switches(_parse(["--heading-terms"])) == {**MODEL_OFF, "GRAPH_HEADING_TERMS": "1"}
+    assert M.chosen_model_switches(_parse(["--cite-phrase"])) == {**MODEL_OFF, "GRAPH_CITE_PHRASE": "1"}
     assert M.chosen_model_switches(_parse(["--grounding-quote"])) == {**MODEL_OFF, "GRAPH_GROUNDING_QUOTE": "1"}
     assert M.chosen_model_switches(_parse(["--drop-scoped-cites"])) == {**MODEL_OFF, "GRAPH_DROP_SCOPED_CITES": "1"}
-    assert M.chosen_model_switches(_parse(["--heading-mark", "--intro-fill"])) == {
-        **MODEL_OFF, "GRAPH_HEADING_MARK": "1", "GRAPH_INTRO_FILL": "1"}
-    assert M.chosen_model_switches(_parse(["--heading-heads", "--scope-note-refuse", "--cite-pick"])) == {
-        **MODEL_OFF, "GRAPH_HEADING_HEADS": "1", "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
+    assert M.chosen_model_switches(_parse(["--intro-fill"])) == {**MODEL_OFF, "GRAPH_INTRO_FILL": "1"}
+    assert M.chosen_model_switches(_parse(["--scope-note-refuse", "--cite-pick"])) == {
+        **MODEL_OFF, "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
     assert M.chosen_model_switches(_parse(["--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first"])) == {
         **MODEL_OFF, "GRAPH_REQUERY_SKIP_SEEN": "1", "GRAPH_CITE_CONSENSUS": "1", "GRAPH_POINTER_REFUSE": "1", "GRAPH_SPECULATE_FIRST": "1"}
 
@@ -447,17 +445,16 @@ def test_prompts_head_flag_sets_only_its_switch():
     assert M.chosen_model_switches(_parse(["--prompts-head"])) == {**MODEL_OFF, "GRAPH_PROMPTS_HEAD": "1"}
 
 
-@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--heading-best", "GRAPH_HEADING_BEST"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2"), ("--best2-samedoc", "GRAPH_BEST2_SAMEDOC")])
+@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2"), ("--best2-samedoc", "GRAPH_BEST2_SAMEDOC")])
 def test_research_fix_flags_set_only_their_switch(flag, env):
     assert M.chosen_model_switches(_parse([flag])) == {**MODEL_OFF, env: "1"}
 
 
 def test_by_task_lists_merge_instead_of_replacing():
     """61.8: 실행기가 준 decompose=low,answer=low 뒤에 answer=low를 더 주자 decompose가 사라졌다. 여러 번 주면 단계별로 합친다."""
-    args = _parse(["--reasoning-by-task", "decompose=low,answer=low", "--reasoning-by-task", "answer=none,judge=low",
-                   "--llm-hedge-by-task", "classify=1.5", "--llm-hedge-by-task", "judge=2"])
+    args = _parse(["--reasoning-by-task", "decompose=low,answer=low", "--reasoning-by-task", "answer=none,judge=low"])
     sw = M.chosen_model_switches(args)
-    assert sw["LLM_REASONING_BY_TASK"] == "decompose=low,answer=none,judge=low" and sw["LLM_HEDGE_BY_TASK"] == "classify=1.5,judge=2"
+    assert sw["LLM_REASONING_BY_TASK"] == "decompose=low,answer=none,judge=low"
     assert M.chosen_model_switches(_parse(["--reasoning-by-task", "decompose=low"]))["LLM_REASONING_BY_TASK"] == "decompose=low"
     with pytest.raises(SystemExit):
         _parse(["--judge-answer", "both"])
@@ -535,14 +532,4 @@ def test_dataset_sha256_checks_only_the_given_file(tmp_path):
         M.check_dataset(M.DATASET, "0" * 64)  # v2 기본값에는 쓰지 않는다
     M.check_dataset(M.DATASET)
 
-
-def test_heading_rank_records_whether_it_ranked():
-    from types import SimpleNamespace
-    rec = SimpleNamespace(calls=[])
-    ok = M.HeadingSearch(SimpleNamespace(closest_to_query=lambda q, cs, o, a: list(reversed(cs))), rec)
-    assert [c["chunk_id"] for c in ok.rank("질문", [{"chunk_id": "a"}, {"chunk_id": "b"}], None, None)] == ["b", "a"]
-    miss = M.HeadingSearch(SimpleNamespace(closest_to_query=lambda q, cs, o, a: None), rec)
-    assert miss.rank("질문", [{"chunk_id": "a"}], None, None) == []
-    assert [(c["kind"], c["ranked"]) for c in rec.calls] == [("heading_rank", True), ("heading_rank", False)]
-    assert sum(c["kind"] == "heading_rank" and not c.get("ranked") for c in rec.calls) == 1  # 행의 heading_rank_fail과 같은 셈
 

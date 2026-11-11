@@ -10,11 +10,13 @@ export function subscribeUnauthorized(listener) {
 }
 
 export class ApiError extends Error {
-  constructor(message, status = 0, code = 'unknown') {
+  constructor(message, status = 0, code = 'unknown', fields = undefined) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    // 422의 칸별 이유 {칸: 이유} (backend/profile_api.py). 없으면 undefined.
+    if (fields) this.fields = fields
   }
 }
 
@@ -35,16 +37,23 @@ export async function apiRequest(path, options = {}) {
       for (const listener of unauthorizedListeners) listener()
     }
     let detail = response.status === 401 ? '로그인이 필요합니다.' : response.status === 403 ? '이 작업을 수행할 권한이 없습니다.' : response.status >= 500 ? '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' : '요청을 처리할 수 없습니다.'
+    let fieldReasons
     try {
       var errorCode
       const body = await response.json()
       if (typeof body.error?.message === 'string' && body.error.message.length < 160) detail = body.error.message
       else if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
+      // 결정표·승인 API는 detail을 {reason, message}로 낸다 (backend/graph/decision/routes.py `_http`).
+      else if (response.status < 500 && typeof body.detail?.message === 'string' && body.detail.message.length < 160) detail = body.detail.message
+      if (response.status === 422 && body.detail?.fields && typeof body.detail.fields === 'object' && !Array.isArray(body.detail.fields)) {
+        fieldReasons = Object.fromEntries(Object.entries(body.detail.fields).filter(([, reason]) => typeof reason === 'string'))
+      }
       if (typeof body.error?.code === 'string' && body.error.code) errorCode = body.error.code
+      else if (typeof body.detail?.reason === 'string' && body.detail.reason) errorCode = body.detail.reason
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }
-    throw new ApiError(detail, response.status, errorCode ?? (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed'))
+    throw new ApiError(detail, response.status, errorCode ?? (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed'), fieldReasons)
   }
 
   return response
@@ -108,6 +117,25 @@ export async function saveProfile(profile) {
 }
 
 export function listAdminUsers() { return apiJson('/admin/users') }
+export function listSignupRequests() { return apiJson('/admin/signup-requests') }
+
+export async function reviewSignupRequest(loginId, action) {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/${encodeURIComponent(loginId)}/${action}`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
+
+export async function reviewSignupRequestById(requestId, action) {
+  await apiRequest('/auth/csrf')
+  const token = readCsrfToken()
+  if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/by-id/${encodeURIComponent(requestId)}/${action}`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
 
 export async function changeAdminRole(loginId, action) {
   await apiRequest('/auth/csrf')
@@ -141,7 +169,11 @@ export async function sendRecallFeedback(noticeId, useful, reason = null) {
 }
 export function getApprovals() { return apiJson('/approvals') }
 export async function postApprovalDecision(approvalId, body) {
-  return apiJson(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify(body) })
+  const response = await apiRequest(`/approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ approval_id: approvalId, ...body }) })
+  if (response.status === 204) return null
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) throw new ApiError('서버 응답 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.', response.status, 'invalid_response')
+  return response.json()
 }
 export function getDecisionTables() { return apiJson('/decision-tables') }
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }

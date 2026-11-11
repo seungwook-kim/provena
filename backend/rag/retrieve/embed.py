@@ -4,6 +4,7 @@
 - voyage-4는 Voyage AI REST API(확정 조합, docs/specs/search.md). 키는 환경 변수 VOYAGE_API_KEY를 부를 때 읽고 어디에도 찍지 않는다.
   연결 오류·시간 초과·429·5xx는 EmbedUnavailable(ConnectionError → MCP 재시도 가능), 키 없음은 EmbedNoKey(검색은 빈 결과),
   401·403·400은 EmbedConfigError. 시간 한도 10초·재시도 0번: MCP 도구 한도 30초에서 번역 한도 15초를 뺀 안쪽.
+  응답의 `usage.total_tokens`는 `/chat` 요청 집계(`backend/services/step_cost.py`)에 더한다(`embed_tokens`). 요청 밖(기동 워밍업, 색인 만들기)이면 더하지 않는다.
 - 앞말·길이·정규화는 1차 비교(evals/retrieval/experiment_v1.py `_encode`)와 같다: 명부에 앞말이 있으면 글 앞에 붙이고,
   없으면 모델 설정의 prompts(예: Qwen3 질문 지시문)를 쓴다. max_seq_length 512, batch 16, 길이 1로 정규화.
 - fp32로 고정한다. 설정 기본값을 따르면 Qwen3는 bf16으로 불러져 모델 말고 정밀도도 달라진다(I-008).
@@ -11,6 +12,7 @@
 """
 from __future__ import annotations
 
+import contextvars
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -18,6 +20,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
+from backend.services import step_cost
 
 MAX_SEQ_LENGTH = 512
 BATCH = 16
@@ -53,6 +57,7 @@ VOYAGE_URL = "https://api.voyageai.com/v1/embeddings"
 VOYAGE_TIMEOUT_S = 10.0
 VOYAGE_BATCH = 128
 VOYAGE_PARALLEL_QUERIES = 8  # 질문 여러 개를 동시에 보내는 상한(`EMBED_KEEPALIVE=1`일 때)
+QUERY_VECTOR_ROLE = "query_embedding"  # 데모 녹화에서 질문 벡터 줄의 역할(backend/services/demo_replay.py)
 
 
 class EmbedUnavailable(ConnectionError):
@@ -96,32 +101,76 @@ class VoyageClient:
         if r.status_code >= 400:
             raise EmbedConfigError(f"Voyage API {r.status_code}")
         try:
-            got = [x["embedding"] for x in sorted(r.json()["data"], key=lambda x: x["index"])]
+            body = r.json()
+            got = [x["embedding"] for x in sorted(body["data"], key=lambda x: x["index"])]
         except (ValueError, KeyError, TypeError):
             raise EmbedUnavailable("Voyage API 응답 형식 오류") from None
         if len(got) != len(texts):
             raise EmbedUnavailable(f"Voyage API 응답 개수 {len(got)} ≠ 요청 {len(texts)}")
+        step_cost.record_embed(step_cost.usage_tokens(body))   # 요청 단위 임베딩 토큰 합(`usage.total_tokens`). 요청 밖이면 아무 일도 하지 않는다
         return got
 
     def _embed_reused(self, texts: list[str], role: str, key: str) -> np.ndarray:
         """질문이 여럿이면 하나씩 동시에 보낸다. 측정에서 3개 묶음은 1~3초, 1개는 0.35초였다. 순서는 입력과 같다."""
         if role == "query" and 1 < len(texts) <= VOYAGE_PARALLEL_QUERIES:
-            with ThreadPoolExecutor(max_workers=len(texts), thread_name_prefix="voyage") as pool:
-                out = list(pool.map(lambda t: self._post_reused([t], role, key)[0], texts))
+            with ThreadPoolExecutor(max_workers=len(texts), thread_name_prefix="voyage") as pool:   # 요청 집계(`step_cost`)가 따라가도록 컨텍스트를 복사해 넘긴다
+                out = list(pool.map(lambda t, ctx: ctx.run(lambda: self._post_reused([t], role, key)[0]), texts, [contextvars.copy_context() for _ in texts]))
         else:
             out = [v for i in range(0, len(texts), VOYAGE_BATCH) for v in self._post_reused(texts[i:i + VOYAGE_BATCH], role, key)]
         m = np.asarray(out, dtype=np.float32)
         return m / np.linalg.norm(m, axis=1, keepdims=True)
 
     def embed(self, texts: list[str], role: str) -> np.ndarray:
+        """질문(role="query")은 데모 재생·녹화를 거친다(`_replayed`, `_recorded`). 문서(role="document")는 항상 API다."""
+        if role == "query":
+            got = self._replayed(texts)
+            if got is not None:
+                return got
+        key = os.environ.get("VOYAGE_API_KEY")
+        if not key:
+            raise EmbedNoKey("VOYAGE_API_KEY가 없다")
+        m = self._embed_remote(texts, role, key)
+        if role == "query":
+            self._recorded(texts, m)
+        return m
+
+    def _query_key(self, text: str) -> str:
+        from backend.services.demo_replay import request_key_for
+        return request_key_for(QUERY_VECTOR_ROLE, [self.spec.name, text])
+
+    def _replayed(self, texts: list[str]) -> np.ndarray | None:
+        """데모 모드(키 없음 또는 DEMO_MODE=1)에서 질문 벡터를 `data/demo_replay/`의 녹화에서 찾는다. 하나라도 없으면 None(그러면 키가 있을 때만 API)."""
+        import json
+        from backend.services.demo_replay import get_store
+        from backend.services.llm import is_demo_mode
+        if not is_demo_mode():
+            return None
+        store = get_store()
+        rows = [store.get(self._query_key(t)) for t in texts]
+        if any(r is None for r in rows):
+            return None
+        m = np.asarray([json.loads(r["response"]) for r in rows], dtype=np.float32)
+        if m.ndim != 2 or m.shape[1] != self.spec.dim:
+            return None
+        return m / np.linalg.norm(m, axis=1, keepdims=True)
+
+    def _recorded(self, texts: list[str], m: np.ndarray) -> None:
+        """녹화 모드(`LLM_RECORD=1`, 데모 아님)에서 실제 API가 돌려준 질문 벡터를 LLM 응답과 같은 폴더에 덧붙인다(소수 6자리)."""
+        import json
+        from backend.services.demo_replay import env_flag, get_store
+        from backend.services.llm import is_demo_mode
+        if not env_flag("LLM_RECORD") or is_demo_mode():
+            return
+        store = get_store()
+        for t, v in zip(texts, m):
+            store.add(self._query_key(t), QUERY_VECTOR_ROLE, self.spec.name, t, json.dumps([round(float(x), 6) for x in v]))
+
+    def _embed_remote(self, texts: list[str], role: str, key: str) -> np.ndarray:
         import http.client
         import json
         import socket
         import urllib.error
         import urllib.request
-        key = os.environ.get("VOYAGE_API_KEY")
-        if not key:
-            raise EmbedNoKey("VOYAGE_API_KEY가 없다")
         if os.environ.get("EMBED_KEEPALIVE") == "1":
             return self._embed_reused(texts, role, key)
         out: list[list[float]] = []
@@ -149,6 +198,7 @@ class VoyageClient:
                 raise EmbedUnavailable("Voyage API 응답 형식 오류(data 없음)") from None
             if len(got) != len(batch):                     # 개수가 다르면 질문과 벡터가 어긋난다 → 쓰지 않는다
                 raise EmbedUnavailable(f"Voyage API 응답 개수 {len(got)} ≠ 요청 {len(batch)}")
+            step_cost.record_embed(step_cost.usage_tokens(d))   # 요청 단위 임베딩 토큰 합(`usage.total_tokens`)
             out += got
         m = np.asarray(out, dtype=np.float32)
         return m / np.linalg.norm(m, axis=1, keepdims=True)   # 1차 비교 _voyage 와 같게 길이 1로

@@ -4,7 +4,7 @@
 `find_by_article`은 리콜(backend/graph/recall)이 "이 섹션을 인용한 과거 답"을 찾는 데 쓴다. 이름·반환 키는 리콜 담당과 맞춘 것이다.
 
 - `InMemoryAnswerStore`: 테스트·데모용. 프로세스가 끝나면 사라진다(기본).
-- `PgAnswerStore`: `db/120_answers_recall.sql`의 `answers`, `citations`, `answer_grounding` 표. 재시작해도 답과 인용이 남아 리콜이 지난 답을 찾을 수 있다.
+- `PgAnswerStore`: `db/120_answers_recall.sql`의 `answers`(인용 검사 결과는 `grounding`, `skills_used` 칸), `citations` 표. 재시작해도 답과 인용이 남아 리콜이 지난 답을 찾을 수 있다.
   앱은 `RECALL_STORE=postgres`일 때만 이 구현을 쓴다(`backend/graph/recall/runtime.py`).
 """
 from __future__ import annotations
@@ -149,17 +149,57 @@ class PgAnswerStore:
                     [(answer_id, c.chunk_id, c.version_id, c.rule_seq, c.article, c.version_date, c.source_url) for c in citations],
                 )
 
-    def save_grounding(self, answer_id: str, grounding: dict, skills_used: list[str]) -> None:
+    def save_with_grounding(self, answer_id, user_id, thread_id, question, answer, as_of, citations, grounding: dict, skills_used: list[str]) -> None:
+        """답, 인용, 근거 검사 결과를 연결 하나, 트랜잭션 하나, 답 INSERT 한 문장으로 쓴다(사전 등록 62.16 `ANSWER_SAVE_ONE_CONN`).
+        근거 검사 결과(grounding, skills_used)는 answers 의 칸이라 따로 INSERT 하지 않는다(별도 표를 쓰지 않아 왕복 한 번이 준다. 옛 DB 이전은 db/109_realign.sql).
+        검사 결과를 JSON 으로 만들 수 없으면 그 칸만 비우고(NULL) 답과 인용은 남긴다."""
+        g, s = self._json_pair(grounding, skills_used)
+        with self._connect() as conn:
+            with conn.transaction():
+                self._insert_answer(conn, answer_id, user_id, thread_id, question, answer, as_of, citations, g, s)
+
+    @staticmethod
+    def _json_pair(grounding: dict, skills_used: list[str]):
+        import json
+
         from psycopg.types.json import Jsonb
 
-        self._rows(
-            "INSERT INTO answer_grounding (answer_id, grounding, skills_used) VALUES (%s, %s, %s) "
-            "ON CONFLICT (answer_id) DO UPDATE SET grounding = EXCLUDED.grounding, skills_used = EXCLUDED.skills_used",
-            (answer_id, Jsonb(dict(grounding)), Jsonb(list(skills_used))),
-        )
+        try:
+            g, s = dict(grounding), list(skills_used)
+            json.dumps([g, s])
+        except (TypeError, ValueError):
+            return None, None
+        return Jsonb(g), Jsonb(s)
+
+    @staticmethod
+    def _insert_answer(conn, answer_id, user_id, thread_id, question, answer, as_of, citations, grounding=None, skills_used=None) -> None:
+        if grounding is None:
+            conn.execute(
+                "INSERT INTO answers (answer_id, user_id, thread_id, question, answer, as_of) VALUES (%s, %s, %s, %s, %s, %s) "
+                "ON CONFLICT (answer_id) DO NOTHING",
+                (answer_id, user_id, thread_id or "", question, answer, as_of),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO answers (answer_id, user_id, thread_id, question, answer, as_of, grounding, skills_used) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+                "ON CONFLICT (answer_id) DO UPDATE SET grounding = EXCLUDED.grounding, skills_used = EXCLUDED.skills_used",
+                (answer_id, user_id, thread_id or "", question, answer, as_of, grounding, skills_used),
+            )
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO citations (answer_id, chunk_id, version_id, rule_seq, article, version_date, source_url) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                [(answer_id, c.chunk_id, c.version_id, c.rule_seq, c.article, c.version_date, c.source_url) for c in citations],
+            )
+
+    def save_grounding(self, answer_id: str, grounding: dict, skills_used: list[str]) -> None:
+        """이미 저장한 답의 근거 검사 결과를 쓴다(`save` 뒤에 따로 부를 때). 답이 없으면 아무것도 바꾸지 않는다."""
+        g, s = self._json_pair(grounding, skills_used)
+        self._rows("UPDATE answers SET grounding = %s, skills_used = %s WHERE answer_id = %s", (g, s, answer_id))
 
     def get_grounding(self, answer_id: str) -> dict | None:
-        rows = self._rows("SELECT grounding, skills_used FROM answer_grounding WHERE answer_id = %s", (answer_id,))
+        rows = self._rows("SELECT grounding, skills_used FROM answers WHERE answer_id = %s AND grounding IS NOT NULL", (answer_id,))
         if not rows:
             return None
         cites = self._rows("SELECT chunk_id, version_id FROM citations WHERE answer_id = %s ORDER BY chunk_id", (answer_id,))

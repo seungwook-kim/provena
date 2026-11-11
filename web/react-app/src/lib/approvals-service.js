@@ -176,6 +176,7 @@ export function toApprovalRequestBody(action, reason = '') {
   const comment = typeof reason === 'string' ? reason.trim() : ''
   if (action === 'approve') return { approve: true, comment }
   if (action === 'reject') return { approve: false, comment }
+  if (action === 'revision') throw new Error('보완 요청 API가 아직 연결되지 않았습니다.')
   if (action === 'retry' || action === 'mark_unreviewed') return { action, comment }
   throw new Error('지원하지 않는 처리입니다.')
 }
@@ -183,7 +184,10 @@ export function toApprovalRequestBody(action, reason = '') {
 export function createApiApprovalsAdapter(api = apiClient) {
   const listApprovals = async () => {
     try {
-      return list(await api.getApprovals()).map(mapApproval)
+      const response = await api.getApprovals()
+      const rows = Array.isArray(response) ? response : response?.approvals
+      if (!Array.isArray(rows)) throw new Error('승인 API 응답 형식이 올바르지 않습니다.')
+      return rows.map(mapApproval)
     } catch (error) {
       throw localizeError(error, '승인 요청을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
     }
@@ -196,7 +200,8 @@ export function createApiApprovalsAdapter(api = apiClient) {
     async decideApproval(id, { action, reason = '' } = {}) {
       const body = toApprovalRequestBody(action, reason)
       try {
-        return mapDecisionResult(await api.postApprovalDecision(id, body))
+        const result = mapDecisionResult(await api.postApprovalDecision(id, body))
+        return result.id ? result : { id, status: action === 'approve' ? 'approved' : 'rejected' }
       } catch (error) {
         throw localizeError(error, '승인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.')
       }
@@ -207,3 +212,7 @@ export function createApiApprovalsAdapter(api = apiClient) {
 export function createApiApprovalsService(api = apiClient) {
   return createApprovalsService(createApiApprovalsAdapter(api))
 }
+
+// Keep the historical export as an alias of the canonical live adapter.
+export const actualApprovalsService = createApiApprovalsService()
+

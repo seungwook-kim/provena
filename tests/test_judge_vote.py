@@ -42,6 +42,8 @@ def test_votes_settle_on_two_same_conclusions():
     assert not F.votes_settled("judge", [s])
     assert not F.votes_settled("judge", [s, n])
     assert F.votes_settled("judge", [s, n, n]) and F.votes_settled("judge", [s, s])
+    assert not F.votes_settled("judge", [n, n])  # 부족 2표는 셋째 표를 기다린다(62.33)
+    assert F.votes_settled("judge", [n, n, n]) and F.votes_settled("judge", [{"sufficient": False, "partial": True}] * 2)
     assert F.votes_settled("grounding", [{"grounded": True}, {"grounded": True}])
     assert not F.votes_settled("grounding", [{"grounded": True}, {"grounded": False}])
 
@@ -96,6 +98,28 @@ def test_vote_majority_of_ungrounded_rewrites(monkeypatch):
     m = llm(judge=OK, answer=cite(REVIEW), grounding=in_order(bad, bad, j(reason="", grounded=True)))
     out = run(build_graph(fn, llm=m, grounding_llm=True), Q_REVIEW)
     assert out["grounding"].get("redrafted") or out["kind"] != "answer"  # 받쳐지지 않는다는 2표가 이긴다
+
+
+# ---------- 62.33: 첫 판정이 전무여도 표가 갈렸으면 바로 거절하지 않는다 ----------
+def test_votes_unanimous_reads_the_merged_vote():
+    assert F.votes_unanimous({"sufficient": False})  # 다수결을 쓰지 않은 표
+    assert F.votes_unanimous(F.merge_votes("judge", [{"sufficient": False}] * 3))
+    assert not F.votes_unanimous(F.merge_votes("judge", [{"sufficient": True}, {"sufficient": False}, {"sufficient": False}]))
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_split_none_vote_researches_instead_of_refusing(monkeypatch, multi):
+    monkeypatch.setenv("GRAPH_JUDGE_VOTE", "1")
+    monkeypatch.setenv("GRAPH_REFUSE_ON_NONE", "1")
+    build = build_multi_graph if multi else build_graph
+    fn, seen = searcher([("", [REVIEW])])
+    m = llm(judge=in_order(NO, OK, NO, OK), answer=cite(REVIEW), grounding=j(reason="", grounded=True))
+    out = run(build(fn, llm=m, grounding_llm=True, max_research=1), Q_REVIEW)
+    assert out["kind"] == "answer" and not out.get("judge_none") and len(seen) == 2  # 충분 1표, 전무 2표: 재검색 뒤 다시 판정한다
+    fn, seen = searcher([("", [REVIEW])])
+    m = llm(judge=NO, answer=cite(REVIEW), grounding=j(reason="", grounded=True))
+    out = run(build(fn, llm=m, grounding_llm=True, max_research=1), Q_REVIEW)
+    assert out["kind"] == "refuse" and out.get("judge_none") is True and len(seen) == 1 and m.count("judge") == 3  # 3표 모두 전무: 바로 거절
 
 
 def test_quote_judge_prompt_and_code_conclusion(monkeypatch):

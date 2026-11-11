@@ -51,6 +51,13 @@ def test_stages_split_time_and_cost():
     assert out["residual_s"]["max"] == pytest.approx(0.0)                   # 전체 = 검색 + 번역 뺀 LLM
 
 
+def test_final_measurement_step_names_are_split_into_stages():
+    """최종 측정 설정이 남기는 호출 이름(예비 분해, 빠른 답)을 몰라 멈추지 않고 올바른 단계로 센다."""
+    rows = [row(5, 4.0, [call("search/decompose_gate", 1.0), call("write_answer/answer_fast", 2.0), call("ground/answer_fast", 1.0)])]
+    st = S.summarize(rows, PRICES)["stages"]
+    assert st["plan"]["p50"] == 1.0 and st["generate"]["p50"] == 2.0 and st["verify"]["p50"] == 1.0
+
+
 def test_reported_cost_wins_over_price_table():
     rep = {**call("write_answer/answer", 2.0), "reported_cost_usd": 0.00002}     # 캐시가 맞아 정가보다 싸게 청구된 호출
     out = S.summarize([row(4, 3.0, [call("classify/classify", 1.0), rep])], PRICES)

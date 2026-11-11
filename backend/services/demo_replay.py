@@ -4,7 +4,9 @@
 - 데모 모드(`LLM_API_KEY` 없음, 또는 `DEMO_MODE=1`)의 `get_chat_model()`은 `ReplayChatModel`을 돌려준다.
   호출마다 요청 키로 `data/demo_replay/*.jsonl`에서 녹화한 응답을 찾는다. 없으면 결정적 가짜 응답(`demo_fallback`)으로 대신하고, 처음 한 번만 로그를 남긴다.
 - 녹화 모드(`LLM_RECORD=1` + 실제 키 + 데모 아님)의 `get_chat_model()`은 `RecordingChatModel`로 실제 모델을 감싸 요청 키 -> 응답을 같은 폴더에 덧붙인다.
-  녹화는 `python -m backend.services.demo_record --questions <파일>`이 한다.
+  녹화는 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`가 한다. 이 CLI는 서버(`/chat`)와 같은 질문 그래프(서비스 설정 61.51 포함)와
+  같은 Postgres 검색 경로를 쓴다(2026-11-10까지는 CLI가 import 오류로 돌지 않았고, 2026-11-09 녹화는 서버를 `LLM_RECORD=1`·`DEMO_MODE=0`으로 띄워 `/chat`으로 만들었다).
+  녹화가 현재 코드의 요청 키와 맞는지는 `tests/test_demo_replay_fresh.py`(`python -m pytest -m demo_replay`, 키·네트워크 없이 0원)가 본다.
 
 요청 키(`request_key`): sha256(역할 + 정규화한 메시지). 역할은 시스템 프롬프트 첫 줄의 `[[task:...]]` 표지(없으면 `generic`).
 공급자·모델 이름은 키에 넣지 않는다(녹화한 모델과 재생하는 쪽의 모델 설정이 달라도 같은 요청이면 같은 응답을 찾으려는 것이고, 모델 이름은 녹화 줄에 정보로만 남긴다).
@@ -12,9 +14,13 @@
 
 환경변수
 - `DEMO_MODE`: 1/true/yes/on이면 키가 있어도 데모(재생). 키가 없으면 이 값과 무관하게 데모.
-- `DEMO_REPLAY_DIR`: 녹화 폴더(기본 `<repo>/data/demo_replay`). 읽기: 폴더의 `*.jsonl` 전부(이름 순, 뒤의 줄이 앞을 덮는다). 쓰기: 같은 폴더의 `recorded.jsonl`.
+- `DEMO_REPLAY_DIR`: 녹화 폴더(기본 `<repo>/data/demo_replay`). 읽기: 폴더의 `*.jsonl` 전부(이름 순, 뒤 파일의 같은 키가 앞 파일을 덮는다). 쓰기: 같은 폴더의 `recorded.jsonl`.
+  같은 파일에 같은 키가 여러 줄이면 응답 변형이다: 그래프가 같은 요청을 여러 번 부르고 매번 다른 응답을 받은 것(답 두 번 써서 고르기, 판정 투표, 근거 판정)이라 재생도 부를 때마다 차례로 돌려가며 낸다.
+  다시 녹화해 바꾸려면 `recorded.jsonl`을 지우고 녹화한다(남아 있으면 새 응답이 변형으로 섞인다).
 - `LLM_RECORD`: 1/true/yes/on이면 녹화 모드(실제 키가 있고 데모가 아닐 때만).
 녹화 줄: {"key", "role", "model", "user_preview", "response", "recorded_at"}. 비밀키는 쓰지 않는다.
+질문 임베딩(voyage-4 API)도 같은 폴더에 녹화·재생한다(`backend/rag/retrieve/embed.py`): 역할 `query_embedding`, 응답은 벡터(JSON 목록)다.
+키 없는 데모는 녹화에 있는 질문만 검색할 수 있다(질문 벡터를 만들 수 없으면 검색은 빈 결과 `no_key`로 끝나고 질문은 거절된다).
 """
 from __future__ import annotations
 
@@ -25,6 +31,7 @@ import logging
 import os
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -39,6 +46,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPLAY_DIR = ROOT / "data" / "demo_replay"
 RECORD_FILE = "recorded.jsonl"
 GENERIC_ROLE = "generic"
+STAGGER_S = 0.05  # 재생에서 같은 키의 n번째 변형을 n*STAGGER_S초 늦춰 낸다(녹화 때의 완료 순서를 재현)
 DEFAULT_FAKE_TEXT = "(가짜 모델 응답) 합성 시험용 답변입니다. 실제 핸드북 근거가 아닙니다."
 _TRUE = ("1", "true", "yes", "on")
 _TASK = re.compile(r"\[\[task:(\w+)\]\]")
@@ -71,6 +79,12 @@ def message_role(messages: list[BaseMessage]) -> str:
     return GENERIC_ROLE
 
 
+def request_key_for(role: str, parts: list[str]) -> str:
+    """LLM 메시지가 아닌 요청(질문 임베딩 등)의 키: sha256(역할 + 정규화한 글 조각들). 녹화 줄의 `role`은 이 역할이다."""
+    payload = {"v": 1, "role": role, "parts": [_normalize(p) for p in parts]}
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 def request_key(messages: list[BaseMessage]) -> str:
     payload = {"v": 1, "role": message_role(messages), "messages": [[m.type, _normalize(_content_text(m))] for m in messages]}
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
@@ -85,31 +99,55 @@ class ReplayStore:
         self._lock = threading.Lock()
         self._sig: tuple | None = None
         self._rows: dict[str, dict] = {}
+        self._variants: dict[str, list[dict]] = {}
+        self._turn: dict[str, int] = {}
 
     def _files(self) -> list[Path]:
         return sorted(self.directory.glob("*.jsonl")) if self.directory.is_dir() else []
 
     def _refresh(self) -> None:
+        """같은 키의 줄이 한 파일에 여러 개면 그 요청을 여러 번 불렀을 때 응답이 달랐던 것(답을 두 번 써서 고르기, 판정 투표, 근거 판정 여러 번)이라
+        모두 남긴다(`pick`이 돌려가며 낸다). 뒤 파일(이름 순)에 같은 키가 있으면 앞 파일의 줄 전체를 덮는다."""
         files = self._files()
         sig = tuple((f.name, f.stat().st_mtime_ns, f.stat().st_size) for f in files)
         if sig == self._sig:
             return
-        rows: dict[str, dict] = {}
+        variants: dict[str, list[dict]] = {}
         for f in files:
+            per_file: dict[str, list[dict]] = {}
             for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
                 if not line.strip():
                     continue
                 try:
                     row = json.loads(line)
-                    rows[row["key"]] = row
+                    per_file.setdefault(row["key"], []).append(row)
                 except (ValueError, KeyError, TypeError):
                     log.warning("녹화 줄을 읽지 못해 건너뜁니다: %s:%d", f.name, n)
-        self._rows, self._sig = rows, sig
+            variants.update(per_file)
+        rows = {k: v[-1] for k, v in variants.items()}
+        self._rows, self._variants, self._sig = rows, variants, sig
 
     def get(self, key: str) -> dict | None:
+        """그 키의 가장 나중 녹화 줄(변형이 여럿이어도 하나)."""
         with self._lock:
             self._refresh()
             return self._rows.get(key)
+
+    def pick(self, key: str) -> dict | None:
+        """그 키의 녹화 줄. 응답 변형이 여럿이면 부를 때마다 차례로 돌려가며 낸다(재생이 녹화 때처럼 여러 답을 섞어 쓰게)."""
+        return self.pick_ranked(key)[0]
+
+    def pick_ranked(self, key: str) -> tuple[dict | None, int]:
+        """`pick`과 같되 그 줄이 같은 키 변형 중 몇 번째(0부터, 녹화 파일 순서)인지도 돌려준다. 변형이 하나 이하면 0."""
+        with self._lock:
+            self._refresh()
+            rows = self._variants.get(key)
+            if not rows:
+                return None, 0
+            n = self._turn.get(key, 0)
+            self._turn[key] = n + 1
+            rank = n % len(rows)
+            return rows[rank], (rank if len(rows) > 1 else 0)
 
     def __len__(self) -> int:
         with self._lock:
@@ -120,8 +158,7 @@ class ReplayStore:
         """녹화 한 줄을 `recorded.jsonl`에 덧붙인다. 같은 키에 같은 응답이 이미 있으면 쓰지 않고 False."""
         with self._lock:
             self._refresh()
-            prev = self._rows.get(key)
-            if prev is not None and prev.get("response") == response:
+            if any(r.get("response") == response for r in self._variants.get(key, ())):
                 return False
             self.directory.mkdir(parents=True, exist_ok=True)
             row = {
@@ -240,7 +277,11 @@ class ReplayChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         store = self.store if self.store is not None else get_store()
-        row = store.get(request_key(messages))
+        row, rank = store.pick_ranked(request_key(messages))
+        if rank:
+            # 같은 요청을 동시에 여러 번 보내는 단계(판정 다수결, 근거 판정, 답 두 번 쓰기)는 녹화 파일의 순서가 그 호출들이 끝난 순서다.
+            # 재생은 즉시 돌아와 스레드 경쟁으로 끝나는 순서가 뒤섞이므로, 몇 번째 변형인지에 비례해 늦춰 녹화 때와 같은 순서로 끝나게 한다(0원).
+            time.sleep(rank * STAGGER_S)
         if row is not None:
             self.hits += 1
             text = str(row["response"])
@@ -270,6 +311,15 @@ def reset_warned() -> None:
         _warned = False
 
 
+def recorded_text(content: Any) -> str:
+    """녹화할 응답 글. 추론을 켠 단계(`LLM_EFFORT_BY_TASK`의 decompose, answer, judge)는 Anthropic이 `[생각 블록, 글 블록]` 목록을 돌려준다.
+    목록을 JSON 글로 그대로 적으면 재생이 그 글을 응답 본문으로 내서 그래프가 JSON을 못 읽고(`_text`는 문자열을 그대로 쓴다) 다른 경로(재작성, 재검색)로 간다.
+    그래서 그래프가 읽는 것과 같게 글 블록만 잇는다(`backend/graph/build.py`의 `_text`와 같은 규칙)."""
+    if isinstance(content, list):
+        return "".join(b if isinstance(b, str) else str(b.get("text") or "") for b in content if isinstance(b, str) or (isinstance(b, dict) and b.get("type") == "text"))
+    return content if isinstance(content, str) else str(content)
+
+
 class RecordingChatModel(FakeListChatModel):
     """녹화 모드: 실제 모델(`inner`)을 부르고 요청 키 -> 응답을 저장소에 덧붙인다. 사용량(usage_metadata)은 그대로 넘겨 비용 집계가 유지된다."""
 
@@ -285,7 +335,7 @@ class RecordingChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         ai = self.inner.invoke(messages, stop=stop, **kwargs)
-        text = ai.content if isinstance(ai.content, str) else json.dumps(ai.content, ensure_ascii=False, default=str)
+        text = recorded_text(ai.content)
         store = self.store if self.store is not None else get_store()
         if store.add(request_key(messages), message_role(messages), self.model_name, _content_text(messages[-1]) if messages else "", text):
             self.recorded += 1

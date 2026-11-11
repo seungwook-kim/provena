@@ -1,0 +1,16 @@
+Q1 citations=1
+   8d1287e09ae75d03 | Security Third Party Risk Management > What Triggers a TPRM Assessment? | 2026-09-13 | https://handbook.gitlab.com/handbook/security/security-assurance/security-risk/third-party-risk-management/
+Q2 citations=2
+   c3b5296636ea8c06 | Vulnerability Resolution SLAs > Vulnerability Management SLAs and Labels | 2026-04-09 | https://handbook.gitlab.com/handbook/security/product-security/vulnerability-management/sla/
+   1760f9bd2b094dd5 | Vulnerability Resolution SLAs > Vulnerability Management SLAs and Labels | 2026-04-09 | https://handbook.gitlab.com/handbook/security/product-security/vulnerability-management/sla/
+Q3 citations=1
+   fa4c75698c139086 | Authorization Matrix (2023-05) > Authorization Matrix | 2023-05-11 | https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md
+Q4 citations=3
+   3069923da5795b3f | Incident Management > References > Incident Manager Escalation | 2026-08-18 | https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/incident-management/
+   1bcdf8557f4f92c2 | Incident Management > References > Incident Manager Escalation | 2026-08-18 | https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/incident-management/
+   7cd641d28bcdfeb5 | Incident Management > Detailed Team Responsibilities > Infrastructure Leadership Responsibilities | 2026-08-18 | https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/incident-management/
+Q5 citations=3
+   9b386ea93519a5a3 | Authorization Matrix (2023-05) > Approving expense > >$25K up to $50K | 2023-05-11 | https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L90-100
+   68ef17df6892a0de | Authorization Matrix (2023-05) > Approving Payment > >$0k up to $500k | 2023-05-11 | https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L163-173
+   8da0bc489f2c58e4 | Authorization Matrix (2023-05) > Non Billable Expenses > >$50K | 2023-05-11 | https://gitlab.com/gitlab-com/www-gitlab-com/-/blob/0a3de833754144dc4d448814e2edbcaed0883f35/sites/handbook/source/handbook/finance/authorization-matrix/index.html.md#L445-455
+Q6 citations=0

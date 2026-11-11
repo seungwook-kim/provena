@@ -1,0 +1,2 @@
+USE_SKILLS=1
+공급자 OpenRouter anthropic/claude-haiku-5.5, 사전 등록 62.3 개정 1, 단일 그래프만

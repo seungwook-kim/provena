@@ -59,7 +59,8 @@ def build_rows(team_id: str, team_label: str, issues: object, chunks: list[dict]
             continue
         cid = item.get("chunk_id")
         issue = _clean(item.get("issue"))
-        if not isinstance(cid, str) or not issue or leaks(issue):
+        topic = _clean(item.get("topic"))
+        if not isinstance(cid, str) or not issue or leaks(issue) or (topic and leaks(topic)):  # topic 칸도 모델이 쓴 글이라 쟁점 문장과 같은 검사를 거친다(사전 등록 62.26)
             dropped.append(item)
             continue
         # 인용 검사(코드): 이번에 검색된 공개 청크에 있어야 하고, 모델이 같이 쓴 값이 있으면 청크 값과 같아야 한다
@@ -76,7 +77,7 @@ def build_rows(team_id: str, team_label: str, issues: object, chunks: list[dict]
         stance = item.get("stance") if item.get("stance") in STANCES else "condition"
         conf = item.get("confidence") if item.get("confidence") in CONFIDENCES else "low"
         rows.append({
-            "team": team_id, "team_label": team_label, "topic": _clean(item.get("topic")).lower(), "issue": issue,
+            "team": team_id, "team_label": team_label, "topic": topic.lower(), "issue": issue,
             "stance": stance, "confidence": conf, "chunk_id": c["chunk_id"], "rule_seq": c.get("rule_seq"),
             "rule_title": c.get("rule_title"), "article": c.get("article"), "section_path": section_path(c),
             "version_id": c.get("version_id"), "version_date": c.get("version_date"),

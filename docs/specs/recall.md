@@ -50,7 +50,7 @@
 | EC-10 | 서비스 키 없이 `/webhooks/regulation-updated`를 호출한다 | 401 |
 | EC-11 | 일반 사용자가 다른 사람의 리콜 알림이나 전체 후보 목록을 요청한다 | 내 알림만 보인다. 남의 알림 한 건을 직접 요청하면 404다. 전체 알림과 후보 목록은 관리자만 본다 |
 | EC-12 | 판정 확신도가 낮다(`RECALL_MIN_CONFIDENCE`, 기본 0.5 미만) | 사용자 알림과 웹훅을 보내지 않고 관리자 검토함에 둔다. 관리자가 풀어 주면(`release`) 사용자에게 보이고 웹훅이 나간다 |
-| EC-13 | 판정 설명에 판정 지시문, `CANARY-` 같은 표지, 다른 사용자의 id·질문이 섞인다 | 설명을 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다. 알림은 간다 |
+| EC-13 | 판정 설명에 판정 지시문, `CANARY-` 같은 표지, 다른 사용자의 id·질문, 개정 전후 본문 속 지시 문장에서 옮겨 온 표식·문장(출력 검사 `GRAPH_SCRUB_OUTPUT`)이 섞인다. 판정 입력의 개정 전후 본문과 섹션 제목에는 입력 정화(`GRAPH_SANITIZE_INPUT`)가 걸린다 | 설명을 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다. 알림은 간다 |
 | EC-16 | 판정은 "결론 그대로"인데 코드 규칙은 금액·승인자·기한·권한 변경이나 섹션 신설·삭제라고 본다 | 알림을 버리지 않고 `review_reason=judge_disagrees_with_rule`로 관리자 검토함에 둔다. 설명 맨 앞에 "[판정 실패, 확인 필요]"를 붙이고 실패 목록에 남기며, 사용자와 웹훅에는 나가지 않는다. 문구만 바뀐 개정은 알림이 없다 |
 | EC-14 | 변경 감시를 멈췄다(`PUT /changes/monitoring`, `paused`) | 정해진 시각의 증분 수집은 그날의 실행 자리(슬롯)를 차지하지 않고 아무것도 하지 않고 끝난다. 명령줄 처리기도 멈춘다(`--force`로 무시) |
 | EC-15 | 권한 확인에 실패하거나 사용자 그룹이 그 섹션의 권한 그룹에 없다(F-06) | 그 사용자에게는 알림을 보이지 않는다. 문서 권한은 지금 모두 공개(빈 그룹)이고, 연결 지점(`backend/graph/recall/acl.py`)만 구현했다 |
@@ -154,7 +154,7 @@ POST {등록한 업무시스템 주소}/webhooks/recall
 - 판정기: LLM 키(`LLM_API_KEY`)가 있으면 LLM 판정(`recall_explain` 작업, `mail-templates` Skill, 답마다 따로 비용 집계), 키가 없거나 데모 모드이면 섹션 낱말 차이 규칙 판정이다. 규칙 판정은 재현율을 앞세워 정밀도가 LLM보다 낮을 수 있다.
 - 알림 피로(F-08): 중요도(high, low)와 확신도(0~1)를 붙인다. 확신도가 낮으면 검토함(EC-12)으로 보내고, "필요 없음" 의견이 같은 사용자·섹션·변경 유형에 `RECALL_FEEDBACK_THRESHOLD`(기본 2, 0이면 끔)만큼 더 쌓이면 다음 알림 중요도를 한 단계 낮추고 두 배면 검토함으로 보낸다.
 - 저장소: `RECALL_STORE=postgres`와 `DATABASE_URL`이 함께 있으면 Postgres, 아니면 메모리(서버를 다시 띄우면 사라진다).
-- 테이블(`db/120_answers_recall.sql`, 다시 실행해도 된다): `answers`, `citations`(answer_id, chunk_id, version_id, rule_seq, article, version_date, source_url), `answer_grounding`, `recall_events`(같은 개정은 한 번만 처리), `recall_notices`(UNIQUE (answer_id, event_key)로 같은 답·같은 개정은 한 건), `maintenance_candidates`, `webhook_subscriptions`(sub_id, url, secret_ref, active), `webhook_deliveries`(delivery_id, sub_id, notice_id, kind, status, tries, attempts), `recall_feedback`, `recall_digests`, `change_monitoring`. 모든 표에 행 수준 보안을 켠다. `citations`가 리콜의 핵심이다. 답과 근거 판(커밋)을 묶어 두어야 영향받는 답을 찾을 수 있다.
+- 테이블(`db/120_answers_recall.sql`, 다시 실행해도 된다): `answers`(인용 검사 결과는 `grounding`, `skills_used` 칸), `citations`(answer_id, chunk_id, version_id, rule_seq, article, version_date, source_url), `recall_events`(같은 개정은 한 번만 처리), `recall_notices`(UNIQUE (answer_id, event_key)로 같은 답·같은 개정은 한 건. 사용자 의견은 `feedback_*` 칸이다), `maintenance_candidates`, `webhook_subscriptions`(sub_id, url, secret_ref, active), `webhook_deliveries`(delivery_id, sub_id, notice_id, kind, status, tries, attempts), `recall_digests`, `change_monitoring`. 모든 표에 행 수준 보안을 켠다. `citations`가 리콜의 핵심이다. 답과 근거 판(커밋)을 묶어 두어야 영향받는 답을 찾을 수 있다.
 - 시험 데이터: 핸드북 git 이력에서 고른 "답이 바뀌는 규칙 변경" 커밋의 개정 전후 판 쌍(고른 절에 최근 12개월 커밋 1,094건 중 12건 확인). 예: 취약점 이슈 공개 시점 30일 → 90일(2026-06-29, `4667e540`), Tier 2 호출 무응답 시 IMOC에게 전달(2026-01-26, `bf53a691`), 위험도 중간 공급사 승인자(2024-01-23, `0c787db1`), 권한표 2021년 개정 커밋.
 
 ## AC (Given-When-Then)

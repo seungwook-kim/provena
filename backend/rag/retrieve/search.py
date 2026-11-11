@@ -7,6 +7,9 @@
 하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
+금액 구간 조회(SEARCH_RANGE_N=n, 기본 3(데모 모드는 0: 녹화가 조회 전 것), 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
+전체 질문 벡터의 상위 k 페이지도)의 구간 행(제목 경로 끝이 '>$25K up to $50K' 같은 금액 구간) 중 그 금액이 속한 행을 표마다 하나씩 골라, 질문이 이름을 부른 표
+(ranges.table_named: `approver`와 `Approving expense`처럼 같은 낱말)를 먼저, 그 안에서 전체 질문 벡터와 가까운 순으로 n개까지 뒤 자리를 바꾼다(ranges.py).
 
 1차 비교(evals/retrieval/experiment_v1.py)와 같은 점수가 나오게 둔 것:
 - BM25 토큰화 `_tokens`(소문자 [a-z0-9]+, 한 글자·불용어 뺌), 상위 고르기 `top_positions`(0점도 후보에 듦, numpy 순서 그대로).
@@ -34,9 +37,11 @@ from typing import Protocol
 
 import numpy as np
 
+from backend.rag.retrieve import hedge as hedge_mod
+from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedNoKey
 from backend.schemas.chunk import DEFAULT_K, Chunk, SearchQuery
-from backend.services import llm_trace
+from backend.services import llm_trace, step_cost
 
 log = logging.getLogger(__name__)
 
@@ -59,17 +64,27 @@ class SearchConfig:
     translate: bool = True
     link_n: int = 2          # 링크 확장으로 바꿀 뒤 자리 수(확정 조합 L1x2 = 2, PREREGISTER #8). 0이면 끔
     link_keep_per_sub: int = 2  # 나뉜 질문은 하위 질문마다 이만큼 자리를 지키고 남은 자리만 링크로 바꾼다. 0이면 지키지 않는다(#9 측정과 같음)
+    range_n: int = 3         # 금액 구간 조회로 채울 뒤 자리 수 상한(사전 등록 62.7, 62.13에서 2→3). 질문에 금액이 없으면 쓰지 않는다. 0이면 끔(SEARCH_RANGE_N=0)
+    hedge: bool = False      # 사전 등록 62.14 `SEARCH_HEDGE=1`: 질문 임베딩 + 벡터 질의가 hedge_s초 안에 안 오면 같은 일을 한 번 더 보내 먼저 온 결과를 쓴다. 기본 꺼짐
+    hedge_s: float = 1.5     # `SEARCH_HEDGE_S`
 
     @classmethod
     def from_env(cls) -> "SearchConfig":
-        from backend.rag.retrieve import embed, rerank
+        from backend.rag.retrieve import embed, hedge, rerank
+        from backend.services.llm import is_demo_mode
+        # 데모 모드(키 없음 또는 DEMO_MODE=1)의 녹화(data/demo_replay/, 2026-11-09)는 금액 구간 조회를 넣기 전에 만든 것이라, 조회를 켜면 달러 금액 질문의
+        # 근거 청크가 달라져 판정·답 녹화 키가 맞지 않는다(5만 달러 질문이 발췌형 가짜 응답으로 나왔다). 그래서 SEARCH_RANGE_N을 안 줬으면 데모에서만 끈다.
+        # 실제 키로 도는 서비스는 그대로 3이다. 녹화를 새로 만들 때는 SEARCH_RANGE_N=0으로 녹화하거나(README) 이 예외를 지운다.
+        range_default = 0 if is_demo_mode() else 3
         cfg = cls(embed_model=embed.spec().name,
                   mode=os.environ.get("SEARCH_MODE") or "dense_en",
                   pool=int(os.environ.get("SEARCH_POOL") or 100),
                   rerank_model=rerank.model_name(),
                   rerank_top=int(os.environ.get("RERANK_TOP") or 10),
                   translate=(os.environ.get("QUERY_TRANSLATE") or "1") != "0",
-                  link_n=int(os.environ.get("SEARCH_LINK_N") or 2))
+                  link_n=int(os.environ.get("SEARCH_LINK_N") or 2),
+                  range_n=int(os.environ.get("SEARCH_RANGE_N") or range_default),
+                  hedge=hedge.enabled(), hedge_s=hedge.hedge_seconds())
         cfg.check()
         return cfg
 
@@ -80,6 +95,10 @@ class SearchConfig:
             raise ValueError(f"SEARCH_POOL·RERANK_TOP은 1 이상: {self.pool}, {self.rerank_top}")
         if self.link_n < 0:
             raise ValueError(f"SEARCH_LINK_N은 0 이상: {self.link_n}")
+        if self.range_n < 0:
+            raise ValueError(f"SEARCH_RANGE_N은 0 이상: {self.range_n}")
+        if not self.hedge_s > 0:
+            raise ValueError(f"SEARCH_HEDGE_S는 0보다 커야 한다: {self.hedge_s}")
 
 
 # ---------- 기록 ----------
@@ -99,7 +118,10 @@ class SearchTrace:
     n_bm25: int = 0
     n_sub: int = 0                       # 하위 질문 수(0이면 나누지 않음)
     n_link: int = 0                      # 링크 확장으로 바꾼 자리 수
+    n_range: int = 0                     # 금액 구간 조회로 바꾼 자리 수
     n_returned: int = 0
+    hedged: bool = False                 # 사전 등록 62.14: 임베딩 + 벡터 질의에 같은 일을 한 번 더 보냈는가(`SEARCH_HEDGE=1`)
+    hedge_winner: int = 0                # 이긴 시도(0 = 처음 보낸 것, 1 = 나중에 보낸 것)
     ms: dict = field(default_factory=dict)
 
 
@@ -147,11 +169,6 @@ def valid_mask(meta: RowMeta, org: str | None, as_of: str | None) -> np.ndarray:
     if org is not None:
         m &= meta.org == org
     return m
-
-
-def heading_text(row: dict) -> str:
-    """청크의 제목 경로: 페이지 제목 > 절 제목(article). 제목 경로 검색(`heading_top`)이 보는 문자열이다."""
-    return f"{row.get('rule_title') or row.get('title') or ''} > {row.get('article') or ''}"
 
 
 class MemoryStore:
@@ -207,15 +224,17 @@ class MemoryStore:
         order = sorted(range(len(pos)), key=lambda j: (-s[j], self._rm.keys[pos[j]][0]))[:n]
         return [(self._rm.keys[pos[j]], float(s[j])) for j in order]
 
-    def heading_top(self, phrase, org, as_of, n):
-        """제목 경로('페이지 제목 > 절 제목')에 phrase(소문자 비교)가 그대로 든 청크(필터 안) n개. 순서는 ord(없으면 행 순서), chunk_id(PgStore와 같다)."""
-        p = (phrase or "").strip().lower()
-        if not p or n <= 0:
-            return []
-        m = valid_mask(self._rm, org, as_of)
-        pos = [i for i in np.flatnonzero(m) if p in heading_text(self.rows[i]).lower()]
-        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))  # 스냅샷 행에는 ord가 없고 파일 순서가 곧 ord다(load_snapshot)
-        return [self._rm.keys[i] for i in pos[:n]]
+    def band_headings(self, rule_seqs, org, as_of):
+        """금액 구간 조회(`Searcher._range_expand`) 후보: 그 페이지들의 청크 중(필터 안) 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord 순."""
+        m = valid_mask(self._rm, org, as_of) & np.isin(self._seq, np.asarray(list(rule_seqs), dtype=np.int64))
+        return [(self._rm.keys[i], self.rows[i].get("article") or "") for i in np.flatnonzero(m) if "$" in (self.rows[i].get("article") or "")]
+
+    def key_scores(self, qvec, embedder, keys):
+        """주어진 청크들의 질문 벡터 점수(내적, vector_top과 같은 값)."""
+        if embedder != self.embedder:
+            raise ValueError(f"저장소 벡터는 {self.embedder}, 요청은 {embedder}")
+        q = np.asarray(qvec, dtype=np.float32)
+        return {k: float(self.vectors[self._idx[k]] @ q) for k in keys if k in self._idx}
 
     def page_chunks(self, rule_seq, version_id):
         """한 페이지 판의 청크 (키, 절 제목) 목록, ord 순(없으면 행 순서). R3 도입부 채우기(`Searcher.intro_fill`)가 쓴다."""
@@ -362,15 +381,26 @@ ORDER BY dist, chunk_id"""
                                "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
         return [((r[0], r[1]), float(r[2])) for r in rows]
 
-    def heading_top(self, phrase, org, as_of, n):
-        """제목 경로(페이지 제목 > 절 제목)에 phrase(소문자 비교)가 그대로 든 청크 n개, 같은 필터(_FILTER), ord·chunk_id 순(MemoryStore와 같다)."""
-        p = (phrase or "").strip().lower()
-        if not p or n <= 0:
+    def band_headings(self, rule_seqs, org, as_of):
+        """금액 구간 조회 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord·chunk_id 순(MemoryStore와 같다)."""
+        if not rule_seqs:
             return []
-        sql = f"""SELECT c.chunk_id, c.version_id {_JOIN}
-WHERE strpos(lower(d.title || ' > ' || coalesce(c.article, '')), %(p)s) > 0 AND {_FILTER}
-ORDER BY c.ord, c.chunk_id LIMIT %(n)s"""
-        return [(r[0], r[1]) for r in self._all(sql, {"p": p, "org": org, "as_of": as_of, "n": n})]
+        sql = f"""SELECT c.chunk_id, c.version_id, c.article {_JOIN}
+WHERE c.rule_seq = ANY(%(seqs)s::bigint[]) AND strpos(coalesce(c.article, ''), '$') > 0 AND {_FILTER}
+ORDER BY c.ord, c.chunk_id"""
+        return [((r[0], r[1]), r[2] or "") for r in self._all(sql, {"seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of})]
+
+    def key_scores(self, qvec, embedder, keys):
+        """주어진 청크들의 질문 벡터 점수(`-(embedding <#> q)` = 내적, vector_top의 score와 같은 값)."""
+        if not keys:
+            return {}
+        sql = """SELECT c.chunk_id, c.version_id, -(c.embedding <#> %(q)s::vector) AS score
+FROM chunks c JOIN unnest(%(ids)s::text[], %(vers)s::text[]) AS k(chunk_id, version_id)
+  ON k.chunk_id = c.chunk_id AND k.version_id = c.version_id
+WHERE c.embedder = %(embedder)s"""
+        rows = self._all(sql, {"q": np.asarray(qvec, dtype=np.float32), "embedder": embedder,
+                               "ids": [k[0] for k in keys], "vers": [k[1] for k in keys]})
+        return {(r[0], r[1]): float(r[2]) for r in rows}
 
     def page_chunks(self, rule_seq, version_id):
         """한 페이지 판의 청크 (키, 절 제목) 목록, ord·chunk_id 순(MemoryStore와 같다)."""
@@ -607,7 +637,7 @@ class Searcher:
             got = [self._translate_one(texts[0], kind)]
         else:
             with ThreadPoolExecutor(max_workers=len(texts)) as ex:
-                got = list(ex.map(llm_trace.bind(lambda t: self._translate_one(t, kind)), texts))
+                got = list(ex.map(step_cost.bind(llm_trace.bind(lambda t: self._translate_one(t, kind))), texts))
         tr.translation_source = got[0][1]
         reasons = [r for _, _, r in got if r]
         if reasons:
@@ -668,6 +698,57 @@ class Searcher:
         tr.n_link, tr.ms["link"] = len(ext), _ms(t)
         return top[: q.k - len(ext)] + ext if ext else top
 
+    def _range_expand(self, top: list[Key], rows: dict[Key, dict], qvecs, texts: list[str | None], q: SearchQuery,
+                      tr: SearchTrace) -> list[Key]:
+        """금액 구간 조회(사전 등록 62.7, 62.13, 62.27): 질문에 달러 금액이 있으면, 상위 k가 든 페이지의 구간 행(제목 경로 끝이 ">$25K up to $50K" 같은 금액 구간인
+        청크) 중 그 금액이 속한 행을 표(제목 경로에서 구간 단계를 뺀 앞부분)마다 하나씩 고르고, 질문이 이름을 부른 표(`ranges.table_named`)를 먼저, 그 안에서
+        전체 질문 벡터(하위 질문은 쓰지 않는다)와 가까운 순으로 range_n개까지 뒤 자리를 바꾼다. 벡터는 "$30,000"이 어느 구간인지 알지 못해 구간 행들이 서로
+        거의 같은 점수로 흩어지기 때문이다. 질문을 나눴으면 전체 질문 벡터의 상위 k 페이지도 후보 페이지에 넣는다(하위 질문만으로 만든 상위 k에 표 페이지가
+        없는 회차가 생기지 않게). 상위 k에 이미 든 구간 행은 그대로 두고 자리만 센다. 금액이 없거나, 후보 페이지에 구간 행이 없거나, 저장소가 이 조회를 모르면 그대로 돌려준다."""
+        n = self.cfg.range_n
+        if not n or qvecs is None or not top:
+            return top
+        amounts = ranges.amounts_in(texts)
+        find, score = getattr(self.store, "band_headings", None), getattr(self.store, "key_scores", None)
+        if not amounts or find is None or score is None:
+            return top
+        t = time.perf_counter()
+        seqs = {int(rows[k]["rule_seq"]) for k in top}
+        if tr.n_sub:
+            # 질문을 나눴으면 상위 k는 하위 질문만으로 만든 것이라, 하위 질문 문장(LLM이 회차마다 다르게 쓴다)에 따라 표 페이지가 상위 k에서 빠질 수 있다.
+            # 전체 질문 벡터의 상위 k 페이지를 후보에 더한다(벡터 질의 1회, 임베딩은 이미 있다). 표를 고르는 점수는 아래와 같이 전체 질문 벡터다
+            whole = [k for k, _ in self.store.vector_top(qvecs[0], self.cfg.embed_model, q.org, q.as_of, q.k)]
+            missing = [k for k in whole if k not in rows]
+            if missing:
+                rows.update(self.store.fetch(missing))
+            seqs |= {int(rows[k]["rule_seq"]) for k in whole if k in rows}
+        covering = ranges.covering(find(sorted(seqs), q.org, q.as_of), amounts)
+        picks = [k for k, _ in covering]
+        if not picks:
+            return top
+        # 전체 질문 벡터 하나로만 고른다. 하위 질문은 LLM이 회차마다 다르게 쓰고 번역도 달라져, 금액이 속한 표가 여럿일 때 어느 표가 남는지가 회차마다 바뀌었다
+        # (운영 트레이스 2026-11-09: 같은 질문 3회에서 지출 승인 행이 빠진 회차가 있었다).
+        # 질문이 이름을 부른 표(예: "approver"와 "Approving expense")를 먼저 둔다. 금액이 여러 표에 들면 구간 행끼리 점수가 0.03 안에 몰려, 질문의 금액과
+        # 글자가 겹치는 다른 표의 행("$10,000"과 "Up to $10K")이 질문이 부른 표를 밀어냈다(운영 재연 2026-11-10, 사전 등록 62.27).
+        best = score(qvecs[0], self.cfg.embed_model, picks)
+        named = {k for k, table in covering if ranges.table_named(table, texts)}
+        chosen = sorted(picks, key=lambda k: (k not in named, -best.get(k, float("-inf"))))[:n]   # 안정 정렬: 같은 점수는 제목 순서
+        new = [k for k in chosen if k not in top]
+        if new:
+            rows.update(self.store.fetch(new))
+            new = [k for k in new if k in rows]
+        tr.n_range, tr.ms["range"] = len(new), _ms(t)
+        if not new:
+            return top
+        out, drop = list(top), len(new)
+        for i in range(len(out) - 1, -1, -1):          # 뒤에서부터 구간 행이 아닌 것을 덜어낸다(링크 확장 청크가 먼저 빠진다)
+            if not drop:
+                break
+            if out[i] not in chosen:
+                del out[i]
+                drop -= 1
+        return out + new
+
     def search(self, q: SearchQuery) -> list[Chunk]:
         check_query(q)
         self._refresh()
@@ -693,40 +774,57 @@ class Searcher:
             return []
         n = max(q.k, cfg.rerank_top if self.reranker else 0)
 
-        qvecs = None
-        if mode != "bm25_kw":
-            t = time.perf_counter()
-            try:                                                 # 전체 + 하위 질문 벡터를 한 번에(API면 요청 1번)
-                qvecs = self.embed([trans[i] if mode == "dense_en" else texts[i] for i in range(len(texts))])
-            except EmbedNoKey:                                   # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
-                tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
-                log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
-                _last.set(tr)
-                return []
-            tr.ms["embed"] = _ms(t)
-            for i, text in enumerate(texts):
-                self._remember(mode, text, qvecs[i])
-
         merge = sub_merge_enabled() and len(texts) > 1
         # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣는다
         idx = range(len(texts)) if merge else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
-        score_maps: dict[int, dict[Key, float]] = {i: {} for i in idx}
-        def one(i: int):
-            return self._ranked(texts[i], trans[i], None if qvecs is None else qvecs[i], mode, q, mask, n, tr,
-                                score_maps[i] if merge else None)
 
-        token = _db_ms.set(tr.ms)
+        def vector_stage(trace: SearchTrace):
+            """질문 임베딩 + 하위 질문마다 벡터 질의(+ 방식에 따라 BM25, 리랭킹). 읽기뿐이라 같은 입력이면 몇 번을 돌려도 결과가 같다.
+            `trace`에 이 시도의 시간·개수를 모은다(hedge가 켜지면 시도마다 따로 모았다가 이긴 쪽만 `tr`에 합친다)."""
+            qv = None
+            if mode != "bm25_kw":
+                t = time.perf_counter()
+                qv = self.embed([trans[i] if mode == "dense_en" else texts[i] for i in range(len(texts))])    # 전체 + 하위 질문 벡터를 한 번에(API면 요청 1번)
+                trace.ms["embed"] = _ms(t)
+                for i, text in enumerate(texts):
+                    self._remember(mode, text, qv[i])
+            smaps: dict[int, dict[Key, float]] = {i: {} for i in idx}
+
+            def one(i: int):
+                return self._ranked(texts[i], trans[i], None if qv is None else qv[i], mode, q, mask, n, trace,
+                                    smaps[i] if merge else None)
+
+            token = _db_ms.set(trace.ms)
+            try:
+                # 하위 질문은 서로 독립이다. 결과는 하위 질문 순서대로 합치므로 동시에 찾아도 순위가 같다. 벡터만 쓰는 방식에서만 켠다(BM25와 리랭커는 프로세스 안 계산이라 빨라지지 않는다)
+                if parallel_subs_enabled() and len(idx) >= 2 and mode in VECTOR_ONLY_MODES and self.reranker is None:
+                    with ThreadPoolExecutor(max_workers=len(idx), thread_name_prefix="subq") as pool:
+                        out = list(pool.map(lambda i, ctx: ctx.run(one, i), idx, [contextvars.copy_context() for _ in idx]))
+                else:
+                    out = [one(i) for i in idx]
+            finally:
+                _db_ms.reset(token)
+            return qv, out, smaps
+
         try:
-            # 하위 질문은 서로 독립이다. 결과는 하위 질문 순서대로 합치므로 동시에 찾아도 순위가 같다. 벡터만 쓰는 방식에서만 켠다(BM25와 리랭커는 프로세스 안 계산이라 빨라지지 않는다)
-            if parallel_subs_enabled() and len(idx) >= 2 and mode in VECTOR_ONLY_MODES and self.reranker is None:
-                with ThreadPoolExecutor(max_workers=len(idx), thread_name_prefix="subq") as pool:
-                    done = list(pool.map(lambda i, ctx: ctx.run(one, i), idx, [contextvars.copy_context() for _ in idx]))
+            if cfg.hedge:   # 사전 등록 62.14: 시도마다 따로 된 기록에 모으고, 이긴 시도의 기록만 합친다(진 시도가 개수·시간을 부풀리지 않게)
+                def attempt_stage(attempt: int):
+                    own = SearchTrace(cfg.embed_model, cfg.rerank_model, mode)
+                    return (*vector_stage(own), own)
+                (qvecs, done, score_maps, own), winner, sent = hedge_mod.hedged(attempt_stage, cfg.hedge_s)
+                tr.ms.update(own.ms)
+                tr.n_dense += own.n_dense
+                tr.n_bm25 += own.n_bm25
+                tr.hedged, tr.hedge_winner = sent, winner
             else:
-                done = [one(i) for i in idx]
-        finally:
-            _db_ms.reset(token)
+                qvecs, done, score_maps = vector_stage(tr)
+        except EmbedNoKey:                                       # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
+            tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
+            log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
+            _last.set(tr)
+            return []
         for got, r in done:
             lists.append(got)
             rows.update(r)
@@ -739,6 +837,7 @@ class Searcher:
         else:
             top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
         top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
+        top = self._range_expand(top[: q.k], rows, qvecs, [*texts, *trans], q, tr)
         out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)
         _last.set(tr)
@@ -859,41 +958,9 @@ class Searcher:
         rows = self.store.fetch(picks) if picks else {}
         return [to_chunk(rows[k]) for k in picks if k in rows]
 
-    def cached_query_vector(self, query: str):
-        """이 검색기가 이미 만든 질문 벡터(캐시)만 돌려준다. 없으면 None(번역 LLM이나 임베딩을 새로 부르지 않는다)."""
-        with self._lock:
-            got = self._qvecs.get((self.cfg.mode, query))
-        return None if got is None else np.asarray(got, dtype=np.float32)
-
-    def closest_to_query(self, query: str, chunks: list, org: str | None = None, as_of: str | None = None) -> list | None:
-        """HB(그래프 `GRAPH_HEADING_BEST=1`, 기본 꺼짐) 전용. chunks(Chunk 또는 dict)를 질문 벡터와 가까운 순으로 돌려준다(그 청크들의 페이지 안 벡터 순위).
-        질문 벡터는 이 검색기가 첫 검색에서 이미 만든 것(캐시)만 쓴다. 캐시에 없거나 순위를 매길 수 없으면 None(부르는 쪽이 HB를 건너뛴다).
-        기본 검색(`search`)은 바꾸지 않는다."""
-        ds = [c.model_dump() if hasattr(c, "model_dump") else dict(c) for c in chunks or []]
-        top = getattr(self.store, "page_vector_top", None)
-        seqs = sorted({int(d["rule_seq"]) for d in ds if d.get("rule_seq") is not None})
-        if not ds or top is None or not seqs:
-            return None
-        qvec = self.cached_query_vector(query)
-        if qvec is None:
-            return None
-        order = {k: i for i, (k, _) in enumerate(top(qvec, self.cfg.embed_model, seqs, org, as_of, [], HEADING_BEST_POOL))}
-        idx = sorted(range(len(ds)), key=lambda i: (order.get((ds[i].get("chunk_id"), ds[i].get("version_id")), len(order) + i)))
-        return [chunks[i] for i in idx]
-
-    def search_headings(self, phrase: str, org: str | None = None, as_of: str | None = None, n: int = 1) -> list[Chunk]:
-        """제목 경로 검색(그래프 `GRAPH_HEADING_TERMS=1`, 기본 꺼짐) 전용. 제목 경로(페이지 제목 > 절 제목)에 phrase가 그대로 든 청크를 ord 순으로 n개.
-        벡터와 번역을 쓰지 않는다(임베딩·LLM 호출 없음). 기본 검색(`search`)은 바꾸지 않는다. 저장소가 이 질의를 모르면 빈 목록이다."""
-        self._refresh()
-        top = getattr(self.store, "heading_top", None)
-        keys = top(phrase, org, as_of, n) if top else []
-        rows = self.store.fetch(keys) if keys else {}
-        return [to_chunk(rows[key]) for key in keys if key in rows]
-
 
 _TRACE_LOCK = threading.Lock()
 QVEC_CACHE = 512   # 질문 벡터 기억 상한(R3용)
-HEADING_BEST_POOL = 500  # HB: 제목 경로 후보의 페이지에서 벡터 순위를 볼 청크 수
 INTRO_MIN = 3      # R3: 같은 페이지 판의 청크가 이만큼 문맥에 있어야 도입부를 채운다
 INTRO_WHOLE = 2    # R3: 도입부 절의 청크가 이 수 이하면 절 전체를 더한다
 

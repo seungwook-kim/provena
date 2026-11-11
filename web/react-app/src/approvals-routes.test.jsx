@@ -122,7 +122,7 @@ describe('live approvals route', () => {
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('승인했습니다.')
     const [request] = requestsTo('POST', '/approvals/dec-1')
-    expect(JSON.parse(request.options.body)).toEqual({ approve: true, comment: '협조 항목은 별도 확인했습니다.' })
+    expect(JSON.parse(request.options.body)).toEqual({ approval_id: 'dec-1', approve: true, comment: '협조 항목은 별도 확인했습니다.' })
     expect(request.options.headers['X-CSRF-Token']).toBe('test-csrf')
     expect(request.options.credentials).toBe('include')
     expect(requestsTo('GET', '/approvals')).toHaveLength(2)
@@ -138,7 +138,7 @@ describe('live approvals route', () => {
     await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('승인했습니다.')
-    expect(JSON.parse(requestsTo('POST', '/approvals/dec-2')[0].options.body)).toEqual({ approve: true, comment: '' })
+    expect(JSON.parse(requestsTo('POST', '/approvals/dec-2')[0].options.body)).toEqual({ approval_id: 'dec-2', approve: true, comment: '' })
   })
 
   it('rejects with a reason and refreshes the list', async () => {
@@ -148,8 +148,22 @@ describe('live approvals route', () => {
     await userEvent.click(screen.getByRole('button', { name: '반려하기' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('반려했습니다.')
-    expect(JSON.parse(requestsTo('POST', '/approvals/dec-1')[0].options.body)).toEqual({ approve: false, comment: '원문과 다릅니다.' })
+    expect(JSON.parse(requestsTo('POST', '/approvals/dec-1')[0].options.body)).toEqual({ approval_id: 'dec-1', approve: false, comment: '원문과 다릅니다.' })
     expect(requestsTo('GET', '/approvals')).toHaveLength(2)
+  })
+
+  it('does not carry a reason typed for one item over to another item', async () => {
+    open('/approvals')
+    await screen.findByRole('heading', { name: '원문 대조' })
+    await userEvent.type(screen.getByLabelText(/^사유/), 'A건에 쓴 사유')
+    await userEvent.click(screen.getByRole('button', { name: /결정표 승인 요청: Travel/ }))
+    await screen.findByText('원문과 다른 칸이 없습니다. (원문 칸 3개)')
+    expect(screen.getByLabelText(/^사유/).value).toBe('')
+    expect(screen.getByRole('button', { name: '반려하기' }).disabled).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
+    await screen.findByText('승인했습니다.')
+    expect(JSON.parse(requestsTo('POST', '/approvals/dec-2')[0].options.body)).toEqual({ approval_id: 'dec-2', approve: true, comment: '' })
   })
 
   it('shows the issue table by team with its unreviewed teams and no department review form', async () => {
@@ -169,7 +183,7 @@ describe('live approvals route', () => {
     await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('승인했습니다.')
-    expect(JSON.parse(requestsTo('POST', '/approvals/iss-1')[0].options.body)).toEqual({ approve: true, comment: '' })
+    expect(JSON.parse(requestsTo('POST', '/approvals/iss-1')[0].options.body)).toEqual({ approval_id: 'iss-1', approve: true, comment: '' })
   })
 
   it('offers retry and mark-unreviewed for a team failure notice', async () => {
@@ -181,7 +195,7 @@ describe('live approvals route', () => {
     await userEvent.click(screen.getByRole('button', { name: '실패한 팀 다시 검토' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
     await screen.findByText('실패한 팀의 검토를 다시 요청했습니다.')
-    expect(JSON.parse(requestsTo('POST', '/approvals/team-1')[0].options.body)).toEqual({ action: 'retry', comment: '' })
+    expect(JSON.parse(requestsTo('POST', '/approvals/team-1')[0].options.body)).toEqual({ approval_id: 'team-1', action: 'retry', comment: '' })
   })
 
   it('shows an empty message when nothing is waiting for approval', async () => {

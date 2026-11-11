@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { streamChatMessage } from './api'
-import { createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation } from './chat-service'
+import { createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation, citationHref, DEFAULT_SOURCE_URL } from './chat-service'
 
 vi.mock('./api', () => ({ getThread: vi.fn(), getThreads: vi.fn(), streamChatMessage: vi.fn() }))
 
@@ -180,5 +180,36 @@ describe('thread detail after reload', () => {
     expect(normalizeCitation({ id: 'p', title: '미리보기', path: '절', version: '2026-10-27' })).toMatchObject({ id: 'p', title: '미리보기', path: '절', version: '2026-10-27' })
     const record = mapThreadRecord({ thread_id: 't', messages: [{ role: 'assistant', text: 'a', citations: [server] }] })
     expect(record.messages[0].citations[0]).toMatchObject({ title: '장애 대응 런북', version: '2025-01-01' })
+  })
+
+  it('uses source_url for the original link only when it is https', () => {
+    expect(citationHref({ source_url: 'https://handbook.gitlab.com/handbook/x/' })).toBe('https://handbook.gitlab.com/handbook/x/')
+    for (const bad of ['http://example.com', 'javascript:alert(1)', '/relative', '', null, undefined, 42]) expect(citationHref({ source_url: bad })).toBe(DEFAULT_SOURCE_URL)
+    expect(citationHref(null)).toBe(DEFAULT_SOURCE_URL)
+  })
+})
+
+// 배포 화면 빈 화면(11/9 실측): 답을 받는 도중 채팅 화면이 내려가면(다른 메뉴 이동 등) dispose()가
+// AbortController가 아닌 요청 기록에 abort()를 불러 TypeError → React가 화면 전체를 지웠다.
+describe('createApiChatAdapter dispose while streaming', () => {
+  it('aborts the in-flight stream without throwing and ignores later events', async () => {
+    let signal; let emit
+    streamChatMessage.mockImplementationOnce((_threadId, _message, options) => new Promise((_resolve, reject) => {
+      signal = options.signal; emit = options.onEvent
+      signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+    }))
+    const snapshots = []
+    const processing = []
+    const service = createChatService(createApiChatAdapter({ onThreadsChange: value => snapshots.push(value), onProcessingChange: value => processing.push(value) }))
+    const pending = service.sendMessage({ threadId: null, message: '질문' })
+    await vi.waitFor(() => expect(signal).toBeDefined())
+    emit({ type: 'token', thread_id: 't9', data: { text: '앞부분' } })
+
+    expect(() => service.dispose()).not.toThrow()
+    expect(signal.aborted).toBe(true)
+    const count = snapshots.length
+    emit({ type: 'token', thread_id: 't9', data: { text: '늦게 온 글자' } })
+    expect(snapshots.length).toBe(count)
+    await expect(pending).resolves.toEqual({ threadId: 't9' })
   })
 })

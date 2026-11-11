@@ -186,7 +186,7 @@ describe('live recall route', () => {
   it('returns to login when the list request is unauthorized', async () => {
     server.recallsResponse = () => { server.user = null; return apiError(401, 'unauthorized', '로그인이 필요합니다.') }
     open('/recalls')
-    await screen.findByLabelText('아이디')
+    await screen.findByLabelText('이메일')
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -275,6 +275,18 @@ describe('live change monitoring route', () => {
     await userEvent.click(link)
     await screen.findByText(/선택한 정책 변경/)
     expect(window.location.pathname).toBe('/recalls')
+  })
+
+  it('draws the distribution from server totals, not from the loaded page', async () => {
+    server.changes = { ...server.changes, more: true, total: 318, counts: { modified: 280, added: 28, removed: 10 } }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    const card = screen.getByLabelText('변경 유형 분포')
+    await waitFor(() => expect(card.textContent).toContain('총 318건'))
+    expect(card.textContent).toContain('수정280건')
+    expect(card.textContent).toContain('추가28건')
+    expect(card.textContent).toContain('삭제10건')
+    expect(card.textContent).toContain('조회 기간 전체 기준')
   })
 
   it('does not offer a recall link when no answers are impacted', async () => {
