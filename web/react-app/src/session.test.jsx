@@ -444,6 +444,7 @@ describe('React authentication and session isolation', () => {
   })
 
   it('uses login_id, cookies and CSRF and shares confirmed /me state after login', async () => {
+    server.profile = { name: '홍길동', dept: '보안', phone_masked: '010-****-5678', address: '부산광역시 해운대구 우동 1', updated_at: '2026-11-11T00:00:00Z' }
     render(<App />)
     await signIn()
     await screen.findByRole('button', { name: '내 계정' })
@@ -455,6 +456,8 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByText(A.login_id)).toBeTruthy()
     expect(screen.queryByText(A.user_id)).toBeNull()
     expect(screen.getByRole('menuitem', { name: '기억 설정' }).getAttribute('href')).toBe('/onboarding')
+    await waitFor(() => expect(screen.getByRole('menu').textContent).toContain('보안'))   // H-23: 소속 팀을 내 정보에서 읽는다
+    expect(screen.getByRole('menu').textContent).not.toContain('설정되지 않음')
     expect(calls.some(call => call.path === '/me')).toBe(true)
   })
 

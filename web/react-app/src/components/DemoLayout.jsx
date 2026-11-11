@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Brain, History, UserRound, UserRoundPen } from 'lucide-react'
 import { useSession } from '../lib/session'
+import { getProfileForEdit } from '../lib/api'
 import { previewRecallService } from '../lib/recall-service'
 import { getLiveServices, useServiceSnapshot } from '../lib/live-services'
 import Logo from './Logo'
@@ -46,6 +47,7 @@ export default function DemoLayout({ active, children }) {
   const { user } = useSession()
   const [accountOpen, setAccountOpen] = useState(false)
   const accountMenuRef = useRef(null)
+  const [team, setTeam] = useState('')
   const demoMode = location.pathname.startsWith('/demo/')
   const liveRecalls = !demoMode && user ? getLiveServices(user.user_id).recalls : null
   const { unread } = useServiceSnapshot(liveRecalls ?? previewRecallService)
@@ -65,6 +67,14 @@ export default function DemoLayout({ active, children }) {
     const timer = setTimeout(() => { liveRecalls.loadUnread()?.catch(() => {}) }, UNREAD_LOAD_DELAY_MS)
     return () => clearTimeout(timer)
   }, [liveRecalls])
+
+  // H-23: 소속 팀을 '설정되지 않음'으로 고정하지 않고, 메뉴를 열 때 내 정보(dept)에서 읽는다.
+  useEffect(() => {
+    if (!accountOpen || demoMode || !user) return undefined
+    let active = true
+    getProfileForEdit().then(profile => { if (active) setTeam(typeof profile?.dept === 'string' ? profile.dept : '') }).catch(() => {})
+    return () => { active = false }
+  }, [accountOpen, demoMode, user?.user_id])
 
   useEffect(() => {
     if (!accountOpen) return undefined
@@ -92,7 +102,7 @@ export default function DemoLayout({ active, children }) {
       </nav>
       <div className="demo-nav-actions">
         {demoMode && <span className="demo-badge">데모 모드</span>}
-        <div className="account-menu" ref={accountMenuRef}><button type="button" className="account-menu-trigger" aria-expanded={accountOpen} aria-haspopup="menu" onClick={() => setAccountOpen(open => !open)}><UserRound aria-hidden="true" size={16} strokeWidth={1.8} /><span>내 계정</span></button>{accountOpen && <div className="account-menu-panel" role="menu"><div className="account-menu-panel-header"><strong>내 계정</strong><button type="button" className="account-menu-close" aria-label="내 계정 메뉴 닫기" onClick={() => setAccountOpen(false)}>×</button></div><div className="account-menu-info"><dl><dt>계정 식별 정보</dt><dd>{accountId}</dd><dt>소속 팀</dt><dd>설정되지 않음</dd><dt>계정 역할</dt><dd>{roleLabel}</dd></dl></div><div className="account-menu-links"><Link to={demoMode ? '/demo/myinfo/edit' : '/myinfo'} role="menuitem" onClick={() => setAccountOpen(false)}><UserRoundPen aria-hidden="true" size={15} strokeWidth={1.8} /><span>회원정보 수정</span></Link><Link to={demoMode ? '/demo/onboarding' : '/onboarding'} role="menuitem" onClick={() => setAccountOpen(false)}><Brain aria-hidden="true" size={15} strokeWidth={1.8} /><span>기억 설정</span></Link><Link to={conversationLink} role="menuitem" onClick={() => setAccountOpen(false)}><History aria-hidden="true" size={15} strokeWidth={1.8} /><span>대화 기록 보기</span></Link></div></div>}</div>
+        <div className="account-menu" ref={accountMenuRef}><button type="button" className="account-menu-trigger" aria-expanded={accountOpen} aria-haspopup="menu" onClick={() => setAccountOpen(open => !open)}><UserRound aria-hidden="true" size={16} strokeWidth={1.8} /><span>내 계정</span></button>{accountOpen && <div className="account-menu-panel" role="menu"><div className="account-menu-panel-header"><strong>내 계정</strong><button type="button" className="account-menu-close" aria-label="내 계정 메뉴 닫기" onClick={() => setAccountOpen(false)}>×</button></div><div className="account-menu-info"><dl><dt>계정 식별 정보</dt><dd>{accountId}</dd><dt>소속 팀</dt><dd>{demoMode ? '데모 데이터' : team || '설정되지 않음'}</dd><dt>계정 역할</dt><dd>{roleLabel}</dd></dl></div><div className="account-menu-links"><Link to={demoMode ? '/demo/myinfo/edit' : '/myinfo'} role="menuitem" onClick={() => setAccountOpen(false)}><UserRoundPen aria-hidden="true" size={15} strokeWidth={1.8} /><span>회원정보 수정</span></Link><Link to={demoMode ? '/demo/onboarding' : '/onboarding'} role="menuitem" onClick={() => setAccountOpen(false)}><Brain aria-hidden="true" size={15} strokeWidth={1.8} /><span>기억 설정</span></Link><Link to={conversationLink} role="menuitem" onClick={() => setAccountOpen(false)}><History aria-hidden="true" size={15} strokeWidth={1.8} /><span>대화 기록 보기</span></Link></div></div>}</div>
         <SessionExitControl demoMode={demoMode} />
       </div>
     </header>
