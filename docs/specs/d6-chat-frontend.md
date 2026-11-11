@@ -101,6 +101,19 @@
 
 백엔드에서 확인되지 않은 내용을 새 스키마로 만들지 않는다. 위 표의 "확정" 값은 PR #60 머지 뒤 백엔드 코드에서 확인한 값이다.
 
+### 의존 파일·환경변수
+
+| 구분 | 이름 | 쓰는 곳 |
+|---|---|---|
+| 파일 | `web/react-app/src/lib/chat-service.js`, `web/react-app/src/lib/api.js` | 위 "프론트 서비스 경계"의 실제 API adapter, 요청·SSE 처리 |
+| 파일 | `web/react-app/src/pages/DemoChatPage.jsx` | 대화 화면, 승인 대기 표시 |
+| 파일 | `web/react-app/vite.config.js` | 개발 서버가 `/auth`, `/me` 등을 백엔드로 넘기는 프록시 |
+| 빌드 변수 | `VITE_API_BASE_URL` | API 기본 주소. 비우면 같은 origin(`src/lib/api.js:1`, `web/react-app/README.md`) |
+| 빌드 변수 | `VITE_API_PROXY_TARGET` | 개발 서버 프록시 대상. 비우면 Docker 안에서는 `http://host.docker.internal:8000`, 아니면 `http://127.0.0.1:8000`(`vite.config.js:10-11`) |
+| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx:10`) |
+| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx:222, 230`) |
+| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py:94, 123`) |
+
 ### 검증 계획
 
 - 현재 완료된 범위: 프론트 단위 테스트와 production build 검증.

@@ -88,6 +88,16 @@
 
 그래프 쪽 시험은 `tests/test_question_graph.py`의 `test_memory_profile_used_for_org`, `test_graph_does_not_leak_profile_across_users`, `test_put_profile_ignores_unknown_fields_and_partial_update`다.
 
+## 의존 파일·환경변수
+
+| 구분 | 이름 | 쓰는 곳 |
+|---|---|---|
+| 파일 | `backend/memory/profile.py`, `backend/memory/__init__.py` | 기억 읽기·쓰기·삭제와 namespace(`profile_namespace`) |
+| 파일 | `backend/api/routes.py`의 `/me/memory` 세 경로 | 로그인·CSRF 확인 뒤 위 함수를 부른다(`routes.py:358` 부근) |
+| 파일 | `backend/graph/checkpoint.py` | 기억을 담는 Store(메모리 `InMemoryStore`, Postgres `PostgresStore`)를 앱 시작에서 연다 |
+| 환경변수 | `DATABASE_URL` | 있으면 Postgres Store(`.env.example`) |
+| 환경변수 | `CHECKPOINTER` | `memory` 또는 `postgres`. 비우면 `DATABASE_URL`이 있을 때 postgres, 없으면 memory(`checkpoint.py`의 `checkpointer_kind`). memory면 서버를 다시 띄울 때 기억도 사라진다 |
+
 ## 남은 점
 
 - `backend/memory/__init__.py`의 `namespace(user_id)`는 `("memories", user_id)`를 돌려주지만 호출하는 곳이 없다. 실제 namespace는 `profile_namespace()`의 `(user_id, "profile")`이며 첫 요소가 사용자 id인 것도 이쪽뿐이다. 이 함수를 지울지 다른 용도로 쓸지는 정하지 않았다.
