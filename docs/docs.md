@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 병합 후 낡은 줄 번호 인용을 현재 코드 줄로 정정(`specs/login.md`, `specs/recall.md`, `specs/decision-approval.md`, `specs/memory.md`, `SDD.md` 11-1, `db/TABLE_SPEC.md`, `web/web.md`) 하고 `TABLE_SPEC.md`의 겹친 서술어를 고쳤다. `api/api.md` 경로 데코레이터 수를 57개로 다시 세고 제외 표에 `HEAD /health`를 더했다(57 - 4 = 53개 동작). `TEAM_GUIDE.md` 일정 행을 날짜순(D4, D5, D6)으로 바꿨다. `SDD.md` 4-4 오류 표에 501 `manual_sync_not_supported` 행을 더했다(C-14). 코드 변경·측정·호출 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `specs/erp-integration.md`의 `openapi.json` 경로 수를 46개에서 47개로 정정(C-14 `POST /admin/sync` 추가 뒤 `export_openapi.py` 재실행 결과 47개 경로·53개 동작, `api.md`·`SPEC.md`와 같음) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `decisions.md`에 서버 간 호출 인증 결정 행 추가: 수신은 `SERVICE_API_KEY`, 송신은 HMAC `X-Signature`(현재 코드 기준, J-09). `api/openapi.json`에 `POST /admin/sync` 반영(C-14) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | PR #131 로컬 실서버 확인 결과 `pr-notes/PR-131-local-check.md` 추가, `pr-notes/PR-131.md`에 로컬 확인 절과 결정 추천 추가, `SPEC.md` 판 날짜 표시 칸의 "EVAL_REPORT에 결과 없음" 문장을 사실대로 정정(숫자 칸은 결정 대기라 그대로). 코드 변경 없음 | #131 |

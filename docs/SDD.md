@@ -363,6 +363,7 @@ flowchart TD
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
 | 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
+| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집 방식 미정, `backend/api/changes.py:171`) |
 | 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
@@ -668,10 +669,10 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 3-4 | 섹션 단위 조회 (검색 → 에이전트) | `get_article(rule_seq, article, as_of)` 따로 / `SearchQuery`에 `rule_seq` 추가 | 따로 | 리콜은 같은 섹션의 개정 전후 원문이 필요하고, 검색과 목적이 다르다 (MCP 도구 `get_section`이 이 역할) |
 | 3-5 | 바뀐 섹션의 종류 | `ChangedArticle`에 추가·삭제·수정 칸 추가 / 두지 않기 | 칸 추가 | 삭제된 섹션을 인용한 답은 수정과 판정이 다르다 |
 | 3-6 | 청크 본문 해시 | `Chunk`에 본문 sha256 칸 추가 / 매번 계산 | 칸 추가 | G3 "서로 다른 청크 수"를 셀 때와 중복 제거에 쓴다 |
-| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`(우리 서비스가 받는 `POST /webhooks/regulation-updated`와는 방향이 반대인 다른 경로다, `backend/graph/recall/webhook.py:31`, `backend/api/recalls.py:320`), 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
+| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`(우리 서비스가 받는 `POST /webhooks/regulation-updated`와는 방향이 반대인 다른 경로다, `backend/graph/recall/webhook.py:36`, `backend/api/recalls.py:320`), 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
 | 3-8 | 웹훅 비밀값이 비었을 때 | 서명 검사 건너뜀 / 항상 필수 | 배포 주소는 필수, 로컬 데모만 건너뜀 | 배포 주소에서 서명 없는 웹훅을 받지 않는다. 비밀값이 비면 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서만 서명 없이 보내고, 그 밖에서는 보내지 않고 전송 기록에 `failed`(`secret_missing`)로 남긴다 |
 | 3-9 | 웹훅 재시도 | 횟수·간격 정하기 / 한 번만 | 최대 3번(`RECALL_WEBHOOK_MAX_TRIES`), 1초(`RECALL_WEBHOOK_BACKOFF_S`)부터 두 배씩 기다림, 시도 제한 시간 5초 | 일시 오류를 넘기되 응답을 오래 붙잡지 않는다. 시도마다 `webhook_deliveries.attempts`에 남긴다 |
-| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분. 정해진 값: 요청 `task_type`, `amount_usd`, `band`(선택), 성공은 202가 아니라 200, 실패는 400, 401, 404, 409(`not_approved`, `ambiguous_table`), 422(`ambiguous_band`). 상세는 `docs/specs/decision-approval.md` How, 코드는 `backend/graph/decision/routes.py:379-392`, `backend/graph/decision/rules.py:36-82` |
+| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분. 정해진 값: 요청 `task_type`, `amount_usd`, `band`(선택), 성공은 202가 아니라 200, 실패는 400, 401, 404, 409(`not_approved`, `ambiguous_table`), 422(`ambiguous_band`). 상세는 `docs/specs/decision-approval.md` How, 코드는 `backend/graph/decision/routes.py:182`(`_parse_run`), `:401-411`(`execute`), `backend/graph/decision/rules.py:36-82` |
 
 ### 11-2. 동작 기본값
 

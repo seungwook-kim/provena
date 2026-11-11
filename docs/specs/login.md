@@ -57,9 +57,9 @@
 
 ### 로그인 제한과 운영 경계
 
-- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`는 기본(`TRUSTED_PROXY_HOPS=0`)에서 `request.client.host`(주소가 없으면 `unknown`)만 쓰고 `X-Forwarded-For`를 무시한다. `TRUSTED_PROXY_HOPS=N`(N>0)이면 `X-Forwarded-For` 오른쪽에서 N번째 값만 믿고(Cloud Run은 실제 접속 주소를 마지막에 덧붙이므로 N=1), 헤더가 없거나 짧거나 IP 형식이 아니면 peer 주소로 돌아간다(`backend/auth.py:700-738`, `.env.example:215`). 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
+- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`는 기본(`TRUSTED_PROXY_HOPS=0`)에서 `request.client.host`(주소가 없으면 `unknown`)만 쓰고 `X-Forwarded-For`를 무시한다. `TRUSTED_PROXY_HOPS=N`(N>0)이면 `X-Forwarded-For` 오른쪽에서 N번째 값만 믿고(Cloud Run은 실제 접속 주소를 마지막에 덧붙이므로 N=1), 헤더가 없거나 짧거나 IP 형식이 아니면 peer 주소로 돌아간다(`backend/auth.py:701-734`, `.env.example:215`). 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
 - 현재 `Dockerfile`은 Uvicorn을 `--no-proxy-headers`로 실행한다. 따라서 Uvicorn은 `X-Forwarded-For`, `X-Forwarded-Proto`를 반영하지 않고, `request.client.host`는 접속 peer 주소 그대로다. 이전 설정(`--proxy-headers --forwarded-allow-ips=*`)은 `X-Forwarded-For` 목록의 맨 앞 주소(요청하는 쪽이 임의로 적을 수 있는 값)를 client 주소로 써서 IP별 실패 제한을 피할 수 있었기 때문에 되돌렸다. `backend/main.py`는 별도의 IP 헤더 검증을 추가하지 않는다.
-- 이 설정에서는 헤더로 IP 값을 위조할 수 없다. 다만 Cloud Run처럼 앞단 프록시 뒤에서 실행하면 접속 peer가 프록시 주소일 수 있어, 서로 다른 사용자가 같은 IP 키로 묶여 IP별 한도(60초/30회)를 함께 소진할 수 있다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어이고 IP 제한은 보조 방어다. 실제 접속 IP가 필요하면 `TRUSTED_PROXY_HOPS`로 프록시가 붙인 값만 믿게 한다(`Dockerfile:59-63` 주석). 운영 Cloud Run에서 이 값이 실제로 어떻게 보이는지는 이 문서에서 확인하지 않았다.
+- 이 설정에서는 헤더로 IP 값을 위조할 수 없다. 다만 Cloud Run처럼 앞단 프록시 뒤에서 실행하면 접속 peer가 프록시 주소일 수 있어, 서로 다른 사용자가 같은 IP 키로 묶여 IP별 한도(60초/30회)를 함께 소진할 수 있다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어이고 IP 제한은 보조 방어다. 실제 접속 IP가 필요하면 `TRUSTED_PROXY_HOPS`로 프록시가 붙인 값만 믿게 한다(`Dockerfile:61-65` 주석). 운영 Cloud Run에서 이 값이 실제로 어떻게 보이는지는 이 문서에서 확인하지 않았다.
 - Uvicorn 동작 참고: [공식 ProxyHeadersMiddleware 구현](https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py).
 - ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.
@@ -77,7 +77,7 @@
 ## 백엔드 구현 및 연동 현황 (강경희)
 
 - `backend/auth.py`에 FastAPI 일반 로그인, bcrypt 검증, HttpOnly JWT 쿠키, CSRF, ID·IP별 로그인 실패 제한과 현재 사용자·관리자 권한 검증 의존성을 구현했다.
-- JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. J-05(로그아웃 뒤 동일 JWT 재사용)용 PostgreSQL 폐기 저장소(`PostgresTokenRevocationStore`, `db/103_auth_token_revocations.sql`)는 `DATABASE_URL`이 있으면 `main.py:298-299`에서 만들어 `main.py:346-347`로 앱에 연결된다. 로그아웃 뒤 같은 JWT는 401임을 `tests/test_auth_revocation.py::test_same_user_logins_issue_unique_jti_and_logout_revokes_only_one_session`이 확인한다(가짜 저장소 기준). 운영 DB에서 한 로그아웃 뒤 재사용 시험 기록은 없다.
+- JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. J-05(로그아웃 뒤 동일 JWT 재사용)용 PostgreSQL 폐기 저장소(`PostgresTokenRevocationStore`, `db/103_auth_token_revocations.sql`)는 `DATABASE_URL`이 있으면 `main.py:299-300`에서 만들어 `main.py:347-348`로 앱에 연결된다. 로그아웃 뒤 같은 JWT는 401임을 `tests/test_auth_revocation.py::test_same_user_logins_issue_unique_jti_and_logout_revokes_only_one_session`이 확인한다(가짜 저장소 기준). 운영 DB에서 한 로그아웃 뒤 재사용 시험 기록은 없다.
 - Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider·`sub`와 **`email_verified=true`인 이메일**만 Google 사용자 저장소 계약에 전달한다. 이메일은 아래 "Google 로그인 계정 연결"의 조건을 모두 만족할 때만 기존 계정을 찾는 데 쓰고, 이메일로 관리자 권한을 새로 주지는 않는다.
 - Mock OAuth·인증·보안 계약 테스트 26건과 DB 환경변수를 제거한 Python 전체 테스트 **215 passed, 1 skipped**를 확인했다.
 - Google 로그인의 사용자 저장소 `get_or_create_google_user`는 `PostgresAuthStore`·`MemoryAuthStore`에 있다(`backend/services/auth_store.py:161,522`, 아래 "Google 로그인 계정 연결"). Cloud Run callback과 실제 Google 브라우저 로그인은 미검증이다.
