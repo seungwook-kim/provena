@@ -19,11 +19,26 @@ test('shows signup approval preview and confirms a local demo action', async () 
   await user.click(screen.getAllByRole('button', { name: '가입 승인' })[0])
   expect(screen.getByRole('dialog')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: '확인' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: '가입 신청 보기' }), 'all')
   expect(screen.getByText('승인 완료')).toBeTruthy()
   expect(screen.getByText(/데모 상태에만 반영됩니다/)).toBeTruthy()
 })
 
 afterEach(cleanup)
+
+test('shows pending signup requests first and hides processed ones by default (H-22)', async () => {
+  const user = userEvent.setup()
+  const signupRequests = [
+    { request_id: 'a', login_id: 'old-done@example.com', requested_at: '2026-11-01T00:00:00Z', status: 'approved', email_verified: true },
+    { request_id: 'b', login_id: 'new-wait@example.com', requested_at: '2026-11-10T00:00:00Z', status: 'pending', email_verified: true },
+  ]
+  render(<AdminUsersTabs users={[]} loading={false} signupRequests={signupRequests} />)
+  expect(screen.getByText('new-wait@example.com')).toBeTruthy()
+  expect(screen.queryByText('old-done@example.com')).toBeNull()
+  await user.selectOptions(screen.getByRole('combobox', { name: '가입 신청 보기' }), 'all')
+  const cells = screen.getAllByRole('row').slice(1).map(row => row.cells[0].textContent)
+  expect(cells).toEqual(['new-wait@example.com', 'old-done@example.com'])
+})
 
 test('keeps the existing administrator role tab', async () => {
   const user = userEvent.setup()
