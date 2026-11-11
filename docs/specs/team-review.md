@@ -84,10 +84,10 @@ POST /approvals/{id}        (관리자)
 409 이미 처리된 승인
 ```
 
-- 쟁점표 한 행(초안, 필드 이름은 D0에 확정): 팀, 쟁점, 근거 섹션(제목 경로), 판 날짜, 원문 URL. 팀이 검토하지 못한 경우는 "검토하지 못함"과 이유를 적는다.
+- 쟁점표 한 행(`backend/graph/departments/issue_table.py:24-27` `ROW_FIELDS`): `team`, `team_label`, `topic`, `issue`, `stance`, `confidence`, `chunk_id`, `rule_seq`, `rule_title`, `article`, `section_path`, `version_id`, `version_date`, `version_date_before`, `source_url`, `conflict`. 팀이 검토하지 못한 경우는 행이 아니라 `unreviewed`(검토하지 못한 팀과 이유)에 적는다.
 - 그래프: Supervisor와 팀 에이전트(`backend/graph/departments/`). 팀 에이전트 4개는 고른 코퍼스 절과 1:1로 맞춘다(보안 ↔ security, IT 운영 ↔ business-technology, 재무 ↔ 도입 승인 정책 절, 인프라·SRE ↔ 인프라·장애 대응 절. 대응표는 D0에 확정). 팀 관점 규칙을 `SKILL.md`로 분리하는 것은 가산(MCP와 Skill)이고, 폴더 이름(sre·it-ops 등)은 D0에 정한다.
 - 체크포인터는 Postgres에 두고, 사람 승인은 interrupt로 멈춘 뒤 `resume()`으로 이어 간다.
-- 테이블: `approvals`(approval_id, kind, thread_id, status, decided_by). 승인된 쟁점표를 저장하는 위치와 모양은 D0에 정한다.
+- 테이블: `approvals`(approval_id, kind, thread_id, status, decided_by). 승인된 쟁점표는 `issue_tables` 테이블에 저장한다(`db/110_issue_tables.sql:6-16`): `table_id`(uuid), `approval_id`(text, UNIQUE라 같은 승인으로 두 번 저장되지 않는다), `thread_id`, `user_id`(검토를 요청한 사용자), `request`(요청 원문), `as_of`(date), `issue_rows`(jsonb 배열, 한 행의 칸은 위 `ROW_FIELDS`), `unreviewed`(jsonb 배열, 기본 `[]`), `approved_by`, `approved_at`. 사람 승인(approve=true)이 들어온 뒤에만 한 줄이 생기고, 반려는 별도 표 없이 `approvals`에 남는다(`db/110_issue_tables.sql:1`, `:22`). 조회는 `thread_id`, `user_id`로 최신 승인 1건이다(`:18`, 색인 `issue_tables_thread_user_idx`).
 - 재무 팀 에이전트가 승인된 결정표(F-04)의 실행 결과를 쓰는지는 D0에 합의한다.
 - 신뢰 경계: 쟁점표 저장은 승인(interrupt)을 거쳐야만 되고, 검색된 원문은 지시가 아닌 자료로만 다룬다. 인용은 코드로 원문과 대조한다.
 - 단일·멀티 비교 평가는 정책 질문 경로(F-01)로 하고, 합동 검토는 별도 시연 경로다.

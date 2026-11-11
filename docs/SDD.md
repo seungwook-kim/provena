@@ -306,7 +306,7 @@ flowchart TD
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 업무시스템의 "승인권자 확인" 호출 |
-| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
+| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 우리 서비스가 업무시스템으로 보내는 리콜 웹훅의 수신 경로 `/webhooks/recall`(11장 3-7)과는 다른 경로다. 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
 | POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음. 입력은 `changes`(본문 포함 가능) 또는 `pages` 중 하나 |
 | POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08). 알림 한 건에 의견은 하나(다시 보내면 덮어씀) |
 | POST, GET | `/webhook-subscriptions` | 관리자 | 업무시스템 웹훅 주소 등록·조회. 리콜 알림이 생기면 등록된 주소로 보내고, 실패하면 재시도하고 기록한다. 등록은 201이고 주소와 `secret_ref`를 검사해 틀리면 400, 응답에 비밀값은 없다. 전송 기록은 `GET /webhook-deliveries`(관리자) |
@@ -621,10 +621,11 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 항목 | 현재 결과 | 근거 |
 |---|---|---|
 | 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
-| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다 | 결정 0078, 0086, `EVAL_REPORT.md` 8장 |
+| 생성 LLM | Haiku 5.5. 운영 호출은 공급자 직접 호출을 유지한다(OpenRouter 경유로 되돌리지 않음). `LLM_PROVIDER` 기본값도 직접 호출 쪽이다(`.env.example:11-14`) | 결정 0078, 0081, 0086, 0089, `EVAL_REPORT.md` 8장 |
 | 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
 | 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
 | 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| 리콜·결정표·합동 검토 판정 규칙(11-2의 4-1, 4-2, 4-3, 4-4) | 모두 추천대로 코드에 있다. 판정 응답이 깨지면 설명 맨 앞 "[판정 실패, 확인 필요]"(4-1), 기준일이나 인용한 판 날짜가 새 판 날짜 이후면 영향 없음(4-2), 네 팀 모두 쟁점도 검토 못 한 팀도 없을 때만 "쟁점 없음"으로 끝(4-3), 표를 지정하지 않으면 승인된 표가 정확히 1개일 때만 실행(4-4) | `backend/graph/recall/notice.py:25`, `:76`, `backend/graph/departments/issue_table.py:150`, `backend/graph/departments/review.py:57`, `backend/graph/decision/execute.py:40-45` |
 | Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
@@ -643,10 +644,10 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 3-4 | 섹션 단위 조회 (검색 → 에이전트) | `get_article(rule_seq, article, as_of)` 따로 / `SearchQuery`에 `rule_seq` 추가 | 따로 | 리콜은 같은 섹션의 개정 전후 원문이 필요하고, 검색과 목적이 다르다 (MCP 도구 `get_section`이 이 역할) |
 | 3-5 | 바뀐 섹션의 종류 | `ChangedArticle`에 추가·삭제·수정 칸 추가 / 두지 않기 | 칸 추가 | 삭제된 섹션을 인용한 답은 수정과 판정이 다르다 |
 | 3-6 | 청크 본문 해시 | `Chunk`에 본문 sha256 칸 추가 / 매번 계산 | 칸 추가 | G3 "서로 다른 청크 수"를 셀 때와 중복 제거에 쓴다 |
-| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`, 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
+| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`(우리 서비스가 받는 `POST /webhooks/regulation-updated`와는 방향이 반대인 다른 경로다, `backend/graph/recall/webhook.py:31`, `backend/api/recalls.py:320`), 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
 | 3-8 | 웹훅 비밀값이 비었을 때 | 서명 검사 건너뜀 / 항상 필수 | 배포 주소는 필수, 로컬 데모만 건너뜀 | 배포 주소에서 서명 없는 웹훅을 받지 않는다. 비밀값이 비면 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서만 서명 없이 보내고, 그 밖에서는 보내지 않고 전송 기록에 `failed`(`secret_missing`)로 남긴다 |
 | 3-9 | 웹훅 재시도 | 횟수·간격 정하기 / 한 번만 | 최대 3번(`RECALL_WEBHOOK_MAX_TRIES`), 1초(`RECALL_WEBHOOK_BACKOFF_S`)부터 두 배씩 기다림, 시도 제한 시간 5초 | 일시 오류를 넘기되 응답을 오래 붙잡지 않는다. 시도마다 `webhook_deliveries.attempts`에 남긴다 |
-| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분 |
+| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분. 정해진 값: 요청 `task_type`, `amount_usd`, `band`(선택), 성공은 202가 아니라 200, 실패는 400, 401, 404, 409(`not_approved`, `ambiguous_table`), 422(`ambiguous_band`). 상세는 `docs/specs/decision-approval.md` How, 코드는 `backend/graph/decision/routes.py:379-392`, `backend/graph/decision/rules.py:36-82` |
 
 ### 11-2. 동작 기본값
 
