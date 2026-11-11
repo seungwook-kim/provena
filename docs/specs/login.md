@@ -56,14 +56,14 @@
 
 ### 로그인 제한과 운영 경계
 
-- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`는 헤더를 직접 파싱하지 않고 `request.client.host`를 사용하며, 주소가 없으면 `unknown`을 사용한다. 이 값은 ASGI 서버의 프록시 헤더 처리에 따라 달라지므로 항상 직접 peer IP인 것은 아니다. 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
+- `LoginRateLimiter`는 프로세스 메모리에서 ID별·IP별 실패 시각을 별도로 저장한다. `backend/auth.py`의 `_client_ip()`(`auth.py:652-675`)는 기본(`TRUSTED_PROXY_HOPS=0`)에서는 `request.client.host`(peer 주소, 없으면 `unknown`)만 쓰고 `X-Forwarded-For`를 무시한다. `TRUSTED_PROXY_HOPS=N`(N>0)이면 `X-Forwarded-For` 오른쪽에서 N번째 값을 쓰고, 헤더가 짧거나 형식이 틀리면 peer 주소로 돌아간다. 아래 "실제 접속 IP" 항목 참고. 이 문서의 IP별 제한은 모두 이 값을 기준으로 한다.
 - 현재 `Dockerfile`은 Uvicorn을 `--no-proxy-headers`로 실행한다. 따라서 Uvicorn은 `X-Forwarded-For`, `X-Forwarded-Proto`를 반영하지 않고, `request.client.host`는 접속 peer 주소 그대로다. 이전 설정(`--proxy-headers --forwarded-allow-ips=*`)은 `X-Forwarded-For` 목록의 맨 앞 주소(요청하는 쪽이 임의로 적을 수 있는 값)를 client 주소로 써서 IP별 실패 제한을 피할 수 있었기 때문에 되돌렸다. `backend/main.py`는 별도의 IP 헤더 검증을 추가하지 않는다.
-- 이 설정에서는 헤더로 IP 값을 위조할 수 없다. 다만 Cloud Run처럼 앞단 프록시 뒤에서 실행하면 접속 peer가 프록시 주소일 수 있어, 서로 다른 사용자가 같은 IP 키로 묶여 IP별 한도(60초/30회)를 함께 소진할 수 있다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어이고 IP 제한은 보조 방어다. Cloud Run에서 `request.client.host`가 실제로 어떤 값이 되는지, 실제 접속 IP가 필요하면 프록시가 붙인 값만 믿는 처리를 로그인 코드에 둘지는 후속 검증 사항이다.
+- 이 설정에서는 헤더로 IP 값을 위조할 수 없다. 다만 Cloud Run처럼 앞단 프록시 뒤에서 실행하면 접속 peer가 프록시 주소일 수 있어, 서로 다른 사용자가 같은 IP 키로 묶여 IP별 한도(60초/30회)를 함께 소진할 수 있다. 같은 ID의 실패는 IP와 무관하게 합산하므로 ID별 제한이 주된 방어이고 IP 제한은 보조 방어다. 프록시가 붙인 값만 믿는 처리는 `TRUSTED_PROXY_HOPS`로 로그인 코드에 구현돼 있다(아래). 이 설정 없이 Cloud Run에서 `request.client.host`가 어떤 값이 되는지는 배포 주소에서 재지 않았다.
 - Uvicorn 동작 참고: [공식 ProxyHeadersMiddleware 구현](https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py).
 - ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.
-- 실제 접속 IP는 환경 변수 `TRUSTED_PROXY_HOPS`(기본 0 = `X-Forwarded-For` 무시)로 정한다. N > 0이면 `X-Forwarded-For`의 오른쪽에서 N번째 값을 쓰고 헤더가 짧거나 형식이 틀리면 peer 주소로 돌아간다(`backend/auth.py:642-675`, Cloud Run은 1). 위 Dockerfile 설명과 함께 읽을 것.
-- 로그인 실패 제한은 프로세스 메모리 기준이라 재시작 시 사라지고 인스턴스 사이에서 공유되지 않는다. 배포는 `--max-instances 1`이다(`README.md:170`). 인스턴스를 늘리려면 공유 저장소 전환이 먼저다. 공유 저장소 전환과 Cloud Run 실제 원본 IP 식별·신뢰 프록시 정책은 후속 검증 사항이다. PostgreSQL 사용자 DB 연동 시 Redis 또는 PostgreSQL 등의 공유 저장소 전환을 검토한다.
+- 실제 접속 IP는 환경 변수 `TRUSTED_PROXY_HOPS`(기본 0 = `X-Forwarded-For` 무시)로 정한다. N > 0이면 `X-Forwarded-For`의 오른쪽에서 N번째 값을 쓰고 헤더가 짧거나 형식이 틀리면 peer 주소로 돌아간다(`backend/auth.py:642-675`). Cloud Run 값 1은 재배포 때 추가할 설정으로 적혀 있다(`docs/worklog.md:153`). 배포 주소에서 IP별로 나뉘는지는 재지 않았고 로컬 시험(`tests/test_deploy_hardening.py`)만 있다(`EVAL_REPORT.md:736`). 위 Dockerfile 설명과 함께 읽을 것.
+- 로그인 실패 제한은 프로세스 메모리 기준이라 재시작 시 사라지고 인스턴스 사이에서 공유되지 않는다. 배포는 `--max-instances 1`이다(`README.md:170`). 인스턴스를 늘리려면 공유 저장소 전환이 먼저다. 신뢰 프록시 정책(`TRUSTED_PROXY_HOPS`)은 구현돼 있고 배포 주소 실측만 남았다. 공유 저장소(Redis 또는 PostgreSQL 등) 전환은 인스턴스를 늘릴 때 검토할 후속 과제다.
 - 팀 저장소에는 자동 사용자 seed나 `backend/user_store.py`가 없다. 테스트는 `tests/test_auth_router_runtime.py`의 `FakeAuthStore`가 실행 중 생성한 UUID·비밀번호를 사용한다.
 
 ### 의존성과 검증
@@ -79,7 +79,7 @@
 - JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. DATABASE_URL이 있으면 `main.py:282-283`이 `PostgresTokenRevocationStore`를 연결한다. 로그아웃 뒤 같은 JWT는 401임을 `tests/test_auth_revocation.py::test_same_user_logins_issue_unique_jti_and_logout_revokes_only_one_session`이 확인한다(가짜 저장소 기준). 운영 DB에서 한 로그아웃 뒤 재사용 시험 기록은 없다.
 - Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider·`sub`와 **`email_verified=true`인 이메일**만 Google 사용자 저장소 계약에 전달한다. 이메일은 아래 "Google 로그인 계정 연결"의 조건을 모두 만족할 때만 기존 계정을 찾는 데 쓰고, 이메일로 관리자 권한을 새로 주지는 않는다.
 - Mock OAuth·인증·보안 계약 테스트 26건과 DB 환경변수를 제거한 Python 전체 테스트 **215 passed, 1 skipped**를 확인했다.
-- 실제 PostgreSQL OAuth·JWT 폐기 저장소, `main.py` 운영 연결, Cloud Run callback 및 실제 Google 브라우저 로그인은 미완료·미검증이다.
+- `main.py` 연결은 됨(79줄). 운영 DB에서의 로그아웃 뒤 재사용 시험, Cloud Run callback, 실제 Google 로그인은 미검증이다.
 
 ### Google 로그인 계정 연결 (2026-11-11, 방식 A)
 
