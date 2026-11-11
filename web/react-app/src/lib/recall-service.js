@@ -29,6 +29,10 @@ export function createRecallService(adapter) {
     decideCandidate: adapter.decideCandidate ? (id, status) => adapter.decideCandidate(id, status) : null,
     listDigests: adapter.listDigests ? () => adapter.listDigests() : null,
     previewImpact: adapter.previewImpact ? payload => adapter.previewImpact(payload) : null,
+    flushDigests: adapter.flushDigests ? () => adapter.flushDigests() : null,
+    processPending: adapter.processPending ? () => adapter.processPending() : null,
+    listWebhooks: adapter.listWebhooks ? () => adapter.listWebhooks() : null,
+    addWebhook: adapter.addWebhook ? url => adapter.addWebhook(url) : null,
   }
 }
 
@@ -106,6 +110,16 @@ export function mapCandidate(candidate = {}) {
     reason: typeof candidate?.reason === 'string' ? candidate.reason : '',
     status: ['pending', 'needed', 'not_needed'].includes(candidate?.status) ? candidate.status : 'pending',
     decidedBy: textOrNull(candidate?.decided_by),
+  }
+}
+
+export function mapWebhook(sub = {}) {
+  return {
+    id: sub?.sub_id == null ? '' : String(sub.sub_id),
+    url: typeof sub?.url === 'string' ? sub.url : '',
+    active: sub?.active !== false,
+    secretConfigured: sub?.secret_configured === true,
+    createdAt: formatDateTime(sub?.created_at),
   }
 }
 
@@ -281,6 +295,22 @@ export function createApiRecallAdapter(api = apiClient) {
       const digests = listOf(await api.getRecallDigests(), 'digests').map(mapDigest)
       update({ digests })
       return digests
+    },
+    // 서버 응답 {digests, notices} / {processed, sent, failed, skipped, notices, ...}. 숫자가 아니면 0으로 둔다.
+    async flushDigests() {
+      const response = await api.flushRecallDigests()
+      return { digests: Number(response?.digests) || 0, notices: Number(response?.notices) || 0 }
+    },
+    async processPending() {
+      const response = await api.processPendingRecalls()
+      const n = key => Number(response?.[key]) || 0
+      return { processed: n('processed'), sent: n('sent'), failed: n('failed'), skipped: n('skipped'), notices: n('notices'), review: n('review') }
+    },
+    async listWebhooks() {
+      return listOf(await api.getWebhookSubscriptions(), 'items').map(mapWebhook)
+    },
+    async addWebhook(url) {
+      return mapWebhook(await api.addWebhookSubscription(String(url ?? '').trim()))
     },
     async previewImpact(payload) {
       const response = await api.postImpactPreview(payload)

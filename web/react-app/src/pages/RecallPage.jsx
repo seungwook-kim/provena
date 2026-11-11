@@ -128,6 +128,8 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
       <ReviewQueue items={snapshot.reviewQueue ?? []} service={service} />
       <CandidatePanel items={snapshot.candidates ?? []} service={service} />
       {service.previewImpact && <ImpactPreviewPanel service={service} />}
+      {(service.flushDigests || service.processPending) && <OperationsPanel service={service} />}
+      {service.listWebhooks && <WebhookPanel service={service} />}
     </>}
   </main></DemoLayout>
 }
@@ -271,5 +273,91 @@ function ImpactPreviewPanel({ service }) {
     </form>
     {error && <p role="alert" className="recall-action-error">{error}</p>}
     {result && <div className="impact-preview-result"><small>MR 댓글용 요약</small><pre>{result.markdown || '요약 내용이 없습니다.'}</pre></div>}
+  </section>
+}
+
+function OperationsPanel({ service }) {
+  const [running, setRunning] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  async function run(kind) {
+    if (running) return
+    const question = kind === 'digest' ? '오늘의 하루 요약을 지금 만들까요? 사용자에게 알림이 전달될 수 있습니다.' : '처리 대기 중인 변경을 지금 처리할까요? LLM을 호출하고 사용자에게 알림이 전달될 수 있습니다.'
+    if (!window.confirm(question)) return
+    setRunning(kind)
+    setMessage('')
+    setError('')
+    try {
+      if (kind === 'digest') {
+        const result = await service.flushDigests()
+        setMessage(`하루 요약 ${result.digests}건을 만들었습니다(알림 ${result.notices}건).`)
+        service.listDigests?.().catch(() => {})
+      } else {
+        const result = await service.processPending()
+        setMessage(`변경 ${result.processed}건을 처리했습니다(알림 ${result.notices}건 생성, 실패 ${result.failed}건, 건너뜀 ${result.skipped}건).`)
+        service.listRecalls().catch(() => {})
+      }
+    } catch (runError) {
+      setError(describeApiError(runError))
+    } finally {
+      setRunning('')
+    }
+  }
+
+  return <section className="recall-admin-section" aria-labelledby="recall-ops-title">
+    <div className="recall-admin-heading"><h2 id="recall-ops-title">리콜 수동 실행</h2><span>관리자 전용</span></div>
+    <p className="recall-admin-lede">정해진 시간을 기다리지 않고 지금 실행합니다. 두 작업 모두 사용자에게 알림을 보낼 수 있습니다.</p>
+    <div className="recall-admin-actions">
+      {service.flushDigests && <button type="button" className="demo-outline-button" disabled={Boolean(running)} onClick={() => run('digest')}>{running === 'digest' ? '만드는 중입니다.' : '하루 요약 지금 만들기'}</button>}
+      {service.processPending && <button type="button" className="demo-outline-button" disabled={Boolean(running)} onClick={() => run('pending')}>{running === 'pending' ? '처리 중입니다.' : '처리 대기 변경 지금 처리'}</button>}
+    </div>
+    {message && <p role="status" className="recall-admin-lede">{message}</p>}
+    {error && <p role="alert" className="recall-action-error">{error}</p>}
+  </section>
+}
+
+function WebhookPanel({ service }) {
+  const [items, setItems] = useState(null)
+  const [url, setUrl] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    service.listWebhooks().then(list => { if (alive) setItems(list) }).catch(loadError => { if (alive) { setItems([]); setError(describeApiError(loadError, '웹훅 구독을 찾을 수 없습니다.')) } })
+    return () => { alive = false }
+  }, [service])
+
+  async function add(event) {
+    event.preventDefault()
+    if (adding) return
+    if (!url.trim()) { setError('웹훅 주소를 입력해 주세요.'); return }
+    setAdding(true)
+    setMessage('')
+    setError('')
+    try {
+      const created = await service.addWebhook(url)
+      setItems(current => [...(current ?? []), created])
+      setUrl('')
+      setMessage('웹훅 구독을 추가했습니다.')
+    } catch (addError) {
+      setError(describeApiError(addError))
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return <section className="recall-admin-section" aria-labelledby="recall-webhook-title">
+    <div className="recall-admin-heading"><h2 id="recall-webhook-title">웹훅 구독</h2><span>{items ? `${items.length}건` : '불러오는 중'}</span></div>
+    <p className="recall-admin-lede">리콜 알림을 받을 외부 주소입니다. 서버에 삭제 기능이 없어 화면에서도 삭제할 수 없습니다.</p>
+    {items && (items.length === 0 ? <p className="recall-empty">등록된 웹훅 구독이 없습니다.</p> : <ul>{items.map(item => <li key={item.id}><strong>{item.url}</strong> <span>{[item.active ? '사용 중' : '꺼짐', item.secretConfigured ? '서명 키 있음' : '서명 키 없음', item.createdAt].filter(Boolean).join(' · ')}</span></li>)}</ul>)}
+    <form className="impact-preview-form" onSubmit={add}>
+      <label>웹훅 주소<input type="url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com/hook" maxLength={500} /></label>
+      <div className="recall-admin-actions"><button type="submit" className="demo-dark-button" disabled={adding}>{adding ? '추가하는 중입니다.' : '구독 추가'}</button></div>
+    </form>
+    {message && <p role="status" className="recall-admin-lede">{message}</p>}
+    {error && <p role="alert" className="recall-action-error">{error}</p>}
   </section>
 }

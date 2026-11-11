@@ -55,6 +55,10 @@ beforeEach(() => {
     if (path === '/threads') return json([])
     if (path === '/recalls' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
     if (path === '/recalls/digests') return server.digestsResponse ? server.digestsResponse() : json({ digests: [{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })
+    if (path === '/recalls/digest/flush' && method === 'POST') return server.flushResponse ? server.flushResponse() : json({ digests: 2, notices: 5 })
+    if (path === '/recalls/process-pending' && method === 'POST') return server.pendingResponse ? server.pendingResponse() : json({ status: 'done', processed: 3, sent: 2, failed: 1, skipped: 0, notices: 4, review: 1, judge_failures: 0, candidates: 0 })
+    if (path === '/webhook-subscriptions' && method === 'GET') return json({ items: server.subs ?? [] })
+    if (path === '/webhook-subscriptions' && method === 'POST') return server.addSubResponse ? server.addSubResponse() : json({ sub_id: 'ws-1', url: JSON.parse(options.body).url, secret_ref: 'X', active: true, created_at: '2026-11-11T00:00:00Z', secret_configured: true }, 201)
     if (path === '/impact-preview' && method === 'POST') return json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
     let match = path.match(/^\/recalls\/([^/]+)\/(ack|review|feedback)$/)
     if (match && method === 'POST') {
@@ -318,6 +322,78 @@ describe('live recall route for administrators', () => {
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText('JSON 형식이 올바르지 않습니다.')
     expect(requestsTo('POST', '/impact-preview')).toHaveLength(0)
+  })
+})
+
+describe('admin manual recall actions and webhook subscriptions (H-21)', () => {
+  beforeEach(() => {
+    server.user = ADMIN
+    server.recalls = { items: [], unread: 0, review_queue: [], candidates: [] }
+    server.subs = [{ sub_id: 'ws-0', url: 'https://hooks.example.com/a', secret_ref: 'X', active: true, created_at: '2026-11-10T00:00:00Z', secret_configured: false }]
+    vi.stubGlobal('confirm', vi.fn(() => true))
+  })
+
+  it('flushes digests with CSRF and shows the result', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '하루 요약 지금 만들기' }))
+    await within(panel).findByText('하루 요약 2건을 만들었습니다(알림 5건).')
+    const [request] = requestsTo('POST', '/recalls/digest/flush')
+    expect(request.options.headers['X-CSRF-Token']).toBe('test-csrf')
+  })
+
+  it('does not call the server when the confirmation is cancelled', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => false))
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    expect(requestsTo('POST', '/recalls/process-pending')).toHaveLength(0)
+  })
+
+  it('processes pending changes and shows the counts', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    await within(panel).findByText('변경 3건을 처리했습니다(알림 4건 생성, 실패 1건, 건너뜀 0건).')
+    expect(requestsTo('POST', '/recalls/process-pending')[0].options.headers['X-CSRF-Token']).toBe('test-csrf')
+  })
+
+  it('shows a server error for a failed manual run', async () => {
+    server.pendingResponse = () => apiError(503, 'not_configured', '변경 목록 저장소를 사용할 수 없습니다.')
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    await within(panel).findByText('변경 목록 저장소를 사용할 수 없습니다.')
+  })
+
+  it('lists webhook subscriptions and adds one', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '웹훅 구독' })).closest('section')
+    await within(panel).findByText('https://hooks.example.com/a')
+    await userEvent.type(within(panel).getByLabelText('웹훅 주소'), 'https://hooks.example.com/b')
+    await userEvent.click(within(panel).getByRole('button', { name: '구독 추가' }))
+    await within(panel).findByText('웹훅 구독을 추가했습니다.')
+    const [request] = requestsTo('POST', '/webhook-subscriptions')
+    expect(JSON.parse(request.options.body)).toEqual({ url: 'https://hooks.example.com/b' })
+    expect(request.options.headers['X-CSRF-Token']).toBe('test-csrf')
+    expect(within(panel).getByText('https://hooks.example.com/b')).toBeTruthy()
+  })
+
+  it('shows the server message when a webhook address is rejected', async () => {
+    server.addSubResponse = () => apiError(400, 'bad_request', '배포 환경에서는 https 주소만 쓸 수 있습니다')
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '웹훅 구독' })).closest('section')
+    await userEvent.type(within(panel).getByLabelText('웹훅 주소'), 'http://x.example.com/h')
+    await userEvent.click(within(panel).getByRole('button', { name: '구독 추가' }))
+    await within(panel).findByText('배포 환경에서는 https 주소만 쓸 수 있습니다')
+  })
+
+  it('hides the admin tools from ordinary users', async () => {
+    server.user = USER
+    open('/recalls')
+    await screen.findByText('알림 목록')
+    expect(screen.queryByRole('heading', { name: '리콜 수동 실행' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '웹훅 구독' })).toBeNull()
   })
 })
 
