@@ -154,9 +154,12 @@ def create_admin_router(
     def list_users(request: Request, response: Response) -> dict[str, list[dict[str, Any]]] | FileResponse:
         page = html_page() if html_page is not None else None
         if page is not None and "text/html" in request.headers.get("accept", "").lower():
-            return FileResponse(page)   # 화면 새로고침·주소 직접 입력
+            # 화면 새로고침·주소 직접 입력. 화면과 API 주소가 같으므로 브라우저가 이 HTML을 캐시하면
+            # 화면의 fetch(/admin/users)가 HTML을 받아 "서버 응답 형식이 올바르지 않습니다"가 된다 → 캐시 금지·Accept별 구분
+            return FileResponse(page, headers={"Cache-Control": "no-store", "Vary": "Accept"})
         owner_guard(request)   # 401·403·503. 화면 요청이 아닐 때만(위) 권한을 본다
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Vary"] = "Accept"
         try:
             rows = list(store.list_users())
         except Exception as exc:

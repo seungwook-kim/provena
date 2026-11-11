@@ -388,6 +388,8 @@ def test_browser_navigation_gets_react_page_and_fetch_gets_api(env, tmp_path):
     anon = TestClient(app)
     html = anon.get("/admin/users", headers=NAVIGATE)
     assert html.status_code == 200 and '<div id="root"></div>' in html.text   # 화면이 뜨고, 화면이 /me·API로 권한을 본다
+    # 같은 주소의 HTML이 브라우저 캐시에 남으면 화면 fetch가 HTML을 받아 '응답 형식 오류'가 난다(11/11 새로고침 재현)
+    assert html.headers["cache-control"] == "no-store" and "accept" in html.headers["vary"].lower()
     assert anon.get("/admin/users").status_code == 401                        # fetch 기본 Accept(*/*)는 API
     assert anon.get("/admin/users", headers={"Accept": "application/json"}).status_code == 401
     member = login(app, "member")
@@ -396,6 +398,7 @@ def test_browser_navigation_gets_react_page_and_fetch_gets_api(env, tmp_path):
     owner = login(app, OWNER)
     r = owner.get("/admin/users", headers={"Accept": "*/*"})
     assert r.status_code == 200 and r.headers["content-type"].startswith("application/json")
+    assert "accept" in r.headers["vary"].lower()
     assert {row["login_id"] for row in r.json()["users"]} >= {OWNER, "member"}
 
 
