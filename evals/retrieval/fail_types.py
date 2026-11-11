@@ -70,13 +70,21 @@ def classify(scored: list[dict]) -> dict[str, Any]:
     }
 
 
+def _rel(path: Path) -> str:
+    """저장소 기준 상대 경로(결과 파일에 작업 PC의 폴더 이름이 들어가지 않게)."""
+    try:
+        return path.resolve().relative_to(REPO).as_posix()
+    except ValueError:
+        return path.name
+
+
 def measure(label: str, results: Path, dataset: Path, corpus: list[Any], exclusions: dict[str, str]) -> dict[str, Any]:
     runs = load_runs(results)
     res = score_runs(runs, load_dataset(dataset), corpus, exclusions)
     per_run: dict[int, list[dict]] = defaultdict(list)
     for r in res["rows"]:
         per_run[r["run"]].append(r)
-    return {"measure": label, "results": results.as_posix(), "dataset": dataset.name, "rows_total": len(res["rows"]),
+    return {"measure": label, "results": _rel(results), "dataset": dataset.name, "rows_total": len(res["rows"]),
             "rows_without_chunk_ids": sum(not r["has_chunk_ids"] for r in res["rows"]),
             "unresolved_citations": sum(len(r["unresolved"]) for r in res["rows"]),
             "pooled": classify(res["rows"]), "per_run": {str(n): classify(rows) for n, rows in sorted(per_run.items())}}

@@ -45,4 +45,4 @@
 python -m evals.retrieval.fail_types --out evals/results/fail_types_00035
 ```
 
-저장된 파일만 읽는다(키·네트워크 없음). 결과 json의 `results` 칸에는 측정했던 PC의 작업 폴더 경로가 들어 있다(저장소 파일 경로가 아님).
+저장된 파일만 읽는다(키·네트워크 없음).

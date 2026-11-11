@@ -4,7 +4,7 @@
  "measures": [
   {
    "measure": "v2 50건",
-   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_provena-api-00035-h69",
+   "results": "evals/results/deploy_latency_provena-api-00035-h69",
    "dataset": "dataset_v2.jsonl",
    "rows_total": 150,
    "rows_without_chunk_ids": 0,
@@ -145,7 +145,7 @@
   },
   {
    "measure": "검증 20건",
-   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_holdout_provena-api-00035-h69",
+   "results": "evals/results/deploy_latency_holdout_provena-api-00035-h69",
    "dataset": "dataset_holdout_v1.jsonl",
    "rows_total": 60,
    "rows_without_chunk_ids": 0,
@@ -290,7 +290,7 @@
   },
   {
    "measure": "새 인용 5건",
-   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_cite_new_provena-api-00035-h69",
+   "results": "evals/results/deploy_latency_cite_new_provena-api-00035-h69",
    "dataset": "dataset_cite_new_v1.jsonl",
    "rows_total": 15,
    "rows_without_chunk_ids": 0,
