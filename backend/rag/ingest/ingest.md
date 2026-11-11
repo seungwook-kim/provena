@@ -5,7 +5,7 @@
 `handbook.py`(고른 절 git 수집, 2023 권한표 판 고정), `history.py`(커밋 이력에서 판 목록), `parse.py`(Markdown·Hugo 단축코드·HTML 표), `pdf.py`(글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱·청킹, 서비스 색인 전용, 현재 7건, Spec `docs/specs/parse.md`의 PDF 절), `chunk.py`(제목 단위, 약 800자, 120자 겹침, 청크 수는 겹침 없이 셈), `diff.py`(커밋 사이 바뀐 섹션), `load.py`(임베딩 적재, manifest), `schedule.py`(증분 수집, 가산 자동화), `changes.py`(바뀐 섹션 목록 읽기 `list_changed`, SELECT만, MCP `list_changed_sections`가 씀), `snapshot_diff.py`(git 없는 두 시점 문서 묶음을 섹션 단위로 비교해 같은 `ChangedArticle` 목록을 만듦, F-07), `compare.py`(원문 대조표: 파싱 결과 옆에 원본 줄과 GitLab 원본 링크). 수집은 로컬에서 한 번 하고 원문 스냅샷(`snapshot.py`로 `data/corpus.tar.gz` 한 파일)과 manifest를 커밋한다. 원문과 파싱 결과를 3건 이상 대조해 기록한다.
 
 - 주인: 박진형
-- 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표)
+- 실행: `python -m backend.rag.ingest.handbook` → `python -m backend.rag.ingest.history` (Spec `docs/specs/collect.md`) → `python -m backend.rag.ingest.parse` (Spec `docs/specs/parse.md`) → `python -m backend.rag.ingest.compare`(원문 대조표) → `python -m backend.rag.ingest.chunk` → `python -m backend.rag.ingest.load --manifest` (Spec `docs/specs/chunk.md`). 색인·적재는 `backend/rag/retrieve/`(Spec `docs/specs/search.md`)
 - 파싱 결과 `data/parsed/document_ir.jsonl`(로컬 생성물, `.gitignore`가 `data/parsed/*`를 제외해 저장소에는 없고 `authz_cells.jsonl`만 커밋됨) 한 줄 = 요소 하나: `element_id, rule_seq, org, kind(heading·paragraph·list_item·table_row·quote·html·code), heading_path, parent_id, order, line_start, line_end(원본 줄, 1부터), text, links, review`. 표 행은 `table_id, row, header, cells` 추가. 청킹(B-3)은 이 형식을 읽는다
 - 입력: 핸드북 저장소(고정 커밋)
 - 출력: 원문 스냅샷, 청크, 바뀐 섹션 목록(`ChangedArticle`)
@@ -14,6 +14,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 O-38 일부: 실행 순서에 `chunk`·`load --manifest`와 색인 위치 추가(11/2 정리 3b90241의 줄을 옮김). O-36: `docs/specs/eval-retrieval.md` 비교 명령의 `grid.json` → `evals/retrieval/grid_v1.json`, 청크 파일 두 경로 설명. O-38의 I-004·I-006·요소 수 문구는 남음 | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `schedule.py`에 `monitoring_paused`를 더해 변경 감시가 멈춰 있으면 실행 자리(슬롯)를 차지하지 않고 `{"status": "noop", "reason": "paused"}`로 끝나게 했다. `snapshot_diff.py`(F-07, git 없이 두 시점 문서 묶음 비교, `--feed`로 `changed_articles`에 넣음)를 추가했다. 시험 `tests/test_snapshot_diff.py`, `tests/test_api_changes.py` | 미정 |
 | 2026-11-03 | 박진형 (jinyeong-731, Claude Code) | 바뀐 섹션 목록 읽기 `changes.py`(`list_changed`, docs/specs/mcp.md How 2): `changed_articles` SELECT만, 실행 기록이 없으면 `LastRun=None`(not_ready), 쪽 통째 삭제는 `new_version_date`가 빈 칸이라 적은 날로 거름(EC-13). 시험 `tests/test_ingest_changes.py` 16개(DB 5개 포함), 상태 칸을 안 바꾸는지 표 지문으로 확인 | (이번 PR) |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | PDF 파싱 추가: `pdf.py`(`collect`로 고정 커밋 원본을 크기·sha256·git blob id 대조 후 `data/pdf/`에 둠, `run`으로 Docling(OCR 끔, `backend/requirements-ingest-pdf.txt`) 변환 → 요소 800개 → 청크 205개, PDF 7건). 원본 목록에 파일을 추가하면 같은 코드로 처리한다. `chunk.py`는 줄 번호가 없는 요소를 비운 채 청킹하도록 `line_span()`만 추가했고 기존 `chunks.jsonl` 해시는 그대로다. 산출물 `data/parsed/pdf_ir.jsonl`, `data/chunks/pdf_chunks.jsonl`은 평가 색인과 분리, 임베딩·DB 적재는 아직 하지 않음. 시험 `tests/test_ingest_pdf.py` 27건 | |
