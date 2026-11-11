@@ -15,7 +15,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 PAGE = Path(__file__).resolve().parent / "erp_screen.html"
-FORWARD_REQUEST = ("Cookie", "Content-Type", "X-CSRF-Token", "Accept")
+FORWARD_REQUEST = ("Content-Type", "X-CSRF-Token", "Accept")
+COOKIE_PREFIX = "provena_"   # 이 화면이 쓰는 쿠키(provena_auth, provena_csrf)만 API로 넘긴다
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """3xx를 따라가지 않고 그대로 돌려준다(다른 주소로 쿠키가 넘어가지 않게)."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+_opener = urllib.request.build_opener(_NoRedirect)
+
+
+def only_provena_cookies(header: str | None) -> str:
+    parts = [c.strip() for c in (header or "").split(";")]
+    return "; ".join(c for c in parts if c.startswith(COOKIE_PREFIX))
 
 
 def make_handler(upstream: str):
@@ -23,12 +39,18 @@ def make_handler(upstream: str):
 
     class Handler(BaseHTTPRequestHandler):
         def _proxy(self) -> None:
+            if not self.path.startswith("/") or self.path.startswith("//"):   # `upstream + path`가 다른 호스트를 가리키지 못하게
+                self._send(400, b"bad path", "text/plain; charset=utf-8", [])
+                return
             length = int(self.headers.get("Content-Length") or 0)
             data = self.rfile.read(length) if length else None
-            req = urllib.request.Request(upstream + self.path, data=data, method=self.command,
-                                         headers={h: self.headers[h] for h in FORWARD_REQUEST if self.headers.get(h)})
+            headers = {h: self.headers[h] for h in FORWARD_REQUEST if self.headers.get(h)}
+            cookie = only_provena_cookies(self.headers.get("Cookie"))
+            if cookie:
+                headers["Cookie"] = cookie
+            req = urllib.request.Request(upstream + self.path, data=data, method=self.command, headers=headers)
             try:
-                resp = urllib.request.urlopen(req, timeout=120)
+                resp = _opener.open(req, timeout=120)
             except urllib.error.HTTPError as e:
                 resp = e
             except OSError:
