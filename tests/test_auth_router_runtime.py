@@ -454,3 +454,47 @@ def test_router_login_id_budget_survives_ip_changes(auth_context):
         "/auth/login", json={"login_id": "different-id", "password": password},
         headers=csrf_headers(peer),
     ).status_code == 401
+
+
+# ---- J-14: 서명된 double-submit CSRF ----
+def _login_with(client: TestClient, password: str, cookie: str, header: str):
+    client.cookies.clear()   # 응답이 심은 쿠키와 중복되면 어느 쪽이 쓰일지 모호해진다
+    client.cookies.set(CSRF_COOKIE_NAME, cookie)
+    return client.post(
+        "/auth/login",
+        json={"login_id": "runtime-user", "password": password},
+        headers={"X-CSRF-Token": header},
+    )
+
+
+def test_csrf_unsigned_same_value_in_cookie_and_header_is_rejected(auth_context):
+    client, _store, _secret, password = auth_context
+    assert _login_with(client, password, "attacker-chosen", "attacker-chosen").status_code == 403
+    # 점이 있어도 서명을 모르면 통과하지 못한다
+    forged = "attacker." + "0" * 64
+    assert _login_with(client, password, forged, forged).status_code == 403
+
+
+def test_csrf_issued_token_is_accepted(auth_context):
+    client, _store, _secret, password = auth_context
+    assert login(client, password).status_code == 200
+
+
+def test_csrf_tampered_signature_is_rejected(auth_context):
+    client, _store, _secret, password = auth_context
+    issue_csrf(client)
+    token = client.cookies.get(CSRF_COOKIE_NAME)
+    last = token[-1]
+    bad = token[:-1] + ("0" if last != "0" else "1")
+    assert _login_with(client, password, bad, bad).status_code == 403
+
+
+def test_csrf_cookie_and_header_mismatch_is_rejected(auth_context):
+    client, _store, _secret, password = auth_context
+    issue_csrf(client)
+    first = client.cookies.get(CSRF_COOKIE_NAME)
+    client.cookies.clear()
+    issue_csrf(client)
+    second = client.cookies.get(CSRF_COOKIE_NAME)
+    assert first != second
+    assert _login_with(client, password, second, first).status_code == 403

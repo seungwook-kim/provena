@@ -453,8 +453,46 @@ def set_auth_cookie(
     )
 
 
-def create_csrf_token() -> str:
-    return secrets.token_urlsafe(32)
+# require_csrf는 Depends로 쓰여 서명 키를 인자로 받지 못한다. 키는 AUTH_SECRET(환경변수) 우선, 없으면 라우터·의존성을 만들 때
+# 등록된 서명 키(로컬 데모의 무작위 키 포함)를 쓴다. 운영에서는 둘이 같은 값이다 (J-14).
+_registered_secret: str | None = None
+
+
+def _register_secret(secret: str | None) -> None:
+    global _registered_secret
+    if secret:
+        _registered_secret = secret
+
+
+def _csrf_key() -> bytes | None:
+    resolved = os.getenv("AUTH_SECRET") or _registered_secret
+    if not resolved or len(resolved.encode("utf-8")) < MIN_AUTH_SECRET_BYTES:
+        return None
+    # JWT 서명과 같은 키를 그대로 쓰지 않도록 용도 이름을 섞는다
+    return hmac.new(resolved.encode("utf-8"), b"provena-csrf-v1", hashlib.sha256).digest()
+
+
+def _csrf_signature(key: bytes, nonce: str) -> str:
+    return hmac.new(key, nonce.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def create_csrf_token(secret: str | None = None) -> str:
+    """서명된 double-submit 토큰: 난수 + "." + HMAC-SHA256(서버 비밀, 난수)."""
+    if secret is not None:
+        key = hmac.new(_get_secret(secret).encode("utf-8"), b"provena-csrf-v1", hashlib.sha256).digest()
+    else:
+        key = _csrf_key()
+        if key is None:
+            raise AuthConfigurationError("AUTH_SECRET is not configured")
+    nonce = secrets.token_urlsafe(32)
+    return f"{nonce}.{_csrf_signature(key, nonce)}"
+
+
+def _csrf_token_signed(token: str, key: bytes) -> bool:
+    nonce, dot, signature = token.partition(".")
+    if not dot or not nonce or not signature:
+        return False
+    return hmac.compare_digest(signature.encode("utf-8"), _csrf_signature(key, nonce).encode("utf-8"))
 
 
 def set_csrf_cookie(
@@ -719,9 +757,10 @@ def require_csrf(request: Request) -> None:
     """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME, "")
     header_token = request.headers.get("x-csrf-token", "")
-    if not cookie_token or not header_token or not hmac.compare_digest(
+    key = _csrf_key()
+    if key is None or not cookie_token or not header_token or not hmac.compare_digest(
         cookie_token.encode("utf-8"), header_token.encode("utf-8")
-    ):
+    ) or not _csrf_token_signed(cookie_token, key):
         raise HTTPException(status_code=403, detail="CSRF 검증에 실패했습니다.")
 
 
@@ -750,6 +789,7 @@ def create_current_user_dependency(
     revocation_store: TokenRevocationStore | None = None,
 ) -> Callable:
     """Use Depends(result) in future protected team endpoints."""
+    _register_secret(secret)
     def current_user(request: Request) -> AuthUser:
         return get_current_user(request, store=store, secret=secret, revocation_store=revocation_store)
 
@@ -781,6 +821,7 @@ def create_require_admin_dependency(
     For a state-changing route, also add Depends(require_csrf). Bind the same
     secret as the auth router, including when local demo uses a random secret.
     """
+    _register_secret(secret)
     def admin_dependency(request: Request) -> AuthUser:
         return require_admin(request, store=store, secret=secret, revocation_store=revocation_store)
 
@@ -820,6 +861,7 @@ def create_auth_router(
     resolved_email_sender = email_sender if email_sender is not None else configured_email_sender()
     current_user = create_current_user_dependency(store=store, secret=secret, revocation_store=revocation_store)
     resolved_secret = _get_secret(secret)
+    _register_secret(resolved_secret)
     resolved_google_store = google_oauth_store
     if resolved_google_store is None and callable(getattr(store, "get_or_create_google_user", None)):
         resolved_google_store = cast(GoogleOAuthStore, store)
@@ -841,7 +883,7 @@ def create_auth_router(
     @router.get("/auth/csrf", status_code=204)
     def csrf() -> Response:
         response = Response(status_code=204)
-        set_csrf_cookie(response, create_csrf_token(), secure=cookie_secure)
+        set_csrf_cookie(response, create_csrf_token(resolved_secret), secure=cookie_secure)
         response.headers["Cache-Control"] = "no-store"
         return response
 

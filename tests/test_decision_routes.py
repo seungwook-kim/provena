@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import InMemorySaver
 
-from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token
+from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token, create_csrf_token
 from backend.graph.decision import rules as R
 from backend.graph.decision import routes as Routes
 from backend.graph.decision.convert import build_convert_graph
@@ -69,8 +69,9 @@ class Ctx:
         if who is not None:
             c.cookies.set(AUTH_COOKIE_NAME, create_access_token(who.user_id, who.role, secret=self.secret))
         if csrf:
-            c.cookies.set(CSRF_COOKIE_NAME, CSRF)
-            c.headers["X-CSRF-Token"] = CSRF
+            token = create_csrf_token(self.secret)   # 서명된 토큰(J-14)
+            c.cookies.set(CSRF_COOKIE_NAME, token)
+            c.headers["X-CSRF-Token"] = token
         return c
 
     def table(self, category: str = EXPENSE, tid: str | None = None, status: str = "approved") -> str:

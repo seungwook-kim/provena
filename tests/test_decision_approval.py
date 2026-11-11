@@ -567,7 +567,7 @@ def test_postgres_real_runtime_routes_after_restart_with_save_failure(pg_url, mo
     from fastapi.testclient import TestClient
     from uuid import uuid4
 
-    from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token
+    from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token, create_csrf_token
     from backend.graph.decision.routes import create_decision_router, open_decision_runtime
     from backend.graph.departments.store import PgIssueTableStore
     from backend.services.auth_store import _default_connect
@@ -590,8 +590,9 @@ def test_postgres_real_runtime_routes_after_restart_with_save_failure(pg_url, mo
     app.include_router(create_decision_router(store=Users(), secret=secret))
     client = TestClient(app)
     client.cookies.set(AUTH_COOKIE_NAME, create_access_token(admin.user_id, admin.role, secret=secret))
-    client.cookies.set(CSRF_COOKIE_NAME, "csrf")
-    post = lambda aid, **body: client.post(f"/approvals/{aid}", json=body, headers={"X-CSRF-Token": "csrf"})  # noqa: E731
+    csrf_token = create_csrf_token(secret)
+    client.cookies.set(CSRF_COOKIE_NAME, csrf_token)
+    post = lambda aid, **body: client.post(f"/approvals/{aid}", json=body, headers={"X-CSRF-Token": csrf_token})  # noqa: E731
 
     def mine():
         return [x for x in client.get("/approvals").json() if x["approval_id"] in seen]

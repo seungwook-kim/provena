@@ -35,7 +35,7 @@
 |---|---|
 | 없는 ID·틀린 비밀번호·비활성 계정·허용하지 않은 role | 같은 401 `로그인 정보가 올바르지 않습니다.` |
 | 없는 ID | 사전에 준비한 bcrypt 더미 해시를 `verify_password()`로 검증한 뒤 401. 더미 계정·DB 레코드 생성과 요청별 해시 생성은 하지 않는다. 응답 시간 차이 완화 목적이며 완전한 상수 시간 보장은 아니다. |
-| CSRF 쿠키·헤더 누락 또는 불일치 | 403 |
+| CSRF 쿠키·헤더 누락·불일치, 또는 서명이 틀린 토큰(서명 없는 임의 값을 쿠키·헤더에 같이 넣은 경우 포함) | 403 |
 | 검증 입력 오류 | 민감한 입력값을 노출하지 않는 422 |
 | 로그인 ID 단독의 60초 내 실패 5회 또는 `request.client.host` 기준 IP 단독의 60초 내 실패 30회 소진 | 다음 로그인 요청부터 429. 성공 로그인은 해당 ID 기록만 초기화하고 IP 기록은 유지한다. |
 | 동일 IP에서 다른 ID로 로그인 | ID별 제한은 공유하지 않는다. 여러 ID의 실패는 해당 IP 기록에 합산되어 IP 한도를 소진하면 429를 반환한다. |
@@ -50,7 +50,7 @@
 - 구현: `backend/auth.py`, 라우터: `create_auth_router(*, store, secret=None, cookie_secure=None, rate_limiter=None)`
 - 비밀번호: bcrypt, 최소 8자·UTF-8 기준 최대 72바이트. 원문·hash·JWT를 응답이나 로그에 남기지 않는다.
 - JWT: `HS256`, `user_id`, `role`, `iat`, `exp`를 포함하며 `AUTH_SECRET`은 최소 32바이트여야 한다.
-- 인증 쿠키: `provena_auth`, `HttpOnly`, `SameSite=Lax`, `Path=/`, 기본 30분. CSRF 쿠키는 `provena_csrf`이며 읽기 가능하다.
+- 인증 쿠키: `provena_auth`, `HttpOnly`, `SameSite=Lax`, `Path=/`, 기본 30분. CSRF 쿠키는 `provena_csrf`이며 읽기 가능하다. 토큰은 `난수.HMAC-SHA256(AUTH_SECRET 파생 키, 난수)` 형식의 서명된 double-submit이고, `require_csrf`는 쿠키·헤더 일치와 서명을 모두 검사한다(J-14).
 - 쿠키 `Secure` 기본값은 True이며, `PROVENA_ENV=local` 및 `PROVENA_DEV_MODE=1`일 때만 로컬 HTTP용 False를 허용한다.
 - `current_user_id(request: Request) -> str`: 쿠키 JWT의 정규화된 UUID 문자열만 반환한다. 요청 본문·query string의 `user_id`는 신뢰하지 않으며 인증 실패는 401이다.
 - `GET /me`는 JWT 검증 뒤 `AuthStore`에서 활성 상태와 role을 다시 확인한다.

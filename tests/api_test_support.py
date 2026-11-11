@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from qgraph_fakes import normal_llm
 from team_review_fakes import Retriever
 
-from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token
+from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token, create_csrf_token
 from backend.graph.build import build_graph
 from backend.graph.departments.review import build_review_graph
 
@@ -76,8 +76,9 @@ class Env:
         if who is not None:
             c.cookies.set(AUTH_COOKIE_NAME, create_access_token(who.user_id, who.role, secret=self.secret))
         if csrf:
-            c.cookies.set(CSRF_COOKIE_NAME, CSRF)
-            c.headers["X-CSRF-Token"] = CSRF
+            token = create_csrf_token(self.secret)   # 서명된 토큰(J-14)
+            c.cookies.set(CSRF_COOKIE_NAME, token)
+            c.headers["X-CSRF-Token"] = token
         return c
 
 
