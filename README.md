@@ -126,7 +126,8 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 
 1. 브라우저에서 http://localhost:8000 을 연다(로그인 화면으로 이동한다). 상태 확인은 http://localhost:8000/health 이다.
 2. **로컬 데모 계정**으로 로그인한다. 아이디는 `demo-user`(일반 사용자), `demo-admin`(관리자)이다. 비밀번호는 [.env.example](./.env.example)의 `DEMO_USER_PASSWORD`, `DEMO_ADMIN_PASSWORD` 값이고, 바꾸려면 `.env`에 같은 이름으로 적는다([.env.example](./.env.example) 참고).
-3. 끝내려면 `docker compose down`, 데이터까지 지우려면 `docker compose down -v`.
+3. `demo-admin`은 최고 관리자(`PROVENA_OWNER_LOGIN_ID`)이기도 하다. compose가 이 값을 `demo-admin`으로 넣어 주므로 가입 승인·사용자 관리 화면이 열린다(다른 아이디로 바꾸려면 `.env`에 `PROVENA_OWNER_LOGIN_ID=<아이디>`). 일반 관리자가 이 화면을 열면 403이다.
+4. 끝내려면 `docker compose down`, 데이터까지 지우려면 `docker compose down -v`.
 
 8000번 포트를 이미 쓰고 있으면 `.env`에 `API_PORT=8001`처럼 적고 그 포트로 연다.
 
@@ -139,6 +140,9 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 
 ### 키 없이 뜨는 데모 모드
 
+- 화면 둘러보기: 18080(compose)의 `/demo/*` 화면(정책 변경 감시·운영 현황 등 정적 미리보기)은 열리지 않고 `/login`으로 돌아간다. 이 화면은 vite 개발 서버(`npm run dev`, `web/react-app`)에서만 열리며, 빌드에 넣으려면 빌드할 때 `VITE_ENABLE_LOCAL_DEMO=true`를 준다(`DemoPages.jsx` 라우트 가드). 평가는 `/chat`, `/recalls`, `/approvals` 같은 실제 화면으로 한다(H-25).
+- 키 없는 데모에서 만들어지지 않는 것: 결정표 변환(`/decision-tables/convert`, 502), 합동 검토, 리콜 알림 생성은 LLM 호출이 필요한데 녹화에 없어 실제 화면으로 확인할 수 없다. 이 세 화면은 vite 목업(`npm run dev`의 `/demo/*`)으로만 본다. LLM 키를 넣으면 실제로 동작한다(L-23, 알려진 한계).
+- 첫 화면의 추천 질문 3개는 위 녹화 질문과 같은 글자라 키 없이도 인용 답이 나온다(K-20). 로그인 사용자의 기억(`/onboarding`)은 키 없는 데모에서 질문 입력에 넣지 않는다(녹화에 기억이 없어 넣으면 녹화한 질문까지 거절된다, K-18). 가입 인증번호는 로컬에서 서버 로그(`docker compose logs api`의 `[로컬 전용] 가입 인증번호`)에 남는다(K-21).
 - `DEMO_MODE=1`(기본)이면 LLM 키 없이 `data/demo_replay/`의 녹화 응답을 재생하고, 녹화 요청과 맞지 않는 호출은 결정적 가짜 응답으로 대신한다. **녹화는 2026-11-10 23:25 최종 코드로 다시 떴다(커밋 `a03ac9f`).** 2026-11-09 녹화는 커밋 `4f03a8d` 이후의 프롬프트(`ANSWER_SYSTEM`, `redraft_user` 규칙 추가)와 맞지 않아 답 본문이 "검색된 근거를 그대로 발췌한 답입니다(데모 모드: 실제 LLM이 쓴 답이 아닙니다)"라는 대체 문장이 되던 상태여서 새 녹화로 대체했다. 재녹화 뒤 키 없는 재생 시험 `python -m pytest -m demo_replay`가 통과했고, 데모 질문 결과가 아래 기대와 일치한다. 검색과 인용(섹션, 판 날짜, 출처 안내)은 전과 같이 붙는다. 녹화가 현재 코드와 맞는지는 키·네트워크 없이 `python -m pytest -m demo_replay`(`tests/test_demo_replay_fresh.py`)로 확인한다. 이 시험은 데모 질문마다 서버와 같은 질문 그래프를 새 Postgres에서 돌려 `data/demo_replay/recorded.jsonl`에 없는 요청이 하나라도 있으면 실패하고 다시 녹화하라고 안내한다(프롬프트나 검색을 바꾼 뒤 실행하며, Docker와 pgvector 이미지가 필요하다. 접속 정보를 직접 줄 때는 `PROVENA_D5_PG_URL`). 실패하면 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`로 다시 녹화한다(`DATABASE_URL`, `LLM_API_KEY`, `LLM_PROVIDER`, `VOYAGE_API_KEY` 필요). 검색 색인은 위 절차대로 `loader`가 `data/index.tar.gz`(없으면 `INDEX_URL`)를 풀어 적재하며, 색인이 없으면 질문은 거절로 끝난다(상태는 [docs/GATES.md](./docs/GATES.md) G2).
 - 새 clone 기동 확인(2026-11-10 20:35~20:58, 병합 커밋 `e8b8059`, PR #116, #117 포함): `.env` 없이 `docker compose up`으로 db healthy, loader 청크 23,095개 적재, `/health` 200, 데모 계정 두 개 로그인 200을 확인했다. 아래 인용 질문 5개는 모두 인용이 붙은 답(`kind=answer`)이 나왔다(승인 권한표 2023-05판 등). **다만 이 시점에는 5개 모두 답 본문이 발췌 대체 문장이었다(녹화 재생이 아님). 2026-11-10 23:25 재녹화(`a03ac9f`) 뒤에는 키 없는 재생 시험 `pytest -m demo_replay`가 통과했다.** DB는 `db/*.sql`(`db/109` 포함)로 새로 만들어 오류 없이 만들어졌다. 증거는 `evals/results/fresh_clone_keyless_2026-11-10/`, 판정은 [docs/GATES.md](./docs/GATES.md) G2.
 - 녹화는 LLM 응답과 질문 임베딩(voyage-4 벡터) 두 가지다. 키가 없으면 새 질문의 벡터를 만들 수 없으므로, **녹화한 질문만 키 없이 답이 나온다.** 녹화에 없는 질문은 "검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다."라는 거절로 끝난다. 다른 질문을 시험하려면 `.env`에 `LLM_API_KEY`와 `VOYAGE_API_KEY`를 넣고 `DEMO_MODE=0`으로 바꾼다.
