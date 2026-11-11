@@ -106,6 +106,10 @@ class GoogleOAuthError(AuthError):
     """Google OAuth could not prove the browser or identity request is valid."""
 
 
+class GoogleLoginUnavailableError(AuthConfigurationError):
+    """The user store cannot serve Google login yet (e.g. db/203 user_identities·google_sub not applied)."""
+
+
 class GoogleAccountLinkError(GoogleOAuthError):
     """A verified Google e-mail cannot be linked (inactive, unverified or already linked account)."""
 
@@ -801,6 +805,10 @@ def create_auth_router(
             raise AuthConfigurationError("Google OAuth user store is not configured")
         if google_id_token_verifier is None and not getattr(jwt.algorithms, "has_crypto", False):
             raise AuthConfigurationError("Google ID token verification dependency is not configured")
+        available = getattr(resolved_google_store, "google_login_available", None)
+        if callable(available) and not available():
+            # 운영 DB에 Google 연결 표(db/203)가 아직 없으면 Google 로그인만 끄고 비밀번호 로그인은 그대로 둔다.
+            raise GoogleLoginUnavailableError("Google login schema is not applied")
         return config, resolved_google_store
 
     @router.get("/auth/csrf", status_code=204)
@@ -1107,6 +1115,8 @@ def create_auth_router(
             return _google_oauth_failure_response(GOOGLE_OAUTH_PENDING_PATH)
         except GoogleSignupRejectedError:
             return _google_oauth_failure_response(GOOGLE_OAUTH_REJECTED_PATH)
+        except GoogleLoginUnavailableError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_UNAVAILABLE_PATH)
         except (AuthConfigurationError, GoogleOAuthError, RevocationStoreUnavailableError, InvalidTokenError, Exception):
             # OAuth failures must not disclose token, provider, storage, or configuration details.
             return _google_oauth_failure_response()

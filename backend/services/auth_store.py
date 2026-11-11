@@ -24,7 +24,8 @@ from threading import RLock
 from typing import Any
 from uuid import UUID, uuid4
 
-from backend.auth import AuthUser, GoogleAccountLinkError, GoogleSignupPendingError, GoogleSignupRejectedError
+from backend.auth import (AuthUser, GoogleAccountLinkError, GoogleLoginUnavailableError, GoogleSignupPendingError,
+                          GoogleSignupRejectedError)
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "101_auth_users.sql"
 REVOCATION_SCHEMA_FILE = Path(__file__).resolve().parents[2] / "db" / "103_auth_token_revocations.sql"
@@ -38,6 +39,14 @@ GOOGLE_PROVIDER = "google"
 ROLES = frozenset({"user", "admin"})
 
 _COLUMNS = "user_id, login_id, password_hash, role, is_active"
+
+# db/203 이 적용됐는지(signup_requests.google_sub 열과 user_identities 표가 둘 다 있는지). 운영 DB는 203 전일 수 있다.
+_GOOGLE_SCHEMA_SQL = (
+    "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = ANY (current_schemas(false)) "
+    "AND table_name = 'signup_requests' AND column_name = 'google_sub') "
+    "AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = ANY (current_schemas(false)) "
+    "AND table_name = 'user_identities')"
+)
 
 
 def _google_email(email: str) -> str:
@@ -145,6 +154,9 @@ class MemoryAuthStore:
             if request is None or request.get("google_sub") is not None:
                 return None
             return (request["status"], request["password_hash"])
+
+    def google_login_available(self) -> bool:
+        return True
 
     def get_or_create_google_user(self, provider: str, subject: str, email: str) -> AuthUser:
         """구글 sub 한 개 -> 계정 하나. 이미 연결된 sub, 아니면 같은 이메일의 인증된 활성 계정에 연결, 아니면 가입 신청."""
@@ -375,6 +387,24 @@ class PostgresAuthStore:
                 raise ValueError("dsn 또는 connect가 필요하다")
             connect = _default_connect(dsn)
         self._connect = connect
+        self._google_schema: bool | None = None  # db/203 적용 여부. 저장소마다 한 번만 확인한다(ensure_schema 뒤에는 다시 본다)
+
+    def _has_google_schema(self, conn: Any) -> bool:
+        """signup_requests.google_sub 열과 user_identities 표가 있는지. 처음 한 번만 information_schema 를 본다."""
+        if self._google_schema is None:
+            row = conn.execute(_GOOGLE_SCHEMA_SQL).fetchone()
+            self._google_schema = bool(row and row[0])
+        return self._google_schema
+
+    def google_login_available(self) -> bool:
+        """203 전 DB면 False(콜백·시작이 Google 로그인 사용 불가 안내로 보낸다). 확인 중 저장소 오류도 False(캐시하지 않음)."""
+        if self._google_schema is None:
+            try:
+                with self._connect() as conn:
+                    self._has_google_schema(conn)
+            except Exception:
+                return False
+        return bool(self._google_schema)
 
     def _fetch_one(self, sql: str, params: tuple) -> AuthUser | None:
         with self._connect() as conn:
@@ -404,8 +434,9 @@ class PostgresAuthStore:
         before a users record exists.
         """
         with self._connect() as conn:
+            google_filter = " AND google_sub IS NULL" if self._has_google_schema(conn) else ""  # 203 전에는 구글 신청 행이 없다
             row = conn.execute(
-                "SELECT status, password_hash FROM signup_requests WHERE login_id = %s AND google_sub IS NULL "
+                f"SELECT status, password_hash FROM signup_requests WHERE login_id = %s{google_filter} "
                 "ORDER BY request_id DESC LIMIT 1",
                 (login_id,),
             ).fetchone()
@@ -496,6 +527,8 @@ class PostgresAuthStore:
         email = _google_email(email)
         outcome: str | AuthUser
         with self._connect() as conn:
+            if not self._has_google_schema(conn):
+                raise GoogleLoginUnavailableError("Google login schema is not applied")
             with conn.transaction():
                 outcome = self._google_resolve(conn, provider, subject, email)
         if isinstance(outcome, AuthUser):
@@ -645,9 +678,11 @@ class PostgresAuthStore:
         status = "approved" if action == "approve" else "rejected"
         reviewer = UUID(str(reviewed_by))
         with self._connect() as conn:
+            google_col = "google_sub" if self._has_google_schema(conn) else "NULL"  # 203 전 DB에는 열이 없다
             with conn.transaction():
                 row = conn.execute(
-                    "SELECT request_id, status, password_hash, email_verification_required, email_verified_at, google_sub FROM signup_requests "
+                    "SELECT request_id, status, password_hash, email_verification_required, email_verified_at, "
+                    f"{google_col} FROM signup_requests "
                     "WHERE login_id = %s ORDER BY request_id DESC LIMIT 1 FOR UPDATE", (login_id,)
                 ).fetchone()
                 if row is None:
@@ -752,6 +787,7 @@ class PostgresAuthStore:
         with self._connect() as conn:
             for schema_file in (SCHEMA_FILE, REVOCATION_SCHEMA_FILE, ADMIN_LOG_SCHEMA_FILE, SIGNUP_SCHEMA_FILE, EMAIL_VERIFICATION_SCHEMA_FILE, PRIVACY_SCHEMA_FILE, SIGNUP_EDGES_SCHEMA_FILE, GOOGLE_SCHEMA_FILE):
                 conn.execute(schema_file.read_text(encoding="utf-8"))
+        self._google_schema = None  # 방금 203 을 적용했을 수 있으니 다음 호출에서 다시 확인한다
 
 
 class PostgresTokenRevocationStore:

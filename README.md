@@ -197,7 +197,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
    - 로컬: `http://localhost:8000/auth/google/callback`
 3. OAuth 동의 화면이 "테스트" 상태이면 **테스트 사용자**에 로그인할 Google 계정을 추가한다(없으면 그 계정은 동의 화면에서 막힌다).
 4. Cloud Run에 환경 변수 3개를 넣는다: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`(Secret Manager 권장), `GOOGLE_REDIRECT_URI`(위 배포 URI와 같은 값). 로컬은 같은 3개를 `.env`에 둔다(`GOOGLE_REDIRECT_URI`는 로컬 URI).
-5. 운영 DB에 `db/203_google_identities.sql`을 적용한다(`101`·`106` 다음. 다시 돌려도 된다). 적용 전에 Google 로그인을 켜면 첫 로그인이 실패 화면으로 간다.
+5. 운영 DB에 `db/203_google_identities.sql`을 적용한다(`101`·`106` 다음. 다시 돌려도 된다). 적용 전에는 Google 로그인 버튼이 "지금은 사용할 수 없습니다" 안내로 가고 비밀번호 로그인·가입·승인은 그대로 된다. 적용한 뒤 서버를 다시 시작한다.
 6. 구글이 인증한 이메일이 이미 인증·승인된 계정의 이메일과 정확히 같으면 그 계정에 연결돼 바로 로그인된다(역할은 그대로). 같은 이메일 계정이 없으면 **관리자 승인 대기**로 시작하고(`/login?oauth_error=google_signup_pending`), 최고 관리자가 `/admin/signup-requests`에서 승인하면 다음 로그인부터 들어간다. 연결 조건은 `docs/specs/login.md`의 "Google 로그인 계정 연결".
 
 내 정보·사용자 관리를 쓰려면 배포 전에 운영 DB에 `db/104_user_profiles.sql`, `db/105_admin_role_log.sql`을 적용한다. `user_profiles` 표가 없으면 `/me`가 503이 되어 로그인 뒤 화면이 열리지 않는다.
