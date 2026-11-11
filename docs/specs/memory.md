@@ -27,7 +27,7 @@
 2. 서버는 로그인 쿠키에서 얻은 사용자 id로 Store의 `(user_id, "profile")` namespace, 키 `me`에 값을 쓴다. 보낸 칸만 갱신하고 나머지는 그대로 둔다.
 3. 사용자가 `/chat`으로 질문하면 서버는 같은 사용자 id를 그래프 입력의 `user_id`로 넘긴다.
 4. 그래프의 첫 노드 `load_memory`가 `get_profile(store, user_id)`로 그 사용자의 프로필을 읽어 State의 `profile`에 둔다.
-5. `profile`은 질문 종류 분류 프롬프트와 재작성 프롬프트에 "소속·직급: ..." 줄에 프로필 dict 통째(담당 서비스 포함)로 들어가고, 입력에 절(`org`)이 없고 재작성도 절을 정하지 않았을 때 검색 범위(`search_org`)로 `affiliation` 값이 쓰인다.
+5. `profile`은 질문 종류 분류 프롬프트와 재작성 프롬프트에 "소속·직급: ..." 줄에 소속·직급(`affiliation`·`rank`)만 들어가고(담당 서비스 `service`는 저장만 한다, `PROMPT_PROFILE_FIELDS`),, 입력에 절(`org`)이 없고 재작성도 절을 정하지 않았을 때 검색 범위(`search_org`)로 `affiliation` 값이 쓰인다.
 6. 사용자가 `GET /me/memory`로 저장된 값을, `DELETE /me/memory`로 지운 결과를 확인한다.
 
 ### Edge Cases

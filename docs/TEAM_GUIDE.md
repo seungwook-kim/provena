@@ -147,7 +147,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` �
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환·실행 (F-04)
 │  │  └─ recall/    recall.md     # 리콜 판정·알림·웹훅·검토함·요약·영향 미리보기 (F-02, F-05, F-08)
-│  ├─ memory/       memory.md     # Store 장기 기억 (현재 칸은 소속·직급, docs/specs/memory.md). 템플릿 memory.py 자리
+│  ├─ memory/       memory.md     # Store 장기 기억 (현재 칸은 소속·직급·담당 서비스, docs/specs/memory.md). 템플릿 memory.py 자리
 │  └─ prompts/      prompts.md
 │
 ├─ skills/          skills.md     # 런타임 Skill 13개 (가산: MCP와 Skill)

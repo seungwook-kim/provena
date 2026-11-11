@@ -32,7 +32,7 @@ VITE_API_BASE_URL=
 ## 현재 인증·연동 상태
 
 - 로그인 UI는 아이디와 비밀번호를 받고, 서버 요청 본문에 기존 계약 그대로 `login_id`와 `password`를 전달합니다.
-- 회원가입은 서버 `POST /auth/signup`(backend/auth.py:1001-1002)에 연결되어 있고(`src/lib/signup.js:21`), 가입 신청 계정은 관리자 승인 대기 상태로 저장됩니다. Google 로그인은 서버 라우트(`/auth/google/start`·`callback`, backend/auth.py:1109·1102)와 화면 버튼(`LoginPage.jsx:48`, `SignupPage.jsx:48`)이 있습니다. 사용자 생성 함수 `get_or_create_google_user`는 `backend/auth.py:159`에 Protocol로 선언되어 있고 `MemoryAuthStore`·`PostgresAuthStore`에 구현이 있습니다(backend/services/auth_store.py:161, 482). 실제 Google 로그인은 실행해 보지 않았습니다(코드로만 확인).
+- 회원가입은 서버 `POST /auth/signup`(`signup`, backend/auth.py:1053)에 연결되어 있고(`requestSignup`, `src/lib/signup.js:25`), 가입 신청 계정은 관리자 승인 대기 상태로 저장됩니다. Google 로그인은 서버 라우트(`/auth/google/start`·`callback`, `google_start`·`google_callback`, backend/auth.py:1152·1193)와 화면 버튼(`LoginPage.jsx:111`, `SignupPage.jsx:15`)이 있습니다. 사용자 생성 함수 `get_or_create_google_user`는 `backend/auth.py:159`에 Protocol로 선언되어 있고 `MemoryAuthStore`·`PostgresAuthStore`에 구현이 있습니다(backend/services/auth_store.py:161, 522). 실제 Google 로그인은 실행해 보지 않았습니다(코드로만 확인).
 - 실제 API·DB 연동, 권한별 접근 제한, Cloud Run 배포 동작은 별도로 검증해야 합니다.
 
 ## 사후 구현 상태 정정
@@ -49,7 +49,7 @@ VITE_API_BASE_URL=
 - 관리자 메뉴와 `/admin`, `/approvals` UI는 `/me`의 `admin` role에서만 표시합니다. 클라이언트 검사는 보안 경계가 아니며 실제 API는 서버에서 권한을 검사해야 합니다.
 - 로그아웃은 CSRF 발급 후 서버 204 응답을 확인해야 완료됩니다. 실패하면 현재 화면에 오류를 표시합니다.
 - 임시 기억은 사용자별 sessionStorage에만 저장하며 로그아웃·세션 만료·사용자 변경 시 정리합니다. 기존 공용 localStorage 기억은 읽거나 사용자에게 이관하지 않습니다.
-- 브라우저 저장소는 보안 격리 수단이 아닙니다. 민감한 정보는 저장하지 않습니다. 서버 장기 기억 `GET/PATCH/DELETE /me/memory`(backend/api/routes.py:359-378)는 `src/lib/api.js:142·150·151`의 `getMemory`·`patchMemory`·`deleteMemory`로 연결되어 있고(소속·직급 두 칸), sessionStorage는 임시 기억만 담습니다.
+- 브라우저 저장소는 보안 격리 수단이 아닙니다. 민감한 정보는 저장하지 않습니다. 서버 장기 기억 `GET/PATCH/DELETE /me/memory`(backend/api/routes.py:359-378)는 `src/lib/api.js:194·201·202`의 `getMemory`·`patchMemory`·`deleteMemory`로 연결되어 있고(소속·직급·담당 서비스 세 칸), sessionStorage는 임시 기억만 담습니다.
 
 ## 검증
 

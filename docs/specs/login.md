@@ -15,7 +15,7 @@
 - bcrypt 비밀번호 검증, JWT(HttpOnly 쿠키), CSRF 검증, 사용자 활성 상태·role 재확인을 제공한다.
 - `Depends(current_user_id)`가 인증된 UUID 문자열을 제공하도록 한다.
 - 로그인 ID 단독으로 60초 동안 실패 5회, `request.client.host` 기준 IP 단독으로 60초 동안 실패 30회를 독립 집계하고, 어느 하나라도 소진되면 다음 요청부터 HTTP 429를 반환한다.
-- 같은 라우터가 `POST /auth/signup`(가입 신청, 관리자 승인 전까지 로그인 불가, 201)과 `GET /auth/google/start`·`GET /auth/google/callback`(Google 로그인)도 제공한다(`backend/auth.py:1001-1002, 1061, 1102`). 가입 승인 쪽 규칙은 `admin-roles.md`.
+- 같은 라우터가 `POST /auth/signup`(가입 신청, 관리자 승인 전까지 로그인 불가, 201)과 `GET /auth/google/start`·`GET /auth/google/callback`(Google 로그인)도 제공한다(`create_auth_router` 안 `signup` `backend/auth.py:1053`, `google_start` `:1152`, `google_callback` `:1193`). 가입 승인 쪽 규칙은 `admin-roles.md`.
 - **Out of Scope**: 비밀번호 재설정, 분산 rate limiter.
 
 ## What

@@ -183,7 +183,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
 │  │  └─ recall/    recall.md     # 리콜 판정·알림·웹훅·검토함·요약·영향 미리보기 (F-02, F-05, F-08)
-│  ├─ memory/       memory.md     # Store 장기 기억 (현재 코드가 저장하는 칸은 소속·직급 둘, `docs/specs/memory.md`)
+│  ├─ memory/       memory.md     # Store 장기 기억 (현재 코드가 저장하는 칸은 소속·직급·담당 서비스 셋, `docs/specs/memory.md`)
 │  └─ prompts/      prompts.md
 │
 ├─ skills/          skills.md     # 런타임 Skill (가산: MCP와 Skill). 상세는 2-3
@@ -391,7 +391,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | 리콜 알림 | 바뀐 답, 개정 전후 섹션, 설명 | `/recalls` |
 | 관리자 | 결정표 목록, 연결 정책 후보 | `/decision-tables`, `/recalls` |
 | 가입 | 가입 신청(승인 전에는 로그인 불가 안내) | `/auth/signup` |
-| 내 정보·기억 | 내 정보 입력·수정, 장기 기억(소속·직급) 보기·고치기·지우기 | `/me/profile`, `/me/memory` |
+| 내 정보·기억 | 내 정보 입력·수정, 장기 기억(소속·직급·담당 서비스) 보기·고치기·지우기 | `/me/profile`, `/me/memory` |
 | 변경 감시 | 바뀐 섹션 목록, 개정 전후 본문, 감시 켜기·멈추기(관리자) | `/changes`, `/changes/monitoring` |
 | 사용자 관리 (최고 관리자) | 사용자 목록, 관리자 등록·해제, 가입 신청 승인·거절 | `/admin/users`, `/admin/signup-requests` |
 
