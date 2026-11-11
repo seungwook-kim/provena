@@ -101,7 +101,7 @@ def _tracked(model, n):
     """그래프처럼 RunnableLambda 안에서 CostTracker 콜백을 달고 n번 부른다. (calls, input_tokens)를 돌려준다."""
     from langchain_core.runnables import RunnableLambda
     from backend.services.cost import CostTracker
-    tracker = CostTracker(100.0, default_model="claude-haiku-5-5")
+    tracker = CostTracker(100.0)
     chain = RunnableLambda(lambda q: model.invoke([HumanMessage(q)]))
     for _ in range(n):
         chain.invoke("q", {"callbacks": [tracker]})
@@ -119,7 +119,7 @@ def test_cost_counted_once_per_miss_and_zero_on_hit():
 def test_eval_bypass_counts_cost_once():
     from langchain_core.runnables import RunnableLambda
     from backend.services.cost import CostTracker
-    tracker = CostTracker(100.0, default_model="claude-haiku-5-5")
+    tracker = CostTracker(100.0)
     m = CachingChatModel(inner=_UsageInner(responses=["x"]))
     RunnableLambda(lambda q: m.invoke([HumanMessage(q)])).invoke("q", {"callbacks": [tracker], "metadata": {"eval": True}})
     assert tracker.summary()["calls"] == 1 and tracker.summary()["input_tokens"] == 1000
