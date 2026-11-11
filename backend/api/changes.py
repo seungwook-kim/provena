@@ -11,8 +11,6 @@
 """
 from __future__ import annotations
 
-import subprocess
-import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
@@ -110,11 +108,6 @@ def _totals(st: Any, since: str) -> dict[str, int] | None:
         return None
 
 
-def _spawn_sync(slot: str) -> None:
-    """수집 한 번을 별도 프로세스로 시작한다(응답을 막지 않는다). 시험은 `app.state.sync_launcher`로 바꿔 끼운다."""
-    subprocess.Popen([sys.executable, "-m", "backend.rag.ingest.schedule", "--once", "--slot", slot])  # noqa: S603
-
-
 def _monitoring(st: Any) -> str:
     try:
         return st.monitoring_get().get("status") or "active"
@@ -164,7 +157,7 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
 
     @router.post("/admin/sync")
     def post_sync(request: Request, body: SyncBody | None = None, admin: AuthUser = Depends(admin_user), _csrf: None = Depends(require_csrf)) -> dict:
-        """증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). `dry_run=false`일 때만 수집을 시작한다."""
+        """증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). dry_run=false는 501(실제 실행 방식 미정)."""
         from backend.rag.ingest import schedule   # 수집 모듈은 읽기만 한다(import). 무거운 의존성이라 부를 때 불러온다
 
         body = body or SyncBody()
@@ -174,11 +167,8 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
         plan = {"slot": slot, "scheduled_slot": schedule.slot_of(now), "monitoring": _monitoring(st)}
         if body.dry_run:
             return {"dry_run": True, "started": False, **plan}
-        if plan["monitoring"] == "paused":
-            raise ApiError(409, "monitoring_paused", "변경 감시가 멈춰 있어 수집을 시작하지 않습니다.")
-        launcher = getattr(request.app.state, "sync_launcher", None) or _spawn_sync
-        launcher(slot)
-        return {"dry_run": False, "started": True, **plan}
+        # 실제 실행 방식(Cloud Run Job, workflow_dispatch, 이미지에 git 설치)은 팀장이 정한다. 그 전에는 아무것도 시작하지 않는다
+        raise ApiError(501, "manual_sync_not_supported", "실제 수동 수집은 아직 지원하지 않습니다. 정시 수집(GitHub Actions handbook-sync)을 사용하세요. dry_run=true로는 계획만 볼 수 있습니다.")
 
     @router.get("/changes/{event_id}", response_model=None)
     def get_change(event_id: str, request: Request, response: Response):

@@ -205,9 +205,10 @@ def test_manual_sync_requires_login_and_admin(env):
     assert env.client(env.admin, csrf=False).post("/admin/sync", json={}).status_code == 403   # CSRF 없이는 거부
 
 
-def test_manual_sync_dry_run_is_default_and_starts_nothing(env):
-    started = []
-    env.app.state.sync_launcher = started.append
+def test_manual_sync_dry_run_is_default_and_starts_nothing(env, monkeypatch):
+    import subprocess
+    spawned = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: spawned.append(a))
     admin = env.client(env.admin)
     for kwargs in ({}, {"json": {}}, {"json": {"dry_run": True}}):
         r = admin.post("/admin/sync", **kwargs)
@@ -215,16 +216,16 @@ def test_manual_sync_dry_run_is_default_and_starts_nothing(env):
         body = r.json()
         assert body["dry_run"] is True and body["started"] is False and body["slot"].startswith("manual-")
         assert body["monitoring"] == "active"
-    assert started == []
+    assert spawned == []
 
 
-def test_manual_sync_real_run_only_when_asked_and_not_paused(env):
-    started = []
-    env.app.state.sync_launcher = started.append
+def test_manual_sync_real_run_is_not_supported_and_spawns_nothing(env, monkeypatch):
+    import subprocess
+    spawned = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: spawned.append(a))
     admin = env.client(env.admin)
     r = admin.post("/admin/sync", json={"dry_run": False})
-    assert r.status_code == 200 and r.json()["started"] is True and started == [r.json()["slot"]]
-    admin.put("/changes/monitoring", json={"status": "paused"})
-    r = admin.post("/admin/sync", json={"dry_run": False})
-    assert r.status_code == 409 and r.json()["error"]["code"] == "monitoring_paused" and len(started) == 1
+    assert r.status_code == 501 and r.json()["error"]["code"] == "manual_sync_not_supported"
+    assert "handbook-sync" in r.json()["error"]["message"]
+    assert spawned == []
     assert admin.post("/admin/sync", json={"dry_run": "x", "extra": 1}).status_code == 422

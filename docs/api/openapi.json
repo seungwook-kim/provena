@@ -1512,7 +1512,7 @@
     },
     "/admin/sync": {
       "post": {
-        "description": "증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). `dry_run=false`일 때만 수집을 시작한다.",
+        "description": "증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). dry_run=false는 501(실제 실행 방식 미정).",
         "operationId": "post_sync_admin_sync_post",
         "requestBody": {
           "content": {
