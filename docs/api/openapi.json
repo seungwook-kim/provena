@@ -1816,6 +1816,9 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Signup request is pending approval or rejected, or (error code signup_unverified) its email verification is not finished yet"
+          },
           "422": {
             "content": {
               "application/json": {

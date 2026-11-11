@@ -14,6 +14,7 @@
 | conflict | 409 | 상태 충돌 |
 | approval_pending | 409 | 승인 대기 중인 thread에 새 질문 |
 | not_approved | 409 | 승인되지 않은 결정표 실행 (결정표 라우트가 아래 규칙으로 낸다, `backend/graph/decision/rules.py`) |
+| signup_unverified | 403 | 이메일 인증을 마치지 않은 가입 신청으로 로그인(`backend/auth.py`, 이어하기 안내) |
 | rate_limited | 429 | 로그인 시도 제한 |
 | limit_exceeded | 429 | LLM 비용 상한 초과 (SSE `error` 이벤트의 data.code도 같은 값) |
 | not_configured | 503 | 서버 설정이나 저장소를 쓸 수 없음 |

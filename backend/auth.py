@@ -84,6 +84,9 @@ def _is_missing_signup_table_error(exc: Exception) -> bool:
 
 SIGNUP_PENDING_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다."
 SIGNUP_REJECTED_MESSAGE = "가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요."
+# 이메일 인증을 마치지 않은 대기 신청: 관리자 승인 대기가 아니라 인증이 먼저다(오류 code signup_unverified)
+SIGNUP_UNVERIFIED_CODE = "signup_unverified"
+SIGNUP_UNVERIFIED_MESSAGE = "이메일 인증을 먼저 마쳐 주세요. 로그인 화면의 '이메일 인증 이어하기'에서 인증번호를 다시 받을 수 있습니다."
 
 
 class AuthError(Exception):
@@ -818,7 +821,23 @@ def create_auth_router(
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    @router.post("/auth/login", response_model=UserResponse)
+    def _signup_unverified(login_id: str) -> bool:
+        """비밀번호가 맞은 대기 신청이 이메일 인증 전인지. 확인하지 못하면 False(기존 승인 대기 안내)."""
+        get_verification = getattr(store, "get_signup_verification", None)
+        if not callable(get_verification):
+            return False
+        try:
+            row = get_verification(login_id)
+        except Exception:
+            return False
+        return bool(row and row.get("status") == "pending" and row.get("email_verification_required")
+                    and row.get("email_verified_at") is None)
+
+    @router.post(
+        "/auth/login",
+        response_model=UserResponse,
+        responses={403: {"description": "Signup request is pending approval or rejected, or (error code signup_unverified) its email verification is not finished yet"}},
+    )
     def login(request: Request, payload: LoginRequest, response: Response) -> UserResponse:
         require_csrf(request)
         login_id = payload.login_id.strip().lower() if "@" in payload.login_id else payload.login_id
@@ -854,6 +873,8 @@ def create_auth_router(
                 raise HTTPException(status_code=403, detail=SIGNUP_REJECTED_MESSAGE)
         elif signup is not None and password_valid:
             approval_status = signup[0]
+            if approval_status == "pending" and _signup_unverified(login_id):
+                raise HTTPException(status_code=403, detail={"reason": SIGNUP_UNVERIFIED_CODE, "message": SIGNUP_UNVERIFIED_MESSAGE})
             if approval_status == "pending":
                 raise HTTPException(status_code=403, detail=SIGNUP_PENDING_MESSAGE)
             if approval_status == "rejected":

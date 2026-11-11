@@ -76,6 +76,24 @@ def test_verified_pending_cannot_be_overwritten(monkeypatch):
     assert verify_password(OLD, store._signup_requests["done@example.com"]["password_hash"])
 
 
+def test_login_before_email_verification_says_verify_first(monkeypatch):
+    """인증 전 대기 신청으로 로그인하면 '관리자 승인 대기'가 아니라 '이메일 인증 먼저'(code signup_unverified)."""
+    from backend.api.errors import install_error_handlers
+    from backend.auth import SIGNUP_PENDING_MESSAGE, SIGNUP_UNVERIFIED_MESSAGE
+
+    client, store, sender = build(monkeypatch)
+    install_error_handlers(client.app)
+    assert signup(client, "early@example.com", OLD).status_code == 201
+    early = client.post("/auth/login", json={"login_id": "early@example.com", "password": OLD}, headers=csrf(client))
+    assert early.status_code == 403
+    assert early.json()["error"]["code"] == "signup_unverified" and early.json()["detail"] == SIGNUP_UNVERIFIED_MESSAGE
+    wrong = client.post("/auth/login", json={"login_id": "early@example.com", "password": NEW}, headers=csrf(client))
+    assert wrong.status_code == 401  # 비밀번호가 틀리면 신청 상태를 알려 주지 않는다
+    assert verify(client, "early@example.com", sender.deliveries[-1]["code"]).status_code == 200
+    later = client.post("/auth/login", json={"login_id": "early@example.com", "password": OLD}, headers=csrf(client))
+    assert later.status_code == 403 and later.json()["detail"] == SIGNUP_PENDING_MESSAGE
+    assert later.json()["error"]["code"] == "forbidden"
+
 # --- 2. 거절 뒤 재가입 ---------------------------------------------------------
 
 def test_rejected_email_can_sign_up_again(monkeypatch):
