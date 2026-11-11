@@ -323,11 +323,13 @@ describe('React authentication and session isolation', () => {
     render(<App />)
     await screen.findByRole('heading', { name: '어느 팀에서 일하시나요?' })
     expect(screen.getByText('소속된 팀을 선택해 주세요.')).toBeTruthy()
+    expect(screen.getByText(/등록 완료 시 저장됩니다/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: '이전' })).toBeNull()
     await userEvent.click(await screen.findByRole('button', { name: '보안' }))
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
     expect(screen.getByText('주로 담당하는 업무 역할을 선택해 주세요.')).toBeTruthy()
+    expect(screen.queryByText(/등록 완료 시 저장됩니다/)).toBeNull()   // H-30: 같은 안내를 단계마다 되풀이하지 않는다
     expect(screen.getByRole('button', { name: '이전' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '개발자' }))
     await userEvent.click(screen.getByRole('button', { name: '다음' }))

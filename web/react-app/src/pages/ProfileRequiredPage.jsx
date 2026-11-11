@@ -268,7 +268,7 @@ function ProfileOnboardingPage() {
       <div className="profile-stepper" aria-label="등록 단계">{steps.map((item, index) => <span key={item.label} className={index <= step ? 'active' : ''}>{index + 1}</span>)}</div>
       <h1 id="profile-title">{current.title}</h1>
       <p className="profile-step-description">{current.description}</p>
-      <p className="profile-storage-notice">소속 팀·업무 역할·담당 서비스는 등록 완료 시 저장됩니다. 업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없습니다.</p>
+      {step === 0 && <p className="profile-storage-notice">소속 팀·업무 역할·담당 서비스는 등록 완료 시 저장됩니다. 업무 역할은 시스템 관리자(Admin/Owner) 권한과 관계없습니다.</p>}
       {loading ? <p role="status">회원정보를 불러오는 중입니다.</p> : <>
         {step === 0 && <div className="profile-choice-grid">{TEAM_OPTIONS.map(option => <button type="button" key={option} className={form.team === option ? 'selected' : ''} onClick={() => update('team', option)}>{option}</button>)}</div>}
         {step === 0 && <FieldError id="profile-error-team" message={fieldErrors.team} />}
