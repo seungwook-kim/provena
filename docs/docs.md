@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 통합 PR 작업 내역 `docs/pr-notes/PR-next.md` 추가(번호는 PR이 열린 뒤 이름 변경), `deliverables/ai_tools_log.md`에 통합 PR 한 줄 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 로컬 시험·측정 값에 로컬·배포 미확인 표기(`SDD.md` Google 로그인 설명, `specs/106`·`incremental.md`, `pr-notes/PR-127·130`, 포트폴리오 인용 정확도 행). 문구만, 숫자 재측정 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11: `GATES.md` G7 칸의 '10장 미작성' 문구를 `EVAL_REPORT.md` 10장 작성 사실에 맞게 고침(O-47, 시연 영상 미작성은 그대로). 측정·호출 없음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | #127·#129·#130 기록 보강: ai_tools_log 추가, 폴더 md PR 칸 채움, PR별 작업 내역 md(docs/pr-notes/) 추가 | 미정 |
