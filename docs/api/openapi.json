@@ -897,6 +897,17 @@
             ],
             "title": "Is Owner"
           },
+          "login_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Id"
+          },
           "profile_completed": {
             "anyOf": [
               {
@@ -950,6 +961,18 @@
               }
             ],
             "title": "Rank"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
           }
         },
         "title": "MemoryPatch",

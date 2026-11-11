@@ -165,7 +165,7 @@ def test_google_callback_issues_existing_jwt_cookie_for_verified_subject(oauth_c
     assert store.calls == [("google", "google-subject-123", "verified@example.test")]
     assert exchanger.code_verifier
     assert verifier.nonce
-    assert client.get("/me").json() == {"user_id": str(store.user.user_id), "role": "user"}
+    assert client.get("/me").json() == {"user_id": str(store.user.user_id), "role": "user", "login_id": store.user.login_id}
 
 
 def test_google_first_login_provisions_user_and_relogin_reuses_provider_subject(monkeypatch):
@@ -406,7 +406,7 @@ def test_google_email_links_to_existing_verified_account(local_env):
     assert result == "changed"
     client, response = _google_login(_google_app(store))
     assert response.headers["location"] == "/"
-    assert client.get("/me").json() == {"user_id": str(user.user_id), "role": "user"}
+    assert client.get("/me").json() == {"user_id": str(user.user_id), "role": "user", "login_id": user.login_id}
     assert [r.status for r in store.list_signup_requests()] == ["approved"]  # 새 신청이 생기지 않았다
 
 
@@ -416,7 +416,7 @@ def test_google_link_keeps_admin_role_and_does_not_mint_admins(local_env):
     store._users["boss@example.test"] = AuthUser(boss.user_id, boss.login_id, boss.password_hash, "admin", True)  # 운영자가 올린 상태
     client, response = _google_login(_google_app(store, "boss-sub", "boss@example.test"))
     assert response.headers["location"] == "/"
-    assert client.get("/me").json() == {"user_id": str(boss.user_id), "role": "admin"}
+    assert client.get("/me").json() == {"user_id": str(boss.user_id), "role": "admin", "login_id": "boss@example.test"}
     assert store.get_by_login_id("boss@example.test").role == "admin"
     # 계정이 없는 이메일은 구글로 와도 admin 이 되지 않고 승인 대기 신청만 생긴다
     client2, response2 = _google_login(_google_app(store, "other-sub", "new-admin@example.test"))

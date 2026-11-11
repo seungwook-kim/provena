@@ -419,7 +419,7 @@ def test_login_flow_through_main_app_with_fake_store(monkeypatch):
     assert ok.status_code == 200 and ok.json() == {"user_id": str(uid), "role": "user"}
     assert client.cookies.get(AUTH_COOKIE_NAME)
     # 사용자 관리(요청 2번): main.py가 /me에 is_owner를 더한다. PROVENA_OWNER_LOGIN_ID가 없으면 false(닫힘)
-    assert client.get("/me").json() == {"user_id": str(uid), "role": "user", "profile_completed": False, "is_owner": False}
+    assert client.get("/me").json() == {"user_id": str(uid), "role": "user", "login_id": "demo-user", "profile_completed": False, "is_owner": False}
     assert client.post("/auth/logout", headers=headers).status_code == 204
     assert client.get("/me").status_code == 401
 

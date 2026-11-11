@@ -9,6 +9,8 @@ const CHANGE_TYPES = ['MODIFIED', 'ADDED', 'REMOVED', 'HELD']
 const CHANGE_LABELS = { MODIFIED: '수정', ADDED: '추가', REMOVED: '삭제', HELD: '동결 보류' }
 const DELIVERY_LABELS = { pending: '알림 발송 대기', sent: '알림 발송 완료', failed: '알림 발송 실패' }
 const MONITORING_LABELS = { active: '감시 중', paused: '일시 중지' }
+// sync_runs.status values (backend/rag/ingest/schedule.py, changes.py:79). Unknown values are shown as is.
+const RUN_STATUS_LABELS = { succeeded: '완료', noop: '변경 없음', running: '진행 중', failed: '실패' }
 const NOT_FOUND = '변경 기록을 찾을 수 없습니다.'
 
 function Marked({ text, mark }) {
@@ -94,7 +96,7 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
   const lastRun = snapshot.lastRun
 
   return <DemoLayout active="changes"><main className="change-service-page">
-    <header className="change-service-heading"><div><h1>정책 변경 감시</h1>{live && lastRun && <p>마지막 수집 {lastRun.finishedAt || '시각 미기록'}{lastRun.status ? ` · ${lastRun.status}` : ''}</p>}</div>{live && <MonitoringControl service={service} status={snapshot.monitoring?.status ?? null} isAdmin={isAdmin} />}</header>
+    <header className="change-service-heading"><div><h1>정책 변경 감시</h1>{live && lastRun && <p>마지막 수집 {lastRun.finishedAt || '시각 미기록'}{lastRun.status ? ` · ${RUN_STATUS_LABELS[lastRun.status] ?? lastRun.status}` : ''}</p>}</div>{live && <MonitoringControl service={service} status={snapshot.monitoring?.status ?? null} isAdmin={isAdmin} />}</header>
     <section className="change-service-tools"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="정책 문서 검색" aria-label="정책 문서 검색" /><div>{CHANGE_TYPES.map(kind => <button type="button" key={kind} className={enabled[kind] ? 'selected' : ''} onClick={() => setEnabled(current => ({ ...current, [kind]: !current[kind] }))}>{CHANGE_LABELS[kind]}</button>)}</div></section>
     {status === 'error' && records.length > 0 && <p className="recall-action-error" role="alert">{listErrorMessage(snapshot.error)} <button type="button" onClick={() => service.listChanges().catch(() => {})}>다시 시도</button></p>}
     <ChangeDistribution counts={typeCounts} scope={serverCounts ? '조회 기간 전체 기준' : '현재 목록 기준'} />

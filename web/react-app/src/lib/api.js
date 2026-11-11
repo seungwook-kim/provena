@@ -20,22 +20,47 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, options = {}) {
+// 변경 요청이 겹칠 때 /auth/csrf를 여러 번 받으면 쿠키가 바뀌어 먼저 읽은 토큰이 틀어진다(H-18).
+// 진행 중인 토큰 요청은 하나로 합친다.
+let csrfInFlight = null
+function fetchCsrfCookie() {
+  if (!csrfInFlight) {
+    csrfInFlight = apiRequest('/auth/csrf').then(() => readCsrfToken()).finally(() => { csrfInFlight = null })
+  }
+  return csrfInFlight
+}
+
+export async function apiRequest(path, options = {}, csrfRetried = false) {
   const requestEpoch = authEpoch
   const { suppressUnauthorized = false, ...requestOptions } = options
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: 'include',
-    // 화면 주소와 API 주소가 같은 곳(/admin/users, /recalls, /approvals)은 새로고침 때 받은 HTML이 브라우저 캐시에 남아
-    // fetch가 그 HTML을 받으면 '서버 응답 형식이 올바르지 않습니다'가 된다 → API 요청은 캐시를 쓰지 않는다
-    cache: 'no-store',
-    ...requestOptions,
-    headers: {
-      ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
-      ...requestOptions.headers,
-    },
-  })
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: 'include',
+      // 화면 주소와 API 주소가 같은 곳(/admin/users, /recalls, /approvals)은 새로고침 때 받은 HTML이 브라우저 캐시에 남아
+      // fetch가 그 HTML을 받으면 '서버 응답 형식이 올바르지 않습니다'가 된다 → API 요청은 캐시를 쓰지 않는다
+      cache: 'no-store',
+      ...requestOptions,
+      headers: {
+        ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
+        ...requestOptions.headers,
+      },
+    })
+  } catch (error) {
+    // 서버가 꺼졌거나 네트워크가 끊기면 브라우저가 영어 "Failed to fetch"를 던진다 → 한국어 안내로 바꾼다. 취소(AbortError)는 그대로 둔다.
+    if (error?.name === 'AbortError') throw error
+    throw new ApiError('서버에 연결하지 못했습니다. 네트워크를 확인하고 잠시 후 다시 시도해 주세요.', 0, 'network_error')
+  }
 
   if (!response.ok) {
+    // 다른 요청이 쿠키를 바꿔 토큰이 어긋났으면(403 csrf_failed) 새 토큰으로 한 번만 다시 보낸다.
+    if (response.status === 403 && !csrfRetried && requestOptions.headers?.['X-CSRF-Token']) {
+      const code = await response.clone().json().then(body => body?.error?.code, () => undefined)
+      if (code === 'csrf_failed') {
+        const fresh = await fetchCsrfCookie()
+        if (fresh) return apiRequest(path, { ...options, headers: { ...requestOptions.headers, 'X-CSRF-Token': decodeURIComponent(fresh) } }, true)
+      }
+    }
     if (requestEpoch === authEpoch && response.status === 401 && !suppressUnauthorized && !['/me', '/auth/login', '/auth/logout'].includes(path)) {
       for (const listener of unauthorizedListeners) listener()
     }
@@ -58,6 +83,9 @@ export async function apiRequest(path, options = {}) {
     } catch {
       // HTML 등 JSON이 아닌 오류 응답은 내부 내용을 사용자에게 노출하지 않습니다.
     }
+    // 429에 Retry-After(초)가 있으면 남은 시간을 문구에 붙인다(H-29)
+    const wait = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+    if (response.status === 429 && wait > 0) detail = `${detail} (약 ${wait}초 뒤 가능)`
     throw new ApiError(detail, response.status, errorCode ?? (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'request_failed'), fieldReasons)
   }
 
@@ -74,11 +102,7 @@ export async function apiJson(path, options = {}) {
 }
 
 export async function login(loginId, password) {
-  await apiRequest('/auth/csrf')
-  const csrfToken = document.cookie
-    .split('; ')
-    .find((cookie) => cookie.startsWith('provena_csrf='))
-    ?.split('=')[1]
+  const csrfToken = await fetchCsrfCookie()
 
   if (!csrfToken) throw new Error('CSRF 토큰을 받을 수 없습니다.')
 
@@ -94,10 +118,16 @@ export async function acknowledgeRecall(recallId) {
 }
 
 export async function logout() {
-  await apiRequest('/auth/csrf')
-  const csrfToken = document.cookie.split('; ').find((cookie) => cookie.startsWith('provena_csrf='))?.split('=')[1]
+  const csrfToken = await fetchCsrfCookie()
   if (!csrfToken) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 로그아웃을 다시 시도해 주세요.')
-  const response = await apiRequest('/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(csrfToken) } })
+  let response
+  try {
+    response = await apiRequest('/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(csrfToken) } })
+  } catch (error) {
+    // 세션이 이미 만료됐으면 서버에 지울 세션이 없다. 로컬 세션은 그대로 지운다(H-19).
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
   if (response.status !== 204) throw new ApiError('로그아웃 완료를 확인하지 못했습니다. 다시 시도해 주세요.')
   return response
 }
@@ -108,11 +138,14 @@ function readCsrfToken() {
   return document.cookie.split('; ').find(cookie => cookie.startsWith('provena_csrf='))?.split('=')[1]
 }
 
+// 전화번호를 가린 보기(phone_masked). 화면에 보여 주기만 할 때 쓴다.
+export function getProfile() { return apiJson('/me/profile') }
+
+// 원래 전화번호가 담긴 보기. 내 정보를 고치는 화면에서만 쓴다.
 export function getProfileForEdit() { return apiJson('/me/profile?view=edit') }
 
 export async function saveProfile(profile) {
-  await apiRequest('/auth/csrf')
-  const token = readCsrfToken()
+  const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return apiJson('/me/profile', {
     method: 'PUT',
@@ -125,8 +158,7 @@ export function listAdminUsers() { return apiJson('/admin/users') }
 export function listSignupRequests() { return apiJson('/admin/signup-requests') }
 
 export async function reviewSignupRequest(loginId, action) {
-  await apiRequest('/auth/csrf')
-  const token = readCsrfToken()
+  const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
   return apiJson(`/admin/signup-requests/${encodeURIComponent(loginId)}/${action}`, {
     method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
@@ -134,17 +166,23 @@ export async function reviewSignupRequest(loginId, action) {
 }
 
 export async function reviewSignupRequestById(requestId, action) {
-  await apiRequest('/auth/csrf')
-  const token = readCsrfToken()
+  const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF token unavailable', 0, 'csrf_unavailable')
   return apiJson(`/admin/signup-requests/by-id/${encodeURIComponent(requestId)}/${action}`, {
     method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
   })
 }
 
+export async function resetSignupVerification(requestId) {
+  const token = await fetchCsrfCookie()
+  if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/by-id/${encodeURIComponent(requestId)}/reset-verification`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
+
 export async function changeAdminRole(loginId, action) {
-  await apiRequest('/auth/csrf')
-  const token = readCsrfToken()
+  const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return apiJson(`/admin/users/${encodeURIComponent(loginId)}/${action}`, {
     method: 'POST',
@@ -155,8 +193,7 @@ export function getThreads() { return apiJson('/threads', { suppressUnauthorized
 export function getThread(threadId) { return apiJson(`/threads/${encodeURIComponent(threadId)}`) }
 export function getMemory() { return apiJson('/me/memory', { suppressUnauthorized: true }) }
 async function csrfHeaders() {
-  await apiRequest('/auth/csrf')
-  const token = readCsrfToken()
+  const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return { 'X-CSRF-Token': decodeURIComponent(token) }
 }

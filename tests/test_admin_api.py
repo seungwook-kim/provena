@@ -188,7 +188,7 @@ def test_promote_then_revoke_takes_effect_on_next_request_without_relogin(env):
     owner = login(app, OWNER)
     member = login(app, "member")                       # 등록 전에 받은 쿠키
     assert member.get("/approvals-like").status_code == 403
-    assert member.get("/me").json() == {"user_id": str(store.users["member"].user_id), "role": "user", "is_owner": False}
+    assert member.get("/me").json() == {"user_id": str(store.users["member"].user_id), "role": "user", "login_id": "member", "is_owner": False}
 
     r = post(owner, "member", "promote")
     assert r.status_code == 200 and r.json() == {"login_id": "member", "role": "admin", "changed": True}
@@ -306,7 +306,7 @@ def test_me_without_owner_check_keeps_old_shape(monkeypatch):
     app = FastAPI()
     app.state.token_revocation_store = revocations_for(store)
     app.include_router(create_test_auth_router(store=store, secret=secrets.token_urlsafe(48), cookie_secure=False))
-    assert set(login(app, "member").get("/me").json()) == {"user_id", "role"}
+    assert set(login(app, "member").get("/me").json()) == {"user_id", "role", "login_id"}
 
 
 def test_is_owner_rules():

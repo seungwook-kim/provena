@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { apiRequest } from './lib/api'
 
-const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user' }
+const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', login_id: 'a-user@example.com' }
 const B = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin' }
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 let server
@@ -17,7 +17,7 @@ beforeEach(() => {
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   window.history.replaceState({}, '', '/chat')
   calls = []
-  server = { user: null, profile: null, savedProfile: null, putFields: null, memory: {}, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
+  server = { user: null, profile: null, savedProfile: null, putFields: null, memory: {}, memoryPatches: [], memoryPatchStatus: 200, memoryGetStatus: 200, logoutStatus: 204, csrfStatus: 204, meStatus: 200, meHook: null }
   vi.stubGlobal('fetch', vi.fn(async (path, options) => {
     calls.push({ path, options })
     if (path === '/me') {
@@ -37,8 +37,10 @@ beforeEach(() => {
       return json(server.user)
     }
     if (path === '/me/memory' && options?.method === 'PATCH') {
+      if (server.memoryPatchStatus !== 200) return json({ error: { code: 'unavailable', message: '기억 저장소가 응답하지 않습니다.' } }, server.memoryPatchStatus)
       const memoryOwner = server.user?.user_id ?? 'anonymous'
-      server.memory[memoryOwner] = JSON.parse(options.body)
+      server.memoryPatches.push(JSON.parse(options.body))
+      server.memory[memoryOwner] = { ...server.memory[memoryOwner], ...JSON.parse(options.body) }
       return json({ profile: server.memory[memoryOwner] })
     }
     if (path === '/me/memory' && options?.method === 'DELETE') {
@@ -47,6 +49,7 @@ beforeEach(() => {
       return new Response(null, { status: 204 })
     }
     if (path === '/me/memory') {
+      if (server.memoryGetStatus !== 200) return json({ detail: 'unavailable' }, server.memoryGetStatus)
       return json({ profile: server.memory[server.user?.user_id ?? 'anonymous'] ?? {} })
     }
     if (path === '/auth/logout') {
@@ -68,6 +71,8 @@ beforeEach(() => {
       if (server.user) server.user = { ...server.user, profile_completed: true }
       return json({ name: server.savedProfile.name, dept: server.savedProfile.dept, phone_masked: '010-****-5678', address: server.savedProfile.address })
     }
+    // 가린 보기(GET /me/profile): 원래 전화번호(phone)는 주지 않는다 (backend/profile_api.py _view)
+    if (path === '/me/profile') return server.profile ? json({ name: server.profile.name, dept: server.profile.dept, phone_masked: '010-****-5678', address: server.profile.address }) : json({ detail: '내 정보가 아직 없습니다.' }, 404)
     return json({ detail: '인증이 필요합니다.' }, 401)
   }))
 })
@@ -155,15 +160,21 @@ describe('React authentication and session isolation', () => {
     expect(screen.queryByRole('navigation', { name: '관리자 메뉴' })).toBeNull()
   })
 
-  it('shows all six fields on the completed-user profile edit screen, keeps role and service optional, and saves only the profile API fields', async () => {
+  it('shows all six fields on the completed-user profile edit screen and saves them to the profile API and the memory API', async () => {
     server.user = { ...A, profile_completed: true }
     server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
+    server.memory[A.user_id] = { affiliation: '개발', rank: 'SRE', service: '모니터링' }
     window.history.replaceState({}, '', '/myinfo')
     render(<App />)
     await screen.findByRole('heading', { name: '회원정보 수정' })
     expect(await screen.findByLabelText('소속 팀 *')).toBeTruthy()
-    await userEvent.selectOptions(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)'), '개발자')
-    const service = screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)')
+    // 불러오기: 내 정보 API와 AI 기억 API를 둘 다 읽어 역할·서비스를 채운다.
+    await waitFor(() => expect(screen.getByLabelText('업무 역할 (선택)').value).toBe('SRE'))
+    expect(screen.getByLabelText('담당 서비스 (선택)').value).toBe('모니터링')
+    expect(calls.map(call => call.path)).toEqual(expect.arrayContaining(['/me/profile?view=edit', '/me/memory']))
+    await userEvent.selectOptions(screen.getByLabelText('업무 역할 (선택)'), '개발자')
+    const service = screen.getByLabelText('담당 서비스 (선택)')
+    await userEvent.clear(service)
     await userEvent.type(service, '결제 API')
     expect(screen.getByLabelText('이름 *')).toBeTruthy()
     const phone = screen.getByLabelText('전화번호 *')
@@ -171,13 +182,15 @@ describe('React authentication and session isolation', () => {
     const address = screen.getByLabelText('근무지 주소 * (5~100자)')
     expect(address.className).toBe('profile-address-field')
     await userEvent.clear(service)
-    // 담당 서비스는 저장되지 않는 선택 칸이라 비워도 저장을 막지 않는다(새로고침하면 늘 비어 있다).
+    // 담당 서비스는 선택 칸이라 비워도 저장을 막지 않는다.
     expect(screen.getByRole('button', { name: '변경사항 저장' }).disabled).toBe(false)
     await userEvent.type(service, '결제 API')
     await userEvent.clear(phone)
     await userEvent.type(phone, '01098765432')
     await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '부산광역시 해운대구 우동 1' })
+    expect(server.memoryPatches).toEqual([{ rank: '개발자', service: '결제 API' }])   // 바뀐 칸만
+    expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
   })
 
   it('lets a returning user save basic info while role and service stay empty', async () => {
@@ -187,8 +200,8 @@ describe('React authentication and session isolation', () => {
     render(<App />)
     await screen.findByRole('heading', { name: '회원정보 수정' })
     const phone = await screen.findByLabelText('전화번호 *')
-    expect(screen.getByLabelText('업무 역할 (선택 · 저장 연동 준비 중)').value).toBe('')
-    expect(screen.getByLabelText('담당 서비스 (선택 · 저장 연동 준비 중)').value).toBe('')
+    expect(screen.getByLabelText('업무 역할 (선택)').value).toBe('')
+    expect(screen.getByLabelText('담당 서비스 (선택)').value).toBe('')
     await userEvent.clear(phone)
     await userEvent.type(phone, '01098765432')
     const save = screen.getByRole('button', { name: '변경사항 저장' })
@@ -196,6 +209,90 @@ describe('React authentication and session isolation', () => {
     await userEvent.click(save)
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '부산광역시 해운대구 우동 1' })
     expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
+    // 소속 팀은 내 정보(dept)에만 저장한다. 한글 팀 이름을 기억의 affiliation(검색 범위)으로 보내지 않는다.
+    expect(server.memoryPatches).toEqual([])
+  })
+
+  it('tells exactly what was saved when the memory API fails after the profile API succeeded', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
+    server.memory[A.user_id] = { affiliation: '개발' }
+    server.memoryPatchStatus = 503
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    await userEvent.selectOptions(await screen.findByLabelText('업무 역할 (선택)'), 'SRE')
+    const phone = screen.getByLabelText('전화번호 *')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe('기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.')
+    expect(server.savedProfile.phone).toBe('010-9876-5432')
+    expect(screen.queryByRole('status')).toBeNull()   // 거짓 성공 문구 없음
+    // 다시 저장하면 내 정보는 바뀐 게 없어 다시 보내지 않고, 기억만 다시 보낸다.
+    server.savedProfile = null
+    server.memoryPatchStatus = 200
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
+    expect(server.savedProfile).toBeNull()
+    expect(server.memoryPatches).toEqual([{ rank: 'SRE' }])
+  })
+
+  it('saves nothing and says so when the profile API rejects while memory fields changed', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
+    server.memory[A.user_id] = { affiliation: '개발' }
+    server.putFields = { phone: '전화번호 형식이 올바르지 않습니다.' }
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    await userEvent.selectOptions(await screen.findByLabelText('업무 역할 (선택)'), 'SRE')
+    const phone = screen.getByLabelText('전화번호 *')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    expect((await screen.findAllByRole('alert')).some(node => node.textContent === '입력한 내용을 확인해 주세요. 아무것도 저장되지 않았습니다.')).toBe(true)
+    expect(server.memoryPatches).toEqual([])
+  })
+
+  it('does not overwrite stored role and service when the memory API cannot be read', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.profile = { name: '홍길동', dept: '개발', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' }
+    server.memoryGetStatus = 503
+    window.history.replaceState({}, '', '/myinfo')
+    render(<App />)
+    await screen.findByRole('heading', { name: '회원정보 수정' })
+    expect((await screen.findByRole('alert')).textContent).toContain('AI 기억(업무 역할·담당 서비스)을 불러오지 못해')
+    expect(screen.getByLabelText('업무 역할 (선택)').disabled).toBe(true)
+    expect(screen.getByLabelText(/^담당 서비스 \(선택\)/).disabled).toBe(true)
+    const phone = screen.getByLabelText('전화번호 *')
+    await userEvent.clear(phone)
+    await userEvent.type(phone, '01098765432')
+    await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
+    expect(server.savedProfile.phone).toBe('010-9876-5432')
+    expect(server.memoryPatches).toEqual([])
+  })
+
+  it('saves the service from the AI memory settings screen and loads it back', async () => {
+    server.user = { ...A, profile_completed: true }
+    server.memory[A.user_id] = { affiliation: '개발', rank: 'SRE', service: '모니터링' }
+    window.history.replaceState({}, '', '/onboarding')
+    render(<App />)
+    await screen.findByRole('button', { name: '내 계정' })
+    await waitFor(() => expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    const service = await screen.findByLabelText(/^담당 서비스 \(선택\)/)
+    expect(service.value).toBe('모니터링')                       // 불러오기
+    expect(screen.queryByText(/저장 연동 준비 중/)).toBeNull()
+    await userEvent.clear(service)
+    await userEvent.type(service, '결제 API')
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('결제 API')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: '저장하고 채팅 시작' }))
+    await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
+    expect(server.memoryPatches).toEqual([{ affiliation: '개발', rank: 'SRE', service: '결제 API' }])
   })
 
   it('lets registration finish without choosing a role or a service', async () => {
@@ -205,7 +302,7 @@ describe('React authentication and session isolation', () => {
     await userEvent.click(await screen.findByRole('button', { name: '보안' }))
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
-    expect(screen.getByText('선택 항목입니다. 저장되지 않으므로 고르지 않고 넘어가도 됩니다.')).toBeTruthy()
+    expect(screen.getByText('선택 항목입니다. 고르지 않고 넘어가도 됩니다. 나중에 내 정보 수정에서 넣을 수 있습니다.')).toBeTruthy()
     expect(screen.getByRole('button', { name: '다음' }).disabled).toBe(false)
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '어떤 서비스를 담당하시나요?' })).toBeTruthy()
@@ -219,6 +316,7 @@ describe('React authentication and session isolation', () => {
     expect(screen.getAllByText('설정하지 않음')).toHaveLength(2)   // 업무 역할, 담당 서비스
     await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
+    expect(server.memoryPatches).toEqual([])   // 비운 칸도, 소속 팀(affiliation)도 보내지 않는다
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
   })
@@ -229,11 +327,13 @@ describe('React authentication and session isolation', () => {
     render(<App />)
     await screen.findByRole('heading', { name: '어느 팀에서 일하시나요?' })
     expect(screen.getByText('소속된 팀을 선택해 주세요.')).toBeTruthy()
+    expect(screen.getByText(/등록 완료 시 저장됩니다/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: '이전' })).toBeNull()
     await userEvent.click(await screen.findByRole('button', { name: '보안' }))
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { name: '어떤 역할을 맡고 계신가요?' })).toBeTruthy()
     expect(screen.getByText('주로 담당하는 업무 역할을 선택해 주세요.')).toBeTruthy()
+    expect(screen.queryByText(/등록 완료 시 저장됩니다/)).toBeNull()   // H-30: 같은 안내를 단계마다 되풀이하지 않는다
     expect(screen.getByRole('button', { name: '이전' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '개발자' }))
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
@@ -275,6 +375,8 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByText('부산광역시 해운대구 우동 1')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
+    // 기억에는 업무 역할·담당 서비스만 보낸다. 소속 팀 '보안'은 검색 절 이름(security)과 달라 affiliation 으로 보내지 않는다.
+    expect(server.memoryPatches).toEqual([{ rank: '개발자', service: '결제 API' }])
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
   })
@@ -348,6 +450,7 @@ describe('React authentication and session isolation', () => {
   })
 
   it('uses login_id, cookies and CSRF and shares confirmed /me state after login', async () => {
+    server.profile = { name: '홍길동', dept: '보안', phone_masked: '010-****-5678', address: '부산광역시 해운대구 우동 1', updated_at: '2026-11-11T00:00:00Z' }
     render(<App />)
     await signIn()
     await screen.findByRole('button', { name: '내 계정' })
@@ -356,7 +459,14 @@ describe('React authentication and session isolation', () => {
     expect(request.options.credentials).toBe('include')
     expect(request.options.headers['X-CSRF-Token']).toBe('fresh-csrf')
     await userEvent.click(screen.getByRole('button', { name: '내 계정' }))
-    expect(screen.getByText(A.user_id)).toBeTruthy()
+    expect(screen.getByText(A.login_id)).toBeTruthy()
+    expect(screen.queryByText(A.user_id)).toBeNull()
+    expect(screen.getByRole('menuitem', { name: '기억 설정' }).getAttribute('href')).toBe('/onboarding')
+    await waitFor(() => expect(screen.getByRole('menu').textContent).toContain('보안'))   // H-23: 소속 팀을 내 정보에서 읽는다
+    expect(screen.getByRole('menu').textContent).not.toContain('설정되지 않음')
+    // 메뉴는 전화번호를 가린 보기만 부른다(원래 번호가 담긴 ?view=edit 는 부르지 않는다).
+    expect(calls.some(call => call.path === '/me/profile' && !call.options?.method)).toBe(true)
+    expect(calls.some(call => call.path === '/me/profile?view=edit')).toBe(false)
     expect(calls.some(call => call.path === '/me')).toBe(true)
   })
 
@@ -444,6 +554,75 @@ describe('React authentication and session isolation', () => {
     await screen.findByLabelText('이메일 또는 아이디')
   })
 
+  it('tells the user the session expired and keeps the typed question (H-29)', async () => {
+    await authenticated()
+    await waitFor(() => expect(screen.getByLabelText('질문').disabled).toBe(false))
+    await userEvent.type(screen.getByLabelText('질문'), '쓰던 질문')
+    server.user = null
+    act(() => window.dispatchEvent(new Event('focus')))
+    await screen.findByLabelText('이메일 또는 아이디')
+    expect(screen.getByRole('status').textContent).toContain('만료')
+    expect(window.location.search).toBe('?reason=expired')
+    expect(sessionStorage.getItem(`provena-chat-draft:${A.user_id}`)).toBe('쓰던 질문')
+    expect(sessionStorage.getItem('provena-chat-draft')).toBeNull()
+  })
+
+  describe('typed question draft is per account (H-29)', () => {
+    const draftKeys = () => Object.keys(sessionStorage).filter(key => key.startsWith('provena-chat-draft'))
+    const composer = async () => {
+      const box = await screen.findByRole('textbox', { name: '질문' })
+      await waitFor(() => expect(box.disabled).toBe(false))
+      return box
+    }
+    async function expireWithDraft() {
+      await authenticated()
+      await userEvent.type(await composer(), 'A가 쓰던 질문')
+      server.user = null
+      act(() => window.dispatchEvent(new Event('focus')))
+      await screen.findByLabelText('이메일 또는 아이디')
+    }
+
+    it('does not show account A draft to account B after A expired in the same tab', async () => {
+      await expireWithDraft()
+      await signIn('B')
+      await screen.findByRole('navigation', { name: '관리자 메뉴' })
+      expect((await composer()).value).toBe('')
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('restores the draft when the same account signs in again after expiry', async () => {
+      await expireWithDraft()
+      await signIn('A')
+      expect((await composer()).value).toBe('A가 쓰던 질문')
+    })
+
+    it('swaps the composer when the account changes while the chat stays mounted', async () => {
+      await authenticated()
+      await userEvent.type(await composer(), 'A가 쓰던 질문')
+      server.user = B
+      act(() => window.dispatchEvent(new Event('focus')))
+      await screen.findByRole('navigation', { name: '관리자 메뉴' })
+      await waitFor(() => expect(screen.getByRole('textbox', { name: '질문' }).value).toBe(''))
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('removes a draft left under the old shared key', async () => {
+      sessionStorage.setItem('provena-chat-draft', '예전 키에 남은 질문')
+      await authenticated(B)
+      expect((await composer()).value).toBe('')
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('clears the draft on mock sign-out too', async () => {
+      vi.stubEnv('VITE_ENABLE_MOCK_SESSION', 'true')
+      render(<App />)
+      await userEvent.type(await composer(), '목 계정 질문')
+      expect(draftKeys()).toHaveLength(1)
+      await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+      await waitFor(() => expect(draftKeys()).toEqual([]))
+    })
+  })
+
   it('offers retry on /me server failure instead of pretending the user logged out', async () => {
     server.meStatus = 503
     render(<App />)
@@ -508,6 +687,15 @@ describe('React authentication and session isolation', () => {
     server.logoutStatus = 204
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
     await screen.findByRole('link', { name: '로그인' })
+    expect(window.location.pathname).toBe('/')
+  })
+
+  it('clears the local session when the server already expired it (401 on logout, H-19)', async () => {
+    await authenticated()
+    server.logoutStatus = 401
+    await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+    await screen.findByRole('link', { name: '로그인' })
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(window.location.pathname).toBe('/')
   })
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getCurrentUser, invalidateAuthRequests, login, logout, subscribeUnauthorized } from '../lib/api'
 import { clearSessionMemory, selectMemoryOwner } from '../lib/session-memory'
 import { SessionContext } from '../lib/session'
+import { clearDrafts } from '../lib/draft'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MOCK_USER = { user_id: '00000000-0000-4000-8000-000000000001', role: 'admin', profile_completed: true }
@@ -17,13 +18,14 @@ function validateUser(user) {
   return {
     user_id: user.user_id.toLowerCase(),
     role: user.role,
+    ...(typeof user.login_id === 'string' && user.login_id ? { login_id: user.login_id } : {}),
     ...(typeof user.profile_completed === 'boolean' ? { profile_completed: user.profile_completed } : {}),
     ...(typeof user.is_owner === 'boolean' ? { is_owner: user.is_owner } : {}),
   }
 }
 
 function sameUser(left, right) {
-  return Boolean(left && right) && ['user_id', 'role', 'profile_completed', 'is_owner'].every(key => left[key] === right[key])
+  return Boolean(left && right) && ['user_id', 'role', 'login_id', 'profile_completed', 'is_owner'].every(key => left[key] === right[key])
 }
 
 export function SessionProvider({ children }) {
@@ -35,16 +37,18 @@ export function SessionProvider({ children }) {
   const accept = useCallback(user => {
     invalidateAuthRequests()
     selectMemoryOwner(user.user_id)
+    clearDrafts(user.user_id) // 다른 계정이 쓰던 질문은 새 계정에게 보이지 않게 지운다(H-29).
     confirmedUser.current = user
-    setSession({ status: 'authenticated', user, error: '' })
+    setSession({ status: 'authenticated', user, error: '', expired: false })
   }, [])
 
-  const expire = useCallback(() => {
+  const expire = useCallback((byServer = false) => {
+    const wasSignedIn = confirmedUser.current !== null
     invalidateAuthRequests()
     sequence.current += 1
     clearSessionMemory()
     confirmedUser.current = null
-    setSession({ status: 'anonymous', user: null, error: '' })
+    setSession({ status: 'anonymous', user: null, error: '', expired: byServer && wasSignedIn })
   }, [])
 
   const refresh = useCallback(async () => {
@@ -64,14 +68,14 @@ export function SessionProvider({ children }) {
       if (request === sequence.current) acceptChanged(user)
     } catch (error) {
       if (request !== sequence.current) return
-      if (error.status === 401) expire()
+      if (error.status === 401) expire(true)
       else if (!background) setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
       // A failed background check (offline, 5xx, bad payload) keeps the confirmed session; the next focus retries.
     }
   }, [accept, expire])
 
   useEffect(() => {
-    const unsubscribe = subscribeUnauthorized(() => { if (!mutating.current) expire() })
+    const unsubscribe = subscribeUnauthorized(() => { if (!mutating.current) expire(true) })
     let active = true
     queueMicrotask(() => { if (active) refresh() })
     const onFocus = () => refresh()
@@ -106,10 +110,12 @@ export function SessionProvider({ children }) {
     sequence.current += 1
     try {
       if (isMockSessionEnabled()) {
+        clearDrafts()
         expire()
         return
       }
       await logout()
+      clearDrafts()
       expire() // Do not clear a valid session or pretend success when the server failed.
     } finally { mutating.current = false }
   }

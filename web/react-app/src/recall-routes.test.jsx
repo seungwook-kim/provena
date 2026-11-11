@@ -54,7 +54,7 @@ beforeEach(() => {
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
     if (path === '/recalls' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
-    if (path === '/recalls/digests') return json([{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, high: 1, low: 1, notices: [] }])
+    if (path === '/recalls/digests') return server.digestsResponse ? server.digestsResponse() : json({ digests: [{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })
     if (path === '/impact-preview' && method === 'POST') return json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
     let match = path.match(/^\/recalls\/([^/]+)\/(ack|review|feedback)$/)
     if (match && method === 'POST') {
@@ -103,6 +103,7 @@ describe('live recall route', () => {
     expect(screen.queryByRole('heading', { name: '함께 볼 정책 후보' })).toBeNull()
     expect(screen.queryByRole('heading', { name: '변경 전 영향 미리보기' })).toBeNull()
     await screen.findByRole('heading', { name: '하루 요약' })
+    expect(await screen.findByText(/알림 2건/)).toBeTruthy()
     const recallLink = screen.getByRole('link', { name: /리콜 알림/ })
     expect(recallLink.getAttribute('href')).toBe('/recalls')
     expect(recallLink.querySelector('b')?.textContent).toBe('1')
@@ -204,6 +205,36 @@ describe('live recall route', () => {
   })
 })
 
+describe('recall and change screens follow the real backend responses', () => {
+  it("does not offer the acknowledge button on another user's notice to an administrator", async () => {
+    // backend: POST /recalls/{id}/ack is owner-only, an admin gets 404 (tests/test_api_recalls.py:165)
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: USER.user_id })], unread: 0, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    expect(screen.queryByRole('button', { name: '확인' })).toBeNull()
+    expect(screen.getByText('다른 사용자의 알림입니다.')).toBeTruthy()
+  })
+
+  it('still lets an administrator acknowledge their own notice', async () => {
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: ADMIN.user_id })], unread: 1, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    await userEvent.click(screen.getByRole('button', { name: '확인' }))
+    await screen.findByText('미확인 0건')
+  })
+
+  it('shows the last collection run status in Korean, not the raw sync_runs value', async () => {
+    // backend/rag/ingest/changes.py:79 last_run.status is 'succeeded' or 'noop'
+    server.changes = { ...server.changes, last_run: { ...server.changes.last_run, status: 'succeeded' } }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    expect(screen.getByText(/마지막 수집 .* · 완료/)).toBeTruthy()
+    expect(screen.queryByText(/succeeded/)).toBeNull()
+  })
+})
+
 describe('live recall route for administrators', () => {
   beforeEach(() => {
     server.user = ADMIN
@@ -245,10 +276,38 @@ describe('live recall route for administrators', () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
     await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
-    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.paste('[{"rule_seq":"12","article":"Approval limits"}]')
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText(/무효가 될 답변 3건/)
-    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 'handbook/finance/procurement', article: 'Approval limits' }] })
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 12, article: 'Approval limits' }] })
+  })
+
+  it('blocks a non-numeric rule_seq before sending, because the server answers 422 (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect(await within(panel).findByText(/rule_seq는 0 이상의 정수/)).toBeTruthy()
+    expect(requestsTo('POST', '/impact-preview')).toHaveLength(0)
+  })
+
+  it('shows an error instead of an empty list when the digests cannot be loaded (H-11)', async () => {
+    server.digestsResponse = () => apiError(500, 'internal_error', '서버 오류')
+    open('/recalls')
+    expect(await screen.findByText('하루 요약을 불러오지 못했습니다.')).toBeTruthy()
+  })
+
+  it('sends the page-pair form of the impact preview with integer rule_seq only (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '개정 전후 본문(JSON)' }))
+    await userEvent.click(within(panel).getByLabelText('개정 전후 본문(JSON)'))
+    await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    await within(panel).findByText(/무효가 될 답변 3건/)
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
+    expect(within(panel).queryByRole('button', { name: 'MR diff' })).toBeNull()
   })
 
   it('rejects invalid impact preview JSON before calling the server', async () => {

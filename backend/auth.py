@@ -6,6 +6,7 @@ The caller supplies an AuthStore; PostgreSQL integration remains pending.
 
 from __future__ import annotations
 
+import math
 import os
 import secrets
 import hmac
@@ -573,6 +574,8 @@ class UserResponse(BaseModel):
 class MeResponse(UserResponse):
     # 내 정보(요청 1번): /me에만 "있다/없다"를 더한다. 로그인 응답(UserResponse)은 그대로 두려고 따로 뺐다.
     profile_completed: bool | None = None
+    # 화면의 계정 메뉴가 UUID 대신 보여 줄 로그인 아이디(이메일 계정은 이메일, H-13)
+    login_id: str | None = None
     # 사용자 관리(요청 2번): 최고 관리자면 true. 화면이 메뉴를 숨기는 데만 쓰고, 서버는 요청마다 다시 확인한다
     is_owner: bool | None = None
 
@@ -609,6 +612,19 @@ class LoginRateLimiter:
             len(self._failures_by_login_id.get(login_id, [])) >= self.max_attempts
             or len(self._failures_by_ip.get(client_ip, [])) >= self.max_ip_attempts
         )
+
+    def retry_after_seconds(self, login_id: str, client_ip: str) -> int:
+        """Seconds until the oldest failure of an exhausted bucket leaves the window (at least 1)."""
+
+        now = time.monotonic()
+        waits = []
+        for stamps, limit in (
+            (self._failures_by_login_id.get(login_id, []), self.max_attempts),
+            (self._failures_by_ip.get(client_ip, []), self.max_ip_attempts),
+        ):
+            if len(stamps) >= limit:
+                waits.append(self.window_seconds - (now - min(stamps)))
+        return max(1, math.ceil(max(waits))) if waits else 1
 
     def record_failure(self, login_id: str, client_ip: str) -> None:
         stamp = time.monotonic()
@@ -854,7 +870,13 @@ def create_auth_router(
         login_id = _normalise_signup_login(payload.login_id)  # 시도 제한 키와 신청 조회는 가입과 같은 규칙
         client_ip = _client_ip(request)
         if limiter.is_limited(login_id, client_ip):
-            raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+            retry_after = getattr(limiter, "retry_after_seconds", None)
+            wait = retry_after(login_id, client_ip) if callable(retry_after) else None
+            raise HTTPException(
+                status_code=429,
+                detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+                headers={"Retry-After": str(wait)} if wait else None,
+            )
         try:
             user = store.get_by_login_id(typed)
             if user is None and typed != login_id:
@@ -1200,6 +1222,6 @@ def create_auth_router(
             if type(completed) is not bool:   # 저장소 오류·이상한 값은 막힘/열림을 추측하지 않고 503
                 raise HTTPException(status_code=503, detail="내 정보 저장소를 사용할 수 없습니다.")
         owner = None if owner_check is None else owner_check(user) is True   # backend/admin_api.py is_owner (DB 조회 없음)
-        return MeResponse(user_id=str(user.user_id), role=user.role, profile_completed=completed, is_owner=owner)
+        return MeResponse(user_id=str(user.user_id), role=user.role, login_id=user.login_id, profile_completed=completed, is_owner=owner)
 
     return router

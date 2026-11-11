@@ -31,7 +31,7 @@ function listErrorMessage(error) {
   return '리콜 알림을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 }
 
-export default function RecallPage({ service = previewRecallService, isAdmin = false }) {
+export default function RecallPage({ service = previewRecallService, isAdmin = false, userId = null }) {
   const live = service.live
   const snapshot = useServiceSnapshot(service)
   const { records, unread } = snapshot
@@ -43,17 +43,21 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(() => requestedId ?? records[0]?.id ?? null)
   const [actionError, setActionError] = useState('')
+  const [digestError, setDigestError] = useState('')
   const [busy, setBusy] = useState(false)
   const [missingId, setMissingId] = useState(null)
   const scoped = useMemo(() => filterByChange(records, { ruleSeq, article }), [article, records, ruleSeq])
   const visible = useMemo(() => service.filterRecalls(scoped, filter), [filter, scoped, service])
   const selected = records.find(record => record.id === selectedId) ?? (selectedId && selectedId === missingId ? null : visible[0] ?? null)
+  // An administrator sees every user's notices, but the backend lets only the owner acknowledge one (POST /recalls/{id}/ack -> 404).
+  const othersNotice = Boolean(live && userId && selected?.userId && selected.userId !== String(userId).toLowerCase())
   const filters = live ? [['all', '전체'], ['unread', '미확인'], ['changed', '결론 변경'], ['high', '중요'], ['confirm', '확인 필요']] : [['all', '전체'], ['unread', '미확인'], ['changed', '결론 변경']]
 
   useEffect(() => {
     if (!live) return
     service.listRecalls().catch(() => {})
-    service.listDigests?.().catch(() => {})
+    setDigestError('')
+    service.listDigests?.().catch(() => setDigestError('하루 요약을 불러오지 못했습니다.'))
   }, [live, service])
 
   useEffect(() => {
@@ -107,7 +111,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
           : visible.length === 0 ? <p className="recall-empty">{records.length ? '해당하는 알림이 없습니다.' : '받은 알림이 없습니다.'}</p>
             : visible.map(record => <button type="button" key={record.id} className={`recall-service-item ${record.id === selected?.id ? 'selected' : ''} ${record.needsConfirmation ? 'needs-confirmation' : ''}`} onClick={() => select(record.id)}><div><strong>{record.title}</strong>{!record.acked && <i aria-label="미확인" />}</div><span>{record.question}</span><small>{[record.document, record.detectedAt].filter(Boolean).join(' · ')}</small>{live && (record.severity || record.needsConfirmation) && <span className="recall-item-badges"><JudgementBadges record={{ ...record, confidence: null }} /></span>}<em className={record.conclusionChanged ? 'changed' : ''}>{record.conclusionChanged ? '결론 변경' : record.acked ? '확인 완료' : '확인 필요'}</em></button>)}
     </aside>
-      <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{versionText(selected.oldVersionDate, selected.newVersionDate) && ` · ${versionText(selected.oldVersionDate, selected.newVersionDate)}`}</p></div><button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button></div>
+      <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{versionText(selected.oldVersionDate, selected.newVersionDate) && ` · ${versionText(selected.oldVersionDate, selected.newVersionDate)}`}</p></div>{othersNotice ? <span className="recall-owner-note">다른 사용자의 알림입니다.</span> : <button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button>}</div>
         {actionError && <p className="recall-action-error" role="alert">{actionError}</p>}
         {selected.needsConfirmation && <p className="recall-confirm-needed" role="note">자동 판정에 실패한 알림입니다. 원문과 당시 답변을 직접 확인해 주세요.</p>}
         {live && selected.question && <section className="recall-answer recall-question"><small>당시 질문</small><p>{selected.question}</p></section>}
@@ -118,6 +122,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         {service.sendFeedback && <FeedbackControls key={selected.id} record={selected} service={service} />}
       </> : selectedId && selectedId === missingId ? <div className="recall-empty-detail" role="alert"><h2>{NOT_FOUND}</h2><p>삭제되었거나 접근할 수 없는 알림입니다. 목록에서 다른 알림을 선택해 주세요.</p></div>
         : <div className="recall-empty-detail"><h2>아직 알림이 없습니다.</h2><p>정책 변경으로 다시 확인이 필요한 답변이 생기면 알려드립니다.</p></div>}</article></section>
+    {live && digestError && <p className="recall-action-error" role="alert">{digestError}</p>}
     {live && snapshot.digests?.length > 0 && <DigestPanel digests={snapshot.digests} />}
     {live && isAdmin && <>
       <ReviewQueue items={snapshot.reviewQueue ?? []} service={service} />
@@ -161,7 +166,7 @@ function FeedbackControls({ record, service }) {
 function DigestPanel({ digests }) {
   return <section className="recall-admin-section recall-digest" aria-labelledby="recall-digest-title">
     <div className="recall-admin-heading"><h2 id="recall-digest-title">하루 요약</h2><span>최근 {Math.min(digests.length, 7)}일</span></div>
-    <ul>{digests.slice(0, 7).map(digest => <li key={digest.id || digest.day}><strong>{digest.day}</strong><span>알림 {digest.count}건 · 중요 {digest.high}건 · 참고 {digest.low}건</span></li>)}</ul>
+    <ul>{digests.slice(0, 7).map(digest => <li key={digest.id || digest.day}><strong>{digest.day}</strong><span>{[`알림 ${digest.count}건`, digest.high != null && `중요 ${digest.high}건`, digest.low != null && `참고 ${digest.low}건`].filter(Boolean).join(' · ')}</span></li>)}</ul>
   </section>
 }
 
@@ -258,10 +263,10 @@ function ImpactPreviewPanel({ service }) {
 
   return <section className="recall-admin-section" aria-labelledby="impact-preview-title">
     <div className="recall-admin-heading"><h2 id="impact-preview-title">변경 전 영향 미리보기</h2><span>저장·알림 없음</span></div>
-    <p className="recall-admin-lede">개정안의 바뀐 섹션 목록이나 MR diff를 넣으면 무효가 될 답변과 알림 대상 수를 미리 계산합니다.</p>
+    <p className="recall-admin-lede">개정안의 바뀐 섹션 목록이나 개정 전후 본문을 넣으면 무효가 될 답변과 알림 대상 수를 미리 계산합니다.</p>
     <form className="impact-preview-form" onSubmit={run}>
-      <div className="recall-filter-row" role="group" aria-label="입력 형식">{[['changes', '바뀐 섹션 목록(JSON)'], ['diff', 'MR diff']].map(([key, label]) => <button type="button" key={key} className={mode === key ? 'selected' : ''} onClick={() => setMode(key)}>{label}</button>)}</div>
-      <label><textarea aria-label={mode === 'diff' ? 'MR diff' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'diff' ? 'diff --git a/... b/...' : '[{"rule_seq": "...", "article": "...", "old_version_date": "...", "new_version_date": "...", "change_type": "modified"}]'} /></label>
+      <div className="recall-filter-row" role="group" aria-label="입력 형식">{[['changes', '바뀐 섹션 목록(JSON)'], ['pages', '개정 전후 본문(JSON)']].map(([key, label]) => <button type="button" key={key} className={mode === key ? 'selected' : ''} onClick={() => setMode(key)}>{label}</button>)}</div>
+      <label><textarea aria-label={mode === 'pages' ? '개정 전후 본문(JSON)' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'pages' ? '{"old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "pages": [{"path": "handbook/a.md", "old": "이전 본문", "new": "새 본문"}]}' : '[{"rule_seq": 12, "article": "조항 이름", "old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "change_type": "modified"}]'} /></label>
       <div className="recall-admin-actions"><button type="submit" className="demo-dark-button" disabled={running}>{running ? '계산 중입니다.' : '미리보기 실행'}</button></div>
     </form>
     {error && <p role="alert" className="recall-action-error">{error}</p>}

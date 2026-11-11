@@ -25,7 +25,7 @@
 
 | | AI 기억 | 내 정보 (이번 요청) |
 |---|---|---|
-| 담는 것 | 팀·역할·담당 서비스 | 이름·소속·전화번호·주소 |
+| 담는 것 | 팀·역할·담당 서비스 (`affiliation`·`rank`·`service`) | 이름·소속·전화번호·주소 |
 | 저장 | LangGraph Store `(user_id, "profile")` (`docs/SDD.md:253`, `:333`) | 새 표 `user_profiles` (암호화) |
 | LLM에 들어가나 | 들어감(답 맞춤) | **안 들어감** — 그래프·Store·Langfuse 어디에도 넣지 않는다 |
 | 길 | `GET/PATCH/DELETE /me/memory` (`docs/SDD.md:285`) | `GET/PUT /me/profile` (제안) |
