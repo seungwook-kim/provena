@@ -66,3 +66,17 @@ describe('apiRequest cache', () => {
     vi.unstubAllGlobals()
   })
 })
+
+// H-17: 이벤트가 아주 많아도 콜백 호출이 겹겹이 쌓이지 않는다
+describe('streamChatMessage many events (H-17)', () => {
+  it('delivers 30000 named events in one chunk without nesting callbacks', async () => {
+    document.cookie = 'provena_csrf=csrf-token'
+    const block = 'event: token\ndata: {"thread_id":"t1","data":{"text":"a"}}\n\n'
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(sseResponse(block.repeat(30000))))
+    let count = 0
+    await streamChatMessage('t1', 'q', { onEvent: event => { count += 1; if (event.type !== 'token') throw new Error('type') } })
+    expect(count).toBe(30000)
+  })
+})
