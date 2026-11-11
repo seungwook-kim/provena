@@ -9,19 +9,21 @@ const PHONE_PATTERN = /^010\d{8}$/
 const TEAM_OPTIONS = ['보안', '인프라·SRE', 'IT 운영', '재무', '개발']
 const ROLE_OPTIONS = ['개발자', 'SRE', '관리자', '정책 담당자']
 const SERVICE_MAX_LENGTH = 100   // backend/api/routes.py MemoryPatch
-const MEMORY_FAILED = '기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(소속 팀·업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.'
+const MEMORY_FAILED = '기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.'
 
-// AI 기억(GET /me/memory)의 affiliation·rank·service 를 화면의 소속 팀·업무 역할·담당 서비스로 옮긴다.
+// AI 기억(GET /me/memory)의 rank·service 를 화면의 업무 역할·담당 서비스로 옮긴다.
+// 소속 팀은 내 정보(dept)에만 저장하고 기억의 affiliation 으로는 보내지 않는다. affiliation 은 검색 범위(절 이름)로 쓰이는데
+// (docs/specs/memory.md), 화면의 한글 팀 이름은 코퍼스 절 이름(security, finance 등)과 달라서 보내면 검색 결과가 비게 된다.
 function memoryToForm(memory) {
   const profile = memory?.profile && typeof memory.profile === 'object' ? memory.profile : {}
   const text = value => (typeof value === 'string' ? value : '')
-  return { affiliation: text(profile.affiliation), role: text(profile.rank), service: text(profile.service) }
+  return { role: text(profile.rank), service: text(profile.service) }
 }
 
 // 기억 저장 본문: 바뀐 칸만 보낸다(서버는 보낸 칸만 갱신). 기준 값과 같으면 보내지 않는다.
 function memoryChanges(form, base) {
-  const next = { affiliation: form.team, rank: form.role, service: form.service.trim() }
-  const prev = { affiliation: base.affiliation, rank: base.role, service: base.service }
+  const next = { rank: form.role, service: form.service.trim() }
+  const prev = { rank: base.role, service: base.service }
   return Object.fromEntries(Object.entries(next).filter(([key, value]) => value !== prev[key]))
 }
 
@@ -241,8 +243,9 @@ function ProfileOnboardingPage() {
     try {
       await saveProfile({ name: form.name, dept: form.team, phone: form.phone, address: form.address })
       profileSaved = true
-      // 처음 등록이라 사용자가 이 화면에서 정한 값만 보낸다(빈 칸은 보내지 않아 이미 있는 기억을 지우지 않는다).
-      await patchMemory({ affiliation: form.team, ...(form.role ? { rank: form.role } : {}), ...(form.service.trim() ? { service: form.service.trim() } : {}) })
+      // 처음 등록이라 사용자가 이 화면에서 정한 값만 보낸다(빈 칸은 보내지 않아 이미 있는 기억을 지우지 않는다). 소속 팀은 보내지 않는다(위 memoryToForm 설명).
+      const memoryBody = { ...(form.role ? { rank: form.role } : {}), ...(form.service.trim() ? { service: form.service.trim() } : {}) }
+      if (Object.keys(memoryBody).length > 0) await patchMemory(memoryBody)
       await refresh()
       navigate('/chat', { replace: true })
     } catch (saveError) {

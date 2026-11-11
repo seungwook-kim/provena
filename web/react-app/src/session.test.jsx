@@ -207,8 +207,8 @@ describe('React authentication and session isolation', () => {
     await userEvent.click(save)
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '개발', phone: '010-9876-5432', address: '부산광역시 해운대구 우동 1' })
     expect((await screen.findByRole('status')).textContent).toBe('변경사항을 저장했습니다.')
-    // 기억의 소속 팀이 비어 있었으므로 내 정보의 소속 팀과 맞추려고 affiliation만 보낸다(역할·서비스는 빈 칸 그대로라 안 보냄).
-    expect(server.memoryPatches).toEqual([{ affiliation: '개발' }])
+    // 소속 팀은 내 정보(dept)에만 저장한다. 한글 팀 이름을 기억의 affiliation(검색 범위)으로 보내지 않는다.
+    expect(server.memoryPatches).toEqual([])
   })
 
   it('tells exactly what was saved when the memory API fails after the profile API succeeded', async () => {
@@ -225,7 +225,7 @@ describe('React authentication and session isolation', () => {
     await userEvent.type(phone, '01098765432')
     await userEvent.click(screen.getByRole('button', { name: '변경사항 저장' }))
     const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toBe('기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(소속 팀·업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.')
+    expect(alert.textContent).toBe('기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.')
     expect(server.savedProfile.phone).toBe('010-9876-5432')
     expect(screen.queryByRole('status')).toBeNull()   // 거짓 성공 문구 없음
     // 다시 저장하면 내 정보는 바뀐 게 없어 다시 보내지 않고, 기억만 다시 보낸다.
@@ -314,7 +314,7 @@ describe('React authentication and session isolation', () => {
     expect(screen.getAllByText('설정하지 않음')).toHaveLength(2)   // 업무 역할, 담당 서비스
     await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
-    expect(server.memoryPatches).toEqual([{ affiliation: '보안' }])   // 비운 칸은 보내지 않는다
+    expect(server.memoryPatches).toEqual([])   // 비운 칸도, 소속 팀(affiliation)도 보내지 않는다
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
   })
@@ -373,6 +373,8 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByText('부산광역시 해운대구 우동 1')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '등록 완료' }))
     expect(server.savedProfile).toEqual({ name: '홍길동', dept: '보안', phone: '010-1234-5678', address: '부산광역시 해운대구 우동 1' })
+    // 기억에는 업무 역할·담당 서비스만 보낸다. 소속 팀 '보안'은 검색 절 이름(security)과 달라 affiliation 으로 보내지 않는다.
+    expect(server.memoryPatches).toEqual([{ rank: '개발자', service: '결제 API' }])
     await screen.findByRole('button', { name: '내 계정' })
     expect(window.location.pathname).toBe('/chat')
   })
@@ -403,7 +405,7 @@ describe('React authentication and session isolation', () => {
     const phone = screen.getByLabelText('전화번호 *')
     expect(phone.getAttribute('aria-describedby')).toBe('profile-error-phone')
     expect(screen.getByText('전화번호 형식이 맞지 않습니다. 예: 010-1234-5678').id).toBe('profile-error-phone')
-    expect(screen.getByText('입력한 내용을 확인해 주세요. 아무것도 저장되지 않았습니다.')).toBeTruthy()
+    expect(screen.getByText('입력한 내용을 확인해 주세요.')).toBeTruthy()
     // 그 칸을 다시 고치면 그 칸 오류만 지워진다.
     await userEvent.type(address, '호')
     expect(screen.queryByText('주소는 5~100자로 입력해 주세요.')).toBeNull()
@@ -460,11 +462,11 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByRole('menuitem', { name: '기억 설정' }).getAttribute('href')).toBe('/onboarding')
     await waitFor(() => expect(screen.getByRole('menu').textContent).toContain('보안'))   // H-23: 소속 팀을 내 정보에서 읽는다
     expect(screen.getByRole('menu').textContent).not.toContain('설정되지 않음')
-    expect(calls.some(call => call.path === '/me')).toBe(true)
-  })
     // 메뉴는 전화번호를 가린 보기만 부른다(원래 번호가 담긴 ?view=edit 는 부르지 않는다).
     expect(calls.some(call => call.path === '/me/profile' && !call.options?.method)).toBe(true)
     expect(calls.some(call => call.path === '/me/profile?view=edit')).toBe(false)
+    expect(calls.some(call => call.path === '/me')).toBe(true)
+  })
 
   it('shows login failure and never enters a protected screen', async () => {
     render(<App />)
