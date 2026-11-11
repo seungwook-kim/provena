@@ -235,13 +235,15 @@ def post_mr_comment(markdown: str, *, project_id: str | int, mr_iid: str | int, 
                     post=None, timeout: float = 10.0) -> bool:
     """`render_markdown` 요약을 GitLab MR 댓글로 게시한다(I-08, F-05). 게시했으면 True.
 
-    환경변수 `GITLAB_API_URL`(예: https://gitlab.example.com/api/v4)이나 `GITLAB_TOKEN`이 없으면 아무것도 보내지 않고 False(건너뜀).
+    환경변수 `GITLAB_API_URL`(https만, 예: https://gitlab.example.com/api/v4)이나 `GITLAB_TOKEN`이 없으면 아무것도 보내지 않고 False(건너뜀).
     요청은 GitLab 노트 API(`POST {api}/projects/{id}/merge_requests/{iid}/notes`, 본문 `{"body": ...}`, 머리글 `PRIVATE-TOKEN`).
     `post(url, json_body, headers, timeout) -> status`는 시험이 바꿔 끼운다(기본은 httpx). 2xx가 아니면 예외를 던진다."""
     api_url = (api_url if api_url is not None else os.environ.get("GITLAB_API_URL", "")).strip().rstrip("/")
     token = (token if token is not None else os.environ.get("GITLAB_TOKEN", "")).strip()
     if not api_url or not token:
         return False
+    if not api_url.lower().startswith("https://"):   # 토큰이 평문 http로 나가지 않게 한다
+        raise ValueError("GITLAB_API_URL은 https://로 시작해야 합니다")
     url = f"{api_url}/projects/{quote(str(project_id), safe='')}/merge_requests/{int(mr_iid)}/notes"
     headers = {"PRIVATE-TOKEN": token, "Content-Type": "application/json"}
     if post is None:

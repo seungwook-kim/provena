@@ -33,6 +33,13 @@ def test_posts_note_with_body_url_and_token_header(monkeypatch):
     assert headers["PRIVATE-TOKEN"] == "secret-token"
 
 
+def test_http_url_is_refused_so_token_never_goes_plain(monkeypatch):
+    calls = []
+    with pytest.raises(ValueError, match="https"):
+        post_mr_comment("x", project_id=1, mr_iid=1, api_url="http://g.example/api/v4", token="t", post=lambda *a: calls.append(a) or 201)
+    assert calls == []
+
+
 def test_non_2xx_raises():
     with pytest.raises(RuntimeError, match="403"):
         post_mr_comment("x", project_id=1, mr_iid=1, api_url="https://g.example/api/v4", token="t", post=lambda *a: 403)
