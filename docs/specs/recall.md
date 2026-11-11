@@ -97,6 +97,7 @@ POST /impact-preview           바뀐 섹션(changes) 또는 두 판(pages)의 �
 GET  /changes                  변경 감시 목록 {items, last_run, more, monitoring} (?since=&limit=&offset=)   로그인
 GET  /changes/{event_id}       한 건과 개정 전후 본문                              로그인
 GET, PUT /changes/monitoring   변경 감시 켜기·멈추기 {status: active | paused}      조회 로그인, 변경 관리자·CSRF
+POST /admin/sync               증분 수집 수동 실행. dry_run=true(기본)는 계획만, false는 501 manual_sync_not_supported(방식 미정)   관리자, CSRF
 ```
 
 RecallNotice (알림 한 건, `GET /recalls` 응답이다. 웹훅 본문은 여기서 `user_id`·`question`·`answer_excerpt`·`thread_id`·`acked`를 뺀 모양이다. 계약 모델(`backend/schemas/recall.py`)의 칸에 화면용 칸을 더한 모양이다):

@@ -314,6 +314,7 @@ flowchart TD
 | GET | `/recalls/feedback-stats`, `/recalls/digests` | 로그인(통계는 관리자) | 의견 집계(유형별 정밀도), 하루 요약 목록(본인 것, 관리자는 전체) |
 | POST | `/recalls/digest/flush`, `/recalls/process-pending` | 관리자, CSRF | 하루 요약 보내기, 쌓인 변경 처리(스위치와 무관하게 한 번 실행) |
 | GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
+| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 실행 방식 미정, 정시 수집 workflow `handbook-sync` 사용) |
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |

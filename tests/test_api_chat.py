@@ -196,6 +196,16 @@ def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch
         assert wrong_method.status_code == 405
         assert wrong_method.json()["error"]["code"] == "method_not_allowed"
 
+        # K-12: 정적 마운트(/)는 GET·HEAD만 받아도, 없는 경로는 어떤 메서드든 같은 404 규약이어야 한다
+        for method in ("post", "put", "patch", "delete"):
+            r = getattr(client, method)("/does-not-exist/deep")
+            assert r.status_code == 404 and r.json()["error"]["code"] == "not_found", method
+        # 경로는 있고 메서드만 틀린 경우는 404가 아니라 405
+        for method in ("put", "patch", "delete", "post"):
+            r = getattr(client, method)("/health")
+            assert r.status_code == 405 and r.json()["error"]["code"] == "method_not_allowed", method
+        assert client.put("/health").headers["Allow"] == "GET"      # RFC 9110: 405에는 허용 메서드를 알린다
+
 
 def test_legacy_root_redirects_when_react_dist_is_missing(monkeypatch, tmp_path):
     web_dir = tmp_path / "web"
