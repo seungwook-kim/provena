@@ -42,6 +42,7 @@ from backend.graph.decision.params import DECISION_PARAMS_SYSTEM, params_from_ob
 from backend.graph.decompose import decompose_enabled, decompose_question, drop_company_prefix, gate_split
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
+from backend.graph.service_profile import SharedChatModel
 from backend.graph.state import AgentState
 from backend.memory.profile import get_profile
 from backend.prompts import question as P
@@ -318,7 +319,11 @@ def build_graph(
     llm = llm if llm is not None else get_chat_model()
     store = store if store is not None else InMemoryStore()
     # 키 없는 데모(녹화 재생)는 사용자 기억을 쓰지 않는다: 녹화는 기억이 없는 요청이라, 기억(소속)이 분류·재작성 입력과 검색 범위에 들어가면 녹화 키가 어긋나 녹화한 질문까지 거절된다(K-18).
-    replay_demo = isinstance(llm, ReplayChatModel)
+    # 서버는 모델을 `SharedChatModel`(처음 부를 때 만드는 껍데기)로 감싸 넘기므로 요청 때 안쪽 모델을 본다. 만들 때 보면 모델을 앞당겨 만들게 된다.
+    def replay_demo() -> bool:
+        inner = llm.model() if isinstance(llm, SharedChatModel) else llm
+        return isinstance(inner, ReplayChatModel)
+
     research_limit = resolve_max_research(max_research)
     run_parallel = env_flag("GRAPH_PARALLEL_INTAKE") if parallel_intake is None else bool(parallel_intake)
     brief = env_flag("LLM_BRIEF_OUTPUT") if brief_output is None else bool(brief_output)
@@ -472,7 +477,7 @@ def build_graph(
         return {
             **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             **({"started_at": time.monotonic()} if answer_budget else {}),
-            "profile": get_profile(store, user_id) if user_id and not replay_demo else {},
+            "profile": get_profile(store, user_id) if user_id and not replay_demo() else {},
             "as_of": state.get("as_of") or date.today().isoformat(),
             "as_of_given": bool(state.get("as_of")),
             "kind": "",
