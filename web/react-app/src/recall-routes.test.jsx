@@ -224,6 +224,15 @@ describe('recall and change screens follow the real backend responses', () => {
     await userEvent.click(screen.getByRole('button', { name: '확인' }))
     await screen.findByText('미확인 0건')
   })
+
+  it('shows the last collection run status in Korean, not the raw sync_runs value', async () => {
+    // backend/rag/ingest/changes.py:79 last_run.status is 'succeeded' or 'noop'
+    server.changes = { ...server.changes, last_run: { ...server.changes.last_run, status: 'succeeded' } }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    expect(screen.getByText(/마지막 수집 .* · 완료/)).toBeTruthy()
+    expect(screen.queryByText(/succeeded/)).toBeNull()
+  })
 })
 
 describe('live recall route for administrators', () => {
