@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 문서 브랜치 검증 지적 반영(코드 변경·측정·호출 없음). ① 팀 규칙: `.env.example`을 고치기 전으로 되돌림(팀장만 고치는 파일, 5장. 키 없는 데모 경고·인젝션 방어 스위치·측정 스위치·`TEST_DATABASE_URL` 설명 추가는 조장님께 요청), `db/db.md` 강경희 11/10 행과 `evals/evals.md` 김승욱 11/9 행을 원문으로 복구, `backend/backend.md` 행 위치 원복, `db/db.md` 중복 보충 행 삭제. ② 틀린 인용 7건: `approval_latency_postgres.md` 문장, `specs/search.md`의 지운 보조 검색 2개(결정 0101), 포트폴리오 `EVAL_REPORT.md` 줄 번호와 PR 수(32건, 명령·기준 해시 표기), `specs/login.md`·`web/react-app/README.md`의 `auth.py` 줄, `db/QUERY_INDEX.md`의 `main.py:317`, `SDD.md`의 `embed.py:51, 53`. 줄 번호 전체 재정리는 코드 PR 머지 뒤에 한다 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `docs/specs/memory.md`와 `docs/specs/d6-chat-frontend.md`에 "의존 파일·환경변수" 절 추가(코드·`.env.example`에서 grep한 이름만). `README.md` 데모 표 제목의 "(예정)" 삭제(지표 표의 "미측정"은 `EVAL_REPORT.md`에 값이 없어 그대로 둠) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | PR #113(이메일 가입 인증, `db/107`·`db/108`)과 이후 113(부분 유니크)·203(구글 연결)을 DB 문서에 반영(DB 파일·코드 변경 없음). `docs/db/ERD.md`·`TABLE_SPEC.md`·`QUERY_INDEX.md`에 `signup_requests`의 칸 7개와 색인, 108의 RLS·권한 회수와 106·109와 겹침을 적고, `auth_store.py`·`auth.py`·`main.py`의 줄 번호를 현재 파일 기준으로 다시 맞춤(질의마다 grep으로 확인) | 미정 |
 | 2026-11-11 | 김승욱 (Claude Code) | D8 후속 정정(측정·호출 없음): `SPEC.md` 3장 응답 시간·비용 행의 공식 값을 `EVAL_REPORT.md` 8장 표와 같은 최신 배포 `provena-api-00035-h69`로 맞춤(전체 p95 평균 8.942초, 검색 p95 1.22초, 요청당 0.0074달러, 단계별 비용 위치). 이전에는 `00032-zhs` 값과 `00020`의 검색 p95 1.40초가 섞여 있었다 | |
