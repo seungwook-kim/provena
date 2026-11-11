@@ -918,10 +918,31 @@ def create_auth_router(
             log.warning("verification email delivery failed: %s", type(exc).__name__)
             raise HTTPException(status_code=503, detail="이메일 발송에 실패했습니다.") from None
 
+    def _reject_overwrite_while_limited(login_id: str) -> None:
+        """인증 전 신청이 이미 있고 인증번호 발송 제한(간격·횟수)에 걸려 있으면, 비밀번호를 바꾸기 전에 429로 돌려보낸다."""
+        get_verification = getattr(store, "get_signup_verification", None)
+        try:
+            row = get_verification(login_id) if callable(get_verification) else None
+        except Exception:
+            return  # 저장소 오류는 아래 가입 처리가 503으로 알린다
+        if (not row or row.get("status") != "pending" or not row.get("email_verification_required")
+                or row.get("email_verified_at") is not None):
+            return
+        now = datetime.now(timezone.utc)
+        last_sent = row.get("last_verification_sent_at")
+        if ((last_sent and (now - last_sent).total_seconds() < EMAIL_VERIFICATION_RESEND_SECONDS)
+                or row.get("verification_send_count", 0) >= EMAIL_VERIFICATION_MAX_SENDS):
+            raise HTTPException(status_code=429, detail="인증번호 발송 제한을 초과했습니다. 잠시 후 다시 시도해 주세요.")
+
     @router.post(
         "/auth/signup",
         status_code=201,
-        responses={503: {"description": "Signup storage unavailable, or the verification email could not be sent (the pending request is removed so the same email can sign up again)"}},
+        description=("Email signup. An unverified pending request for the same email is overwritten with the new password and a new code is sent "
+                     "(only someone who receives the email can finish verification). Verified or approved requests and existing accounts return 409. "
+                     "A rejected request does not block signing up again."),
+        responses={409: {"description": "Email already has an account, or its pending request is already verified/approved"},
+                   429: {"description": "Too many signup requests, or the verification email send limit (interval or count) for an existing unverified request was reached; the existing request is left unchanged"},
+                   503: {"description": "Signup storage unavailable, or the verification email could not be sent (a request created by this call is removed so the same email can sign up again; an overwritten existing unverified request is kept)"}},
     )
     def signup(request: Request, payload: SignupRequest) -> dict[str, str]:
         require_csrf(request)
@@ -940,14 +961,18 @@ def create_auth_router(
         create_pending = getattr(store, "create_pending_user", None)
         if not callable(create_pending):
             raise HTTPException(status_code=503, detail="signup approval storage is unavailable")
+        if email_required:
+            _reject_overwrite_while_limited(login_id)  # 처음 만든 신청이 아니므로 try 밖에서 한다(아래 except 가 지우지 않게)
+        replaced = False
         try:
             if email_required:
-                create_pending(login_id, password_hash, email_verification_required=True)
+                replaced = create_pending(login_id, password_hash, email_verification_required=True) == "replaced"
             else:
                 create_pending(login_id, password_hash)
             issued = _issue_signup_verification(login_id) if email_required else None
         except HTTPException:
-            if email_required:
+            # 처음 만든 신청만 지운다. 인증 전 신청을 덮어쓴 경우에는 기존 신청을 그대로 두어 이어하기를 쓸 수 있게 한다.
+            if email_required and not replaced:
                 delete_pending = getattr(store, "delete_pending_signup", None)
                 if callable(delete_pending):
                     delete_pending(login_id)
