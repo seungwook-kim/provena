@@ -10,6 +10,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 ## 작업 기록 (최신이 위)
 
+| 2026-11-11 | 박진형 (jinyeong-731) | A-07 `main.py` 에 환경 변수 `PROVENA_DOCS_PUBLIC`(0이면 `/docs`·`/redoc`·`/openapi.json` 끔, 기본 공개) 스위치를 더했다. 끌지는 조장이 정한다 |
 | 2026-11-10 | kyunghee | 회원가입 승인 리뷰 반영: `signup_requests` 미생성 시 undefined-table 오류만 가입 기록 없음으로 처리하고 기타 DB 오류는 503으로 처리. 106 SQL에 RLS·Data API 권한 차단 반영. 107은 현재 코드 사용처가 없어 추가하지 않음 | 미정 |
 
 | 날짜 | 작업자 | 한 일 | PR |
