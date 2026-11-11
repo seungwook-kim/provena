@@ -56,9 +56,15 @@ test('shows the privacy access tab and demo request form without exposing raw da
   expect(screen.getByRole('dialog')).toBeTruthy()
 })
 
+test('hides the privacy tab outside preview because no backend API exists (H-16)', () => {
+  render(<AdminUsersTabs users={[]} loading={false} isPreview={false} defaultTab="privacy" />)
+  expect(screen.queryByRole('tab', { name: /개인정보 열람/ })).toBeNull()
+  expect(screen.getByRole('region', { name: '회원가입 승인 목록' })).toBeTruthy()
+})
+
 test('ordinary admin request view omits role management and real privacy history is empty', () => {
   render(<AdminUsersTabs users={[]} loading={false} isPreview={false} showRoleTab={false} defaultTab="privacy" />)
-  expect(screen.getAllByRole('tab')).toHaveLength(2)
+  expect(screen.getAllByRole('tab')).toHaveLength(1)
   expect(screen.queryByText('pending-user-01')).toBeNull()
 })
 
