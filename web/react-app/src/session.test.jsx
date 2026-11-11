@@ -292,7 +292,7 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByText('결제 API')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: '저장하고 채팅 시작' }))
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    expect(server.memoryPatches).toEqual([{ affiliation: '개발', rank: 'SRE', service: '결제 API' }])
+    expect(server.memoryPatches).toEqual([{ rank: 'SRE', service: '결제 API' }])   // 팀(affiliation)은 보내지 않는다 (#131 리뷰 ①)
   })
 
   it('lets registration finish without choosing a role or a service', async () => {
@@ -538,7 +538,9 @@ describe('React authentication and session isolation', () => {
     view = render(<App />)
     await screen.findByRole('button', { name: '내 계정' })
     await openMemorySettings()
-    expect(screen.getByRole('button', { name: '보안' }).className).toContain('selected')
+    // 팀은 기억(affiliation)으로 저장하지 않으므로(#131 리뷰 ①) 새로고침 뒤 선택이 비어 있고, 저장한 업무 역할만 돌아온다.
+    expect(screen.getByRole('button', { name: '보안' }).className).not.toContain('selected')
+    expect(server.memory[A.user_id]).toEqual({ rank: '개발자', service: '' })
     expect(localStorage.getItem('provena-memory')).toBeNull()
     view.unmount()
   })
