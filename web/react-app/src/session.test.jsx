@@ -71,6 +71,8 @@ beforeEach(() => {
       if (server.user) server.user = { ...server.user, profile_completed: true }
       return json({ name: server.savedProfile.name, dept: server.savedProfile.dept, phone_masked: '010-****-5678', address: server.savedProfile.address })
     }
+    // 가린 보기(GET /me/profile): 원래 전화번호(phone)는 주지 않는다 (backend/profile_api.py _view)
+    if (path === '/me/profile') return server.profile ? json({ name: server.profile.name, dept: server.profile.dept, phone_masked: '010-****-5678', address: server.profile.address }) : json({ detail: '내 정보가 아직 없습니다.' }, 404)
     return json({ detail: '인증이 필요합니다.' }, 401)
   }))
 })
@@ -460,6 +462,9 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByRole('menu').textContent).not.toContain('설정되지 않음')
     expect(calls.some(call => call.path === '/me')).toBe(true)
   })
+    // 메뉴는 전화번호를 가린 보기만 부른다(원래 번호가 담긴 ?view=edit 는 부르지 않는다).
+    expect(calls.some(call => call.path === '/me/profile' && !call.options?.method)).toBe(true)
+    expect(calls.some(call => call.path === '/me/profile?view=edit')).toBe(false)
 
   it('shows login failure and never enters a protected screen', async () => {
     render(<App />)

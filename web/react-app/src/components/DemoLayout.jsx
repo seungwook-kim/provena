@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Brain, History, UserRound, UserRoundPen } from 'lucide-react'
 import { useSession } from '../lib/session'
-import { getProfileForEdit } from '../lib/api'
+import { getProfile } from '../lib/api'
 import { previewRecallService } from '../lib/recall-service'
 import { getLiveServices, useServiceSnapshot } from '../lib/live-services'
 import Logo from './Logo'
@@ -68,11 +68,11 @@ export default function DemoLayout({ active, children }) {
     return () => clearTimeout(timer)
   }, [liveRecalls])
 
-  // H-23: 소속 팀을 '설정되지 않음'으로 고정하지 않고, 메뉴를 열 때 내 정보(dept)에서 읽는다.
+  // H-23: 소속 팀을 '설정되지 않음'으로 고정하지 않고, 메뉴를 열 때 내 정보(dept)에서 읽는다. 전화번호를 가린 보기로 읽는다(원래 번호가 필요 없다).
   useEffect(() => {
     if (!accountOpen || demoMode || !user) return undefined
     let active = true
-    getProfileForEdit().then(profile => { if (active) setTeam(typeof profile?.dept === 'string' ? profile.dept : '') }).catch(() => {})
+    getProfile().then(profile => { if (active) setTeam(typeof profile?.dept === 'string' ? profile.dept : '') }).catch(() => {})
     return () => { active = false }
   }, [accountOpen, demoMode, user?.user_id])
 
