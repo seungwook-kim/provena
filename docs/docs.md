@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | F-08 `specs/incremental.md` 문장 정정: 정시 실행 3건 실패 원인을 확정 말투에서 "추정"으로 맞추고, 결정 한 줄(로컬 DB `--once` 성공 기록 → Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회, 한도는 조직 설정이라 해소 요청 필요, 11/11 Actions 실행 20건 러너 미기동 API 확인)을 추가했다. 로컬 실행은 하지 않았다 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): `specs/107-email-signup-verification.md` 24시간 규칙 복구(S2), `specs/login.md` 113·114 전 DB 동작(S1), `specs/admin-roles.md` by-id 승인은 그 행만(M1). `specs/admin-roles.md` 이메일 최고 관리자 대소문자 무시(M3). `specs/login.md` AC-08 인증 전 로그인 안내, `api/openapi.json` 로그인 403 설명. `specs/107-email-signup-verification.md` 가입 201 응답 문구·code, openapi 가입 설명. `specs/login.md` AC-09 비이메일 아이디 대소문자. Google 연결 SQL 이름 203 → 114(`db/ERD.md`·`db/TABLE_SPEC.md`·`db/QUERY_INDEX.md`·`specs/login.md`·`specs/admin-roles.md`). | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-13: `docs/specs/recall.md`의 웹훅 본문 계약에서 개인·질문 칸을 뺀다고 고쳤다 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | K-03 PRD와 의존성 버전 차이(`rank-bm25`, `bcrypt>=4.2,<5`)를 `decisions.md` 에 기록했다(의존성은 그대로) | |

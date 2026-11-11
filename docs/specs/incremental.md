@@ -109,7 +109,8 @@ backend/rag/ingest/schedule.py
 - 핸드북 캐시·모델 캐시는 `actions/cache` 로 이어 쓴다. 정시 실행은 main에 있는 workflow만 돈다.
 - 비밀값: `DATABASE_URL`, `VOYAGE_API_KEY`(기본 모델 voyage-4가 API라 새 글이 있는 날 임베딩에 쓴다. 키가 없는 채로 새 글이 들어오는 날은 임베딩 단계에서 실패하고 실패 알림이 간다. 서식만 바뀐 날은 벡터를 재사용하므로 키를 쓰지 않는다), `SYNC_ALERT_WEBHOOK`(조장, 운영 DB가 정해진 뒤). 변수: `EMBED_MODEL`(색인 장부와 같은 모델)
 - 켜고 첫 실행: workflow는 현재 비활성(`disabled_manually`)이다. 비밀값·변수를 등록한 뒤 `gh workflow enable handbook-sync.yml`, `gh workflow run handbook-sync.yml`로 한 번 돌리고 `gh run list --workflow handbook-sync.yml`로 결과를 본다. 손으로 돌린 실행은 `GITHUB_EVENT_NAME`이 `workflow_dispatch`라 `trigger=manual`로 기록되고, 슬롯은 기본으로 그날 UTC 날짜라 같은 날 정시 실행이 이미 있었으면 슬롯 충돌로 아무것도 하지 않는다. 첫 성공 뒤 DB `sync_runs`의 마지막 행(`status`, `to_commit`, `embedded`, `reused`)을 확인한다.
-- 지금까지 실행 3건(2026-11-03~04)은 모두 "DATABASE_URL이 없다"로 실패했다(비밀값 미등록).
+- 지금까지 실행 3건(2026-11-03~04)은 모두 "증분 수집 한 번" 단계에서 실패했다. 원인은 비밀값 미등록(`DATABASE_URL` 없음)으로 **추정**한다(작업 로그를 API로 읽을 수 없어 직접 확인하지 못했다, 위 표 "실패 원인(추정)").
+- 결정(11/11): 로컬 DB `--once` 성공 기록 → Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회. 결제 한도는 조직 설정이라 해소 요청 필요(11/11 Actions 실행 20건 러너 미기동, API 확인).
 
 **재시도 규칙**
 
