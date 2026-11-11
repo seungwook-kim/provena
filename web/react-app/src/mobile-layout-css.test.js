@@ -11,9 +11,21 @@ describe('좁은 화면 채팅 레이아웃 (H-26)', () => {
     expect(block).toMatch(/\.demo-chat-page \.demo-citation-sidebar\{display:block;grid-column:1\/-1/)
   })
 
-  it('640px 이하에서 대화 목록(새 대화·검색 포함)을 display:none 하지 않는다', () => {
+  it('640px 이하에서 대화 목록(새 대화 버튼 포함)을 display:none 하지 않는다', () => {
     const block = lastBlock('@media(max-width:640px){.demo-chat-page')
     expect(block).toMatch(/\.demo-chat-page \.demo-thread-sidebar\{display:flex/)
+  })
+
+  it('640px 이하에서 대화 검색칸을 숨기는 규칙을 뒤에서 다시 보이게 덮는다', () => {
+    // 앞쪽 640px 규칙이 검색칸을 숨긴다. 같은 폭 조건에서 더 뒤에 있고 선택자가 더 구체적인 규칙이 보이게 해야 한다.
+    const hide = '.demo-thread-search{display:none}'
+    const show = '.demo-chat-page .demo-thread-search{display:grid}'
+    expect(css).toContain(hide)
+    const start = css.lastIndexOf('@media(max-width:640px){.demo-chat-page')
+    expect(start).toBeGreaterThan(css.lastIndexOf(hide))
+    expect(css.slice(start)).toContain(show)
+    // 검색칸을 숨기는 규칙은 맨 앞 하나뿐이어야 한다(뒤에서 다시 숨기지 않음).
+    expect(css.split(/\.demo-thread-search\{[^}]*display:none/).length - 1).toBe(1)
   })
 })
 
