@@ -1,0 +1,134 @@
+{
+  "min_wrong": 2,
+  "n_items": 70,
+  "n_failed": 7,
+  "type_sum": 7,
+  "largest": "근거 선택",
+  "by_type": {
+    "검색 실패": [
+      {
+        "set": "v2",
+        "id": 38,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "검색 실패",
+          "검색 실패",
+          "검색 실패"
+        ],
+        "type": "검색 실패"
+      },
+      {
+        "set": "holdout",
+        "id": 101,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "검색 실패",
+          "검색 실패",
+          "검색 실패"
+        ],
+        "type": "검색 실패"
+      }
+    ],
+    "근거 선택": [
+      {
+        "set": "v2",
+        "id": 3,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "근거 선택",
+          "근거 선택",
+          "근거 선택"
+        ],
+        "type": "근거 선택"
+      },
+      {
+        "set": "v2",
+        "id": 6,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "근거 선택",
+          "근거 선택",
+          "근거 선택"
+        ],
+        "type": "근거 선택"
+      },
+      {
+        "set": "v2",
+        "id": 39,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "근거 선택",
+          "근거 선택",
+          "근거 선택"
+        ],
+        "type": "근거 선택"
+      },
+      {
+        "set": "holdout",
+        "id": 108,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "근거 선택",
+          "근거 선택",
+          "근거 선택"
+        ],
+        "type": "근거 선택"
+      }
+    ],
+    "정답 밖 인용": [
+      {
+        "set": "holdout",
+        "id": 105,
+        "wrong": 3,
+        "runs": 3,
+        "by_run": [
+          "정답 밖 인용",
+          "정답 밖 인용",
+          "정답 밖 인용"
+        ],
+        "type": "정답 밖 인용"
+      }
+    ]
+  },
+  "below_threshold": [
+    {
+      "set": "holdout",
+      "id": 104,
+      "wrong": 1,
+      "runs": 3,
+      "by_run": [
+        null,
+        null,
+        "근거 선택"
+      ]
+    },
+    {
+      "set": "holdout",
+      "id": 107,
+      "wrong": 1,
+      "runs": 3,
+      "by_run": [
+        null,
+        null,
+        "정답 밖 인용"
+      ]
+    },
+    {
+      "set": "holdout",
+      "id": 109,
+      "wrong": 1,
+      "runs": 3,
+      "by_run": [
+        null,
+        null,
+        "정답 밖 인용"
+      ]
+    }
+  ]
+}
