@@ -57,6 +57,33 @@ def test_add_skips_a_response_already_recorded_for_the_key(tmp_path):
     assert [store.pick("k")["response"] for _ in range(2)] == ["a", "b"]
 
 
+def _msgs(task: str):
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    return [SystemMessage(content=f"[[task:{task}]]\n규칙"), HumanMessage(content="기준일: 2026-11-11\n질문: q\n<<<자료>>>\nchunk_id=c1\n본문 문장입니다. 둘째.\n<<<끝>>>")]
+
+
+def test_missing_reasoning_answer_fails_instead_of_faking_when_the_fast_answer_is_also_sent(tmp_path, monkeypatch):
+    """추론 답(answer)과 빠른 답(answer_fast)을 같이 보내는 구성(GRAPH_ANSWER_WAIT_S)에서 추론 답 녹화가 없으면 가짜 발췌 답을 내지 않고 실패시킨다.
+    가짜 답이 인용과 함께 오면 그래프가 그것을 추론 답으로 뽑아 녹화한 빠른 답을 이긴다(11/11 G2: README 질문 1번이 발췌형 답으로 나온 원인)."""
+    model = dr.ReplayChatModel(store=dr.ReplayStore(tmp_path))
+    monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "4.0")
+    with pytest.raises(dr.ReplayMiss):
+        model.invoke(_msgs("answer"))
+    assert model.invoke(_msgs("answer_fast")).content == dr.DEFAULT_FAKE_TEXT                                                           # 빠른 답은 기존대로(녹화 없으면 고정 문장)
+    assert json.loads(model.invoke(_msgs("judge")).content)["sufficient"] is True                                                      # 다른 역할도 기존대로
+    monkeypatch.delenv("GRAPH_ANSWER_WAIT_S")
+    assert "발췌한 답" in model.invoke(_msgs("answer")).content                                                                           # 빠른 답을 같이 보내지 않는 구성은 기존대로
+
+
+def test_recorded_reasoning_answer_is_still_replayed_when_the_fast_answer_is_also_sent(tmp_path, monkeypatch):
+    store = dr.ReplayStore(tmp_path)
+    msgs = _msgs("answer")
+    store.add(dr.request_key(msgs), "answer", "m", "p", '{"answer":"녹화한 답 [1]","citations":[{"chunk_id":"c1"}]}')
+    monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "4.0")
+    assert "녹화한 답" in dr.ReplayChatModel(store=store).invoke(msgs).content
+
+
 @pytest.fixture
 def client(monkeypatch, tmp_path):
     for name in ("LLM_API_KEY", "VOYAGE_API_KEY", "DEMO_MODE", "LLM_RECORD", "LLM_PROVIDER"):
