@@ -84,3 +84,19 @@
 - 시험 3개 통과, 변이 31번(int8 분기 끔) 뒤 2개 실패.
 ### 한계
 - 이미 낸 v1 418조합의 int8 값은 다시 재지 않았다(재측정은 모델 실행이 필요). `retrieve.md` I-013 상태 칸은 담당(김승욱)이 닫을 항목이라 바꾸지 않았다.
+
+## L-04 exclusions.json 형식 시험과 재현 명령 안내
+### 무엇을 바꿨나
+- `tests/test_exclusions_schema.py`(12개): `evals/exclusions.json`이 JSON이고 `as_of`·`excluded` 키가 있는지, 항목마다 id가 `evals/dataset_v1.jsonl` 또는 `dataset_v2.jsonl`의 `id`에 있는지, `reason`이 비지 않은 문자열인지, id 중복이 없는지 본다. 항목 0건이면 통과. 검사 함수가 경로를 받아 임시 파일로 나쁜 입력을 시험한다. 실제 파일과 평가셋은 바꾸지 않았다.
+- `EVAL_REPORT.md` 9장 첫 명령 앞에 한 줄 추가: `--chunks data/chunks/chunks.jsonl`은 커밋하지 않은 파일이며 `python -m backend.rag.ingest.chunk`로 만들거나 `data/index.tar.gz`를 푼 `data/index/chunks.jsonl`을 쓴다. 명령과 숫자는 그대로. **`EVAL_REPORT.md`는 조장 파일**이라 이 한 줄은 조장이 확인하고 받을 부분이다.
+- `evals/evals.md`, `docs/docs.md` 기록 표에 한 줄씩.
+### 왜
+- 목록 L-04 행. 근거: 코드 `evals/retrieval/run.py:38-41`(`load_exclusions`는 `id`·`reason`을 읽기만 하고 검증은 없음), 문서 `evals/README.md:55-62`(형식과 "사유를 공개"가 조건), 사실 `evals/exclusions.json`은 `{"as_of": null, "excluded": []}`로 시험이 파일을 보는 곳이 없었다.
+- 안내 한 줄의 근거(코드·문서): `.gitignore:40`이 `data/chunks/`를 막음, `backend/rag/ingest/chunk.py:285` 출력 기본값 `data/chunks`와 `docs/specs/chunk.md:49`(출력 `data/chunks/chunks.jsonl`, 커밋 안 함), `backend/rag/retrieve/index.py:92-94`가 `chunks.jsonl`을 `shutil.copyfile`로 `data/index/chunks.jsonl`에 그대로 복사(같은 형식), `data/index.tar.gz` 안에 `chunks.jsonl`이 있음(`tar -tzf`로 확인), `docs/specs/eval-retrieval.md:23`이 같은 안내를 이미 적음.
+### 확인한 것 (로컬)
+- 시험 12개 통과(실제 파일 1, 0건 1, 정상 항목 1, 나쁜 입력 9). 나쁜 입력 9가지는 모두 문제를 돌려줘 실패로 잡힌다: JSON 깨짐, `as_of` 없음, `excluded` 없음, 평가셋에 없는 id, reason 빈 문자열, reason 공백, reason 없음, id 없음, id 중복.
+- 변이(코드를 망가뜨려 보기)는 따로 돌리지 않았다. 나쁜 입력 사례가 검사 함수의 각 분기를 직접 지나가는 것으로 대신했다.
+### 한계
+- 시험이 평가셋 id 존재만 본다. 제외 사유가 사실인지, 코퍼스가 바뀐 문항이 맞는지는 보지 않는다(사람 판단).
+- `load_exclusions`(run.py)가 이 검사를 호출하지는 않는다. 형식이 틀린 파일은 CI 시험에서 잡히고 실행 시점에는 잡히지 않는다.
+- 안내 한 줄은 명령을 직접 새 저장소에서 다시 돌려 확인한 것이 아니라 위 코드·문서 근거로 쓴 것이다(`chunk.py`는 `data/corpus.tar.gz`를 자동으로 푸는 코드가 있으나 이 작업에서 실행하지 않음).

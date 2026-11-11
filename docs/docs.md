@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | `EVAL_REPORT.md` 9장 재현 명령 앞에 한 줄 추가: `--chunks data/chunks/chunks.jsonl`은 커밋하지 않은 파일이며 `backend.rag.ingest.chunk`로 만들거나 `data/index.tar.gz`를 푼 `data/index/chunks.jsonl`을 쓴다(명령·숫자는 그대로). `EVAL_REPORT.md`는 조장 파일 | |
 | 2026-11-11 | 박진형 (jinyeong-731) | `GATES.md` 변이 표에 18~33번 추가(D5 이후 코드 승인 재개·멀티·판정 단계와 새 시험의 변이, 로컬 실행 결과), `embedding_measurement.md` 재측정 기록 한계 문장을 int8 수정 반영으로 고침, 작업 내역 `pr-notes/PR-next-b4.md` 추가 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | PR #131 로컬 실서버 확인 결과 `pr-notes/PR-131-local-check.md` 추가, `pr-notes/PR-131.md`에 로컬 확인 절과 결정 추천 추가, `SPEC.md` 판 날짜 표시 칸의 "EVAL_REPORT에 결과 없음" 문장을 사실대로 정정(숫자 칸은 결정 대기라 그대로). 코드 변경 없음 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 통합 PR 작업 내역 `docs/pr-notes/PR-131.md` 추가, `deliverables/ai_tools_log.md`에 통합 PR 한 줄 | #131 |

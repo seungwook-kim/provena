@@ -905,6 +905,7 @@ b는 a와 다르지 않았다(회차 p95 평균 +0.028초, 검색 hedge 발동 0
 평가자가 샘플 몇 문항을 다시 돌려 숫자가 맞는지 봅니다.
 
 ```bash
+# 아래 `--chunks data/chunks/chunks.jsonl`은 저장소에 커밋하지 않은 파일이다(.gitignore). `python -m backend.rag.ingest.chunk`로 만들거나, 새로 받은 저장소에서는 `data/index.tar.gz`를 풀어 나온 같은 형식의 `data/index/chunks.jsonl`을 `--chunks`에 넘긴다
 # 베이스라인(3장 표 0번). 아래 prepare로 만든 캐시를 쓴다. 결과 evals/results/baseline_v1/
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_baseline_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/baseline_v1
 # 검색 1차 비교(3-0) 원시 결과 보기: 조합별 JSON 418개를 같은 폴더에 푼다(푼 파일은 커밋하지 않는다)
