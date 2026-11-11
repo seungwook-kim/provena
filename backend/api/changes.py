@@ -34,6 +34,11 @@ class MonitoringBody(BaseModel):
     status: Literal["active", "paused"]
 
 
+class SyncBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    dry_run: bool = True    # 기본은 시험 실행: 무엇을 할지만 알려 주고 수집은 시작하지 않는다
+
+
 class ChangeItem(BaseModel):
     """`GET /changes`의 `items` 한 건(`change_json`의 반환과 같은 칸). 명세용이며 응답을 걸러내지 않는다."""
     event_id: str | None = None
@@ -149,6 +154,21 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
     def put_monitoring(body: MonitoringBody, request: Request, admin: AuthUser = Depends(admin_user), _csrf: None = Depends(require_csrf)) -> dict:
         rec = _store(request).monitoring_set(body.status, admin.login_id)
         return {"status": rec["status"], "updated_by": rec.get("updated_by"), "updated_at": str(rec.get("updated_at") or "") or None}
+
+    @router.post("/admin/sync")
+    def post_sync(request: Request, body: SyncBody | None = None, admin: AuthUser = Depends(admin_user), _csrf: None = Depends(require_csrf)) -> dict:
+        """증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). dry_run=false는 501(실제 실행 방식 미정)."""
+        from backend.rag.ingest import schedule   # 수집 모듈은 읽기만 한다(import). 무거운 의존성이라 부를 때 불러온다
+
+        body = body or SyncBody()
+        now = datetime.now(timezone.utc)
+        slot = f"manual-{now:%Y%m%d%H%M%S}"
+        st = _store(request)
+        plan = {"slot": slot, "scheduled_slot": schedule.slot_of(now), "monitoring": _monitoring(st)}
+        if body.dry_run:
+            return {"dry_run": True, "started": False, **plan}
+        # 실제 실행 방식(Cloud Run Job, workflow_dispatch, 이미지에 git 설치)은 팀장이 정한다. 그 전에는 아무것도 시작하지 않는다
+        raise ApiError(501, "manual_sync_not_supported", "실제 수동 수집은 아직 지원하지 않습니다. 정시 수집(GitHub Actions handbook-sync)을 사용하세요. dry_run=true로는 계획만 볼 수 있습니다.")
 
     @router.get("/changes/{event_id}", response_model=None)
     def get_change(event_id: str, request: Request, response: Response):

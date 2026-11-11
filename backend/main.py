@@ -49,6 +49,7 @@ from typing import Any
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Match, Mount
 
 from backend.api.errors import ApiError, install_error_handlers
 from backend.api.middleware import RequestContextMiddleware
@@ -401,12 +402,16 @@ def create_app(
             api_prefixes = ("auth", "api", "me", "health", "threads", "approvals", "mcp")
             spa_prefixes = ("login", "signup", "chat", "onboarding", "myinfo", "admin", "recalls", "changes", "demo")
 
-        @app.post("/threads", include_in_schema=False)
-        def threads_wrong_method() -> None:
-            raise HTTPException(status_code=405, detail="Method Not Allowed")
-
-        @app.post("/{path:path}", include_in_schema=False)
-        def unknown_post(path: str) -> None:
+        # 정적 파일 마운트(/)는 GET·HEAD만 받아 다른 메서드는 405가 된다. 맞는 경로가 하나도 없으면 모든 메서드를 404 not_found로,
+        # 경로는 맞는데 메서드만 틀리면 405 method_not_allowed로 돌려준다(오류 응답 규약, K-12).
+        @app.api_route("/{path:path}", methods=["POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
+        def unknown_path(request: Request) -> None:
+            # 라우터가 감싸져 있어 route.methods를 읽을 수 없다 → 메서드를 하나씩 바꿔 가며 실제로 맞는 경로가 있는지 본다
+            others = [r for r in request.app.router.routes if getattr(r, "path", None) != "/{path:path}" and not isinstance(r, Mount)]
+            allowed = [m for m in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                       if any(r.matches({**request.scope, "method": m})[0] == Match.FULL for r in others)]
+            if any(r.matches(request.scope)[0] != Match.NONE for r in others):
+                raise HTTPException(status_code=405, detail="Method Not Allowed", headers={"Allow": ", ".join(allowed)} if allowed else None)
             raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
 
         if web_root != WEB_DIR:

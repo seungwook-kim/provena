@@ -12,14 +12,15 @@ describe('apiMemoryService field mapping', () => {
     expect(mapApiMemoryResponse({ affiliation: '보안', rank: 'SRE' })).toEqual({ team: '보안', role: 'SRE', service: '' })
   })
 
-  it('sends team, role and service as affiliation, rank and service', async () => {
+  it('sends role and service as rank and service, never the team as affiliation', async () => {
     const { getMemory, patchMemory } = await import('./api')
     getMemory.mockResolvedValueOnce({ affiliation: '보안', rank: 'SRE' })
     patchMemory.mockResolvedValueOnce({ affiliation: 'IT 운영', rank: '개발자', service: '결제 API' })
 
     expect(await apiMemoryService.getMemorySettings('user-1')).toEqual({ team: '보안', role: 'SRE', service: '' })
     expect(await apiMemoryService.saveMemorySettings('user-1', { team: 'IT 운영', role: '개발자', service: '결제 API' })).toEqual({ team: 'IT 운영', role: '개발자', service: '결제 API' })
-    expect(patchMemory).toHaveBeenCalledWith({ affiliation: 'IT 운영', rank: '개발자', service: '결제 API' })
+    expect(patchMemory).toHaveBeenCalledWith({ rank: '개발자', service: '결제 API' })
+    expect(Object.keys(patchMemory.mock.calls.at(-1)[0])).not.toContain('affiliation')
   })
 
   it('keeps affiliation and rank after a PATCH response is read again', async () => {

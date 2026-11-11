@@ -12,7 +12,24 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | `pr-notes/PR-132.md` 추가: #131 리뷰 반영(기억 설정 소속 미전송, 판 날짜 참고 값)과 놓친 것 목록 후속 38개(E-02~R-09) 묶음의 작업 내역(갈래별 무엇을·근거·확인·한계, 해소 확인 번호, 조장 확인 필요). 코드 변경·측정·호출 없음, 모든 값은 로컬 | #132 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 조장 리뷰 반영: 결정 ① 확정(기억 설정이 한글 팀 이름을 `affiliation`으로 보내지 않음, `specs/memory.md` 문장 수정), 결정 ② 확정(`SPEC.md`·`README.md` 판 날짜 표시는 참고 값 1.000(00037-2jt 원자료 재계산 v2 75/75)으로만 적고 이번 주 최종 운영 측정에서 조장이 다시 세어 반영), `pr-notes/PR-131.md` 결정 절 갱신. 측정·호출 없음 | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 병합 후 낡은 줄 번호 인용을 현재 코드 줄로 정정(`specs/login.md`, `specs/recall.md`, `specs/decision-approval.md`, `specs/memory.md`, `SDD.md` 11-1, `db/TABLE_SPEC.md`, `web/web.md`) 하고 `TABLE_SPEC.md`의 겹친 서술어를 고쳤다. `api/api.md` 경로 데코레이터 수를 57개로 다시 세고 제외 표에 `HEAD /health`를 더했다(57 - 4 = 53개 동작). `TEAM_GUIDE.md` 일정 행을 날짜순(D4, D5, D6)으로 바꿨다. `SDD.md` 4-4 오류 표에 501 `manual_sync_not_supported` 행을 더했다(C-14). 코드 변경·측정·호출 없음 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `specs/erp-integration.md`의 `openapi.json` 경로 수를 46개에서 47개로 정정(C-14 `POST /admin/sync` 추가 뒤 `export_openapi.py` 재실행 결과 47개 경로·53개 동작, `api.md`·`SPEC.md`와 같음) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `decisions.md`에 서버 간 호출 인증 결정 행 추가: 수신은 `SERVICE_API_KEY`, 송신은 HMAC `X-Signature`(현재 코드 기준, J-09). `api/openapi.json`에 `POST /admin/sync` 반영(C-14) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | PR #131 로컬 실서버 확인 결과 `pr-notes/PR-131-local-check.md` 추가, `pr-notes/PR-131.md`에 로컬 확인 절과 결정 추천 추가, `SPEC.md` 판 날짜 표시 칸의 "EVAL_REPORT에 결과 없음" 문장을 사실대로 정정(숫자 칸은 결정 대기라 그대로). 코드 변경 없음 | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | F-18: `embedding_measurement.md` 11.11 추가 — 확정 구성에 하이브리드·리랭킹이 없는 이유를 10장 72조합 표의 줄(번호 인용)에서 옮긴 표로 정리. 새 측정 없음 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `specs/memory.md` 기억 기준·정정 절차·State/Store 경계 추가, `memory.py`=`backend/memory/` 대응 한 줄(E-02, E-03). `specs/login.md` 로그인 실패 제한 프로세스 메모리·`--max-instances 1`·`TRUSTED_PROXY_HOPS`·쿠키 수명, J-05 낡은 서술 정정(J-04, J-05) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개의 "(첫 PR 과제 완료)"와 "세 사람 모두 채웠다" 문구를 사실대로 고치고(김승욱 한마디 비어 있음), 템플릿 문구 "강사를 부르세요·멘션하세요"를 TEAM_GUIDE 9장 양식 안내로 바꿈(R-09 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `SPEC.md` P-03 행에서 "자동 생성 SDK"를 예정(아직 없음)으로 고치고 `specs/erp-integration.md`를 가리키게 함. `specs/erp-integration.md`의 예정 문구를 `mock_erp.md`와 통일(N-07 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 트리의 `backend/rag/ingest/`에 실제로 있는 `snapshot.py`·`compare.py` 추가(O-17 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 `db/` 줄 최초 작성자를 `git log --follow`로 다시 확인해 103을 강경희로 정정, 정의 없는 "B-16"을 "팀장 확정 대기"로(O-23 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE:90·113·309의 `.claude/skills/`·`.mcp.json`도 아직 저장소에 없는 예정으로 표시(O-39, 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개 절의 첫 과제 안내문을 현재 상태(세 사람 모두 채움)에 맞게 정리(R-09) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | docs/specs/erp-integration.md 신규: 업무시스템 연동 Spec(REST·SDK·웹훅 한 장, 코드에 있는 것만 적고 SDK 자동 생성·Java 목업은 예정, N-07) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 2장 일정을 가이드 일정(D4 11/5 그래프, D6 11/9 서비스화)에 맞춤(O-01), 5-0 db/ 줄을 실제 SQL 번호(01·101~114·120·201~202)와 git 최초 작성자로 고치고 data/ 줄을 corpus.tar.gz로(O-23, O-17), 예시 브랜치 jinhyung을 jinhyeong으로(O-31), 아직 없는 .mcp.json과 파트별 config.py를 예정으로 표시(O-39). PRD 수집 규칙의 data/corpus/를 data/corpus.tar.gz(풀면 corpus/)로(O-17). 5장 폴더 주인 배정과 팀장 전용 파일 표는 건드리지 않음. O-47은 fix-o47-l24 브랜치에서 처리돼 건너뜀 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 O-06, O-07, O-15, O-19, O-21, O-27, O-35 확인. O-06·O-19·O-21·O-27은 해소(근거 파일:줄 확인), O-07(`SDD.md` 51행의 LangChain 임베딩·저장소·리트리버 표기를 실제 Voyage API 직접 호출·psycopg 직접 조회로), O-15(`ApprovalItem.kind`에 `team_review_failed`), O-35(`Chunk.kind` 주석에 실제 값 article·row와 나머지 값 보존 이유)를 `SDD.md`에서 고침. `backend/schemas/`는 건드리지 않음. `SDD.md` 5-0의 `db/` 줄을 실제 SQL 번호(01, 101~114, 120, 201~202)로 고치고 번호대 주인 배정은 팀장 확정 대기(B-16)로 적음 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | SDD·Spec 값 반영(놓친 것 O-24, P-01, P-02, P-03, P-11, B-04): `SDD.md` 웹훅 두 경로의 방향 구분, 11-0에 LLM 제공자 기본값·판정 규칙 결과 추가, 11-1 결정표 실행 API 값 채움 / `specs/decision-approval.md` 실행 API 필드·응답 코드를 코드대로 / `specs/recall.md` 웹훅 제한 시간 env와 기본값 / `specs/team-review.md` 쟁점표 행 칸과 `issue_tables` 저장 모양. `rule_links`(B-04)는 이미 `chunks.link_targets`로 정리되어 있어 확인만 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 통합 PR 작업 내역 `docs/pr-notes/PR-131.md` 추가, `deliverables/ai_tools_log.md`에 통합 PR 한 줄 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 로컬 시험·측정 값에 로컬·배포 미확인 표기(`SDD.md` Google 로그인 설명, `specs/106`·`incremental.md`, `pr-notes/PR-127·130`, 포트폴리오 인용 정확도 행). 문구만, 숫자 재측정 없음 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11: `GATES.md` G7 칸의 '10장 미작성' 문구를 `EVAL_REPORT.md` 10장 작성 사실에 맞게 고침(O-47, 시연 영상 미작성은 그대로). 측정·호출 없음 | #131 |
