@@ -51,7 +51,7 @@ from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
 from backend.schemas.chunk import DEFAULT_K
-from backend.services.demo_replay import env_flag
+from backend.services.demo_replay import ReplayChatModel, env_flag
 from backend.services.llm import CostCapExceeded, get_chat_model, is_demo_mode
 from backend.services.skills import load_skill, skills_enabled
 
@@ -317,6 +317,8 @@ def build_graph(
     read_section = section_reader or default_section_reader
     llm = llm if llm is not None else get_chat_model()
     store = store if store is not None else InMemoryStore()
+    # 키 없는 데모(녹화 재생)는 사용자 기억을 쓰지 않는다: 녹화는 기억이 없는 요청이라, 기억(소속)이 분류·재작성 입력과 검색 범위에 들어가면 녹화 키가 어긋나 녹화한 질문까지 거절된다(K-18).
+    replay_demo = isinstance(llm, ReplayChatModel)
     research_limit = resolve_max_research(max_research)
     run_parallel = env_flag("GRAPH_PARALLEL_INTAKE") if parallel_intake is None else bool(parallel_intake)
     brief = env_flag("LLM_BRIEF_OUTPUT") if brief_output is None else bool(brief_output)
@@ -470,7 +472,7 @@ def build_graph(
         return {
             **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             **({"started_at": time.monotonic()} if answer_budget else {}),
-            "profile": get_profile(store, user_id) if user_id else {},
+            "profile": get_profile(store, user_id) if user_id and not replay_demo else {},
             "as_of": state.get("as_of") or date.today().isoformat(),
             "as_of_given": bool(state.get("as_of")),
             "kind": "",

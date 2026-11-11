@@ -171,6 +171,19 @@ def test_memory_profile_used_for_org():
     assert "TEST-finance" in rewrite_user
 
 
+def test_replay_demo_ignores_saved_profile(tmp_path):
+    """K-18: 키 없는 데모(재생 모델)는 저장한 기억을 입력에 넣지 않는다. 녹화는 기억 없는 요청이라 기억이 들어가면 녹화 키가 어긋난다."""
+    from backend.services.demo_replay import ReplayChatModel, ReplayStore
+
+    store = InMemoryStore()
+    put_profile(store, "u1", affiliation="TEST-finance", rank="매니저")
+    fn, calls = counting_search()
+    out = run(graph(fn, llm=ReplayChatModel(store=ReplayStore(tmp_path)), store=store))
+    assert out["profile"] == {}
+    assert calls and all(c.org is None for c in calls)
+    assert get_profile(store, "u1") == {"affiliation": "TEST-finance", "rank": "매니저"}  # 저장된 기억은 그대로
+
+
 def test_store_namespace_is_per_user():
     store = InMemoryStore()
     put_profile(store, "alice", affiliation="TEST-security", rank="디렉터")
