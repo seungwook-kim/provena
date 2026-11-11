@@ -24,6 +24,28 @@ export function normalizeCitation(citation, index = 0) {
   return { ...citation, id: citation.id ?? citation.chunk_id ?? `citation-${index}`, title: citation.title ?? citation.rule_title ?? '', path: citation.path ?? citation.article ?? '', version: citation.version ?? citation.version_date ?? '' }
 }
 
+// 답 본문 [n]을 본문에 처음 나오는 순서대로 다시 매긴다(H-32 ①). 서버는 근거 목록 순서로 번호를 붙여 본문이 [1][3][2]처럼 뒤섞일 수 있다.
+// 화면 표시만 바꾼다: 본문과 근거 목록(칩·패널)의 번호를 같이 바꾸고, 본문에 없는 근거는 뒤에 그대로 둔다. 서버 값·평가 지표는 그대로다.
+const FOOTER_MARK = '\n\n기준일 '
+export function renumberByAppearance(message) {
+  const citations = message?.citations
+  const text = message?.text
+  if (message?.role !== 'assistant' || message.state === 'generating' || !Array.isArray(citations) || citations.length < 2 || typeof text !== 'string') return message
+  const cut = text.lastIndexOf(FOOTER_MARK)
+  const body = cut < 0 ? text : text.slice(0, cut)
+  const footer = cut < 0 ? '' : text.slice(cut)
+  const order = []
+  for (const match of body.matchAll(/\[(\d+)\]/g)) {
+    const n = Number(match[1])
+    if (n >= 1 && n <= citations.length && !order.includes(n)) order.push(n)
+  }
+  for (let n = 1; n <= citations.length; n += 1) if (!order.includes(n)) order.push(n)
+  if (order.every((n, i) => n === i + 1)) return message
+  const renumber = new Map(order.map((n, i) => [n, i + 1]))
+  const newBody = body.replace(/\[(\d+)\]/g, (whole, digits) => renumber.has(Number(digits)) ? `[${renumber.get(Number(digits))}]` : whole)
+  return { ...message, text: newBody + footer, citations: order.map(n => citations[n - 1]) }
+}
+
 // GET /threads/{id} sends `messages` (user/assistant pairs); older servers only send `last` ({kind, answer, ...}).
 function mapMessage(message, fallbackState = 'done') {
   if (message.role === 'user') return { ...message, text: message.text ?? '' }

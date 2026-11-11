@@ -171,3 +171,18 @@ def test_documents_are_never_replayed_or_recorded(client, monkeypatch):
     monkeypatch.setenv("LLM_RECORD", "1")
     client.embed(["문서 조각"], "document")
     assert len(dr.get_store()) == 0
+
+
+def test_replay_adds_no_fixed_delay(tmp_path):
+    """H-32 ③: 키 없는 데모의 재생은 고정 지연이 없다. 같은 요청의 n번째 변형만 n*STAGGER_S초 늦출 뿐이라 변형 3개와 녹화 밖 요청이 합쳐 0.5초 안에 끝나야 한다(기본 STAGGER_S 기준)."""
+    import time
+
+    from langchain_core.messages import HumanMessage
+
+    key = dr.request_key([HumanMessage(content="q")])
+    (tmp_path / "recorded.jsonl").write_text("\n".join(_row(key, r) for r in ("a", "b", "c")) + "\n", encoding="utf-8")
+    model = dr.ReplayChatModel(store=dr.ReplayStore(tmp_path))
+    started = time.perf_counter()
+    assert [model.invoke([HumanMessage(content="q")]).content for _ in range(3)] == ["a", "b", "c"]
+    model.invoke([HumanMessage(content="녹화에 없는 질문")])
+    assert time.perf_counter() - started < 0.5
