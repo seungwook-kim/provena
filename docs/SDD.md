@@ -117,7 +117,7 @@ flowchart LR
 
 ### 2-4. 개발 도구 Skill
 
-`.claude/skills/`에 두고 저장소에 커밋해 팀이 같이 쓴다. 에이전트가 실행 중에 쓰는 것이 아니므로 가산(가이드 p.20) 근거로 내세우지 않는다.
+`.claude/skills/`에 두고 저장소에 커밋해 팀이 같이 쓸 예정이다(아직 폴더가 없다). 에이전트가 실행 중에 쓰는 것이 아니므로 가산(가이드 p.20) 근거로 내세우지 않는다.
 
 | Skill | 하는 일 |
 |---|---|
@@ -141,8 +141,8 @@ flowchart LR
 repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
 ├─ AGENTS.md, CLAUDE.md      # 개발 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
-├─ .claude/skills/           # 개발 도구 Skill (2-4)
-├─ .mcp.json                 # 개발용 MCP 연결 설정
+├─ .claude/skills/           # 개발 도구 Skill (2-4, 예정: 아직 없음)
+├─ .mcp.json                 # 개발용 MCP 연결 설정 (예정: 아직 없음)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
 ├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장, `evals/evals.md`). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
