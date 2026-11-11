@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | PR #113(이메일 가입 인증, `db/107`·`db/108`)과 이후 112(부분 유니크)·203(구글 연결)을 DB 문서에 반영(DB 파일·코드 변경 없음). `docs/db/ERD.md`·`TABLE_SPEC.md`·`QUERY_INDEX.md`에 `signup_requests`의 칸 7개와 색인, 108의 RLS·권한 회수와 106·109와 겹침을 적고, `auth_store.py`·`auth.py`·`main.py`의 줄 번호를 현재 파일 기준으로 다시 맞춤(질의마다 grep으로 확인) | 미정 |
 | 2026-11-11 | 김승욱 (Claude Code) | D8 후속 정정(측정·호출 없음): `SPEC.md` 3장 응답 시간·비용 행의 공식 값을 `EVAL_REPORT.md` 8장 표와 같은 최신 배포 `provena-api-00035-h69`로 맞춤(전체 p95 평균 8.942초, 검색 p95 1.22초, 요청당 0.0074달러, 단계별 비용 위치). 이전에는 `00032-zhs` 값과 `00020`의 검색 p95 1.40초가 섞여 있었다 | |
 | 2026-11-11 | 박진형 (jinyeong-731) | 문서 현행화(최신 main c5ff52e 기준, 코드·평가셋·결과 원자료는 고치지 않음): 폴더 md의 "하는 일"에 빠진 파일 설명 추가와 낡은 문장 정정(`evals/safety/safety.md` 챗봇 비교 "아직 안 함", `web/react-app/README.md` 회원가입·기억 API, `mock_erp.md`), PR #119 등 빠진 작업 기록 행을 "보충" 표시로 추가, `db/db.md`에 109 운영 적용 상태, `docs/db/*`의 `routes.py`·`build.py` 줄 번호를 현재 코드로, `.env.example`에 키 없는 데모 경고·시험 DB 변수 정리, 끊어진 링크 전수 점검(마크다운 링크 0건) | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 기록 보강과 정정(측정·호출 없음): 검증 20건의 판정 기록 문장을 확인된 사실(판정 결과 기록을 찾지 못함, 재판정 진행)로 고침(`EVAL_REPORT.md` 2장, `docs/SPEC.md`, `decisions.md` 0096, 판정 시트 `evals/judge_sheet_holdout_v1.csv` 추가). `EVAL_REPORT.md` 2장에 평가셋 v2 판정 과정(2026-11-02, 판정자 박진형·강경희, 36번·48번 수정과 48번 재판정)을 적고 `evals/evals.md` 작업 기록에 같은 날 행을 더함. `TEAM_GUIDE.md`의 Langfuse 연결 줄을 담당 배정(박진형)과 커밋 이력상 구현(김승욱, 강경희)으로 나눠 적음 | 미정 |

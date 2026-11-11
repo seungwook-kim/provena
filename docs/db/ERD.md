@@ -92,7 +92,7 @@ flowchart LR
 
 ### 3-1. 인증
 
-파일: `db/101_auth_users.sql`, `103_auth_token_revocations.sql`, `104_user_profiles.sql`, `105_admin_role_log.sql`, `106_signup_approval.sql`.
+파일: `db/101_auth_users.sql`, `103_auth_token_revocations.sql`, `104_user_profiles.sql`, `105_admin_role_log.sql`, `106_signup_approval.sql`, `107_email_signup_verification.sql`(`signup_requests`에 칸 7개와 색인 2개), `108_auth_privacy_hardening.sql`(표를 만들지 않고 `users`, `signup_requests`의 RLS와 권한 회수).
 
 ```mermaid
 erDiagram
@@ -137,6 +137,13 @@ erDiagram
         timestamptz requested_at
         timestamptz reviewed_at
         uuid reviewed_by FK
+        boolean email_verification_required "기본값 false, 107"
+        timestamptz email_verified_at "인증 전 NULL, 107"
+        text verification_code_hash "코드 해시, 107"
+        timestamptz verification_expires_at "107"
+        integer verification_attempts "기본값 0, 107"
+        integer verification_send_count "기본값 0, 107"
+        timestamptz last_verification_sent_at "107"
         text google_sub UK "구글 가입 신청의 sub, 203이 더한 칸"
     }
     user_identities {
