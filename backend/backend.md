@@ -10,10 +10,10 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 ## 작업 기록 (최신이 위)
 
+| 2026-11-10 | kyunghee | 회원가입 승인 리뷰 반영: `signup_requests` 미생성 시 undefined-table 오류만 가입 기록 없음으로 처리하고 기타 DB 오류는 503으로 처리. 106 SQL에 RLS·Data API 권한 차단 반영. 107은 현재 코드 사용처가 없어 추가하지 않음 | 미정 |
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-10 | kyunghee | 회원가입 승인 리뷰 반영: `signup_requests` 미생성 시 undefined-table 오류만 가입 기록 없음으로 처리하고 기타 DB 오류는 503으로 처리. 106 SQL에 RLS·Data API 권한 차단 반영. 107은 현재 코드 사용처가 없어 추가하지 않음 | 미정 |
 | 2026-11-10 | 강경희 | PostgreSQL 및 메모리 인증 저장소에 가입 신청 생성·상태 조회·승인·거절 기능을 구현하고, 관리자 API와 로그인 승인 검증을 연동하였습니다. | 미정 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #110) `api/routes.py`: 응답 시간 p95 단축 코드 스위치(기본 꺼짐)에 맞춰 `/chat` 처리를 고침(커밋 acd9a45) | #110 |
 | 2026-11-09 | 김승욱 (Claude Code) | 승인 결정의 동시 요청 잠금을 여러 인스턴스로 넓혔다. 같은 Postgres를 보는 서버 프로세스 2개로 시험하니 같은 승인 건에서 그래프가 2번 재개됐고(결정표·쟁점표 24회 모두), 쟁점표는 반대 결정 12회 중 8회에서 승인 저장과 반려 기록이 함께 남았다. `graph/decision/routes.py`의 `_decision_lock`이 스레드 잠금에 더해 `graph/decision/repo.py`의 `PostgresDecisionRepo.decision_lock`(`pg_advisory_xact_lock`, 풀과 별도 연결, 대기 120초)을 건다. 잠금 실패는 503 `save_failed`다. 또 빈 DB에서 인스턴스 2개가 동시에 뜰 때 `graph/checkpoint.py`의 표 만들기가 부딪혀 한쪽이 죽던 문제를 `setup_tables`(부딪힌 오류만 6번까지 다시)로 고쳤다. 시험 `tests/test_decision_multi_instance.py` 20건(수정 전 결정 16건 실패, 빈 DB 4건 중 3건 실패). 배포 서비스에서 인스턴스 2개 이상으로는 시험하지 않았다 | 미정 |

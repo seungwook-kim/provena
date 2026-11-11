@@ -83,13 +83,14 @@ WHERE nsp.nspname = 'public'
 
 ## 작업 기록 (최신이 위)
 
+| 2026-11-10 | 강경희 (kyunghee) | `106_signup_approval.sql`의 `signup_requests`에 RLS를 활성화하고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 회수하는 보안 설정을 반영. `101` 다음에 106을 적용함을 기록. 같은 줄의 "107 프로필 필드는 사용하지 않음"은 프로필 추가 칸 제안(`docs/specs/107-user-profile-fields.md`)을 가리키며, 같은 번호의 `107_email_signup_verification.sql`은 이메일 가입 인증에 쓰여 적용 대상이다(위 절 참고) | 미정 |
+
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
 | 2026-11-11 | 박진형 (jinyeong-731) | `113_signup_edges.sql` 추가: `signup_requests`의 `login_id` UNIQUE와 107의 소문자 유니크 색인을 거절 행을 뺀 부분 유니크 색인(`signup_requests_login_id_open_unique`, `signup_requests_login_id_lower_open_unique`)으로 바꿔 거절된 이메일도 다시 가입할 수 있게 했고, 겹치지 않는 이메일 `users.login_id`를 소문자로 바꾸고 `users_login_id_lower_unique`를 걸었다(대소문자만 다른 쌍이 있으면 그 쌍과 색인은 건너뛰고 NOTICE). 새 Postgres 컨테이너에 `db/` 전체를 이름 순서로 적용해 오류 0, 113을 두 번 돌려도 같음을 확인했다. 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-11 | 김승욱 (Claude Code) | `108_auth_privacy_hardening.sql`의 `REVOKE ... FROM anon, authenticated`를 역할이 있을 때만 실행하는 `DO` 블록으로 바꾸고 106과 겹치는 줄을 정리했다. 새 Postgres 16 컨테이너에 `db/`의 SQL을 compose와 같은 순서로 전부 실행해 오류 0, 108 뒤의 109 이후 파일까지 실행됨을 확인했고, 108을 한 번 더 돌리고 `anon`·`authenticated` 역할을 만든 뒤에도 돌려 오류 없이 권한 0건임을 확인했다. 운영 DB의 107·108 적용 여부는 이 저장소에서 확인하지 못했고 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | `109_realign.sql`(표 3개 합침, 색인 정리, `anon`·`authenticated` 권한 회수), `manual/109_purge_old.sql` 추가, `105`·`110`·`120`을 합친 모양으로 수정, `docs/db/ERD.md`, `TABLE_SPEC.md` 추가. 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-09 | 박진형 (jinyeong-731) | `104_user_profiles.sql`(내 정보 암호문 표 `user_profiles`, `users` 외래키, RLS)과 `105_admin_role_log.sql`(관리자 등록·해제 기록 `admin_role_log`, RLS) 추가. 둘 다 `IF NOT EXISTS`라 다시 돌려도 된다. 운영 Supabase에는 적용하지 않았다(미적용) — `101` 다음에 104·105를 앱 재배포 전에 적용해야 한다(104가 없으면 `/me`가 503) | 미정 |
-| 2026-11-10 | 김승욱 (기록: 박진형) | (보충) `109_realign.sql`(표 3개 합침, 색인 정리, `anon`·`authenticated` 권한 회수), `manual/109_purge_old.sql` 추가, `105`·`110`·`120`을 합친 모양으로 수정, `docs/db/ERD.md`, `TABLE_SPEC.md` 추가. 운영에는 적용하지 않았다(미적용) (덧붙임 2026-11-11: 운영에는 이후 1단계를 11/10 밤, 2단계를 11/11 00:42에 적용하고 옛 표를 삭제했다. 근거 `docs/worklog.md:10`, `docs/db/TABLE_SPEC.md`) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `120_answers_recall.sql` 추가: `answers`, `citations`, `answer_grounding`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_feedback`, `recall_digests`, `change_monitoring`(모두 `IF NOT EXISTS`, RLS). 로컬 pgvector 컨테이너에 `01_init`, 1xx, 201, 202, 120 순으로 적용하고 120을 한 번 더 적용해 확인했고, `tests/test_recall_pg.py`가 저장소 SQL을 그 DB에서 시험한다. 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | 운영 Supabase를 풀러 접속으로 읽기 전용 조회해 표 목록과 행 수(`docs` 1,512행, `chunks` 23,095행, `threads` 0행)를 확인하고, 데모 계정 2개 등록 뒤 `users` 2행을 확인하고, "운영 Supabase 인증 스키마 적용" 절의 미적용·미검증 서술을 확인 결과로 고쳤다. SQL은 실행하지 않았다 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | `111_threads.sql` 추가: 사용자별 대화 목록 `threads`(PK `(user_id, thread_id)`, 인덱스 `(user_id, updated_at DESC)`, RLS). 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
