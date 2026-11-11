@@ -82,7 +82,7 @@ POST /decision-tables/run                   표를 모를 때: 업무 종류로 
 }
 
 응답 실패 (본문 `detail`은 `{reason, message}`, backend/graph/decision/rules.py `DecisionError`):
-400 bad_request       task_type 없음, 금액 누락·음수·숫자 아님, 구간 이름만으로 못 고르는 업무에 band 없음
+400 bad_request       task_type 없음, 금액 누락·음수·숫자 아님, 금액으로 구간을 고를 수 없는 업무(금액 칸이 없는 구간이 있는 표)인데 band를 주지 않음 (`backend/graph/decision/rules.py:315-319`)
 401 인증 토큰 없음
 404 not_found         없는 결정표·업무 종류·구간, 금액이 속하는 구간이 없음
 409 not_approved      승인되지 않은(draft·rejected) 결정표
