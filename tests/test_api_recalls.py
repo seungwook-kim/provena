@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 
 import pytest
 from api_test_support import CSRF, Env, FakeAuthStore
@@ -42,6 +43,14 @@ def env(monkeypatch):
         e.post = Post()
         svc.sender = WebhookSender(svc.store, post=e.post, sleep=lambda s: None, max_tries=3, backoff=0.0, local_demo=False)
         yield e
+
+
+def assert_no_private(body: dict) -> None:
+    for k in ("user_id", "question", "answer_excerpt", "thread_id", "acked"):
+        assert k not in body, k
+    for n in body.get("notices", []):
+        assert_no_private(n)
+    assert "notice_id" in body or "notices" in body
 
 
 def seed(env, read=None) -> dict:
@@ -196,6 +205,7 @@ def test_review_queue_hidden_until_released(env, monkeypatch):
     assert r.status_code == 200 and r.json()["needs_review"] is False
     assert [n["notice_id"] for n in env.client(env.alice).get("/recalls").json()["items"]] == [ids["alice"]]
     assert len(env.post.calls) == 1                                    # 풀어 준 알림만 웹훅
+    assert_no_private(json.loads(env.post.calls[0][1]))                 # J-13: 웹훅 본문에 사용자·질문·답 발췌가 없다
     assert admin.post(f"/recalls/{ids['bob']}/review", json={"action": "dismiss"}).status_code == 200
     assert admin.post(f"/recalls/{ids['bob']}/review", json={"action": "release"}).status_code == 409
     assert admin.post("/recalls/rn-none/review", json={"action": "release"}).status_code == 404
@@ -216,6 +226,8 @@ def test_digest_flush_and_list(env, monkeypatch):
     r = env.client(env.admin).post("/recalls/digest/flush", params={"day": "2026-11-09"})
     assert r.status_code == 200 and r.json() == {"digests": 2, "notices": 2}
     assert len(env.post.calls) == 2 and all(b'"type":"recall_digest"' in c[1] for c in env.post.calls)
+    for c in env.post.calls:                                             # J-13: 요약에도 사용자·질문 칸이 없다
+        assert_no_private(json.loads(c[1]))
     mine = env.client(env.alice).get("/recalls/digests").json()["digests"]
     assert len(mine) == 1 and mine[0]["user_id"] == str(env.alice.user_id) and mine[0]["day"] == "2026-11-09"
     assert len(env.client(env.admin).get("/recalls/digests").json()["digests"]) == 2

@@ -1,6 +1,6 @@
 """리콜 웹훅을 업무시스템으로 보내는 쪽 (SDD 11-1 3-7·3-8, docs/specs/recall.md AC-03, EC-05).
 
-형식: 구독 주소(`url`)로 POST, 본문은 리콜 알림 JSON(`GET /recalls`의 알림 한 건과 같은 모양), 헤더
+형식: 구독 주소(`url`)로 POST, 본문은 리콜 알림 JSON(`GET /recalls`의 알림 한 건에서 user_id·question·answer_excerpt·thread_id·acked를 뺀 모양, `webhook_view`), 헤더
 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문 bytes) 16진수>`. 서명은 보내는 bytes 그대로로 계산한다.
 
 - 비밀값: 구독의 `secret_ref`는 비밀값이 든 환경변수 이름이다(`RECALL_WEBHOOK_SECRET` 또는 `RECALL_WEBHOOK_SECRET_<이름>`). 값은 저장소·DB에 적지 않는다.
@@ -54,6 +54,18 @@ def verify_signature(body: bytes, header: str | None, secret: str) -> bool:
     if not header or not secret:
         return False
     return hmac.compare_digest(sign_payload(body, secret), header)
+
+
+# 외부로 내보내지 않는 칸(J-13): 사용자 식별자·질문 원문·답 발췌·대화 id·사용자별 확인 상태
+_PRIVATE_KEYS = ("user_id", "question", "answer_excerpt", "thread_id", "acked")
+
+
+def webhook_view(payload: dict) -> dict:
+    """웹훅으로 내보낼 모양. 알림과 하루 요약(`notices` 안의 알림 포함)에서 개인·질문 칸을 뺀다. 원본은 바꾸지 않는다."""
+    out = {k: v for k, v in payload.items() if k not in _PRIVATE_KEYS}
+    if isinstance(out.get("notices"), list):
+        out["notices"] = [webhook_view(n) if isinstance(n, dict) else n for n in out["notices"]]
+    return out
 
 
 def encode_body(payload: dict) -> bytes:
