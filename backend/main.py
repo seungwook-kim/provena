@@ -381,11 +381,12 @@ def create_app(
         # 경로는 맞는데 메서드만 틀리면 405 method_not_allowed로 돌려준다(오류 응답 규약, K-12).
         @app.api_route("/{path:path}", methods=["POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
         def unknown_path(request: Request) -> None:
-            for route in request.app.router.routes:
-                if getattr(route, "path", None) == "/{path:path}":
-                    continue
-                if not isinstance(route, Mount) and route.matches(request.scope)[0] != Match.NONE:
-                    raise HTTPException(status_code=405, detail="Method Not Allowed")
+            # 라우터가 감싸져 있어 route.methods를 읽을 수 없다 → 메서드를 하나씩 바꿔 가며 실제로 맞는 경로가 있는지 본다
+            others = [r for r in request.app.router.routes if getattr(r, "path", None) != "/{path:path}" and not isinstance(r, Mount)]
+            allowed = [m for m in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                       if any(r.matches({**request.scope, "method": m})[0] == Match.FULL for r in others)]
+            if any(r.matches(request.scope)[0] != Match.NONE for r in others):
+                raise HTTPException(status_code=405, detail="Method Not Allowed", headers={"Allow": ", ".join(allowed)} if allowed else None)
             raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
 
         if web_root != WEB_DIR:

@@ -204,6 +204,7 @@ def test_unknown_post_is_common_404_and_existing_route_method_is_405(monkeypatch
         for method in ("put", "patch", "delete", "post"):
             r = getattr(client, method)("/health")
             assert r.status_code == 405 and r.json()["error"]["code"] == "method_not_allowed", method
+        assert client.put("/health").headers["Allow"] == "GET"      # RFC 9110: 405에는 허용 메서드를 알린다
 
 
 def test_legacy_root_redirects_when_react_dist_is_missing(monkeypatch, tmp_path):
