@@ -593,7 +593,9 @@ def quotable_phrases(question: str, corpus: str) -> list[str]:
 
 
 _ECHO_MAX = 40  # 되묻기에 되풀이할 영문 구의 최대 길이. 이보다 길면 이름이 아니라 붙여 넣은 문장이다
-_ECHO_URL = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|net|org|io|kr|dev)\b", re.I)
+# 주소 꼴: 스킴(`이름://`), `www.`, 점으로 이은 이름 + 2자 이상 영문 끝자리(TLD 목록 없음), IPv4. 끝자리가 숫자·1자면(`v1.2`, `e.g`) 주소가 아니다.
+# `config.yml`·`Node.js` 같은 파일·제품 이름은 도메인과 꼴이 같아 함께 막힌다. 막혀도 인용 없는 일반 문구로 되물을 뿐이라 안전한 쪽을 택했다
+_ECHO_URL = re.compile(r"[a-z][a-z0-9+.\-]*://|www\.|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])|(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])", re.I)
 _ECHO_SQL = re.compile(r"\b(?:select|insert|update|delete|drop|union|alter|truncate|exec)\b.*\b(?:from|into|table|set|select|where|database)\b|;\s*--|--\s|/\*", re.I | re.S)
 
 

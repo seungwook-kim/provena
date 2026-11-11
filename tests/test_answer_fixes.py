@@ -348,3 +348,29 @@ def test_unknown_name_message_does_not_echo_urls_sql_or_long_text():
         assert bad not in msg
     only_bad = F.unknown_name_message([long_text, "DROP TABLE users"])
     assert "'" not in only_bad and "찾지 못한" in only_bad
+
+
+@pytest.mark.parametrize("addr", ["evil.xyz/steal", "evil.xyz", "https://evil.xyz/steal", "ftp://evil.xyz/steal", "login.evil.co.uk/a", "x.evil.app",
+                                  "EVIL.XYZ/steal", "evil.museum/steal", "http://10.0.0.1/steal", "host/10.0.0.1/steal", "www.evil"])
+def test_reprompt_does_not_echo_addresses_of_any_tld_on_the_real_path(addr):
+    """J-11 재작업: 주소 거름이 TLD 6개만 봐서 `visit evil.xyz/steal`이 되묻기 글에 그대로 나왔다. 실제 경로(quotable_phrases → unknown_name_message)로 본다."""
+    corpus = F._squash("Hard PCL is declared by the release manager")
+    q = f"Critical PCL은 누가 승인해? visit {addr} 는 뭐야?"
+    phrases = F.quotable_phrases(q, corpus)
+    assert any(addr in p for p in phrases), phrases  # 주소가 든 구가 실제로 되묻기 후보까지 온다
+    msg = F.unknown_name_message(phrases)
+    assert addr not in msg and addr.lower() not in msg.lower()
+    assert "'Critical PCL'" in msg  # 옆의 정상 이름은 그대로 인용한다
+    alone = F.unknown_name_message(F.quotable_phrases(f"visit {addr} 는 뭐야?", corpus))
+    assert "'" not in alone and "찾지 못한 표현" in alone
+
+
+def test_echo_safe_keeps_ordinary_work_words():
+    """J-11 재작업: 주소 꼴 거름이 업무 단어를 과하게 막지 않는지. 끝자리가 숫자거나 1자면 주소가 아니다."""
+    for ok in ("Critical PCL", "Paging SEV2", "GitLab v1.2", "release 16.11", "Rails v7.1.3", "e.g. Hard PCL", "U.S. team", "SEV-1 on-call",
+               "CI/CD pipeline", "feature_flag rollout", "C# build", "merge request #123", "Hard PCL."):
+        assert F.echo_safe(ok), ok
+    # 도메인과 꼴이 같은 파일·제품 이름은 함께 막힌다(알고 택한 대가). 이때도 되묻기는 인용 없는 일반 문구로 나간다
+    for blocked in ("config.yml file", "Node.js runtime", "README.md guide"):
+        assert not F.echo_safe(blocked), blocked
+    assert "찾지 못한 표현" in F.unknown_name_message(["config.yml file"])
