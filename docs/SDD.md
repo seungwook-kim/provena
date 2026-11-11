@@ -616,15 +616,16 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 
 D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
 
-### 11-0. 2026-11-10 현재 확인되는 결과
+### 11-0. 2026-11-11 현재 확인되는 결과
 
 | 항목 | 현재 결과 | 근거 |
 |---|---|---|
 | 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
-| 생성 LLM | Haiku 5.5. 운영 호출은 공급자 직접 호출을 유지한다(OpenRouter 경유로 되돌리지 않음). `LLM_PROVIDER` 기본값도 직접 호출 쪽이다(`.env.example:11-14`) | 결정 0078, 0081, 0086, 0089, `EVAL_REPORT.md` 8장 |
+| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다(OpenRouter 경유로 되돌리지 않음). `LLM_PROVIDER` 기본값도 직접 호출 쪽이다(`.env.example:11-14`) | 결정 0078, 0081, 0086, 0089, `EVAL_REPORT.md` 8장 |
 | 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
 | 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
 | 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| 페이지 id(3-1) | 경로 sha256 앞 8자를 16진수로 읽은 정수. 판이 바뀌어도 같은 페이지는 같은 id | `backend/rag/ingest/handbook.py:169-171` |
 | 리콜·결정표·합동 검토 판정 규칙(11-2의 4-1, 4-2, 4-3, 4-4) | 모두 추천대로 코드에 있다. 판정 응답이 깨지면 설명 맨 앞 "[판정 실패, 확인 필요]"(4-1), 기준일이나 인용한 판 날짜가 새 판 날짜 이후면 영향 없음(4-2), 네 팀 모두 쟁점도 검토 못 한 팀도 없을 때만 "쟁점 없음"으로 끝(4-3), 표를 지정하지 않으면 승인된 표가 정확히 1개일 때만 실행(4-4) | `backend/graph/recall/notice.py:25`, `:76`, `backend/graph/departments/issue_table.py:150`, `backend/graph/departments/review.py:57`, `backend/graph/decision/execute.py:40-45` |
 | Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
