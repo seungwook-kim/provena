@@ -1,0 +1,287 @@
+{
+  "meta": {
+    "dataset": "dataset_review_v1_gold_draft.jsonl",
+    "dataset_path": "C:/d7r3/evals/dataset_review_v1_gold_draft.jsonl",
+    "dataset_sha256": "d0d1537f27671e6c216713fbf64d65a871d8d0f326fe8b8099a2b1b6e7875620",
+    "n_items": 10,
+    "repeats": 3,
+    "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+    "revision": "provena-api-00037-2jt",
+    "commit": "c5ff52e",
+    "timeout_s": 180.0,
+    "max_cost_usd": 0.5,
+    "gold_draft": true,
+    "admin_rows": true,
+    "rejected_enabled": true,
+    "request_id_prefix": "rvchk-031529-",
+    "started_at": "2026-11-11T11:41:56+09:00",
+    "finished_at": "2026-11-11T11:47:02+09:00",
+    "stopped_by_budget": null,
+    "local_compare": "C:\\d7r3\\evals\\results\\review_v1_team_vs_single_62_36\\compare.json",
+    "note": "팀 경로(운영 합동 검토)만 잰다. 시간은 클라이언트 측(요청 전송부터 마지막 이벤트까지), 로그인·CSRF 준비 시간 제외.",
+    "partial": false,
+    "pending_approvals_left": []
+  },
+  "metrics": {
+    "n": 30,
+    "gold_status": "계산함(초안 정답 기준: 팀장 검토 초안, 판정자 확인 전)",
+    "gold_pending_ids": [],
+    "gold_items": 24,
+    "gold_total": 111,
+    "gold_found": 25,
+    "missed_issue_rate": 0.7747747747747747,
+    "date_agree_rate": 1.0,
+    "unmatched_row_rate": 0.8192090395480226,
+    "issue_rows": 177,
+    "section_rate": 1.0,
+    "date_rate": 1.0,
+    "evidence_complete_rate": 1.0,
+    "unreviewed_team_slots": 0,
+    "clarify_expected": 6,
+    "clarify_asked": 6,
+    "clarify_rate": 1.0,
+    "clarify_confirmed": false,
+    "false_clarify_rate": 0.041666666666666664,
+    "latency_mean_s": 9.998866666666666,
+    "latency_p95_s": 24.609,
+    "errors": 0
+  },
+  "n_runs": 30,
+  "paths": {
+    "other_route": 12,
+    "review_clarify": 7,
+    "review_table": 11
+  },
+  "rows_unknown": 0,
+  "latency_s": {
+    "all": {
+      "mean": 9.999,
+      "p50": 8.881,
+      "p95": 24.609,
+      "max": 24.687
+    },
+    "by_path": {
+      "review_table": {
+        "n": 11,
+        "mean": 9.865,
+        "p95": 12.967,
+        "p50": 9.489,
+        "max": 12.967
+      },
+      "review_clarify": {
+        "n": 7,
+        "mean": 3.772,
+        "p95": 4.124,
+        "p50": 3.829,
+        "max": 4.124
+      },
+      "other_route": {
+        "n": 12,
+        "mean": 13.754,
+        "p95": 24.687,
+        "p50": 8.881,
+        "max": 24.687
+      }
+    }
+  },
+  "cost": {
+    "runs_with_cost": 19,
+    "runs_without_cost": 11,
+    "cost_known_sum_usd": 0.182858,
+    "from_done_event_runs": 19,
+    "from_server_log_runs": 0,
+    "upper_estimate_usd": 0.265358,
+    "note": "`done`이 있는 런(되묻기, 쟁점 없음)은 응답에서 비용을 본다. 쟁점표 런은 `approval_request`로 끝나 응답에 비용이 없고 서버 로그(`fill-cost`)로만 볼 수 있다. 로그의 `cost_usd`는 질문 번역 LLM을 뺀 그래프 합이다. 비용을 못 본 런은 합에 넣지 않았고 상한 추정은 그 런마다 EST_RUN_USD를 더한 값이다.",
+    "est_run_usd": 0.0075
+  },
+  "per_item": [
+    {
+      "id": 1,
+      "kind": "full",
+      "paths": [
+        "review_table",
+        "review_table",
+        "review_table"
+      ],
+      "rows": [
+        14,
+        15,
+        13
+      ],
+      "gold_total": 6,
+      "gold_found": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "full",
+      "paths": [
+        "review_table",
+        "review_table",
+        "review_table"
+      ],
+      "rows": [
+        18,
+        18,
+        17
+      ],
+      "gold_total": 7,
+      "gold_found": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "full",
+      "paths": [
+        "review_clarify",
+        "review_table",
+        "review_table"
+      ],
+      "rows": [
+        null,
+        15,
+        17
+      ],
+      "gold_total": 6,
+      "gold_found": [
+        null,
+        2,
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "full",
+      "paths": [
+        "review_table",
+        "review_table",
+        "review_table"
+      ],
+      "rows": [
+        16,
+        17,
+        17
+      ],
+      "gold_total": 7,
+      "gold_found": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "partial",
+      "paths": [
+        "other_route",
+        "other_route",
+        "other_route"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ],
+      "gold_total": 2,
+      "gold_found": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "partial",
+      "paths": [
+        "other_route",
+        "other_route",
+        "other_route"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ],
+      "gold_total": 4,
+      "gold_found": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "partial",
+      "paths": [
+        "other_route",
+        "other_route",
+        "other_route"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ],
+      "gold_total": 3,
+      "gold_found": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "clarify",
+      "paths": [
+        "review_clarify",
+        "review_clarify",
+        "review_clarify"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "clarify",
+      "paths": [
+        "review_clarify",
+        "review_clarify",
+        "review_clarify"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "low_issue",
+      "paths": [
+        "other_route",
+        "other_route",
+        "other_route"
+      ],
+      "rows": [
+        null,
+        null,
+        null
+      ],
+      "gold_total": 2,
+      "gold_found": [
+        null,
+        null,
+        null
+      ]
+    }
+  ]
+}

@@ -5,6 +5,8 @@
 - `GET /decision-tables`: 로그인. 승인된 결정표 목록 (SDD 5장). 금액은 원문 표기와 함께 정확한 금액 표기(`band_label`)를 낸다.
 - `POST /decision-tables/convert`: 관리자와 CSRF. 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 간다 (AC-03).
 - `GET /approvals`: 관리자. 승인 대기 목록과 초안, 셀 대조표. 쟁점표 건은 쟁점표 본문, 팀 실패 알림 건은 실패한 팀(`failed_teams`).
+- `GET /approvals/{approval_id}`: 관리자. 승인 건 하나(끝난 건 포함)와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`).
+  같은 건에 결정이 여러 번 와도 `resume_count`는 그래프가 실제로 돈 횟수만 센다(같은 결정 재전송은 `duplicate_ignored_count`). 저장소는 `record_resume`, Postgres 칸은 `db/112_approval_resume_log.sql`이다.
 - `POST /approvals/{approval_id}`: 관리자와 CSRF. 그래프를 재개한다. 결정표와 쟁점표는 `{approve, comment}`, 팀 실패 알림은 `{action: retry | mark_unreviewed, comment}`로 같은 경로다.
 
 규칙
@@ -131,6 +133,15 @@ class ApprovalView(_TeamResolutionOnly):
     issue_table: dict | None = None
     failed_teams: list[dict] | None = None
     save_failed: bool = False
+    status: str | None = None
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+    # 그래프 재개 기록. `resume_count`는 결정이 그래프를 실제로 돌린 횟수, `duplicate_ignored_count`는 같은 결정의 재전송이라 돌리지 않고 넘긴 횟수다.
+    # 같은 건에 결정이 동시에 여러 번 와도 `resume_count`는 1이어야 한다. `last_resume_result`는 resumed | resume_failed | rejected_value | duplicate_ignored.
+    resume_count: int = 0
+    duplicate_ignored_count: int = 0
+    last_resumed_at: datetime | None = None
+    last_resume_result: str | None = None
 
 
 class DecisionResult(_TeamResolutionOnly):
@@ -255,7 +266,10 @@ def _paused(graph, rec) -> tuple[dict | None, dict | None]:
 
 
 def _view(rec, graph) -> ApprovalView:
-    view = ApprovalView(approval_id=rec.approval_id, kind=rec.kind, summary=rec.summary, created_at=rec.created_at)
+    view = ApprovalView(approval_id=rec.approval_id, kind=rec.kind, summary=rec.summary, created_at=rec.created_at, status=rec.status,
+                        decided_by=rec.decided_by, decided_at=rec.decided_at, resume_count=rec.resume_count,
+                        duplicate_ignored_count=rec.duplicate_ignored_count, last_resumed_at=rec.last_resumed_at,
+                        last_resume_result=rec.last_resume_result)
     if rec.kind == KIND:
         view.table_id = rec.target_id
     if graph is None:
@@ -295,12 +309,30 @@ def _result(rec, graph=None) -> DecisionResult:
     return out
 
 
-def _resume(graph, rec, value: dict, approve: bool | None) -> None:
-    """승인을 기다리면 사람 결정(`value`)으로 재개하고, 결정을 적다 실패해 멈췄으면 같은 결정일 때 그 노드만 다시 돌린다. `approve`가 None이면 알 수 없는 값이다."""
+def _note_resume(repo, approval_id: str, result: str) -> None:
+    """재개 기록을 남긴다. 기록이 실패해도(예: `db/112_approval_resume_log.sql` 적용 전) 결정 처리는 막지 않는다."""
+    try:
+        repo.record_resume(approval_id, result)
+    except Exception as exc:  # noqa: BLE001 - DB 오류 등. 메시지에 접속 문자열이 섞일 수 있어 종류만 남긴다
+        log.warning("재개 기록 실패 %s: %s", approval_id, type(exc).__name__)
+
+
+def _invoke(graph, repo, rec, inp, cfg) -> None:
+    """그래프를 재개한다. 오류로 끝나면 `resume_failed`를 기록하고 오류를 그대로 올린다. 성공 기록은 부른 쪽이 결과를 보고 남긴다."""
+    try:
+        graph.invoke(inp, cfg)
+    except Exception:
+        _note_resume(repo, rec.approval_id, "resume_failed")
+        raise
+
+
+def _resume(graph, repo, rec, value: dict, approve: bool | None) -> None:
+    """승인을 기다리면 사람 결정(`value`)으로 재개하고, 결정을 적다 실패해 멈췄으면 같은 결정일 때 그 노드만 다시 돌린다. `approve`가 None이면 알 수 없는 값이다.
+    그래프를 돌릴 때마다 승인 건에 재개 기록을 남긴다(`ApprovalRecord.resume_count` 등)."""
     cfg = {"configurable": {"thread_id": rec.thread_id}}
     pending, stalled = _paused(graph, rec)
     if pending is not None:
-        graph.invoke(Command(resume=value), cfg)
+        _invoke(graph, repo, rec, Command(resume=value), cfg)
     elif stalled is None:
         raise R.Conflict("승인을 기다리는 그래프를 찾을 수 없다")
     elif approve is None:
@@ -308,11 +340,13 @@ def _resume(graph, rec, value: dict, approve: bool | None) -> None:
     elif stalled["decision"]["approve"] is not approve:
         raise R.AlreadyDecided("다른 결정이 이미 접수되어 저장을 기다리고 있다. 같은 결정만 다시 보낼 수 있다")
     else:
-        graph.invoke(None, cfg)
+        _invoke(graph, repo, rec, None, cfg)
     again = pending_interrupt(graph, rec.thread_id)
     if again is not None and again.get("approval_id") == rec.approval_id:   # 틀린 재개 값: 상태는 그대로이고 같은 승인 요청이 다시 올라와 있다
+        _note_resume(repo, rec.approval_id, "rejected_value")
         why = again.get("rejected_resume", "bad_format")
         raise HTTPException(status_code=400, detail={"reason": why, "message": RESUME_MESSAGES.get(why, why)})
+    _note_resume(repo, rec.approval_id, "resumed")
 
 
 def _repeat_decision(request: Request, repo, rec, approve: bool | None, decided_by: str | None, comment: str):
@@ -322,11 +356,15 @@ def _repeat_decision(request: Request, repo, rec, approve: bool | None, decided_
     decide = repo.decide if rec.kind == KIND else repo.decide_review_item
     decide(rec.approval_id, approve, decided_by, comment)
     if rec.kind != TEAM_FAILED_KIND:
+        _note_resume(repo, rec.approval_id, "duplicate_ignored")
         return None
     graph = _state(request, "review_graph")
     left = unfinished_state(graph, rec.thread_id)
     if left and left.get("approval_id") == rec.approval_id:
-        graph.invoke(None, {"configurable": {"thread_id": rec.thread_id}})
+        _invoke(graph, repo, rec, None, {"configurable": {"thread_id": rec.thread_id}})
+        _note_resume(repo, rec.approval_id, "resumed")
+    else:
+        _note_resume(repo, rec.approval_id, "duplicate_ignored")
     return graph
 
 
@@ -396,6 +434,19 @@ def create_decision_router(
         graphs = {KIND: _state(request, "decision_graph"), ISSUE_KIND: review, TEAM_FAILED_KIND: review}
         return [_view(rec, graphs.get(rec.kind)) for rec in repo.list_pending()]
 
+    @router.get("/approvals/{approval_id}", response_model=ApprovalView)
+    def get_approval(approval_id: str, request: Request, _admin: AuthUser = Depends(require_admin)) -> ApprovalView:
+        """승인 건 하나의 상태와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`). 끝난 건도 읽는다.
+        결정 응답은 같은 결정을 다시 보내도 같게 유지하므로 재개 횟수는 여기서 읽는다."""
+        repo = _state(request, "decision_repo")
+        try:
+            rec = repo.get_approval(approval_id)
+        except R.DecisionError as e:
+            raise _http(e) from None
+        view = _view(rec, None)
+        view.resolution = team_resolution(rec) if rec.kind == TEAM_FAILED_KIND else None
+        return view
+
     @router.post("/approvals/{approval_id}", response_model=DecisionResult)
     def decide(
         approval_id: str, request: Request, admin: AuthUser = Depends(require_admin),
@@ -414,7 +465,7 @@ def create_decision_router(
                 graph = _repeat_decision(request, repo, rec, approve, value["decided_by"], value["comment"])
                 return _result(repo.get_approval(approval_id), graph)
             graph = _state(request, "decision_graph" if rec.kind == KIND else "review_graph")
-            _resume(graph, rec, value, approve)
+            _resume(graph, repo, rec, value, approve)
             rec = repo.get_approval(approval_id)
             if rec.status == "pending":      # 그래프는 끝났는데 승인 건이 그대로다: 성공으로 돌려주지 않는다
                 raise RuntimeError("approval still pending after resume")
