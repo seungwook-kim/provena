@@ -88,8 +88,18 @@ export default function DemoChatPage({ api = false }) {
   const [threads, setThreads] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('')
-  const [input, setInput] = useState(() => loadDraft())
-  useEffect(() => { saveDraft(input) }, [input])
+  const draftUserId = useSession().user?.user_id
+  const draftOwner = useRef(draftUserId)
+  const [input, setInput] = useState(() => loadDraft(draftUserId))
+  useEffect(() => {
+    // 화면이 떠 있는 채로 계정이 바뀌면 앞 계정의 질문을 새 계정 이름으로 저장하지 않고 입력칸을 바꾼다(H-29).
+    if (draftOwner.current !== draftUserId) {
+      draftOwner.current = draftUserId
+      setInput(loadDraft(draftUserId))
+      return
+    }
+    saveDraft(draftUserId, input)
+  }, [draftUserId, input])
   const [selectedCitation, setSelectedCitation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)

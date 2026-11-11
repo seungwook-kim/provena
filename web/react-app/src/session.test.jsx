@@ -451,7 +451,64 @@ describe('React authentication and session isolation', () => {
     await screen.findByLabelText('이메일 또는 아이디')
     expect(screen.getByRole('status').textContent).toContain('만료')
     expect(window.location.search).toBe('?reason=expired')
-    expect(sessionStorage.getItem('provena-chat-draft')).toBe('쓰던 질문')
+    expect(sessionStorage.getItem(`provena-chat-draft:${A.user_id}`)).toBe('쓰던 질문')
+    expect(sessionStorage.getItem('provena-chat-draft')).toBeNull()
+  })
+
+  describe('typed question draft is per account (H-29)', () => {
+    const draftKeys = () => Object.keys(sessionStorage).filter(key => key.startsWith('provena-chat-draft'))
+    const composer = async () => {
+      const box = await screen.findByRole('textbox', { name: '질문' })
+      await waitFor(() => expect(box.disabled).toBe(false))
+      return box
+    }
+    async function expireWithDraft() {
+      await authenticated()
+      await userEvent.type(await composer(), 'A가 쓰던 질문')
+      server.user = null
+      act(() => window.dispatchEvent(new Event('focus')))
+      await screen.findByLabelText('이메일 또는 아이디')
+    }
+
+    it('does not show account A draft to account B after A expired in the same tab', async () => {
+      await expireWithDraft()
+      await signIn('B')
+      await screen.findByRole('navigation', { name: '관리자 메뉴' })
+      expect((await composer()).value).toBe('')
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('restores the draft when the same account signs in again after expiry', async () => {
+      await expireWithDraft()
+      await signIn('A')
+      expect((await composer()).value).toBe('A가 쓰던 질문')
+    })
+
+    it('swaps the composer when the account changes while the chat stays mounted', async () => {
+      await authenticated()
+      await userEvent.type(await composer(), 'A가 쓰던 질문')
+      server.user = B
+      act(() => window.dispatchEvent(new Event('focus')))
+      await screen.findByRole('navigation', { name: '관리자 메뉴' })
+      await waitFor(() => expect(screen.getByRole('textbox', { name: '질문' }).value).toBe(''))
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('removes a draft left under the old shared key', async () => {
+      sessionStorage.setItem('provena-chat-draft', '예전 키에 남은 질문')
+      await authenticated(B)
+      expect((await composer()).value).toBe('')
+      expect(draftKeys()).toEqual([])
+    })
+
+    it('clears the draft on mock sign-out too', async () => {
+      vi.stubEnv('VITE_ENABLE_MOCK_SESSION', 'true')
+      render(<App />)
+      await userEvent.type(await composer(), '목 계정 질문')
+      expect(draftKeys()).toHaveLength(1)
+      await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+      await waitFor(() => expect(draftKeys()).toEqual([]))
+    })
   })
 
   it('offers retry on /me server failure instead of pretending the user logged out', async () => {

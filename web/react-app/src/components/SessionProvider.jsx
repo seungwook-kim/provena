@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getCurrentUser, invalidateAuthRequests, login, logout, subscribeUnauthorized } from '../lib/api'
 import { clearSessionMemory, selectMemoryOwner } from '../lib/session-memory'
 import { SessionContext } from '../lib/session'
-import { saveDraft } from '../lib/draft'
+import { clearDrafts } from '../lib/draft'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MOCK_USER = { user_id: '00000000-0000-4000-8000-000000000001', role: 'admin', profile_completed: true }
@@ -36,6 +36,7 @@ export function SessionProvider({ children }) {
   const accept = useCallback(user => {
     invalidateAuthRequests()
     selectMemoryOwner(user.user_id)
+    clearDrafts(user.user_id) // 다른 계정이 쓰던 질문은 새 계정에게 보이지 않게 지운다(H-29).
     confirmedUser.current = user
     setSession({ status: 'authenticated', user, error: '', expired: false })
   }, [])
@@ -108,11 +109,12 @@ export function SessionProvider({ children }) {
     sequence.current += 1
     try {
       if (isMockSessionEnabled()) {
+        clearDrafts()
         expire()
         return
       }
       await logout()
-      saveDraft('')
+      clearDrafts()
       expire() // Do not clear a valid session or pretend success when the server failed.
     } finally { mutating.current = false }
   }
