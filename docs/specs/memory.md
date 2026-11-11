@@ -54,6 +54,32 @@
 - 허용 칸은 `ALLOWED_FIELDS = ("affiliation", "rank")`이다. `get_profile()`은 이 밖의 칸과 빈 값을 걸러서 돌려준다.
 - State와 Store의 경계(SDD 5장): 질문, 검색 결과, 재검색 횟수, 초안 답은 State(체크포인트)에 두고, 다음 대화에도 쓸 소속·직급만 Store에 둔다. 기억 값과 질문 내용은 로그에 쓰지 않는다(`backend/api/routes.py`).
 
+### 기억 기준
+
+| 기억한다 | 기억하지 않는다 |
+|---|---|
+| 소속(`affiliation`), 직급(`rank`): 다음 대화에도 같은 값이 필요하고, 사용자가 직접 입력·정정할 수 있는 값 | 질문, 검색 결과, 답, 재검색 횟수(이번 대화 값이라 State) |
+| | 사용자 id·비밀번호·토큰 등 인증 값, 허용 칸 밖의 모든 값(`ALLOWED_FIELDS` 밖은 저장 전에 422) |
+| | 그래프가 대화 중에 추측해 스스로 쓰는 값(그래프는 읽기만 한다) |
+
+### 정정 절차
+
+1. 사용자가 `GET /me/memory`로 저장된 값을 확인한다.
+2. 틀린 칸만 `PATCH /me/memory`로 고친다. 고친 값은 다음 질문의 `load_memory`부터 쓰인다.
+3. 값 전체가 잘못이거나 지우고 싶으면 `DELETE /me/memory`로 키 `me`를 지운다. 이후 기억 없이 동작한다.
+4. 고치기·지우기는 로그인한 본인의 namespace에만 적용되고 CSRF 헤더가 필요하다.
+
+### State와 Store 경계
+
+| | State(체크포인트) | Store |
+|---|---|---|
+| 범위 | 한 thread(`<user_id>:<thread_id>`) | 한 사용자, 모든 thread |
+| 내용 | 질문, 검색 결과, 재검색 횟수, 초안 답, 읽어 온 `profile` 사본 | `{affiliation, rank}` |
+| 쓰는 곳 | 그래프 노드 | `/me/memory` API만 |
+| 읽는 곳 | 그래프 노드 | 첫 노드 `load_memory` |
+
+CP 증거 파일명 `memory.py`는 저장소의 `backend/memory/` 패키지(`__init__.py`, `profile.py`)에 해당한다.
+
 ### 읽기
 
 - 질문 그래프 `backend/graph/build.py`의 `load_memory` 노드가 START 다음 첫 노드다. 질문마다 Store를 다시 읽으므로 `PATCH`로 고친 값은 다음 질문부터 쓰인다.
@@ -90,12 +116,12 @@
 
 ## 남은 점
 
-- `backend/memory/__init__.py`의 `namespace(user_id)`는 `("memories", user_id)`를 돌려주지만 호출하는 곳이 없다. 실제 namespace는 `profile_namespace()`의 `(user_id, "profile")`이며 첫 요소가 사용자 id인 것도 이쪽뿐이다. 이 함수를 지울지 다른 용도로 쓸지는 정하지 않았다.
+- `backend/memory/__init__.py`의 `namespace(user_id)`는 `(user_id, "memories")`를 돌려주도록 고쳤다(E-03). 호출하는 곳과 이 namespace에 저장된 데이터는 없다(grep). 실제 기억은 `profile_namespace()`의 `(user_id, "profile")`에 둔다.
 - SDD 4-3장의 "기억 불러오기" 서술과 `backend/memory/memory.md`는 팀·역할·담당 서비스를 기억한다고 적고 있으나, 코드가 저장하는 칸은 소속·직급 두 개뿐이다. 문서를 코드에 맞출지, 칸을 늘릴지는 정하지 않았다.
 - `affiliation` 값은 검색 범위(절 이름)로도 쓰이는데, 기억을 저장할 때 허용 값 목록으로 검증하는 코드는 없다(길이 100자 제한뿐이다). 사용자가 적은 문자열은 그대로 LLM 프롬프트의 "소속·직급" 줄에도 들어가며 별도 정화 처리는 코드에 없다. 영향은 미확인이다.
 - 사용자 분리 시험은 메모리 Store 기준이다. `PostgresStore`와 배포 환경에서 평가용 계정 A·B로 한 실측은 미확인이다.
 - 운영 Supabase에는 2026-11-09 읽기 전용 조회 기준으로 Store 표가 아직 없다. `backend/graph/checkpoint.py:107-108`의 `setup()`이 앱 첫 기동 때 만든다(`db/db.md`).
-- 틀린 기억을 고치는 절차는 위 API로 구현했지만, 기억해도 되는 기준과 보존 기간은 SDD 5장 서술 외에 별도 규칙이 없다.
+- 보존 기간·자동 삭제는 정하지 않았다(Out of Scope).
 
 ## AC (Given-When-Then)
 
