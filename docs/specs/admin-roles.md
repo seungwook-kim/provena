@@ -49,11 +49,11 @@
 
 | 길 | 지금 상태 | 근거 |
 |---|---|---|
-| Google 로그인 첫 접속 때 자동 생성(role user) | 계약만 있음. `PostgresAuthStore`에 `get_or_create_google_user`가 없고 `users` 표에 provider·sub 칸이 없어, 지금 배포판에서는 Google 로그인이 실패 화면으로 간다 | `backend/auth.py:780`, `:671`, `:678-679`, `:786-788` / `backend/services/auth_store.py:3` / `db/101_auth_users.sql:6-14` / 시험 대역은 role `user`로 만듦 `tests/test_google_oauth.py:71` |
+| Google 로그인 첫 접속 때 자동 생성(role user) | 구현됨(로그인 아이디 = 구글이 인증한 이메일, role `user`, 비밀번호 없음). 새 계정은 비밀번호 가입처럼 **승인 대기**로 시작하고 `/admin/signup-requests`에서 승인한다. 이미 인증·승인된 같은 이메일 계정은 새로 만들지 않고 연결한다(`docs/specs/login.md` "Google 로그인 계정 연결"). 운영은 `db/203_google_identities.sql` 적용과 Cloud Run Google 키 설정(조장) 뒤에 켜진다 | `backend/services/auth_store.py`의 `get_or_create_google_user` / `db/203_google_identities.sql` / `tests/test_google_oauth.py`, `tests/test_google_postgres_integration.py` |
 | `create_account` 명령(이 Spec) | 새로 만듦 | 아래 How |
 | 로컬 데모 시드 | 로컬 전용, 바꾸지 않음 | `backend/services/demo_seed.py:3` |
 
-- Google로 생긴 계정은 항상 `user`로 시작한다. 이메일로 기존 계정·관리자 권한을 잇지 않는 로그인 규칙(`docs/specs/login.md:79`)을 그대로 따른다. 관리자가 되는 길은 최고 관리자의 등록뿐이다.
+- Google로 생긴 계정은 항상 `user`로 시작한다. 구글 이메일이 기존 계정과 정확히 같으면 그 계정에 연결하지만 **역할은 바꾸지 않고**, 이메일로 관리자 권한을 새로 주지도 않는다(`docs/specs/login.md`의 "Google 로그인 계정 연결"). 관리자가 되는 길은 최고 관리자의 등록뿐이다.
 
 ### Edge Cases
 
@@ -244,7 +244,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 1. **첫 계정은 누가 돌리나**: 조장님이 돌리나, 팀 지침서대로 강경희(운영 DB·Cloud Run 환경변수·평가용 계정 A·B 절차, `docs/TEAM_GUIDE.md:56`)가 돌리나. 최고 관리자 아이디는 누구 것으로 하나.
 2. **평가용 계정 A·B 역할**: 둘 다 `user`인가, 하나는 `admin`(최고 관리자 아님)인가. 평가자가 승인함까지 보려면 admin이 하나 필요하다(G1 "핵심 시나리오 끝까지"). A·B 중 한 명만 재무 절을 보는 일(`docs/PRD.md:184`)은 `groups`라 이 Spec 밖.
 3. **표 칸**: `users`에 RLS를 105에서 같이 켤지, `last_login` 칸을 더할지(더하면 로그인 성공 때 쓰기가 생김, `backend/auth.py` 수정).
-4. **Google 자동 아이디 머리글자**: Google 계정의 `login_id`를 어떤 머리글자로 만들지(시험 대역은 `google-`, `tests/test_google_oauth.py:71`). 최고 관리자 설정값이 그 머리글자로 시작하면 막는다.
+4. **Google 자동 아이디 머리글자**: Google 계정의 `login_id`를 어떤 머리글자로 만들지(시험 대역은 `google-`, `tests/test_google_oauth.py:71`). 최고 관리자 설정값이 그 머리글자로 시작하면 막는다. (2026-11-11: 구글 계정의 `login_id`가 이메일로 바뀌어 `google-` 아이디는 더 만들어지지 않는다. `admin_api.py`의 머리글자 막이는 남아 있지만 동작에는 영향이 없다. 정리 여부는 강경희 판단.)
 5. **토큰 폐기 저장소(J-05) 연결 시점**: 지금 배선으로는 로그인이 503이라 관리자 기능도 그 뒤다.
 
 ## 시나리오

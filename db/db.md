@@ -10,7 +10,7 @@ pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번
 
 ## 운영 Supabase 인증 스키마 적용
 
-회원가입 승인 기능은 `db/101_auth_users.sql` 적용 후 `db/106_signup_approval.sql`을 적용한다. 106은 비밀번호 해시 보호를 위해 RLS를 켜고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 모두 회수한다. 이메일 가입 인증을 쓰는 앱을 배포하기 전에는 106 다음에 `db/107_email_signup_verification.sql`(인증 열과 색인), `db/108_auth_privacy_hardening.sql`(`users`·`signup_requests`와 id 시퀀스의 RLS, 권한 회수)을 이 순서로 적용한다. 107과 108은 몇 번을 돌려도 같은 결과이고, 108은 106·109처럼 `anon`·`authenticated` 역할이 있을 때만 해당 역할의 권한을 회수한다. 번호 107은 `docs/specs/107-user-profile-fields.md`(프로필 추가 칸 제안)와도 겹치지만 서로 다른 것이다. 그 제안은 SQL 파일이 없고 코드에 사용처(`role_enc`, `service_enc`)가 없어 적용하지 않는다.
+회원가입 승인 기능은 `db/101_auth_users.sql` 적용 후 `db/106_signup_approval.sql`을 적용한다. 106은 비밀번호 해시 보호를 위해 RLS를 켜고 `PUBLIC`, `anon`, `authenticated`의 테이블 권한을 모두 회수한다. 이메일 가입 인증을 쓰는 앱을 배포하기 전에는 106 다음에 `db/107_email_signup_verification.sql`(인증 열과 색인), `db/108_auth_privacy_hardening.sql`(`users`·`signup_requests`와 id 시퀀스의 RLS, 권한 회수)을 이 순서로 적용한다. 107과 108은 몇 번을 돌려도 같은 결과이고, 108은 106·109처럼 `anon`·`authenticated` 역할이 있을 때만 해당 역할의 권한을 회수한다. 번호 107은 `docs/specs/107-user-profile-fields.md`(프로필 추가 칸 제안)와도 겹치지만 서로 다른 것이다. 그 제안은 SQL 파일이 없고 코드에 사용처(`role_enc`, `service_enc`)가 없어 적용하지 않는다. Google 로그인(`docs/specs/login.md`)을 켜려면 108 다음(파일 이름 순서상 마지막)에 `db/203_google_identities.sql`을 적용한다. `user_identities` 표를 만들고 `users`·`signup_requests`의 `password_hash`를 NULL 허용으로 바꾸며 `signup_requests.google_sub`를 더한다. 몇 번을 돌려도 같은 결과이고, `anon`·`authenticated` 권한 회수는 해당 역할이 있을 때만 한다(운영 적용은 팀장 승인 뒤).
 
 일반 PostgreSQL(docker compose 등 Supabase가 아닌 환경)처럼 `anon`, `authenticated` 역할이 없으면 106은 해당 역할에 대한 권한 회수를 건너뛰고 RLS 활성화와 `PUBLIC` 권한 회수만 적용한다.
 
