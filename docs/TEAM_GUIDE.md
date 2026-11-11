@@ -134,6 +134,8 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
+│  │  │     snapshot.py           # 원문·색인 압축 스냅샷 pack·unpack(corpus.tar.gz, index.tar.gz)
+│  │  │     compare.py            # 파싱 결과와 원본 줄 대조표(data/parsed/compare/, 커밋하지 않음)
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지 (가산: 자동화)
 │  │  └─ retrieve/  retrieve.md   # 템플릿 retrieve.py 자리
 │  │        embed.py              # 다국어 로컬 임베딩 (11장)
