@@ -12,7 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 키 없는 데모(`is_demo_mode()`)에서 `POST /decision-tables/convert`가 502·503 대신 "예시 응답"으로 시작하는 고정 응답(성공과 같은 201, `status=example`)을 낸다(놓친 것 L-23). 초안은 LLM이 아니라 권한표 칸에서 코드로 만든 기준 규칙이고 승인함에 올리거나 저장하지 않는다. 키가 있는 실제 모드의 502·503은 그대로다. 시험 `tests/test_decision_routes.py`에 데모 시험 2개 추가, 기존 502·503 시험 2개는 키가 있는 모드로 고정 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 키 없는 데모(`is_demo_mode()`)에서 `POST /decision-tables/convert`가 502·503 대신 "예시 응답"으로 시작하는 고정 응답(성공과 같은 201, `status=example`)을 낸다(놓친 것 L-23). 초안은 LLM이 아니라 권한표 칸에서 코드로 만든 기준 규칙이고 승인함에 올리거나 저장하지 않는다. 키가 있는 실제 모드의 502·503은 그대로다. 데모 모드에서는 권한표 칸을 읽은 뒤 변환 중 난 예외 전부(DB 오류 포함)를 예시 응답으로 바꾼다. 그래프 안의 LLM 오류와 저장소 오류를 호출 지점에서 가를 수 없어 좁히지 않았다. 시험 `tests/test_decision_routes.py`에 데모 시험 2개 추가, 기존 502·503 시험 2개는 키가 있는 모드로 고정 | 미정 |
 | 2026-11-11 | 김승욱 (Claude Code) | 강사 코멘트 ③ 대응. 승인 건에 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`)을 남기고 `GET /approvals`와 새 `GET /approvals/{approval_id}`(관리자)로 노출. 저장소에 `record_resume`, Postgres 칸은 `db/112_approval_resume_log.sql`(운영 적용 필요, 적용 전에도 승인은 동작하고 기록만 빠진다). 동시 결정 시험은 재개 1회·무시 1회를 이 값으로 단정. 팀 실패 알림 재시작 시험을 더하다가 질문 그래프 아래 하위 그래프에서 결정 뒤 단계 오류 후 같은 결정으로 이어 돌리면 앞 승인 건의 재개 값이 쟁점표 승인에 들어가 쟁점표가 사람 없이 반려되는 문제를 찾아 `departments/review.py`의 두 interrupt가 다른 승인 건 번호의 값을 받지 않게 고침 | - |
 | 2026-11-10 | 김승욱 (Claude Code) | 결정표 변환 입력의 권한표 칸에 입력 정화(`prompt_cells`), 초안에 출력 검사(`draft_leaks`, 걸리면 초안 실패) 추가(사전 등록 62.26). 원문 대조와 승인 화면은 원본 칸을 그대로 쓴다 | - |
 

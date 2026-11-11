@@ -432,7 +432,10 @@ def test_convert_in_demo_mode_returns_a_labelled_example_instead_of_502(ctx, mon
     ctx.llm.reply = "이건 JSON이 아니다"                                                # 녹화에 초안이 없어 변환이 실패하는 상황
     r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
     assert r.status_code == 201 and r.json()["summary"].startswith("예시 응답") and r.json()["status"] == "example"
-    assert r.json()["draft"] and ctx.repo.list_pending() == []                        # 승인함에 올라가지 않는다
+    cells = cells_of(EXPENSE)
+    expected = R.rules_from_cells(cells)
+    assert [{k: v for k, v in d.items() if k != "band_label"} for d in r.json()["draft"]] == expected   # 지어낸 값이 없고 권한표 칸에서 코드로 만든 규칙 그대로
+    assert ctx.repo.list_pending() == []                                              # 승인함에 올라가지 않는다
 
 
 def test_convert_in_demo_mode_still_404s_unknown_category_and_example_on_llm_exception(ctx, monkeypatch):
@@ -445,6 +448,7 @@ def test_convert_in_demo_mode_still_404s_unknown_category_and_example_on_llm_exc
     ctx.llm.reply = boom
     r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
     assert r.status_code == 201 and r.json()["summary"].startswith("예시 응답")
+    assert [{k: v for k, v in d.items() if k != "band_label"} for d in r.json()["draft"]] == R.rules_from_cells(cells_of(EXPENSE))
 
 
 def test_convert_unreadable_draft_is_not_retried_and_reaches_no_inbox(ctx, real_llm):
