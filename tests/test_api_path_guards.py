@@ -50,3 +50,31 @@ def test_broken_approval_row_is_skipped_not_500():
     repo = PostgresDecisionRepo.__new__(PostgresDecisionRepo)
     repo._rows = lambda sql, params=(): [bad, good]
     assert [r.approval_id for r in repo.list_pending()] == ["ap-good"]
+
+
+def test_middleware_blocks_nul_before_router():
+    """C-16: 시험 앱은 메모리 저장소라 NUL id가 원래 404다. 그래서 라우터에 닿으면 500인 앱으로 미들웨어 거름만 따로 증명한다."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from backend.api.middleware import RequestContextMiddleware
+
+    app = FastAPI()
+    app.add_middleware(RequestContextMiddleware)
+
+    @app.get("/x/{eid}")
+    def get_boom(eid: str):
+        raise RuntimeError("router reached")
+
+    @app.post("/x/{eid}/run")
+    def post_boom(eid: str):
+        raise RuntimeError("router reached")
+
+    c = TestClient(app, raise_server_exceptions=False)
+    for method, path in [("get", "/x/ab%00c"), ("post", "/x/ab%00c/run"), ("get", "/x/ab%00c/")]:
+        r = getattr(c, method)(path)
+        assert r.status_code == 404 and r.json()["error"]["code"] == "not_found", (path, r.status_code)
+        assert r.headers["x-request-id"] == r.json()["error"]["request_id"]
+    # 대조군: NUL이 없으면 라우터까지 가서 500이다(= 위 404는 라우터가 아니라 미들웨어가 낸 것)
+    assert c.get("/x/abc").status_code == 500
+    assert c.post("/x/abc/run").status_code == 500
