@@ -12,6 +12,10 @@
 공급자·모델 이름은 키에 넣지 않는다(녹화한 모델과 재생하는 쪽의 모델 설정이 달라도 같은 요청이면 같은 응답을 찾으려는 것이고, 모델 이름은 녹화 줄에 정보로만 남긴다).
 정규화: 공백을 하나로 접고, 맨 앞 `기준일: YYYY-MM-DD` 줄의 날짜는 지운다(오늘 날짜가 들어가서 날마다 키가 바뀌는 것을 막는다).
 
+추론 답이 녹화에 없을 때(2026-11-11): 서비스 설정(`GRAPH_ANSWER_WAIT_S`)에서 그래프는 추론 답(`answer`)과 빠른 답(`answer_fast`)을 같이 보내고, 추론 답이 시간 안에 인용과 함께 오면 그것을 쓴다.
+녹화 때 질문이 차가운 검색(첫 질문)이라 `GRAPH_ANSWER_BUDGET_S`를 넘겨 추론 답을 보내지 않았으면 그 질문에는 빠른 답만 녹화돼 있다. 재생은 추론 답을 보내므로(검색이 따뜻하면 예산 안),
+이 요청이 `demo_fallback`으로 가면 인용 있는 가짜 답이 녹화한 빠른 답을 이겨 발췌형 답이 나왔다. 그래서 이 구성에서 추론 답이 녹화에 없으면 가짜 응답 대신 `ReplayMiss`로 실패시켜 그래프가 빠른 답(녹화)을 쓰게 한다.
+
 환경변수
 - `DEMO_MODE`: 1/true/yes/on이면 키가 있어도 데모(재생). 키가 없으면 이 값과 무관하게 데모.
 - `DEMO_REPLAY_DIR`: 녹화 폴더(기본 `<repo>/data/demo_replay`). 읽기: 폴더의 `*.jsonl` 전부(이름 순, 뒤 파일의 같은 키가 앞 파일을 덮는다). 쓰기: 같은 폴더의 `recorded.jsonl`.
@@ -261,6 +265,21 @@ def demo_fallback(messages: list[BaseMessage]) -> str:
 
 
 # ---------------------------------------------------------------- 모델
+SLOW_ANSWER_ROLE = "answer"  # GRAPH_ANSWER_WAIT_S가 있으면 이 역할은 추론을 켠 느린 답뿐이다(빠른 답은 `answer_fast`). backend/graph/build.py의 timed_reply
+
+
+class ReplayMiss(RuntimeError):
+    """재생할 녹화가 없고 가짜 응답으로 대신해서도 안 되는 요청(추론 답). 호출한 쪽이 다른 응답(빠른 답)으로 넘어가게 실패로 돌려준다."""
+
+
+def answer_race_on() -> bool:
+    """그래프가 추론 답과 빠른 답을 같이 보내는 구성인가(`GRAPH_ANSWER_WAIT_S` > 0). 서비스 설정 61.51이 켠다."""
+    try:
+        return float(os.environ.get("GRAPH_ANSWER_WAIT_S") or 0) > 0
+    except ValueError:
+        return False
+
+
 class ReplayChatModel(FakeListChatModel):
     """데모 모델. 녹화한 응답을 요청 키로 찾고, 없으면 `demo_fallback`. `FakeListChatModel`의 하위 클래스라
     "가짜 모델이면 건너뛴다"는 기존 검사(`isinstance(llm, FakeListChatModel)`)가 그대로 통한다."""
@@ -287,6 +306,12 @@ class ReplayChatModel(FakeListChatModel):
             text = str(row["response"])
         else:
             self.misses += 1
+            if message_role(messages) == SLOW_ANSWER_ROLE and answer_race_on():
+                # 추론 답(느린 답)이 녹화에 없다. 그래프가 빠른 답을 같이 보내고 기다리는 구성(GRAPH_ANSWER_WAIT_S)에서는 추론 답이 오지 않은 것과 같다:
+                # 실패로 돌려주면 그래프가 녹화한 빠른 답(실제 LLM 응답)을 쓴다. 결정적 가짜 응답을 내면 그것이 "인용 있는 추론 답"으로 뽑혀 녹화 답을 이긴다.
+                if not _warned_once():
+                    log.warning("데모 재생: 추론 답 녹화가 없어 빠른 답을 씁니다(녹화 %d건, 폴더 %s). 이 메시지는 한 번만 냅니다.", len(store), store.directory)
+                raise ReplayMiss(f"녹화에 없는 {SLOW_ANSWER_ROLE} 요청")
             text = demo_fallback(messages)
             if not _warned_once():
                 log.warning("데모 재생: 녹화 응답이 없어 결정적 가짜 응답을 씁니다(역할 %s, 녹화 %d건, 폴더 %s). 이 메시지는 한 번만 냅니다.", message_role(messages), len(store), store.directory)
