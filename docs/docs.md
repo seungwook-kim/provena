@@ -12,6 +12,14 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개의 "(첫 PR 과제 완료)"와 "세 사람 모두 채웠다" 문구를 사실대로 고치고(김승욱 한마디 비어 있음), 템플릿 문구 "강사를 부르세요·멘션하세요"를 TEAM_GUIDE 9장 양식 안내로 바꿈(R-09 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `SPEC.md` P-03 행에서 "자동 생성 SDK"를 예정(아직 없음)으로 고치고 `specs/erp-integration.md`를 가리키게 함. `specs/erp-integration.md`의 예정 문구를 `mock_erp.md`와 통일(N-07 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 트리의 `backend/rag/ingest/`에 실제로 있는 `snapshot.py`·`compare.py` 추가(O-17 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 `db/` 줄 최초 작성자를 `git log --follow`로 다시 확인해 103을 강경희로 정정, 정의 없는 "B-16"을 "팀장 확정 대기"로(O-23 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE:90·113·309의 `.claude/skills/`·`.mcp.json`도 아직 저장소에 없는 예정으로 표시(O-39, 검증 후속) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개 절의 첫 과제 안내문을 현재 상태(세 사람 모두 채움)에 맞게 정리(R-09) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | docs/specs/erp-integration.md 신규: 업무시스템 연동 Spec(REST·SDK·웹훅 한 장, 코드에 있는 것만 적고 SDK 자동 생성·Java 목업은 예정, N-07) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 2장 일정을 가이드 일정(D4 11/5 그래프, D6 11/9 서비스화)에 맞춤(O-01), 5-0 db/ 줄을 실제 SQL 번호(01·101~114·120·201~202)와 git 최초 작성자로 고치고 data/ 줄을 corpus.tar.gz로(O-23, O-17), 예시 브랜치 jinhyung을 jinhyeong으로(O-31), 아직 없는 .mcp.json과 파트별 config.py를 예정으로 표시(O-39). PRD 수집 규칙의 data/corpus/를 data/corpus.tar.gz(풀면 corpus/)로(O-17). 5장 폴더 주인 배정과 팀장 전용 파일 표는 건드리지 않음. O-47은 fix-o47-l24 브랜치에서 처리돼 건너뜀 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 O-06, O-07, O-15, O-19, O-21, O-27, O-35 확인. O-06·O-19·O-21·O-27은 해소(근거 파일:줄 확인), O-07(`SDD.md` 51행의 LangChain 임베딩·저장소·리트리버 표기를 실제 Voyage API 직접 호출·psycopg 직접 조회로), O-15(`ApprovalItem.kind`에 `team_review_failed`), O-35(`Chunk.kind` 주석에 실제 값 article·row와 나머지 값 보존 이유)를 `SDD.md`에서 고침. `backend/schemas/`는 건드리지 않음. `SDD.md` 5-0의 `db/` 줄을 실제 SQL 번호(01, 101~114, 120, 201~202)로 고치고 번호대 주인 배정은 팀장 확정 대기(B-16)로 적음 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | SDD·Spec 값 반영(놓친 것 O-24, P-01, P-02, P-03, P-11, B-04): `SDD.md` 웹훅 두 경로의 방향 구분, 11-0에 LLM 제공자 기본값·판정 규칙 결과 추가, 11-1 결정표 실행 API 값 채움 / `specs/decision-approval.md` 실행 API 필드·응답 코드를 코드대로 / `specs/recall.md` 웹훅 제한 시간 env와 기본값 / `specs/team-review.md` 쟁점표 행 칸과 `issue_tables` 저장 모양. `rule_links`(B-04)는 이미 `chunks.link_targets`로 정리되어 있어 확인만 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 통합 PR 작업 내역 `docs/pr-notes/PR-131.md` 추가, `deliverables/ai_tools_log.md`에 통합 PR 한 줄 | #131 |
