@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개 절의 첫 과제 안내문을 현재 상태(세 사람 모두 채움)에 맞게 정리(R-09) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | docs/specs/erp-integration.md 신규: 업무시스템 연동 Spec(REST·SDK·웹훅 한 장, 코드에 있는 것만 적고 SDK 자동 생성·Java 목업은 예정, N-07) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 2장 일정을 가이드 일정(D4 11/5 그래프, D6 11/9 서비스화)에 맞춤(O-01), 5-0 db/ 줄을 실제 SQL 번호(01·101~114·120·201~202)와 git 최초 작성자로 고치고 data/ 줄을 corpus.tar.gz로(O-23, O-17), 예시 브랜치 jinhyung을 jinhyeong으로(O-31), 아직 없는 .mcp.json과 파트별 config.py를 예정으로 표시(O-39). PRD 수집 규칙의 data/corpus/를 data/corpus.tar.gz(풀면 corpus/)로(O-17). 5장 폴더 주인 배정과 팀장 전용 파일 표는 건드리지 않음. O-47은 fix-o47-l24 브랜치에서 처리돼 건너뜀 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): `specs/107-email-signup-verification.md` 24시간 규칙 복구(S2), `specs/login.md` 113·114 전 DB 동작(S1), `specs/admin-roles.md` by-id 승인은 그 행만(M1). `specs/admin-roles.md` 이메일 최고 관리자 대소문자 무시(M3). `specs/login.md` AC-08 인증 전 로그인 안내, `api/openapi.json` 로그인 403 설명. `specs/107-email-signup-verification.md` 가입 201 응답 문구·code, openapi 가입 설명. `specs/login.md` AC-09 비이메일 아이디 대소문자. Google 연결 SQL 이름 203 → 114(`db/ERD.md`·`db/TABLE_SPEC.md`·`db/QUERY_INDEX.md`·`specs/login.md`·`specs/admin-roles.md`). | 미정 |
