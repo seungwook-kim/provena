@@ -65,7 +65,7 @@
 | `PROVENA_OWNER_LOGIN_ID`가 비었음 | 사용자 관리는 모두에게 403(닫힘). 시작 로그 경고 1줄. 나머지 앱은 정상 |
 | 설정값 계정이 없음·`user`·비활성 | 시작 로그 오류 1줄(값은 쓰지 않음). 요청마다 다시 확인하므로 닫힌 채 유지되고, 계정을 고치면 재배포 없이 열린다 |
 | 설정값이 Google 자동 아이디 머리글자로 시작 | 시작 로그 오류, 사용자 관리 닫힘(Google 계정이 최고 관리자 아이디를 차지하는 길을 막음). 머리글자는 열린 항목 4 |
-| 아이디 대소문자 다름 (`Owner` 대 `owner`) | 다른 사람으로 본다(정확히 같을 때만 최고 관리자). `users.login_id` UNIQUE가 대소문자를 구분한다 |
+| 아이디 대소문자 다름 (`Owner` 대 `owner`) | 다른 사람으로 본다(정확히 같을 때만 최고 관리자). `users.login_id` UNIQUE가 대소문자를 구분한다. 단 이메일(`@` 포함) 설정값은 대소문자를 무시한다(`db/113`이 이메일 아이디를 소문자로 바꾸고 로그인도 소문자로 찾기 때문) |
 | promote·revoke에 CSRF 쿠키·헤더 없음·다름 | 403 `CSRF 검증에 실패했습니다.`(`backend/auth.py:565-576`). DB 쓰기 0건 |
 | 대상 아이디 없음 | 404 `사용자를 찾을 수 없습니다.` |
 | 대상이 최고 관리자 본인(자기 해제 포함) | 409 `최고 관리자는 바꿀 수 없습니다.` 변경·기록 0건 |
@@ -229,7 +229,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 - **AC-11 비활성 대상**: GIVEN 비활성 계정, WHEN promote, THEN 409, 쓰기 0.
 - **AC-12 CSRF**: GIVEN 최고 관리자, WHEN CSRF 헤더 없음 / 쿠키와 다름, THEN 403, 쓰기 0.
 - **AC-13 요청으로 올리기 불가**: GIVEN 일반 관리자, WHEN 본문 `{"is_owner":true}`·주소 `?owner=1`을 붙여 호출, THEN 403.
-- **AC-14 대소문자**: GIVEN 설정값 `owner`, WHEN 아이디 `Owner`인 admin이 호출, THEN 403.
+- **AC-14 대소문자**: GIVEN 설정값 `owner`, WHEN 아이디 `Owner`인 admin이 호출, THEN 403. GIVEN 설정값 `Boss@Example.com`, WHEN 아이디 `boss@example.com`인 admin이 호출, THEN 최고 관리자(이메일은 대소문자 무시, `tests/test_admin_api.py::test_email_owner_setting_matches_case_insensitively`).
 - **AC-15 트랜잭션**: GIVEN 기록 쓰기가 실패하는 저장소, WHEN promote, THEN 503이고 역할도 바뀌지 않았다.
 - **AC-16 저장소 오류**: GIVEN 조회가 실패하는 저장소, WHEN 사용자 관리 호출, THEN 503.
 - **AC-17 `/me`**: GIVEN 최고 관리자 / 일반 관리자, WHEN `/me`, THEN `is_owner` true / false.
