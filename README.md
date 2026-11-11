@@ -126,7 +126,7 @@ docker compose up          # .env 없이도 뜬다. 처음에는 이미지를 �
 
 1. 브라우저에서 http://localhost:8000 을 연다(로그인 화면으로 이동한다). 상태 확인은 http://localhost:8000/health 이다.
 2. **로컬 데모 계정**으로 로그인한다. 아이디는 `demo-user`(일반 사용자), `demo-admin`(관리자)이다. 비밀번호는 [.env.example](./.env.example)의 `DEMO_USER_PASSWORD`, `DEMO_ADMIN_PASSWORD` 값이고, 바꾸려면 `.env`에 같은 이름으로 적는다([.env.example](./.env.example) 참고).
-3. `demo-admin`은 최고 관리자(`PROVENA_OWNER_LOGIN_ID`)이기도 하다. compose가 이 값을 `demo-admin`으로 넣어 주므로 가입 승인·사용자 관리 화면이 열린다(다른 아이디로 바꾸려면 `.env`에 `PROVENA_OWNER_LOGIN_ID=<아이디>`). 일반 관리자가 이 화면을 열면 403이다.
+3. 가입 승인·사용자 관리 화면은 최고 관리자(`PROVENA_OWNER_LOGIN_ID`)만 연다. 로컬 데모에서 열려면 `docker compose up` 전에 `.env`에 `PROVENA_OWNER_LOGIN_ID=demo-admin`을 적는다(비우면 이 두 화면만 403, `docs/specs/admin-roles.md:176`). 일반 관리자가 이 화면을 열면 403이다.
 4. 끝내려면 `docker compose down`, 데이터까지 지우려면 `docker compose down -v`.
 
 8000번 포트를 이미 쓰고 있으면 `.env`에 `API_PORT=8001`처럼 적고 그 포트로 연다.
