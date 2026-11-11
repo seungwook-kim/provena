@@ -84,11 +84,11 @@ POST /approvals/{id}        (관리자)
 409 이미 처리된 승인
 ```
 
-- 쟁점표 한 행(초안, 필드 이름은 D0에 확정): 팀, 쟁점, 근거 섹션(제목 경로), 판 날짜, 원문 URL. 팀이 검토하지 못한 경우는 "검토하지 못함"과 이유를 적는다.
-- 그래프: Supervisor와 팀 에이전트(`backend/graph/departments/`). 팀 에이전트 4개는 고른 코퍼스 절과 1:1로 맞춘다(보안 ↔ security, IT 운영 ↔ business-technology, 재무 ↔ 도입 승인 정책 절, 인프라·SRE ↔ 인프라·장애 대응 절. 대응표는 D0에 확정). 팀 관점 규칙을 `SKILL.md`로 분리하는 것은 가산(MCP와 Skill)이고, 폴더 이름(sre·it-ops 등)은 D0에 정한다.
+- 쟁점표 한 행(필드는 `backend/graph/departments/issue_table.py:24`의 `ROW_FIELDS`가 정한다): `team`, `team_label`, `topic`, `issue`, `stance`, `confidence`, `chunk_id`, `rule_seq`, `rule_title`, `article`, `section_path`, `version_id`, `version_date`, `version_date_before`, `source_url`, `conflict`. 초안 때의 "팀, 쟁점, 근거 섹션(제목 경로), 판 날짜, 원문 URL"은 이 필드들에 들어 있다. 팀이 검토하지 못한 경우는 "검토하지 못함"과 이유를 적는다.
+- 그래프: Supervisor와 팀 에이전트(`backend/graph/departments/`). 팀 에이전트 4개는 고른 코퍼스 절과 1:1로 맞춘다(보안 ↔ security, IT 운영 ↔ business-technology, 재무 ↔ 도입 승인 정책 절, 인프라·SRE ↔ 인프라·장애 대응 절. 현재 대응표는 `backend/graph/departments/teams.py:25-28`: 보안=`security`, 인프라·SRE=`infra`, IT 운영=`business-technology`, 재무=`finance` 절). 팀 관점 규칙을 `SKILL.md`로 분리하는 것은 가산(MCP와 Skill)이고, 폴더 이름은 `skills/security`, `infra`, `itops`, `finance`로 정해졌다.
 - 체크포인터는 Postgres에 두고, 사람 승인은 interrupt로 멈춘 뒤 `resume()`으로 이어 간다.
-- 테이블: `approvals`(approval_id, kind, thread_id, status, decided_by). 승인된 쟁점표를 저장하는 위치와 모양은 D0에 정한다.
-- 재무 팀 에이전트가 승인된 결정표(F-04)의 실행 결과를 쓰는지는 D0에 합의한다.
+- 테이블: `approvals`(approval_id, kind, thread_id, status, decided_by, summary, created_at, comment, decided_at, `db/102_decision_approvals.sql`). 승인된 쟁점표는 `issue_tables`(`approval_id`, `thread_id`, `user_id`, `request`, `as_of`, `issue_rows`(jsonb), `unreviewed`(jsonb), `approved_by`, `approved_at`, `db/110_issue_tables.sql`)에 저장하고 반려는 `approvals`의 같은 줄에 남긴다.
+- 재무 팀 에이전트는 승인된 결정표(F-04)의 실행 결과를 쓰지 않는다(2026-11-11 `backend/graph/departments/`에 결정표 실행 호출 없음, `review.py`는 승인함 저장소 `DecisionRepo`만 부른다). 쓰게 할지는 팀장 판단이다.
 - 신뢰 경계: 쟁점표 저장은 승인(interrupt)을 거쳐야만 되고, 검색된 원문은 지시가 아닌 자료로만 다룬다. 인용은 코드로 원문과 대조한다.
 - 단일·멀티 비교 평가는 정책 질문 경로(F-01)로 하고, 합동 검토는 별도 시연 경로다.
 

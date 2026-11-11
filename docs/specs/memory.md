@@ -1,6 +1,6 @@
 # Spec — 사용자별 장기 기억 (P-01, G4)
 
-상태: `backend/memory/`, `GET/PATCH/DELETE /me/memory`, 질문 그래프의 기억 읽기 구현 완료. 사용자 분리는 API 수준 시험(`tests/test_api_isolation.py`)으로 확인했다. 운영 DB의 Store 표는 아직 없고 배포 환경에서 평가용 계정 두 개로 한 실측은 미확인이다.
+상태: `backend/memory/`, `GET/PATCH/DELETE /me/memory`, 질문 그래프의 기억 읽기 구현 완료. 사용자 분리는 API 수준 시험(`tests/test_api_isolation.py`)으로 확인했다. 운영 DB에는 `store` 표가 있고(2026-11-10 조회 0행 / 56 KB, `docs/db/TABLE_SPEC.md:59`) 배포 환경에서 평가용 계정 두 개로 한 실측(2026-11-09: 일반 계정에 자기 대화만 보이고 남의 thread는 404, 기억 저장 시 `store`에 소속·직급이 생기고 초기화하면 지워짐)이 `EVAL_REPORT.md:509`·`docs/GATES.md` G4에 있다.
 
 ## Why
 
@@ -14,20 +14,20 @@
 
 ## Goal
 
-- 소속(`affiliation`)과 직급(`rank`) 두 칸만 LangGraph Store에 사용자별로 저장한다.
+- 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 세 칸만 LangGraph Store에 사용자별로 저장한다.
 - 로그인한 사용자가 자신의 기억을 보고(`GET`), 고치고(`PATCH`), 지울(`DELETE`) 수 있다.
 - 질문 그래프가 질문마다 첫 노드에서 로그인한 사용자의 기억만 읽어 State에 둔다.
-- **Out of Scope**: 대화 내용, 질문, 검색 결과, 답의 장기 저장(State와 체크포인트가 맡는다), 그래프가 대화 중에 기억을 스스로 쓰는 것, 소속·직급 밖의 칸, 기억의 유효 기간·자동 삭제
+- **Out of Scope**: 대화 내용, 질문, 검색 결과, 답의 장기 저장(State와 체크포인트가 맡는다), 그래프가 대화 중에 기억을 스스로 쓰는 것, 소속·직급·담당 서비스 밖의 칸, 기억의 유효 기간·자동 삭제
 
 ## What
 
 ### Happy Path
 
-1. 사용자가 로그인한 뒤 `PATCH /me/memory`에 `{"affiliation": ..., "rank": ...}` 중 고칠 칸을 보낸다(CSRF 헤더 필요).
+1. 사용자가 로그인한 뒤 `PATCH /me/memory`에 `{"affiliation": ..., "rank": ..., "service": ...}` 중 고칠 칸을 보낸다(CSRF 헤더 필요).
 2. 서버는 로그인 쿠키에서 얻은 사용자 id로 Store의 `(user_id, "profile")` namespace, 키 `me`에 값을 쓴다. 보낸 칸만 갱신하고 나머지는 그대로 둔다.
 3. 사용자가 `/chat`으로 질문하면 서버는 같은 사용자 id를 그래프 입력의 `user_id`로 넘긴다.
 4. 그래프의 첫 노드 `load_memory`가 `get_profile(store, user_id)`로 그 사용자의 프로필을 읽어 State의 `profile`에 둔다.
-5. `profile`은 질문 종류 분류 프롬프트와 재작성 프롬프트에 "소속·직급: ..." 줄로 들어가고, 입력에 절(`org`)이 없고 재작성도 절을 정하지 않았을 때 검색 범위(`search_org`)로 `affiliation` 값이 쓰인다.
+5. `profile`은 질문 종류 분류 프롬프트와 재작성 프롬프트에 "소속·직급: ..." 줄에 소속·직급(`affiliation`·`rank`)만 들어가고(담당 서비스 `service`는 저장만 한다, `PROMPT_PROFILE_FIELDS`),, 입력에 절(`org`)이 없고 재작성도 절을 정하지 않았을 때 검색 범위(`search_org`)로 `affiliation` 값이 쓰인다.
 6. 사용자가 `GET /me/memory`로 저장된 값을, `DELETE /me/memory`로 지운 결과를 확인한다.
 
 ### Edge Cases
@@ -50,8 +50,8 @@
 ### 저장 위치와 namespace
 
 - 구현: `backend/memory/profile.py`. Store는 LangGraph `BaseStore`이며 `backend/graph/checkpoint.py`의 `open_persistence()`가 체크포인터와 함께 연다. `DATABASE_URL`이 있고 `CHECKPOINTER`가 `memory`가 아니면 `PostgresStore`(표 `store`, 앱 시작 때 `setup()`이 만들고 RLS를 켠다), 그렇지 않으면 `InMemoryStore`다. `build_graph(store=None)`도 `InMemoryStore`를 쓴다.
-- namespace는 `(user_id, "profile")`이고 첫 요소가 사용자 id다. 키는 `me` 하나이며 값은 `{"affiliation": str, "rank": str}` 형태의 dict다. 사용자마다 namespace가 달라 다른 사용자의 값을 읽을 수 없다.
-- 허용 칸은 `ALLOWED_FIELDS = ("affiliation", "rank")`이다. `get_profile()`은 이 밖의 칸과 빈 값을 걸러서 돌려준다.
+- namespace는 `(user_id, "profile")`이고 첫 요소가 사용자 id다. 키는 `me` 하나이며 값은 `{"affiliation": str, "rank": str, "service": str}` 형태(없는 칸은 빠짐)의 dict다. 사용자마다 namespace가 달라 다른 사용자의 값을 읽을 수 없다.
+- 허용 칸은 `ALLOWED_FIELDS = ("affiliation", "rank", "service")`이다. `get_profile()`은 이 밖의 칸과 빈 값을 걸러서 돌려준다.
 - State와 Store의 경계(SDD 5장): 질문, 검색 결과, 재검색 횟수, 초안 답은 State(체크포인트)에 두고, 다음 대화에도 쓸 소속·직급만 Store에 둔다. 기억 값과 질문 내용은 로그에 쓰지 않는다(`backend/api/routes.py`).
 
 ### 읽기
@@ -67,7 +67,7 @@
 | 메서드 | 경로 | 인증 | 동작 |
 |---|---|---|---|
 | GET | `/me/memory` | 로그인 | `{user_id, profile, allowed_fields}` |
-| PATCH | `/me/memory` | 로그인, CSRF | 본문 `{affiliation?, rank?}`(각 100자 이하, 그 밖의 칸은 422). 보낸 칸만 갱신하고 `{user_id, profile}`을 돌려준다 |
+| PATCH | `/me/memory` | 로그인, CSRF | 본문 `{affiliation?, rank?, service?}`(각 100자 이하, 그 밖의 칸은 422). 보낸 칸만 갱신하고 `{user_id, profile}`을 돌려준다 |
 | DELETE | `/me/memory` | 로그인, CSRF | `delete_profile()`로 키 `me`를 지우고 `{user_id, profile: {}}`을 돌려준다 |
 
 - 사용자 id는 로그인 쿠키에서만 얻는다. `?user_id=`는 읽지 않고, 본문의 `user_id`는 `extra="forbid"`로 422다.
@@ -88,13 +88,23 @@
 
 그래프 쪽 시험은 `tests/test_question_graph.py`의 `test_memory_profile_used_for_org`, `test_graph_does_not_leak_profile_across_users`, `test_put_profile_ignores_unknown_fields_and_partial_update`다.
 
+## 의존 파일·환경변수
+
+| 구분 | 이름 | 쓰는 곳 |
+|---|---|---|
+| 파일 | `backend/memory/profile.py`, `backend/memory/__init__.py` | 기억 읽기·쓰기·삭제와 namespace(`profile_namespace`) |
+| 파일 | `backend/api/routes.py`의 `/me/memory` 세 경로 | 로그인·CSRF 확인 뒤 위 함수를 부른다(`routes.py:359` 부근) |
+| 파일 | `backend/graph/checkpoint.py` | 기억을 담는 Store(메모리 `InMemoryStore`, Postgres `PostgresStore`)를 앱 시작에서 연다 |
+| 환경변수 | `DATABASE_URL` | 있으면 Postgres Store(`.env.example`) |
+| 환경변수 | `CHECKPOINTER` | `memory` 또는 `postgres`. 비우면 `DATABASE_URL`이 있을 때 postgres, 없으면 memory(`checkpoint.py`의 `checkpointer_kind`). memory면 서버를 다시 띄울 때 기억도 사라진다 |
+
 ## 남은 점
 
 - `backend/memory/__init__.py`의 `namespace(user_id)`는 `("memories", user_id)`를 돌려주지만 호출하는 곳이 없다. 실제 namespace는 `profile_namespace()`의 `(user_id, "profile")`이며 첫 요소가 사용자 id인 것도 이쪽뿐이다. 이 함수를 지울지 다른 용도로 쓸지는 정하지 않았다.
-- SDD 4-3장의 "기억 불러오기" 서술과 `backend/memory/memory.md`는 팀·역할·담당 서비스를 기억한다고 적고 있으나, 코드가 저장하는 칸은 소속·직급 두 개뿐이다. 문서를 코드에 맞출지, 칸을 늘릴지는 정하지 않았다.
+- 기억 설정 화면(`/onboarding`)의 팀·역할·담당 서비스는 각각 `affiliation`·`rank`·`service`에 저장한다. 내 정보 화면(`/myinfo`, 첫 등록 포함)은 `rank`·`service`만 보내고 소속 팀은 내 정보 `dept`에만 저장한다(2026-11-11). 화면의 팀 이름은 한글(보안, 재무 등)이고 코퍼스 절 이름은 영문(`security`, `finance` 등 11종)이라, 한글 팀 이름이 `affiliation`에 들어가면 검색 범위가 없는 절로 좁혀져 결과가 0건이 된다(numpy 저장소와 가짜 LLM 그래프로 확인, 실제 DB·배포는 미확인). 기억 설정 화면은 지금도 한글 팀 이름을 보내므로 팀 이름을 절 이름으로 바꾸는 표를 둘지는 정하지 않았다. SDD 4-3장과 `backend/memory/memory.md`의 서술이 이 이름과 맞는지는 다시 대조하지 않았다.
 - `affiliation` 값은 검색 범위(절 이름)로도 쓰이는데, 기억을 저장할 때 허용 값 목록으로 검증하는 코드는 없다(길이 100자 제한뿐이다). 사용자가 적은 문자열은 그대로 LLM 프롬프트의 "소속·직급" 줄에도 들어가며 별도 정화 처리는 코드에 없다. 영향은 미확인이다.
-- 사용자 분리 시험은 메모리 Store 기준이다. `PostgresStore`와 배포 환경에서 평가용 계정 A·B로 한 실측은 미확인이다.
-- 운영 Supabase에는 2026-11-09 읽기 전용 조회 기준으로 Store 표가 아직 없다. `backend/graph/checkpoint.py:107-108`의 `setup()`이 앱 첫 기동 때 만든다(`db/db.md`).
+- `tests/test_api_isolation.py`의 사용자 분리 시험은 메모리 Store 기준이고, `PostgresStore`·배포 환경(평가용 계정 A·B)은 2026-11-09 실측으로 확인했다(`EVAL_REPORT.md:509`). 실측 뒤 조회 시점의 `store`는 0행이다(소속·직급을 초기화해 지운 뒤).
+- 운영 Supabase의 `store` 표는 2026-11-09 조회 때는 없었고 앱 첫 기동 때 `backend/graph/checkpoint.py:107-108`의 `setup()`이 만들었다. 2026-11-10 조회에는 있다(0행 / 56 KB, `docs/db/TABLE_SPEC.md:59`).
 - 틀린 기억을 고치는 절차는 위 API로 구현했지만, 기억해도 되는 기준과 보존 기간은 SDD 5장 서술 외에 별도 규칙이 없다.
 
 ## AC (Given-When-Then)

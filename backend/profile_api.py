@@ -4,7 +4,8 @@
 - 다른 사람의 내 정보를 주는 경로는 없다. 관리자도 자기 것만 본다.
 - 기본 보기는 전화번호를 서버에서 가린다(010-****-5678). 원래 번호는 본인이 `view=edit`로 열 때만 준다.
 - 입력 검사 규칙은 시안 `src/lib/profile-preview.js`의 validateProfile·normalizePhone과 같다. 서버 검사가 기준이다.
-- 422 응답에는 입력값을 되풀이하지 않는다: `{"detail": {"message": ..., "fields": {칸: 이유}}}`.
+- 422 응답에는 입력값을 되풀이하지 않는다: 팀 표준 `ApiError`로 `{"error": {"code": "validation_error", "message": ..., "details": {"fields": {칸: 이유}}}}`.
+  (`HTTPException`의 dict detail은 운영 오류 처리기가 `reason`이 없으면 message·칸별 이유를 버린다. `backend/api/errors.py`)
 - 본문은 로그에 남기지 않는다. 저장소·암호화 실패는 이유를 숨기고 503으로 답한다.
 """
 from __future__ import annotations
@@ -23,6 +24,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import Response
 
+from backend.api.errors import ApiError
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, require_csrf
 from backend.services.profile_crypto import ProfileCipher
 from backend.services.profile_store import FIELDS, EncryptedProfile, ProfileStore
@@ -40,8 +42,8 @@ _AREA = re.compile(r"0[3-6][1-5][0-9]{7,8}")
 _SPACE_OR_HYPHEN = re.compile(r"[\s-]")
 
 
-def _invalid(fields: dict[str, str] | None = None) -> HTTPException:
-    return HTTPException(status_code=422, detail={"message": INVALID_MESSAGE, "fields": fields or {}})
+def _invalid(fields: dict[str, str] | None = None) -> ApiError:
+    return ApiError(422, "validation_error", INVALID_MESSAGE, details={"fields": fields or {}})
 
 
 class ProfileRoute(APIRoute):

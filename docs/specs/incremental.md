@@ -24,7 +24,7 @@
   - 반영 뒤에도 `as_of=2026-10-27`(동결일) 검색 결과가 반영 전과 같다.
   - 실패한 실행마다 디스코드 알림 1건, 또는 알림을 끈 사실이 실행 로그에 남는다.
 - **Out of Scope** (넣지 않은 것과 이유)
-  - 리콜 웹훅 전송(`POST /webhooks/regulation-updated`): 받는 쪽이 아직 없다. 지금은 `changed_articles` 표(`status=pending`)에 쌓고, 받는 쪽이 생기면 전송을 붙인다(10줄 내외). 받는 쪽이 표를 직접 읽어도 된다(리뷰에서 확인).
+  - 리콜 웹훅 전송(`POST /webhooks/regulation-updated`): 증분 수집이 직접 보내는 코드는 없다(저장소에 그 경로를 부르는 수집 쪽 코드 0건). 받는 쪽은 구현돼 있다(`backend/api/recalls.py`의 `/webhooks/regulation-updated`와, `changed_articles`의 `pending` 행을 읽어 처리하는 관리자용 `POST /recalls/process-pending`, `recall.md`). 수집은 `changed_articles` 표(`status=pending`)에 쌓고 리콜 쪽이 그 표를 읽는다.
   - 답의 결론이 바뀌었는지 판정(LLM, 리콜 그래프) / 사용자·업무시스템 알림(리콜)
   - 실행 되돌리기(`--rollback`): 가산 조건이 아니다. 잘못된 반영은 반영 직전 검사(행 수 대조·DB 고유 색인)가 커밋 전에 막는다.
   - 실행 기록 해시 체인, 26시간 무성공 알림, 비상 정지 변수: 기록은 `sync_runs`, 무성공은 실행 기록 날짜로 보이고, 멈춤은 Actions의 "Disable workflow"로 한다.
@@ -46,6 +46,18 @@
 7. 바뀐 쪽을 처음 수집과 같은 함수(`parse_page`·`chunk_structure`, 800/120)로 청킹한다. 같은 쪽에 같은 글의 벡터가 있으면 재사용하고, 없는 글만 임베딩한다(서식만 바뀐 날은 모델을 올리지 않는다).
 8. 한 트랜잭션으로: 옛 판의 `valid_to` 를 닫고 새 판·청크를 넣고, 사라진 쪽(목록이 완전할 때만)을 닫고, 바뀐 섹션을 `changed_articles` 에 넣고, `index_meta.generation` 을 올리고(api가 BM25를 다시 만듦), 실행 기록을 `succeeded` 로 확정한다.
 9. 실패하면 전부 되돌리고 실행 기록을 `failed`(`error_kind`)로 남긴 뒤 종료 코드 1 → workflow의 `if: failure()` 단계가 디스코드로 알린다.
+
+**재임베딩 단위와 실행 기록의 현재 상태 (F-17·F-08, 2026-11-11 확인)**
+
+| 항목 | 현재 동작 | 근거 |
+|---|---|---|
+| 다시 읽는 단위 | 바뀐 쪽(파일)만. 안 바뀐 쪽은 청킹·임베딩 모두 안 한다 | `schedule.py:169-186`(`rep["pages"]`만 `page_chunks` 호출), `diff.list_changes` 의 blob id 비교 |
+| 바뀐 쪽 안에서 | 청크 본문(머리말·겹침 포함, 임베딩 입력 그대로)이 같은 글은 DB의 벡터를 재사용하고 없는 글만 임베딩한다. 키는 **글 전체 문자열**이지 `text_sha256` 해시가 아니다 | `schedule.py:187-200`(`known`·`need`·`reused`) |
+| 재사용 범위 | **같은 쪽(`rule_seq`)의 기존 청크 한정** + 같은 `embedder`. 다른 쪽에 같은 글이 있어도(예: 쪽 사이 이동) 새로 임베딩한다 | `schedule.py:189-193`(`WHERE rule_seq = ANY(%s) AND embedder = %s`) |
+| 해시 단위로 안 한 것 | 전역 `text_sha256` 조회로 넓히면 쪽 이동·복제 문단도 재사용할 수 있으나, 아직 하지 않았다(같은 쪽 범위만으로 11/2 DB 사본 실행에서 새로 124·재사용 4,007) | ingest.md 작업 기록 11/02 |
+| 성공 실행 기록 | 코드는 한 트랜잭션 끝에서 `sync_runs.status='succeeded'` 를 남긴다(`schedule.py:287`). 그러나 **운영 DB에서 정시 실행이 성공한 기록은 아직 없다**: Actions 정시 실행 3회(UTC 11/3 00:54, 11/3 23:14, 11/4 23:36) 모두 `sync` 작업의 "증분 수집 한 번" 단계에서 실패했고 이후 workflow는 `disabled_manually` | Actions API 실행 id 41556125760·41737577192·41935004516 |
+| 실패 원인(추정) | 저장소 비밀값 `DATABASE_URL`·`VOYAGE_API_KEY` 가 만들어진 시각이 2026-11-09 07:03Z로, 세 실행보다 뒤다. 그 단계는 `DATABASE_URL` 이 없으면 `SystemExit("DATABASE_URL이 없다")`(`schedule.py:365-366`)로 종료 코드 1을 낸다. 작업 로그는 API로 읽을 수 없어(종료 코드 1 주석만 남음) 직접 확인한 것은 아니며, 단계 순서(캐시·pip 성공 → 수집 단계 실패)와 비밀값 시각이 일치하는 정황이다 | 비밀값 목록·변수 조회(값은 보지 않음), 작업 단계 결과 |
+| 다시 켜기 전 | `SYNC_ALERT_WEBHOOK` 비밀값은 아직 없다(실패 알림은 "알림 꺼짐"으로 끝남). 켜는 일은 조장 결정이고 이 문서는 켜지 않는다 | 비밀값 목록 |
 
 **Edge Cases**
 
@@ -97,7 +109,8 @@ backend/rag/ingest/schedule.py
 - 핸드북 캐시·모델 캐시는 `actions/cache` 로 이어 쓴다. 정시 실행은 main에 있는 workflow만 돈다.
 - 비밀값: `DATABASE_URL`, `VOYAGE_API_KEY`(기본 모델 voyage-4가 API라 새 글이 있는 날 임베딩에 쓴다. 키가 없는 채로 새 글이 들어오는 날은 임베딩 단계에서 실패하고 실패 알림이 간다. 서식만 바뀐 날은 벡터를 재사용하므로 키를 쓰지 않는다), `SYNC_ALERT_WEBHOOK`(조장, 운영 DB가 정해진 뒤). 변수: `EMBED_MODEL`(색인 장부와 같은 모델)
 - 켜고 첫 실행: workflow는 현재 비활성(`disabled_manually`)이다. 비밀값·변수를 등록한 뒤 `gh workflow enable handbook-sync.yml`, `gh workflow run handbook-sync.yml`로 한 번 돌리고 `gh run list --workflow handbook-sync.yml`로 결과를 본다. 손으로 돌린 실행은 `GITHUB_EVENT_NAME`이 `workflow_dispatch`라 `trigger=manual`로 기록되고, 슬롯은 기본으로 그날 UTC 날짜라 같은 날 정시 실행이 이미 있었으면 슬롯 충돌로 아무것도 하지 않는다. 첫 성공 뒤 DB `sync_runs`의 마지막 행(`status`, `to_commit`, `embedded`, `reused`)을 확인한다.
-- 지금까지 실행 3건(2026-11-03~04)은 모두 "DATABASE_URL이 없다"로 실패했다(비밀값 미등록).
+- 지금까지 실행 3건(2026-11-03~04)은 모두 "증분 수집 한 번" 단계에서 실패했다. 원인은 비밀값 미등록(`DATABASE_URL` 없음)으로 **추정**한다(작업 로그를 API로 읽을 수 없어 직접 확인하지 못했다, 위 표 "실패 원인(추정)").
+- 결정(11/11): ① 로컬 DB에서 `--once`를 1회 실행해 성공 기록 남기기(아직 안 함) ②  Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회. 결제 한도는 조직 설정이라 해소 요청 필요(11/11 Actions 실행 20건 러너 미기동, API 확인).
 
 **재시도 규칙**
 

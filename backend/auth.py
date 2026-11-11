@@ -6,6 +6,7 @@ The caller supplies an AuthStore; PostgreSQL integration remains pending.
 
 from __future__ import annotations
 
+import math
 import os
 import secrets
 import hmac
@@ -452,8 +453,46 @@ def set_auth_cookie(
     )
 
 
-def create_csrf_token() -> str:
-    return secrets.token_urlsafe(32)
+# require_csrf는 Depends로 쓰여 서명 키를 인자로 받지 못한다. 키는 AUTH_SECRET(환경변수) 우선, 없으면 라우터·의존성을 만들 때
+# 등록된 서명 키(로컬 데모의 무작위 키 포함)를 쓴다. 운영에서는 둘이 같은 값이다 (J-14).
+_registered_secret: str | None = None
+
+
+def _register_secret(secret: str | None) -> None:
+    global _registered_secret
+    if secret:
+        _registered_secret = secret
+
+
+def _csrf_key() -> bytes | None:
+    resolved = os.getenv("AUTH_SECRET") or _registered_secret
+    if not resolved or len(resolved.encode("utf-8")) < MIN_AUTH_SECRET_BYTES:
+        return None
+    # JWT 서명과 같은 키를 그대로 쓰지 않도록 용도 이름을 섞는다
+    return hmac.new(resolved.encode("utf-8"), b"provena-csrf-v1", hashlib.sha256).digest()
+
+
+def _csrf_signature(key: bytes, nonce: str) -> str:
+    return hmac.new(key, nonce.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def create_csrf_token(secret: str | None = None) -> str:
+    """서명된 double-submit 토큰: 난수 + "." + HMAC-SHA256(서버 비밀, 난수)."""
+    if secret is not None:
+        key = hmac.new(_get_secret(secret).encode("utf-8"), b"provena-csrf-v1", hashlib.sha256).digest()
+    else:
+        key = _csrf_key()
+        if key is None:
+            raise AuthConfigurationError("AUTH_SECRET is not configured")
+    nonce = secrets.token_urlsafe(32)
+    return f"{nonce}.{_csrf_signature(key, nonce)}"
+
+
+def _csrf_token_signed(token: str, key: bytes) -> bool:
+    nonce, dot, signature = token.partition(".")
+    if not dot or not nonce or not signature:
+        return False
+    return hmac.compare_digest(signature.encode("utf-8"), _csrf_signature(key, nonce).encode("utf-8"))
 
 
 def set_csrf_cookie(
@@ -560,6 +599,11 @@ class SignupVerificationRequest(BaseModel):
     code: str
 
 
+class SignupResendRequest(BaseModel):
+    """재발송은 코드가 없는 요청이다(C-21). 옛 화면이 `code`를 같이 보내도 무시한다."""
+    login_id: str
+
+
 class UserResponse(BaseModel):
     user_id: str
     role: str
@@ -568,6 +612,8 @@ class UserResponse(BaseModel):
 class MeResponse(UserResponse):
     # 내 정보(요청 1번): /me에만 "있다/없다"를 더한다. 로그인 응답(UserResponse)은 그대로 두려고 따로 뺐다.
     profile_completed: bool | None = None
+    # 화면의 계정 메뉴가 UUID 대신 보여 줄 로그인 아이디(이메일 계정은 이메일, H-13)
+    login_id: str | None = None
     # 사용자 관리(요청 2번): 최고 관리자면 true. 화면이 메뉴를 숨기는 데만 쓰고, 서버는 요청마다 다시 확인한다
     is_owner: bool | None = None
 
@@ -604,6 +650,19 @@ class LoginRateLimiter:
             len(self._failures_by_login_id.get(login_id, [])) >= self.max_attempts
             or len(self._failures_by_ip.get(client_ip, [])) >= self.max_ip_attempts
         )
+
+    def retry_after_seconds(self, login_id: str, client_ip: str) -> int:
+        """Seconds until the oldest failure of an exhausted bucket leaves the window (at least 1)."""
+
+        now = time.monotonic()
+        waits = []
+        for stamps, limit in (
+            (self._failures_by_login_id.get(login_id, []), self.max_attempts),
+            (self._failures_by_ip.get(client_ip, []), self.max_ip_attempts),
+        ):
+            if len(stamps) >= limit:
+                waits.append(self.window_seconds - (now - min(stamps)))
+        return max(1, math.ceil(max(waits))) if waits else 1
 
     def record_failure(self, login_id: str, client_ip: str) -> None:
         stamp = time.monotonic()
@@ -698,9 +757,10 @@ def require_csrf(request: Request) -> None:
     """
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME, "")
     header_token = request.headers.get("x-csrf-token", "")
-    if not cookie_token or not header_token or not hmac.compare_digest(
+    key = _csrf_key()
+    if key is None or not cookie_token or not header_token or not hmac.compare_digest(
         cookie_token.encode("utf-8"), header_token.encode("utf-8")
-    ):
+    ) or not _csrf_token_signed(cookie_token, key):
         raise HTTPException(status_code=403, detail="CSRF 검증에 실패했습니다.")
 
 
@@ -729,6 +789,7 @@ def create_current_user_dependency(
     revocation_store: TokenRevocationStore | None = None,
 ) -> Callable:
     """Use Depends(result) in future protected team endpoints."""
+    _register_secret(secret)
     def current_user(request: Request) -> AuthUser:
         return get_current_user(request, store=store, secret=secret, revocation_store=revocation_store)
 
@@ -760,6 +821,7 @@ def create_require_admin_dependency(
     For a state-changing route, also add Depends(require_csrf). Bind the same
     secret as the auth router, including when local demo uses a random secret.
     """
+    _register_secret(secret)
     def admin_dependency(request: Request) -> AuthUser:
         return require_admin(request, store=store, secret=secret, revocation_store=revocation_store)
 
@@ -799,6 +861,7 @@ def create_auth_router(
     resolved_email_sender = email_sender if email_sender is not None else configured_email_sender()
     current_user = create_current_user_dependency(store=store, secret=secret, revocation_store=revocation_store)
     resolved_secret = _get_secret(secret)
+    _register_secret(resolved_secret)
     resolved_google_store = google_oauth_store
     if resolved_google_store is None and callable(getattr(store, "get_or_create_google_user", None)):
         resolved_google_store = cast(GoogleOAuthStore, store)
@@ -820,7 +883,7 @@ def create_auth_router(
     @router.get("/auth/csrf", status_code=204)
     def csrf() -> Response:
         response = Response(status_code=204)
-        set_csrf_cookie(response, create_csrf_token(), secure=cookie_secure)
+        set_csrf_cookie(response, create_csrf_token(resolved_secret), secure=cookie_secure)
         response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -849,7 +912,13 @@ def create_auth_router(
         login_id = _normalise_signup_login(payload.login_id)  # 시도 제한 키와 신청 조회는 가입과 같은 규칙
         client_ip = _client_ip(request)
         if limiter.is_limited(login_id, client_ip):
-            raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+            retry_after = getattr(limiter, "retry_after_seconds", None)
+            wait = retry_after(login_id, client_ip) if callable(retry_after) else None
+            raise HTTPException(
+                status_code=429,
+                detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+                headers={"Retry-After": str(wait)} if wait else None,
+            )
         try:
             user = store.get_by_login_id(typed)
             if user is None and typed != login_id:
@@ -1056,7 +1125,7 @@ def create_auth_router(
         description="Resends only for pending, unverified email signup requests. Missing, completed, and rate-limited requests are intentionally returned as status unavailable.",
         responses={503: {"description": "Email verification storage or provider unavailable (also returned when EMAIL_PROVIDER is not configured or delivery fails)"}},
     )
-    def resend_signup(request: Request, payload: SignupVerificationRequest) -> dict[str, str]:
+    def resend_signup(request: Request, payload: SignupResendRequest) -> dict[str, str]:
         require_csrf(request)
         _check_signup_ip_rate_limit(request)
         login_id = _normalise_signup_login(payload.login_id)
@@ -1195,6 +1264,6 @@ def create_auth_router(
             if type(completed) is not bool:   # 저장소 오류·이상한 값은 막힘/열림을 추측하지 않고 503
                 raise HTTPException(status_code=503, detail="내 정보 저장소를 사용할 수 없습니다.")
         owner = None if owner_check is None else owner_check(user) is True   # backend/admin_api.py is_owner (DB 조회 없음)
-        return MeResponse(user_id=str(user.user_id), role=user.role, profile_completed=completed, is_owner=owner)
+        return MeResponse(user_id=str(user.user_id), role=user.role, login_id=user.login_id, profile_completed=completed, is_owner=owner)
 
     return router

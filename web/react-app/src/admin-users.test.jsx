@@ -18,12 +18,30 @@ test('shows signup approval preview and confirms a local demo action', async () 
   expect(screen.getByText('pending-user-01')).toBeTruthy()
   await user.click(screen.getAllByRole('button', { name: '가입 승인' })[0])
   expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(screen.getByText(/가입을 승인합니다/)).toBeTruthy()   // H-31: 승인/거절 구분
   await user.click(screen.getByRole('button', { name: '확인' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: '가입 신청 보기' }), 'all')
   expect(screen.getByText('승인 완료')).toBeTruthy()
   expect(screen.getByText(/데모 상태에만 반영됩니다/)).toBeTruthy()
+  await user.click(screen.getByRole('tab', { name: '관리자 권한 관리' }))
+  expect(screen.queryByText(/데모 상태에만 반영됩니다/)).toBeNull()   // H-31: 다른 탭에 이전 성공 문구가 남지 않는다
 })
 
 afterEach(cleanup)
+
+test('shows pending signup requests first and hides processed ones by default (H-22)', async () => {
+  const user = userEvent.setup()
+  const signupRequests = [
+    { request_id: 'a', login_id: 'old-done@example.com', requested_at: '2026-11-01T00:00:00Z', status: 'approved', email_verified: true },
+    { request_id: 'b', login_id: 'new-wait@example.com', requested_at: '2026-11-10T00:00:00Z', status: 'pending', email_verified: true },
+  ]
+  render(<AdminUsersTabs users={[]} loading={false} signupRequests={signupRequests} />)
+  expect(screen.getByText('new-wait@example.com')).toBeTruthy()
+  expect(screen.queryByText('old-done@example.com')).toBeNull()
+  await user.selectOptions(screen.getByRole('combobox', { name: '가입 신청 보기' }), 'all')
+  const cells = screen.getAllByRole('row').slice(1).map(row => row.cells[0].textContent)
+  expect(cells).toEqual(['new-wait@example.com', 'old-done@example.com'])
+})
 
 test('keeps the existing administrator role tab', async () => {
   const user = userEvent.setup()
@@ -56,9 +74,15 @@ test('shows the privacy access tab and demo request form without exposing raw da
   expect(screen.getByRole('dialog')).toBeTruthy()
 })
 
+test('hides the privacy tab outside preview because no backend API exists (H-16)', () => {
+  render(<AdminUsersTabs users={[]} loading={false} isPreview={false} defaultTab="privacy" />)
+  expect(screen.queryByRole('tab', { name: /개인정보 열람/ })).toBeNull()
+  expect(screen.getByRole('region', { name: '회원가입 승인 목록' })).toBeTruthy()
+})
+
 test('ordinary admin request view omits role management and real privacy history is empty', () => {
   render(<AdminUsersTabs users={[]} loading={false} isPreview={false} showRoleTab={false} defaultTab="privacy" />)
-  expect(screen.getAllByRole('tab')).toHaveLength(2)
+  expect(screen.getAllByRole('tab')).toHaveLength(1)
   expect(screen.queryByText('pending-user-01')).toBeNull()
 })
 

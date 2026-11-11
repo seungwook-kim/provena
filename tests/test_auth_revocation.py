@@ -242,7 +242,7 @@ def test_separate_server_processes_share_committed_revocation_via_test_sql_adapt
         conn.execute("CREATE TABLE revoked(jti TEXT PRIMARY KEY, expires_at REAL NOT NULL)")
     token = create_access_token(store.user.user_id, "user", secret=secret)
     env = os.environ.copy()
-    for key in ["DATABASE_URL", "PROVENA_TEST_DATABASE_URL"]:
+    for key in ["DATABASE_URL", "PROVENA_TEST_DATABASE_URL", "TEST_DATABASE_URL"]:
         env.pop(key, None)
     env["PYTHONPATH"] = os.pathsep.join([os.getcwd(), os.path.join(os.getcwd(), "tests")])
     statuses, pids = [], []

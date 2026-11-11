@@ -241,6 +241,15 @@ def _authz_cells(category: str) -> list[dict]:
     return cells
 
 
+def _known_category(category: str) -> bool:
+    """권한표에 그 업무 종류가 있나. 칸 파일을 못 읽으면 모른다고 보지 않는다(없는 업무로 오판해 404를 내지 않도록)."""
+    try:
+        lines = AUTHZ_CELLS_FILE.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return True
+    return any(R.norm(json.loads(line)["category"]) == R.norm(category) for line in lines if line.strip())
+
+
 def _check_convertible(repo, category: str) -> None:
     """같은 업무 종류로 승인된 표가 둘이 되면 실행이 거절되고(AC-06), 대기 건이 둘이면 승인함이 겹치므로 시작 전에 막는다."""
     if repo.find_approved(category):
@@ -380,6 +389,10 @@ def create_decision_router(
         task_type, amount, band = _parse_run(body)
         try:
             return DecisionExecutor(_state(request, "decision_repo")).run(task_type, amount, table_id=table_id, band=band)
+        except R.AmbiguousTable as e:
+            if table_id is None and task_type and not _known_category(task_type):   # C-23: 없는 업무 종류는 404, 표가 0개·2개 이상인 모호함만 409
+                raise _http(R.NotFound("권한표에 그 업무 종류가 없다")) from None
+            raise _http(e) from None
         except R.DecisionError as e:
             raise _http(e) from None
 

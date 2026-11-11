@@ -145,3 +145,46 @@ def test_http_wrong_token_is_blocked(caplog):
     assert not isinstance(e.value, mc.McpUnavailable)     # 토큰 틀림은 다시 불러도 같다
     # 다른 이유(설정 오류 등)로 실패한 것이 아니라 서버 인증이 401로 막았는지
     assert any("status=401" in r.getMessage() for r in caplog.records)
+
+
+# ---------- section_via_mcp: 섹션 dict / 없으면 None / 실패 구분은 search_via_mcp와 같음 (클라이언트 절) ----------
+
+def make_section(store):
+    return server.build_server(search_fn=FakeSearch(), section_store=store, changes_store=FakeChanges())
+
+
+def test_section_via_mcp_returns_the_section():
+    got = mc.section_via_mcp(7, "A", None, make_section(section_rows(["first", "second"])))
+    assert got["text"] == "first\nsecond" and got["chunk_ids"] == ["s0", "s1"]
+
+
+@pytest.mark.parametrize("rule_seq, article", [(7, "Nope"), (8, "A")])
+def test_section_via_mcp_missing_is_none(rule_seq, article):
+    assert mc.section_via_mcp(rule_seq, article, None, make_section(section_rows(["x"]))) is None
+
+
+def test_section_via_mcp_store_down_is_retryable():
+    class Down(type(section_rows(["x"]))):
+        def page_version(self, rule_seq, as_of):
+            raise ConnectionError("db down")
+    with pytest.raises(mc.McpUnavailable) as e:
+        mc.section_via_mcp(7, "A", None, make_section(Down([], [])))
+    assert e.value.retryable
+
+
+def test_section_via_mcp_integrity_error_is_not_retryable():
+    st = section_rows(["first", "second"])
+    st.rows[1]["text"] += " tampered"
+    with pytest.raises(mc.McpSearchError) as e:
+        mc.section_via_mcp(7, "A", None, make_section(st))
+    assert e.value.status == "error" and not e.value.retryable
+    assert not isinstance(e.value, mc.McpUnavailable)
+
+
+def test_section_via_mcp_connection_refused_and_inside_event_loop():
+    with pytest.raises(mc.McpUnavailable):
+        mc.section_via_mcp(7, "A", None, "http://127.0.0.1:9/mcp/", token="abc")
+
+    async def inside():
+        return mc.section_via_mcp(7, "A", None, make_section(section_rows(["x"])))
+    assert asyncio.run(inside())["text"] == "x"

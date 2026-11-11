@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import InMemorySaver
 
-from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token
+from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token, create_csrf_token
 from backend.graph.decision import rules as R
 from backend.graph.decision import routes as Routes
 from backend.graph.decision.convert import build_convert_graph
@@ -69,8 +69,9 @@ class Ctx:
         if who is not None:
             c.cookies.set(AUTH_COOKIE_NAME, create_access_token(who.user_id, who.role, secret=self.secret))
         if csrf:
-            c.cookies.set(CSRF_COOKIE_NAME, CSRF)
-            c.headers["X-CSRF-Token"] = CSRF
+            token = create_csrf_token(self.secret)   # 서명된 토큰(J-14)
+            c.cookies.set(CSRF_COOKIE_NAME, token)
+            c.headers["X-CSRF-Token"] = token
         return c
 
     def table(self, category: str = EXPENSE, tid: str | None = None, status: str = "approved") -> str:
@@ -169,6 +170,18 @@ def test_unapproved_table_is_409(ctx, status):
     tid = ctx.table(status=status)
     r = ctx.client(ctx.user).post(f"/decision-tables/{tid}/run", json={"task_type": EXPENSE, "amount_usd": 30000})
     assert r.status_code == 409 and r.json()["detail"]["reason"] == "not_approved"
+
+
+def test_unknown_task_type_is_404_but_zero_or_many_tables_stay_409(ctx):
+    c = ctx.client(ctx.user)
+    r = c.post("/decision-tables/run", json={"task_type": "없는 업무 종류", "amount_usd": 1})
+    assert r.status_code == 404 and r.json()["detail"]["reason"] == "not_found"
+    known = c.post("/decision-tables/run", json={"task_type": EXPENSE, "amount_usd": 1})   # 있는 업무 종류인데 승인된 표 0개
+    assert known.status_code == 409 and known.json()["detail"]["reason"] == "ambiguous_table"
+    ctx.table()
+    ctx.table()
+    many = c.post("/decision-tables/run", json={"task_type": EXPENSE, "amount_usd": 1})
+    assert many.status_code == 409 and many.json()["detail"]["reason"] == "ambiguous_table"
 
 
 def test_task_type_needs_exactly_one_approved_table(ctx):

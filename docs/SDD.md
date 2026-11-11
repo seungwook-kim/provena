@@ -1,7 +1,7 @@
 ---
 type: sdd
 project: Provena
-updated: 2026-11-10
+updated: 2026-11-11
 tags: [project, sdd]
 ---
 
@@ -27,7 +27,7 @@ PRD의 기능을 어떤 모듈·데이터·API로 만들지 적은 설계 문서
 ```mermaid
 flowchart LR
   U[사용자 화면 web/] -->|HTTP, SSE| API[backend/ FastAPI]
-  ERP[mock_erp/ Spring 업무시스템 목업] -->|REST, SDK, 웹훅| API
+  ERP[mock_erp/ 업무시스템 목업, 현재 Python 예제] -->|REST, SDK, 웹훅| API
   MCPc[외부 MCP 클라이언트 IDE 등] --> MCP[extras/mcp_skill/ FastMCP]
   API --> AG[backend/graph/ LangGraph]
   MCP --> RAG
@@ -52,8 +52,8 @@ flowchart LR
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
-| `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | Java(Spring Boot) 목업은 크게, Python 예제는 작게 |
-| SDK | 업무시스템이 쓰는 클라이언트 | OpenAPI 명세에서 자동 생성한 Java·Python SDK (생성 도구는 11장) |
+| `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | 계획은 Java(Spring Boot) 목업은 크게, Python 예제는 작게. 현재(2026-11-11)는 Python 예제(`mock_erp/python_example/`)만 있고 Java 목업은 만들지 않았다(`mock_erp/mock_erp.md` "만든 것과 만들지 않은 것") |
+| SDK | 업무시스템이 쓰는 클라이언트 | 계획은 OpenAPI 명세에서 자동 생성한 Java·Python SDK (생성 도구는 11장). 현재는 명세(`docs/api/openapi.json`)와 Python 예제만 있고 SDK 자동 생성은 하지 않았다(`mock_erp/mock_erp.md`) |
 | DB | 문서·청크·판, 사용자, 답변·인용, 결정표, 승인, 리콜 | 운영: Supabase Postgres + pgvector / 데모: 로컬 pgvector 컨테이너 |
 | 관측 | 그래프 단계별 트레이스, 평가 점수 연결 | Langfuse |
 
@@ -100,6 +100,7 @@ flowchart LR
 | `chat-tool-guide` | 조건부 | 에이전트가 MCP 도구를 고르는 규칙 | 검색 노드가 도구를 고정 호출하지 않고 LLM이 도구를 고르게 할 때 쓴다 | |
 | `mail-templates` | 조건부 | 리콜 알림·업무시스템 웹훅 문구 | 리콜 알림·웹훅을 만들 때 쓴다 | |
 | `retrieval-slots` | 조건부 | 검색 결과 관련도 판정 기준 | 검색 평가를 사람 판정 외에 자동 판정으로도 할 때 쓴다 | |
+| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 결정 0101로 지운 검색어 용어표(`TERM_ROWS`)와는 별개로 남은 Skill이다 | |
 
 - `delegation`을 따로 둔 이유: 승인권자 질문(예: 외부 SaaS 3만 달러, 정확히 2.5만·5만 달러)은 금액 구간 경계 해석에서 갈린다. Skill이 있을 때와 없을 때 차이가 가장 잘 드러난다.
 - 근거 섹션은 PRD 5장 대표 질문과 개정 커밋에서 골랐다. 정답 섹션은 D1에 원문으로 확정한다. Skill을 쓸 때 원문 섹션을 다시 확인하고 페이지 id(`rule_seq`)와 제목 경로를 적는다. 구간 끝값 처리와 금액 수치는 원문 표기를 그대로 따른다.
@@ -117,7 +118,7 @@ flowchart LR
 
 ### 2-4. 개발 도구 Skill
 
-`.claude/skills/`에 두고 저장소에 커밋해 팀이 같이 쓴다. 에이전트가 실행 중에 쓰는 것이 아니므로 가산(가이드 p.20) 근거로 내세우지 않는다.
+개발 도구 Skill 폴더에 두고 저장소에 커밋해 팀이 같이 쓰기로 했다. 2026-11-11 `git ls-files` 기준 저장소에는 해당 폴더와 `.mcp.json`이 없다(개발 도구 규칙은 `AGENTS.md`·`CLAUDE.md`뿐). 없는 채로 둘지 넣을지는 팀장 판단이다. 에이전트가 실행 중에 쓰는 것이 아니므로 가산(가이드 p.20) 근거로 내세우지 않는다.
 
 | Skill | 하는 일 |
 |---|---|
@@ -141,20 +142,22 @@ flowchart LR
 repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ README.md                 # 프로젝트 소개, 실행 방법, 데이터 출처·라이선스 표기 (루트에는 폴더 md를 두지 않는다)
 ├─ AGENTS.md, CLAUDE.md      # 개발 도구 규칙 (CLAUDE.md는 AGENTS.md를 가리킨다)
-├─ .claude/skills/           # 개발 도구 Skill (2-4)
-├─ .mcp.json                 # 개발용 MCP 연결 설정
+├─ (개발 도구 Skill 폴더)          # 개발 도구 Skill (2-4, 계획. 저장소에 아직 없음)
+├─ .mcp.json                 # 개발용 MCP 연결 설정 (계획. 저장소에 아직 없음)
 ├─ .github/                  # PR 양식, CI(ci.yml), 비밀값 검사(secret-scan.yml)
 ├─ pytest.ini                 # 시험은 `pytest -q`, 평가는 `evals/` 아래 실행기(명령은 SPEC 3장, `evals/evals.md`). 의존성은 backend/requirements.txt
 ├─ Dockerfile, docker-compose.yml, .env.example
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 │
-├─ docs/    docs.md          # TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, SDD.md, TEAM_GUIDE.md, specs/, deliverables/
+├─ docs/    docs.md          # TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, PRD.md, SDD.md, TEAM_GUIDE.md, why_langgraph.md, decisions.md, worklog.md, embedding_measurement.md, api/, db/, specs/, deliverables/
 │
 ├─ backend/
 │  ├─ backend.md
 │  ├─ main.py                     # FastAPI 진입점(/health), 라우트: 채팅 스트리밍, 승인, 리콜, 결정표 실행, 웹훅
 │  ├─ auth.py                     # 로그인, 사용자 식별 (bcrypt + JWT 쿠키)
-│  ├─ persistence.py              # 체크포인터·Store (DATABASE_URL이면 Postgres)
+│  ├─ admin_api.py                # 관리자 라우터: 사용자 권한, 가입 승인
+│  ├─ profile_api.py              # 내 정보 `/me/profile`
+│  ├─ api/          api.md        # 채팅·승인 외 라우트: routes.py(/chat, /threads, /me/memory), recalls.py, changes.py, threads.py, errors.py, middleware.py
 │  ├─ schemas/      schemas.md    # 파트 사이 데이터 형식 (3명 승인): chunk.py events.py approval.py recall.py decision.py
 │  ├─ services/     services.md   # llm.py (LLM 호출은 여기 한 곳: 데모 모드, Langfuse, 비용 상한), skills.py (런타임 Skill 불러오기)
 │  ├─ rag/          rag.md
@@ -162,6 +165,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     handbook.py           # 핸드북 git 수집(고른 절만), 2023 권한표 판 고정
 │  │  │     history.py            # git 커밋 이력에서 판 목록 (리콜 시험 데이터)
 │  │  │     parse.py              # Markdown·Hugo 단축코드·HTML 표 파싱, 원문 대조
+│  │  │     compare.py            # 원문 대조표: 파싱 결과 옆에 원본 줄·GitLab 원본 링크를 붙인다(사람이 눈으로 대조)
 │  │  │     pdf.py                # PDF 파싱(Docling, OCR 끔) → 같은 요소 형식, 쪽 번호 보존, 서비스 색인 전용 청크
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
@@ -169,15 +173,17 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지, 변경 감시를 멈췄으면 건너뜀 (가산: 자동화)
 │  │  │     snapshot_diff.py      # git 없는 변경 감지(F-07): 두 시점 문서 묶음을 섹션 단위로 비교해 같은 형식의 바뀐 섹션 목록을 만든다
 │  │  └─ retrieve/  retrieve.md
-│  │        embed.py              # 다국어 로컬 임베딩
-│  │        search.py             # 하이브리드 검색, 판·절 필터, 한→영 질의 변환
-│  │        rerank.py             # bge-reranker-v2-m3
-│  │        link_graph.py         # 핸드북 페이지 링크 그래프 (가산: GraphRAG)
-│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장
+│  │        embed.py              # 임베딩(기본 voyage-4 API, 로컬 모델은 비교용)
+│  │        search.py             # 검색(기본 dense_en), 판·절 필터, 링크 확장, 금액 구간 조회
+│  │        translate.py          # 한→영 질의 변환
+│  │        ranges.py             # 금액 구간 조회 재료
+│  │        rerank.py             # 리랭커 불러오기(기본은 쓰지 않음)
+│  │        links.py              # 핸드북 페이지 링크 추출·주소 풀기 (가산: GraphRAG). 링크 확장은 search.py
+│  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장. checkpoint.py = 체크포인터·Store(DATABASE_URL이면 Postgres)
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
 │  │  └─ recall/    recall.md     # 리콜 판정·알림·웹훅·검토함·요약·영향 미리보기 (F-02, F-05, F-08)
-│  ├─ memory/       memory.md     # Store 장기 기억 (팀·역할·담당 서비스)
+│  ├─ memory/       memory.md     # Store 장기 기억 (현재 코드가 저장하는 칸은 소속·직급·담당 서비스 셋, `docs/specs/memory.md`)
 │  └─ prompts/      prompts.md
 │
 ├─ skills/          skills.md     # 런타임 Skill (가산: MCP와 Skill). 상세는 2-3
@@ -190,16 +196,16 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │     ├─ mcp_server/decision_tool.py   # explain_decision (결정표 실행기 호출)
 │     ├─ mcp_server/trace_tool.py      # get_agent_trace (체크포인트 읽기)
 │     ├─ mcp_server/grounding_tool.py  # get_grounding (답 저장소의 근거 판정 기록 읽기)
-│     └─ tests/                   # MCP 경로와 직접 호출 경로의 결과 일치 시험
-├─ web/   web.md   (pages/: login, chat, approvals, recalls, admin)
-├─ mock_erp/  mock_erp.md   (Spring Boot 업무시스템 목업, python_example/)
-├─ db/    db.md    (init.sql, seed: 데모 계정 2개. SQL 번호대는 파트마다 100번대씩)
+│     └─ (시험은 `tests/test_mcp_server.py`, 클라이언트는 mcp_client/client.py)
+├─ web/   web.md   (react-app/src/pages/: 로그인, 가입, 내 정보, 채팅, 승인함, 리콜, 변경 감시, 관리자, 사용자 관리, 기억 설정, landing)
+├─ mock_erp/  mock_erp.md   (python_example/, src/는 설명 문서뿐: Spring Boot 목업은 만들지 않음)
+├─ db/    db.md    (01_init.sql, 101~120번 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드. 번호대 100은 로그인·그래프, 200은 검색)
 ├─ data/  data.md  (corpus.tar.gz 원문 스냅샷(풀면 corpus/), manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처. 코드와 폴더를 나눈다, 8장)
 ├─ evals/ evals.md
 │     ├─ dataset_v1.jsonl, dataset_v2.jsonl
 │     ├─ freeze.py, FROZEN.json, PREREGISTER.md
 │     ├─ ci_compare.py            # 커밋된 최종 측정 결과를 통과선과 견줌(CI)
-│     ├─ retrieval/ (retrieval.md)  agent/ (agent.md)  safety/ (safety.md)  results/
+│     ├─ retrieval/ (retrieval.md)  agent/ (agent.md)  safety/ (safety.md)  latency/ (latency.md)  results/
 └─ tests/
 ```
 
@@ -223,10 +229,10 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ### 4-2. rag: 검색
 
 - 입력 `SearchQuery(query, org, as_of, k)` → 출력 `list[Chunk]` (점수 포함). `org`는 "절"(예: security), `as_of`는 "이 날짜 기준 핸드북 판"이다(6장).
-- 순서: 절·판 필터 → 벡터 검색(pgvector) + BM25 → RRF로 합치기 → 리랭킹 → 상위 k
-- **한국어 질문, 영어 문서:** 벡터 검색은 다국어 임베딩으로 한국어 질문을 그대로 쓴다. BM25는 영어 단어끼리만 맞으므로 LLM이 질문을 영어 검색어로 바꾼 뒤 계산한다. 두 방식(직접 교차언어 vs 번역 후 검색)을 D2 평가셋으로 비교한다(11장).
+- 설계 당시 순서: 절·판 필터 → 벡터 검색(pgvector) + BM25 → RRF로 합치기 → 리랭킹 → 상위 k. **현재 확정 조합(2026-11-05)은 voyage-4 · `dense_en`(영어 문장 벡터만, BM25 없음) · 리랭커 없음 · k=5 · 질문 분해 · 링크 확장 L1x2 + 금액 구간 조회**다(`docs/specs/search.md` 확정 조합·Happy Path, `.env.example:156-157`). 하이브리드·리랭커는 `SEARCH_MODE`·`RERANK_*`로 켤 수 있는 비교용이다
+- **한국어 질문, 영어 문서:** 설계 당시에는 다국어 임베딩으로 한국어 질문을 그대로 쓰는 방식과 번역 후 검색을 비교하기로 했다. 비교 결과 현재 기본은 LLM이 질문을 영어 문장으로 바꿔(`QUERY_TRANSLATE`, 번역은 장부에 저장) 그 문장의 벡터로 검색하는 `dense_en`이다(`docs/specs/search.md` 3·4단계).
 - `as_of`가 있으면 그 날짜에 유효했던 커밋 판만 검색한다.
-- **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
+- **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. **(2026-11-11 현재 미구현 부분: `data/acl_policy.json`과 `SearchQuery.allowed_groups`는 코드에 없다(`backend/schemas/chunk.py:35-40`, grep 0건). `chunks.acl`·`users.groups` 칸과 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만 있고 코퍼스 `acl`은 전부 비어 있다. 검색 단계 거르기를 만들지는 팀장 판단이다.)** 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
 - **한국어 문서:** BM25 토큰에 한글 토큰을 더한다. 영어 토큰은 바꾸지 않아 기존 색인을 그대로 쓴다.
 - 바꾸는 순서는 한 번에 하나: 청킹 → 임베딩 → 하이브리드 → 리랭킹. 나머지는 고정한 채(lasagna 방식) 바꿀 때마다 Recall·MRR을 다시 잰다.
 - GraphRAG(가산, 가이드 p.20): 핸드북 페이지 사이 링크 19,366개(전체 4,195쪽 중 2,622쪽이 링크를 가짐, 실측)로 정책 참조 그래프를 만든다. 비공개 주소로 가는 링크(450쪽에서 발견)는 끝점 없는 간선이라 뺀다. 벡터 검색이 지는 질문 유형(예: "배포 승인 정책이 바뀌면 영향받는 다른 정책은?")을 정의하고 개선 전후를 보인다. F-02 연결 정책 리콜도 이 그래프를 쓴다.
@@ -257,11 +263,11 @@ flowchart TD
 
 | 노드 | LLM 사용 | 설명 |
 |---|---|---|
-| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 팀, 역할(예: SRE, 개발), 담당 서비스 |
+| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:84-87`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
 | 질문 종류 | 있음 | 정책 질문 / 결정표 질문 / 합동 검토 |
 | 질의 재작성 | 있음 | 핸드북 용어(영어)로 바꾸고 절·시점 조건을 뽑는다. `glossary` Skill을 쓴다 |
 | 검색 | 없음 | `search_handbook` 호출 (MCP 또는 직접 호출, `SEARCH_VIA_MCP`) |
-| 근거 충분 판정 | 있음 | 재검색은 최대 2회 |
+| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:61`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:54`, `.env.example:63`) |
 | 답 작성 | 있음 | `citation-rules` Skill을 쓴다. 결정표 질문이면 `delegation` Skill도 쓴다 |
 | 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. `grounding-check` Skill을 기준으로 삼는다 |
 | 결정표 실행 | 없음 | 관리자가 승인한 결정표만 실행한다 |
@@ -284,18 +290,23 @@ flowchart TD
 
 | 메서드 | 경로 | 권한 | 설명 |
 |---|---|---|---|
-| POST | `/auth/login` | 누구나 | 로그인 (방식은 11장) |
+| GET | `/auth/csrf` | 누구나 | CSRF 쿠키 발급(204). 로그인·가입·쓰기 요청의 `X-CSRF-Token` 값으로 쓴다 |
+| POST | `/auth/login` | 누구나, CSRF | 로그인 (방식은 11장). 대기·거절 가입 신청 계정은 로그인되지 않는다 |
+| POST | `/auth/signup` | 누구나, CSRF | 가입 신청 `{login_id, password, password_confirmation}` → 201. `users` 행은 만들지 않고 `signup_requests`에 `pending`으로 저장한다. 오류 409(이미 있는 아이디)·422·503 (`docs/specs/106-signup-approval.md`) |
+| GET | `/auth/google/start`, `/auth/google/callback` | 누구나 | Google 로그인(PKCE). 운영 동작 미확인. 코드상 Google 설정이나 114가 없으면 `/login?oauth_error=google_unavailable`로 이동한다(`docs/specs/login.md`) |
 | POST | `/auth/logout` | 로그인 | |
-| GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, profile_completed, is_owner}`. `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
+| GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, login_id, profile_completed, is_owner}`(`login_id`는 화면 계정 메뉴 표시용). `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
 | GET, PUT | `/me/profile` | 로그인 (PUT은 CSRF) | 내 정보(이름 `name`, 부서 `dept`, 전화 `phone`, 주소 `address`, 칸마다 암호화 저장). GET은 전화번호를 가린 `{name, dept, phone_masked, address, updated_at}`(아직 없으면 404), `?view=edit`일 때만 원래 `phone`. PUT은 네 칸 전부를 받아 검사하고(틀리면 422 `{message, fields}`, 입력값은 되풀이하지 않음) GET과 같은 모양으로 답한다. 남의 내 정보를 주는 경로는 없다 (`backend/profile_api.py`, `db/104_user_profiles.sql`) |
 | POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
 | GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
-| GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
+| GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank`, `service` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
 | GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
+| GET | `/admin/signup-requests` | 최고 관리자 | 가입 신청 목록 `{"requests": [{login_id, requested_at, status}]}`. `password_hash`는 내지 않는다 |
+| POST | `/admin/signup-requests/{login_id}/{action}` | 최고 관리자, CSRF | `action`은 `approve`·`reject`. 승인하면 `users` 행을 만든다. `{login_id, status, changed}`(이미 처리된 신청은 `changed: false`). 오류 401·403·404·422·503 (`docs/specs/106-signup-approval.md`, `admin-roles.md`) |
 | GET | `/recalls` | 로그인 | `{items, unread}`. 일반 사용자는 자기 알림 중 볼 수 있는 섹션의 것만, 관리자는 전체와 `review_queue`(관리자 검토함), `candidates`(함께 볼 정책 후보), `judge_failures`(판정이 깨진 알림)를 더 받는다 |
 | GET | `/recalls/{id}` | 로그인 | 알림 한 건. 남의 알림과 검토함·폐기된 알림은 404 `not_found`(관리자는 모두 봄) |
 | POST | `/recalls/{id}/ack` | 로그인, CSRF | 확인 표시. 본인만(남의 알림은 404). 갱신된 알림을 돌려준다 |
@@ -305,7 +316,9 @@ flowchart TD
 | GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
-| POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 업무시스템의 "승인권자 확인" 호출 |
+| POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |
+| POST | `/decision-tables/convert` | 관리자, CSRF | 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 보낸다(201) |
+| POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 요청 `{task_type, amount_usd?, band?}`(금액 칸 없는 구간 업무는 `band`로 고른다). 업무시스템의 "승인권자 확인" 호출 |
 | POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
 | POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음. 입력은 `changes`(본문 포함 가능) 또는 `pages` 중 하나 |
 | POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08). 알림 한 건에 의견은 하나(다시 보내면 덮어씀) |
@@ -344,7 +357,7 @@ flowchart TD
 | 409 | `conflict` | 지금 상태에서 받을 수 없는 요청(결정표) |
 | 409 | `already_decided` | 이미 끝난 승인 건에 다른 결정 |
 | 409 | `not_approved` | 승인되지 않은 결정표 실행 |
-| 409 | `ambiguous_table` | 업무 종류로 승인된 표가 0개이거나 2개 이상 |
+| 409 | `ambiguous_table` | 권한표에 있는 업무 종류인데 승인된 표가 0개이거나 2개 이상 (권한표에 없는 업무 종류는 404 `not_found`) |
 | 422 | `validation_error` | 본문·경로 검증 오류(`details`에 위치·사유), `/me/memory` PATCH의 빈 본문 |
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
@@ -377,6 +390,12 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | 승인함 (관리자) | 변환된 결정표·쟁점표, 원문 대조, 승인/반려 | `/approvals` |
 | 리콜 알림 | 바뀐 답, 개정 전후 섹션, 설명 | `/recalls` |
 | 관리자 | 결정표 목록, 연결 정책 후보 | `/decision-tables`, `/recalls` |
+| 가입 | 가입 신청(승인 전에는 로그인 불가 안내) | `/auth/signup` |
+| 내 정보·기억 | 내 정보 입력·수정, 장기 기억(소속·직급·담당 서비스) 보기·고치기·지우기 | `/me/profile`, `/me/memory` |
+| 변경 감시 | 바뀐 섹션 목록, 개정 전후 본문, 감시 켜기·멈추기(관리자) | `/changes`, `/changes/monitoring` |
+| 사용자 관리 (최고 관리자) | 사용자 목록, 관리자 등록·해제, 가입 신청 승인·거절 | `/admin/users`, `/admin/signup-requests` |
+
+(화면 주소는 `web/react-app/src/App.jsx`: `/login`, `/signup`, `/myinfo`, `/chat`, `/recalls`, `/changes`, `/approvals`, `/admin`, `/admin/users`, `/onboarding`)
 
 ## 5. 데이터 모델
 
@@ -436,12 +455,15 @@ class Chunk(BaseModel):
     source_url: str        # 핸드북 페이지 URL
     text_sha256: str | None = None   # 본문 sha256 (11-1 3-6)
     version_date_before: bool = False   # True면 판 날짜를 정확히 모르고 version_date 이전이라는 뜻(얕은 이력, I-001). 화면은 "YYYY-MM-DD 이전"으로 보인다
+    line_start: int | None = None   # 원본 페이지 줄 범위(1부터, 끝 포함). 평가셋 `경로#L523` 정답 대조와 출처 링크용. 3명 승인 사항이었고 `backend/schemas/chunk.py`에 반영됨
+    line_end: int | None = None
 
 class SearchQuery(BaseModel):
     query: str
     org: str | None = None     # 절
     as_of: str | None = None   # 이 날짜 기준 핸드북 판(커밋)만
-    k: int = 8
+    k: int = 5                 # DEFAULT_K (확정 조합 k=5, docs/specs/search.md)
+    sub_queries: list[str] | None = None   # 질문 분해 결과(2~3개), 있으면 하위 질문마다 검색
 
 # backend/schemas/events.py  (에이전트 → 화면)
 class AgentEvent(BaseModel):
@@ -566,8 +588,8 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 데모 (G2) | 로컬 pgvector 컨테이너 + 스냅샷 | 키 없음: 기록해 둔 응답 재생 | 데모 전용 2개 시드 (평가용과 다른 값) | `docker compose up` (10분 안) |
 | 운영 (G1) | Supabase Postgres + pgvector | 생성 LLM (11장) | 평가용 테스트 계정 2개 (비공개 제출) | GCP Cloud Run |
 
-- 리랭커와 기본 임베딩은 두 모드 모두 로컬 모델이다(`HF_HUB_OFFLINE=1`로 오프라인 실행 확인). 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재할 수 있고, 질문까지 API를 쓰는 구성은 키 없는 데모에서 기록된 질문만 재생한다. 후보는 11/6에 정한다(`docs/decisions.md` 2026-11-02).
-- 데모 모드는 키가 없으므로 한→영 질의 변환도 기록된 응답을 재생하거나, 다국어 임베딩만으로 검색한다(BM25 영어 질의 없음). 차이는 리포트에 적는다.
+- 기본 임베딩은 `voyage-4` API이고(`backend/rag/retrieve/embed.py:51, 53`), 리랭커는 쓰지 않는다(`.env.example:156`, `backend/rag/retrieve/retrieve.md:5`). 로컬 모델(`HF_HUB_OFFLINE=1` 기본, `backend/requirements-local-models.txt`)은 비교용이다. 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재하고(`data/index.tar.gz`), 키 없는 데모는 기록된 질문 벡터·응답만 재생한다(`docs/specs/search.md`, `embed.py` 질문 벡터 재생, PR #81).
+- 데모 모드는 키가 없으므로 한→영 질의 변환과 질문 벡터도 기록된 것을 재생한다. 기록에 없는 질문은 재생할 수 없다(`README.md`·`docs/GATES.md` G2의 한계 설명).
 - 모든 LLM 호출은 `backend/services/llm.py` 한 곳을 거친다. 데모 모드 재생, Langfuse 트레이스, 비용 상한을 이곳에서 처리한다.
 - Cloud Run 메모리와 이미지 크기는 D0에 확인한다(11장).
 - Supabase 무료 플랜은 1주 비활성 시 정지되므로 `/health`를 정기 호출한다.
@@ -590,7 +612,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 |---|---|
 | 문서 속 간접 인젝션 | 검색된 원문은 지시가 아닌 자료로만 다룬다. 결정표 실행은 관리자 승인(interrupt)을 거쳐야만 되고, 인용은 코드로 원문과 대조한다. MCP에는 쓰기·실행 도구를 내보내지 않는다. 시험 최소 30건(`evals/safety/`), 공격문은 핸드북 문서(런북·정책) 안에 심는다. 모델이 낸 글도 믿지 않고 코드로 다시 확인한다(답과 되묻기의 내부 표식·시스템 프롬프트 유출 검사, 결정표 질문에서 모델이 고른 업무 종류는 승인된 목록 안의 값만). 설계 약속은 결정표 기준 변경·승인 우회·기억·시스템 프롬프트·다른 사용자 유출 뚫림 0건이고, 그 밖의 경로는 공격 성공률을 공개한다. 통과는 "아는 방법으로 깨지지 않았다"는 뜻이다. 상세는 `evals/safety/safety.md` |
 | 출처 유출 | 다른 사용자 대화와 기억이 섞이지 않는지 시험(`evals/safety/run_safety.py`의 L1~L4, 로컬 시험 앱의 `tests/test_api_isolation.py`). 평가자는 평가용 계정 A·B로 직접 확인한다(가이드 p.21). 같은 확인(남의 대화 404, 비로그인 401, 관리자 경로 403, 오류 본문, 보안 헤더)을 `evals/safety/deploy_check.py`가 환경 변수로 받은 두 계정으로 배포 주소에 돌린다 |
-| 권한 | 결정표 승인·반려, 전체 리콜, 변경 전 영향 미리보기는 관리자만. 문서는 사용자 그룹으로 검색 단계에서 거르고(F-06), 리콜 알림도 볼 수 있는 섹션만 인용한다 |
+| 권한 | 결정표 승인·반려, 전체 리콜, 변경 전 영향 미리보기는 관리자만. 리콜 알림은 볼 수 있는 섹션만 인용한다(`backend/graph/recall/acl.py`). 문서를 사용자 그룹으로 검색 단계에서 거르는 것(F-06)은 설계만 있고 아직 구현되지 않았다(4-2 참고) |
 | 비밀값 | `.env`에만. 평가 계정 비밀번호는 저장소에 없음 |
 | 결정표 오류 | 승인 전 실행 금지. 셀 대조표를 승인 화면에 보여 준다 |
 | 비공개 링크 | 비공개 주소로만 연결된 칸·링크는 답의 근거로 쓰지 않고 "비공개 문서"로 표시한다 |
@@ -630,7 +652,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
 | F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
 | README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
-| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/`(Java `src/`, `python_example/`)에 있고 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
 
 
 ### 11-1. 파트 사이 계약

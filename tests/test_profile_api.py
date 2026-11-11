@@ -13,6 +13,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.api.errors import install_error_handlers
 from backend.auth import CSRF_COOKIE_NAME, AuthUser, hash_password
 from backend.profile_api import create_profile_router, mask_phone, normalize_phone, validate_profile
 from backend.services.profile_crypto import KEY_ENV, ProfileCipher
@@ -44,6 +45,7 @@ def env(monkeypatch):
     cipher = ProfileCipher({1: os.urandom(32)})
     secret = secrets.token_urlsafe(48)
     app = FastAPI()
+    install_error_handlers(app)   # 운영 앱(backend/main.py)과 같은 오류 처리기. 없이 시험하면 칸별 이유가 사라지는 것을 못 잡는다
     app.state.token_revocation_store = revocations_for(auth_store)
     app.include_router(create_test_auth_router(store=auth_store, secret=secret, cookie_secure=False,
                                                profile_completed=profiles.exists))
@@ -91,8 +93,10 @@ def test_invalid_input_is_422_with_fields_and_no_echo(env):
     bad = {"name": "이영희1", "dept": "부서" * 21, "phone": "1234-99887", "address": "부산"}
     r = put(c, bad)
     assert r.status_code == 422
-    detail = r.json()["detail"]
-    assert set(detail["fields"]) == {"name", "dept", "phone", "address"} and detail["message"]
+    error = r.json()["error"]
+    assert error["code"] == "validation_error" and error["message"]
+    assert set(error["details"]["fields"]) == {"name", "dept", "phone", "address"}
+    assert r.json()["detail"] == error["message"]
     for value in bad.values():
         assert value not in r.text
     assert "99887" not in r.text
@@ -101,7 +105,7 @@ def test_invalid_input_is_422_with_fields_and_no_echo(env):
 
 def test_empty_body_reports_every_field(env):
     r = put(env["client"]("A"), {})
-    assert r.status_code == 422 and set(r.json()["detail"]["fields"]) == {"name", "dept", "phone", "address"}
+    assert r.status_code == 422 and set(r.json()["error"]["details"]["fields"]) == {"name", "dept", "phone", "address"}
 
 
 @pytest.mark.parametrize("raw", [b"not json 01055556666", b"[1, 2]", b'"01055556666"', b'{"name": 12345678}'])
@@ -110,7 +114,7 @@ def test_malformed_bodies_are_422_without_echo(env, raw):
     r = c.put("/me/profile", content=raw, headers={**csrf(c), "Content-Type": "application/json"})
     assert r.status_code == 422
     assert "01055556666" not in r.text and "12345678" not in r.text
-    assert isinstance(r.json()["detail"]["fields"], dict)
+    assert isinstance(r.json()["error"]["details"]["fields"], dict)
 
 
 def test_oversized_body_is_rejected(env):
@@ -199,7 +203,7 @@ def test_me_profile_completed_false_then_true(env):
     assert c.get("/me").json()["profile_completed"] is False
     put(c, GOOD)
     me = c.get("/me").json()
-    assert me == {"user_id": str(env["users"]["A"].user_id), "role": "user", "profile_completed": True}
+    assert me == {"user_id": str(env["users"]["A"].user_id), "role": "user", "login_id": "A", "profile_completed": True}
 
 
 def test_login_response_is_unchanged(env):
@@ -335,7 +339,7 @@ def test_me_without_callback_has_no_profile_completed(monkeypatch):
     c = TestClient(app)
     login = c.post("/auth/login", json={"login_id": "solo", "password": password}, headers=csrf(c))
     assert login.json() == {"user_id": str(user.user_id), "role": "user"}
-    assert c.get("/me").json() == {"user_id": str(user.user_id), "role": "user"}
+    assert c.get("/me").json() == {"user_id": str(user.user_id), "role": "user", "login_id": "solo"}   # H-13: /me만 login_id가 더 있다
 
 
 def test_me_callback_bad_value_is_503(monkeypatch):
@@ -352,3 +356,25 @@ def test_me_callback_bad_value_is_503(monkeypatch):
     login = c.post("/auth/login", json={"login_id": "solo", "password": password}, headers=csrf(c))
     assert login.json() == {"user_id": str(user.user_id), "role": "user"}   # 로그인 응답은 그대로
     assert c.get("/me").status_code == 503
+
+
+def test_profile_422_body_matches_the_openapi_schema(env):
+    """C-20: 프로필 422의 `error.details`(객체)가 명세 `HTTPValidationError`가 허용한 모양이어야 한다."""
+    import jsonschema
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    install_error_handlers(app)
+
+    @app.post("/x")
+    def x(n: int) -> dict:
+        return {}
+
+    schema = app.openapi()
+    spec = {**schema["components"]["schemas"]["HTTPValidationError"], "components": schema["components"]}
+    r = put(env["client"]("A"), {})
+    assert r.status_code == 422 and isinstance(r.json()["error"]["details"], dict)
+    jsonschema.validate(r.json(), spec)
+    arr = {"detail": "m", "error": {"code": "validation_error", "message": "m", "request_id": "r",
+                                    "details": [{"loc": ["body"], "msg": "m", "type": "t"}]}}
+    jsonschema.validate(arr, spec)

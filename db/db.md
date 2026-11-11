@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번호대는 파트마다 100번대씩 나눈다.
+pgvector 확장 생성(`01_init.sql`)과 앱 표 25개 생성(2026-11-10 `docs/db/ERD.md`·`TABLE_SPEC.md` 기준, `109_realign.sql`로 표 3개를 합치는 재정렬 포함). 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드한다(`101_auth_users.sql:4`, `backend/services/demo_seed.py`). SQL 파일 번호대는 파트마다 100번대씩 나눈다.
 
 - 주인: 김승욱
 - 입력: 없음
@@ -68,7 +68,7 @@ WHERE nsp.nspname = 'public'
   AND cls.relname IN ('users', 'token_revocations');
 ```
 
-운영 Supabase는 2026-11-09에 풀러 접속으로 읽기 전용 조회해 확인했다. public 스키마에 `users`, `threads`, `token_revocations`, `approvals`, `decision_tables`, `issue_tables`, `issue_table_rejections`, `docs`(1,512행), `chunks`(23,095행), `versions`, `index_meta`, `query_translations` 표가 있다. 따라서 인증 표(`users`, `token_revocations`)와 대화 표(`threads`, `111_threads.sql`)는 적용돼 있다. 같은 날 데모 계정 2개(일반 사용자 1개, 관리자 1개)를 `backend/services/auth_store.py`의 `upsert_user()`로 등록하고 다시 조회해 확인했다(비밀번호는 bcrypt 해시로만 저장). `threads`는 0행이어서 운영 경로로 대화한 적은 아직 없다. LangGraph 체크포인트·Store 표는 아직 없으며, `backend/graph/checkpoint.py`의 `setup()`이 앱 첫 기동 때 만든다. 위 SQL로 보는 RLS 활성화 상태, 앱 접속 역할의 소유 여부와 `rolbypassrls`, 운영 계정으로 한 실제 로그인은 확인하지 못했다(미확인).
+운영 Supabase는 2026-11-09에 풀러 접속으로 읽기 전용 조회해 확인했다. public 스키마에 `users`, `threads`, `token_revocations`, `approvals`, `decision_tables`, `issue_tables`, `issue_table_rejections`, `docs`(1,512행), `chunks`(23,095행), `versions`, `index_meta`, `query_translations` 표가 있다. 따라서 인증 표(`users`, `token_revocations`)와 대화 표(`threads`, `111_threads.sql`)는 적용돼 있다. 같은 날 데모 계정 2개(일반 사용자 1개, 관리자 1개)를 `backend/services/auth_store.py`의 `upsert_user()`로 등록하고 다시 조회해 확인했다(비밀번호는 bcrypt 해시로만 저장). `threads`는 0행이어서 운영 경로로 대화한 적은 아직 없다. LangGraph 체크포인트·Store 표는 이 11/9 조회 때는 없었으며(`backend/graph/checkpoint.py`의 `setup()`이 앱 첫 기동 때 만든다), 11/10 조회에는 6개가 있다(`docs/db/TABLE_SPEC.md:55-60`). 11/10 조회의 `chunks`는 30,171행(옛 판 포함, `docs/db/TABLE_SPEC.md:43`)이라 위 23,095행과 값이 다르다. 위 SQL로 보는 RLS 활성화 상태, 앱 접속 역할의 소유 여부와 `rolbypassrls`, 운영 계정으로 한 실제 로그인은 확인하지 못했다(미확인).
 
 ## DB 재정렬 (`109_realign.sql`, 결정 0090)
 
@@ -78,6 +78,7 @@ WHERE nsp.nspname = 'public'
 - `109_realign.sql`(1단계)은 옛 모양 DB를 올린다. 합칠 칸을 더하고 값을 복사만 하며 옛 표는 건드리지 않아서 옛 코드가 그대로 돈다. 쓰이지 않는 색인 7개(`answers_user_idx`, `issue_tables_thread_idx`, `issue_tables_user_idx`, `admin_role_log_at`, `token_revocations_expires_at`, `signup_requests_status_requested_at`, `recall_notices_review_idx`)를 지우고 `issue_tables_thread_user_idx`, `recall_notices_feedback_idx`, `chunks_link_targets_gin`을 만든다. `anon`, `authenticated` 역할이 있을 때만 public 표·뷰·시퀀스의 권한을 회수하고 앞으로 만드는 표의 기본 권한도 회수한다. 여러 번 실행해도 된다.
 - 2단계 `db/manual/109_retire_old.sql`은 새 코드가 배포되고 옛 리비전이 내려간 뒤 사람이 직접 실행한다. 1단계 뒤에 옛 표에 쌓인 값을 새 칸으로 한 번 더 옮기고 옛 표 3개를 `<이름>_old_20261110`으로 이름만 바꾼다(되돌림은 이름을 되돌리면 된다). 이름이 바뀐 옛 표는 `db/manual/109_purge_old.sql`로 지운다. 백업 확인 뒤 직접 실행하며, 되돌릴 수 없다.
 - 운영 적용 순서: 백업, `109_realign.sql`(옛 코드가 그대로 돈다), 새 코드 배포, 옛 리비전 내림, `manual/109_retire_old.sql`, 두어 날 뒤 `manual/109_purge_old.sql`. 1단계 뒤 새 코드가 뜨기 전까지 옛 코드가 옛 표에 쓴 값은 2단계가 옮긴다. 새 코드가 뜬 뒤 2단계 전까지 옛 리비전이 아직 요청을 받으면 그 요청이 쓴 값이 새 칸에 안 보일 수 있다(2단계가 채운다).
+- 운영 적용 상태(2026-11-11 기준 `docs/worklog.md:10`): 1단계 11/10 밤, 새 코드 배포와 옛 리비전 내림 뒤 2단계 11/11 00:42, 옛 표는 새 칸에 빠진 행이 0건임을 확인한 뒤 11/11에 삭제해 `public` 표는 31개다. 위 "운영 Supabase는 2026-11-09에 … 조회" 문단은 그 날짜의 값이다.
 - 바꾸지 않은 것: LangGraph가 만드는 6개 표(구조 변경 금지), `users.groups`와 `chunks.acl`(문서 권한 F-06 연결 지점), `threads` 등의 `user_id` text 타입(결정 0091), 옛 판 `chunks` 행(결정 0092).
 
 ## 작업 기록 (최신이 위)
@@ -86,18 +87,21 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | `107_email_signup_verification.sql`: 소문자 유니크 색인 `signup_requests_login_id_lower_unique`를 113의 대체 색인(`signup_requests_login_id_lower_open_unique`)이 없을 때만 만든다(`DO` 블록). 113 뒤에 107을 다시 돌리면(로컬 `ensure_schema()`는 시작할 때마다 돌린다) 옛 색인이 되살아나, 거절 행과 같은 이메일의 새 신청이 함께 있을 때 UniqueViolation으로 로컬 앱이 뜨지 않았다. 113 전 DB와 새 DB(107 → 113 순서)의 결과는 전과 같다. 시험 `tests/test_signup_edges.py`(거절 → 재가입 → `ensure_schema()` 재실행, 107·113·114 두 번 재적용 오류 0). 운영에는 적용하지 않았다(미적용) | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·114 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`). L1 `113_signup_edges.sql`이 `signup_requests`의 이메일 `login_id`도 겹치지 않을 때 소문자로 바꾼다(겹치는 쌍은 그대로, 다시 돌려도 같음). `203_google_identities.sql` → `114_google_identities.sql` 이름 변경(인증 파트 100번대, 113 다음). 내용은 같다. | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | `113_signup_edges.sql` 추가: `signup_requests`의 `login_id` UNIQUE와 107의 소문자 유니크 색인을 거절 행을 뺀 부분 유니크 색인(`signup_requests_login_id_open_unique`, `signup_requests_login_id_lower_open_unique`)으로 바꿔 거절된 이메일도 다시 가입할 수 있게 했고, 겹치지 않는 이메일 `users.login_id`를 소문자로 바꾸고 `users_login_id_lower_unique`를 걸었다(대소문자만 다른 쌍이 있으면 그 쌍과 색인은 건너뛰고 NOTICE). 새 Postgres 컨테이너에 `db/` 전체를 이름 순서로 적용해 오류 0, 113을 두 번 돌려도 같음을 확인했다. 운영에는 적용하지 않았다(미적용) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | S1 호환 시험 설명에 시험 기준, 배포 미확인 표기를 붙임(문구만, SQL 변경 없음) | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `107_email_signup_verification.sql`: 소문자 유니크 색인 `signup_requests_login_id_lower_unique`를 113의 대체 색인(`signup_requests_login_id_lower_open_unique`)이 없을 때만 만든다(`DO` 블록). 113 뒤에 107을 다시 돌리면(로컬 `ensure_schema()`는 시작할 때마다 돌린다) 옛 색인이 되살아나, 거절 행과 같은 이메일의 새 신청이 함께 있을 때 UniqueViolation으로 로컬 앱이 뜨지 않았다. 113 전 DB와 새 DB(107 → 113 순서)의 결과는 전과 같다. 시험 `tests/test_signup_edges.py`(거절 → 재가입 → `ensure_schema()` 재실행, 107·113·114 두 번 재적용 오류 0). 운영에는 적용하지 않았다(미적용) | #127 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·114 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`)(시험 기준, 배포 미확인). L1 `113_signup_edges.sql`이 `signup_requests`의 이메일 `login_id`도 겹치지 않을 때 소문자로 바꾼다(겹치는 쌍은 그대로, 다시 돌려도 같음). `203_google_identities.sql` → `114_google_identities.sql` 이름 변경(인증 파트 100번대, 113 다음). 내용은 같다. | #127 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `113_signup_edges.sql` 추가: `signup_requests`의 `login_id` UNIQUE와 107의 소문자 유니크 색인을 거절 행을 뺀 부분 유니크 색인(`signup_requests_login_id_open_unique`, `signup_requests_login_id_lower_open_unique`)으로 바꿔 거절된 이메일도 다시 가입할 수 있게 했고, 겹치지 않는 이메일 `users.login_id`를 소문자로 바꾸고 `users_login_id_lower_unique`를 걸었다(대소문자만 다른 쌍이 있으면 그 쌍과 색인은 건너뛰고 NOTICE). 새 Postgres 컨테이너에 `db/` 전체를 이름 순서로 적용해 오류 0, 113을 두 번 돌려도 같음을 확인했다. 운영에는 적용하지 않았다(미적용) | #127 |
 | 2026-11-11 | 김승욱 (Claude Code) | `108_auth_privacy_hardening.sql`의 `REVOKE ... FROM anon, authenticated`를 역할이 있을 때만 실행하는 `DO` 블록으로 바꾸고 106과 겹치는 줄을 정리했다. 새 Postgres 16 컨테이너에 `db/`의 SQL을 compose와 같은 순서로 전부 실행해 오류 0, 108 뒤의 109 이후 파일까지 실행됨을 확인했고, 108을 한 번 더 돌리고 `anon`·`authenticated` 역할을 만든 뒤에도 돌려 오류 없이 권한 0건임을 확인했다. 운영 DB의 107·108 적용 여부는 이 저장소에서 확인하지 못했고 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | `109_realign.sql`(표 3개 합침, 색인 정리, `anon`·`authenticated` 권한 회수), `manual/109_purge_old.sql` 추가, `105`·`110`·`120`을 합친 모양으로 수정, `docs/db/ERD.md`, `TABLE_SPEC.md` 추가. 운영에는 적용하지 않았다(미적용) | 미정 |
-| 2026-11-09 | 박진형 (jinyeong-731) | `104_user_profiles.sql`(내 정보 암호문 표 `user_profiles`, `users` 외래키, RLS)과 `105_admin_role_log.sql`(관리자 등록·해제 기록 `admin_role_log`, RLS) 추가. 둘 다 `IF NOT EXISTS`라 다시 돌려도 된다. 운영 Supabase에는 적용하지 않았다(미적용) — `101` 다음에 104·105를 앱 재배포 전에 적용해야 한다(104가 없으면 `/me`가 503) | 미정 |
+| 2026-11-09 | 박진형 (jinyeong-731) | `104_user_profiles.sql`(내 정보 암호문 표 `user_profiles`, `users` 외래키, RLS)과 `105_admin_role_log.sql`(관리자 등록·해제 기록 `admin_role_log`, RLS) 추가. 둘 다 `IF NOT EXISTS`라 다시 돌려도 된다. 운영 Supabase에는 적용하지 않았다(미적용) — `101` 다음에 104·105를 앱 재배포 전에 적용해야 한다(104가 없으면 `/me`가 503) | #74 |
 | 2026-11-09 | 김승욱 (Claude Code) | `120_answers_recall.sql` 추가: `answers`, `citations`, `answer_grounding`, `recall_events`, `recall_notices`, `maintenance_candidates`, `webhook_subscriptions`, `webhook_deliveries`, `recall_feedback`, `recall_digests`, `change_monitoring`(모두 `IF NOT EXISTS`, RLS). 로컬 pgvector 컨테이너에 `01_init`, 1xx, 201, 202, 120 순으로 적용하고 120을 한 번 더 적용해 확인했고, `tests/test_recall_pg.py`가 저장소 SQL을 그 DB에서 시험한다. 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | 운영 Supabase를 풀러 접속으로 읽기 전용 조회해 표 목록과 행 수(`docs` 1,512행, `chunks` 23,095행, `threads` 0행)를 확인하고, 데모 계정 2개 등록 뒤 `users` 2행을 확인하고, "운영 Supabase 인증 스키마 적용" 절의 미적용·미검증 서술을 확인 결과로 고쳤다. SQL은 실행하지 않았다 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | `111_threads.sql` 추가: 사용자별 대화 목록 `threads`(PK `(user_id, thread_id)`, 인덱스 `(user_id, updated_at DESC)`, RLS). 운영 Supabase에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-05 | 김승욱 (Claude Code) | `manual/chunks_hnsw_voyage4.sql` 추가: voyage-4 HNSW 색인 수동 실행 파일(`SEARCH_HNSW=1`일 때만 코드가 사용). 하위 폴더라 db 초기화와 `load_snapshot`이 적용하지 않는다. `201_search.sql`은 경로 주석만 고침 | 미정 |
 | 2026-11-05 | 강경희 (kyunghee) | 운영 Supabase에서는 `ensure_schema()`가 실행되지 않는 조건과 `101_auth_users.sql` → `103_auth_token_revocations.sql` 수동 적용·RLS·접속 역할·로그인 검증 절차를 문서화했다. 운영 DB는 미적용·미검증으로 기록 | 미정 |
 | 2026-11-05 | 박진형 (jinyeong-731) | `202_sync.sql`: `sync_runs`·`changed_articles`에 RLS 켜기(정책 없음, `201_search.sql` 91~95줄과 같은 방식). 조장 요청 | 이 PR |
+| 2026-11-05 | 김승욱 (커밋 작성자 기준 소급 기록) | `102_decision_approvals.sql`(결정표 `decision_tables`·사람 승인 `approvals`)과 `110_issue_tables.sql`(합동 검토 쟁점표 `issue_tables`) 추가. 11/10 `109_realign.sql`이 일부를 합쳤다 | 커밋 306ef24, PR #54 |
+| 2026-11-05 | 김승욱 (소급 기록. 커밋 1f19d53 작성자는 Seungwook Kim, 머지된 PR #53은 kyunghee 브랜치) | `103_auth_token_revocations.sql`(`token_revocations`, 로그아웃한 JWT 폐기 기록) 추가 | 커밋 1f19d53, PR #53 (`docs/specs/admin-roles.md` 번호 설명 기준) |
 | 2026-11-02 | 박진형 (jinyeong-731) | `201_search.sql`(검색 파트 200번대): `docs`·`versions`(판 유효 구간 `valid_from`·`valid_to`, `version_date_before`)·`chunks`(열쇠 (chunk_id, version_id), 줄 범위, 차원 없는 `vector`)·`index_meta`(색인 장부)·`query_translations`(번역 장부). 모두 `IF NOT EXISTS`라 compose 첫 기동(initdb)과 `loader`가 두 번 돌려도 같다 | 이 PR |
 | 2026-10-30 | 김승욱 (Claude Code) | `101_auth_users.sql`(users 테이블, SQL 번호대 100번대는 김승욱 파트로 잡음) 추가. 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다 | 미정 |
 

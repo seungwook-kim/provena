@@ -125,7 +125,7 @@ def run_http_bench(n: int, url: str) -> dict:
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
-    from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token
+    from backend.auth import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, AuthUser, create_access_token, create_csrf_token
     from backend.graph.decision.routes import create_decision_router, open_decision_runtime
 
     secret = secrets.token_urlsafe(32)
@@ -144,8 +144,9 @@ def run_http_bench(n: int, url: str) -> dict:
     app.include_router(create_decision_router(store=Users(), secret=secret))
     client = TestClient(app)
     client.cookies.set(AUTH_COOKIE_NAME, create_access_token(admin.user_id, admin.role, secret=secret))
-    client.cookies.set(CSRF_COOKIE_NAME, "csrf")
-    h = {"X-CSRF-Token": "csrf"}
+    csrf = create_csrf_token(secret)   # 서명된 토큰(J-14). 라우터에 넘긴 secret으로 서명한다
+    client.cookies.set(CSRF_COOKIE_NAME, csrf)
+    h = {"X-CSRF-Token": csrf}
     rows = []
     with open_decision_runtime(app):
         cells = authz_cells()   # 가짜 모델로 바꾼다. 체크포인터·저장소·승인 건 표는 런타임이 연 실제 것 그대로

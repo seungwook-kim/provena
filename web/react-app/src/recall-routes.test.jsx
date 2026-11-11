@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, configure, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { resetLiveServices } from './lib/live-services'
+
+// 전체 실행 부하에서 findBy/waitFor 기본 1초가 모자라 가끔 실패했다(리뷰 6번). 이 파일의 기다림 한도를 5초로 둔다.
+configure({ asyncUtilTimeout: 5000 })
+vi.setConfig({ testTimeout: 15000 })
 
 const USER = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', profile_completed: true }
 const ADMIN = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin', profile_completed: true }
@@ -54,7 +58,11 @@ beforeEach(() => {
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
     if (path === '/recalls' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
-    if (path === '/recalls/digests') return json([{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, high: 1, low: 1, notices: [] }])
+    if (path === '/recalls/digests') return server.digestsResponse ? server.digestsResponse() : json({ digests: [{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })
+    if (path === '/recalls/digest/flush' && method === 'POST') return server.flushResponse ? server.flushResponse() : json({ digests: 2, notices: 5 })
+    if (path === '/recalls/process-pending' && method === 'POST') return server.pendingResponse ? server.pendingResponse() : json({ status: 'done', processed: 3, sent: 2, failed: 1, skipped: 0, notices: 4, review: 1, judge_failures: 0, candidates: 0 })
+    if (path === '/webhook-subscriptions' && method === 'GET') return json({ items: server.subs ?? [] })
+    if (path === '/webhook-subscriptions' && method === 'POST') return server.addSubResponse ? server.addSubResponse() : json({ sub_id: 'ws-1', url: JSON.parse(options.body).url, secret_ref: 'X', active: true, created_at: '2026-11-11T00:00:00Z', secret_configured: true }, 201)
     if (path === '/impact-preview' && method === 'POST') return json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
     let match = path.match(/^\/recalls\/([^/]+)\/(ack|review|feedback)$/)
     if (match && method === 'POST') {
@@ -103,6 +111,7 @@ describe('live recall route', () => {
     expect(screen.queryByRole('heading', { name: '함께 볼 정책 후보' })).toBeNull()
     expect(screen.queryByRole('heading', { name: '변경 전 영향 미리보기' })).toBeNull()
     await screen.findByRole('heading', { name: '하루 요약' })
+    expect(await screen.findByText(/알림 2건/)).toBeTruthy()
     const recallLink = screen.getByRole('link', { name: /리콜 알림/ })
     expect(recallLink.getAttribute('href')).toBe('/recalls')
     expect(recallLink.querySelector('b')?.textContent).toBe('1')
@@ -111,7 +120,7 @@ describe('live recall route', () => {
   it('feeds the navigation badge from unread on other screens without logging out on failure', async () => {
     open('/chat')
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    await waitFor(() => expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')?.textContent).toBe('1'))
+    await waitFor(() => expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')?.textContent).toBe('1'), { timeout: 5000 })
     expect(requestsTo('GET', '/recalls')).toHaveLength(1)
 
     cleanup()
@@ -120,7 +129,7 @@ describe('live recall route', () => {
     server.recallsResponse = () => apiError(401, 'unauthorized', '로그인이 필요합니다.')
     open('/chat')
     await screen.findByRole('heading', { name: '정책에 대해 물어보세요.' })
-    await waitFor(() => expect(requestsTo('GET', '/recalls')).toHaveLength(1))
+    await waitFor(() => expect(requestsTo('GET', '/recalls')).toHaveLength(1), { timeout: 5000 })
     expect(screen.getByRole('button', { name: '내 계정' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /리콜 알림/ }).querySelector('b')).toBeNull()
   })
@@ -204,6 +213,36 @@ describe('live recall route', () => {
   })
 })
 
+describe('recall and change screens follow the real backend responses', () => {
+  it("does not offer the acknowledge button on another user's notice to an administrator", async () => {
+    // backend: POST /recalls/{id}/ack is owner-only, an admin gets 404 (tests/test_api_recalls.py:165)
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: USER.user_id })], unread: 0, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    expect(screen.queryByRole('button', { name: '확인' })).toBeNull()
+    expect(screen.getByText('다른 사용자의 알림입니다.')).toBeTruthy()
+  })
+
+  it('still lets an administrator acknowledge their own notice', async () => {
+    server.user = ADMIN
+    server.recalls = { items: [notice({ user_id: ADMIN.user_id })], unread: 1, review_queue: [], candidates: [] }
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    await userEvent.click(screen.getByRole('button', { name: '확인' }))
+    await screen.findByText('미확인 0건')
+  })
+
+  it('shows the last collection run status in Korean, not the raw sync_runs value', async () => {
+    // backend/rag/ingest/changes.py:79 last_run.status is 'succeeded' or 'noop'
+    server.changes = { ...server.changes, last_run: { ...server.changes.last_run, status: 'succeeded' } }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    expect(screen.getByText(/마지막 수집 .* · 완료/)).toBeTruthy()
+    expect(screen.queryByText(/succeeded/)).toBeNull()
+  })
+})
+
 describe('live recall route for administrators', () => {
   beforeEach(() => {
     server.user = ADMIN
@@ -234,7 +273,8 @@ describe('live recall route for administrators', () => {
   it('decides a maintenance candidate and shows who decided', async () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '함께 볼 정책 후보' })).closest('section')
-    expect(within(panel).getByText(/조달 정책에서 링크로 연결됩니다/)).toBeTruthy()
+    // 제목은 후보 목록을 받기 전에도 그려지므로(그땐 '후보가 없습니다') 후보 문장은 도착을 기다린다.
+    expect(await within(panel).findByText(/조달 정책에서 링크로 연결됩니다/)).toBeTruthy()
     await userEvent.click(within(panel).getByRole('button', { name: '정비 필요' }))
     await within(panel).findByText('판단한 관리자: admin-1')
     expect(JSON.parse(requestsTo('POST', '/maintenance-candidates/c1')[0].options.body)).toEqual({ status: 'needed' })
@@ -245,10 +285,38 @@ describe('live recall route for administrators', () => {
     open('/recalls')
     const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
     await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
-    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.paste('[{"rule_seq":"12","article":"Approval limits"}]')
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText(/무효가 될 답변 3건/)
-    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 'handbook/finance/procurement', article: 'Approval limits' }] })
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ changes: [{ rule_seq: 12, article: 'Approval limits' }] })
+  })
+
+  it('blocks a non-numeric rule_seq before sending, because the server answers 422 (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":"handbook/finance/procurement","article":"Approval limits"}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect(await within(panel).findByText(/rule_seq는 0 이상의 정수/)).toBeTruthy()
+    expect(requestsTo('POST', '/impact-preview')).toHaveLength(0)
+  })
+
+  it('shows an error instead of an empty list when the digests cannot be loaded (H-11)', async () => {
+    server.digestsResponse = () => apiError(500, 'internal_error', '서버 오류')
+    open('/recalls')
+    expect(await screen.findByText('하루 요약을 불러오지 못했습니다.')).toBeTruthy()
+  })
+
+  it('sends the page-pair form of the impact preview with integer rule_seq only (H-10)', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '개정 전후 본문(JSON)' }))
+    await userEvent.click(within(panel).getByLabelText('개정 전후 본문(JSON)'))
+    await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    await within(panel).findByText(/무효가 될 답변 3건/)
+    expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
+    expect(within(panel).queryByRole('button', { name: 'MR diff' })).toBeNull()
   })
 
   it('rejects invalid impact preview JSON before calling the server', async () => {
@@ -259,6 +327,78 @@ describe('live recall route for administrators', () => {
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
     await within(panel).findByText('JSON 형식이 올바르지 않습니다.')
     expect(requestsTo('POST', '/impact-preview')).toHaveLength(0)
+  })
+})
+
+describe('admin manual recall actions and webhook subscriptions (H-21)', () => {
+  beforeEach(() => {
+    server.user = ADMIN
+    server.recalls = { items: [], unread: 0, review_queue: [], candidates: [] }
+    server.subs = [{ sub_id: 'ws-0', url: 'https://hooks.example.com/a', secret_ref: 'X', active: true, created_at: '2026-11-10T00:00:00Z', secret_configured: false }]
+    vi.stubGlobal('confirm', vi.fn(() => true))
+  })
+
+  it('flushes digests with CSRF and shows the result', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '하루 요약 지금 만들기' }))
+    await within(panel).findByText('하루 요약 2건을 만들었습니다(알림 5건).')
+    const [request] = requestsTo('POST', '/recalls/digest/flush')
+    expect(request.options.headers['X-CSRF-Token']).toBe('test-csrf')
+  })
+
+  it('does not call the server when the confirmation is cancelled', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => false))
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    expect(requestsTo('POST', '/recalls/process-pending')).toHaveLength(0)
+  })
+
+  it('processes pending changes and shows the counts', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    await within(panel).findByText('변경 3건을 처리했습니다(알림 4건 생성, 실패 1건, 건너뜀 0건).')
+    expect(requestsTo('POST', '/recalls/process-pending')[0].options.headers['X-CSRF-Token']).toBe('test-csrf')
+  })
+
+  it('shows a server error for a failed manual run', async () => {
+    server.pendingResponse = () => apiError(503, 'not_configured', '변경 목록 저장소를 사용할 수 없습니다.')
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '리콜 수동 실행' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '처리 대기 변경 지금 처리' }))
+    await within(panel).findByText('변경 목록 저장소를 사용할 수 없습니다.')
+  })
+
+  it('lists webhook subscriptions and adds one', async () => {
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '웹훅 구독' })).closest('section')
+    await within(panel).findByText('https://hooks.example.com/a')
+    await userEvent.type(within(panel).getByLabelText('웹훅 주소'), 'https://hooks.example.com/b')
+    await userEvent.click(within(panel).getByRole('button', { name: '구독 추가' }))
+    await within(panel).findByText('웹훅 구독을 추가했습니다.')
+    const [request] = requestsTo('POST', '/webhook-subscriptions')
+    expect(JSON.parse(request.options.body)).toEqual({ url: 'https://hooks.example.com/b' })
+    expect(request.options.headers['X-CSRF-Token']).toBe('test-csrf')
+    expect(within(panel).getByText('https://hooks.example.com/b')).toBeTruthy()
+  })
+
+  it('shows the server message when a webhook address is rejected', async () => {
+    server.addSubResponse = () => apiError(400, 'bad_request', '배포 환경에서는 https 주소만 쓸 수 있습니다')
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '웹훅 구독' })).closest('section')
+    await userEvent.type(within(panel).getByLabelText('웹훅 주소'), 'http://x.example.com/h')
+    await userEvent.click(within(panel).getByRole('button', { name: '구독 추가' }))
+    await within(panel).findByText('배포 환경에서는 https 주소만 쓸 수 있습니다')
+  })
+
+  it('hides the admin tools from ordinary users', async () => {
+    server.user = USER
+    open('/recalls')
+    await screen.findByText('알림 목록')
+    expect(screen.queryByRole('heading', { name: '리콜 수동 실행' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '웹훅 구독' })).toBeNull()
   })
 })
 
@@ -282,7 +422,7 @@ describe('live change monitoring route', () => {
     open('/changes')
     await screen.findByRole('button', { name: /Procurement/ })
     const card = screen.getByLabelText('변경 유형 분포')
-    await waitFor(() => expect(card.textContent).toContain('총 318건'))
+    await waitFor(() => expect(card.textContent).toContain('총 318건'), { timeout: 5000 })
     expect(card.textContent).toContain('수정280건')
     expect(card.textContent).toContain('추가28건')
     expect(card.textContent).toContain('삭제10건')
@@ -292,7 +432,7 @@ describe('live change monitoring route', () => {
   it('does not offer a recall link when no answers are impacted', async () => {
     open('/changes')
     await userEvent.click(await screen.findByRole('button', { name: /Vendor guide/ }))
-    await waitFor(() => expect(requestsTo('GET', '/changes/e2')).toHaveLength(1))
+    await waitFor(() => expect(requestsTo('GET', '/changes/e2')).toHaveLength(1), { timeout: 5000 })
     expect(screen.queryByRole('link', { name: '관련 리콜 알림 보기' })).toBeNull()
   })
 

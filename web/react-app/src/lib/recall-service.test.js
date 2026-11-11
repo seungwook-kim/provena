@@ -138,12 +138,25 @@ describe('recall notice mapping', () => {
   })
 
   it('parses impact preview input', () => {
-    expect(parseImpactInput('changes', '[{"rule_seq":"a"}]')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('changes', '{"changes":[{"rule_seq":"a"}]}')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('changes', '{"rule_seq":"a"}')).toEqual({ changes: [{ rule_seq: 'a' }] })
-    expect(parseImpactInput('diff', ' diff --git a b ')).toEqual({ diff: 'diff --git a b' })
+    expect(parseImpactInput('changes', '[{"rule_seq":1}]')).toEqual({ changes: [{ rule_seq: 1 }] })
+    expect(parseImpactInput('changes', '{"changes":[{"rule_seq":1}]}')).toEqual({ changes: [{ rule_seq: 1 }] })
+    expect(parseImpactInput('changes', '{"rule_seq":1}')).toEqual({ changes: [{ rule_seq: 1 }] })
+    // 서버는 rule_seq 정수만 받는다(ImpactChange.rule_seq: int, ge=0) — 문자열 경로·음수·소수·없음은 보내기 전에 막는다
+    for (const bad of ['"handbook/finance/procurement"', '"a"', '-1', '1.5', 'null']) {
+      expect(() => parseImpactInput('changes', `[{"rule_seq":${bad},"article":"x"}]`)).toThrow('rule_seq')
+    }
+    expect(() => parseImpactInput('changes', '[{"article":"x"}]')).toThrow('rule_seq')
     expect(() => parseImpactInput('changes', '{oops')).toThrow('JSON 형식이 올바르지 않습니다.')
-    expect(() => parseImpactInput('diff', '  ')).toThrow('diff 내용을 입력해 주세요.')
+    expect(() => parseImpactInput('changes', '  ')).toThrow('바뀐 섹션 목록을 입력해 주세요.')
+  })
+
+  it('sends rule_seq as an integer and never sends the unsupported diff field (H-10)', () => {
+    expect(parseImpactInput('changes', '[{"rule_seq":"12","article":"a"},{"rule_seq":7,"article":"b"}]')).toEqual({ changes: [{ rule_seq: 12, article: 'a' }, { rule_seq: 7, article: 'b' }] })
+    const pages = '{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}'
+    expect(parseImpactInput('pages', pages)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
+    expect(() => parseImpactInput('pages', '[{"path":"a.md"}]')).toThrow('pages')
+    expect(() => parseImpactInput('pages', '{"pages":[{"path":"a.md"}]}')).toThrow('old_version_date')
+    expect(Object.keys(parseImpactInput('pages', pages))).not.toContain('diff')
   })
 })
 
@@ -248,6 +261,20 @@ describe('API recall service', () => {
     const result = await service.previewImpact({ changes: [] })
     expect(api.postImpactPreview).toHaveBeenCalledWith({ changes: [] })
     expect(result.markdown).toContain('무효 답변 3건')
+  })
+
+  it('reads the digests key the server returns and keeps count from the server (H-11)', async () => {
+    const api = fakeApi({ getRecallDigests: vi.fn(async () => ({ digests: [{ digest_id: 'd1', user_id: 'u1', day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })) })
+    const service = createApiRecallService(api)
+    await service.listRecalls()
+    const digests = await service.listDigests()
+    expect(digests).toHaveLength(1)
+    expect(digests[0]).toMatchObject({ id: 'd1', day: '2026-11-03', count: 2, high: null, low: null })
+  })
+
+  it('does not swallow a digest load failure (H-11)', async () => {
+    const api = fakeApi({ getRecallDigests: vi.fn(async () => { throw new Error('boom') }) })
+    await expect(createApiRecallService(api).listDigests()).rejects.toThrow('boom')
   })
 
   it('leaves the preview service without live-only actions', () => {
