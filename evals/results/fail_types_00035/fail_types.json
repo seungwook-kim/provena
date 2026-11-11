@@ -1,0 +1,402 @@
+{
+ "revision": "provena-api-00035-h69",
+ "corpus": "index.tar.gz:chunks.jsonl",
+ "measures": [
+  {
+   "measure": "v2 50건",
+   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_provena-api-00035-h69",
+   "dataset": "dataset_v2.jsonl",
+   "rows_total": 150,
+   "rows_without_chunk_ids": 0,
+   "unresolved_citations": 0,
+   "pooled": {
+    "relevant_rows": 75,
+    "answered_relevant": 74,
+    "refused_relevant": 1,
+    "refused_by_stage": {
+     "refuse/give_up": 1
+    },
+    "refused_out_of_domain": 0,
+    "no_gold_cited": 2,
+    "partial_gold_cited": 4,
+    "off_gold_cited": 11,
+    "answered_for_off_gold": 74,
+    "irrelevant_rows": 75,
+    "irrelevant_answered": 0,
+    "irrelevant_refused": 72,
+    "irrelevant_clarified": 3,
+    "questions": {
+     "refused_relevant": {
+      "38": 1
+     },
+     "no_gold_cited": {
+      "38": 2
+     },
+     "partial_gold_cited": {
+      "36": 1,
+      "39": 3
+     },
+     "off_gold_cited": {
+      "8": 3,
+      "9": 3,
+      "38": 2,
+      "39": 3
+     },
+     "refused_out_of_domain": {}
+    }
+   },
+   "per_run": {
+    "1": {
+     "relevant_rows": 25,
+     "answered_relevant": 25,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 1,
+     "partial_gold_cited": 2,
+     "off_gold_cited": 4,
+     "answered_for_off_gold": 25,
+     "irrelevant_rows": 25,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 24,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {
+       "38": 1
+      },
+      "partial_gold_cited": {
+       "36": 1,
+       "39": 1
+      },
+      "off_gold_cited": {
+       "8": 1,
+       "9": 1,
+       "38": 1,
+       "39": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "2": {
+     "relevant_rows": 25,
+     "answered_relevant": 25,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 1,
+     "partial_gold_cited": 1,
+     "off_gold_cited": 4,
+     "answered_for_off_gold": 25,
+     "irrelevant_rows": 25,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 24,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {
+       "38": 1
+      },
+      "partial_gold_cited": {
+       "39": 1
+      },
+      "off_gold_cited": {
+       "8": 1,
+       "9": 1,
+       "38": 1,
+       "39": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "3": {
+     "relevant_rows": 25,
+     "answered_relevant": 24,
+     "refused_relevant": 1,
+     "refused_by_stage": {
+      "refuse/give_up": 1
+     },
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 0,
+     "partial_gold_cited": 1,
+     "off_gold_cited": 3,
+     "answered_for_off_gold": 24,
+     "irrelevant_rows": 25,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 24,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {
+       "38": 1
+      },
+      "no_gold_cited": {},
+      "partial_gold_cited": {
+       "39": 1
+      },
+      "off_gold_cited": {
+       "8": 1,
+       "9": 1,
+       "39": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    }
+   }
+  },
+  {
+   "measure": "검증 20건",
+   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_holdout_provena-api-00035-h69",
+   "dataset": "dataset_holdout_v1.jsonl",
+   "rows_total": 60,
+   "rows_without_chunk_ids": 0,
+   "unresolved_citations": 0,
+   "pooled": {
+    "relevant_rows": 30,
+    "answered_relevant": 28,
+    "refused_relevant": 2,
+    "refused_by_stage": {
+     "refuse/ground": 2
+    },
+    "refused_out_of_domain": 0,
+    "no_gold_cited": 2,
+    "partial_gold_cited": 4,
+    "off_gold_cited": 9,
+    "answered_for_off_gold": 28,
+    "irrelevant_rows": 30,
+    "irrelevant_answered": 0,
+    "irrelevant_refused": 27,
+    "irrelevant_clarified": 3,
+    "questions": {
+     "refused_relevant": {
+      "101": 2
+     },
+     "no_gold_cited": {
+      "101": 1,
+      "109": 1
+     },
+     "partial_gold_cited": {
+      "104": 1,
+      "108": 3
+     },
+     "off_gold_cited": {
+      "101": 1,
+      "104": 1,
+      "105": 3,
+      "108": 3,
+      "109": 1
+     },
+     "refused_out_of_domain": {}
+    }
+   },
+   "per_run": {
+    "1": {
+     "relevant_rows": 10,
+     "answered_relevant": 10,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 1,
+     "partial_gold_cited": 1,
+     "off_gold_cited": 3,
+     "answered_for_off_gold": 10,
+     "irrelevant_rows": 10,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 9,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {
+       "101": 1
+      },
+      "partial_gold_cited": {
+       "108": 1
+      },
+      "off_gold_cited": {
+       "101": 1,
+       "105": 1,
+       "108": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "2": {
+     "relevant_rows": 10,
+     "answered_relevant": 9,
+     "refused_relevant": 1,
+     "refused_by_stage": {
+      "refuse/ground": 1
+     },
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 0,
+     "partial_gold_cited": 1,
+     "off_gold_cited": 2,
+     "answered_for_off_gold": 9,
+     "irrelevant_rows": 10,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 9,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {
+       "101": 1
+      },
+      "no_gold_cited": {},
+      "partial_gold_cited": {
+       "108": 1
+      },
+      "off_gold_cited": {
+       "105": 1,
+       "108": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "3": {
+     "relevant_rows": 10,
+     "answered_relevant": 9,
+     "refused_relevant": 1,
+     "refused_by_stage": {
+      "refuse/ground": 1
+     },
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 1,
+     "partial_gold_cited": 2,
+     "off_gold_cited": 4,
+     "answered_for_off_gold": 9,
+     "irrelevant_rows": 10,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 9,
+     "irrelevant_clarified": 1,
+     "questions": {
+      "refused_relevant": {
+       "101": 1
+      },
+      "no_gold_cited": {
+       "109": 1
+      },
+      "partial_gold_cited": {
+       "104": 1,
+       "108": 1
+      },
+      "off_gold_cited": {
+       "104": 1,
+       "105": 1,
+       "108": 1,
+       "109": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    }
+   }
+  },
+  {
+   "measure": "새 인용 5건",
+   "results": "C:/Users/JINNYEONG/AppData/Local/Temp/claude/b58030b9724d196d/88fba0d3-8765-416c-8b42-3efd568b6f8d/scratchpad/d9/wt/evals/results/deploy_latency_cite_new_provena-api-00035-h69",
+   "dataset": "dataset_cite_new_v1.jsonl",
+   "rows_total": 15,
+   "rows_without_chunk_ids": 0,
+   "unresolved_citations": 0,
+   "pooled": {
+    "relevant_rows": 15,
+    "answered_relevant": 15,
+    "refused_relevant": 0,
+    "refused_by_stage": {},
+    "refused_out_of_domain": 0,
+    "no_gold_cited": 0,
+    "partial_gold_cited": 0,
+    "off_gold_cited": 6,
+    "answered_for_off_gold": 15,
+    "irrelevant_rows": 0,
+    "irrelevant_answered": 0,
+    "irrelevant_refused": 0,
+    "irrelevant_clarified": 0,
+    "questions": {
+     "refused_relevant": {},
+     "no_gold_cited": {},
+     "partial_gold_cited": {},
+     "off_gold_cited": {
+      "301": 3,
+      "304": 3
+     },
+     "refused_out_of_domain": {}
+    }
+   },
+   "per_run": {
+    "1": {
+     "relevant_rows": 5,
+     "answered_relevant": 5,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 0,
+     "partial_gold_cited": 0,
+     "off_gold_cited": 2,
+     "answered_for_off_gold": 5,
+     "irrelevant_rows": 0,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 0,
+     "irrelevant_clarified": 0,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {},
+      "partial_gold_cited": {},
+      "off_gold_cited": {
+       "301": 1,
+       "304": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "2": {
+     "relevant_rows": 5,
+     "answered_relevant": 5,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 0,
+     "partial_gold_cited": 0,
+     "off_gold_cited": 2,
+     "answered_for_off_gold": 5,
+     "irrelevant_rows": 0,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 0,
+     "irrelevant_clarified": 0,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {},
+      "partial_gold_cited": {},
+      "off_gold_cited": {
+       "301": 1,
+       "304": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    },
+    "3": {
+     "relevant_rows": 5,
+     "answered_relevant": 5,
+     "refused_relevant": 0,
+     "refused_by_stage": {},
+     "refused_out_of_domain": 0,
+     "no_gold_cited": 0,
+     "partial_gold_cited": 0,
+     "off_gold_cited": 2,
+     "answered_for_off_gold": 5,
+     "irrelevant_rows": 0,
+     "irrelevant_answered": 0,
+     "irrelevant_refused": 0,
+     "irrelevant_clarified": 0,
+     "questions": {
+      "refused_relevant": {},
+      "no_gold_cited": {},
+      "partial_gold_cited": {},
+      "off_gold_cited": {
+       "301": 1,
+       "304": 1
+      },
+      "refused_out_of_domain": {}
+     }
+    }
+   }
+  }
+ ]
+}
