@@ -302,6 +302,7 @@ flowchart TD
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank`, `service` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
+| POST | `/admin/eval/review` | 관리자, CSRF, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 | **평가 전용**(결정 0104, 사전 등록 62.41). 같은 합동 검토 요청을 에이전트 하나가 검토하는 기준선을 운영에서 재는 통로. `{message, as_of?, search: "same" \| "undivided"}` → JSON 한 번 `{status, search, issue_rows, unreviewed, clarify_question, retrieved, llm_calls, usage, latency_ms, revision, request_id}`. 꺼져 있으면 권한 검사보다 먼저 404 `not_found`, 하루 호출 상한(`EVAL_REVIEW_SINGLE_MAX_PER_DAY`, 기본 200)을 넘으면 429 `rate_limited`, 요청당 비용 상한을 넘으면 429 `limit_exceeded`. 쟁점표·승인함·대화 목록에 아무것도 쓰지 않는다. 서비스 경로는 이 코드를 부르지 않는다 |
 | GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
@@ -616,6 +617,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 비밀값 | `.env`에만. 평가 계정 비밀번호는 저장소에 없음 |
 | 결정표 오류 | 승인 전 실행 금지. 셀 대조표를 승인 화면에 보여 준다 |
 | 비공개 링크 | 비공개 주소로만 연결된 칸·링크는 답의 근거로 쓰지 않고 "비공개 문서"로 표시한다 |
+| 평가 전용 엔드포인트가 운영에 있다 | `POST /admin/eval/review`는 합동 검토 팀 구성과 단일 검토자를 같은 리비전에서 비교하려고 둔 측정 통로다(결정 0104). 여는 조건: 환경 변수 `EVAL_REVIEW_SINGLE=1`(서비스 값에 넣지 않고 측정 리비전에서만 켬, 측정이 끝나면 지움)이고, 로그인한 관리자이며 CSRF가 맞을 때. 꺼져 있으면 누구에게나 404다. 막는 장치: 요청당 LLM 비용 상한, 하루 호출 수 상한, 쟁점표·승인함에 쓰지 않음, 서비스 경로(`/chat`, 질문 그래프, 합동 검토 그래프)에서 코드를 부르지 않음(시험으로 고정). 남는 기록: 호출·거절마다 WARNING 로그 한 줄(요청 문장은 sha256 앞 12자만), Langfuse 추적 `review_single_eval`. DB 감사 표는 만들지 않았다 |
 
 ## 10. 평가 연결
 
@@ -684,7 +686,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
-| 생성 LLM | `haiku-5.5` / `gpt-6-luna`. `LLM_PROVIDER`(기본 anthropic)·`openai` 둘 다 받고, 키가 없으면 데모 모드 | 평가셋 v1로 비교해 하나를 고른다 | D0 후보, D2 확정 |
+| 생성 LLM | `haiku-5.5` / `gpt-6-luna`. `LLM_PROVIDER`(기본 anthropic)·`openai` 둘 다 받고, 키가 없으면 데모 모드 | `haiku-5.5`. 평가셋 v1로 `gpt-6-luna`와 비교하려던 계획은 실행하지 않음: 운영에 계속 쓸 수 있는 키가 Anthropic 키뿐이라 같은 공급자 안에서 Haiku 5.5와 Sonnet 5.5를 비교했다(EVAL_REPORT 8장) | D0 후보, D2 확정 |
 | 임베딩 | `bge-m3` / 비교 후보(Qwen3-Embedding-0.6B 등). 한국어 질문 → 영어 문서라 다국어 모델이 필요하다 | `bge-m3` 기본 | D0 후보, D2~D3 확정 |
 | 한→영 질의 변환 | LLM이 BM25용 영어 검색어를 만든다 / 다국어 임베딩만 쓴다 | 두 방식을 평가셋으로 비교 | D2~D3 |
 | 로컬 모델 실행, Cloud Run 메모리·이미지 크기 | 각자 PC에서 `bge-m3`를 불러 보고 확인 | 오늘 확인 | D0 |
