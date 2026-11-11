@@ -51,7 +51,7 @@
 - 한계: 1,564쪽 중 499쪽(32%)은 마지막 수정이 100파일 넘게 바꾼 일괄 커밋(공백 제거·이름 변경·조직 개편)이다. 판 날짜는 "정책 내용이 바뀐 날"이 아니라 "글자가 마지막으로 바뀐 날"이다
 - 출력: `data/corpus/handbook/**`, `data/corpus/authz/authorization-matrix-2023-05.html.md`, `data/corpus/pages.jsonl`, `data/corpus/collect_manifest.json`, `data/corpus/history/*.jsonl`
 - 커밋: 위 출력 폴더는 커밋하지 않고 `python -m backend.rag.ingest.snapshot pack`으로 만든 `data/corpus.tar.gz` 한 파일을 커밋한다. 풀 때 쪽별·권한표 sha256과 `corpus_id`를 이 수집 결과와 대조한다(`backend/rag/ingest/snapshot.py`, 고치는 순서는 `data/data.md`)
-- 개정 이력: `git log --no-merges --no-renames --name-status` (이름 바뀜 탐지는 파일 내용을 받아야 해서 끈다), **2024-01-01부터** 고정 커밋까지. 팀 리콜 시험 커밋 12건(`study`의 참고 URL 2장, 가장 오래된 것 2024-01-23)이 모두 있어야 하고 하나라도 없으면 멈춘다. (처음엔 주제서 초안의 "최근 12개월"이라 4건이 빠졌음, 10/29 수정) 권한표 이력은 API commits(`path`), 요청 간격 1초, 최대 20쪽
+- 개정 이력: `git log --no-merges --no-renames --name-status` (이름 바뀜 탐지는 파일 내용을 받아야 해서 끈다). 옵션 `python -m backend.rag.ingest.history --follow-renames`(F-11)는 `-M` 으로 읽어 옮긴 파일을 `R100` 상태와 `old_path` 로 남긴다(기본 꺼짐이라 `handbook_commits.jsonl` 은 그대로, 느림). 고른 폴더 밖에서 옮겨 온 파일은 경로 제한 때문에 추가(A)로 보이고, 판 날짜(`handbook.last_changes`)는 옮긴 커밋이 마지막 수정인 채 `--no-renames` 그대로다, **2024-01-01부터** 고정 커밋까지. 팀 리콜 시험 커밋 12건(`study`의 참고 URL 2장, 가장 오래된 것 2024-01-23)이 모두 있어야 하고 하나라도 없으면 멈춘다. (처음엔 주제서 초안의 "최근 12개월"이라 4건이 빠졌음, 10/29 수정) 권한표 이력은 API commits(`path`), 요청 간격 1초, 최대 20쪽
 
 ## AC (Given-When-Then)
 

@@ -189,6 +189,28 @@ def test_parse_log():
     assert commits[1]["title"] == "typo"
 
 
+def test_parse_log_rename_keeps_old_path():
+    """F-11: -M 로 읽으면 R100<\t>옛<\t>새. 예전 코드는 경로가 '옛<\t>새' 한 덩어리가 됐다."""
+    text = f"{RS}abc{US}2026-03-02{US}move\n\nR100\tcontent/a/old.md\tcontent/a/new.md\nM\tcontent/a/x.md\n"
+    files = parse_log(text)[0]["files"]
+    assert files[0] == {"status": "R100", "path": "content/a/new.md", "old_path": "content/a/old.md"}
+    assert files[1] == {"status": "M", "path": "content/a/x.md"}
+
+
+def test_handbook_history_follow_renames_flag(tmp_path, monkeypatch):
+    import backend.rag.ingest.history as H
+    run, _, _ = _repo_with_history(tmp_path)
+    run("mv", "content/handbook/security/c.md", "content/handbook/security/c2.md")
+    run("commit", "-qm", "move", when=("2025-04-01", "2025-04-01"))
+    monkeypatch.setattr(H, "PINNED_COMMIT", run("rev-parse", "HEAD"))
+    moved = lambda r: next(c for c in r if c["title"] == "move")["files"]
+    default = moved(H.handbook_history(tmp_path, "2024-01-01"))
+    assert sorted(f["status"] for f in default) == ["A", "D"]   # 기본: 삭제+추가로 끊긴다(현재 동작 유지)
+    followed = moved(H.handbook_history(tmp_path, "2024-01-01", follow_renames=True))
+    assert len(followed) == 1 and followed[0]["status"] == "R100"
+    assert followed[0]["old_path"].endswith("security/c.md") and followed[0]["path"].endswith("security/c2.md")
+
+
 def test_missing_recall_commits_detected():
     full = [{"sha": s + "0" * 32} for s in RECALL_COMMITS]
     assert missing_recall(full) == []

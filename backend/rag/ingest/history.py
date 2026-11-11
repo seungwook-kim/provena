@@ -38,14 +38,20 @@ def parse_log(text: str) -> list[dict]:
         files = []
         for line in filter(None, lines):
             status, path = line.split("\t", 1)
-            files.append({"status": status, "path": path})
+            if status[:1] in ("R", "C"):   # 이름 바뀜(-M): "R100<\t>옛 경로<\t>새 경로" (F-11)
+                old, path = path.split("\t", 1)
+                files.append({"status": status, "path": path, "old_path": old})
+            else:
+                files.append({"status": status, "path": path})
         commits.append({"sha": sha, "date": day, "title": title, "files": files})
     return commits
 
 
-def handbook_history(repo: Path, since: str) -> list[dict]:
-    # --no-renames: 이름 바뀜 탐지는 파일 내용을 비교해야 해서 blob:none 캐시에서 내용을 하나씩 내려받는다
-    out = git(repo, "log", "--no-merges", "--no-renames", f"--since={since}",
+def handbook_history(repo: Path, since: str, follow_renames: bool = False) -> list[dict]:
+    """기본은 --no-renames: 이름 바뀜 탐지는 파일 내용을 비교해야 해서 blob:none 캐시에서 내용을 하나씩 내려받는다.
+    follow_renames=True(-M)면 옮긴 파일이 `R` 상태와 `old_path` 로 나온다(F-11). 고른 폴더 밖에서 옮겨 온 파일은
+    경로 제한 때문에 그대로 추가(A)로 보인다. 기본이 꺼짐이라 handbook_commits.jsonl 은 바뀌지 않는다."""
+    out = git(repo, "log", "--no-merges", "-M" if follow_renames else "--no-renames", f"--since={since}",
               f"--format={RS}%H{US}{VERSION_DATE_FORMAT}{US}%s", "--name-status", PINNED_COMMIT, "--", *all_folders())
     commits = parse_log(out.decode("utf-8"))
     for c in commits:
@@ -97,10 +103,12 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("data/corpus/history"))
     ap.add_argument("--cache", type=Path, default=Path.home() / ".cache/provena/handbook")
     ap.add_argument("--skip-authz", action="store_true")
+    ap.add_argument("--follow-renames", action="store_true",
+                    help="이름 바뀜을 따라간다(R, old_path). 캐시에서 파일 내용을 내려받아 느리다. 기본 꺼짐(F-11)")
     args = ap.parse_args()
 
     pinned = commit_day(args.cache, PINNED_COMMIT)
-    hb = handbook_history(args.cache, HISTORY_SINCE)
+    hb = handbook_history(args.cache, HISTORY_SINCE, args.follow_renames)
     missing = missing_recall(hb)
     if missing:   # 캐시가 예전(1년)에 받은 것이면 이력이 모자란다
         raise CollectError(f"리콜 시험 커밋이 이력에 없음: {missing}. "
