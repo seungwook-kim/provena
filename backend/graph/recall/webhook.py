@@ -8,7 +8,9 @@
   전송 기록에 `failed`(`secret_missing`)로 남긴다.
 - 재시도: 2xx가 아니거나 연결이 실패하면 `RECALL_WEBHOOK_BACKOFF_S`(기본 1초)부터 두 배씩 기다려 다시 보낸다. 최대 `RECALL_WEBHOOK_MAX_TRIES`
   (기본 3)번 시도하고 그래도 실패하면 `failed`. 시도마다 상태 코드·오류 종류·시각을 `webhook_deliveries.attempts`에 남긴다.
-- 주소 검사(SSRF 방지): http·https만 받는다. 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다.
+- 주소 검사(SSRF 방지): http·https만 받는다. 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다. 주소 이름을 실제로 풀어 나온 IP가
+  공인 주소가 아니면(루프백·사설·링크로컬·예약, `127.0.0.1.nip.io`처럼 이름이 내부 IP를 가리키는 경우, 정수·16진수 IP 표기 포함) 막는다.
+  등록할 때와 보낼 때마다 검사한다.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import json
 import logging
 import os
 import re
+import socket
 import time
 import uuid
 from collections.abc import Callable
@@ -85,12 +88,35 @@ def check_target_url(url: str, *, strict: bool) -> None:
     host = parts.hostname.lower().rstrip(".")
     if host in _BLOCKED_HOSTS or host.endswith((".internal", ".local", ".localhost")):
         raise ValueError("내부 주소는 쓸 수 없습니다")
+    for ip in _resolve(host):
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        if not ip.is_global:
+            raise ValueError("공인 주소가 아닌 IP는 쓸 수 없습니다")
+
+
+_NUMERIC_HOST = re.compile(r"^(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+)){0,3}$", re.I)
+
+
+def _resolve(host: str) -> list:
+    """호스트 -> IP 목록. IP 글자(점 4개 꼴, IPv6, 정수·16진수·8진수 줄임 표기)는 그대로 풀고, 이름은 DNS로 푼다. 풀지 못하면 ValueError."""
     try:
-        ip = ipaddress.ip_address(host)
+        return [ipaddress.ip_address(host)]
     except ValueError:
-        return
-    if not ip.is_global:
-        raise ValueError("공인 주소가 아닌 IP는 쓸 수 없습니다")
+        pass
+    if _NUMERIC_HOST.match(host):
+        try:
+            return [ipaddress.ip_address(socket.inet_aton(host))]
+        except OSError:
+            raise ValueError("주소를 해석할 수 없습니다") from None
+    try:
+        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise ValueError("주소 이름을 찾을 수 없습니다") from None
+    ips = list(dict.fromkeys(ipaddress.ip_address(i[4][0].split("%")[0]) for i in infos))
+    if not ips:
+        raise ValueError("주소 이름을 찾을 수 없습니다")
+    return ips
 
 
 def _env_number(name: str, default: float, cast: type) -> Any:

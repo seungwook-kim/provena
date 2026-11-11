@@ -6,3 +6,14 @@ import pytest
 @pytest.fixture(autouse=True)
 def _decompose_off_unless_asked(monkeypatch):
     monkeypatch.setenv("SEARCH_DECOMPOSE", "0")
+
+
+@pytest.fixture(autouse=True)
+def _webhook_dns_offline(monkeypatch):
+    """웹훅 주소 검사(`webhook._resolve`)가 시험 중 실제 DNS를 부르지 않게 한다. `example.com` 이름은 공인 IP로 푼다."""
+    import ipaddress
+
+    from backend.graph.recall import webhook
+
+    real = webhook._resolve
+    monkeypatch.setattr(webhook, "_resolve", lambda host: [ipaddress.ip_address("93.184.216.34")] if host.endswith("example.com") else real(host))
