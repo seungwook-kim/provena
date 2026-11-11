@@ -96,3 +96,74 @@ describe('DemoChatPage leaving while an answer is streaming', () => {
     expect(consoleError.mock.calls.flat().join(' ')).not.toContain('abort is not a function')
   })
 })
+
+// H-08: 화면 쪽 — 오류 표시, 4000자 제한, 다시 시도
+describe('DemoChatPage chat errors (H-08)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+  function stubChat(chatResponse) {
+    window.history.replaceState({}, '', '/chat')
+    document.cookie = 'provena_csrf=test-token'
+    const fetchMock = vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([listed])
+      if (path === '/threads/t1') return json({ ...listed, messages: [{ role: 'user', text: '앞 질문' }, { role: 'assistant', text: '앞 답', state: 'done' }] })
+      if (path === '/auth/csrf') return new Response(null, { status: 204 })
+      if (path === '/chat') return chatResponse()
+      return json({ detail: 'not found' }, 404)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('shows the server message for a 409 and clears the generating bubble, and retry resends the question', async () => {
+    const fetchMock = stubChat(() => json({ error: { code: 'approval_pending', message: '승인이 끝나야 다음 질문을 할 수 있습니다.' } }, 409))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText('앞 답')
+    fireEvent.change(screen.getByRole('textbox', { name: '질문' }), { target: { value: '다음 질문' } })
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+
+    expect(await screen.findByText('승인이 끝나야 다음 질문을 할 수 있습니다.')).toBeTruthy()
+    expect(screen.queryByText('답변을 생성하고 있습니다.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+    await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(2))
+    const bodies = fetchMock.mock.calls.filter(([path]) => path === '/chat').map(([, options]) => JSON.parse(options.body).message)
+    expect(bodies).toEqual(['다음 질문', '다음 질문'])
+  })
+
+  it('shows the error for a first question in a new conversation too', async () => {
+    stubChat(() => json({ error: { code: 'not_configured', message: '채팅이 설정되지 않았습니다.' } }, 503))
+    render(<App />)
+    fireEvent.change(await screen.findByRole('textbox', { name: '질문' }), { target: { value: '첫 질문' } })
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('채팅이 설정되지 않았습니다.')
+  })
+
+  it('limits the textarea to 4000 characters', async () => {
+    stubChat(() => json({}, 500))
+    render(<App />)
+    expect((await screen.findByRole('textbox', { name: '질문' })).getAttribute('maxlength')).toBe('4000')
+  })
+})
+
+// H-32: 근거 패널 번호는 선택한 답 기준
+describe('DemoChatPage citation numbering (H-32)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('numbers panel tabs per answer, not across the whole thread', async () => {
+    stubServer({ ...listed, messages: [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: 'a1', state: 'done', citations: [{ id: 'c1', rule_title: '문서A' }, { id: 'c2', rule_title: '문서B' }] },
+      { role: 'user', text: 'q2' },
+      { role: 'assistant', text: 'a2', state: 'done', citations: [{ id: 'c3', rule_title: '문서C' }, { id: 'c4', rule_title: '문서D' }] },
+    ] })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText('a2')
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['[1]', '[2]'])
+    expect(screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['출처 1: 문서C', '출처 2: 문서D'])
+    fireEvent.click(screen.getByRole('button', { name: /문서A/ }))
+    expect(screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['출처 1: 문서A', '출처 2: 문서B'])
+  })
+})

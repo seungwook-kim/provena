@@ -83,7 +83,9 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     async getThread(id) {
       const streaming = () => [...controllers.values()].some(request => request.activeThreadId === id)
       const local = threads.find(thread => thread.id === id)
-      if (local && (streaming() || local.messages?.some(message => message.role === 'user'))) return structuredClone(local)
+      // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있어 서버에서 다시 받는다(H-15)
+      const waiting = local?.messages?.some(message => message.role === 'assistant' && message.state === 'approval')
+      if (local && (streaming() || (local.messages?.some(message => message.role === 'user') && !waiting))) return structuredClone(local)
       const { getThread } = await import('./api')
       const thread = mapThreadRecord(await getThread(id))
       const latest = threads.find(item => item.id === id)
@@ -99,7 +101,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       const request = { controller, activeThreadId: threadId, cancelled: false }
       controllers.set(streamId, request); onProcessingChange?.(streamId)
       const userMessage = { role: 'user', text: message, timestamp: new Date().toISOString() }
-      const answer = { role: 'assistant', text: '', citations: [], state: 'generating', timestamp: new Date().toISOString() }
+      // question: 오류 말풍선의 '다시 시도'가 다시 보낼 질문(H-08)
+      const answer = { role: 'assistant', text: '', citations: [], state: 'generating', question: message, timestamp: new Date().toISOString() }
       const existing = threads.find(thread => thread.id === threadId)
       if (existing) upsert(threadId, { messages: [...(existing.messages ?? []), userMessage, answer] })
       try {
@@ -128,8 +131,19 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
         }})
         return { threadId: threadId ?? threads[0]?.id }
       } catch (error) {
-        if (!request.cancelled && !isAbortError(error)) throw error
-        return { threadId: request.activeThreadId ?? threadId }
+        if (request.cancelled || isAbortError(error)) return { threadId: request.activeThreadId ?? threadId }
+        // HTTP 오류(409 approval_pending, 503, 422, 403)는 생성 중 말풍선을 오류로 바꿔 화면에 남긴다(H-08).
+        // 말풍선을 둘 대화가 아직 없으면(새 대화 첫 질문) 호출한 쪽이 알리도록 던진다.
+        const id = request.activeThreadId ?? threadId
+        const messages = [...(threads.find(thread => thread.id === id)?.messages ?? [])]
+        const draft = messages.findLast(item => item.role === 'assistant' && item.state === 'generating')
+        if (!draft) throw error
+        draft.state = 'error'
+        draft.error = error?.message || '채팅 처리 중 오류가 발생했습니다.'
+        draft.errorCode = error?.code
+        draft.question = message
+        upsert(id, { messages, lastActivityAt: new Date().toISOString() })
+        return { threadId: id, error: draft.error }
       } finally {
         if (controllers.get(streamId) === request) {
           controllers.delete(streamId)

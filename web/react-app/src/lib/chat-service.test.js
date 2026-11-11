@@ -213,3 +213,54 @@ describe('createApiChatAdapter dispose while streaming', () => {
     await expect(pending).resolves.toEqual({ threadId: 't9' })
   })
 })
+
+// H-08: 채팅 HTTP 오류(409·503·422·403)가 화면에 남아야 한다
+describe('createApiChatAdapter HTTP errors (H-08)', () => {
+  const listedThread = { thread_id: 't1', title: '연차 질문', updated_at: '2026-11-09T01:00:00Z', messages: [{ role: 'user', text: '앞 질문' }, { role: 'assistant', text: '앞 답', state: 'done' }] }
+
+  it('turns a rejected request into an error answer instead of leaving the generating bubble', async () => {
+    const { getThreads } = await import('./api')
+    const { ApiError } = await vi.importActual('./api')
+    getThreads.mockResolvedValueOnce([listedThread])
+    streamChatMessage.mockRejectedValueOnce(new ApiError('이전 질문의 승인이 끝나지 않았습니다.', 409, 'approval_pending'))
+    const snapshots = []
+    const adapter = createApiChatAdapter({ onThreadsChange: value => snapshots.push(value) })
+    await adapter.listThreads()
+
+    const result = await adapter.sendMessage({ threadId: 't1', message: '새 질문' })
+
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer).toMatchObject({ state: 'error', error: '이전 질문의 승인이 끝나지 않았습니다.', errorCode: 'approval_pending', question: '새 질문' })
+    expect(result.error).toBe('이전 질문의 승인이 끝나지 않았습니다.')
+  })
+
+  it('still throws when there is no thread yet to show the error in', async () => {
+    const { ApiError } = await vi.importActual('./api')
+    streamChatMessage.mockRejectedValueOnce(new ApiError('채팅이 설정되지 않았습니다.', 503, 'not_configured'))
+    const adapter = createApiChatAdapter()
+    await expect(adapter.sendMessage({ threadId: null, message: '첫 질문' })).rejects.toMatchObject({ status: 503 })
+  })
+
+  it('keeps the question on a streamed error event so retry can resend it', async () => {
+    const { snapshots, service } = setup([{ type: 'error', thread_id: 't1', data: { code: 'limit_exceeded', message: 'x' } }])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    expect(snapshots.at(-1)[0].messages.at(-1).question).toBe('질문')
+  })
+})
+
+// H-15: 승인이 끝난 대화는 다시 열 때 서버 상태를 받아와야 한다
+describe('thread with a finished approval (H-15)', () => {
+  it('refetches a thread whose local copy still waits for approval', async () => {
+    const { getThreads, getThread } = await import('./api')
+    getThreads.mockResolvedValueOnce([{ thread_id: 't1', title: '승인 질문', updated_at: '2026-11-09T01:00:00Z' }])
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '승인 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '', state: 'approval' }] })
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '승인 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '승인된 답', state: 'done' }] })
+    const adapter = createApiChatAdapter()
+    await adapter.listThreads()
+    expect((await adapter.getThread('t1')).messages.at(-1).state).toBe('approval')
+
+    const again = await adapter.getThread('t1')
+
+    expect(again.messages.at(-1)).toMatchObject({ state: 'done', text: '승인된 답' })
+  })
+})
