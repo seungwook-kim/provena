@@ -82,7 +82,7 @@
 
 | 메서드 | 경로 | 권한 | 요청 | 성공 응답 | 오류 |
 |---|---|---|---|---|---|
-| GET | `/me` (기존, 칸 추가) | 로그인 | - | 200 `{user_id, role, is_owner}` | 401, 503 |
+| GET | `/me` (기존, 칸 추가) | 로그인 | - | 200 `{user_id, role, login_id, is_owner}`(`login_id`는 화면 계정 메뉴 표시용, 본인 것만) | 401, 503 |
 | GET | `/admin/users` | 최고 관리자 | - | 200 `{"users":[{"login_id","role","is_owner","created_at"}]}`, `created_at` 오름차순 | 401, 403, 503 |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"admin","changed":true\|false}` | 401, 403, 404, 409, 503 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자 + CSRF | 본문 없음, 헤더 `X-CSRF-Token` | 200 `{"login_id","role":"user","changed":true\|false}` | 401, 403, 404, 409, 503 |
