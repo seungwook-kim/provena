@@ -1236,6 +1236,18 @@
         "title": "SubscriptionBody",
         "type": "object"
       },
+      "SyncBody": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "SyncBody",
+        "type": "object"
+      },
       "UserResponse": {
         "properties": {
           "role": {
@@ -1496,6 +1508,54 @@
           }
         },
         "summary": "Review Signup Request"
+      }
+    },
+    "/admin/sync": {
+      "post": {
+        "description": "증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). `dry_run=false`일 때만 수집을 시작한다.",
+        "operationId": "post_sync_admin_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SyncBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Sync Admin Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Sync"
       }
     },
     "/admin/users": {
