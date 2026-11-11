@@ -9,7 +9,7 @@
 | L-08 채팅 HTTP 오류 프런트 시험 | 이미 해결 | 코드: `web/react-app/src/lib/chat-service.test.js:218-` `createApiChatAdapter HTTP errors (H-08)`(409·503 거절, 스트림 끊김, 오류 이벤트). 새로 안 만듦 |
 | L-08 하루 요약 계약 시험 | 일부 | 코드: `tests/test_recall_alert_fatigue.py:124` 한 건(정렬·id 안정)뿐. 칸 관계 시험은 없어 추가 |
 | L-08 영향 미리보기 시험 | 일부 | 코드: `tests/test_api_recalls.py:378-403`은 HTTP 겉(드라이런·400)만. `changes_from_pages`·`preview_impact` 직접 시험은 없어 추가 |
-| L-08 번들+백엔드 한 바퀴 | 일부 | 코드: 가입 승인(`test_signup_admin_api.py:41`)·프로필(`test_profile_api.py`)·채팅(`test_api_*`)이 따로 있고 한 앱에서 이어 부르는 시험은 없음 |
+| L-08 번들+백엔드 한 바퀴 | 일부 | 코드: 가입 승인(`test_signup_admin_api.py:41`)·프로필(`test_profile_api.py`)·채팅(`test_api_*`)이 따로 있고 한 앱에서 이어 부르는 시험은 없음 ; 긴 SSE(`api.test.js:71-77`)·Google 시작 화면(`session.test.jsx:480-498`, `signup-fixes.test.jsx:29`) 프런트 시험은 이미 main에 있음 |
 | L-10 변이 | 미해결 | 문서: `docs/GATES.md` 변이 표가 17번(11/5)까지, 목록 L-10 행 "D5 이후 코드 변이 행 없음" |
 | S-03 근거 비움 | 미해결 | 코드: `tests/`에서 검색 결과가 빈 채 판정이 "충분"이라 답하는 경우를 막는 시험 없음(`grep` 기준, 추정은 아님) |
 | S-04 | 미해결 | 코드: `evals/`에 인용 없는 답 분모 계산 파일 없음 |
@@ -19,15 +19,17 @@
 ### 무엇을 바꿨나
 - `tests/test_digest_contract.py`(4개): 하루 요약의 건수 합·중요도·`conclusion_changed`·설명 길이·id 순서 무관.
 - `tests/test_impact_preview_contract.py`(9개): `changes_from_pages`의 수정·추가·삭제 분류와 서식만 바뀐 섹션 제외, `preview_impact` 요약 숫자 관계, 답 저장소 불변, 마크다운에 사용자 id 없음·출처 문구 있음.
-- `tests/test_round_trip_app.py`(2개): 실제 `create_app` 한 개에 가입 대기 → 승인 전 로그인 거절 → 소유자 승인 → 로그인 → `/chat` → `/threads`, 그리고 거절된 사용자는 로그인 불가·익명 `/chat` 401.
+- `tests/test_round_trip_app.py`(2개): 실제 `create_app` 한 개에 `POST /auth/signup` → 기록용 발송기(`RecordingEmailSender.deliveries`)에서 인증번호를 읽어 `POST /auth/signup/verify` → 승인 전 로그인 거절 → 소유자 승인 → 로그인 → `/chat` → `/threads`(목록 행의 순서 가입·인증·승인·로그인·채팅; `/me/profile`은 제외), 그리고 거절된 사용자는 로그인 불가·익명 `/chat` 401.
 ### 왜
 - 목록 L-08 행의 "남음" 목록(하루 요약·영향 미리보기 diff 계약, 번들+백엔드 한 바퀴, 채팅 HTTP 오류). 근거 종류: 문서(목록 행)·코드.
 ### 확인한 것 (로컬)
 - 새 시험 통과: digest 4, impact 9, round trip 2.
-- 변이(`tests/mutation_d5.py`): 26 요약 중요도 고정 → 1 실패, 27 `any`→`all` → 1, 28 `answers_checked=0` → 1, 29 출처 문구 제거 → 1, 30 옛 본문 모음 조건 → 2, 32 거절도 계정 생성 → 1, 33 승인해도 계정 없음 → 1.
+- 변이(`tests/mutation_d5.py`): 26 요약 중요도 고정 → 1 실패, 27 `any`→`all` → 1, 28 `answers_checked=0` → 1, 29 출처 문구 제거 → 1, 30 옛 본문 모음 조건 → 2, 32 거절도 계정 생성 → 1, 33 승인해도 계정 없음 → 1. 인증 단계 변이(`email_verified_at` 기록을 지움) → 1 실패(승인이 409), 원본 복구 확인.
 ### 한계
 - 내 정보(`/me/profile`)는 DB 없이 조립한 앱에 열리지 않아(`backend/main.py` `profile_store`) 한 바퀴에 못 넣었다(시험은 `test_profile_api.py`가 따로 봄).
-- 만들어진 화면 번들은 서빙하지 않았다(빌드에 npm 필요). Google 시작 화면·긴 SSE 시험은 이 묶음에서 만들지 않았다.
+- 만들어진 화면 번들은 서빙하지 않았다(빌드에 npm 필요). 긴 SSE와 Google 시작 화면 시험은 main에 이미 있어 새로 만들지 않았다(아래 표기).
+- 긴 SSE: 이미 해결 in main. 코드: `web/react-app/src/lib/api.test.js:71-77` `streamChatMessage many events (H-17)`(30000개 이벤트를 한 덩어리로 받아도 콜백이 겹쌓이지 않음, 80행에서 30000개 확인).
+- Google 시작 화면: 이미 해결 in main. 코드: `web/react-app/src/session.test.jsx:480-498`(`/auth/google/start` 링크, `oauth_error` 한국어 안내와 모르는 코드 무시, OAuth 복귀 경로가 채팅으로 감)과 `web/react-app/src/signup-fixes.test.jsx:29` H-09(인증 코드 단계에서 Google 링크 숨김).
 - 승인은 `MemoryAuthStore`라 Postgres 경로는 `test_signup_postgres_integration.py`(DB 필요)가 맡는다.
 
 ## L-10 변이 확인 (+ S-03·S-04 시험의 변이)
@@ -76,7 +78,8 @@
 ## S-07·L-04 bge int8 점수 캐시 (I-013)
 ### 무엇을 바꿨나
 - 판정: main은 해결 안 함. `evals/retrieval/experiment_v1.py`의 `_Scores.score`가 int8일 때 저장 값을 읽지도 쓰지도 않고 후보 전체를 한 번에 계산하게 함(서비스 방식과 같음). 다른 리랭커는 그대로 저장 값 재사용.
-- `tests/test_exp_int8_scores.py`(3개), `docs/embedding_measurement.md` 한계 문장 정정(수정안 중 int8 부분 반영, v1 값은 다시 재지 않음).
+- `tests/test_exp_int8_scores.py`(3개), `docs/embedding_measurement.md` 한계 문장 정정(수정안 중 int8 부분 반영, v1 값은 다시 재지 않음 = 수치 재측정 안 함).
+- 서비스 영향 없음: 바뀐 곳은 실험 스크립트 `evals/retrieval/experiment_v1.py`뿐이다. 서비스의 확정 조합은 리랭커가 없다: `docs/decisions.md:46`(2026-11-03 "리랭커 없음"으로 확정)·`:175`(팀장 확정), `backend/rag/retrieve/rerank.py:43` `DEFAULT_MODEL = NONE`(켜려면 환경변수 `RERANK_MODEL`).
 ### 왜
 - 목록 S-07 행. 근거: 문서 `docs/embedding_measurement.md:326`(묶음에 따라 점수가 달라짐), `:361`(반영 안 함), `backend/rag/retrieve/retrieve.md:37` I-013 상태 "열림". 확정 조합이 리랭커 없음이라 서비스 영향 없음은 목록의 판단이다.
 - 지시서의 "L-04"는 이 항목을 가리킨 것으로 보고 처리했다. 목록의 L-04 행(`exclusions.json`, 재현 명령)은 따로 보지 않았다.
@@ -100,3 +103,8 @@
 - 시험이 평가셋 id 존재만 본다. 제외 사유가 사실인지, 코퍼스가 바뀐 문항이 맞는지는 보지 않는다(사람 판단).
 - `load_exclusions`(run.py)가 이 검사를 호출하지는 않는다. 형식이 틀린 파일은 CI 시험에서 잡히고 실행 시점에는 잡히지 않는다.
 - 안내 한 줄은 명령을 직접 새 저장소에서 다시 돌려 확인한 것이 아니라 위 코드·문서 근거로 쓴 것이다(`chunk.py`는 `data/corpus.tar.gz`를 자동으로 푸는 코드가 있으나 이 작업에서 실행하지 않음).
+
+## 리뷰 반영
+- L-08 한 바퀴 시험: `store.create_pending_user` 직접 삽입을 없애고 `POST /auth/signup` → 인증번호 읽기 → `POST /auth/signup/verify` → 승인 → 로그인 → `/chat`·`/threads` 순으로 바꿈. 거절 사용자 시험은 유지.
+- L-08 한계: "Google 시작 화면·긴 SSE 시험은 안 만들었다" 문장을 지우고 둘 다 main에 이미 있다고 근거(파일:줄)와 함께 적음. 요약 표의 L-08 행에도 반영.
+- S-07: 변경은 실험 스크립트뿐이고 서비스 확정 조합은 리랭커 없음이라 서비스 영향 없음을 근거와 함께 적음. "수치 재측정 안 함" 명시.
