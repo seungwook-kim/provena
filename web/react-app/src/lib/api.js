@@ -48,8 +48,10 @@ export async function apiRequest(path, options = {}) {
       else if (response.status < 500 && typeof body.detail === 'string' && body.detail.length < 160) detail = body.detail
       // 결정표·승인 API는 detail을 {reason, message}로 낸다 (backend/graph/decision/routes.py `_http`).
       else if (response.status < 500 && typeof body.detail?.message === 'string' && body.detail.message.length < 160) detail = body.detail.message
-      if (response.status === 422 && body.detail?.fields && typeof body.detail.fields === 'object' && !Array.isArray(body.detail.fields)) {
-        fieldReasons = Object.fromEntries(Object.entries(body.detail.fields).filter(([, reason]) => typeof reason === 'string'))
+      // 칸별 이유는 운영 오류 처리기가 내는 error.details.fields에 있다(backend/profile_api.py). 옛 위치 detail.fields도 받는다.
+      const rawFields = body.error?.details?.fields ?? body.detail?.fields
+      if (response.status === 422 && rawFields && typeof rawFields === 'object' && !Array.isArray(rawFields)) {
+        fieldReasons = Object.fromEntries(Object.entries(rawFields).filter(([, reason]) => typeof reason === 'string'))
       }
       if (typeof body.error?.code === 'string' && body.error.code) errorCode = body.error.code
       else if (typeof body.detail?.reason === 'string' && body.detail.reason) errorCode = body.detail.reason

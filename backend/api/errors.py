@@ -81,7 +81,38 @@ def code_and_message(status: int, detail: Any) -> tuple[str, str]:
     return STATUS_CODES.get(status, "internal_error" if status >= 500 else "bad_request"), message
 
 
+def _envelope_openapi(app: FastAPI) -> None:
+    """명세의 422 응답(`HTTPValidationError`)을 이 서버가 실제로 내는 오류 봉투 모양으로 맞춘다(C-20).
+    FastAPI 기본 명세는 `detail`이 항목 배열이라 했지만 서버는 `detail` 문자열과 `error` 봉투를 낸다(`_validation`)."""
+    original = app.openapi
+
+    def openapi() -> dict:
+        schema = original()
+        schemas = schema.get("components", {}).get("schemas", {})
+        if "HTTPValidationError" in schemas:
+            schemas["HTTPValidationError"] = {
+                "title": "HTTPValidationError", "type": "object", "required": ["detail", "error"],
+                "description": "422 오류 봉투. `detail`은 `error.message`와 같은 고정 문구이고 입력값은 담지 않는다.",
+                "properties": {
+                    "detail": {"type": "string", "title": "Detail"},
+                    "error": {"type": "object", "required": ["code", "message", "request_id"], "properties": {
+                        "code": {"type": "string", "const": "validation_error"}, "message": {"type": "string"}, "request_id": {"type": "string"},
+                        "details": {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}}}},
+                },
+            }
+        if "ValidationError" in schemas:
+            schemas["ValidationError"] = {
+                "title": "ValidationError", "type": "object", "required": ["loc", "msg", "type"],
+                "properties": {"loc": {"type": "array", "items": {"type": "string"}, "title": "Loc"},
+                               "msg": {"type": "string", "title": "Msg"}, "type": {"type": "string", "title": "Type"}},
+            }
+        return schema
+
+    app.openapi = openapi  # type: ignore[method-assign]
+
+
 def install_error_handlers(app: FastAPI) -> None:
+    _envelope_openapi(app)
     @app.exception_handler(ApiError)
     async def _api_error(_request: Request, exc: ApiError) -> JSONResponse:
         return JSONResponse(error_body(exc.code, exc.message, details=exc.details), status_code=exc.status, headers=exc.headers)

@@ -1,6 +1,6 @@
 """리콜 웹훅을 업무시스템으로 보내는 쪽 (SDD 11-1 3-7·3-8, docs/specs/recall.md AC-03, EC-05).
 
-형식: 구독 주소(`url`)로 POST, 본문은 리콜 알림 JSON(`GET /recalls`의 알림 한 건과 같은 모양), 헤더
+형식: 구독 주소(`url`)로 POST, 본문은 리콜 알림 JSON(`GET /recalls`의 알림 한 건에서 user_id·question·answer_excerpt·thread_id·acked를 뺀 모양, `webhook_view`), 헤더
 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문 bytes) 16진수>`. 서명은 보내는 bytes 그대로로 계산한다.
 
 - 비밀값: 구독의 `secret_ref`는 비밀값이 든 환경변수 이름이다(`RECALL_WEBHOOK_SECRET` 또는 `RECALL_WEBHOOK_SECRET_<이름>`). 값은 저장소·DB에 적지 않는다.
@@ -8,7 +8,9 @@
   전송 기록에 `failed`(`secret_missing`)로 남긴다.
 - 재시도: 2xx가 아니거나 연결이 실패하면 `RECALL_WEBHOOK_BACKOFF_S`(기본 1초)부터 두 배씩 기다려 다시 보낸다. 최대 `RECALL_WEBHOOK_MAX_TRIES`
   (기본 3)번 시도하고 그래도 실패하면 `failed`. 시도마다 상태 코드·오류 종류·시각을 `webhook_deliveries.attempts`에 남긴다.
-- 주소 검사(SSRF 방지): http·https만 받는다. 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다.
+- 주소 검사(SSRF 방지): http·https만 받는다. 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다. 주소 이름을 실제로 풀어 나온 IP가
+  공인 주소가 아니면(루프백·사설·링크로컬·예약, `127.0.0.1.nip.io`처럼 이름이 내부 IP를 가리키는 경우, 정수·16진수 IP 표기 포함) 막는다.
+  등록할 때와 보낼 때마다 검사한다.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import json
 import logging
 import os
 import re
+import socket
 import time
 import uuid
 from collections.abc import Callable
@@ -53,6 +56,18 @@ def verify_signature(body: bytes, header: str | None, secret: str) -> bool:
     return hmac.compare_digest(sign_payload(body, secret), header)
 
 
+# 외부로 내보내지 않는 칸(J-13): 사용자 식별자·질문 원문·답 발췌·대화 id·사용자별 확인 상태
+_PRIVATE_KEYS = ("user_id", "question", "answer_excerpt", "thread_id", "acked")
+
+
+def webhook_view(payload: dict) -> dict:
+    """웹훅으로 내보낼 모양. 알림과 하루 요약(`notices` 안의 알림 포함)에서 개인·질문 칸을 뺀다. 원본은 바꾸지 않는다."""
+    out = {k: v for k, v in payload.items() if k not in _PRIVATE_KEYS}
+    if isinstance(out.get("notices"), list):
+        out["notices"] = [webhook_view(n) if isinstance(n, dict) else n for n in out["notices"]]
+    return out
+
+
 def encode_body(payload: dict) -> bytes:
     """본문 bytes. 서명과 전송이 같은 bytes를 쓰도록 한 곳에서 만든다."""
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -85,12 +100,35 @@ def check_target_url(url: str, *, strict: bool) -> None:
     host = parts.hostname.lower().rstrip(".")
     if host in _BLOCKED_HOSTS or host.endswith((".internal", ".local", ".localhost")):
         raise ValueError("내부 주소는 쓸 수 없습니다")
+    for ip in _resolve(host):
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        if not ip.is_global:
+            raise ValueError("공인 주소가 아닌 IP는 쓸 수 없습니다")
+
+
+_NUMERIC_HOST = re.compile(r"^(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+)){0,3}$", re.I)
+
+
+def _resolve(host: str) -> list:
+    """호스트 -> IP 목록. IP 글자(점 4개 꼴, IPv6, 정수·16진수·8진수 줄임 표기)는 그대로 풀고, 이름은 DNS로 푼다. 풀지 못하면 ValueError."""
     try:
-        ip = ipaddress.ip_address(host)
+        return [ipaddress.ip_address(host)]
     except ValueError:
-        return
-    if not ip.is_global:
-        raise ValueError("공인 주소가 아닌 IP는 쓸 수 없습니다")
+        pass
+    if _NUMERIC_HOST.match(host):
+        try:
+            return [ipaddress.ip_address(socket.inet_aton(host))]
+        except OSError:
+            raise ValueError("주소를 해석할 수 없습니다") from None
+    try:
+        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise ValueError("주소 이름을 찾을 수 없습니다") from None
+    ips = list(dict.fromkeys(ipaddress.ip_address(i[4][0].split("%")[0]) for i in infos))
+    if not ips:
+        raise ValueError("주소 이름을 찾을 수 없습니다")
+    return ips
 
 
 def _env_number(name: str, default: float, cast: type) -> Any:

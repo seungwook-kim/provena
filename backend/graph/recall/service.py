@@ -18,7 +18,7 @@ from backend.graph.recall.digest import digest_mode
 from backend.graph.recall.feedback import adjust
 from backend.graph.recall.graph import build_recall_graph
 from backend.graph.recall.maintenance import find_candidates
-from backend.graph.recall.webhook import encode_body
+from backend.graph.recall.webhook import encode_body, webhook_view
 from backend.rag.ingest.schedule import event_id
 from backend.schemas.recall import ChangedArticle
 
@@ -145,7 +145,7 @@ class RecallService:
             rec = self.store.notice_get(nid)
             if rec is None or not user_visible(rec):
                 continue
-            out += self.sender.send(nid, encode_body(notice_json(rec)))
+            out += self.sender.send(nid, encode_body(webhook_view(notice_json(rec))))
         return out
 
     def review(self, notice_id: str, action: str) -> tuple[dict | None, list[str]]:

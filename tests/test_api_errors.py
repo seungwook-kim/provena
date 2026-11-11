@@ -165,3 +165,13 @@ def test_health_without_database_url_does_not_ping(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(main, "ping_database", lambda: pytest.fail("DB가 없으면 부르지 않는다"))
     assert TestClient(main.create_app()).get("/health").status_code == 200
+
+
+def test_openapi_422_schema_matches_the_error_envelope(monkeypatch):
+    """C-20: 명세의 422(`HTTPValidationError`)가 실제 응답(`detail` 문자열 + `error` 봉투)과 같다."""
+    with Env(monkeypatch) as env:
+        schemas = env.app.openapi()["components"]["schemas"]
+        props = schemas["HTTPValidationError"]["properties"]
+        assert props["detail"]["type"] == "string" and set(props["error"]["properties"]) == {"code", "message", "request_id", "details"}
+        r = env.client(env.alice).post("/chat", json={})
+        assert r.status_code == 422 and isinstance(r.json()["detail"], str) and set(r.json()["error"]) >= {"code", "message", "request_id"}

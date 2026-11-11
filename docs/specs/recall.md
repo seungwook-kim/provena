@@ -99,7 +99,7 @@ GET  /changes/{event_id}       한 건과 개정 전후 본문                  
 GET, PUT /changes/monitoring   변경 감시 켜기·멈추기 {status: active | paused}      조회 로그인, 변경 관리자·CSRF
 ```
 
-RecallNotice (알림 한 건, `GET /recalls` 응답과 웹훅 본문이 같다. 계약 모델(`backend/schemas/recall.py`)의 칸에 화면용 칸을 더한 모양이다):
+RecallNotice (알림 한 건, `GET /recalls` 응답이다. 웹훅 본문은 여기서 `user_id`·`question`·`answer_excerpt`·`thread_id`·`acked`를 뺀 모양이다. 계약 모델(`backend/schemas/recall.py`)의 칸에 화면용 칸을 더한 모양이다):
 
 ```
 {
@@ -141,12 +141,12 @@ MaintenanceCandidate (함께 볼 정책):
 
 ```
 POST {등록한 업무시스템 주소}/webhooks/recall
-본문: RecallNotice JSON 그대로
+본문: RecallNotice JSON에서 `user_id`·`question`·`answer_excerpt`·`thread_id`·`acked`를 뺀 것(개인·질문 원문을 밖으로 내보내지 않는다). 받는 쪽은 `answer_id`·`notice_id`로 식별한다
 헤더: X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>
 ```
 
 - secret은 `webhook_subscriptions.secret_ref`가 가리키는 환경변수(`RECALL_WEBHOOK_SECRET` 또는 `RECALL_WEBHOOK_SECRET_<이름>`)의 값이고 저장소에 적지 않는다. 주소는 http·https만 받고, 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다.
-- 하루 요약(`RECALL_DIGEST=daily`)이면 알림마다 보내지 않고 사용자별 요약 한 건(`{"type": "recall_digest", "digest_id", "day", "count", "high", "low", "notices": [...]}`)으로 묶어 같은 서명 규칙으로 보낸다.
+- 하루 요약(`RECALL_DIGEST=daily`)이면 알림마다 보내지 않고 사용자별 요약 한 건(`{"type": "recall_digest", "digest_id", "day", "count", "high", "low", "notices": [...]}`)으로 묶어 같은 서명 규칙으로 보내며, 요약과 `notices` 안 알림에서도 `user_id`·`question`·`answer_excerpt`·`thread_id`·`acked`를 뺀다.
 - 판 비교: 같은 페이지의 두 커밋을 제목 경로로 정렬해 본문을 비교한다. 리콜은 개정 전후 같은 섹션 원문이 필요하므로, 검색과 따로 섹션 단위 조회(`get_section(rule_seq, article, as_of)`)를 쓴다.
 - 연결 정책: 핸드북 페이지 사이 링크로 만든 참조 그래프(`rule_links`: from_rule, to_rule, kind)를 쓴다. 비공개 주소로 가는 링크는 뺀다.
 - 증분 수집(가산 자동화): 마지막 커밋 이후 새 커밋만 받고, 중복 실행을 막고, 정해진 시각 실행 기록과 실패 알림을 남긴다. 바뀐 섹션은 `changed_articles`에 쌓이고, `python -m backend.graph.recall.process_pending`이나 관리자 `POST /recalls/process-pending`이 같은 처리 경로로 리콜에 넘긴다(`event_key`는 수집의 `event_id`와 같다).

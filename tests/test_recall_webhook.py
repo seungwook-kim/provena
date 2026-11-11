@@ -156,3 +156,50 @@ def test_env_defaults(monkeypatch):
     monkeypatch.setenv("RECALL_WEBHOOK_BACKOFF_S", "x")
     s = WebhookSender(InMemoryRecallStore(), post=Post(200), local_demo=False)
     assert s.max_tries == 5 and s.backoff == 1.0
+
+
+@pytest.fixture
+def fake_dns(monkeypatch):
+    """이름 -> IP 표. 실제 DNS 없이 `127.0.0.1.nip.io` 같은 이름이 내부 IP로 풀리는 상황을 만든다."""
+    import ipaddress
+
+    from backend.graph.recall import webhook as W
+
+    table = {"169.254.169.254.nip.io": "169.254.169.254", "127.0.0.1.nip.io": "127.0.0.1", "rebind.example.com": "10.1.2.3",
+             "v6.example.com": "::ffff:127.0.0.1", "hooks.example.com": "93.184.216.34"}
+    real = W._resolve
+
+    def fake(host):
+        if host in table:
+            return [ipaddress.ip_address(table[host])]
+        return real(host)
+
+    monkeypatch.setattr(W, "_resolve", fake)
+
+
+@pytest.mark.parametrize("url", ["https://169.254.169.254.nip.io", "https://127.0.0.1.nip.io/x", "https://2130706433/", "https://0x7f.1/",
+                                 "https://0177.0.0.1/", "https://rebind.example.com/x", "https://v6.example.com/x", "https://[::1]/x",
+                                 "https://[::ffff:10.0.0.1]/x", "https://167772161/x"])
+def test_internal_targets_blocked_after_resolving(url, fake_dns):
+    """J-12: 이름이 내부 IP로 풀리거나 정수·16진수·8진수 표기인 주소도 막는다."""
+    with pytest.raises(ValueError):
+        check_target_url(url, strict=True)
+
+
+def test_unresolvable_host_is_blocked_in_strict_mode(fake_dns):
+    with pytest.raises(ValueError):
+        check_target_url("https://no-such-host.invalid/x", strict=True)
+    check_target_url("https://hooks.example.com/x", strict=True)
+
+
+def test_send_time_check_blocks_a_host_that_now_resolves_inside(secret, monkeypatch, fake_dns):
+    """J-12: 등록 때는 공인이던 이름이 보낼 때 내부로 풀리면(DNS 바꿔치기) 보내지 않고 blocked_url로 남긴다."""
+    from backend.graph.recall import webhook as W
+
+    st, post = store_with(url="https://hooks.example.com/x"), Post(200)
+    s = sender(st, post)
+    assert s.send("rn-1", BODY)[0]["status"] == "success"
+    st2, post2 = store_with(url="https://hooks.example.com/x"), Post(200)
+    monkeypatch.setattr(W, "_resolve", lambda host: [__import__("ipaddress").ip_address("127.0.0.1")])
+    rec = sender(st2, post2).send("rn-1", BODY)[0]
+    assert rec["status"] == "failed" and rec["last_error"].startswith("blocked_url") and post2.calls == []

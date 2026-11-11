@@ -13,6 +13,7 @@
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
 | 2026-11-11 | 김승욱 (Claude Code) | 강사 코멘트 ③ 대응. 승인 건에 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`)을 남기고 `GET /approvals`와 새 `GET /approvals/{approval_id}`(관리자)로 노출. 저장소에 `record_resume`, Postgres 칸은 `db/112_approval_resume_log.sql`(운영 적용 필요, 적용 전에도 승인은 동작하고 기록만 빠진다). 동시 결정 시험은 재개 1회·무시 1회를 이 값으로 단정. 팀 실패 알림 재시작 시험을 더하다가 질문 그래프 아래 하위 그래프에서 결정 뒤 단계 오류 후 같은 결정으로 이어 돌리면 앞 승인 건의 재개 값이 쟁점표 승인에 들어가 쟁점표가 사람 없이 반려되는 문제를 찾아 `departments/review.py`의 두 interrupt가 다른 승인 건 번호의 값을 받지 않게 고침 | - |
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 C-18: 승인 대기 목록에서 깨진 행(target_id NULL) 하나가 전체를 500으로 만들지 않게 그 행만 건너뛰고 로그를 남긴다. C-23은 명세(EC-04)와 기존 시험이 0개를 409로 정해 두어 결정이 필요하다 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 결정표 변환 입력의 권한표 칸에 입력 정화(`prompt_cells`), 초안에 출력 검사(`draft_leaks`, 걸리면 초안 실패) 추가(사전 등록 62.26). 원문 대조와 승인 화면은 원본 칸을 그대로 쓴다 | - |
 
 ## 문제 기록 (최신이 위)
