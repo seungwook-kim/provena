@@ -11,6 +11,8 @@
 - 주소 검사(SSRF 방지): http·https만 받는다. 로컬 데모가 아니면 https만, 내부망·메타데이터 주소는 막는다. 주소 이름을 실제로 풀어 나온 IP가
   공인 주소가 아니면(루프백·사설·링크로컬·예약, `127.0.0.1.nip.io`처럼 이름이 내부 IP를 가리키는 경우, 정수·16진수 IP 표기 포함) 막는다.
   등록할 때와 보낼 때마다 검사한다.
+- DNS 재바인딩 방지(J-12): 보낼 때는 검사에서 나온 공인 IP 하나로 직접 연결한다(주소의 host를 그 IP로 바꾸고 `Host` 헤더·TLS SNI는 원래 이름).
+  전송 라이브러리가 이름을 다시 풀지 않으므로 검사와 연결의 IP가 어긋날 수 없다.
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 log = logging.getLogger(__name__)
 
@@ -86,8 +88,9 @@ def check_secret_ref(secret_ref: str) -> None:
         raise ValueError("secret_ref는 RECALL_WEBHOOK_SECRET 또는 RECALL_WEBHOOK_SECRET_<대문자·숫자·밑줄> 이어야 합니다")
 
 
-def check_target_url(url: str, *, strict: bool) -> None:
-    """구독 주소 검사. 위반하면 ValueError. strict(배포)면 https만, 내부망·메타데이터 주소를 막는다."""
+def check_target_url(url: str, *, strict: bool):
+    """구독 주소 검사. 위반하면 ValueError. strict(배포)면 https만, 내부망·메타데이터 주소를 막는다.
+    strict이고 통과하면 연결에 쓸 공인 IP 하나를 돌려준다(없으면 None). 보낼 때 이 IP로 직접 연결한다(J-12)."""
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise ValueError("url은 http 또는 https 주소여야 합니다")
@@ -100,11 +103,29 @@ def check_target_url(url: str, *, strict: bool) -> None:
     host = parts.hostname.lower().rstrip(".")
     if host in _BLOCKED_HOSTS or host.endswith((".internal", ".local", ".localhost")):
         raise ValueError("내부 주소는 쓸 수 없습니다")
+    pinned = None
     for ip in _resolve(host):
         if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
             ip = ip.ipv4_mapped
         if not ip.is_global:
             raise ValueError("공인 주소가 아닌 IP는 쓸 수 없습니다")
+        pinned = pinned or ip
+    return pinned
+
+
+def pin_request(url: str, ip) -> tuple[str, dict, dict]:
+    """검사를 통과한 IP로 직접 연결하도록 (바뀐 url, 추가 헤더, httpx extensions)를 만든다. IPv6는 대괄호로 감싼다."""
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    ip_text = f"[{ip}]" if ip.version == 6 else str(ip)
+    netloc = ip_text + (f":{parts.port}" if parts.port else "")
+    try:
+        ipaddress.ip_address(host)
+        literal = True
+    except ValueError:
+        literal = False
+    ext = {} if literal or parts.scheme != "https" else {"sni_hostname": host}
+    return urlunsplit(parts._replace(netloc=netloc)), {"Host": parts.netloc}, ext
 
 
 _NUMERIC_HOST = re.compile(r"^(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+)){0,3}$", re.I)
@@ -146,11 +167,12 @@ def _local_demo() -> bool:
     return is_local_demo()
 
 
-def _http_post(timeout: float) -> Callable[[str, bytes, dict], int]:
-    def post(url: str, content: bytes, headers: dict) -> int:
+def _http_post(timeout: float) -> Callable[..., int]:
+    def post(url: str, content: bytes, headers: dict, extensions: dict | None = None) -> int:
         import httpx
 
-        return httpx.post(url, content=content, headers=headers, timeout=timeout, follow_redirects=False).status_code
+        return httpx.post(url, content=content, headers=headers, timeout=timeout, follow_redirects=False,
+                          extensions=extensions or None).status_code
 
     return post
 
@@ -163,6 +185,7 @@ class WebhookSender:
         self.store = store
         self.max_tries = max(1, int(max_tries if max_tries is not None else _env_number(MAX_TRIES_ENV, DEFAULT_MAX_TRIES, int)))
         self.backoff = backoff if backoff is not None else _env_number(BACKOFF_ENV, DEFAULT_BACKOFF, float)
+        self._pins = post is None   # 기본 전송만 IP 고정(J-12). 시험에서 넣은 post는 (url, bytes, headers) 그대로 받는다
         self.post = post or _http_post(_env_number(TIMEOUT_ENV, DEFAULT_TIMEOUT, float))
         self.sleep = sleep
         self.local_demo = _local_demo() if local_demo is None else local_demo
@@ -186,13 +209,17 @@ class WebhookSender:
             log.error("웹훅 비밀값이 비어 있어 보내지 않았습니다 sub=%s", sub["sub_id"])
             return self._finish(rec, "failed", None, "secret_missing")
         try:
-            check_target_url(sub["url"], strict=not self.local_demo)
+            ip = check_target_url(sub["url"], strict=not self.local_demo)
         except ValueError as e:
             return self._finish(rec, "failed", None, f"blocked_url: {e}"[:200])
+        url, extra = sub["url"], ()
+        if ip is not None and self._pins:
+            url, add, ext = pin_request(sub["url"], ip)
+            headers, extra = {**headers, **add}, (ext,)
         for i in range(self.max_tries):
             code, error = None, None
             try:
-                code = int(self.post(sub["url"], body, headers))
+                code = int(self.post(url, body, headers, *extra))
                 ok = 200 <= code < 300
                 if not ok:
                     error = f"http_{code}"

@@ -662,10 +662,18 @@
                 "type": "string"
               },
               "details": {
-                "items": {
-                  "$ref": "#/components/schemas/ValidationError"
-                },
-                "type": "array"
+                "anyOf": [
+                  {
+                    "items": {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "description": "칸별 검사 결과. 예: 프로필 422는 `{\"fields\": {칸: 이유}}`",
+                    "type": "object"
+                  }
+                ]
               },
               "message": {
                 "type": "string"

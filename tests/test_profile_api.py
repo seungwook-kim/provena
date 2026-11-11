@@ -356,3 +356,25 @@ def test_me_callback_bad_value_is_503(monkeypatch):
     login = c.post("/auth/login", json={"login_id": "solo", "password": password}, headers=csrf(c))
     assert login.json() == {"user_id": str(user.user_id), "role": "user"}   # 로그인 응답은 그대로
     assert c.get("/me").status_code == 503
+
+
+def test_profile_422_body_matches_the_openapi_schema(env):
+    """C-20: 프로필 422의 `error.details`(객체)가 명세 `HTTPValidationError`가 허용한 모양이어야 한다."""
+    import jsonschema
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    install_error_handlers(app)
+
+    @app.post("/x")
+    def x(n: int) -> dict:
+        return {}
+
+    schema = app.openapi()
+    spec = {**schema["components"]["schemas"]["HTTPValidationError"], "components": schema["components"]}
+    r = put(env["client"]("A"), {})
+    assert r.status_code == 422 and isinstance(r.json()["error"]["details"], dict)
+    jsonschema.validate(r.json(), spec)
+    arr = {"detail": "m", "error": {"code": "validation_error", "message": "m", "request_id": "r",
+                                    "details": [{"loc": ["body"], "msg": "m", "type": "t"}]}}
+    jsonschema.validate(arr, spec)

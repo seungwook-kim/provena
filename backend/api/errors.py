@@ -97,7 +97,9 @@ def _envelope_openapi(app: FastAPI) -> None:
                     "detail": {"type": "string", "title": "Detail"},
                     "error": {"type": "object", "required": ["code", "message", "request_id"], "properties": {
                         "code": {"type": "string", "const": "validation_error"}, "message": {"type": "string"}, "request_id": {"type": "string"},
-                        "details": {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}}}},
+                        "details": {"anyOf": [
+                            {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}},
+                            {"type": "object", "description": "칸별 검사 결과. 예: 프로필 422는 `{\"fields\": {칸: 이유}}`"}]}}},
                 },
             }
         if "ValidationError" in schemas:

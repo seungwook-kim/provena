@@ -203,3 +203,85 @@ def test_send_time_check_blocks_a_host_that_now_resolves_inside(secret, monkeypa
     monkeypatch.setattr(W, "_resolve", lambda host: [__import__("ipaddress").ip_address("127.0.0.1")])
     rec = sender(st2, post2).send("rn-1", BODY)[0]
     assert rec["status"] == "failed" and rec["last_error"].startswith("blocked_url") and post2.calls == []
+
+
+# ---- J-12: 검사한 IP로 직접 연결(DNS 재바인딩 방지) -------------------------------
+@pytest.fixture
+def rebinding_dns(monkeypatch):
+    """첫 호출은 공인 IP, 이후 호출은 127.0.0.1. 호출 횟수를 센다."""
+    import ipaddress
+
+    from backend.graph.recall import webhook as W
+
+    calls = []
+
+    def fake(host):
+        calls.append(host)
+        return [ipaddress.ip_address("93.184.216.34" if len(calls) == 1 else "127.0.0.1")]
+
+    monkeypatch.setattr(W, "_resolve", fake)
+    return calls
+
+
+@pytest.fixture
+def httpx_seen(monkeypatch):
+    import httpx
+
+    seen = []
+
+    def fake_post(url, **kw):
+        seen.append({"url": url, **kw})
+        return httpx.Response(200)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    return seen
+
+
+def _real_sender(st):
+    return WebhookSender(st, sleep=lambda s: None, max_tries=1, backoff=0.0, local_demo=False)
+
+
+def test_request_goes_to_the_checked_ip_even_if_dns_changes(secret, rebinding_dns, httpx_seen):
+    """J-12: 검사 뒤 DNS가 127.0.0.1로 바뀌어도 실제 요청은 검사한 공인 IP로 간다."""
+    rec = _real_sender(store_with(url="https://hooks.example.com:8443/recall?x=1")).send("rn-1", BODY)[0]
+    assert rec["status"] == "success"
+    assert httpx_seen[0]["url"] == "https://93.184.216.34:8443/recall?x=1"
+    assert len(rebinding_dns) == 1 and httpx_seen[0]["follow_redirects"] is False
+
+
+def test_host_header_keeps_original_name_and_port(secret, rebinding_dns, httpx_seen):
+    _real_sender(store_with(url="https://hooks.example.com:8443/recall")).send("rn-1", BODY)
+    assert httpx_seen[0]["headers"]["Host"] == "hooks.example.com:8443"
+
+
+def test_https_sends_original_name_as_sni(secret, rebinding_dns, httpx_seen):
+    _real_sender(store_with(url="https://hooks.example.com/recall")).send("rn-1", BODY)
+    assert httpx_seen[0]["extensions"] == {"sni_hostname": "hooks.example.com"}
+
+
+def test_ipv6_is_bracketed(secret, monkeypatch, httpx_seen):
+    import ipaddress
+
+    from backend.graph.recall import webhook as W
+
+    monkeypatch.setattr(W, "_resolve", lambda host: [ipaddress.ip_address("2606:2800:220:1:248:1893:25c8:1946")])
+    _real_sender(store_with(url="https://hooks.example.com/recall")).send("rn-1", BODY)
+    assert httpx_seen[0]["url"] == "https://[2606:2800:220:1:248:1893:25c8:1946]/recall"
+
+
+def test_pinned_request_is_really_sent_by_httpx_to_the_ip(secret, rebinding_dns):
+    """가짜 transport로 httpx를 끝까지 태워 Host 헤더와 sni_hostname 확장이 요청에 실리는지 본다."""
+    import httpx
+
+    got = {}
+
+    def handler(request):
+        got["url"], got["host"], got["sni"] = str(request.url), request.headers["host"], request.extensions.get("sni_hostname")
+        return httpx.Response(200)
+
+    from backend.graph.recall.webhook import pin_request
+
+    url, add, ext = pin_request("https://hooks.example.com/recall", __import__("ipaddress").ip_address("93.184.216.34"))
+    with httpx.Client(transport=httpx.MockTransport(handler)) as c:
+        assert c.post(url, content=BODY, headers=add, extensions=ext).status_code == 200
+    assert got == {"url": "https://93.184.216.34/recall", "host": "hooks.example.com", "sni": "hooks.example.com"}
