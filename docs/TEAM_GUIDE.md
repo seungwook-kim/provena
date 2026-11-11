@@ -117,7 +117,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다. 2026-11-11 `ls` �
 ├─ EVAL_REPORT.md            # 개선 전후 지표 (제출물)
 ├─ MYINFO_SPEC.md            # 내 정보 화면 시안 (정식 spec은 docs/specs/initial-registration.md). 루트 파일 규칙에서 벗어남, 처리는 팀장 판단
 │
-├─ docs/   (TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, PRD.md, SDD.md, TEAM_GUIDE.md, why_langgraph.md, decisions.md, worklog.md, embedding_measurement.md, api/, db/, specs/, deliverables/)
+├─ docs/   (TOPIC.md, SCAFFOLD.md, ARCHITECTURE.md, GATES.md, SPEC.md, PRD.md, SDD.md, TEAM_GUIDE.md, why_langgraph.md, decisions.md, worklog.md, embedding_measurement.md, api/, db/, specs/, deliverables/, alternatives/)
 │
 ├─ backend/
 │  ├─ backend.md

@@ -97,20 +97,29 @@ SERVICE_ENV: dict[str, str] = {
     "LLM_HEDGE_S": "3.5",               # --llm-hedge 3.5
     # 측정 인자에는 없다. 질문 그래프 밖의 긴 호출은 위 상한과 hedge를 걸지 않는다: 결정표 변환 초안(convert.py TASK_DRAFT),
     # 합동 검토 감독과 팀 에이전트(teams.py). 질문 그래프 단계(classify, rewrite, judge, answer, answer_fast, grounding, decompose 등)는 넣지 않는다
-    "LLM_DEADLINE_SKIP_TASKS": "decision_draft,supervisor,team_*",
+    "LLM_DEADLINE_SKIP_TASKS": "decision_draft,supervisor,team_*,single",   # single: 평가용 단일 검토자(admin 전용 /admin/eval/review). 팀 에이전트와 같은 조건으로 잰다(사전 등록 62.41)
     "LLM_MAX_RETRIES": "2",             # --llm-retries 2
     "GRAPH_ANSWER_WAIT_S": "4.0",       # --answer-wait 4.0 (사전 등록 62.18, 62.22: 5.5에서 줄임)
     "GRAPH_ANSWER_BUDGET_S": "6.5",     # --answer-budget 6.5 (8.0에서 줄임)
+    # 사전 등록 62.40 속도 묶음 중 답·인용·거절이 그대로인 셋(사용자 결정 11/11 14 A). 측정 실행기 인자에는 없다(서비스 경로만)
+    "ANSWER_STORE_REUSE_CONN": "1",     # 62.40: 답 저장소가 프로세스 안에서 연결을 다시 씀(저장 문장·트랜잭션 그대로)
+    "GRAPH_REVISE_AHEAD": "1",          # 62.40: 근거 확인 실패 뒤 답 다시 쓰기와 문장 빼기 재확인을 동시에 시작(위 GRAPH_SPECULATE_GROUND가 켜져 있어야 한다)
+    "LLM_DEADLINE_BY_TASK": "judge=12",  # 62.40: 판정 단계만 시도별 상한 12초(다른 단계는 LLM_DEADLINE_S 그대로)
+    # 사전 등록 62.16의 그래프 밖 왕복 줄이기 둘(사용자 결정 11/11 19). 저장 내용은 같다. 측정 실행기 인자에는 없다(서비스 경로만)
+    "CHAT_FINAL_FROM_STREAM": "1",         # 62.16: /chat이 끝난 뒤 체크포인트를 다시 읽지 않고 스트림 값을 씀
+    "ANSWER_SAVE_ONE_CONN": "1",           # 62.16: 답 저장과 근거 기록 저장을 연결 하나로
+    # 사전 등록 62.14의 검색 hedge(사용자 결정 11/11 26). 운영 Cloud Run 리비전에 이미 같은 값으로 켜져 있어 서비스 값으로 올려도 운영 동작은 그대로다. 측정 실행기 인자에는 없다(서비스 경로만)
+    "SEARCH_HEDGE": "1",                   # 62.14: 첫 검색(임베딩 + 벡터 질의)이 SEARCH_HEDGE_S초 안에 안 오면 같은 검색을 하나 더 보내 먼저 온 결과를 씀
+    "SEARCH_HEDGE_S": "1.5",               # 운영 값(Cloud Run 리비전 환경 변수, 2026-11-11 확인)
 }
 
 
-# 응답 시간 p95 단축 후보(사전 등록 62.14, 62.16, 62.22). 운영 측정 전이라 서비스 값(`SERVICE_ENV`)에 넣지 않는다. 켜려면 환경 변수로 직접 주고(Cloud Run 리비전 환경 변수),
+# 응답 시간 p95 단축 후보. 운영 측정 전이라 서비스 값(`SERVICE_ENV`)에 넣지 않는다(62.16의 두 스위치와 62.14의 검색 hedge는 서비스 값으로 올렸다). 켜려면 환경 변수로 직접 주고(Cloud Run 리비전 환경 변수),
 # 측정 실행기(`evals/agent/exp_multi_v2.py`)에서는 같은 이름의 인자로 켠다. 꺼진 상태는 지금과 같다(tests/test_speed_p95_code.py).
 CANDIDATE_ENV: dict[str, str] = {
-    "SEARCH_HEDGE": "1",                      # C 62.14 --search-hedge 1.5: 첫 검색(임베딩 + 벡터 질의)이 SEARCH_HEDGE_S초 안에 안 오면 같은 검색을 하나 더
-    "SEARCH_HEDGE_S": "1.5",
-    "CHAT_FINAL_FROM_STREAM": "1",            # E 62.16: /chat이 끝난 뒤 체크포인트를 다시 읽지 않고 스트림 값을 씀(인자 없음, 서비스 경로만)
-    "ANSWER_SAVE_ONE_CONN": "1",              # E 62.16: 답 저장과 근거 기록 저장을 연결 하나로(인자 없음, 서비스 경로만)
+    # 사전 등록 62.40: 답·인용·거절이 그대로인 속도 셋(ANSWER_STORE_REUSE_CONN, GRAPH_REVISE_AHEAD, LLM_DEADLINE_BY_TASK)은 서비스 값(SERVICE_ENV)으로 옮겼다.
+    # 추론 끔은 정확률 확인이 필요해 후보로 남기고 기본 꺼짐으로 둔다
+    "GRAPH_JUDGE_RETRY_FAST": "1",            # 62.40: 나뉜 질문의 재검색 뒤 판정만 추론 끔. 측정은 기본 꺼짐으로 한다(정확률 하락이면 뺀다)
 }
 
 

@@ -8,6 +8,8 @@
 - `status`: `idle` | `running` | `pending_approval`. `last`: 마지막 답 `{kind, answer, answer_id, as_of}`.
 - 대화 내용 전체는 여기에 두지 않는다(체크포인트에 있다). 상세 조회는 마지막 답 하나만 준다.
 - Postgres 구현은 호출마다 연결하고 준비된 문장을 끈다(`prepare_threshold=None`). Supabase 풀러(transaction 모드)가 준비된 문장을 쓰지 못한다.
+  `ANSWER_STORE_REUSE_CONN=1`이면 답 저장소와 같은 방식으로 연결을 프로세스 안에서 다시 쓰고(`graph/answer_store.py` `_ConnectionReuse`), 서버가 끊은 연결이면
+  한 번 더 부른다(문장 셋 모두 같은 값을 두 번 읽거나 써도 같다: 조회 둘과 UPSERT). 꺼져 있으면 지금처럼 호출마다 연결한다(사전 등록 62.40).
 """
 from __future__ import annotations
 
@@ -81,10 +83,12 @@ class InMemoryThreadStore:
 def _default_connect(dsn: str) -> Callable[[], Any]:
     import psycopg
 
+    from backend.graph.answer_store import reuse_if_enabled
+
     def connect() -> Any:
         return psycopg.connect(dsn, autocommit=True, connect_timeout=5, prepare_threshold=None)
 
-    return connect
+    return reuse_if_enabled(connect)   # 62.40: 같은 스위치(ANSWER_STORE_REUSE_CONN)로 켜진다
 
 
 def _iso(value: Any) -> Any:
@@ -109,9 +113,14 @@ class PostgresThreadStore:
     def _fetch(self, sql: str, params: tuple) -> list[dict]:
         from psycopg.rows import dict_row
 
-        with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:
-            cur.execute(sql, params)
-            return cur.fetchall() if cur.description else []
+        from backend.graph.answer_store import run_again
+
+        def run() -> list[dict]:
+            with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(sql, params)
+                return cur.fetchall() if cur.description else []
+
+        return run_again(self._connect, run)   # 다시 쓰는 연결이 끊겨 있었으면 새 연결로 한 번 더
 
     def ensure_schema(self) -> None:
         """로컬 데모에서만 부른다(이미 만든 볼륨에도 표를 만든다). 운영에서는 `db/db.md` 절차대로 SQL을 직접 실행한다."""

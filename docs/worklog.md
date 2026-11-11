@@ -2,6 +2,35 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-11 D9 반영: 실패 유형 표, 비용 배수, 대체재 근거, 구성 근거 표
+
+오늘 한 일
+- 실패 유형 도구 `evals/agent/failure_types.py`와 시험 `tests/test_failure_types.py`를 더했다. 저장된 측정 결과만 읽고(모델 호출 없음) 3회 중 2회 이상 틀린 문항을 주 유형 하나에 넣어 합이 실패 문항 수와 같게 센다. 11/11 09시 배포판(provena-api-00037-2jt)의 70문항 결과는 `evals/results/failure_types_provena-api-00037-2jt/`(실패 문항 8: 검색 실패 4, 정답 밖 인용 3, 근거 선택 1, 라우팅 오분류 0), 합동 검토 10문항과 새 인용 5문항은 `_extra/`에 따로 두었다.
+- `EVAL_REPORT.md`에 5-5절(실패 유형 표, 개선 후 칸은 측정 후 기입), 4장의 정책 질문 단일 대 멀티 비용 배수(0.96배)와 합동 검토 비용 배수 자리, 8장의 모델과 구성을 고른 이유 표(LLM 행의 선택 이유는 아래 Haiku 5.5 대 Sonnet 5.5 비교로 채움), 10장의 `docs/alternatives/` 연결을 더했다.
+- 답 작성 모델 비교 근거를 `evals/results/model_compare_haiku_sonnet_2026-11-11/`에 두었다(Haiku 5.5 대 Sonnet 5.5, 평가셋 v2 관련 25건, 로컬 1회, 전체 모델 교체). `EVAL_REPORT.md` 8장 LLM 행의 선택 이유를 채웠고 `docs/PRD.md`와 `docs/SDD.md`의 gpt-6-luna 비교 계획 문장을 "실행하지 않음"으로 고쳤다.
+- 사전 등록 62.38에 판정 기준(검색 실패 문항 4개 → 3개 이하)과 유형 규칙, 62.39에 대상 유형(라우팅 오분류)을 적었다. 결과 칸은 비워 두었다.
+- `docs/alternatives/`(README, 질문, 챗봇 A 2026-11-11 답 전문과 11/10 요약, 챗봇 B 답 전문)를 만들었다. 10장 챗봇 A 표는 2026-11-11 전문 기준으로 다시 판정했다(가안, 팀 재확인 박진형 전). 이어서 대체재 비교에 6~10번 질문 5개를 더했다(사전 등록 62.42, 챗봇 A와 B 전문을 `docs/alternatives/`에 두고 10장에 챗봇 판정을 적었으며 우리 서비스 값은 최종 측정 뒤 기입). 챗봇 B 1~5번도 전문 기준으로 다시 판정했다. `docs/PRD.md`의 챗봇 3종 문장을 2종으로 맞췄다. `docs/GATES.md` G7 행과 `docs/PRD.md` 353행의 어긋난 문장을 고쳤다.
+막힌 것
+- 최종 측정 전이라 개선 후 표, 달라진 문항 목록, 합동 검토 비용 배수는 비어 있다. 챗봇 A 판정의 팀 재확인(박진형)은 아직 받지 않았다.
+다음
+- 최종 운영 측정 뒤 `failure_types`로 개선 후 표를 만들어 5-5절을 채우고, 62.38 판정과 달라진 문항 목록을 적는다.
+
+## 2026-11-11 합동 검토 팀 검색 확대와 평가 전용 단일 모드 (W3, 사전 등록 62.41)
+
+오늘 한 일
+- 팀 검색을 팀마다 하위 검색어 2개, 팀당 10개로 바꿨다(`teams.py` `search_subs`, `review.py` `SEARCH_K=10`). 단일 기준선 코드는 `exp_review_v1`에서 `backend/graph/departments/single_review.py`로 옮기고 `same`(팀과 같은 검색)과 `undivided`(나누지 않은 한 번 검색, k=40)를 두었다.
+- 평가 전용 `POST /admin/eval/review`(`backend/api/eval_review.py`)를 더했다. `EVAL_REVIEW_SINGLE=1`이 아니면 404, 관리자와 CSRF 필수, 하루 호출 상한, WARNING 로그 한 줄, Langfuse 추적, 저장 없음. 팀 경로는 이 엔드포인트로 부르지 않는다.
+- 운영 공정 비교 도구 `evals/agent/review_deploy.py`(팀 `/chat` 대 단일 same, undivided, 10문항 3회, 누락률과 비용 배수)를 만들기만 했다. 시험은 가짜 서버(`tests/test_review_deploy.py`)이고 운영에는 부르지 않았다.
+- 속도 스위치 3개(`ANSWER_STORE_REUSE_CONN`, `GRAPH_REVISE_AHEAD`, `LLM_DEADLINE_BY_TASK=judge=12`)를 서비스 값으로 올렸다(`service_profile.py`). `GRAPH_JUDGE_RETRY_FAST`는 후보로 남긴다.
+- `CHAT_FINAL_FROM_STREAM`의 결정표 경로와 재개 경로 시험을 더했다(`tests/test_chat_final_from_stream_paths.py`).
+- 사전 등록 62.41 행과 순서표 줄을 더했다(결과 칸은 비어 있음).
+
+막힌 것
+- 62.41 판정 범위는 확정했다(주 판정 = 방식별 30회 전체, 팀이 합동 검토 경로에 닿지 않은 회차는 찾은 이슈 0건. 닿은 쌍만 본 값은 보조). 운영 측정 전에는 `EVAL_REVIEW_SINGLE=1`을 측정 리비전에만 켜고 끝나면 지운다.
+
+다음 할 일
+- 배포 뒤 측정 리비전에서 `review_deploy.py` 실행, 결과를 62.41 행에 채움.
+
 ## 2026-11-10~11-11 김승욱 (PR #119 머지, 00035 배포, 묶음 측정, DB 1·2단계와 옛 표 삭제)
 
 오늘 한 일

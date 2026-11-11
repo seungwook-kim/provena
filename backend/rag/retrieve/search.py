@@ -5,6 +5,8 @@
 기본(확정 조합, 2026-11-05): voyage-4 · dense_en(영어 문장 벡터) · 리랭커 없음 · k=5 · 링크 확장 L1x2.
 
 하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
+k가 기본 자리 수(DEFAULT_K)보다 크면(그래프의 나뉜 질문 첫 검색 SPLIT_K) 하위 질문과 링크 확장으로 k-FULL_TAIL자리를 먼저 만들고 끝 FULL_TAIL자리를
+전체 질문의 후보 목록에서 아직 없는 앞 청크로 채운다(사전 등록 62.38). k가 기본 자리 수 이하면 전체 질문 목록을 만들지 않는다(확정 조합 측정과 같다).
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
 금액 구간 조회(SEARCH_RANGE_N=n, 기본 3(데모 모드는 0: 녹화가 조회 전 것), 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
@@ -458,6 +460,10 @@ def rrf(rankings: list[list[Key]], k: int = RRF_K) -> list[tuple[Key, float]]:
 
 
 MAX_SUB_QUERIES = 3       # 측정 분해 규칙: 서로 다른 사실이 둘 이상일 때만, 최대 3개(exp_decompose_v1.py)
+# 나뉜 질문을 기본 자리 수(DEFAULT_K)보다 넓혀 찾을 때 전체 질문의 후보 목록이 받는 끝자리 수(사전 등록 62.38).
+# 전체 질문 목록을 번갈아 합치기의 첫 목록으로 두면 k=8에서 하위 질문마다 2자리만 남아, 하위 질문 목록 3~4위의 정답 청크가 빠졌다
+# (데모 질문 "5만 달러 승인"의 승인 권한표 행 둘). 끝 1자리만 주면 그 청크가 남고, 첫 검색 문맥의 정답 수는 첫 목록으로 둘 때와 같았다(0원 재현, 분해 표본 8개)
+FULL_TAIL = 1
 MAX_QUERY_CHARS = 1000    # MCP 도구 입력 한도와 같다(extras/mcp_skill/mcp_server/server.py MAX_QUERY)
 
 
@@ -472,6 +478,18 @@ def roundrobin(lists: list[list[Key]], k: int) -> list[Key]:
                 if len(out) == k:
                     break
         r += 1
+    return out
+
+
+def fill_tail(top: list[Key], lists: list[list[Key]], k: int) -> list[Key]:
+    """`top` 뒤를 k개가 될 때까지 채운다. 목록을 앞에서부터 차례로 쓰고(앞 목록을 다 본 뒤 다음 목록), 이미 든 것은 건너뛴다."""
+    out = list(top)
+    for x in lists:
+        for key in x:
+            if len(out) >= k:
+                return out
+            if key not in out:
+                out.append(key)
     return out
 
 
@@ -755,8 +773,14 @@ class Searcher:
         cfg = self.cfg
         tr = SearchTrace(cfg.embed_model, cfg.rerank_model, cfg.mode)
         t0 = time.perf_counter()
-        texts = [q.query, *(q.sub_queries or [])]               # 0 = 전체 질문, 1.. = 하위 질문
-        tr.n_sub = len(texts) - 1
+        subs = list(q.sub_queries or [])
+        # 전체 질문이 하위 질문과 같은 문장이면(합동 검토 팀 검색: 요청+보조어, 사전 등록 62.41) 그 문장은 이미 하위 질문이다. 한 번만 번역·임베딩·질의하고
+        # 전체 질문 목록을 따로 만들지 않는다(원 질문 끝자리 없음). 서비스 질문 그래프의 분해는 원 질문과 다른 문장이라 이 경로를 타지 않는다
+        full_is_sub = q.query in subs
+        if full_is_sub:
+            subs = [s for s in subs if s != q.query]
+        texts = [q.query, *subs]                                # 0 = 전체 질문, 1.. = 하위 질문(full_is_sub면 0이 하위 질문도 겸한다)
+        tr.n_sub = len(q.sub_queries or [])
 
         mode = cfg.mode
         kind = {"hybrid_ko_kw": "keywords", "bm25_kw": "keywords", "dense_en": "sentence"}.get(mode)
@@ -775,8 +799,10 @@ class Searcher:
         n = max(q.k, cfg.rerank_top if self.reranker else 0)
 
         merge = sub_merge_enabled() and len(texts) > 1
-        # 나뉘면 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣는다
-        idx = range(len(texts)) if merge else range(1, len(texts)) if len(texts) > 1 else range(1)
+        # 나뉜 질문을 기본 자리 수보다 넓혀 찾으면(q.k > DEFAULT_K) 전체 질문(0번)의 후보 목록도 만들어 끝 FULL_TAIL자리를 준다(사전 등록 62.38).
+        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다
+        tail = FULL_TAIL if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
+        idx = range(len(texts)) if merge or tail or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
 
@@ -834,9 +860,16 @@ class Searcher:
                 for key, s in m.items():
                     best[key] = max(s, best.get(key, float("-inf")))
             top = merge_by_score(lists, best, q.k)
+        elif tail:
+            # lists[0]은 전체 질문, lists[1:]은 하위 질문이다. 하위 질문만 번갈아 합친 k-tail자리에 링크 확장까지 한 뒤(전체 질문 목록이 없는 검색의 k-tail 결과와 같다),
+            # 끝자리를 전체 질문 목록의 아직 없는 앞 청크로 채운다. 전체 질문 목록에 새 청크가 없으면 하위 질문 목록의 다음 청크가 든다
+            inner = q.model_copy(update={"k": q.k - tail})
+            head = self._link_expand(roundrobin(lists[1:], inner.k), rows, None if qvecs is None else qvecs[0], inner, tr)
+            top = fill_tail(head, [lists[0], roundrobin(lists[1:], sum(len(x) for x in lists[1:]))], q.k)
         else:
             top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
-        top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
+        if not tail:
+            top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
         top = self._range_expand(top[: q.k], rows, qvecs, [*texts, *trans], q, tr)
         out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)

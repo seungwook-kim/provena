@@ -192,6 +192,33 @@ def test_single_arm_reviews_four_views_in_one_call_with_same_searches():
         assert r["chunk_id"] == c.chunk_id and r["version_date"] == c.version_date and r["section_path"]
 
 
+def test_single_arm_searches_with_the_same_sub_queries_k_and_form_skill_as_the_team(monkeypatch):
+    """사전 등록 62.41: 단일 갈래(same)는 팀과 같은 자료를 받는다. 하위 질문 둘, 10개, 쟁점표 양식 Skill 한 번."""
+    (team, single), llm, retriever = make_arms()
+    run_one(team, item())
+    team_q = sorted((q.org, q.query, tuple(q.sub_queries or ()), q.k) for q in retriever.calls)
+    retriever.calls.clear()
+    row = run_one(single, item())
+    single_q = sorted((q.org, q.query, tuple(q.sub_queries or ()), q.k) for q in retriever.calls)
+    assert single_q == team_q and all(c["sub_queries"] == [c["query"], next(t.focus for t in T.TEAMS if t.org == c["org"])] and c["k"] == 10 for c in row["retrieval_calls"])
+    (system,) = llm.systems["single"]
+    assert system.count("[쟁점표 양식 Skill]") == 1 and "[보안 관점 Skill]" in system
+    monkeypatch.setenv("USE_SKILLS", "0")
+    (_, single2), llm2, _ = make_arms()
+    run_one(single2, item())
+    (system2,) = llm2.systems["single"]
+    assert "[쟁점표 양식 Skill]" not in system2 and "관점 Skill]" not in system2
+
+
+def test_single_arm_undivided_searches_once_and_the_single_code_lives_in_the_backend_module():
+    from backend.graph.departments import single_review as SR
+
+    assert M.run_single is SR.run_single and M.SINGLE_SYSTEM is SR.SINGLE_SYSTEM and M.single_leaks is SR.single_leaks   # 측정기는 같은 코드를 다시 내보낸다
+    llm, r = review_llm(single=single_issues), Retriever()
+    out = SR.run_single(item()["input"], AS_OF, retriever=r, llm=llm, search="undivided", wide_retriever=r)
+    assert len(r.calls) == 1 and r.calls[0].org is None and r.calls[0].k == 40 and r.calls[0].sub_queries is None and out["retrieved"].keys() == {"all"}
+
+
 def test_single_arm_uses_the_same_citation_check():
     def bad(user):  # 자료에 없는 chunk_id와 다른 팀 자료의 chunk_id를 쓴다
         ids = chunk_ids(user)

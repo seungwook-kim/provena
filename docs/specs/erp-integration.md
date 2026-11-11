@@ -26,7 +26,7 @@ REST(업무시스템 -> 플랫폼)
 1. `GET /auth/csrf`로 `provena_csrf` 쿠키를 받는다.
 2. `POST /auth/login`(헤더 `X-CSRF-Token`)으로 로그인한다. 성공하면 `provena_auth` 쿠키가 생긴다.
 3. `POST /chat`(헤더 `X-CSRF-Token`, 본문 `message`, 선택 `thread_id`·`as_of`·`org`)을 부르고 SSE로 답을 읽는다.
-4. 그 밖의 경로(`/recalls`, `/approvals`, `/decision-tables/*` 등)는 `docs/api/openapi.json`에 있다(47개 경로, `docs/api/api.md`).
+4. 그 밖의 경로(`/recalls`, `/approvals`, `/decision-tables/*` 등)는 `docs/api/openapi.json`에 있다(48개 경로, `docs/api/api.md`).
 
 SDK
 5. 명세 `docs/api/openapi.json`이 SDK 생성기의 입력이다. 생성기로 만든 Java·Python SDK는 **예정(미착수, 담당·기한 없음)**이다(없음). 지금 있는 것은 손으로 쓴 Python 예제 `mock_erp/python_example/provena_client.py`와 모의 업무시스템 정적 화면 `mock_erp/erp_screen.html`(`mock_erp/serve_screen.py`로 같은 주소에 띄움)이다.
@@ -51,7 +51,7 @@ SDK
 
 ## How
 
-- 명세 파일: `docs/api/openapi.json`(FastAPI 앱에서 `python docs/api/export_openapi.py`로 생성, 키·DB 불필요). 경로 47개, `/mcp`와 화면 파일 경로는 빠진다(`docs/api/api.md`).
+- 명세 파일: `docs/api/openapi.json`(FastAPI 앱에서 `python docs/api/export_openapi.py`로 생성, 키·DB 불필요). 경로 48개, `/mcp`와 화면 파일 경로는 빠진다(`docs/api/api.md`).
 - 보내는 쪽 서명: `backend/graph/recall/webhook.py`의 `sign_payload`·`encode_body`. 받는 쪽 예제: `mock_erp/python_example/webhook_receiver.py`(같은 서명 방식).
 - 예제 클라이언트: `mock_erp/python_example/provena_client.py`(로그인 -> CSRF -> `/chat` SSE).
 - 웹훅 상세 형식과 알림 본문(`RecallNotice`)은 `docs/specs/recall.md`, MCP 서버(`/mcp`, 읽기 전용 도구 6개)는 `docs/specs/mcp.md`가 정한다. 이 문서는 그 둘을 다시 정하지 않고 연동 관점에서 모은 것이다.

@@ -622,6 +622,43 @@
         "title": "DecisionTableItem",
         "type": "object"
       },
+      "EvalReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "search": {
+            "default": "same",
+            "enum": [
+              "same",
+              "undivided"
+            ],
+            "title": "Search",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "EvalReviewRequest",
+        "type": "object"
+      },
       "FeedbackBody": {
         "additionalProperties": false,
         "properties": {
@@ -1373,6 +1410,46 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/eval/review": {
+      "post": {
+        "operationId": "eval_review_admin_eval_review_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eval Review Admin Eval Review Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eval Review"
+      }
+    },
     "/admin/signup-requests": {
       "get": {
         "operationId": "list_signup_requests_admin_signup_requests_get",
