@@ -168,13 +168,13 @@
 |---|---|---|
 | `users_pkey` | `PRIMARY KEY (user_id)` | `auth_store.py:389`(`WHERE user_id = %s`), `741`(`UPDATE ... WHERE user_id = %s`) |
 | `users_login_id_key` | `UNIQUE (login_id)` | `auth_store.py:382`(이메일이 아닌 아이디 조회), `410-411`(`ON CONFLICT (login_id)`), `426`, `433`, `479`, `519`, `659`, `731` |
-| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/112`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`_user_exists`의 이메일 조회(`lower(login_id) = lower(%s)`, `auth_store.py:379`, `476`) |
+| `users_login_id_lower_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0` (`db/113`, 대소문자만 다른 이메일 계정이 이미 있으면 만들지 않음) | `get_by_login_id`·`_user_exists`의 이메일 조회(`lower(login_id) = lower(%s)`, `auth_store.py:379`, `476`) |
 
 #### 4-1-2. `signup_requests`
 
 - 목적: 회원가입 요청과 관리자 승인 기록. 승인 전에는 `users` 행이 없어서 `user_id`가 NULL이다(`auth_store.py:672`가 승인할 때 채움). 비밀번호 해시를 담는다.
 - 만든 파일: `db/106_signup_approval.sql:2-12`(표와 색인), `:15`(RLS), `:16-28`(권한 회수). 이메일 인증 칸 7개는 `db/107_email_signup_verification.sql:1-8`, 색인 2개는 `:10-16`. `db/108_auth_privacy_hardening.sql:15`(RLS)와 `:27`(역할이 있을 때 `anon`, `authenticated` 권한 회수)이 한 번 더 실행한다.
-- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresAuthStore` — `get_signup_by_login_id` 391-403, `create_pending_user` 438-471, `get_signup_status` 544-559, `get_signup_verification` 561-572, `issue_verification` 574-597, `save_verification` 599-606, `delete_pending_signup` 608-610, `verify_signup_code` 612-629, `list_signup_requests` 631-638, `review_signup_request` 640-675, `review_signup_request_by_id` 677-680, `reset_signup_verification_by_id` 682-698. 구글 신청은 `_google_resolve` 514-542가 넣는다. `ensure_schema`(748-752)는 106, 107, 108, 112, 203 파일도 실행한다(751).
+- 쓰는 코드: `backend/services/auth_store.py`의 `PostgresAuthStore` — `get_signup_by_login_id` 391-403, `create_pending_user` 438-471, `get_signup_status` 544-559, `get_signup_verification` 561-572, `issue_verification` 574-597, `save_verification` 599-606, `delete_pending_signup` 608-610, `verify_signup_code` 612-629, `list_signup_requests` 631-638, `review_signup_request` 640-675, `review_signup_request_by_id` 677-680, `reset_signup_verification_by_id` 682-698. 구글 신청은 `_google_resolve` 514-542가 넣는다. `ensure_schema`(748-752)는 106, 107, 108, 113, 203 파일도 실행한다(751).
 - 인증 칸 7개는 이메일로 가입한 신규 요청(`email_verification_required = true`)의 코드 확인 상태를 담는다. 코드는 평문이 아니라 해시(`verification_code_hash`)로 저장하고 확인되면 해시와 만료를 비운다(`auth_store.py:628`). 인증 전 승인은 막는다(`auth_store.py:656-657`). 기존 요청과 이메일이 아닌 아이디는 `email_verification_required`가 기본값 `false`다.
 - RLS와 권한: RLS 켬(`db/106_signup_approval.sql:15`, `db/108_auth_privacy_hardening.sql:15`), 정책 없음. `PUBLIC`, `anon`, `authenticated` 권한을 106이 회수하고(16-28) 108이 역할이 있을 때 `anon`, `authenticated`만 한 번 더 회수한다(108:27). 겹침은 3-3.
 
@@ -201,8 +201,8 @@
 |---|---|---|
 | `signup_requests_pkey` | `PRIMARY KEY (request_id)` | `auth_store.py:672`, `679`, `687`, `696`(`WHERE request_id = %s`), `400`, `557`, `566`, `582`, `618`, `649`(`ORDER BY request_id DESC`) |
 | `signup_requests_user_id_key` | `UNIQUE (user_id)` | `auth_store.py:556-557`(`WHERE user_id = %s AND status = 'approved'`), `522`(`user_id = %s AND login_id = %s`) |
-| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/112`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(`463`, 중복 아이디를 UNIQUE 위반으로 감지 `467-469`), 조회는 `login_id =` 조건(`399`, `452`, `566`, `582`, `610`, `618`, `649`)과 `_google_resolve`의 `google_sub OR login_id`(`533`) |
-| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/112`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 읽는 질의가 아니라 쓰기 제약이다. 이메일을 소문자로 바꿔 넣고(`backend/auth.py:816`) 대소문자만 다른 이메일의 두 번째 INSERT를 DB가 막으며, 위반은 `create_pending_user`의 같은 `except`가 중복으로 처리한다(`auth_store.py:467-469`). `@`가 없는 옛 아이디는 적용 대상이 아니다 |
+| `signup_requests_login_id_open_unique` | `UNIQUE (login_id) WHERE status <> 'rejected'` (`db/113`가 `signup_requests_login_id_key`를 대체) | `auth_store.py`의 `create_pending_user`(`463`, 중복 아이디를 UNIQUE 위반으로 감지 `467-469`), 조회는 `login_id =` 조건(`399`, `452`, `566`, `582`, `610`, `618`, `649`)과 `_google_resolve`의 `google_sub OR login_id`(`533`) |
+| `signup_requests_login_id_lower_open_unique` | `UNIQUE (lower(login_id)) WHERE position('@' in login_id) > 0 AND status <> 'rejected'` (`db/113`가 107의 `signup_requests_login_id_lower_unique`를 대체) | 읽는 질의가 아니라 쓰기 제약이다. 이메일을 소문자로 바꿔 넣고(`backend/auth.py:816`) 대소문자만 다른 이메일의 두 번째 INSERT를 DB가 막으며, 위반은 `create_pending_user`의 같은 `except`가 중복으로 처리한다(`auth_store.py:467-469`). `@`가 없는 옛 아이디는 적용 대상이 아니다 |
 | `signup_requests_verification_expiry` | `(verification_expires_at) WHERE email_verification_required AND email_verified_at IS NULL` (`db/107_email_signup_verification.sql:10-12`, 부분 색인) | 이 색인의 조건으로 `verification_expires_at`을 거르는 질의를 코드에서 찾지 못했다. 만료는 `login_id`로 읽은 행을 앱이 비교한다(`auth_store.py:612-629`). 만료 행 정리용으로 만든 것으로 보이나(추정) 정리 코드는 없다 |
 
 #### 4-1-2a. `user_identities`

@@ -32,7 +32,7 @@ ADMIN_LOG_SCHEMA_FILE = SCHEMA_FILE.with_name("105_admin_role_log.sql")
 SIGNUP_SCHEMA_FILE = SCHEMA_FILE.with_name("106_signup_approval.sql")
 EMAIL_VERIFICATION_SCHEMA_FILE = SCHEMA_FILE.with_name("107_email_signup_verification.sql")
 PRIVACY_SCHEMA_FILE = SCHEMA_FILE.with_name("108_auth_privacy_hardening.sql")
-SIGNUP_EDGES_SCHEMA_FILE = SCHEMA_FILE.with_name("112_signup_edges.sql")
+SIGNUP_EDGES_SCHEMA_FILE = SCHEMA_FILE.with_name("113_signup_edges.sql")
 GOOGLE_SCHEMA_FILE = SCHEMA_FILE.with_name("203_google_identities.sql")
 GOOGLE_PROVIDER = "google"
 ROLES = frozenset({"user", "admin"})
@@ -374,7 +374,7 @@ class PostgresAuthStore:
 
     def get_by_login_id(self, login_id: str) -> AuthUser | None:
         if "@" in login_id:
-            # 이메일은 대소문자를 가리지 않는다. db/112 가 users 의 이메일 소문자 유니크 색인(같은 조건)을 둔다.
+            # 이메일은 대소문자를 가리지 않는다. db/113 가 users 의 이메일 소문자 유니크 색인(같은 조건)을 둔다.
             return self._fetch_one(
                 f"SELECT {_COLUMNS} FROM users WHERE position('@' in login_id) > 0 AND lower(login_id) = lower(%s)",
                 (login_id,),
@@ -439,7 +439,7 @@ class PostgresAuthStore:
         """Store a pending request only; no users record or user ID is made.
 
         새 신청이면 None, 인증 전 이메일 신청을 새 비밀번호로 덮어썼으면 "replaced"를 돌려준다(한 트랜잭션).
-        거절된 신청 행은 남기고 새 행을 만든다(db/112 의 부분 유니크 색인이 거절 행을 제외한다).
+        거절된 신청 행은 남기고 새 행을 만든다(db/113 의 부분 유니크 색인이 거절 행을 제외한다).
         인증을 마친·승인된 신청과 이미 있는 계정은 AccountExistsError.
         """
         with self._connect() as conn:

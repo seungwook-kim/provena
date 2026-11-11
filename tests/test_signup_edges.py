@@ -219,7 +219,7 @@ def test_pg_uppercase_email_lookup_and_unique_lower(pgstore):
 def test_pg_migration_lowercases_legacy_emails_and_skips_collisions():
     import psycopg
 
-    sql = (ROOT / "db" / "112_signup_edges.sql").read_text(encoding="utf-8")
+    sql = (ROOT / "db" / "113_signup_edges.sql").read_text(encoding="utf-8")
     prefix = f"mig-{secrets.token_hex(5)}"
     with psycopg.connect(DB, autocommit=True) as conn:
         try:
