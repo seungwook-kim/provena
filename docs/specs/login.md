@@ -76,9 +76,24 @@
 
 - `backend/auth.py`에 FastAPI 일반 로그인, bcrypt 검증, HttpOnly JWT 쿠키, CSRF, ID·IP별 로그인 실패 제한과 현재 사용자·관리자 권한 검증 의존성을 구현했다.
 - JWT에는 고유 `jti`를 넣고, `TokenRevocationStore` 계약으로 인증·로그아웃 시 폐기 여부를 확인한다. 폐기 저장·조회가 없거나 실패하면 503으로 차단한다. J-05(로그아웃 뒤 동일 JWT 재사용)는 PostgreSQL 공유 폐기 저장소와 `main.py` 연결 전까지 열림이다.
-- Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider와 `sub`만 Google 사용자 저장소 계약에 전달하고, 이메일로 기존 계정·관리자 권한을 연결하지 않는다.
+- Google OAuth 시작·콜백은 PKCE(S256), state·nonce, authorization code 교환, Google ID 토큰 서명·issuer·audience·만료 검증을 수행한다. 검증된 `google` provider·`sub`와 **`email_verified=true`인 이메일**만 Google 사용자 저장소 계약에 전달한다. 이메일은 아래 "Google 로그인 계정 연결"의 조건을 모두 만족할 때만 기존 계정을 찾는 데 쓰고, 이메일로 관리자 권한을 새로 주지는 않는다.
 - Mock OAuth·인증·보안 계약 테스트 26건과 DB 환경변수를 제거한 Python 전체 테스트 **215 passed, 1 skipped**를 확인했다.
 - 실제 PostgreSQL OAuth·JWT 폐기 저장소, `main.py` 운영 연결, Cloud Run callback 및 실제 Google 브라우저 로그인은 미완료·미검증이다.
+
+### Google 로그인 계정 연결 (2026-11-11, 방식 A)
+
+- 저장소 계약은 `get_or_create_google_user(provider, sub, email)`이다(`PostgresAuthStore`·`MemoryAuthStore`, `backend/services/auth_store.py`). 한 트랜잭션에서 다음 순서로 본다.
+  1. `user_identities`에 (`google`, `sub`)가 있으면 그 계정으로 로그인한다(이메일 칸만 갱신). 구글 쪽에서 이메일이 바뀌어도 같은 계정이다.
+  2. 없으면 구글이 인증한 이메일을 앞뒤 공백 제거·소문자로 바꾼 값이 `users.login_id`와 **정확히 같은** 계정을 찾는다. 다음을 모두 만족할 때만 `user_identities`에 한 줄을 더해 연결한다. 하나라도 어긋나면 연결하지 않고 `/login?oauth_error=google_login_failed`로 보낸다(계정이 있는지 알려 주지 않는다).
+     - 계정이 활성(`is_active`)이다.
+     - 같은 이메일로 이메일 인증을 마치고 승인된 가입 기록이 있다: `signup_requests`에 `user_id`가 그 계정이고 `status='approved'`, `email_verified_at IS NOT NULL`. 시드·`create_account`로 만든 계정처럼 가입 기록이 없는 계정은 이메일 소유 증명이 없어 연결하지 않는다.
+     - 그 계정에 이미 다른 구글 계정이 연결돼 있지 않다(`UNIQUE (provider, user_id)`).
+  3. 계정이 없으면 `signup_requests`에 가입 신청(`pending`, `login_id`=이메일, `google_sub`, 비밀번호 해시 없음, `email_verified_at`=지금)을 만들고 **승인 대기** 안내(`/login?oauth_error=google_signup_pending`)로 보낸다. 같은 이메일의 가입 신청(비밀번호 가입 포함)이 이미 대기·거절 상태면 새 신청을 만들지 않고 같은 안내를 한다. 최고 관리자가 `/admin/signup-requests`에서 승인하면 `users`(비밀번호 없음, role `user`)와 `user_identities`가 한 트랜잭션으로 만들어진다.
+- `role`은 연결할 때 바꾸지 않는다(admin 계정에 연결해도 admin 그대로). 구글 로그인으로는 admin이 만들어지지 않고, 새 계정은 항상 `user`다.
+- 구글로만 만든 계정은 비밀번호가 없어 비밀번호 로그인이 안 된다(`password_hash` NULL → 더미 해시로 검증해 401, `set_password`·`upsert_user`는 비밀번호가 있는 계정에만 적용).
+- 스키마는 `db/203_google_identities.sql`: `user_identities(provider, subject, user_id, email, created_at, PK(provider, subject), UNIQUE(provider, user_id))`, `signup_requests.google_sub`(부분 유일 색인), `users`·`signup_requests`의 `password_hash` NULL 허용(+ `signup_requests`는 비밀번호 해시나 `google_sub` 중 하나 필수 CHECK). 기존 설계(`users`·`signup_requests`에 provider 칸 4개·유일 색인 2개·CHECK 4개)보다 `users`를 건드리지 않고 이메일 연결과 구글 전용 가입이 같은 표 하나로 풀려서 이쪽으로 정했다. 동시에 같은 구글 계정이 와도 기본키·유일키와 `ON CONFLICT DO NOTHING` 뒤 재조회로 한 줄만 남는다(Postgres 시험으로 확인).
+- `/auth/google/start`는 Google 키(환경 변수 3개 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)가 하나라도 없으면 JSON 503 대신 `/login?oauth_error=google_unavailable`로 303 이동한다. 콜백 오류도 같은 `oauth_error` 방식이다. 로그인 화면(`web/react-app/src/pages/LoginPage.jsx`)이 승인 대기·거절·실패·사용 불가 문구를 보여 준다.
+- 배포에 Google 키를 넣고 운영 DB에 마이그레이션을 적용하는 일, GCP 콘솔 설정은 조장이 한다(`README.md`의 "Google 로그인 설정"). 실제 Google 계정으로 한 브라우저 왕복은 하지 않았다(미검증).
 
 ## AC (Given-When-Then)
 

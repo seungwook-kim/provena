@@ -5,10 +5,19 @@ import AuthIllustration from '../components/AuthIllustration'
 import Logo from '../components/Logo'
 import { Eye, EyeOff } from 'lucide-react'
 
+const GOOGLE_ERRORS = {
+  google_login_failed: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
+  google_signup_pending: '가입 신청이 접수되었습니다. 관리자 승인 대기 중입니다. 승인 완료 후 로그인할 수 있습니다.',
+  google_signup_rejected: '가입 신청이 승인되지 않았습니다. 자세한 내용은 관리자에게 문의해 주세요.',
+  google_unavailable: 'Google 로그인을 지금은 사용할 수 없습니다. 아이디와 비밀번호로 로그인해 주세요.',
+}
+
 export default function LoginPage() {
   const { signIn } = useSession()
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const oauthCode = params.get('oauth_error')
+  const oauthMessage = Object.hasOwn(GOOGLE_ERRORS, oauthCode) ? GOOGLE_ERRORS[oauthCode] : ''
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -78,9 +87,9 @@ export default function LoginPage() {
                 </button>
               </div>
             </label>
-            {(error || params.get('oauth_error') === 'google_login_failed') && (
+            {(error || oauthMessage) && (
               <p className="form-error" role="alert">
-                {error || 'Google 로그인에 실패했습니다. 다시 시도해 주세요.'}
+                {error || oauthMessage}
               </p>
             )}
             <button

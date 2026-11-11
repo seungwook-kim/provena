@@ -372,6 +372,17 @@ describe('React authentication and session isolation', () => {
     expect(googleLogin.getAttribute('href')).toBe('/auth/google/start')
   })
 
+  it('shows a Korean notice for the oauth_error codes the server redirects to, and ignores unknown codes', async () => {
+    window.history.replaceState({}, '', '/login?oauth_error=google_unavailable')
+    render(<App />)
+    expect((await screen.findByRole('alert')).textContent).toContain('Google 로그인을 지금은 사용할 수 없습니다')
+    cleanup()
+    window.history.replaceState({}, '', '/login?oauth_error=__proto__')
+    render(<App />)
+    await screen.findByRole('link', { name: /Google/ })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('routes a confirmed OAuth-return session from the callback root to chat', async () => {
     server.user = A
     window.history.replaceState({}, '', '/')

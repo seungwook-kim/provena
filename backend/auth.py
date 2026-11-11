@@ -53,6 +53,9 @@ GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_OAUTH_FAILURE_PATH = "/login?oauth_error=google_login_failed"
+GOOGLE_OAUTH_PENDING_PATH = "/login?oauth_error=google_signup_pending"
+GOOGLE_OAUTH_REJECTED_PATH = "/login?oauth_error=google_signup_rejected"
+GOOGLE_OAUTH_UNAVAILABLE_PATH = "/login?oauth_error=google_unavailable"
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_BYTES = 72
 MIN_AUTH_SECRET_BYTES = 32
@@ -103,6 +106,18 @@ class GoogleOAuthError(AuthError):
     """Google OAuth could not prove the browser or identity request is valid."""
 
 
+class GoogleAccountLinkError(GoogleOAuthError):
+    """A verified Google e-mail cannot be linked (inactive, unverified or already linked account)."""
+
+
+class GoogleSignupPendingError(AuthError):
+    """A verified Google identity exists but its signup request is awaiting approval."""
+
+
+class GoogleSignupRejectedError(AuthError):
+    """A verified Google identity's signup request was rejected."""
+
+
 @dataclass(frozen=True)
 class GoogleOAuthConfig:
     client_id: str
@@ -124,12 +139,13 @@ class GoogleOAuthConfig:
 @dataclass(frozen=True)
 class GoogleIdentity:
     subject: str
+    email: str  # email_verified=true 로 검증된 이메일(소문자 정규화는 저장소가 한다)
 
 
 class GoogleOAuthStore(Protocol):
     """Persistence boundary for verified Google identities only."""
 
-    def get_or_create_google_user(self, provider: str, subject: str) -> "AuthUser": ...
+    def get_or_create_google_user(self, provider: str, subject: str, email: str) -> "AuthUser": ...
 
 
 class GoogleTokenExchanger(Protocol):
@@ -302,8 +318,8 @@ def _delete_google_oauth_request_cookie(response: Response) -> None:
     )
 
 
-def _google_oauth_failure_response() -> Response:
-    response = Response(status_code=303, headers={"Location": GOOGLE_OAUTH_FAILURE_PATH})
+def _google_oauth_failure_response(location: str = GOOGLE_OAUTH_FAILURE_PATH) -> Response:
+    response = Response(status_code=303, headers={"Location": location})
     _delete_google_oauth_request_cookie(response)
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -375,7 +391,7 @@ class GoogleJwkIdTokenVerifier:
             or not hmac.compare_digest(claims["nonce"], nonce)
         ):
             raise GoogleOAuthError("Google ID token claims are invalid")
-        return GoogleIdentity(subject=subject)
+        return GoogleIdentity(subject=subject, email=claims["email"])
 
 
 def _revocation_store(
@@ -504,7 +520,7 @@ def current_user_id(request: Request) -> str:
 class AuthUser:
     user_id: UUID
     login_id: str
-    password_hash: str = field(repr=False)
+    password_hash: str | None = field(repr=False)  # Google 계정은 None (비밀번호 로그인 불가)
     role: str
     is_active: bool = True
     groups: tuple[str, ...] = ()
@@ -814,7 +830,7 @@ def create_auth_router(
                 except Exception as exc:
                     if not _is_missing_signup_table_error(exc):
                         raise HTTPException(status_code=503, detail="authentication storage unavailable") from None
-        password_hash = user.password_hash if user is not None else (signup[1] if signup else DUMMY_PASSWORD_HASH)
+        password_hash = (user.password_hash if user is not None else (signup[1] if signup else None)) or DUMMY_PASSWORD_HASH
         password_valid = verify_password(payload.password, password_hash)
         get_status = getattr(store, "get_signup_status", None)
         if callable(get_status) and user is not None and password_valid:
@@ -1022,7 +1038,8 @@ def create_auth_router(
         try:
             config, _google_store = configured_google_oauth()
         except AuthConfigurationError:
-            raise HTTPException(status_code=503, detail="Google 로그인 서비스를 사용할 수 없습니다.") from None
+            # 브라우저가 주소창으로 오는 길이라 JSON 글자 대신 로그인 화면으로 돌려보낸다.
+            return Response(status_code=303, headers={"Location": GOOGLE_OAUTH_UNAVAILABLE_PATH, "Cache-Control": "no-store"})
         state = secrets.token_urlsafe(32)
         nonce = secrets.token_urlsafe(32)
         code_verifier = secrets.token_urlsafe(64)
@@ -1076,12 +1093,16 @@ def create_auth_router(
                 config=config,
                 nonce=pending["nonce"],
             )
-            user = oauth_store.get_or_create_google_user("google", identity.subject)
+            user = oauth_store.get_or_create_google_user("google", identity.subject, identity.email)
             if user is None or not user.is_active or user.role not in {"user", "admin"}:
                 raise GoogleOAuthError("OAuth user is not active")
             token = create_access_token(user.user_id, user.role, secret=resolved_secret)
             if _is_revoked(_revocation_store(request, revocation_store), decode_access_token(token, secret=resolved_secret)["jti"]):
                 raise RevocationStoreUnavailableError("new token identifier is already revoked")
+        except GoogleSignupPendingError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_PENDING_PATH)
+        except GoogleSignupRejectedError:
+            return _google_oauth_failure_response(GOOGLE_OAUTH_REJECTED_PATH)
         except (AuthConfigurationError, GoogleOAuthError, RevocationStoreUnavailableError, InvalidTokenError, Exception):
             # OAuth failures must not disclose token, provider, storage, or configuration details.
             return _google_oauth_failure_response()
