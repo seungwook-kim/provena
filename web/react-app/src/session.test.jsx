@@ -509,6 +509,15 @@ describe('React authentication and session isolation', () => {
     expect(window.location.pathname).toBe('/')
   })
 
+  it('clears the local session when the server already expired it (401 on logout, H-19)', async () => {
+    await authenticated()
+    server.logoutStatus = 401
+    await userEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+    await screen.findByRole('link', { name: '로그인' })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(window.location.pathname).toBe('/')
+  })
+
   it('does not submit logout if CSRF acquisition fails', async () => {
     await authenticated()
     server.csrfStatus = 503
