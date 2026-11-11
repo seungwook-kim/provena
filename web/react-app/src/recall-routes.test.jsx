@@ -186,7 +186,7 @@ describe('live recall route', () => {
   it('returns to login when the list request is unauthorized', async () => {
     server.recallsResponse = () => { server.user = null; return apiError(401, 'unauthorized', '로그인이 필요합니다.') }
     open('/recalls')
-    await screen.findByLabelText('이메일')
+    await screen.findByLabelText('이메일 또는 아이디')
     expect(window.location.pathname).toBe('/login')
   })
 

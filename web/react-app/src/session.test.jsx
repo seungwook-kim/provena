@@ -87,7 +87,7 @@ async function signIn(id = 'A', password = 'test-password') {
     window.history.pushState({}, '', '/login')
     window.dispatchEvent(new PopStateEvent('popstate'))
   }
-    await userEvent.type(await screen.findByLabelText('이메일'), id)
+    await userEvent.type(await screen.findByLabelText('이메일 또는 아이디'), id)
   await userEvent.type(screen.getByLabelText('비밀번호'), password)
   await userEvent.click(screen.getByRole('button', { name: '로그인' }))
 }
@@ -133,14 +133,14 @@ describe('React authentication and session isolation', () => {
     render(<App />)
     await screen.findByRole('heading', { name: '로그인' })
     expect(window.location.pathname).toBe('/login')
-    expect(screen.getByLabelText('이메일')).toBeTruthy()
+    expect(screen.getByLabelText('이메일 또는 아이디')).toBeTruthy()
   })
 
   it.each(['/chat', '/recalls', '/approvals', '/admin'])('rejects anonymous direct URL %s before rendering protected UI', async path => {
     window.history.replaceState({}, '', path)
     render(<App />)
     expect(screen.queryByRole('button', { name: '내 계정' })).toBeNull()
-    await screen.findByLabelText('이메일')
+    await screen.findByLabelText('이메일 또는 아이디')
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -431,7 +431,7 @@ describe('React authentication and session isolation', () => {
     await authenticated()
     sessionStorage.setItem(`provena-memory:${A.user_id}`, 'private A')
     await act(async () => { await apiRequest('/protected-test').catch(() => {}) })
-    await screen.findByLabelText('이메일')
+    await screen.findByLabelText('이메일 또는 아이디')
     expect(sessionStorage.getItem(`provena-memory:${A.user_id}`)).toBeNull()
   })
 
@@ -439,7 +439,7 @@ describe('React authentication and session isolation', () => {
     await authenticated()
     server.user = null
     act(() => window.dispatchEvent(new Event('focus')))
-    await screen.findByLabelText('이메일')
+    await screen.findByLabelText('이메일 또는 아이디')
   })
 
   it('offers retry on /me server failure instead of pretending the user logged out', async () => {
@@ -473,7 +473,7 @@ describe('React authentication and session isolation', () => {
 
   it('does not trust a login response when the confirming /me fails', async () => {
     render(<App />)
-    await screen.findByLabelText('이메일')
+    await screen.findByLabelText('이메일 또는 아이디')
     server.meStatus = 503
     await signIn()
     await screen.findByRole('alert')
@@ -607,7 +607,7 @@ describe('React authentication and session isolation', () => {
       sessionStorage.setItem(`provena-memory:${A.user_id}`, 'private A')
       server.user = null
       focus()
-      await screen.findByLabelText('이메일')
+      await screen.findByLabelText('이메일 또는 아이디')
       expect(sessionStorage.getItem(`provena-memory:${A.user_id}`)).toBeNull()
     })
 
