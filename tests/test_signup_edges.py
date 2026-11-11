@@ -151,6 +151,30 @@ def test_login_finds_account_stored_with_uppercase_email(monkeypatch):
         assert res.status_code == 200, typed
 
 
+def test_non_email_login_uses_signup_rule_but_keeps_legacy_uppercase_accounts(monkeypatch):
+    """가입은 비이메일 아이디도 소문자로 저장한다. 로그인은 입력 그대로 먼저, 없으면 소문자로 찾는다."""
+    client, store, _ = build(monkeypatch)
+    store.create_user("Admin", hash_password(OLD), "admin")   # 소문자 규칙 전·데모 시드로 만든 대문자 계정
+    store.create_user("kim", hash_password(OLD), "user")      # 가입으로 만든 계정(소문자 저장)
+
+    def login(typed):
+        return client.post("/auth/login", json={"login_id": typed, "password": OLD}, headers=csrf(client)).status_code
+
+    assert login("Admin") == 200
+    assert login("Kim") == 200 and login(" KIM ") == 200
+    assert login("admin") == 401   # 다른 아이디다(대문자 계정을 소문자 입력으로 열지 않는다)
+
+
+def test_non_email_pending_signup_found_with_any_case(monkeypatch):
+    from backend.auth import SIGNUP_PENDING_MESSAGE
+
+    client, store, _ = build(monkeypatch)
+    assert signup(client, "Lee-Plain", OLD).status_code == 201   # 소문자로 저장된다
+    assert "lee-plain" in store._signup_requests
+    r = client.post("/auth/login", json={"login_id": "Lee-Plain", "password": OLD}, headers=csrf(client))
+    assert r.status_code == 403 and r.json()["detail"] == SIGNUP_PENDING_MESSAGE
+
+
 def test_non_email_login_id_stays_case_sensitive(monkeypatch):
     _, store, _ = build(monkeypatch)
     store.create_user("Admin", hash_password(OLD), "admin")

@@ -843,12 +843,17 @@ def create_auth_router(
     )
     def login(request: Request, payload: LoginRequest, response: Response) -> UserResponse:
         require_csrf(request)
-        login_id = payload.login_id.strip().lower() if "@" in payload.login_id else payload.login_id
+        # 가입은 모든 아이디를 소문자로 저장한다(_normalise_signup_login). 로그인도 같은 규칙으로 찾되, 그 규칙 전에
+        # 대문자로 만든 비이메일 계정(데모 시드·create_account 의 'Admin' 등)이 막히지 않게 입력 그대로 먼저 찾는다.
+        typed = payload.login_id if "@" not in payload.login_id else payload.login_id.strip().lower()
+        login_id = _normalise_signup_login(payload.login_id)  # 시도 제한 키와 신청 조회는 가입과 같은 규칙
         client_ip = _client_ip(request)
         if limiter.is_limited(login_id, client_ip):
             raise HTTPException(status_code=429, detail="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.")
         try:
-            user = store.get_by_login_id(login_id)
+            user = store.get_by_login_id(typed)
+            if user is None and typed != login_id:
+                user = store.get_by_login_id(login_id)
         except Exception:
             raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
         signup = None
