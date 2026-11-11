@@ -154,7 +154,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ├─ extras/mcp_skill/              # 템플릿 가산 자리. mcp_server/server.py: 읽기 전용 도구 6개 search_handbook, get_section, list_changed_sections, explain_decision(decision_tool.py), get_agent_trace(trace_tool.py), get_grounding(grounding_tool.py)
 ├─ web/   (pages/: login, chat, approvals, recalls, admin)
 ├─ mock_erp/ (Spring Boot 업무시스템 목업, python_example/)
-├─ db/    (01_init.sql, 101~114 인증·승인·가입·대화·이슈표 SQL, 120 답·리콜, 201~202 검색·동기화. 최초 작성자는 101~103·109~112·120 김승욱, 106~108 강경희, 104·105·113·114·201·202 박진형(git 이력 기준). 번호대 주인 배정은 팀장 확정 대기(B-16). 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다)
+├─ db/    (01_init.sql, 101~114 인증·승인·가입·대화·이슈표 SQL, 120 답·리콜, 201~202 검색·동기화. 최초 작성자는 101·102·109~112·120 김승욱, 103·106~108 강경희, 104·105·113·114·201·202 박진형(`git log --follow` 이력 기준, 103은 처음 `102_auth_token_revocations.sql`이었다). 번호대 주인 배정은 팀장 확정 대기. 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다)
 ├─ data/  (corpus.tar.gz 원문 스냅샷(풀면 corpus/, 풀린 폴더는 커밋하지 않는다), manifest.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처, 코드와 폴더를 나눈다, 8장)
 ├─ evals/ (dataset_v1.jsonl·v2, freeze.py, FROZEN.json, PREREGISTER.md, retrieval/, agent/, safety/, results/)
 └─ tests/

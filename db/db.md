@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-pgvector 확장 생성(`01_init.sql`), 데모 계정 2개 시드. SQL 파일 번호대는 파트마다 100번대씩 나눈다.
+pgvector 확장 생성(`01_init.sql`)과 인증·승인·가입·대화·이슈표(101~114), 답·리콜(120), 검색·동기화(201~202) SQL. 데모 계정은 SQL이 아니라 앱 시작 때 환경변수로 시드한다. 번호대 주인 배정은 팀장 확정 대기이고, 지금 번호의 최초 작성자는 `docs/TEAM_GUIDE.md` 5-0의 `db/` 줄에 있다.
 
 - 주인: 김승욱
 - 입력: 없음
@@ -86,6 +86,7 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | 5번째 줄 소개 문장을 실제 SQL 번호와 "앱 시작 때 시드"로 고침(TEAM_GUIDE 5-0 `db/` 줄과 같은 말, O-23 검증 후속). `101_auth_users.sql`은 건드리지 않음(옛 번호대 주석이 남아 있음) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `107_email_signup_verification.sql`: 소문자 유니크 색인 `signup_requests_login_id_lower_unique`를 113의 대체 색인(`signup_requests_login_id_lower_open_unique`)이 없을 때만 만든다(`DO` 블록). 113 뒤에 107을 다시 돌리면(로컬 `ensure_schema()`는 시작할 때마다 돌린다) 옛 색인이 되살아나, 거절 행과 같은 이메일의 새 신청이 함께 있을 때 UniqueViolation으로 로컬 앱이 뜨지 않았다. 113 전 DB와 새 DB(107 → 113 순서)의 결과는 전과 같다. 시험 `tests/test_signup_edges.py`(거절 → 재가입 → `ensure_schema()` 재실행, 107·113·114 두 번 재적용 오류 0). 운영에는 적용하지 않았다(미적용) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·114 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`). L1 `113_signup_edges.sql`이 `signup_requests`의 이메일 `login_id`도 겹치지 않을 때 소문자로 바꾼다(겹치는 쌍은 그대로, 다시 돌려도 같음). `203_google_identities.sql` → `114_google_identities.sql` 이름 변경(인증 파트 100번대, 113 다음). 내용은 같다. | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `113_signup_edges.sql` 추가: `signup_requests`의 `login_id` UNIQUE와 107의 소문자 유니크 색인을 거절 행을 뺀 부분 유니크 색인(`signup_requests_login_id_open_unique`, `signup_requests_login_id_lower_open_unique`)으로 바꿔 거절된 이메일도 다시 가입할 수 있게 했고, 겹치지 않는 이메일 `users.login_id`를 소문자로 바꾸고 `users_login_id_lower_unique`를 걸었다(대소문자만 다른 쌍이 있으면 그 쌍과 색인은 건너뛰고 NOTICE). 새 Postgres 컨테이너에 `db/` 전체를 이름 순서로 적용해 오류 0, 113을 두 번 돌려도 같음을 확인했다. 운영에는 적용하지 않았다(미적용) | 미정 |
