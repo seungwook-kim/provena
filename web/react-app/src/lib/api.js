@@ -227,10 +227,11 @@ export async function streamChatMessage(threadId, message, { signal, onEvent } =
     const lines = block.split(/\r?\n/)
     const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trimStart() ?? ''
     const data = lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
-    const callback = onEvent
-    onEvent = payload => callback?.(eventName && payload && typeof payload === 'object' && !Array.isArray(payload) && !payload.type ? { ...payload, type: eventName } : payload)
     if (!data || data === '[DONE]') return
-    try { onEvent?.(JSON.parse(data)) } catch { throw new ApiError('채팅 스트림 이벤트 형식이 올바르지 않습니다.', response.status, 'invalid_event') }
+    let payload
+    try { payload = JSON.parse(data) } catch { throw new ApiError('채팅 스트림 이벤트 형식이 올바르지 않습니다.', response.status, 'invalid_event') }
+    // 콜백을 다시 만들어 덮어쓰면 이벤트마다 호출 깊이가 늘어 긴 답에서 RangeError가 난다(H-17) → 호출 때마다 새 객체만 만든다
+    onEvent?.(eventName && payload && typeof payload === 'object' && !Array.isArray(payload) && !payload.type ? { ...payload, type: eventName } : payload)
   }
   try {
     while (true) {
