@@ -337,32 +337,39 @@ class MemoryAuthStore:
         if action not in {"approve", "reject"}:
             raise ValueError("invalid signup action")
         reviewer = UUID(str(reviewed_by))
-        status = "approved" if action == "approve" else "rejected"
         with self._lock:
-            request = self._signup_requests.get(login_id)
-            if request is None:
-                return "missing"
-            if request["status"] != "pending":
+            return self._review_locked(self._signup_requests.get(login_id), action, reviewer)
+
+    def _review_locked(self, request: dict[str, Any] | None, action: str, reviewer: UUID) -> str:
+        """Review exactly ``request`` while ``_lock`` is held."""
+        status = "approved" if action == "approve" else "rejected"
+        if request is None:
+            return "missing"
+        login_id = request["login_id"]
+        if request["status"] != "pending":
+            return "unchanged"
+        if action == "approve":
+            if request.get("email_verification_required") and request.get("email_verified_at") is None:
+                return "unverified"
+            if login_id in self._users:
                 return "unchanged"
-            if action == "approve":
-                if request.get("email_verification_required") and request.get("email_verified_at") is None:
-                    return "unverified"
-                if login_id in self._users:
-                    return "unchanged"
-                user = self._create_user_locked(login_id, request["password_hash"], "user")
-                if request.get("google_sub") is not None:
-                    self._identities[(GOOGLE_PROVIDER, request["google_sub"])] = user.user_id
-                request["user_id"] = user.user_id
-            request["status"] = status
-            request["reviewed_at"] = datetime.now(timezone.utc)
-            request["reviewed_by"] = reviewer
-            return "changed"
+            user = self._create_user_locked(login_id, request["password_hash"], "user")
+            if request.get("google_sub") is not None:
+                self._identities[(GOOGLE_PROVIDER, request["google_sub"])] = user.user_id
+            request["user_id"] = user.user_id
+        request["status"] = status
+        request["reviewed_at"] = datetime.now(timezone.utc)
+        request["reviewed_by"] = reviewer
+        return "changed"
 
     def review_signup_request_by_id(self, request_id: int, action: str, reviewed_by: UUID | str) -> str:
+        """그 request_id 행만 처리한다(같은 이메일의 다른 신청을 건드리지 않음)."""
+        if action not in {"approve", "reject"}:
+            raise ValueError("invalid signup action")
+        reviewer = UUID(str(reviewed_by))
         with self._lock:
-            login_id = next((key for key, row in self._signup_requests.items()
-                             if row.get("request_id") == request_id), None)
-        return "missing" if login_id is None else self.review_signup_request(login_id, action, reviewed_by)
+            request = next((row for row in self._signup_requests.values() if row.get("request_id") == request_id), None)
+            return self._review_locked(request, action, reviewer)
 
     def reset_signup_verification_by_id(self, request_id: int) -> str:
         with self._lock:
@@ -673,6 +680,14 @@ class PostgresAuthStore:
         return [SignupRequestRow(request_id=r[0], login_id=r[1], requested_at=r[2], status=r[3], email_verified=r[4]) for r in rows]
 
     def review_signup_request(self, login_id: str, action: str, reviewed_by: UUID | str) -> str:
+        """그 아이디의 가장 최근 신청을 처리한다."""
+        return self._review_signup("login_id = %s ORDER BY request_id DESC LIMIT 1", (login_id,), action, reviewed_by)
+
+    def review_signup_request_by_id(self, request_id: int, action: str, reviewed_by: UUID | str) -> str:
+        """그 request_id 행만 잠그고 처리한다. 같은 이메일에 거절 행과 새 신청이 함께 있어도(db/113) 다른 행을 건드리지 않는다."""
+        return self._review_signup("request_id = %s", (request_id,), action, reviewed_by)
+
+    def _review_signup(self, where: str, params: tuple, action: str, reviewed_by: UUID | str) -> str:
         if action not in {"approve", "reject"}:
             raise ValueError("invalid signup action")
         status = "approved" if action == "approve" else "rejected"
@@ -681,13 +696,12 @@ class PostgresAuthStore:
             google_col = "google_sub" if self._has_google_schema(conn) else "NULL"  # 203 전 DB에는 열이 없다
             with conn.transaction():
                 row = conn.execute(
-                    "SELECT request_id, status, password_hash, email_verification_required, email_verified_at, "
-                    f"{google_col} FROM signup_requests "
-                    "WHERE login_id = %s ORDER BY request_id DESC LIMIT 1 FOR UPDATE", (login_id,)
+                    "SELECT request_id, login_id, status, password_hash, email_verification_required, email_verified_at, "
+                    f"{google_col} FROM signup_requests WHERE {where} FOR UPDATE", params
                 ).fetchone()
                 if row is None:
                     return "missing"
-                request_id, current, password_hash, verification_required, verified_at, google_sub = row
+                request_id, login_id, current, password_hash, verification_required, verified_at, google_sub = row
                 if current != "pending":
                     return "unchanged"
                 if action == "approve":
@@ -710,11 +724,6 @@ class PostgresAuthStore:
                     (status, user_id, reviewer, request_id),
                 )
         return "changed"
-
-    def review_signup_request_by_id(self, request_id: int, action: str, reviewed_by: UUID | str) -> str:
-        with self._connect() as conn:
-            row = conn.execute("SELECT login_id FROM signup_requests WHERE request_id = %s", (request_id,)).fetchone()
-        return "missing" if row is None else self.review_signup_request(row[0], action, reviewed_by)
 
     def reset_signup_verification_by_id(self, request_id: int) -> str:
         with self._connect() as conn:

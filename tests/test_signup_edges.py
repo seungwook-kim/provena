@@ -93,6 +93,22 @@ def test_rejected_email_can_sign_up_again(monkeypatch):
     assert store.review_signup_request("again@example.com", "approve", admin.user_id) == "changed"
 
 
+def test_review_by_id_acts_only_on_that_request(monkeypatch):
+    """번호로 승인·거절하면 그 번호의 신청만 바뀐다. 사라진(대체된) 번호는 missing 이고 현재 신청은 그대로다."""
+    client, store, sender = build(monkeypatch)
+    admin = store.create_user("owner", hash_password("owner-pass-12345"), "admin")
+    assert signup(client, "byid@example.com", OLD).status_code == 201
+    old_id = store._signup_requests["byid@example.com"]["request_id"]
+    assert store.review_signup_request_by_id(old_id, "reject", admin.user_id) == "changed"
+    assert signup(client, "byid@example.com", NEW).status_code == 201
+    assert verify(client, "byid@example.com", sender.deliveries[-1]["code"]).status_code == 200
+    new_id = store._signup_requests["byid@example.com"]["request_id"]
+    assert new_id != old_id
+    assert store.review_signup_request_by_id(old_id, "approve", admin.user_id) == "missing"
+    assert store._signup_requests["byid@example.com"]["status"] == "pending"
+    assert store.review_signup_request_by_id(new_id, "approve", admin.user_id) == "changed"
+
+
 # --- 3. 대문자 이메일 -----------------------------------------------------------
 
 def test_login_finds_account_stored_with_uppercase_email(monkeypatch):
@@ -171,6 +187,30 @@ def test_pg_rejected_request_allows_signup_again_and_keeps_history(pgstore):
     value.create_pending_user(plain, hash_password(NEW))
     with pytest.raises(AccountExistsError):
         value.create_pending_user(plain, hash_password(NEW))
+
+
+@pg
+def test_pg_review_by_id_acts_only_on_that_row(pgstore):
+    """같은 이메일에 거절 행(#옛)과 새 신청(#새)이 있을 때, 옛 번호로 승인해도 새 신청이 승인되지 않는다."""
+    import psycopg
+
+    value, prefix = pgstore
+    reviewer = value.create_user(f"{prefix}-rev2", hash_password(OLD), "admin")
+    email = f"{prefix}-d@example.com"
+    value.create_pending_user(email, hash_password(OLD))
+    assert value.review_signup_request(email, "reject", reviewer.user_id) == "changed"
+    value.create_pending_user(email, hash_password(NEW))
+    with psycopg.connect(DB) as conn:
+        (old_id,), (new_id,) = conn.execute(
+            "SELECT request_id FROM signup_requests WHERE login_id = %s ORDER BY request_id", (email,)).fetchall()
+    assert value.review_signup_request_by_id(old_id, "approve", reviewer.user_id) == "unchanged"
+    assert value.get_signup_by_login_id(email)[0] == "pending"  # 새 신청은 그대로
+    assert value.review_signup_request_by_id(new_id, "reject", reviewer.user_id) == "changed"
+    with psycopg.connect(DB) as conn:
+        statuses = [r[0] for r in conn.execute(
+            "SELECT status FROM signup_requests WHERE login_id = %s ORDER BY request_id", (email,)).fetchall()]
+    assert statuses == ["rejected", "rejected"]
+    assert value.review_signup_request_by_id(10**9, "approve", reviewer.user_id) == "missing"
 
 
 @pg

@@ -318,3 +318,7 @@ The implemented administrator endpoint is:
 
 This endpoint identifies the signup request by numeric request id and is
 separate from `POST /admin/signup-requests/{login_id}/{action}`.
+It acts only on the row with that request id (locked with `WHERE request_id = %s FOR UPDATE`):
+an already rejected or reviewed row returns `changed: false` even when the same email has a newer
+pending request (db/113 keeps rejected rows), and the newer request is left unchanged.
+Test: `tests/test_signup_edges.py::test_pg_review_by_id_acts_only_on_that_row`.
