@@ -43,7 +43,7 @@
 
 ## How
 
-- 라우트: `backend/auth.py:921-926`(`/auth/signup`), `:967`(`/auth/signup/verify`), `:992`(`/auth/signup/resend`), `backend/admin_api.py:213,225,268`(목록·처리·by-id 처리). 저장소: `backend/services/auth_store.py`(`create_pending_user`, `list_signup_requests`, `review_signup_request`, 메모리판과 `PostgresAuthStore`).
+- 라우트: `backend/auth.py:985-990`(`/auth/signup`), `:1015`(`/auth/signup/verify`), `:1036`(`/auth/signup/resend`), `backend/admin_api.py:221,225,268`(목록·처리·by-id 처리). 저장소: `backend/services/auth_store.py`(`create_pending_user`, `list_signup_requests`, `review_signup_request`, 메모리판과 `PostgresAuthStore`).
 - 표: `request_id`(식별자), `user_id`(승인 뒤 연결, UNIQUE), `login_id`(UNIQUE), `password_hash`, `status`(pending·approved·rejected), `requested_at`, `reviewed_at`, `reviewed_by`. RLS를 켜고 `PUBLIC`·`anon`·`authenticated` 권한을 회수한다(해시를 Data API로 못 읽게). `status_requested_at` 색인은 `db/109_realign.sql`이 지웠다. 정본은 `db/106_signup_approval.sql`과 `docs/db/TABLE_SPEC.md`다.
 - 적용 순서: `db/101_auth_users.sql` → `db/106_signup_approval.sql` → (이메일 인증을 쓰는 앱 배포 전) `db/107_email_signup_verification.sql` → `db/108_auth_privacy_hardening.sql`. 운영 DB에는 자동 적용하지 않고 팀장 승인 뒤 수동으로 적용한다.
 

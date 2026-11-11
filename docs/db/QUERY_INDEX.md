@@ -119,18 +119,18 @@
 | departments/store.py:67 | issue_tables | INSERT ON CONFLICT (approval_id) | issue_tables_approval_id_key | 쓰기 | 충분 |
 | departments/store.py:81 | approvals | UPDATE approval_id, kind='issue_table', comment='' | approvals_pkey | Seq Scan 11행 0.017 ms | 충분 |
 | departments/store.py:89 | issue_tables | thread_id, user_id ORDER BY approved_at DESC LIMIT 1 | issue_tables_thread_user_idx | Seq Scan + Sort + Limit 3행, 0.049 ms | 정의 일치 |
-| auth_store.py:379, 382, 389, 426, 433, 479, 519, 659, 731 | users | login_id, user_id (이메일은 `lower(login_id) = lower(%s)`, 379·476) | users_login_id_key, users_pkey, users_login_id_lower_unique(113) | Seq Scan 2행, 0.03-0.057 ms (107 반영 전 질의 모양으로 쟀고 이메일 소문자 조회는 다시 재지 않았다) | 충분 (인증된 모든 요청이 users_pkey 조회) |
-| auth_store.py:399, 452, 566, 582, 618, 649 | signup_requests | login_id= ORDER BY request_id DESC LIMIT 1 (452, 582, 618, 649는 FOR UPDATE) | signup_requests_login_id_open_unique(113) | 측정 안 함(107·113 반영 뒤 EXPLAIN은 하지 않았다) | 구조 일치 |
-| auth_store.py:556-557 | signup_requests | user_id=, status='approved' ORDER BY request_id DESC LIMIT 1 | signup_requests_user_id_key | 측정 안 함 | 구조 일치 |
-| auth_store.py:456-458, 592-594, 602-604, 610, 623, 626, 628, 694-696 | signup_requests | UPDATE/DELETE login_id= 또는 request_id= (107의 인증 칸 갱신) | signup_requests_login_id_open_unique, signup_requests_pkey | 쓰기, 측정 안 함 | 구조 일치. `verification_expires_at` 값이 바뀔 때 부분 색인 `signup_requests_verification_expiry`도 갱신된다(쓰기 비용, 추정) |
-| auth_store.py:463 | signup_requests | INSERT (login_id, password_hash, status, email_verification_required) | signup_requests_login_id_open_unique, signup_requests_login_id_lower_open_unique | 쓰기, 측정 안 함 | 113의 `lower(login_id)` 부분 UNIQUE는 대소문자만 다른 이메일의 중복을 막는 제약이며 읽는 질의에 쓰이지 않는다 |
-| 없음 | signup_requests | verification_expires_at 조건 | signup_requests_verification_expiry (107, 부분 색인) | 해당 질의를 코드에서 찾지 못함 | 쓰이는 곳 없음. 만료 판정은 `login_id`로 읽은 행을 앱이 비교한다(`auth_store.py:612-629`) |
-| auth_store.py:672, 679, 687 | signup_requests | request_id= (UPDATE, SELECT, FOR UPDATE) | signup_requests_pkey | 측정 안 함 | 구조 일치 |
-| auth_store.py:635-636 | signup_requests | 조건 없음 ORDER BY requested_at, login_id | 없음 | 빈 표 | 전체 읽기, 생략 (옛 status_requested_at 색인은 이 질의에 못 쓰여 제거) |
-| auth_store.py:519, 522, 533, 538 | user_identities, users, signup_requests | `(provider, subject)`, `users.login_id FOR UPDATE`, `signup_requests (user_id, login_id)`, `google_sub OR login_id` | user_identities_pkey, users_login_id_key, signup_requests_google_sub_key, signup_requests_login_id_key | 새 표(114 적용 전), 구글 로그인 때만 | 충분 (줄 번호는 다른 정리 때 맞춘다) |
-| auth_store.py:715 | users | 조건 없음 ORDER BY created_at, login_id | 없음 | Seq Scan 2행, 0.071 ms | 생략 |
-| auth_store.py:768 | token_revocations | jti=, expires_at > now() | token_revocations_pkey | Seq Scan 35행, 0.033 ms | 충분 (인증된 모든 요청마다 1회) |
-| auth_store.py:776, 741, 743, 672, 463 | token_revocations, users, admin_role_log, signup_requests | INSERT/UPDATE by key | pkey/UNIQUE | 쓰기 | 충분. admin_role_log를 읽는 질의는 없다 |
+| auth_store.py:425, 428, 435, 473, 480, 519, 561, 710, 777 | users | login_id, user_id (이메일은 `lower(login_id) = lower(%s)`, 425·516) | users_login_id_key, users_pkey, users_login_id_lower_unique(113) | Seq Scan 2행, 0.03-0.057 ms (107 반영 전 질의 모양으로 쟀고 이메일 소문자 조회는 다시 재지 않았다) | 충분 (인증된 모든 요청이 users_pkey 조회) |
+| auth_store.py:446, 608, 624, 660, 700 | signup_requests | login_id= ORDER BY request_id DESC LIMIT 1 (624, 660, 700은 FOR UPDATE) | signup_requests_login_id_open_unique(113) | 측정 안 함(107·113 반영 뒤 EXPLAIN은 하지 않았다) | 구조 일치 |
+| auth_store.py:598-599 | signup_requests | user_id=, status='approved' ORDER BY request_id DESC LIMIT 1 | signup_requests_user_id_key | 측정 안 함 | 구조 일치 |
+| auth_store.py:634-636, 644-646, 652, 665, 668, 670, 740-742 | signup_requests | UPDATE/DELETE login_id= 또는 request_id= (107의 인증 칸 갱신) | signup_requests_login_id_open_unique, signup_requests_pkey | 쓰기, 측정 안 함 | 구조 일치. `verification_expires_at` 값이 바뀔 때 부분 색인 `signup_requests_verification_expiry`도 갱신된다(쓰기 비용, 추정) |
+| auth_store.py:504 | signup_requests | INSERT (login_id, password_hash, status, email_verification_required) | signup_requests_login_id_open_unique, signup_requests_login_id_lower_open_unique | 쓰기, 측정 안 함 | 113의 `lower(login_id)` 부분 UNIQUE는 대소문자만 다른 이메일의 중복을 막는 제약이며 읽는 질의에 쓰이지 않는다 |
+| 없음 | signup_requests | verification_expires_at 조건 | signup_requests_verification_expiry (107, 부분 색인) | 해당 질의를 코드에서 찾지 못함 | 쓰이는 곳 없음. 만료 판정은 `login_id`로 읽은 행을 앱이 비교한다(`auth_store.py:654-671`) |
+| auth_store.py:723, 700, 733 | signup_requests | request_id= (UPDATE, SELECT, FOR UPDATE) | signup_requests_pkey | 측정 안 함 | 구조 일치 |
+| auth_store.py:677-678 | signup_requests | 조건 없음 ORDER BY requested_at, login_id | 없음 | 빈 표 | 전체 읽기, 생략 (옛 status_requested_at 색인은 이 질의에 못 쓰여 제거) |
+| auth_store.py:519, 564, 575, 580 | user_identities, users, signup_requests | `(provider, subject)`, `users.login_id FOR UPDATE`, `signup_requests (user_id, login_id)`, `google_sub OR login_id` | user_identities_pkey, users_login_id_key, signup_requests_google_sub_key, signup_requests_login_id_key | 새 표(114 적용 전), 구글 로그인 때만 | 충분 (줄 번호는 다른 정리 때 맞춘다) |
+| auth_store.py:761 | users | 조건 없음 ORDER BY created_at, login_id | 없음 | Seq Scan 2행, 0.071 ms | 생략 |
+| auth_store.py:815 | token_revocations | jti=, expires_at > now() | token_revocations_pkey | Seq Scan 35행, 0.033 ms | 충분 (인증된 모든 요청마다 1회) |
+| auth_store.py:823, 787, 789, 723, 504 | token_revocations, users, admin_role_log, signup_requests | INSERT/UPDATE by key | pkey/UNIQUE | 쓰기 | 충분. admin_role_log를 읽는 질의는 없다 |
 | profile_store.py:71, 76, 81 | user_profiles | user_id | user_profiles_pkey | 빈 표 | 충분 |
 
 ## 5. 결론

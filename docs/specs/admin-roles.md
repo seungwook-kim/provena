@@ -33,7 +33,7 @@
 | 관리자 | 일반 + 승인함·결정표·영향 미리보기 등 SDD "관리자" 경로(`docs/SDD.md:286-296`) | DB `role='admin'` |
 | 최고 관리자 (배포판에 1명) | 관리자 + 사용자 관리(관리자 등록·해제) | DB `role='admin'` 이고 `is_active=true` 이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 정확히 같음 |
 
-- 새 DB 역할(`owner`)을 만들지 않는 이유: DB가 `user`/`admin`만 받고(`db/101_auth_users.sql:10`), 그 밖의 역할은 로그인과 요청 인증에서 401로 막힌다(`backend/auth.py:594`, `:703`). 역할을 늘리면 SQL·로그인·시험을 모두 바꿔야 한다.
+- 새 DB 역할(`owner`)을 만들지 않는 이유: DB가 `user`/`admin`만 받고(`db/101_auth_users.sql:10`), 그 밖의 역할은 로그인과 요청 인증에서 401로 막힌다(`backend/auth.py:743`, `:917`). 역할을 늘리면 SQL·로그인·시험을 모두 바꿔야 한다.
 
 ### Happy Path
 
@@ -159,7 +159,7 @@ python -m backend.services.create_account --login-id <아이디> --role user    
 python -m backend.services.create_account --login-id <아이디> --reset-password  # 비밀번호 잃었을 때
 ```
 
-- `DATABASE_URL`은 환경변수(돌리는 사람의 로컬 `.env`, 커밋 금지)에서 읽는다. 연결 문자열은 화면·로그에 쓰지 않는다(`backend/main.py:48` 방식).
+- `DATABASE_URL`은 환경변수(돌리는 사람의 로컬 `.env`, 커밋 금지)에서 읽는다. 연결 문자열은 화면·로그에 쓰지 않는다(`backend/main.py:104` 방식).
 - 비밀번호는 화면에 안 보이는 입력(`getpass`)으로 두 번 받는다. 셸 기록에 남지 않게 명령 인자로 받지 않는다. 터미널이 없을 때만 환경변수 `PROVENA_NEW_ACCOUNT_PASSWORD`를 읽는다.
 - 같은 아이디가 있으면 멈춘다(덮어쓰지 않음). `--reset-password`일 때만 해시를 바꾸고 역할은 그대로 둔다.
 - `--role`은 `user`/`admin`만. 출력은 `계정 생성: <아이디> (<역할>)` 한 줄뿐, 비밀번호·해시는 쓰지 않는다.
@@ -181,7 +181,7 @@ python -m backend.services.create_account --login-id <아이디> --reset-passwor
 - `store`가 있으면 lifespan에서 `check_owner(store, owner_login_id)`를 한 번 돈다.
   - 비어 있음 → `warning: 최고 관리자 설정이 없어 사용자 관리를 닫았다`
   - 계정 없음·`user`·비활성·Google 머리글자 → `error: 최고 관리자 설정이 users 표와 맞지 않아 사용자 관리를 닫았다` (아이디 값은 쓰지 않음)
-  - DB 조회 실패 → `warning`, 종류 이름만(`backend/main.py:48` 방식)
+  - DB 조회 실패 → `warning`, 종류 이름만(`backend/main.py:104` 방식)
 - 서버는 멈추지 않는다. `AUTH_SECRET`과 달리(`backend/auth.py:660`) 이 설정은 기능 하나만 막으면 되고, `/health`와 로그인은 G1 때문에 살아 있어야 한다.
 - 시작 확인은 알림이다. 실제로 막는 곳은 요청마다 도는 최고 관리자 확인이다. 그래서 배포 뒤에 `create_account`를 돌려도 재배포 없이 열린다.
 

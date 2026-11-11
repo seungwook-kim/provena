@@ -40,7 +40,7 @@
 - **API**: `backend/profile_api.py`의 `/me/profile`만 본인 프로필을 처리
 - **관리자**: `backend/admin_api.py`와 `backend/services/auth_store.py`는 프로필 테이블을 조회하지 않음
 - **키 교체**: 새 버전을 환경변수에 추가하면 신규 저장은 최신 버전, 기존 행은 기존 `key_version`으로 복호화한다. 일괄 재암호화 후 구 키를 제거한다.
-- **AI 기억**: `backend/memory/profile.py`는 LangGraph Store 헬퍼이고 `GET/PATCH/DELETE /me/memory`(`backend/api/routes.py:358-376`)로 FastAPI에 연결돼 있다(`memory.md`). 저장 칸은 소속·직급 두 개다. 이 값은 `store.put`으로 LangGraph `store` 표에 JSON 그대로 들어가(`backend/memory/profile.py:40`) 위 `ProfileCipher` 암호화를 거치지 않는다. 암호화 대상에 넣을지는 팀장 판단 사항이다.
+- **AI 기억**: `backend/memory/profile.py`는 LangGraph Store 헬퍼이고 `GET/PATCH/DELETE /me/memory`(`backend/api/routes.py:359-378`)로 FastAPI에 연결돼 있다(`memory.md`). 저장 칸은 소속·직급 두 개다. 이 값은 `store.put`으로 LangGraph `store` 표에 JSON 그대로 들어가(`backend/memory/profile.py:43`) 위 `ProfileCipher` 암호화를 거치지 않는다. 암호화 대상에 넣을지는 팀장 판단 사항이다.
 
 ## AC
 

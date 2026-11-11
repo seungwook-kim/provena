@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-로그인, 채팅, 승인함, 리콜 알림, 관리자 화면. 확정된 프론트엔드 기술 스택은 Vite + React + Tailwind CSS이며, 프론트엔드 빌드 결과물은 FastAPI가 제공한다. 채팅·승인함·내 정보·관리자 사용자 관리 화면은 실제 API에 연결되어 있다(아래 작업 기록 11-07~11-09). `login.html`·`login.js`·`login.css`는 처음 만든 정적 로그인 화면이며, React 빌드(`web/react-app/dist`)가 없을 때 `backend/main.py:381-388`이 대신 내준다.
+로그인, 채팅, 승인함, 리콜 알림, 관리자 화면. 확정된 프론트엔드 기술 스택은 Vite + React + Tailwind CSS이며, 프론트엔드 빌드 결과물은 FastAPI가 제공한다. 채팅·승인함·내 정보·관리자 사용자 관리 화면은 실제 API에 연결되어 있다(아래 작업 기록 11-07~11-09). `login.html`·`login.js`·`login.css`는 처음 만든 정적 로그인 화면이며, React 빌드(`web/react-app/dist`)가 없을 때 `backend/main.py:388-395`이 대신 내준다.
 
 기존 MVP 상태: 로그인 화면은 HTML·CSS·JavaScript로 먼저 구현·검증했다. 당시 React + Tailwind CSS 전환과 Vite 빌드 결과물의 FastAPI 제공은 아직 진행하지 않았다.
 

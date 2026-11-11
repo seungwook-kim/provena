@@ -100,7 +100,7 @@ flowchart LR
 | `chat-tool-guide` | 조건부 | 에이전트가 MCP 도구를 고르는 규칙 | 검색 노드가 도구를 고정 호출하지 않고 LLM이 도구를 고르게 할 때 쓴다 | |
 | `mail-templates` | 조건부 | 리콜 알림·업무시스템 웹훅 문구 | 리콜 알림·웹훅을 만들 때 쓴다 | |
 | `retrieval-slots` | 조건부 | 검색 결과 관련도 판정 기준 | 검색 평가를 사람 판정 외에 자동 판정으로도 할 때 쓴다 | |
-| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:339,909`, `backend/services/skills.py:14`). 결정 0101로 지운 검색어 용어표(`TERM_ROWS`)와는 별개로 남은 Skill이다 | |
+| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 결정 0101로 지운 검색어 용어표(`TERM_ROWS`)와는 별개로 남은 Skill이다 | |
 
 - `delegation`을 따로 둔 이유: 승인권자 질문(예: 외부 SaaS 3만 달러, 정확히 2.5만·5만 달러)은 금액 구간 경계 해석에서 갈린다. Skill이 있을 때와 없을 때 차이가 가장 잘 드러난다.
 - 근거 섹션은 PRD 5장 대표 질문과 개정 커밋에서 골랐다. 정답 섹션은 D1에 원문으로 확정한다. Skill을 쓸 때 원문 섹션을 다시 확인하고 페이지 id(`rule_seq`)와 제목 경로를 적는다. 구간 끝값 처리와 금액 수치는 원문 표기를 그대로 따른다.
@@ -263,11 +263,11 @@ flowchart TD
 
 | 노드 | LLM 사용 | 설명 |
 |---|---|---|
-| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`) 둘뿐이다(`backend/api/routes.py:84-85`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
+| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:84-87`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
 | 질문 종류 | 있음 | 정책 질문 / 결정표 질문 / 합동 검토 |
 | 질의 재작성 | 있음 | 핸드북 용어(영어)로 바꾸고 절·시점 조건을 뽑는다. `glossary` Skill을 쓴다 |
 | 검색 | 없음 | `search_handbook` 호출 (MCP 또는 직접 호출, `SEARCH_VIA_MCP`) |
-| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:60`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:54`, `.env.example:63`) |
+| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:61`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:54`, `.env.example:63`) |
 | 답 작성 | 있음 | `citation-rules` Skill을 쓴다. 결정표 질문이면 `delegation` Skill도 쓴다 |
 | 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. `grounding-check` Skill을 기준으로 삼는다 |
 | 결정표 실행 | 없음 | 관리자가 승인한 결정표만 실행한다 |

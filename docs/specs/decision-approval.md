@@ -60,7 +60,7 @@
 POST /decision-tables/{id}/run          표를 지정해 실행
 POST /decision-tables/run               표를 모를 때: 업무 종류로 승인된 표가 정확히 1개면 실행 (EC-04, AC-06)
 POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (AC-03)
-(구현: backend/graph/decision/routes.py:348-360)
+(구현: backend/graph/decision/routes.py:399-411)
 인증: 로그인 필수 (업무시스템의 "승인권자 확인" 호출). 실행(run)은 LLM을 쓰지 않는다.
 
 요청 바디 (run, routes.py:_parse_run):
@@ -81,7 +81,7 @@ POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 �
   "financial_approvers": [ string, ... ],
   "cooperating": [ string, ... ],  // 승인이 아닌 표시(Signs, Recommends 등)
   "source": { "rule_seq": int, "category": string, "band": string, "article": string, "source_url": string | null }
-  // 응답 모델: backend/graph/decision/routes.py:83 RunResponse
+  // 응답 모델: backend/graph/decision/routes.py:85 RunResponse
 }
 
 응답 실패:

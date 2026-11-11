@@ -465,8 +465,8 @@ erDiagram
 | L1 | `approvals.approval_id` | `issue_tables.approval_id` (UNIQUE) | 같은 문자열. 승인된 쟁점표 한 건이 승인 건 한 줄에 대응한다 | `db/110_issue_tables.sql:5`, `backend/graph/departments/store.py:67-69, 81-82` |
 | L2 | `approvals.target_id` | `decision_tables.table_id` | `kind = 'decision_table'`이면 `target_id`가 결정표 `table_id`다 | `backend/graph/decision/repo.py:263-264, 279` |
 | L3 | `approvals.target_id` | `issue_tables.table_id` | `kind = 'issue_table'`이면 승인 전에는 `approval_id` 자신, 승인 뒤에는 저장된 `table_id` 문자열이다 | `db/102_decision_approvals.sql:41`, `backend/graph/decision/repo.py:317-318` |
-| L4 | `approvals.thread_id` | 체크포인트 `thread_id` | 그래프 thread 이름 `<user_id>:<thread_id>`. 승인 대기 조회가 이 이름으로 한다 | `backend/api/routes.py:89-90, 327` |
-| L5 | `threads (user_id, thread_id)` | `checkpoints.thread_id`, `checkpoint_blobs.thread_id`, `checkpoint_writes.thread_id` | `threads`의 `thread_id`는 화면이 보낸 바깥 이름이고, 체크포인트에는 `"<user_id>:<thread_id>"`를 쓴다. 같은 `t1`도 사용자마다 따로다 | `db/111_threads.sql:3`, `backend/api/routes.py:89-90, 233-234` |
+| L4 | `approvals.thread_id` | 체크포인트 `thread_id` | 그래프 thread 이름 `<user_id>:<thread_id>`. 승인 대기 조회가 이 이름으로 한다 | `backend/api/routes.py:90-91, 327` |
+| L5 | `threads (user_id, thread_id)` | `checkpoints.thread_id`, `checkpoint_blobs.thread_id`, `checkpoint_writes.thread_id` | `threads`의 `thread_id`는 화면이 보낸 바깥 이름이고, 체크포인트에는 `"<user_id>:<thread_id>"`를 쓴다. 같은 `t1`도 사용자마다 따로다 | `db/111_threads.sql:3`, `backend/api/routes.py:90-91, 233-234` |
 | L6 | `answers.thread_id`, `recall_notices.thread_id` | 체크포인트 `thread_id` | 그래프 이름 `<user_id>:<thread_id>` 그대로 저장한다. 화면용 바깥 이름은 앞 접두어를 떼어 얻는다 | `db/120_answers_recall.sql:6`, `backend/graph/recall/graph.py:43-48` |
 | L7 | `answers.answer_id` | `recall_notices.answer_id` | 같은 문자열. 한 답과 한 개정에 알림은 한 줄이다(`UNIQUE (answer_id, event_key)`) | `db/120_answers_recall.sql:81`, `backend/graph/recall/store.py:328-333` |
 | L8 | `citations (rule_seq, article)` | `changed_articles (rule_seq, article)` | 바뀐 섹션이 들어오면 같은 `(rule_seq, article)`을 인용한 답을 찾는다 | `backend/graph/answer_store.py:221-228`, `backend/graph/recall/graph.py:85` |
