@@ -452,6 +452,7 @@ describe('React authentication and session isolation', () => {
     await userEvent.click(screen.getByRole('button', { name: '내 계정' }))
     expect(screen.getByText(A.login_id)).toBeTruthy()
     expect(screen.queryByText(A.user_id)).toBeNull()
+    expect(screen.getByRole('menuitem', { name: '기억 설정' }).getAttribute('href')).toBe('/onboarding')
     expect(calls.some(call => call.path === '/me')).toBe(true)
   })
 
