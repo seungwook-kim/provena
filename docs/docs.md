@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | README 조원 소개의 "(첫 PR 과제 완료)"와 "세 사람 모두 채웠다" 문구를 사실대로 고치고(김승욱 한마디 비어 있음), 템플릿 문구 "강사를 부르세요·멘션하세요"를 TEAM_GUIDE 9장 양식 안내로 바꿈(R-09 검증 후속) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `SPEC.md` P-03 행에서 "자동 생성 SDK"를 예정(아직 없음)으로 고치고 `specs/erp-integration.md`를 가리키게 함. `specs/erp-integration.md`의 예정 문구를 `mock_erp.md`와 통일(N-07 검증 후속) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 트리의 `backend/rag/ingest/`에 실제로 있는 `snapshot.py`·`compare.py` 추가(O-17 검증 후속) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | TEAM_GUIDE 5-0 `db/` 줄 최초 작성자를 `git log --follow`로 다시 확인해 103을 강경희로 정정, 정의 없는 "B-16"을 "팀장 확정 대기"로(O-23 검증 후속) | 미정 |
