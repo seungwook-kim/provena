@@ -25,8 +25,8 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 C-20·C-21 반영으로 `openapi.json`을 다시 만들었다(422 응답 모양, `SignupResendRequest`) | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11 · H-12/H-13: `openapi.json`을 갱신했다. `MeResponse`에 `login_id`(H-13), `MemoryPatch`에 `service`(H-12)가 더해졌다. 경로 수는 그대로다 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 C-20·C-21 반영으로 `openapi.json`을 다시 만들었다(422 응답 모양, `SignupResendRequest`) | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11 · H-12/H-13: `openapi.json`을 갱신했다. `MeResponse`에 `login_id`(H-13), `MemoryPatch`에 `service`(H-12)가 더해졌다. 경로 수는 그대로다 | #131 |
 | 2026-11-11 | 김승욱 (Claude Code) | `python docs/api/export_openapi.py`로 명세를 다시 만들었다(42개에서 46개 경로). `POST /admin/signup-requests/by-id/{request_id}/reset-verification`이 더해졌고, `GET /admin/signup-requests` 응답에 `request_id`·`email_verified`, 검토·초기화 응답에 `request_id`가 들어갔다. 손으로 고쳐 두었던 오류 응답 설명(401·403·404·409·503, `/auth/signup/verify`·`/auth/signup/resend`의 설명)은 생성 때 사라지므로 라우트 데코레이터(`description`, `responses`)와 응답 모델로 옮겨 코드에서 만들어지게 했다 | 미정 |
 | 2026-11-10 | 김승욱 (Claude Code) | 명세를 다시 만들어 35개 경로에서 42개 경로로 늘렸다. 더해진 것은 `/admin/signup-requests`(+`/{login_id}/{action}`), `/admin/users`(+`/{login_id}/promote`, `/{login_id}/revoke`), `/auth/signup`, `/me/profile`이다(앞의 명세는 11/9 생성본이라 이 라우터들이 없었다). 앱이 `/me/profile`을 실제 사용자 저장소가 있을 때만 붙여서 `export_openapi.py`가 이 라우터를 직접 붙이도록 고쳤다 | 미정 |
 | 2026-11-09 | 김승욱 (Claude Code) | `export_openapi.py`와 `openapi.json` 추가(35개 경로: 로그인, `/chat`, `/threads`, 결정표·승인, 리콜, 변경 감시, `/health` 등. `/mcp`는 명세에 나오지 않음) | [#82](https://github.com/aihuman-7th/proj3-c/pull/82) |

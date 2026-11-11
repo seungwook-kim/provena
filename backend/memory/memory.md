@@ -12,7 +12,7 @@ Store namespace에 사용자 id를 넣어 사용자 사이에 기억이 섞이�
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11 · H-12/H-13: `profile.py`의 허용 칸에 담당 서비스 `service`를 더했다(`ALLOWED_FIELDS`, `put_profile`). 화면의 담당 서비스 칸을 실제로 저장하려는 것이다 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 조장 지시 11/11 · H-12/H-13: `profile.py`의 허용 칸에 담당 서비스 `service`를 더했다(`ALLOWED_FIELDS`, `put_profile`). 화면의 담당 서비스 칸을 실제로 저장하려는 것이다 | #131 |
 | 2026-11-02 | 김승욱 (Claude Code) | 사용자 프로필 읽기 `profile.py` | 이번 PR |
 
 ## 문제 기록 (최신이 위)

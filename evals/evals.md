@@ -12,8 +12,8 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 26행 표기를 EVAL_REPORT 6장 실제 행 번호 27로 고침(문구만, 측정 없음) | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | 측정 결과 옆 설명 문서 추가(측정·호출 없음): `results/d8_stage_report/approval_latency_postgres.md`(승인 대기 로컬 Postgres 측정의 방법·숫자·한계·재현 명령, 숫자는 json에서 다시 계산해 `EVAL_REPORT.md` 8장과 대조), `results/fail_types_00035/README.md`(배포본 실패 유형 세기의 이유·전후·한계). `EVAL_REPORT.md` 6장 표에 27행(2026-11-10 로컬 실제 모델 인젝션 30건, 참고값) 추가 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 26행 표기를 EVAL_REPORT 6장 실제 행 번호 27로 고침(문구만, 측정 없음) | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 측정 결과 옆 설명 문서 추가(측정·호출 없음): `results/d8_stage_report/approval_latency_postgres.md`(승인 대기 로컬 Postgres 측정의 방법·숫자·한계·재현 명령, 숫자는 json에서 다시 계산해 `EVAL_REPORT.md` 8장과 대조), `results/fail_types_00035/README.md`(배포본 실패 유형 세기의 이유·전후·한계). `EVAL_REPORT.md` 6장 표에 27행(2026-11-10 로컬 실제 모델 인젝션 30건, 참고값) 추가 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | D8 운영 측정분 정리 문서 `results/deploy_latency_provena-api-00035-h69/stage_times.md`: 00035 단계별 시간(64세션)과 00020 대비 전후, 리비전별 전체 응답 시간·비용, 한계, 재현 명령. 값은 커밋된 `stage_times.json` 두 개에서 다시 계산해 8장과 같음을 확인, 새 호출 없음 | - |
 | 2026-11-11 | 김승욱 (Claude Code) | D8 후속 정정(측정·호출 없음): `EVAL_REPORT.md` 8장 CI 문단의 출처를 체크포인트 사이트의 3조 코멘트로 바꾸고 pytest 통과 수가 그 커밋 기준임을 적음, 00020·00024 단계별 시간이 고치기 전 도구의 값임을 적음, 단계별로 나누어 잰 범위(비용·LLM 시간은 150행, 검색 시간은 64세션 합)를 적음. `tests/test_stage_times.py` 주석의 생성 합을 -7초로 정정 | |
 | 2026-11-11 | 박진형 (jinyeong-731) | D8 8장 빈칸 채움, 새 LLM 호출 없음: 승인 대기를 Postgres 체크포인터로 실측(`agent/approval_latency.py` n=20, 같은 PC Docker Postgres 16.15, 결과 `results/d8_stage_report/approval_latency_postgres.json`), 표의 검색·생성 시간을 배포본 `provena-api-00035-h69` Langfuse 트레이스로 다시 셈(세션 64/150, 결과 `results/deploy_latency_provena-api-00035-h69/stage_times.json`). `latency/stage_times.py`가 그래프가 끝난 뒤 시작한 호출 때문에 생성 시간을 음수로 내던 결함을 고치고 시험 `tests/test_stage_times.py`를 붙임(00035 64세션 중 7개. 00020·00024 81세션은 음수가 0개였으나 고친 도구로 다시 계산하지 못해 고치기 전 값이다). 결정표 변환 멈춤이 `9c65296`부터 약 0.2초 늘어난 것을 이분 탐색으로 찾아 8장에 적음. CI 문단에 Actions 시작 실패(조직 결제 문제)와 로컬 실행 결과 기록 | |

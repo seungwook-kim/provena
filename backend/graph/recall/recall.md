@@ -65,8 +65,8 @@ python -m backend.graph.recall.process_pending [--limit 50] [--force]
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속 J-12(DNS 재바인딩): 웹훅을 보낼 때 주소 검사에서 나온 공인 IP 하나로 직접 연결한다(`check_target_url`이 IP를 돌려주고 `pin_request`가 host를 IP로 바꿈, `Host` 헤더·TLS SNI는 원래 이름, 리다이렉트 따라가지 않음). 단건·하루 요약 둘 다 같은 전송 함수라 한 곳에서 처리. 시험 `tests/test_recall_webhook.py` | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-12(웹훅 주소를 실제로 풀어 나온 IP가 내부·루프백·링크로컬이면 등록·전송 때 막음, 정수·16진수 표기 포함), J-13(웹훅 본문에서 user_id·question·answer_excerpt·thread_id·acked 제거) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속 J-12(DNS 재바인딩): 웹훅을 보낼 때 주소 검사에서 나온 공인 IP 하나로 직접 연결한다(`check_target_url`이 IP를 돌려주고 `pin_request`가 host를 IP로 바꿈, `Host` 헤더·TLS SNI는 원래 이름, 리다이렉트 따라가지 않음). 단건·하루 요약 둘 다 같은 전송 함수라 한 곳에서 처리. 시험 `tests/test_recall_webhook.py` | #131 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-12(웹훅 주소를 실제로 풀어 나온 IP가 내부·루프백·링크로컬이면 등록·전송 때 막음, 정수·16진수 표기 포함), J-13(웹훅 본문에서 user_id·question·answer_excerpt·thread_id·acked 제거) | #131 |
 | 2026-11-10 | 김승욱 (Claude Code) | 리콜 판정 입력의 개정 전후 본문과 섹션 제목에 입력 정화, 판정 설명에 출력 검사(`guard_explanation(sources=...)`, 이유 `injected_instruction`) 추가(사전 등록 62.26) | - |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #116) 합친 표(DB 재정렬)에 맞춰 `store.py`, `maintenance.py`를 고침 | #116 |
 | 2026-11-09 | 김승욱 (Claude Code) | 리콜 그래프·판정기·저장소·웹훅·검토함·하루 요약·의견·함께 볼 정책 후보·변경 감시·영향 미리보기와 라우터를 구현하고 `db/120_answers_recall.sql`을 더했다. 판정 설명 검사(지시문·표지·다른 사용자 값)와 판정·코드 규칙 불일치 교차 검사를 넣었다. 시험은 `tests/test_recall_*.py`, `test_api_recalls.py`, `test_api_changes.py`, `test_snapshot_diff.py`와 실제 Postgres용 `test_recall_pg.py`(`PROVENA_TEST_DATABASE_URL`이 있을 때만) | 미정 |
