@@ -160,6 +160,14 @@ export async function reviewSignupRequestById(requestId, action) {
   })
 }
 
+export async function resetSignupVerification(requestId) {
+  const token = await fetchCsrfCookie()
+  if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
+  return apiJson(`/admin/signup-requests/by-id/${encodeURIComponent(requestId)}/reset-verification`, {
+    method: 'POST', headers: { 'X-CSRF-Token': decodeURIComponent(token) },
+  })
+}
+
 export async function changeAdminRole(loginId, action) {
   const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')

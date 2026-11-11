@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, changeAdminRole, listAdminUsers, listSignupRequests, reviewSignupRequestById } from '../lib/api'
+import { ApiError, changeAdminRole, listAdminUsers, listSignupRequests, resetSignupVerification, reviewSignupRequestById } from '../lib/api'
 import { useSession } from '../lib/session'
 import DemoLayout from '../components/DemoLayout'
 import AdminUsersTabs from '../components/AdminUsersTabs'
@@ -42,6 +42,11 @@ export default function AdminUsersPage() {
     try { const result = await reviewSignupRequestById(requestId, action); setMessage(result.changed ? '가입 신청 처리가 완료되었습니다.' : '변경할 상태가 없습니다.'); await loadSignupRequests() }
     catch (reviewError) { setError(reviewError.message || '가입 신청 처리에 실패했습니다.') }
   }
+  async function resetVerification(requestId) {
+    setError(''); setMessage('')
+    try { await resetSignupVerification(requestId); setMessage('인증번호를 초기화했습니다. 신청자가 새 인증번호를 받을 수 있습니다.'); await loadSignupRequests() }
+    catch (resetError) { setError(resetError.message || '인증 재설정에 실패했습니다.') }
+  }
   async function applyChange() {
     if (!confirm || busy) return
     setBusy(confirm.login_id)
@@ -63,7 +68,7 @@ export default function AdminUsersPage() {
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="profile-success" role="status">{message}</p>}
-    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} />
+    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} onResetVerification={resetVerification} />
     {false && <div>
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
