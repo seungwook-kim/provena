@@ -4,6 +4,7 @@
 프롬프트 본문(`SYSTEM`)과 응답 읽기 규칙은 측정 코드(`evals/retrieval/exp_decompose_v1.py`)와 같고, 시험이 대조한다. 다른 점은 아래와 같다.
 - 노드 표지(`[[task:decompose]]`)를 프롬프트 맨 앞에 붙인다(시험용 가짜 모델이 노드를 구분하는 표지).
 - 응답 형식이 깨지면 1회 다시 요청한다(`ATTEMPTS`=2). 측정 때는 최대 3번이었다.
+- 원 질문이 물음이 아닌 앞 문장(전제)과 질문 문장으로 이루어져 있고 전제의 내용어가 어느 하위 질문에도 없으면, 하위 질문 앞에 그 전제 문장을 붙인다(`keep_premise`, 사전 등록 62.45).
 - 하위 질문이 1개이거나, 4개 이상이면 앞 3개만 쓰고, 항목이 비었거나 1000자를 넘거나 원 질문과 같으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙).
 실패(형식 오류, 호출 오류)하거나 나누지 않으면 빈 목록이고, 검색은 질문 하나로 그대로 이어 간다. 분해 때문에 답이 멈추지 않는다.
 켜는 곳: `decompose_enabled()`. 기본은 켬이다(측정한 확정 조합). 환경 변수 `SEARCH_DECOMPOSE`가 0, false, no, off이면 끈다.
@@ -67,6 +68,47 @@ def normalize(question: str, obj: dict) -> list[str]:
     return subs if ok else []
 
 
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?。？！])\s+")
+_WORD = re.compile(r"[0-9A-Za-z가-힣]+")
+_PARTICLES = ("에서는", "으로는", "에서", "으로", "에게", "한테", "까지", "부터", "마다", "처럼", "이라고", "라고", "을", "를", "은", "는", "이", "가", "의", "에", "와", "과", "도", "로", "만")
+_SKIP_WORDS = {"우리", "저희", "제가", "내가", "요즘", "지금", "혹시", "만약", "그리고", "그런데", "그럼", "그러면"}  # 내용이 없는 대명사·접속어
+_LIGHT_VERB_START = "하합했해있없되됩싶"  # "합니다", "하려고", "있는데" 같은 서술어 조각은 내용어로 세지 않는다
+
+
+def _content_stems(sentence: str) -> list[str]:
+    """문장의 내용어 줄기. 끝의 조사를 떼고, 한글 낱말은 앞 두 글자만 쓴다(어미가 붙어도 하위 질문의 같은 낱말과 맞게). 한 글자 낱말, 대명사·접속어, 서술어 조각은 뺀다."""
+    out: list[str] = []
+    for word in _WORD.findall(sentence):
+        for p in _PARTICLES:
+            if word.endswith(p) and len(word) > len(p):
+                word = word[: -len(p)]
+                break
+        if len(word) < 2 or word in _SKIP_WORDS:
+            continue
+        if "가" <= word[0] <= "힣":
+            if word[0] in _LIGHT_VERB_START:
+                continue
+            word = word[:2]
+        out.append(word.casefold())
+    return out
+
+
+def keep_premise(question: str, subs: list[str]) -> list[str]:
+    """원 질문이 두 문장 이상이고, 앞 문장(전제)의 내용어가 어느 하위 질문에도 없으면 모든 하위 질문 앞에 그 전제 문장을 붙인다(사전 등록 62.45).
+    분해가 전제("외부 SaaS를 도입")를 하위 질문에서 빼거나 줄이면 첫 검색 문맥의 맨 위가 바뀌어 판정이 갈린다. LLM 호출과 프롬프트는 그대로이고 코드가 문장만 붙인다.
+    전제는 물음이 아닌 앞 문장이다. 앞 문장이 물음(`?`)이면 그 문장은 하위 질문으로 나뉘어 이미 검색되므로 붙이지 않는다.
+    나뉘지 않았거나(빈 목록), 한 문장이거나, 앞 문장에 물음이 있거나, 전제의 내용어가 하위 질문에 모두 있거나, 붙이면 길이 한도를 넘으면 하위 질문을 그대로 돌려준다."""
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split((question or "").strip()) if s.strip()]
+    if not subs or len(sentences) < 2 or any(s.endswith(("?", "？")) for s in sentences[:-1]):
+        return subs
+    premise = " ".join(sentences[:-1])
+    joined = " ".join(subs).casefold()
+    if all(stem in joined for stem in _content_stems(premise)):
+        return subs
+    out = [f"{premise} {s}" for s in subs]
+    return out if all(len(s) <= MAX_SUB_CHARS for s in out) else subs
+
+
 # `GRAPH_KEEP_PRODUCT_NAME=1`(기본 꺼짐): 조사 없이 바로 제품의 대상(계정, 그룹, 프로젝트 등)을 꾸미는 "GitLab"은 회사가 아니라 제품을 가리키므로 떼지 않는다.
 # 예: "GitLab 계정"은 GitLab.com 계정이다. "GitLab 정기 릴리스"(v1 3번)처럼 대상 말이 아닌 경우와 조사가 붙은 경우는 그대로 뗀다
 _PRODUCT_TARGET = re.compile(
@@ -123,6 +165,6 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
             continue
         obj = parse_split(text)
         if obj is not None:
-            return drop_company_prefix(normalize(question, obj)), "llm"
+            return keep_premise(question, drop_company_prefix(normalize(question, obj))), "llm"
         source = "invalid"
     return [], source

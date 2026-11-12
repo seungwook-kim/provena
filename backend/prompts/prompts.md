@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-12 | 김승욱 (Claude Code) | 넓힌 첫 검색의 판정 입력에서 넓힌 자리 청크 머리 줄에 `[보충]`을 붙이고(`format_materials(marked=)`, `judge_user(extra=)`), 그런 판정에만 구절을 [보충]이 아닌 자료에서 먼저 찾게 하는 문장 1개를 판정 구절 규칙에 더함(`judge_widened`). 표시가 없는 판정의 입력과 프롬프트는 글자까지 같다(사전 등록 62.44) | 이번 PR |
 | 2026-11-11 | 박진형 (jinyeong-731) | H-13: 분류·재작성 프롬프트에 넣는 프로필 칸을 affiliation·rank로 고정(`PROMPT_PROFILE_FIELDS`). 기억의 service 칸은 저장만 하고 프롬프트에 넣지 않아 측정(main) 때와 입력이 같다. 시험 `test_prompt_profile_has_only_measured_fields_not_service` | #131 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `question.py`: 분류 프롬프트의 out_of_domain 기준을 주제가 아니라 '질문이 조직이 정한 것을 묻는가'로 바꿈(사전 등록 62.A, 커밋 8722491) | #119 |
 | 2026-11-10 | 김승욱 (Claude Code) | `seen_titles`(재작성 입력의 이미 찾은 문서 제목)가 입력 정화를 거치게 하고 `format_materials`의 기본 꺼짐 주석을 기본 켬으로 바로잡음(사전 등록 62.26) | - |
