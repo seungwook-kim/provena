@@ -267,6 +267,8 @@ class _Scores:
         self._model = None
 
     def score(self, query: str, chunks: list[SimpleNamespace]) -> list[float]:
+        if self.name == "int8":  # I-013: int8는 묶음에 따라 같은 쌍의 점수가 달라져 저장 값을 쓰지 않는다. 서비스처럼 후보 전체를 한 번에 계산한다
+            return [float(s) for s in self._predict(query, [c.text for c in chunks])]
         keys = [f"{qkey(query)}:{c.chunk_id}" for c in chunks]
         todo = [(k, c) for k, c in zip(keys, chunks) if k not in self.data]
         if todo:
