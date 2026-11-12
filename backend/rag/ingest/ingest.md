@@ -14,6 +14,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-12 | 박진형 (jinyeong-731) | F-08: 증분 수집 `schedule.py --once` 로컬 DB 1회 실행(코드 변경 없음, 운영 DB 안 씀): 스냅샷 적재 뒤 129243bc → d92556d4, 성공, 추가 3·수정 149·서식만 152, 새 임베딩 436·재사용 6,946(Voyage 52,539토큰, 약 0.003달러), 63초. 결과는 `docs/specs/incremental.md` 결정 ① | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | F-10: `source.py`에 `DocumentSource` 추상화(SDD 3장). `HandbookGitSource`는 `handbook.py` 함수를 그대로 불러 감싸고, `DirectorySnapshotSource`는 폴더의 `.md`. `schedule.py`는 건드리지 않음. 시험 `tests/test_ingest_source.py`(구현체 출력 = handbook 출력) | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | F-11 `--follow-renames` 켠 전체 실행 1회(GitLab 공개 저장소 내용 읽기만, 임베딩·LLM·DB 쓰기 없음, 출력은 저장소 밖 임시 폴더): 이름 바뀜 1,163건, 옮기기 전 판을 찾은 것 1,090건(93.7%), 처리 커밋 6,878건, 25분 11초, 리콜 시험 12건 모두 있음. `docs/specs/collect.md` 한계 문구를 "켠 전체 실행 미확인"에서 실측으로 고쳤다. 운영은 기본 꺼짐 유지 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 정리: R-07 빈 `ingest()` 제거, O-18 SDD 트리에 `compare.py` 반영, F-11 개정 이력 `--follow-renames` 옵션(기본 꺼짐, 시험 4개): 고른 폴더 안 이동은 `R<유사도>`·`old_path`, 폴더 밖에서 옮겨 온 파일(I-006)은 경로 제한 없이 짝을 찾아 잇고 `handbook_renames.jsonl` 에 이전 경로와 옮기기 전 판을 쓴다. 판 날짜·청크·검색에는 잇지 않았고 옵션을 켠 전체 실행은 못 돌려 봤다(한계는 `docs/specs/collect.md` How), F-17·F-08 재임베딩 단위와 정시 실행 실패 원인을 `docs/specs/incremental.md` 에 기록 | #131 |
