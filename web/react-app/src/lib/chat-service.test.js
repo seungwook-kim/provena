@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { streamChatMessage } from './api'
-import { createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation, citationHref, DEFAULT_SOURCE_URL } from './chat-service'
+import { STREAM_ERROR_MESSAGE, createApiChatAdapter, createChatService, mapThreadRecord, normalizeCitation, citationHref, DEFAULT_SOURCE_URL } from './chat-service'
 
 vi.mock('./api', () => ({ getThread: vi.fn(), getThreads: vi.fn(), streamChatMessage: vi.fn() }))
 
@@ -295,5 +295,17 @@ describe('thread with a finished approval (H-15)', () => {
     const again = await adapter.getThread('t1')
 
     expect(again.messages.at(-1)).toMatchObject({ state: 'done', text: '승인된 답' })
+  })
+})
+
+describe('SSE error 이벤트 문구 (A3)', () => {
+  it('서버 예외 원문(영어)을 보이지 않고 고정 한국어 문구를 쓰며 코드는 남긴다', async () => {
+    const { snapshots, service } = setup([{ type: 'error', thread_id: 't1', data: { code: 'internal_error', message: 'KeyError: relation "chunks" does not exist' } }])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer.state).toBe('error')
+    expect(answer.error).toBe(STREAM_ERROR_MESSAGE)
+    expect(answer.error).not.toMatch(/KeyError/)
+    expect(answer.errorCode).toBe('internal_error')
   })
 })

@@ -78,6 +78,9 @@ export function mapThreadResponse(payload) {
   return []
 }
 
+// 스트림 error 이벤트의 message는 서버 예외 원문(영어)이라 그대로 보이지 않게 고정 문구로 바꾼다. 원인 코드는 errorCode에 남는다.
+export const STREAM_ERROR_MESSAGE = '답변을 만드는 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.'
+
 function isAbortError(error) {
   return error?.name === 'AbortError' || error?.code === 'ABORT_ERR'
 }
@@ -140,7 +143,7 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
           if (event.type === 'citation') addCitations(draft, event.data)
           if (event.type === 'no_results') { draft.state = 'no-evidence'; draft.text = event.data?.message ?? draft.text }
           if (event.type === 'approval_request') draft.state = 'approval'
-          if (event.type === 'error') { draft.state = 'error'; draft.error = event.data?.message ?? '채팅 처리 중 오류가 발생했습니다.' }
+          if (event.type === 'error') { draft.state = 'error'; draft.error = STREAM_ERROR_MESSAGE }
           if (event.type === 'done') draft.state = 'done'
           if (event.type === 'error') draft.errorCode = event.data?.code
           if (event.type === 'done') {
