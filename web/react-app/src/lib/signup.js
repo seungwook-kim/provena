@@ -1,4 +1,4 @@
-import { apiJson, apiRequest } from './api'
+import { apiJson, csrfHeaders } from './api'
 
 const MIN_PASSWORD_LENGTH = 8
 const MAX_PASSWORD_BYTES = 72
@@ -13,13 +13,6 @@ export function validateSignupInput({ email = '', password = '', passwordConfirm
   if (password && (password.length < MIN_PASSWORD_LENGTH || passwordBytes > MAX_PASSWORD_BYTES)) errors.push(`비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상, UTF-8 기준 ${MAX_PASSWORD_BYTES}바이트 이하로 입력해 주세요.`)
   if (password && passwordConfirmation && password !== passwordConfirmation) errors.push('비밀번호가 일치하지 않습니다.')
   return errors
-}
-
-async function csrfHeaders() {
-  await apiRequest('/auth/csrf')
-  const csrfToken = document.cookie.split('; ').find(cookie => cookie.startsWith('provena_csrf='))?.split('=')[1]
-  if (!csrfToken) throw new Error('CSRF 토큰을 받을 수 없습니다.')
-  return { 'X-CSRF-Token': decodeURIComponent(csrfToken) }
 }
 
 export async function requestSignup({ email, password, passwordConfirmation }) {

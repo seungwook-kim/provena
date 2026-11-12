@@ -132,3 +132,36 @@ describe('network failure', () => {
     vi.unstubAllGlobals()
   })
 })
+
+describe('가입 요청의 CSRF는 api.js 공용 경로를 쓴다 (A9)', () => {
+  it('403 csrf_failed를 받으면 새 토큰으로 한 번만 다시 보낸다', async () => {
+    const { requestSignup } = await import('./signup')
+    document.cookie = 'provena_csrf=old'
+    let signupCalls = 0
+    const fetchMock = vi.fn(async (url, init) => {
+      if (url.includes('/auth/csrf')) { document.cookie = 'provena_csrf=fresh'; return new Response(null, { status: 204 }) }
+      signupCalls += 1
+      if (signupCalls === 1) return new Response(JSON.stringify({ error: { code: 'csrf_failed', message: 'x' } }), { status: 403, headers: { 'content-type': 'application/json' } })
+      return new Response('{"status":"sent"}', { status: 200, headers: { 'content-type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    document.cookie = 'provena_csrf=old'
+    await requestSignup({ email: 'a@b.co', password: 'password1', passwordConfirmation: 'password1' })
+    const signups = fetchMock.mock.calls.filter(([url]) => url.includes('/auth/signup'))
+    expect(signups).toHaveLength(2)
+    expect(signups[1][1].headers['X-CSRF-Token']).toBe('fresh')
+    vi.unstubAllGlobals()
+  })
+
+  it('동시에 보낸 가입 요청도 /auth/csrf는 한 번만 받는다', async () => {
+    const { requestSignup, resendSignupCode } = await import('./signup')
+    const fetchMock = vi.fn(async url => {
+      if (url.includes('/auth/csrf')) { document.cookie = 'provena_csrf=t1'; return new Response(null, { status: 204 }) }
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await Promise.all([requestSignup({ email: 'a@b.co', password: 'password1', passwordConfirmation: 'password1' }), resendSignupCode('a@b.co')])
+    expect(fetchMock.mock.calls.filter(([url]) => url.includes('/auth/csrf'))).toHaveLength(1)
+    vi.unstubAllGlobals()
+  })
+})
