@@ -47,4 +47,4 @@ Python SDK는 생성된 `requirements.txt`의 패키지(urllib3, python-dateutil
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-12 | 박진형 (jinyeong-731) | 신규. openapi-generator 7.26.0으로 Python·Java SDK 생성, `generate.sh`와 이 문서 추가(C-15·P-07) | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | 신규. openapi-generator 7.26.0으로 Python·Java SDK 생성, `generate.sh`와 이 문서 추가(C-15·P-07) | #135 |
