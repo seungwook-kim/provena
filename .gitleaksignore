@@ -1,7 +1,7 @@
 # AUTHZ_COMMIT은 공개 저장소의 Git 커밋 해시이며 비밀값이 아니다
 ec1376c9952d4f88311729ef54aa6106fd482a02:backend/rag/ingest/handbook.py:generic-api-key:47
 
-# 아래 6건은 비밀값이 아닌 오탐이다(2026-11-11 원문 줄을 확인함).
+# 커밋 지문은 모두 9건이다(위 AUTHZ_COMMIT 1건, 아래 6건, 그 아래 이메일 가입 시험 2건). 아래 6건은 비밀값이 아닌 오탐이다(2026-11-11 원문 줄을 확인함).
 # 시험 코드에 적은 SQL 파일 이름 목록(101_auth_users.sql 등)
 57e632fea76ab8e1b5a5b56131923dab5234be59:tests/test_db_realign.py:generic-api-key:92
 b30c273cef97bc475badd13a7ec73526d572c595:tests/test_db_realign.py:generic-api-key:89
@@ -16,7 +16,7 @@ bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_rep
 da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:140
 da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:141
 
-# 위에 이미 등록한 6건의 현재 작업 폴더 검사(gitleaks dir)용 지문. 같은 줄이라 같은 이유의 오탐이다.
+# 위 커밋 지문 9건 가운데 같은 줄이 현재 작업 폴더에도 남아 있는 7건의, 작업 폴더 검사(gitleaks dir)용 지문 6건(db_realign 시험의 2건은 한 줄로 합쳐진다). 같은 줄이라 같은 이유의 오탐이다.
 backend/rag/ingest/handbook.py:generic-api-key:52
 tests/test_db_realign.py:generic-api-key:96
 tests/test_signup_postgres_integration.py:generic-api-key:174
