@@ -12,6 +12,8 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-11 | 박진형 (jinyeong-731) | `EVAL_REPORT.md` 9장 재현 명령 앞에 한 줄 추가: `--chunks data/chunks/chunks.jsonl`은 커밋하지 않은 파일이며 `backend.rag.ingest.chunk`로 만들거나 `data/index.tar.gz`를 푼 `data/index/chunks.jsonl`을 쓴다(명령·숫자는 그대로). `EVAL_REPORT.md`는 조장 파일 | |
+| 2026-11-11 | 박진형 (jinyeong-731) | `GATES.md` 변이 표에 18~33번 추가(D5 이후 코드 승인 재개·멀티·판정 단계와 새 시험의 변이, 로컬 실행 결과), `embedding_measurement.md` 재측정 기록 한계 문장을 int8 수정 반영으로 고침, 작업 내역 `pr-notes/PR-next-b4.md` 추가 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `pr-notes/PR-132.md` 추가: #131 리뷰 반영(기억 설정 소속 미전송, 판 날짜 참고 값)과 놓친 것 목록 후속 38개(E-02~R-09) 묶음의 작업 내역(갈래별 무엇을·근거·확인·한계, 해소 확인 번호, 조장 확인 필요). 코드 변경·측정·호출 없음, 모든 값은 로컬 | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 리뷰 반영: 결정 ① 확정(기억 설정이 한글 팀 이름을 `affiliation`으로 보내지 않음, `specs/memory.md` 문장 수정), 결정 ② 확정(`SPEC.md`·`README.md` 판 날짜 표시는 참고 값 1.000(00037-2jt 원자료 재계산 v2 75/75)으로만 적고 이번 주 최종 운영 측정에서 조장이 다시 세어 반영), `pr-notes/PR-131.md` 결정 절 갱신. 측정·호출 없음 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 병합 후 낡은 줄 번호 인용을 현재 코드 줄로 정정(`specs/login.md`, `specs/recall.md`, `specs/decision-approval.md`, `specs/memory.md`, `SDD.md` 11-1, `db/TABLE_SPEC.md`, `web/web.md`) 하고 `TABLE_SPEC.md`의 겹친 서술어를 고쳤다. `api/api.md` 경로 데코레이터 수를 57개로 다시 세고 제외 표에 `HEAD /health`를 더했다(57 - 4 = 53개 동작). `TEAM_GUIDE.md` 일정 행을 날짜순(D4, D5, D6)으로 바꿨다. `SDD.md` 4-4 오류 표에 501 `manual_sync_not_supported` 행을 더했다(C-14). 코드 변경·측정·호출 없음 | 미정 |
