@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from './App'
-import { APPROVAL_WAITING_TEXT, MODIFIED_LABEL, PROGRESS_TEXT } from './pages/DemoChatPage'
+
+// 문구가 바뀌면 시험도 실패하도록 코드의 상수를 가져오지 않고 문장을 그대로 적는다(검증 지적 11/12)
+const MODIFIED_LABEL = '원문을 요약·재서술함(수정됨)'
+const PROGRESS_TEXT = '근거를 찾고 답을 확인하는 중입니다'
+const APPROVAL_WAITING_TEXT = '담당자 승인을 기다리고 있습니다. 승인 단계가 끝나면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.'
 
 configure({ asyncUtilTimeout: 5000 })
 vi.setConfig({ testTimeout: 15000 })

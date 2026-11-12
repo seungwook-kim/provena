@@ -14,8 +14,9 @@ function CitationButtons({ citations, selectedCitation, messageIndex, onSelect }
 // CC BY-SA 표시 세 가지(원문 주소·라이선스 링크·수정 여부, TEAM_GUIDE 7장) 중 수정 여부. 서버가 attribution.modified=true를 보낸다(backend/api/routes.py ATTRIBUTION)
 export const MODIFIED_LABEL = '원문을 요약·재서술함(수정됨)'
 export const PROGRESS_TEXT = '근거를 찾고 답을 확인하는 중입니다'
-// 승인 뒤 재개는 같은 대화에 결과를 남기고(backend/graph/departments/review.py finalize), 화면은 탭으로 돌아올 때 다시 받는다(아래 H-15 effect)
-export const APPROVAL_WAITING_TEXT = '담당자 승인을 기다리고 있습니다. 승인 또는 반려되면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.'
+// 승인 뒤 재개는 같은 대화에 결과를 남기고(backend/graph/departments/review.py finalize), 화면은 탭으로 돌아올 때 다시 받는다(아래 H-15 effect).
+// 팀 검토 실패 건은 승인·반려가 아니라 다시 검토·검토 못 한 팀 표시이고 다음 승인 건이 이어질 수 있어(backend/graph/decision/routes.py next_approval) "승인 단계가 끝나면"으로 쓴다
+export const APPROVAL_WAITING_TEXT = '담당자 승인을 기다리고 있습니다. 승인 단계가 끝나면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.'
 
 // 답은 그래프가 끝난 뒤 한 번에 오므로(backend/graph/stream.py) 단계 대신 지난 시간만 보여 준다
 function GeneratingProgress() {

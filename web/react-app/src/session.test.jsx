@@ -4,7 +4,8 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { apiRequest } from './lib/api'
-import { PRIVACY_NOTICE } from './lib/privacy-notice'
+// 문구 회귀를 잡도록 문장을 그대로 적는다(src/lib/privacy-notice.js 와 같아야 함)
+const PRIVACY_NOTICE = '이름·전화번호·근무지 주소는 암호화해 저장하며, 본인만 볼 수 있고 관리자에게도 보이지 않습니다.'
 
 const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', login_id: 'a-user@example.com' }
 const B = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin' }
