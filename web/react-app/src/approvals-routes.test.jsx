@@ -60,7 +60,7 @@ beforeEach(() => {
     if (path === '/me') return server.user ? json(server.user) : json({ detail: '인증이 필요합니다.' }, 401)
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
-    if (path === '/recalls') return json({ items: [], unread: 0 })
+    if (path === '/recalls?limit=500') return json({ items: [], unread: 0 })
     if (path === '/recalls/digests') return json([])
     if (path === '/approvals' && method === 'GET') return server.listResponse ? server.listResponse() : json(server.approvals)
     const match = path.match(/^\/approvals\/([^/]+)$/)

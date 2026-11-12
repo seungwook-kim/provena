@@ -200,7 +200,7 @@ async function csrfHeaders() {
 
 export async function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, headers: await csrfHeaders(), body: JSON.stringify(value) }) }
 export async function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true, headers: await csrfHeaders() }) }
-export function getRecalls({ suppressUnauthorized = false } = {}) { return apiJson('/recalls', { suppressUnauthorized }) }
+export function getRecalls({ suppressUnauthorized = false, limit } = {}) { return apiJson(limit != null ? `/recalls?limit=${encodeURIComponent(limit)}` : '/recalls', { suppressUnauthorized }) }
 export function getRecall(noticeId) { return apiJson(`/recalls/${encodeURIComponent(noticeId)}`) }
 export function getRecallDigests() { return apiJson('/recalls/digests', { suppressUnauthorized: true }) }
 export async function reviewRecall(noticeId, action) {

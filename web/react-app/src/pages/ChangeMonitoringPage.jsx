@@ -15,7 +15,9 @@ const NOT_FOUND = '변경 기록을 찾을 수 없습니다.'
 
 function Marked({ text, mark }) {
   if (!mark || !text?.includes(mark)) return text
-  const [before, after] = text.split(mark)
+  const at = text.indexOf(mark)
+  const before = text.slice(0, at)
+  const after = text.slice(at + mark.length)
   return <>{before}<mark>{mark}</mark>{after}<span className="changed-text-legend"><i aria-hidden="true" />변경된 부분</span></>
 }
 
@@ -104,6 +106,7 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
       {loadingFirst ? <p className="change-service-empty" role="status">변경 기록을 불러오고 있습니다.</p>
         : failedFirst ? <div className="change-service-empty recall-load-error" role="alert"><p>{listErrorMessage(snapshot.error)}</p><button type="button" className="demo-outline-button" onClick={() => service.listChanges().catch(() => {})}>다시 시도</button></div>
           : visible.length ? visible.map(record => <button type="button" key={record.id} className={`change-service-item ${record.id === selected?.id ? 'selected' : ''}`} onClick={() => setSelectedId(record.id)}><div><strong>{record.document}</strong><span className={`change-type ${record.type.toLowerCase()}`}>{CHANGE_LABELS[record.type]}</span></div><p>{record.summary}</p><small>{[record.area, record.detectedAt].filter(Boolean).join(' · ')}</small>{typeof record.impactedAnswerCount === 'number' && <em>영향받는 답변 {record.impactedAnswerCount}건</em>}</button>) : <p className="change-service-empty">{records.length ? '검색 결과가 없습니다.' : '변경 기록이 없습니다.'}</p>}
+      {live && snapshot.more && query.trim() && <p className="change-service-empty" role="status">아직 일부만 불러왔습니다. 더 보기를 눌러 나머지에서도 찾아 주세요.</p>}
       {live && snapshot.more && <button type="button" className="demo-outline-button change-load-more" disabled={status === 'loading'} onClick={() => service.loadMore?.().catch(() => {})}>{status === 'loading' ? '불러오는 중입니다.' : '더 보기'}</button>}
     </aside>
       <article className="change-service-detail">{selected ? <><div className="change-detail-head"><div><span className={`change-type ${selected.type.toLowerCase()}`}>{CHANGE_LABELS[selected.type]}</span><h2>{selected.document}</h2><p>{[selected.area, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{selected.deliveryStatus && ` · ${DELIVERY_LABELS[selected.deliveryStatus]}`}</p></div></div><section className="change-summary"><small>변경 내용 요약</small><p>{selected.summary}</p></section>

@@ -56,7 +56,7 @@ beforeEach(() => {
     if (path === '/me') return json(ADMIN)
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
-    if (path === '/recalls') return json({ items: [], unread: 0 })
+    if (path === '/recalls?limit=500') return json({ items: [], unread: 0 })
     if (path === '/recalls/digests') return json([])
     if (path === '/decision-tables' && method === 'GET') return server.tablesResponse ? server.tablesResponse() : json(server.tables)
     if (path === '/approvals' && method === 'GET') return server.approvalsResponse ? server.approvalsResponse() : json(server.approvals)

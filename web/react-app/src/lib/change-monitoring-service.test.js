@@ -186,3 +186,15 @@ describe('API change monitoring service', () => {
     expect(previewChangeMonitoringService.loadMore).toBeNull()
   })
 })
+
+describe('changed text for the live view (A2)', () => {
+  it('computes the changed part of a modified record from old and new text', () => {
+    const record = mapChange(change({ change_type: 'modified', old_text: '구매 승인 절차를 진행합니다.', new_text: '구매 승인 전에 보안 검토를 완료해야 합니다.' }))
+    expect(record.changedText).toBe('전에 보안 검토를 완료해야')
+    expect(record.newPolicy).toContain(record.changedText)
+  })
+  it('leaves changedText empty when there is nothing to compare', () => {
+    expect(mapChange(change({ change_type: 'added', new_text: '새 문서' })).changedText).toBeNull()
+    expect(mapChange(change()).changedText).toBeNull()
+  })
+})

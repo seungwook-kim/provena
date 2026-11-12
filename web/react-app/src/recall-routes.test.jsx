@@ -37,7 +37,7 @@ let server
 let calls
 
 function requestsTo(method, path) {
-  return calls.filter(call => (call.options?.method ?? 'GET') === method && call.path === path)
+  return calls.filter(call => (call.options?.method ?? 'GET') === method && call.path.replace(/^\/recalls\?limit=500$/, '/recalls') === path)
 }
 
 beforeEach(() => {
@@ -57,7 +57,7 @@ beforeEach(() => {
     if (path === '/me') return server.user ? json(server.user) : json({ detail: '인증이 필요합니다.' }, 401)
     if (path === '/auth/csrf') { document.cookie = 'provena_csrf=test-csrf; path=/'; return new Response(null, { status: 204 }) }
     if (path === '/threads') return json([])
-    if (path === '/recalls' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
+    if (path === '/recalls?limit=500' && method === 'GET') return server.recallsResponse ? server.recallsResponse() : json(server.recalls)
     if (path === '/recalls/digests') return server.digestsResponse ? server.digestsResponse() : json({ digests: [{ digest_id: 'd1', user_id: USER.user_id, day: '2026-11-03', count: 2, notice_ids: ['n1', 'n2'], created_at: '2026-11-03T00:00:00Z' }] })
     if (path === '/recalls/digest/flush' && method === 'POST') return server.flushResponse ? server.flushResponse() : json({ digests: 2, notices: 5 })
     if (path === '/recalls/process-pending' && method === 'POST') return server.pendingResponse ? server.pendingResponse() : json({ status: 'done', processed: 3, sent: 2, failed: 1, skipped: 0, notices: 4, review: 1, judge_failures: 0, candidates: 0 })
@@ -106,7 +106,7 @@ describe('live recall route', () => {
     expect(screen.getByText('확신도 82%')).toBeTruthy()
     expect(screen.getAllByText('중요').length).toBeGreaterThan(0)
     expect(screen.getByText('보안 검토 단계가 추가되었습니다.')).toBeTruthy()
-    expect(screen.getByText('구매 승인 전에 보안 검토를 완료해야 합니다.')).toBeTruthy()
+    expect(screen.getByText((_, el) => el.tagName === 'P' && el.textContent.includes('구매 승인 전에 보안 검토를 완료해야 합니다.'))).toBeTruthy()
     expect(screen.queryByRole('heading', { name: '관리자 확인 대기' })).toBeNull()
     expect(screen.queryByRole('heading', { name: '함께 볼 정책 후보' })).toBeNull()
     expect(screen.queryByRole('heading', { name: '변경 전 영향 미리보기' })).toBeNull()
@@ -402,11 +402,26 @@ describe('admin manual recall actions and webhook subscriptions (H-21)', () => {
   })
 })
 
+describe('live recall list cap (A7)', () => {
+  it('requests 500 and tells the user when the cap is reached', async () => {
+    server.recalls = { items: Array.from({ length: 500 }, (_, i) => notice({ notice_id: `n${i}` })), unread: 1 }
+    open('/recalls')
+    await screen.findByText(/최근 알림 500건만 표시/)
+    expect(requestsTo('GET', '/recalls')).toHaveLength(1)
+  })
+
+  it('shows no cap notice for a short list', async () => {
+    open('/recalls')
+    await screen.findByRole('button', { name: /Security review/ })
+    expect(screen.queryByText(/500건만 표시/)).toBeNull()
+  })
+})
+
 describe('live change monitoring route', () => {
   it('shows changes, loads old and new text, and links to related recalls', async () => {
     open('/changes')
     await screen.findByRole('button', { name: /Procurement/ })
-    await screen.findByText('새 정책 본문')
+    await screen.findByText((_, el) => el.tagName === 'P' && el.textContent.includes('새 정책 본문'))
     expect(screen.getByText('이전 정책 본문')).toBeTruthy()
     expect(screen.getByText('감시 중')).toBeTruthy()
     expect(screen.queryByRole('button', { name: '감시 일시 중지' })).toBeNull()
@@ -415,6 +430,30 @@ describe('live change monitoring route', () => {
     await userEvent.click(link)
     await screen.findByText(/선택한 정책 변경/)
     expect(window.location.pathname).toBe('/recalls')
+  })
+
+  it('highlights the changed part of the new policy text on the live server (A2)', async () => {
+    server.changes = { ...server.changes, items: [change({ old_text: '구매 승인 절차를 진행합니다.', new_text: '구매 승인 전에 보안 검토를 완료해야 합니다.' })] }
+    open('/changes')
+    const mark = await screen.findByText('전에 보안 검토를 완료해야', { selector: 'mark' })
+    expect(mark.tagName).toBe('MARK')
+  })
+
+  it('warns that search covers only loaded records while more pages remain (A6)', async () => {
+    server.changes = { ...server.changes, more: true }
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    await userEvent.type(screen.getByLabelText('정책 문서 검색'), '없는문서')
+    await screen.findByText('검색 결과가 없습니다.')
+    expect(screen.getByText(/아직 일부만 불러왔습니다. 더 보기를 눌러/)).toBeTruthy()
+  })
+
+  it('does not show the partial-load notice when everything is loaded (A6)', async () => {
+    open('/changes')
+    await screen.findByRole('button', { name: /Procurement/ })
+    await userEvent.type(screen.getByLabelText('정책 문서 검색'), '없는문서')
+    await screen.findByText('검색 결과가 없습니다.')
+    expect(screen.queryByText(/아직 일부만 불러왔습니다/)).toBeNull()
   })
 
   it('draws the distribution from server totals, not from the loaded page', async () => {
