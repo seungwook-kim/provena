@@ -218,7 +218,7 @@
 | 위치 | `mock_erp/sdk/` (`mock_erp/` 안: TEAM_GUIDE 5장 폴더 주인표에 `mock_erp/`는 업무시스템 목업, SDD 디렉토리 트리도 `mock_erp/` 아래. 새 최상위 폴더를 만들지 않음) |
 | 파일 | `generate.sh`(고정 버전·SHA 확인·고정 옵션), `sdk.md`(폴더 문서), `python/`(패키지 `provena_sdk`), `java/`(패키지 `com.provena.sdk`, `native` 라이브러리, `pom.xml`) |
 | 문서 | PRD P-03, SDD 5장·11장·디렉토리 트리, SPEC P-03, `specs/erp-integration.md`, `mock_erp.md`, `docs/docs.md`의 SDK 문구를 "생성함, 도구는 openapi-generator 7.26.0"으로 고침 |
-| 생성 크기 | Python 57파일 795,325바이트, Java 55파일 716,817바이트, 합계 112파일 1,512,142바이트(약 1.5MB). gradle 래퍼(바이너리 `gradle-wrapper.jar` 포함)와 미사용 gradle·sbt 파일, 생성기가 내는 CI 설정(`.github/`, `.gitlab-ci.yml`, `.travis.yml`)과 `AndroidManifest.xml`은 `generate.sh`가 지워 저장소에 바이너리가 없다(`git diff --name-only origin/main..HEAD`에서 .jar·.class 0건). 기준(2MB)보다 작아 생성 코드를 커밋한다. 시험·모델 문서 파일은 만들지 않게 해서 줄였다 |
+| 생성 크기 | Python 57파일 774,518바이트, Java 55파일 696,306바이트, 합계 112파일 1,470,824바이트(git에 저장되는 크기, `git ls-tree -l`. 윈도우 작업 폴더는 줄바꿈 변환으로 더 크게 보임). gradle 래퍼(바이너리 `gradle-wrapper.jar` 포함)와 미사용 gradle·sbt 파일, 생성기가 내는 CI 설정(`.github/`, `.gitlab-ci.yml`, `.travis.yml`)과 `AndroidManifest.xml`은 `generate.sh`가 지워 저장소에 바이너리가 없다(`git diff --name-only origin/main..HEAD`에서 .jar·.class 0건). 기준(2MB)보다 작아 생성 코드를 커밋한다. 시험·모델 문서 파일은 만들지 않게 해서 줄였다 |
 | 재생성 | `bash mock_erp/sdk/generate.sh` |
 
 ### 왜 (근거)
