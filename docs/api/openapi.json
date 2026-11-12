@@ -622,6 +622,43 @@
         "title": "DecisionTableItem",
         "type": "object"
       },
+      "EvalReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "search": {
+            "default": "same",
+            "enum": [
+              "same",
+              "undivided"
+            ],
+            "title": "Search",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "EvalReviewRequest",
+        "type": "object"
+      },
       "FeedbackBody": {
         "additionalProperties": false,
         "properties": {
@@ -1309,6 +1346,18 @@
         "title": "SubscriptionBody",
         "type": "object"
       },
+      "SyncBody": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "SyncBody",
+        "type": "object"
+      },
       "UserResponse": {
         "properties": {
           "role": {
@@ -1361,6 +1410,46 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/eval/review": {
+      "post": {
+        "operationId": "eval_review_admin_eval_review_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eval Review Admin Eval Review Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eval Review"
+      }
+    },
     "/admin/signup-requests": {
       "get": {
         "operationId": "list_signup_requests_admin_signup_requests_get",
@@ -1555,6 +1644,54 @@
           }
         },
         "summary": "Review Signup Request"
+      }
+    },
+    "/admin/sync": {
+      "post": {
+        "description": "증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). dry_run=false는 501(실제 실행 방식 미정).",
+        "operationId": "post_sync_admin_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SyncBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Sync Admin Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Sync"
       }
     },
     "/admin/users": {

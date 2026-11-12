@@ -150,3 +150,65 @@ def test_summary_adds_per_step_totals_only_from_rows_that_have_them():
     summary = {"meta": {"n_questions": 3, "base_url": "x"}, "per_run": [{"run": 1, **s}], "all_runs": s, "relevant_only": s, "irrelevant_only": s}
     md = dl.render_markdown(summary)
     assert "## 단계별 비용" in md and "judge/judge" in md and "Voyage 임베딩: 토큰 합 13" in md and "give_up/no_evidence 1건" in md
+
+
+def kind_row(run, i, total, kind, result="answer", status="ok"):
+    """`dataset_kind`가 있는 행(deploy_latency가 저장하는 모양). 거절 기대 칸은 일부러 종류와 맞추지 않는 값으로 두어 `dataset_kind`를 읽는지 본다."""
+    return {"run": run, "id": i, "status": status, "first_token_s": 0.1, "total_s": total if status == "ok" else None, "result": result,
+            "citations": 1, "cost_usd": 0.01, "dataset_kind": kind, "expect_refusal": False}
+
+
+def test_summary_has_p50_and_p95_per_dataset_kind_overall_and_per_run():
+    runs = {
+        1: [kind_row(1, i, float(i), "relevant") for i in range(1, 11)] + [kind_row(1, 100 + i, 2.0 * i, "irrelevant", result="refuse") for i in range(1, 5)],
+        2: [kind_row(2, i, 10.0 + i, "relevant") for i in range(1, 11)] + [kind_row(2, 100 + i, 1.0, "irrelevant", result="refuse") for i in range(1, 5)]
+        + [kind_row(2, 999, 0, "relevant", status="timeout")],
+    }
+    s = dl.build_summary(runs, {"n_questions": 14, "base_url": "https://x", "revision": "r", "commit": "c", "timeout_s": 120, "started_at": "a", "finished_at": "b"})
+    k = s["by_dataset_kind"]
+    rel, irr = k["relevant"], k["irrelevant"]
+    # 관련 전체: 1~10와 11~20 (20개, 실패 1행은 뺀다). p50 = 10번째 값 10.0, p95 = 19번째 값 19.0 (가장 가까운 순위)
+    assert (rel["all_runs"]["n"], rel["all_runs"]["n_ok"]) == (21, 20)
+    assert rel["all_runs"]["total_s"]["p50"] == 10.0 and rel["all_runs"]["total_s"]["p95"] == 19.0 and rel["all_runs"]["total_s"]["max"] == 20.0
+    assert [(p["run"], p["total_s"]["p50"], p["total_s"]["p95"]) for p in rel["per_run"]] == [(1, 5.0, 10.0), (2, 15.0, 20.0)]
+    # 비관련: 회차 1은 2,4,6,8초 / 회차 2는 모두 1초
+    assert [(p["run"], p["total_s"]["p50"], p["total_s"]["p95"]) for p in irr["per_run"]] == [(1, 4.0, 8.0), (2, 1.0, 1.0)]
+    assert irr["all_runs"]["total_s"]["p50"] == 1.0 and irr["all_runs"]["total_s"]["p95"] == 8.0
+    # 답을 낸 문항만: 비관련은 모두 거절이라 비어 있다. 관련은 전체와 같다
+    assert irr["all_runs"]["answered_total_s"]["p95"] is None and rel["all_runs"]["answered_total_s"]["p95"] == 19.0
+    # 같은 계산 함수(percentile)와 같은 값
+    assert rel["all_runs"]["total_s"]["p95"] == dl.percentile([float(i) for i in range(1, 11)] + [10.0 + i for i in range(1, 11)], 95)
+
+
+def test_dataset_kind_falls_back_to_expect_refusal_for_old_rows_and_existing_summary_keys_stay():
+    old = row(1, 1, 3.0, result="refuse", refusal=True)         # `dataset_kind` 칸이 없는 옛 행
+    assert "dataset_kind" not in old and dl.row_kind(old) == "irrelevant" and dl.row_kind(row(1, 2, 1.0)) == "relevant"
+    s = dl.build_summary({1: [old, row(1, 2, 1.0)]}, {"n_questions": 2, "base_url": "u", "revision": "r", "commit": "c", "timeout_s": 1, "started_at": "a", "finished_at": "b"})
+    assert s["by_dataset_kind"]["irrelevant"]["all_runs"]["n"] == 1 and s["by_dataset_kind"]["relevant"]["all_runs"]["n"] == 1
+    assert s["relevant_only"]["n"] == 1 and s["irrelevant_only"]["n"] == 1 and set(s) >= {"meta", "per_run", "all_runs", "relevant_only", "irrelevant_only"}
+
+
+def test_markdown_lists_the_p50_and_p95_of_each_kind_for_every_run_and_overall(tmp_path):
+    runs = {1: [kind_row(1, i, float(i), "relevant") for i in range(1, 5)] + [kind_row(1, 9, 7.0, "irrelevant", result="refuse")],
+            2: [kind_row(2, i, float(i) + 1, "relevant") for i in range(1, 5)] + [kind_row(2, 9, 3.0, "irrelevant", result="refuse")]}
+    meta = {"n_questions": 5, "base_url": "https://x", "revision": "r", "commit": "c", "timeout_s": 120, "started_at": "a", "finished_at": "b"}
+    dl.write_outputs(tmp_path, runs, meta)
+    md = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "## 관련·비관련 문항별 시간" in md
+    lines = [ln for ln in md.splitlines() if ln.startswith("| 관련 |") or ln.startswith("| 비관련 |")]
+    assert [ln.split("|")[1:3] for ln in lines] == [[" 관련 ", " 1회차 "], [" 관련 ", " 2회차 "], [" 관련 ", " 전체 "],
+                                                     [" 비관련 ", " 1회차 "], [" 비관련 ", " 2회차 "], [" 비관련 ", " 전체 "]]
+    irr_all = lines[-1].split("|")
+    assert irr_all[3].strip() == "2/2" and irr_all[4].strip() == "3.000" and irr_all[5].strip() == "7.000"       # 성공/전체, p50, p95
+    import json
+
+    saved = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+    assert saved["by_dataset_kind"]["relevant"]["all_runs"]["total_s"]["p95"] == 5.0
+
+
+def test_stream_keeps_the_thread_id_sent_in_every_event():
+    """행에 대화 id를 남긴다: 운영 Langfuse sessionId(`<user_id>:<thread_id>`)와 정확히 짝짓는 열쇠. 이벤트 바깥 칸 thread_id에서 읽는다."""
+    lines = sse("token", {"text": "a"}) + sse("done", {"kind": "answer", "usage": {}})
+    got = dl.consume_chat_stream(lines, t0=0.0, clock=lambda: 1.0)
+    assert got["thread_id"] == "t-x" and got["status"] == "ok"
+    assert dl.consume_chat_stream([], t0=0.0, clock=lambda: 1.0)["thread_id"] is None

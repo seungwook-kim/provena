@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import pytest
-from fake_search import fake_search
+from fake_search import _INCIDENT, _chunk, fake_search
 from qgraph_fakes import first_chunk_id, j, normal_llm
 
 from backend.graph import decompose as dec
@@ -14,8 +14,11 @@ from backend.graph.build import (
     MSG_REFUSE,
     MSG_REFUSE_NO_KEY,
     MSG_REFUSE_SEARCH_DOWN,
+    MAX_CHUNKS,
     SEARCH_K,
+    SPLIT_K,
     build_graph,
+    chunk_cap,
 )
 from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.schemas import SearchQuery
@@ -70,8 +73,35 @@ def test_first_search_carries_original_question_and_sub_queries_and_research_doe
     assert llm.count("decompose") == 1
     assert calls[0].query == Q and calls[0].sub_queries == ["SEV2 장애 최초 대응은 몇 분 이내인가요?", "SEV2 장애는 누가 호출하나요?"]
     assert [c.sub_queries for c in calls[1:]] == [None, None]                       # 재검색은 분해 없이
+    assert SPLIT_K == 8 and calls[0].k == SPLIT_K and [c.k for c in calls[1:]] == [SEARCH_K, SEARCH_K]   # 나뉜 질문의 첫 검색만 k=8(사전 등록 62.38)
     assert [c.query for c in calls[1:]] == ["SEV2 최초 대응 1", "SEV2 최초 대응 2"]  # 재작성 검색어(영어)로
     assert next(u for t, u in llm.calls if t == "decompose") == Q                   # 분해 입력은 한국어 원 질문 그대로
+
+
+def numbered_search():
+    """부를 때마다 q.k개의 새 청크를 돌려주는 가짜 검색(근거 목록 상한 시험용)."""
+    calls: list[SearchQuery] = []
+
+    def fn(q):
+        calls.append(q)
+        base = sum(c.k for c in calls[:-1])
+        return [_chunk(_INCIDENT, "2025-01-01", "article", f"Incident Response > S{base + i}", f"SEV2 대응 자료 {base + i}") for i in range(q.k)]
+
+    return fn, calls
+
+
+def test_chunk_cap_grows_by_the_extra_places_only_for_split_questions():
+    assert (SPLIT_K - SEARCH_K, MAX_CHUNKS) == (3, 10)
+    assert [chunk_cap(x) for x in (None, [], ["a"], ["a", "b"], ["a", "b", "c"])] == [10, 10, 10, 13, 13]
+
+
+def test_evidence_list_cap_is_three_higher_for_a_split_question_and_unchanged_otherwise():
+    fn, calls = numbered_search()
+    out = run(build_graph(fn, llm=insufficient_llm(decompose=GOOD), decompose=True))
+    assert [c.k for c in calls] == [8, 5, 5] and len(out["chunks"]) == 13      # 첫 8 + 재검색 5(상한 13에서 멈춘다)
+    fn, calls = numbered_search()
+    out = run(build_graph(fn, llm=insufficient_llm(decompose=NOT_SPLIT), decompose=True))
+    assert [c.k for c in calls] == [5, 5, 5] and len(out["chunks"]) == 10      # 나뉘지 않은 질문은 지금과 같다
 
 
 def test_decompose_state_is_recorded():
@@ -259,7 +289,7 @@ def test_answer_step_still_works_with_sub_queries_and_default_retriever_gets_the
 
     monkeypatch.setattr(search_mod, "_searcher", type("S", (), {"search": lambda self, q: (seen.append(q), fake_search(q))[1]})())
     out = run(build_graph(llm=normal_llm(decompose=GOOD, answer=lambda u: j(answer=f"답 [{first_chunk_id(u)}]", citations=[{"chunk_id": first_chunk_id(u)}])), decompose=True))
-    assert seen and seen[0].sub_queries and seen[0].k == 5 and out["kind"] in ("answer", "refuse")
+    assert seen and seen[0].sub_queries and seen[0].k == SPLIT_K and out["kind"] in ("answer", "refuse")
 
 
 # ---------- 첫 검색의 회사 이름 ----------

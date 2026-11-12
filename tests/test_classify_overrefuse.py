@@ -57,3 +57,32 @@ def test_need_yes_no_questions_must_not_end_at_review():
     general = {"repeat": 1, "id": 18, "kind": "", "group": "general", "probe": "", "route": "out_of_domain", "llm_calls": 1}
     bad = C.summarize([row("review"), general])
     assert not bad["passed"] and bad["need_yes_no"]["review_ids"] == [321]
+
+
+def test_review_set_is_added_only_on_request_and_its_ids_do_not_collide():
+    base = C.load_items()
+    with_set = C.load_items(with_review_set=True)
+    assert len(base) == 84 and len(with_set) == 94 and len({it["id"] for it in with_set}) == 94
+    ask = [it for it in with_set if C.group_of(it) == "review_request"]
+    assert sorted(it["id"] for it in ask) == list(range(1001, 1011)) and {it["probe"] for it in ask} == {C.REVIEW_PROBE}
+    assert C.plan(with_set, 3)["groups"]["review_request"] == 10
+
+
+def test_review_set_gate_wants_review_two_runs_of_three_and_no_review_outside_the_set():
+    """합동 검토 요청 10건은 문항마다 3회 중 2회 이상 review, 그 밖 문항은 review 0(62.39 초안)."""
+    ask = lambda i, route: {"repeat": 1, "id": i, "kind": "partial", "group": "review_request", "probe": C.REVIEW_PROBE, "route": route, "llm_calls": 1}  # noqa: E731
+    other = lambda i, route: {"repeat": 1, "id": i, "kind": "relevant", "group": "relevant", "probe": "", "route": route, "llm_calls": 1}  # noqa: E731
+    gen = {"repeat": 1, "id": 18, "kind": "", "group": "general", "probe": "", "route": "out_of_domain", "llm_calls": 1}  # 일반 지식 기준은 따로 통과해 둔다
+    ok = C.summarize([ask(1005, "rule"), ask(1005, "review"), ask(1005, "review"), other(1, "rule"), gen])
+    assert ok["pass_review_request"] and ok["pass_no_review_leak"] and ok["passed"]
+    miss = C.summarize([ask(1005, "decision"), ask(1005, "rule"), ask(1005, "review"), other(1, "rule"), gen])
+    assert not miss["pass_review_request"] and not miss["passed"] and miss["review_request"]["review_runs"] == {1005: 1}
+    leak = C.summarize([ask(1005, "review"), ask(1005, "review"), ask(1005, "review"), other(7, "review"), gen])
+    assert leak["pass_review_request"] and not leak["pass_no_review_leak"] and leak["review_leak"]["ids"] == [7] and not leak["passed"]
+
+
+def test_review_set_questions_are_never_sent_back_to_the_policy_path_by_code():
+    """모델이 review라고 하면 코드의 되돌림(asks_fact_not_review)은 이 10건을 정책 경로로 돌리지 않는다. 분류 문구가 원인임을 0원으로 가른다."""
+    ask = [it for it in C.load_items(with_review_set=True) if it["probe"] == C.REVIEW_PROBE]
+    rows = C.run(ask, _llm(lambda user: j(org_specific=True, route="review")))
+    assert [r["route"] for r in rows] == ["review"] * 10

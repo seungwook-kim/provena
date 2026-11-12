@@ -49,10 +49,12 @@ from typing import Any
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Match, Mount
 
 from backend.api.errors import ApiError, install_error_handlers
 from backend.api.middleware import RequestContextMiddleware
 from backend.api.changes import create_changes_router
+from backend.api.eval_review import create_eval_review_router
 from backend.api.recalls import create_recall_router
 from backend.api.routes import create_api_router
 from backend.api.threads import InMemoryThreadStore, PostgresThreadStore
@@ -183,6 +185,35 @@ def start_search_warmup() -> threading.Thread:
     return t
 
 
+WARMUP_QUERY = "handbook warmup"   # 첫 요청 준비용 고정 문장. 평가 문항에 없고, 번역·LLM을 거치지 않으며 결과는 버린다
+
+
+def first_request_warmup(*, searcher_ready: bool) -> None:
+    """인스턴스의 첫 `/chat`이 떠안던 지연 초기화를 시작 때 미리 한다(F3 3차 18장: 그래프 시작 전 +1.3초, 검색 +1.0초).
+    (1) Langfuse 클라이언트·핸들러 만들기(트레이스는 보내지 않음), (2) 검색 준비가 끝났으면 고정 문장으로 임베딩 1회와 색인 질의 1회
+    (Voyage 연결과 검색 DB 연결을 미리 맺는다. 번역 LLM·번역 장부 쓰기는 하지 않고 결과는 버린다).
+    단계마다 실패해도 경고만 남기고 서버 시작을 막지 않는다. 오류 종류만 남긴다(접속 문자열이 섞일 수 있다)."""
+    started = time.perf_counter()
+    done: list[str] = []
+    try:
+        from backend.services import tracing
+        tracing.get_handler(allow_evaluation=True)   # 클라이언트는 프로세스 안에 캐시된다. 꺼져 있으면 None
+        done.append("tracing")
+    except Exception as exc:  # noqa: BLE001 - 못 만들어도 첫 요청 때 만든다
+        log.warning("첫 요청 준비 실패(tracing) stage=first_request_warmup: %s", type(exc).__name__)
+    if searcher_ready:
+        try:
+            import importlib
+            searcher = importlib.import_module("backend.rag.retrieve.search")._searcher
+            if searcher is not None:
+                vec = searcher.embed([WARMUP_QUERY])[0]
+                searcher.store.vector_top(vec, searcher.cfg.embed_model, None, None, 1)
+                done.append("search")
+        except Exception as exc:  # noqa: BLE001 - 못 해도 첫 검색 때 한다
+            log.warning("첫 요청 준비 실패(search) stage=first_request_warmup: %s", type(exc).__name__)
+    log.info("첫 요청 준비 stage=first_request_warmup elapsed_s=%.1f steps=%s", time.perf_counter() - started, ",".join(done) or "-")
+
+
 def run_startup_warmup(*, preload_llm: bool, timeout: float = SEARCH_WARMUP_TIMEOUT_S) -> bool:
     """시작할 때 기다리며 준비한다: (1) 첫 LLM 호출에 필요한 제공자 모듈 올리기(`preload_llm`일 때), (2) 검색 준비.
 
@@ -200,6 +231,10 @@ def run_startup_warmup(*, preload_llm: bool, timeout: float = SEARCH_WARMUP_TIME
             except Exception as exc:  # noqa: BLE001 - 못 올려도 첫 호출 때 올라간다. 종류만 남긴다
                 log.warning("LLM 모듈 미리 올리기 실패(첫 호출 때 올라감) stage=llm_preload: %s", type(exc).__name__)
         outcome["ok"] = _search_warmup_job()
+        try:
+            first_request_warmup(searcher_ready=outcome["ok"])
+        except Exception as exc:  # noqa: BLE001 - 첫 요청 준비는 덤이다. 예상 밖 오류도 서버 시작과 검색 준비 결과를 바꾸지 않는다
+            log.warning("첫 요청 준비 실패 stage=first_request_warmup: %s", type(exc).__name__)
 
     t = threading.Thread(target=work, name="startup-warmup", daemon=True)
     started = time.perf_counter()
@@ -380,6 +415,8 @@ def create_app(
             # 화면 주소도 /admin/users라 브라우저가 직접 열면(새로고침) React 화면을 내준다(app.state.react_index, 빌드 없으면 API 그대로)
         app.include_router(create_admin_router(store=store, owner_login_id=owner_login_id, secret=auth_secret,
                                                html_page=lambda: app.state.react_index))
+        # 평가 전용(결정 0104, 사전 등록 62.41): 환경 변수 EVAL_REVIEW_SINGLE=1일 때만 열린다(꺼지면 404). 서비스 값에 넣지 않는다
+        app.include_router(create_eval_review_router(store=store, secret=auth_secret))
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)          # 정적 파일 마운트(/)보다 먼저
 
@@ -401,12 +438,16 @@ def create_app(
             api_prefixes = ("auth", "api", "me", "health", "threads", "approvals", "mcp")
             spa_prefixes = ("login", "signup", "chat", "onboarding", "myinfo", "admin", "recalls", "changes", "demo")
 
-        @app.post("/threads", include_in_schema=False)
-        def threads_wrong_method() -> None:
-            raise HTTPException(status_code=405, detail="Method Not Allowed")
-
-        @app.post("/{path:path}", include_in_schema=False)
-        def unknown_post(path: str) -> None:
+        # 정적 파일 마운트(/)는 GET·HEAD만 받아 다른 메서드는 405가 된다. 맞는 경로가 하나도 없으면 모든 메서드를 404 not_found로,
+        # 경로는 맞는데 메서드만 틀리면 405 method_not_allowed로 돌려준다(오류 응답 규약, K-12).
+        @app.api_route("/{path:path}", methods=["POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
+        def unknown_path(request: Request) -> None:
+            # 라우터가 감싸져 있어 route.methods를 읽을 수 없다 → 메서드를 하나씩 바꿔 가며 실제로 맞는 경로가 있는지 본다
+            others = [r for r in request.app.router.routes if getattr(r, "path", None) != "/{path:path}" and not isinstance(r, Mount)]
+            allowed = [m for m in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                       if any(r.matches({**request.scope, "method": m})[0] == Match.FULL for r in others)]
+            if any(r.matches(request.scope)[0] != Match.NONE for r in others):
+                raise HTTPException(status_code=405, detail="Method Not Allowed", headers={"Allow": ", ".join(allowed)} if allowed else None)
             raise ApiError(404, "not_found", "요청한 경로를 찾을 수 없습니다.")
 
         if web_root != WEB_DIR:

@@ -11,6 +11,8 @@
 문항: `evals/dataset_v2.jsonl` 50, `evals/dataset_holdout_v1.jsonl` 20, `evals/overrefuse_probe_v1.jsonl` 10(사내 규정을 묻는 기술 질문 5, 일반 기술 질문 5),
 `evals/review_probe_v1.jsonl` 4(규정상 필요 여부를 예·아니오로 묻는 정책 질문, 사전 등록 62.34. 평가셋과 겹치지 않는다).
 합동 검토 경로는 서버처럼 연결된 것으로 두어(자리만 채운 값, 부르지 않는다) 분류 뒤 코드의 되돌림까지 적용한 경로를 적는다.
+`--with-review-set`: 합동 검토 평가셋 10건(`evals/dataset_review_v1_gold_draft.jsonl`)을 더한다(번호 1001~1010). 이 10건은 모두 review여야 하고(문항마다 3회 중 2회 이상, 62.39 초안),
+이 묶음 밖 문항이 review로 가면(v2, 검증, 프로브 94건 중) 기준 미달이다. 수정 전 운영 기록에서 이 묶음 밖 review는 0이었다.
 종료 코드: 0 통과, 1 기준 미달(뒤 단계를 돌리기 전에 멈춘다), 2 실행 불가(키 없음, 문항 없음).
 
 통과 기준(62.A에 측정 전에 적은 값과 같다. 검증 109번은 이 수정을 만들 때 본 문항이라 따로 적고 기준에서 뺀다):
@@ -38,18 +40,30 @@ EST_INPUT_TOKENS, EST_OUTPUT_TOKENS = 1050, 25
 EST_SECOND_CALL_SHARE = 0.25  # 도메인 밖이 나와 확인 호출이 한 번 더 나가는 문항 비율(80문항 가운데 약 20)
 
 
-def load_items(paths=DATASETS) -> list[dict]:
+REVIEW_SET = "evals/dataset_review_v1_gold_draft.jsonl"  # 합동 검토 평가셋 10건(`--with-review-set`일 때만 더한다). 문항 종류가 full, partial, clarify, low_issue이고 모두 합동 검토 요청이다
+REVIEW_PROBE = "review_request"  # 이 묶음 문항은 분류 경로가 review여야 한다(사전 등록 62.39 초안)
+MIN_REVIEW_RUNS = 2  # 문항마다 회차 중 이만큼 이상 review여야 통과(3회 중 2회)
+
+
+def load_items(paths=DATASETS, with_review_set: bool = False) -> list[dict]:
     out = []
     for rel in paths:
         for line in (ROOT / rel).read_text(encoding="utf-8").splitlines():
             if line.strip():
                 r = json.loads(line)
                 out.append({"id": r["id"], "question": r["input"], "kind": r["kind"], "probe": r.get("probe") or ""})
+    if with_review_set:
+        for line in (ROOT / REVIEW_SET).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                out.append({"id": 1000 + r["id"], "question": r["input"], "kind": r["kind"], "probe": REVIEW_PROBE})  # 번호가 평가셋 v2와 겹치지 않게 1000을 더한다
     return out
 
 
 def group_of(item: dict) -> str:
     """통과 기준에서 문항이 드는 묶음. `seen`은 기준 밖, `other`는 거절이 정답이지만 분류 경로는 어느 쪽이어도 되는 문항(검색 뒤 판정이 거절한다)."""
+    if item["probe"] == REVIEW_PROBE:
+        return "review_request"
     if item["id"] == SEEN_ID:
         return "seen"
     if item["kind"] == "relevant":
@@ -111,7 +125,15 @@ def summarize(rows: list[dict]) -> dict:
     need = [r for r in rows if r.get("probe") == NEED_PROBE]
     s["need_yes_no"] = {"rows": len(need), "review": sum(1 for r in need if r["route"] == "review"), "review_ids": sorted({r["id"] for r in need if r["route"] == "review"})}
     s["pass_need_yes_no"] = s["need_yes_no"]["review"] == 0
-    s["passed"] = s["pass_relevant"] and s["pass_general"] and s["pass_need_yes_no"]
+    # 합동 검토 요청 묶음(62.39 초안): 문항마다 회차 중 MIN_REVIEW_RUNS회 이상 review. 이 묶음 밖의 문항이 review로 가면(새는 것) 안 된다
+    ask = [r for r in rows if r.get("probe") == REVIEW_PROBE]
+    per_id = {i: [r["route"] for r in ask if r["id"] == i] for i in sorted({r["id"] for r in ask})}
+    s["review_request"] = {"rows": len(ask), "review_runs": {i: sum(1 for x in v if x == "review") for i, v in per_id.items()}, "routes": per_id}
+    s["pass_review_request"] = all(sum(1 for x in v if x == "review") >= min(MIN_REVIEW_RUNS, len(v)) for v in per_id.values())
+    leaked = [r for r in rows if r.get("probe") != REVIEW_PROBE and r["route"] == "review"]
+    s["review_leak"] = {"rows": len(leaked), "ids": sorted({r["id"] for r in leaked})}
+    s["pass_no_review_leak"] = not leaked
+    s["passed"] = s["pass_relevant"] and s["pass_general"] and s["pass_need_yes_no"] and s["pass_review_request"] and s["pass_no_review_leak"]
     return s
 
 
@@ -121,16 +143,17 @@ def plan(items: list[dict], repeats: int) -> dict:
     calls = round(len(items) * repeats * (1 + EST_SECOND_CALL_SHARE))
     usd = calls * cost_usd("claude-haiku-5-5", EST_INPUT_TOKENS, EST_OUTPUT_TOKENS)
     return {"items": len(items), "repeats": repeats, "est_llm_calls": calls, "est_cost_usd": round(usd, 4), "embedding_calls": 0,
-            "groups": {g: sum(1 for it in items if group_of(it) == g) for g in ("relevant", "general", "other", "seen")}}
+            "groups": {g: sum(1 for it in items if group_of(it) == g) for g in ("relevant", "general", "other", "seen", "review_request")}}
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="분류 단계만 불러 도메인 밖 분류를 확인한다(62.30)")
     p.add_argument("--repeats", type=int, default=3)
     p.add_argument("--out", type=Path, default=None, help="rows.jsonl과 summary.json을 쓸 폴더")
+    p.add_argument("--with-review-set", action="store_true", help=f"합동 검토 평가셋 10건({REVIEW_SET})을 더해 review 분류를 확인한다(62.39 초안)")
     p.add_argument("--plan", action="store_true", help="호출하지 않고 문항 수와 예상 호출 수·비용만 낸다")
     a = p.parse_args(argv)
-    items = load_items()
+    items = load_items(with_review_set=a.with_review_set)
     if not items:
         print("문항이 없습니다.", file=sys.stderr)
         return 2

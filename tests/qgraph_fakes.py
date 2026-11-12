@@ -19,12 +19,13 @@ class ScriptedLLM:
         system, user = messages[0].content, messages[-1].content
         task = re.search(r"\[\[task:(\w+)\]\]", system).group(1)
         self.calls.append((task, user))
-        h = self.handlers.get(task, "")
+        key = "judge" if task == "judge_retry" and "judge_retry" not in self.handlers else task  # 재검색 뒤 판정(단계 표지 judge_retry)은 판정과 같은 응답 차례를 쓴다
+        h = self.handlers.get(key, "")
         if callable(h):
             out = h(user)
         elif isinstance(h, list):
-            i = self._n.get(task, 0)
-            self._n[task] = i + 1
+            i = self._n.get(key, 0)
+            self._n[key] = i + 1
             out = h[min(i, len(h) - 1)]
         else:
             out = h

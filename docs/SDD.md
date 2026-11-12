@@ -48,7 +48,7 @@ flowchart LR
 | `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜·웹훅·변경 감시 라우트는 `api/recalls.py`, `api/changes.py`) | FastAPI, OpenAPI 자동 문서 |
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
-| `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | LangChain 임베딩·pgvector 저장소·리트리버, 로컬 임베딩·리랭커. 인용 검사는 직접 구현 |
+| `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | 임베딩은 Voyage API(`voyage-4`)를 직접 호출하고, pgvector는 psycopg SQL로 직접 조회한다(LangChain 임베딩·저장소·리트리버는 쓰지 않는다). 리랭커는 로컬 모델(11-0, 현재 미사용). 인용 검사는 직접 구현 |
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
@@ -302,6 +302,7 @@ flowchart TD
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank`, `service` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
+| POST | `/admin/eval/review` | 관리자, CSRF, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 | **평가 전용**(결정 0104, 사전 등록 62.41). 같은 합동 검토 요청을 에이전트 하나가 검토하는 기준선을 운영에서 재는 통로. `{message, as_of?, search: "same" \| "undivided"}` → JSON 한 번 `{status, search, issue_rows, unreviewed, clarify_question, retrieved, llm_calls, usage, latency_ms, revision, request_id}`. 꺼져 있으면 권한 검사보다 먼저 404 `not_found`, 하루 호출 상한(`EVAL_REVIEW_SINGLE_MAX_PER_DAY`, 기본 200)을 넘으면 429 `rate_limited`, 요청당 비용 상한을 넘으면 429 `limit_exceeded`. 쟁점표·승인함·대화 목록에 아무것도 쓰지 않는다. 서비스 경로는 이 코드를 부르지 않는다 |
 | GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
@@ -314,12 +315,13 @@ flowchart TD
 | GET | `/recalls/feedback-stats`, `/recalls/digests` | 로그인(통계는 관리자) | 의견 집계(유형별 정밀도), 하루 요약 목록(본인 것, 관리자는 전체) |
 | POST | `/recalls/digest/flush`, `/recalls/process-pending` | 관리자, CSRF | 하루 요약 보내기, 쌓인 변경 처리(스위치와 무관하게 한 번 실행) |
 | GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
+| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 실행 방식 미정, 정시 수집 workflow `handbook-sync` 사용) |
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |
 | POST | `/decision-tables/convert` | 관리자, CSRF | 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 보낸다(201) |
 | POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 요청 `{task_type, amount_usd?, band?}`(금액 칸 없는 구간 업무는 `band`로 고른다). 업무시스템의 "승인권자 확인" 호출 |
-| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
+| POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 우리 서비스가 업무시스템으로 보내는 리콜 웹훅의 수신 경로 `/webhooks/recall`(11장 3-7)과는 다른 경로다. 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
 | POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음. 입력은 `changes`(본문 포함 가능) 또는 `pages` 중 하나 |
 | POST | `/recalls/{id}/feedback` | 로그인 | 리콜 알림이 쓸모 있었는지(`useful`, `reason`). 같은 유형의 다음 알림 심각도에 반영(F-08). 알림 한 건에 의견은 하나(다시 보내면 덮어씀) |
 | POST, GET | `/webhook-subscriptions` | 관리자 | 업무시스템 웹훅 주소 등록·조회. 리콜 알림이 생기면 등록된 주소로 보내고, 실패하면 재시도하고 기록한다. 등록은 201이고 주소와 `secret_ref`를 검사해 틀리면 400, 응답에 비밀값은 없다. 전송 기록은 `GET /webhook-deliveries`(관리자) |
@@ -362,6 +364,7 @@ flowchart TD
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
 | 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
+| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집 방식 미정, `backend/api/changes.py:171`) |
 | 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
@@ -450,7 +453,7 @@ class Chunk(BaseModel):
     version_id: str        # 커밋 기반 판 id (5장 versions, citations와 같은 값)
     version_date: str      # 이 판(커밋)의 날짜 YYYY-MM-DD
     fetched_at: str        # 수집일 YYYY-MM-DD
-    kind: Literal["article", "annex", "row", "buchik", "pre"]  # article(섹션), row(권한표 행) 위주로 쓴다. 나머지 값은 남겨 둔다
+    kind: Literal["article", "annex", "row", "buchik", "pre"]  # 실제로 만드는 값은 article(섹션), row(권한표 행)뿐이다(backend/rag/ingest/chunk.py). annex, buchik, pre는 만드는 코드가 없고, 값 삭제는 3명 승인이라 남겨 둔다
     text: str
     source_url: str        # 핸드북 페이지 URL
     text_sha256: str | None = None   # 본문 sha256 (11-1 3-6)
@@ -474,7 +477,7 @@ class AgentEvent(BaseModel):
 # backend/schemas/approval.py  (에이전트 ↔ 화면)
 class ApprovalItem(BaseModel):
     approval_id: str
-    kind: Literal["decision_table", "issue_table"]
+    kind: Literal["decision_table", "issue_table", "team_review_failed"]
     summary: str
     created_at: datetime   # JSON에는 ISO 8601 문자열
 
@@ -616,6 +619,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 비밀값 | `.env`에만. 평가 계정 비밀번호는 저장소에 없음 |
 | 결정표 오류 | 승인 전 실행 금지. 셀 대조표를 승인 화면에 보여 준다 |
 | 비공개 링크 | 비공개 주소로만 연결된 칸·링크는 답의 근거로 쓰지 않고 "비공개 문서"로 표시한다 |
+| 평가 전용 엔드포인트가 운영에 있다 | `POST /admin/eval/review`는 합동 검토 팀 구성과 단일 검토자를 같은 리비전에서 비교하려고 둔 측정 통로다(결정 0104). 여는 조건: 환경 변수 `EVAL_REVIEW_SINGLE=1`(서비스 값에 넣지 않고 측정 리비전에서만 켬, 측정이 끝나면 지움)이고, 로그인한 관리자이며 CSRF가 맞을 때. 꺼져 있으면 누구에게나 404다. 막는 장치: 요청당 LLM 비용 상한, 하루 호출 수 상한, 쟁점표·승인함에 쓰지 않음, 서비스 경로(`/chat`, 질문 그래프, 합동 검토 그래프)에서 코드를 부르지 않음(시험으로 고정). 남는 기록: 호출·거절마다 WARNING 로그 한 줄(요청 문장은 sha256 앞 12자만), Langfuse 추적 `review_single_eval`. DB 감사 표는 만들지 않았다 |
 
 ## 10. 평가 연결
 
@@ -638,15 +642,17 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 
 D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
 
-### 11-0. 2026-11-10 현재 확인되는 결과
+### 11-0. 2026-11-11 현재 확인되는 결과
 
 | 항목 | 현재 결과 | 근거 |
 |---|---|---|
 | 결정표의 재무 승인(3-2) | 칸 추가. `DecisionRule.financial_approvers`를 `cooperating_depts`와 따로 둔다 | `backend/schemas/decision.py` |
-| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다 | 결정 0078, 0086, `EVAL_REPORT.md` 8장 |
+| 생성 LLM | Haiku 5.5. 운영 호출은 Anthropic 직접 호출을 유지한다(OpenRouter 경유로 되돌리지 않음). `LLM_PROVIDER` 기본값도 직접 호출 쪽이다(`.env.example:11-14`) | 결정 0078, 0081, 0086, 0089, `EVAL_REPORT.md` 8장 |
 | 임베딩 | `voyage-4` 영어 문장 벡터(2026-11-03 팀 확정). `bge-m3`는 기준선 | `EVAL_REPORT.md` 1장, 3장 |
 | 한→영 질의 변환 | 질문을 영어로 번역(번역 장부에 저장)하고, 여러 사실을 묻는 질문은 하위 질문으로 나눈다 | `EVAL_REPORT.md` 3장, 8장 |
 | 리랭커 | 쓰지 않는다(`voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다) | `EVAL_REPORT.md` 3-2 |
+| 페이지 id(3-1) | 경로 sha256 앞 8자를 16진수로 읽은 정수. 판이 바뀌어도 같은 페이지는 같은 id | `backend/rag/ingest/handbook.py:169-171` |
+| 리콜·결정표·합동 검토 판정 규칙(11-2의 4-1, 4-2, 4-3, 4-4) | 모두 추천대로 코드에 있다. 판정 응답이 깨지면 설명 맨 앞 "[판정 실패, 확인 필요]"(4-1), 기준일이나 인용한 판 날짜가 새 판 날짜 이후면 영향 없음(4-2), 네 팀 모두 쟁점도 검토 못 한 팀도 없을 때만 "쟁점 없음"으로 끝(4-3), 표를 지정하지 않으면 승인된 표가 정확히 1개일 때만 실행(4-4) | `backend/graph/recall/notice.py:25`, `:76`, `backend/graph/departments/issue_table.py:150`, `backend/graph/departments/review.py:57`, `backend/graph/decision/execute.py:40-45` |
 | Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
@@ -665,10 +671,10 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 3-4 | 섹션 단위 조회 (검색 → 에이전트) | `get_article(rule_seq, article, as_of)` 따로 / `SearchQuery`에 `rule_seq` 추가 | 따로 | 리콜은 같은 섹션의 개정 전후 원문이 필요하고, 검색과 목적이 다르다 (MCP 도구 `get_section`이 이 역할) |
 | 3-5 | 바뀐 섹션의 종류 | `ChangedArticle`에 추가·삭제·수정 칸 추가 / 두지 않기 | 칸 추가 | 삭제된 섹션을 인용한 답은 수정과 판정이 다르다 |
 | 3-6 | 청크 본문 해시 | `Chunk`에 본문 sha256 칸 추가 / 매번 계산 | 칸 추가 | G3 "서로 다른 청크 수"를 셀 때와 중복 제거에 쓴다 |
-| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`, 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
+| 3-7 | 리콜 웹훅 형식 | 아래 안 / 다른 형식 | 아래 안 | 업무시스템 쪽 수신 경로 `POST /webhooks/recall`(우리 서비스가 받는 `POST /webhooks/regulation-updated`와는 방향이 반대인 다른 경로다, `backend/graph/recall/webhook.py:36`, `backend/api/recalls.py:320`), 본문은 `RecallNotice` JSON 그대로, 서명은 헤더 `X-Signature: sha256=<HMAC-SHA256(secret, 원본 본문) 16진수>`. secret은 `webhook_subscriptions.secret_ref`가 가리키는 값이고 저장소에 적지 않는다 |
 | 3-8 | 웹훅 비밀값이 비었을 때 | 서명 검사 건너뜀 / 항상 필수 | 배포 주소는 필수, 로컬 데모만 건너뜀 | 배포 주소에서 서명 없는 웹훅을 받지 않는다. 비밀값이 비면 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서만 서명 없이 보내고, 그 밖에서는 보내지 않고 전송 기록에 `failed`(`secret_missing`)로 남긴다 |
 | 3-9 | 웹훅 재시도 | 횟수·간격 정하기 / 한 번만 | 최대 3번(`RECALL_WEBHOOK_MAX_TRIES`), 1초(`RECALL_WEBHOOK_BACKOFF_S`)부터 두 배씩 기다림, 시도 제한 시간 5초 | 일시 오류를 넘기되 응답을 오래 붙잡지 않는다. 시도마다 `webhook_deliveries.attempts`에 남긴다 |
-| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분 |
+| - | 결정표 실행 API 요청 필드 이름, 응답 코드(202, 409) | Spec에서 정함 | D0 Spec 작성 때 정함 | 업무시스템과 맞물리는 부분. 정해진 값: 요청 `task_type`, `amount_usd`, `band`(선택), 성공은 202가 아니라 200, 실패는 400, 401, 404, 409(`not_approved`, `ambiguous_table`), 422(`ambiguous_band`). 상세는 `docs/specs/decision-approval.md` How, 코드는 `backend/graph/decision/routes.py:182`(`_parse_run`), `:401-411`(`execute`), `backend/graph/decision/rules.py:36-82` |
 
 ### 11-2. 동작 기본값
 
@@ -684,7 +690,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
-| 생성 LLM | `haiku-5.5` / `gpt-6-luna`. `LLM_PROVIDER`(기본 anthropic)·`openai` 둘 다 받고, 키가 없으면 데모 모드 | 평가셋 v1로 비교해 하나를 고른다 | D0 후보, D2 확정 |
+| 생성 LLM | `haiku-5.5` / `gpt-6-luna`. `LLM_PROVIDER`(기본 anthropic)·`openai` 둘 다 받고, 키가 없으면 데모 모드 | `haiku-5.5`. 평가셋 v1로 `gpt-6-luna`와 비교하려던 계획은 실행하지 않음: 운영에 계속 쓸 수 있는 키가 Anthropic 키뿐이라 같은 공급자 안에서 Haiku 5.5와 Sonnet 5.5를 비교했다(EVAL_REPORT 8장) | D0 후보, D2 확정 |
 | 임베딩 | `bge-m3` / 비교 후보(Qwen3-Embedding-0.6B 등). 한국어 질문 → 영어 문서라 다국어 모델이 필요하다 | `bge-m3` 기본 | D0 후보, D2~D3 확정 |
 | 한→영 질의 변환 | LLM이 BM25용 영어 검색어를 만든다 / 다국어 임베딩만 쓴다 | 두 방식을 평가셋으로 비교 | D2~D3 |
 | 로컬 모델 실행, Cloud Run 메모리·이미지 크기 | 각자 PC에서 `bge-m3`를 불러 보고 확인 | 오늘 확인 | D0 |

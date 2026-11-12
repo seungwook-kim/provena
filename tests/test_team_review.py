@@ -30,7 +30,9 @@ from team_review_fakes import (
 )
 
 import backend.services.skills as skills_mod
+from backend.schemas import SearchQuery
 from backend.graph.departments import issue_table as IT
+from backend.graph.departments import review as R
 from backend.graph.departments import teams as T
 from backend.graph.departments.review import MSG_NO_ISSUES, RETRY_NOTE, TEAM_ATTEMPTS, build_review_graph
 from backend.graph.departments.store import InMemoryIssueTableStore, IssueTableStore, PgIssueTableStore
@@ -94,7 +96,61 @@ def test_every_team_searches_its_own_section_with_the_as_of_date():
     start(g)
     got = {q.org: q for q in retriever.calls}
     assert set(got) == set(TEAM_ORG.values())  # 보안 security, 인프라·SRE infra, IT 운영 business-technology, 재무 finance
-    assert all(q.as_of == "2026-11-05" and q.k == 5 and REQUEST in q.query for q in got.values())
+    assert all(q.as_of == "2026-11-05" and q.k == R.SEARCH_K == 10 and REQUEST in q.query for q in got.values())
+
+
+def test_every_team_search_has_two_sub_queries_request_plus_focus_and_focus_alone():
+    """사전 등록 62.41: 팀마다 하위 질문 둘(요청 + 보조어, 팀 보조어)을 번갈아 합쳐 10개. 새 문구는 없고 보조어는 팀 정의의 값이다."""
+    g, _, retriever, _ = make()
+    start(g)
+    assert len(retriever.calls) == 4
+    for q in retriever.calls:
+        team = next(t for t in T.TEAMS if t.org == q.org)
+        assert q.sub_queries == [q.query, team.focus] and q.query == T.search_text(team, REQUEST)
+        assert 2 <= len(q.sub_queries) <= 3 and q.k == 10
+
+
+def test_team_search_candidates_are_the_two_sub_queries_only_with_no_original_question_list():
+    """사전 등록 62.41 명세 고정: 실제 검색 함수에 팀 검색 질의(k=10)를 넣으면 요청+보조어와 팀 보조어 두 문장만 한 번씩 임베딩·벡터 질의하고,
+    원 질문(전체 질문) 후보 목록이나 끝 1자리가 없다. 같은 문장을 두 번 검색하지 않는다."""
+    from tests.test_search_v2 import ROWS, make as make_searcher, row
+
+    team = T.TEAMS[0]
+    base = T.search_text(team, REQUEST)
+    subs = T.search_subs(team, REQUEST)
+    assert subs == [base, team.focus] and R.SEARCH_K == 10
+    rows = ROWS + [row("z1", [2.0, 0, 0], page=30)]
+    from backend.rag.retrieve import translate
+
+    calls: list = []
+    translated: list = []
+    s = make_searcher(rows, calls=calls, range_n=0, translator=lambda q, kind: (translated.append(q), translate.Result(q, "stub"))[1])
+    seen: list = []
+    real = s.store.vector_top
+    s.store.vector_top = lambda *a, **k: (seen.append(1), real(*a, **k))[1]
+    got = s.search(SearchQuery(query=base, sub_queries=subs, org="finance", k=R.SEARCH_K))
+    assert calls == [[base, team.focus]] and len(seen) == 2 and translated == [base]   # 영어 보조어는 번역하지 않고, 요청+보조어는 한 번만 번역한다
+    from backend.rag.retrieve.search import last_search_trace
+
+    assert last_search_trace().n_sub == 2 and len(got) == len({c.chunk_id for c in got})
+
+
+def test_a_request_too_long_for_a_sub_query_falls_back_to_the_undivided_search_and_still_searches():
+    long = "새 도구 도입 검토 요청이다. " * 80
+    assert all(T.search_subs(t, long) is None for t in T.TEAMS)
+    g, _, retriever, _ = make()
+    assert pending(start(g, question=long))["table"]["rows"]
+    assert len(retriever.calls) == 4 and all(q.sub_queries is None and q.k == 10 for q in retriever.calls)
+
+
+def test_search_chars_limit_equals_the_search_function_limit():
+    from backend.rag.retrieve.search import MAX_QUERY_CHARS, check_query
+
+    assert T.MAX_SEARCH_CHARS == MAX_QUERY_CHARS
+    just = "가" * (T.MAX_SEARCH_CHARS - len(T.TEAMS[0].focus) - 1)
+    subs = T.search_subs(T.TEAMS[0], just)
+    assert subs is not None and all(len(s) <= MAX_QUERY_CHARS for s in subs)
+    check_query(SearchQuery(query=subs[0], sub_queries=subs, k=10))   # 한도를 넘지 않아 검색 검사가 거절하지 않는다
 
 
 def test_section_path_falls_back_to_page_title_when_no_article():

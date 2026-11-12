@@ -16,6 +16,7 @@
 - `LLM_REASONING`: openrouter 요청에 `reasoning.effort`를 붙인다(none, minimal, low, medium, high). 비우면 보내지 않는다. 다른 제공자에는 쓰지 않는다.
 - `LLM_EFFORT`, `LLM_EFFORT_BY_TASK`: anthropic 요청의 `effort`(none, low, medium, high, xhigh, max, none은 생각 끔 `thinking: disabled`). 기본 수준과 단계별 덮기(`answer=medium,grounding=medium`)이며 단계는 시스템 프롬프트의 `[[task:...]]`로 읽는다. 둘 다 비우면 보내지 않는다(API 기본). 다른 제공자에는 쓰지 않는다.
 - `LLM_DEADLINE_S`·`LLM_HEDGE_S`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
+- `LLM_DEADLINE_BY_TASK`: `단계=초` 쉼표 목록(예: `judge=12`). 그 단계만 시도별 상한을 `LLM_DEADLINE_S` 대신 이 초로 둔다(재시도마다 늘리는 규칙과 hedge는 그대로). 비면 모든 단계가 기본 상한이다.
 - `LLM_DEADLINE_SKIP_TASKS`: 쉼표 목록(끝 `*`는 접두어). 시스템 프롬프트의 `[[task:...]]`가 맞는 요청은 위 상한과 hedge 없이 그대로 보낸다. 비면 모든 요청에 건다.
 - `LLM_PROVIDER_SORT`: openrouter 요청에 `provider.sort`를 붙인다(latency, throughput, price). 비우면 보내지 않는다.
 - `LLM_BASE_URL`: openrouter의 API 주소를 바꾼다(기본 `https://openrouter.ai/api/v1`). OpenAI 호환 주소면 된다.
@@ -25,6 +26,9 @@ LLM 호출의 트레이스와 비용 기록도 이 파일 한 곳으로 모은�
 끝나면 `finish_run(config)`을 부른다.
 - Langfuse 트레이스: `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`가 있을 때만(`tracing.py`). 없으면 트레이스 없이 그대로 돈다.
 - 비용 상한: `LLM_COST_CAP_USD`(`cost.py`). 한 질문의 LLM 비용이 상한에 닿으면 다음 호출에서 `CostCapExceeded`.
+- `LLM_RESPONSE_CACHE`: 1이면 실제 모델 앞에 응답 캐시(`CachingChatModel`)를 둔다. 같은 모델·같은 메시지·같은 호출 조건이면 두 번째부터 모델을 부르지 않는다.
+  기본은 꺼짐(안전한 쪽). 평가 실행(`eval_config`가 넣는 `metadata.eval`이 참)은 켜져 있어도 캐시를 건너뛰어(다른 평가 스크립트는 이 값을 안 넣으므로 `LLM_RESPONSE_CACHE`를 끄고 돌린다) 적중이 평가 점수·시간·비용을 오염하지 않는다. 데모·재생 모드는 건드리지 않는다.
+  `LLM_RESPONSE_CACHE_SIZE`: 프로세스 안에 둘 최대 항목 수(기본 256, 오래된 것부터 버린다).
 - 호출별 시간 기록: `llm_trace.capture()` 안에서 만든 config에만 붙는다(`llm_trace.py`). 평가 실행기가 켠다.
 """
 from __future__ import annotations
@@ -35,12 +39,15 @@ from concurrent.futures import TimeoutError as FutureTimeout
 
 import httpx
 
+import hashlib
 import importlib
 import logging
 import json
 import re
 import os
 import time
+from collections import OrderedDict
+from threading import Lock
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -81,7 +88,75 @@ def get_chat_model(responses: list[str] | None = None) -> BaseChatModel:
         from backend.services.demo_replay import RecordingChatModel
 
         return RecordingChatModel(inner=model, model_name=os.environ.get("LLM_MODEL") or getattr(model, "model", None) or getattr(model, "model_name", "") or "")
+    if env_flag("LLM_RESPONSE_CACHE"):
+        return CachingChatModel(inner=model)
     return model
+
+
+class CachingChatModel(BaseChatModel):
+    """같은 모델·같은 메시지·같은 호출 조건이면 저장해 둔 응답을 돌려준다(G-08). 실제 모델 앞에만 둔다(데모·재생 모드에는 안 씀).
+
+    - 키: 모델 이름 + 출력에 영향을 주는 설정(온도·최대 토큰·effort 등) + 메시지(종류·내용) + stop·호출 인자를 JSON으로 묶은 sha256.
+    - 평가 실행(`config.metadata.eval`)은 건너뛴다. 적중이 점수·시간·비용에 섞이지 않게 한다.
+    - 적중한 응답은 `usage_metadata`를 0으로 바꿔 돌려준다. 안 그러면 비용 집계(`CostTracker`)가 안 나간 호출을 또 센다.
+    - 저장소는 이 인스턴스(그래프 모델 1개) 안 메모리에만 있다(`LLM_RESPONSE_CACHE_SIZE`개까지, 오래된 것부터 버림). `get_chat_model()`을 새로 부르면 빈 캐시다. 재시작하면 비워진다.
+    - 평가 우회는 `evals/agent/tracking.py`의 `eval_config`(`metadata.eval`)만 한다. 다른 평가 스크립트는 `LLM_RESPONSE_CACHE`를 끄고(기본) 돌린다.
+    - 한계: `bind_tools`·`with_structured_output` 미지원, stream은 한 덩어리.
+    - 안쪽 모델은 `_generate`로 부른다(`invoke`면 콜백이 두 번 불려 비용이 이중 집계된다).
+    """
+
+    inner: Any
+    max_entries: int = 0
+    hits: int = 0
+    misses: int = 0
+    _store: Any = None
+    _lock: Any = None
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self._store = OrderedDict()
+        self._lock = Lock()
+        if not self.max_entries:
+            self.max_entries = int(_env_number("LLM_RESPONSE_CACHE_SIZE", int) or 256)
+
+    @property
+    def _llm_type(self) -> str:
+        return "caching"
+
+    def _cache_key(self, messages: list[BaseMessage], stop: list[str] | None, kwargs: dict[str, Any]) -> str:
+        inner = self.inner
+        settings = {k: repr(getattr(inner, k, None)) for k in (
+            "model", "model_name", "temperature", "max_tokens", "max_tokens_to_sample", "top_p", "top_k", "effort", "effort_default", "effort_by_task")}
+        payload = {
+            "type": getattr(inner, "_llm_type", type(inner).__name__), "settings": settings,
+            "messages": [m.model_dump(exclude={"id", "response_metadata", "usage_metadata"}) for m in messages],
+            "stop": stop, "kwargs": sorted((k, repr(v)) for k, v in kwargs.items()),
+        }
+        return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr).encode("utf-8")).hexdigest()
+
+    def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
+        meta = getattr(run_manager, "metadata", None) or {}
+        if meta.get("eval"):
+            return self.inner._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        key = self._cache_key(messages, stop, kwargs)
+        with self._lock:
+            hit = self._store.get(key)
+            if hit is not None:
+                self._store.move_to_end(key)
+                self.hits += 1
+        if hit is not None:
+            ai = hit.model_copy(deep=True)
+            if getattr(ai, "usage_metadata", None):
+                ai.usage_metadata = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+            return ChatResult(generations=[ChatGeneration(message=ai)])
+        # `inner.invoke`가 아니라 `inner._generate`: 새 실행(run)을 만들지 않아 콜백(CostTracker 등)이 한 번만 불린다
+        result = self.inner._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        with self._lock:
+            self.misses += 1
+            self._store[key] = result.generations[0].message.model_copy(deep=True)
+            while len(self._store) > self.max_entries:
+                self._store.popitem(last=False)
+        return result
 
 
 def _env_number(name: str, cast: type) -> Any:
@@ -119,8 +194,10 @@ class DeadlineTransport(httpx.BaseTransport):
 
     timeout_exc: Any = httpx.ReadTimeout  # 넘으면 내는 예외. SDK가 재시도하는 시간 초과 예외여야 한다(anthropic SDK는 httpx2, _deadline_transport_httpx2)
 
-    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, skip_tasks: tuple[str, ...] = ()) -> None:
-        self.inner, self.seconds, self.hedge = inner, seconds, hedge  # hedge(`LLM_HEDGE_S`): 이 시간 안에 답이 없으면 같은 요청을 하나 더 보내 먼저 온 답을 쓴다
+    def __init__(self, inner: httpx.BaseTransport, seconds: float, hedge: float = 0.0, skip_tasks: tuple[str, ...] = (),
+                 by_task: dict[str, float] | None = None) -> None:
+        self.inner, self.seconds, self.hedge = inner, seconds, hedge
+        self.by_task = dict(by_task or {})  # `LLM_DEADLINE_BY_TASK`: 이 단계는 기본 상한(`LLM_DEADLINE_S`) 대신 이 상한을 쓴다(hedge는 그대로). 없으면 모든 단계가 기본 상한  # hedge(`LLM_HEDGE_S`): 이 시간 안에 답이 없으면 같은 요청을 하나 더 보내 먼저 온 답을 쓴다
         self.skip_tasks = tuple(skip_tasks)  # `LLM_DEADLINE_SKIP_TASKS`: 이 단계는 상한과 hedge 없이 그대로 보낸다(답이 긴 결정표 초안, 합동 검토)
         self.pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix="llm-http")
 
@@ -156,8 +233,8 @@ class DeadlineTransport(httpx.BaseTransport):
             attempt = int(request.headers.get("x-stainless-retry-count") or 0)
         except ValueError:
             attempt = 0
-        limit = self.seconds * (attempt + 1)
-        task = self._task_of(request) if self.skip_tasks else None
+        task = self._task_of(request) if (self.skip_tasks or self.by_task) else None
+        limit = self.by_task.get(task or "", self.seconds) * (attempt + 1)
         if task and task_matches(task, self.skip_tasks):
             return self.inner.handle_request(request)
         hedge = self.hedge
@@ -218,6 +295,24 @@ def deadline_skip_tasks() -> tuple[str, ...]:
             raise ValueError(f"LLM_DEADLINE_SKIP_TASKS는 단계 이름 목록이다(끝 *는 접두어): {part!r}")
         out.append(name)
     return tuple(out)
+
+
+def deadline_by_task() -> dict[str, float]:
+    """`LLM_DEADLINE_BY_TASK`(예: `judge=12`). 이 단계만 시도별 상한(`LLM_DEADLINE_S`)을 다른 초로 바꾼다. 나머지 단계는 기본 상한 그대로다. 틀린 값은 ValueError다."""
+    out: dict[str, float] = {}
+    for part in (os.environ.get("LLM_DEADLINE_BY_TASK") or "").split(","):
+        if not part.strip():
+            continue
+        task, _, raw = part.partition("=")
+        task = task.strip().lower()
+        try:
+            seconds = float(raw.strip())
+        except ValueError:
+            seconds = 0.0
+        if not re.fullmatch(r"[a-z_]+", task) or seconds <= 0:
+            raise ValueError(f"LLM_DEADLINE_BY_TASK는 단계=초 목록이다(예: judge=12): {part!r}")
+        out[task] = seconds
+    return out
 
 
 def task_matches(task: str, patterns: tuple[str, ...]) -> bool:
@@ -283,7 +378,7 @@ def _openrouter_client() -> dict[str, Any]:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, deadline_skip_tasks())
+        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, deadline_skip_tasks(), deadline_by_task())
     if efforts:
         opts["transport"] = TaskReasoningTransport(opts.get("transport") or httpx.HTTPTransport(), efforts)
     return {"http_client": httpx.Client(**opts)}
@@ -362,14 +457,14 @@ def _anthropic_http_client() -> Any:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, deadline_skip_tasks())
+        opts["transport"] = _deadline_transport_httpx2(seconds, _env_number("LLM_HEDGE_S", float) or 0.0, deadline_skip_tasks(), deadline_by_task())
     return httpx2.Client(**opts)
 
 
 _deadline2_cls: Any = None
 
 
-def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[str, ...] = ()) -> Any:
+def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[str, ...] = (), by_task: dict[str, float] | None = None) -> Any:
     """`DeadlineTransport`와 같은 동작을 httpx2 전송으로. 넘으면 httpx2.ReadTimeout을 내 anthropic SDK가 재시도한다."""
     import httpx2
 
@@ -379,7 +474,7 @@ def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[s
             timeout_exc = httpx2.ReadTimeout
 
         _deadline2_cls = DeadlineTransport2
-    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, skip_tasks)
+    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, skip_tasks, by_task)
 
 
 _tuned_anthropic_cls: Any = None

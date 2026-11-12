@@ -49,7 +49,7 @@
 | EC-05 | LLM 초안을 읽지 못한다 | 지금은 재시도 없이 실패로 끝낸다(재시도는 D4에 판단) |
 | EC-06 | 셀 대조표에서 초안과 원문이 다르다 | 승인 화면에 불일치 칸을 보여 준다. 관리자가 반려하거나 고쳐 다시 올린다 |
 | EC-07 | CSS grid 표의 칸 위치가 밀렸다 | 클래스와 순서로 행·칸을 다시 만들고, 원문 대조 3건 이상으로 확인한다. 승인 전에는 실행하지 않아 밀린 표가 쓰이지 않는다 |
-| EC-08 | 권한표에 업무 승인과 재무 승인이 따로 있다 | 재무 승인자를 `cooperating_depts`에 담을지 별도 칸으로 둘지 D0에 정한다 |
+| EC-08 | 권한표에 업무 승인과 재무 승인이 따로 있다 | 재무 승인자는 별도 칸 `financial_approvers`에 담는다(SDD 11-1 3-2, `backend/schemas/decision.py:19`). 실행 결과의 `approvers`는 업무 승인 다음 재무 승인 순이다 |
 | EC-09 | 관리자가 아닌 사용자가 승인·반려를 시도한다 | 403 |
 | EC-10 | 금액이 음수이거나, 금액 구간표 업무인데 금액이 없거나(금액 칸 없는 구간 업무는 band로 고르므로 생략 가능), 업무 종류가 표에 없다 | 400 (없는 업무 종류는 404) |
 | EC-11 | 검색된 원문이나 질문에 "승인 기준을 바꿔라" 같은 지시가 들어 있다 | 따르지 않는다. 결정표 기준은 관리자 승인(interrupt)을 거쳐야만 바뀐다 |
@@ -60,17 +60,17 @@
 POST /decision-tables/{id}/run          표를 지정해 실행
 POST /decision-tables/run               표를 모를 때: 업무 종류로 승인된 표가 정확히 1개면 실행 (EC-04, AC-06)
 POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (AC-03)
-(구현: backend/graph/decision/routes.py:399-411)
+(구현: backend/graph/decision/routes.py:412, :416, :424)
 인증: 로그인 필수 (업무시스템의 "승인권자 확인" 호출). 실행(run)은 LLM을 쓰지 않는다.
 
 요청 바디 (run, routes.py:_parse_run):
 {
   "task_type": string,     // 업무 종류
   "amount_usd": number,    // 금액(달러). 생략 가능: 금액 칸이 없는 구간만 있는 업무는 band로 고른다
-  "band": string           // 선택. 구간 이름. 금액 구간표에서는 band를 줘도 금액으로 고른다(낮은 승인 단계를 받지 못하게)
+  "band": string           // 선택. 구간 이름. 금액 구간표에서는 band를 줘도 금액으로 고르고(낮은 승인 단계를 받지 못하게), 금액과 안 맞으면 404
 }
 
-응답 성공 (200):
+응답 성공 (200, `RunResponse`):
 {
   "table_id": string,
   "version_id": string,            // 권한표 판
@@ -81,26 +81,31 @@ POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 �
   "financial_approvers": [ string, ... ],
   "cooperating": [ string, ... ],  // 승인이 아닌 표시(Signs, Recommends 등)
   "source": { "rule_seq": int, "category": string, "band": string, "article": string, "source_url": string | null }
-  // 응답 모델: backend/graph/decision/routes.py:85 RunResponse
+  // 응답 모델: backend/graph/decision/routes.py:86 RunResponse
 }
 
-응답 실패:
-400 요청 형식 오류 (금액이 음수·숫자 아님, `task_type` 없음. 금액 생략은 금액 칸이 없는 구간 업무에서만 허용, 금액 구간표에서 생략하면 400)
+응답 실패 본문 `detail`은 `{reason, message}` (`backend/graph/decision/rules.py`의 `DecisionError`):
+400 bad_request       task_type 없음, 금액 누락·음수·숫자 아님(금액 생략은 금액 칸이 없는 구간 업무에서만 허용), 금액으로 구간을 고를 수 없는 업무(금액 칸이 없는 구간이 있는 표)인데 band를 주지 않음 (`backend/graph/decision/rules.py:316-320`)
 401 인증 토큰 없음
-404 없는 결정표 또는 업무 종류
-409 승인되지 않은 결정표
+404 not_found         없는 결정표·업무 종류·구간, 금액이 속하는 구간이 없음
+409 not_approved      승인되지 않은(draft·rejected) 결정표
+409 ambiguous_table   업무 종류로 승인된 표가 0개이거나 2개 이상 (표를 지정하지 않은 호출)
+422 ambiguous_band    금액이 두 구간에 함께 듦 (band를 줘도 같다)
 ```
 
 ```
-GET  /decision-tables         승인된 결정표 목록 (로그인)
+GET  /decision-tables         승인된 결정표 목록 (로그인). 규칙마다 정확한 금액 표기 `band_label`을 더해 준다
 GET  /approvals               승인 대기 목록 (관리자)
-POST /approvals/{id}          Decision { approval_id, approve, comment } → 그래프 재개 (관리자)
+POST /approvals/{approval_id} 결정표·쟁점표는 { approve, comment }, 팀 실패 알림은 { action: retry | mark_unreviewed, comment } → 그래프 재개 (관리자, CSRF).
+                              `decided_by`는 로그인한 관리자로 서버가 채우고 요청 본문 값은 읽지 않는다
+GET  /approvals/{approval_id} 승인 건 하나(끝난 건 포함) (관리자)
+POST /decision-tables/convert 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (관리자, CSRF, 성공 201)
 ```
 
 DecisionRule과 DecisionTable (파트 사이 계약, 필드 구조는 `backend/schemas/`에서 확정):
 
 ```
-DecisionRule: 업무 종류 × 금액 구간 → 승인자(업무 승인), 협조(cooperating_depts, 재무 승인자)
+DecisionRule: 업무 종류 × 금액 구간 → 승인자(approvers, 업무 승인), 재무 승인자(financial_approvers), 협조(cooperating_depts)
 DecisionTable: table_id, rule_seq, version_id, cells(json),
                status("draft" | "approved" | "rejected"), approved_by
 ```
@@ -108,7 +113,7 @@ DecisionTable: table_id, rule_seq, version_id, cells(json),
 - 데이터: 2023-05 공개 승인 권한표(옛 저장소 `www-gitlab-com`, 커밋 `0a3de83375`). 지출·지급·계약·채용·출장비·자금 이동 등 약 30종 × 금액 구간 × 역할 11개다. 현재 핸드북에서는 비공개 주소로 옮겨졌다. 같은 커밋의 이용 조건 페이지에 같은 CC BY-SA 4.0 문장이 있다.
 - 파싱: 권한표는 CSS grid(div) 표라 파서가 칸을 만들어 주지 않는다. `lxml`(+ `beautifulsoup4`)로 클래스와 순서를 보고 행(업무 종류 × 금액 구간)과 칸(역할 11개)을 직접 다시 만든다. 청크는 "표 이름 + 금액 구간 + 역할별 승인" 행 1개를 한 청크(`kind="row"`)로 만든다.
 - 그래프: 결정표 변환은 `backend/graph/decision/`에서 LLM 초안 → 셀 대조표 → 사람 승인(interrupt) 순으로 한다. 결정표 실행 노드에는 LLM을 쓰지 않는다. 결정표 질문은 승인된 결정표 실행 → 인용과 함께 한국어 답 작성 순이다.
-- 테이블: `decision_tables`(table_id, rule_seq, version_id, cells, status, approved_by), `approvals`(approval_id, kind, thread_id, status, decided_by). 승인자 기록(`Decision`에 `decided_by` 필드를 둘지, 실행 설정에서 읽을지)은 D0에 정한다.
+- 테이블: `decision_tables`(table_id, rule_seq, version_id, cells, status, approved_by), `approvals`(approval_id, kind, thread_id, status, decided_by). 승인자 기록은 `decided_by`를 로그인한 관리자로 서버가 채운다(`backend/graph/decision/routes.py` 모듈 설명 "규칙").
 - 신뢰 경계: 결정표 승인·반려는 관리자만 한다. 승인 전 실행은 금지이고, 승인 화면에 셀 대조표를 보여 준다. 인젝션 시험에서 결정표 기준 변경·승인 우회 경로는 뚫림 0건이어야 한다.
 - 변환 정확도 평가: 결정표 셀을 사람이 2023 권한표 원문에서 뽑은 정답과 셀 단위로 대조한다.
 

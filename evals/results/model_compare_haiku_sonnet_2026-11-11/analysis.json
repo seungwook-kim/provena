@@ -1,0 +1,279 @@
+{
+  "haiku": {
+    "n": 25,
+    "errors": 0,
+    "answered": 24,
+    "refused_or_asked": 1,
+    "refusal_accuracy_(relevant=answer expected)": 0.96,
+    "over_refusal_rate": 0.04,
+    "cited_correct_rate": 0.8866666666666667,
+    "citation_accuracy": 0.9305555555555555,
+    "wrong_citation_rate": 0.125,
+    "wrong_citation_items": 3,
+    "all_gold_found_and_no_wrong": 20,
+    "hallucination_risk_items": 0,
+    "latency_p50_s": 7.335,
+    "latency_p95_s": 9.776,
+    "latency_mean_s": 7.81324,
+    "latency_max_s": 19.393,
+    "llm_calls_total": 497,
+    "llm_trace_calls_total": 453,
+    "llm_calls_per_item": 19.88,
+    "input_tokens": 1697215,
+    "output_tokens": 129290,
+    "cost_usd_total": 0.2329412,
+    "cost_usd_per_item": 0.009317648,
+    "retries_total": 2,
+    "models_in_trace": [
+      "claude-haiku-5-5"
+    ],
+    "by_task": {
+      "answer": {
+        "calls": 37,
+        "in": 191626,
+        "out": 15801,
+        "cost": 0.027063
+      },
+      "answer_fast": {
+        "calls": 54,
+        "in": 299342,
+        "out": 20476,
+        "cost": 0.040172
+      },
+      "classify": {
+        "calls": 25,
+        "in": 35226,
+        "out": 474,
+        "cost": 0.00376
+      },
+      "decompose": {
+        "calls": 25,
+        "in": 14559,
+        "out": 4369,
+        "cost": 0.00364
+      },
+      "decompose_gate": {
+        "calls": 25,
+        "in": 14609,
+        "out": 1261,
+        "cost": 0.002091
+      },
+      "grounding": {
+        "calls": 164,
+        "in": 784504,
+        "out": 41822,
+        "cost": 0.099361
+      },
+      "judge": {
+        "calls": 69,
+        "in": 351391,
+        "out": 43428,
+        "cost": 0.056853
+      },
+      "translate_sentence": {
+        "calls": 54,
+        "in": 5958,
+        "out": 1659,
+        "cost": 0.001425
+      }
+    }
+  },
+  "sonnet": {
+    "n": 25,
+    "errors": 0,
+    "answered": 24,
+    "refused_or_asked": 1,
+    "refusal_accuracy_(relevant=answer expected)": 0.96,
+    "over_refusal_rate": 0.04,
+    "cited_correct_rate": 0.8866666666666667,
+    "citation_accuracy": 0.9375,
+    "wrong_citation_rate": 0.08333333333333333,
+    "wrong_citation_items": 2,
+    "all_gold_found_and_no_wrong": 21,
+    "hallucination_risk_items": 0,
+    "latency_p50_s": 8.326,
+    "latency_p95_s": 14.527,
+    "latency_mean_s": 9.44172,
+    "latency_max_s": 15.664,
+    "llm_calls_total": 501,
+    "llm_trace_calls_total": 437,
+    "llm_calls_per_item": 20.04,
+    "input_tokens": 1701411,
+    "output_tokens": 90234,
+    "cost_usd_total": 4.277816,
+    "cost_usd_per_item": 0.17111263999999998,
+    "retries_total": 1,
+    "models_in_trace": [
+      "claude-sonnet-5-5"
+    ],
+    "by_task": {
+      "answer": {
+        "calls": 48,
+        "in": 252878,
+        "out": 12050,
+        "cost": 0.626256
+      },
+      "answer_fast": {
+        "calls": 52,
+        "in": 294577,
+        "out": 18962,
+        "cost": 0.778774
+      },
+      "classify": {
+        "calls": 25,
+        "in": 35226,
+        "out": 475,
+        "cost": 0.075202
+      },
+      "decompose": {
+        "calls": 25,
+        "in": 14559,
+        "out": 1873,
+        "cost": 0.047848
+      },
+      "decompose_gate": {
+        "calls": 25,
+        "in": 14609,
+        "out": 1510,
+        "cost": 0.044318
+      },
+      "grounding": {
+        "calls": 134,
+        "in": 686655,
+        "out": 38600,
+        "cost": 1.75931
+      },
+      "judge": {
+        "calls": 78,
+        "in": 397374,
+        "out": 15136,
+        "cost": 0.946108
+      },
+      "translate_sentence": {
+        "calls": 50,
+        "in": 5533,
+        "out": 1628,
+        "cost": 0.027346
+      }
+    }
+  },
+  "cost_ratio_sonnet_over_haiku": 18.36435976117578,
+  "differing_items": [
+    {
+      "id": 1,
+      "haiku": [
+        "answer",
+        2,
+        2,
+        4,
+        4,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        2,
+        2,
+        3,
+        3,
+        ""
+      ]
+    },
+    {
+      "id": 6,
+      "haiku": [
+        "answer",
+        1,
+        2,
+        1,
+        2,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        2,
+        2,
+        2,
+        2,
+        ""
+      ]
+    },
+    {
+      "id": 35,
+      "haiku": [
+        "answer",
+        1,
+        1,
+        3,
+        3,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        1,
+        1,
+        2,
+        2,
+        ""
+      ]
+    },
+    {
+      "id": 37,
+      "haiku": [
+        "answer",
+        2,
+        2,
+        2,
+        2,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        2,
+        2,
+        3,
+        3,
+        ""
+      ]
+    },
+    {
+      "id": 38,
+      "haiku": [
+        "answer",
+        1,
+        2,
+        1,
+        3,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        0,
+        2,
+        0,
+        1,
+        ""
+      ]
+    },
+    {
+      "id": 40,
+      "haiku": [
+        "answer",
+        1,
+        1,
+        2,
+        2,
+        ""
+      ],
+      "sonnet": [
+        "answer",
+        1,
+        1,
+        1,
+        1,
+        ""
+      ]
+    }
+  ],
+  "latency_ratio_p50": 1.1351056578050445,
+  "latency_ratio_p95": 1.4859860883797054
+}

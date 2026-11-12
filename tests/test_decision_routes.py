@@ -432,14 +432,46 @@ def test_convert_unknown_category_is_404_without_llm(ctx):
     assert r.status_code == 404 and ctx.llm.calls == []
 
 
-def test_convert_unreadable_draft_is_not_retried_and_reaches_no_inbox(ctx):
+@pytest.fixture
+def real_llm(monkeypatch):
+    """키가 있는 실제 모드(데모 아님). 키 없는 데모(L-23)는 아래 `test_convert_in_demo_mode_*`가 따로 본다."""
+    monkeypatch.setenv("LLM_API_KEY", "test-key-not-used")
+    monkeypatch.delenv("DEMO_MODE", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+
+def test_convert_in_demo_mode_returns_a_labelled_example_instead_of_502(ctx, monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "1")
+    ctx.llm.reply = "이건 JSON이 아니다"                                                # 녹화에 초안이 없어 변환이 실패하는 상황
+    r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
+    assert r.status_code == 201 and r.json()["summary"].startswith("예시 응답") and r.json()["status"] == "example"
+    cells = cells_of(EXPENSE)
+    expected = R.rules_from_cells(cells)
+    assert [{k: v for k, v in d.items() if k != "band_label"} for d in r.json()["draft"]] == expected   # 지어낸 값이 없고 권한표 칸에서 코드로 만든 규칙 그대로
+    assert ctx.repo.list_pending() == []                                              # 승인함에 올라가지 않는다
+
+
+def test_convert_in_demo_mode_still_404s_unknown_category_and_example_on_llm_exception(ctx, monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "1")
+    assert ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": "없는 업무"}).status_code == 404
+
+    def boom(_):
+        raise RuntimeError("no record")
+
+    ctx.llm.reply = boom
+    r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
+    assert r.status_code == 201 and r.json()["summary"].startswith("예시 응답")
+    assert [{k: v for k, v in d.items() if k != "band_label"} for d in r.json()["draft"]] == R.rules_from_cells(cells_of(EXPENSE))
+
+
+def test_convert_unreadable_draft_is_not_retried_and_reaches_no_inbox(ctx, real_llm):
     ctx.llm.reply = "이건 JSON이 아니다"
     r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
     assert r.status_code == 502 and r.json()["detail"]["reason"] == "draft_unreadable"
     assert len(ctx.llm.calls) == 1 and ctx.repo.list_pending() == []
 
 
-def test_convert_llm_failure_is_503_without_details(ctx):
+def test_convert_llm_failure_is_503_without_details(ctx, real_llm):
     def boom(_):
         raise RuntimeError("provider failed key=secret-value")
 
