@@ -88,7 +88,9 @@
   - `body.error?.message`, `body.error?.code`를 우선 사용하고 기존 `body.detail` 처리도 유지한다.
   - `event:`와 `data:`를 청크 경계와 무관하게 처리한다.
 - `web/react-app/src/pages/DemoChatPage.jsx`
-  - `approval_request`로 메시지 상태가 `approval`이면 “승인 대기 중”을 표시한다.
+  - `approval_request`로 메시지 상태가 `approval`이면 고정 안내 “담당자 승인을 기다리고 있습니다. 승인 또는 반려되면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.”를 표시한다(2026-11-12, 승인 뒤 결과는 같은 대화에 남는다: `backend/graph/departments/review.py` finalize, 화면은 창으로 돌아올 때 다시 받는다).
+  - 답을 기다리는 동안 “근거를 찾고 답을 확인하는 중입니다 · N초 지남”을 표시한다. 서버는 그래프가 끝난 뒤에만 답을 보내므로(`backend/graph/stream.py`) 단계 대신 지난 시간만 보여 준다(2026-11-12).
+  - 출처·라이선스 안내는 서버 `attribution.modified`가 true이면 “원문을 요약·재서술함(수정됨)”을 함께 표시한다(TEAM_GUIDE 7장 수정 여부, 2026-11-12).
   - 현재 대화의 승인 대기 상태에 한해 입력과 전송을 비활성화한다.
   - 데모/실제 adapter 선택, 라우팅, 스트리밍, 중단 기능을 유지한다.
 ### 확인된 API 필드와 미확정 계약

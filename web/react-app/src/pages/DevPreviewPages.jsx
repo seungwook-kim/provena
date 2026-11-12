@@ -4,6 +4,7 @@ import DemoLayout from '../components/DemoLayout'
 import AdminRoleDialog from '../components/AdminRoleDialog'
 import AdminUsersTable from '../components/AdminUsersTable'
 import AdminUsersTabs from '../components/AdminUsersTabs'
+import { PRIVACY_NOTICE } from '../lib/privacy-notice'
 import '../profile.css'
 import '../admin-users.css'
 
@@ -67,10 +68,12 @@ export function DevProfilePreview({ mode = 'create' }) {
           <label><span>소속 팀 <em aria-hidden="true">*</em></span><select required value={form.team} onChange={event => update('team', event.target.value)}><option value="" disabled>소속 팀을 선택해 주세요.</option>{TEAM_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
           <label><span>업무 역할 <em aria-hidden="true">*</em></span><select required value={form.role} onChange={event => update('role', event.target.value)}><option value="">설정하지 않음</option>{ROLE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
           <label><span>담당 서비스 <em aria-hidden="true">*</em></span><input required value={form.service} onChange={event => update('service', event.target.value)} placeholder="예: 결제 API, 사내 모니터링" /></label>
+          <p className="profile-storage-notice profile-privacy-notice">{PRIVACY_NOTICE}</p>
           <label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} /></label>
           <label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" placeholder="예시) 010-1234-5678" /></label>
           <label><span>근무지 주소 <small>(선택)</small></span><textarea className="profile-address-field" value={form.address} onChange={event => update('address', event.target.value)} /></label>
         </> : <>
+          <p className="profile-storage-notice profile-privacy-notice">{PRIVACY_NOTICE}</p>
           <label><span>이름</span><input required value={form.name} onChange={event => update('name', event.target.value)} /></label>
           <label><span>소속(담당부서)</span><input required value={form.dept} onChange={event => update('dept', event.target.value)} /></label>
           <label><span>전화번호</span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" placeholder="010-1234-5678" /></label>

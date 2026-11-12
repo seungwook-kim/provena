@@ -11,10 +11,27 @@ function CitationButtons({ citations, selectedCitation, messageIndex, onSelect }
   return <div className="citation-chip-list">{citations.map((citation, index) => <button type="button" key={citation.id} className={`citation-chip ${selectedCitation?.id === citation.id && selectedCitation?.messageIndex === messageIndex ? 'selected' : ''}`} onClick={() => onSelect({ ...citation, messageIndex })}>[{index + 1}] {citation.title}</button>)}</div>
 }
 
+// CC BY-SA 표시 세 가지(원문 주소·라이선스 링크·수정 여부, TEAM_GUIDE 7장) 중 수정 여부. 서버가 attribution.modified=true를 보낸다(backend/api/routes.py ATTRIBUTION)
+export const MODIFIED_LABEL = '원문을 요약·재서술함(수정됨)'
+export const PROGRESS_TEXT = '근거를 찾고 답을 확인하는 중입니다'
+// 승인 뒤 재개는 같은 대화에 결과를 남기고(backend/graph/departments/review.py finalize), 화면은 탭으로 돌아올 때 다시 받는다(아래 H-15 effect)
+export const APPROVAL_WAITING_TEXT = '담당자 승인을 기다리고 있습니다. 승인 또는 반려되면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.'
+
+// 답은 그래프가 끝난 뒤 한 번에 오므로(backend/graph/stream.py) 단계 대신 지난 시간만 보여 준다
+function GeneratingProgress() {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const started = Date.now()
+    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <p className="demo-answer-progress">{seconds > 0 ? `${PROGRESS_TEXT} · ${seconds}초 지남` : `${PROGRESS_TEXT}.`}</p>
+}
+
 function AttributionNotice({ attribution }) {
   const items = (Array.isArray(attribution) ? attribution : [attribution]).filter(Boolean)
   if (!items.length) return null
-  return <div className="demo-attribution" role="note"><strong>출처·라이선스 안내</strong>{items.map((item, index) => <div key={index}>{item.source && <span>{item.source}</span>}{item.license && <span>{item.license}</span>}{item.license_url && <a href={item.license_url} target="_blank" rel="noreferrer">라이선스 보기</a>}{item.notice && <p>{item.notice}</p>}</div>)}</div>
+  return <div className="demo-attribution" role="note"><strong>출처·라이선스 안내</strong>{items.map((item, index) => <div key={index}>{item.source && <span>{item.source}</span>}{item.license && <span>{item.license}</span>}{item.license_url && <a href={item.license_url} target="_blank" rel="noreferrer">라이선스 보기</a>}{item.modified === true && <span>{MODIFIED_LABEL}</span>}{item.notice && <p>{item.notice}</p>}</div>)}</div>
 }
 
 function timestampValue(value) {
@@ -74,9 +91,9 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
     return <Fragment key={index}>
       {showDivider && <div className="demo-message-date"><span>{formatDateDivider(timestamp)}</span></div>}
       {message.role === 'user' ? <div className="demo-user-message" title={messageTime} tabIndex={messageTime ? 0 : undefined}>{message.text}</div> : <article className={`demo-answer ${message.state}`} title={messageTime} tabIndex={messageTime ? 0 : undefined}>
-        {message.state === 'approval' && <p>승인 대기 중</p>}
+        {message.state === 'approval' && <p>{APPROVAL_WAITING_TEXT}</p>}
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
-        {message.state === 'generating' && <p className="demo-answer-progress">답변을 생성하고 있습니다.</p>}
+        {message.state === 'generating' && <GeneratingProgress />}
         {message.text && <p>{message.text}</p>}
         {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} messageIndex={index} onSelect={onSelectCitation} />}
         <AttributionNotice attribution={message.attribution} />
@@ -250,7 +267,7 @@ export default function DemoChatPage({ api = false }) {
       {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => selectThread(thread)}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
     </aside>
     <main className="demo-chat-main">
-      <div className="demo-chat-status">{processing && <span className="demo-generating">답변을 생성하고 있습니다.</span>}</div>
+      <div className="demo-chat-status">{processing && <span className="demo-generating">{PROGRESS_TEXT}.</span>}</div>
       <div className="demo-messages">
         {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
