@@ -12,6 +12,9 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-20·O-38·O-22·Q-07·M-14: PRD 임베딩 행·SDD 11-3 임베딩 기본값을 voyage-4 확정(decisions.md:48)으로 정정, PRD 9장·SDD 5장 manifest '커밋 sha' 문구를 실제 칸(`version_id`)과 `collect_manifest.json` 위치로 정정, SCAFFOLD.md 머리말과 AGENTS.md 폴더 역할을 TEAM_GUIDE 5장·SDD 3장으로 안내, `specs/deploy.md` 신규(배포 의존 파일·환경변수; 화면 `d6-chat-frontend.md`·기억 `memory.md`는 이미 절이 있어 줄 번호만 정정), AGENTS.md 낡은 두 곳(SEARCH_MODE 위치, 후보 버전 장 번호) 수정 | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 목록 마무리 묶음 작업 내역 `pr-notes/PR-next.md`, 동결 전 점검 노트 `pr-notes/k16-a14-i06-check-1112.md`(K-16·A-14·I-06), `specs/decision-approval.md`에 결정표 변환 화면 한 줄(H-21), `deliverables/ai_tools_log.md` 한 줄 | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | 포트폴리오 갱신(`deliverables/portfolio-박진형.md`): EVAL_REPORT 줄 번호를 현재 본문 기준으로 다시 찾음, 배포 숫자를 최종 운영 배포판 `provena-api-00044-49s` 값으로 교체(응답 p95 11.524초는 SPEC 10초 초과로 명시, 로컬 값과 구분), 내 PR 수 32건→37건(origin/main `601183c7`, 11/12), 놓친 것 목록 처리 #127·#130·#131·#132 추가 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `EVAL_REPORT.md` 9장 재현 명령 앞에 한 줄 추가: `--chunks data/chunks/chunks.jsonl`은 커밋하지 않은 파일이며 `backend.rag.ingest.chunk`로 만들거나 `data/index.tar.gz`를 푼 `data/index/chunks.jsonl`을 쓴다(명령·숫자는 그대로). `EVAL_REPORT.md`는 조장 파일 | #135 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `GATES.md` 변이 표에 18~33번 추가(D5 이후 코드 승인 재개·멀티·판정 단계와 새 시험의 변이, 로컬 실행 결과), `embedding_measurement.md` 재측정 기록 한계 문장을 int8 수정 반영으로 고침, 작업 내역 `pr-notes/PR-135.md` 추가 | #135 |
 | 2026-11-12 | 박진형 (jinyeong-731) | `pr-notes/PR-135.md` 추가와 #132 조장 리뷰 결정 반영(C-14 501 유지·정시 수집 workflow, L-23 201 `status=example`, E-04 충족 판정, G-08 캐시는 운영·최종 측정에서 끔, `.env.example` 새 변수 4개는 이미 있음(조장이 넣음)). `decisions.md` 세 행, `PR-132.md` 13절. 코드 변경 없음, 미답 항목은 그대로 | #135 |

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import DecisionConvertPanel from '../components/DecisionConvertPanel'
 import DemoLayout from '../components/DemoLayout'
 import { STALE_APPROVAL_ERROR_CODES, previewApprovalsService, reviewDepartments } from '../lib/approvals-service'
 
@@ -8,6 +9,8 @@ const roleLabel = { approver: '업무 승인', financial: '재무 승인', coope
 const stanceLabel = { allow: '가능', condition: '조건부 가능', block: '불가' }
 const reviewResultLabel = { possible: '가능', conditional: '조건부 가능', blocked: '불가' }
 const confidenceLabel = { high: '높음', medium: '보통', low: '낮음' }
+// 팀 검토 실패 알림의 failed_teams 에는 화면 이름이 없어(backend/graph/departments/review.py) 서버 팀 표(backend/graph/departments/teams.py)와 같은 이름을 둔다. 모르는 코드는 그대로
+const teamLabel = { security: '보안', infra: '인프라·SRE', itops: 'IT 운영', finance: '재무' }
 const actionByConfirm = { approved: 'approve', rejected: 'reject', revision: 'revision', retry: 'retry', mark_unreviewed: 'mark_unreviewed' }
 const doneMessage = {
   approved: '승인했습니다.',
@@ -139,6 +142,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     <header><h1>승인함</h1></header>
     {!live && <div className="approval-filters">{Object.entries(label).map(([key, value]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => setFilter(key)}>{value}</button>)}</div>}
     {live && notice && <p className="approval-complete" role="status">{notice}</p>}
+    {live && service.convertDecisionTable && <DecisionConvertPanel service={service} onConverted={loadList} />}
     <section className="approval-service-layout">
       <aside>
         <h2>승인 요청</h2>
@@ -157,7 +161,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
             <div>
               <span>{kindLabel[selected.kind]}</span>
               <h2>{selected.title}</h2>
-              <p>{live ? `승인 번호 ${selected.id}${selected.tableId ? ` · 결정표 ${selected.tableId}` : ''}` : selected.source}</p>
+              <p>{live ? (selected.at ? `${selected.at} 올라옴` : '') : selected.source}</p>
             </div>
             {!live && selected.url && <a href={selected.url} target="_blank" rel="noreferrer">원문 보기</a>}
           </div>
@@ -195,6 +199,8 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
             </>}
           </div>
           {actionError && <p className="approval-complete" role="alert">{actionError}</p>}
+          {/* 판단에는 쓰지 않지만 서버 로그·재개 기록·GET /approvals/{id} 와 대조할 번호라 지우지 않고 맨 아래에 둔다 */}
+          {live && <p className="approval-id-line">승인 번호 {selected.id}{selected.tableId ? ` · 결정표 ${selected.tableId}` : ''}</p>}
         </> : <p>{loading ? '상세 정보를 불러오는 중입니다.' : live && !loadError ? '왼쪽 목록에서 승인 요청을 선택하면 상세 내용이 표시됩니다.' : '상세 정보를 불러오지 못했습니다.'}</p>}
       </article>
     </section>
@@ -266,7 +272,7 @@ function TeamFailedDetail({ teams }) {
     <h3>검토하지 못한 팀</h3>
     <div className="approval-table-wrap"><table className="approval-table">
       <thead><tr><th scope="col">팀</th><th scope="col">이유</th><th scope="col">시도 횟수</th></tr></thead>
-      <tbody>{teams.map((team, index) => <tr key={`${team.team}-${index}`}><td>{team.team}</td><td>{team.reason || '없음'}</td><td>{team.attempts ?? '없음'}</td></tr>)}</tbody>
+      <tbody>{teams.map((team, index) => <tr key={`${team.team}-${index}`}><td>{teamLabel[team.team] ?? team.team}</td><td>{team.reason || '없음'}</td><td>{team.attempts ?? '없음'}</td></tr>)}</tbody>
     </table></div>
     <div className="approval-compare"><section><small>선택할 수 있는 처리</small><p>다시 검토를 고르면 실패한 팀만 다시 실행합니다. 검토하지 못한 팀으로 표시를 고르면 그 팀의 쟁점 없이 쟁점표 승인 단계로 넘어갑니다.</p></section></div>
   </>

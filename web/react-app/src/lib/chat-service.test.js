@@ -297,3 +297,19 @@ describe('thread with a finished approval (H-15)', () => {
     expect(again.messages.at(-1)).toMatchObject({ state: 'done', text: '승인된 답' })
   })
 })
+
+describe('스트림 도중 연결이 끊긴 경우', () => {
+  it('브라우저가 던진 영어 오류 대신 한국어 문구를 보인다', async () => {
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => {
+      onEvent({ type: 'token', thread_id: 't1', data: { text: '생성 중' } })
+      throw new TypeError('network error')
+    })
+    const snapshots = []
+    const service = createChatService(createApiChatAdapter({ onThreadsChange: value => snapshots.push(value) }))
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer.state).toBe('error')
+    expect(answer.error).not.toMatch(/network error/)
+    expect(answer.error).toBe('채팅 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
+  })
+})

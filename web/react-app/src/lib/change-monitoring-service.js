@@ -9,6 +9,7 @@ import {
   updatePreviewMonitoringStatus,
 } from './change-monitoring-preview'
 import { formatDateTime, toErrorInfo } from './recall-service'
+import { changedMark } from './text-diff'
 
 // Stable API boundary. Pages receive a service built from either the preview or the API adapter.
 export function createChangeMonitoringService(adapter) {
@@ -83,7 +84,7 @@ export function mapChange(change = {}) {
     summary: `${CHANGE_SUMMARY[type]}${versions}`,
     oldPolicy: textOrNull(change?.old_text),
     newPolicy: textOrNull(change?.new_text),
-    changedText: null,
+    ...(type === 'MODIFIED' ? changedMark(textOrNull(change?.old_text), textOrNull(change?.new_text)) : { changedText: null, changedAt: null }),
     impactedAnswerCount: impacted,
     sourceUrl: textOrNull(change?.source_url),
     recallTo: impacted && impacted > 0 ? buildRecallLink({ ruleSeq, article }) : null,

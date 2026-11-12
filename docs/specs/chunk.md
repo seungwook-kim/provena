@@ -3,7 +3,7 @@
 ## Why
 
 - **페르소나**: 검색(B-4)·질문 그래프(김승욱)가 쓸 청크를 받는 우리 조, G3(서로 다른 청크 1만+)를 확인하는 평가자
-- **상황**: 파싱 결과(`data/parsed/document_ir.jsonl`)는 요소 85,389개다. 검색 단위는 요소보다 크고 문서보다 작아야 한다.
+- **상황**: 파싱 결과(`data/parsed/document_ir.jsonl`)는 요소 85,388개다(2026-11-12 `data/corpus.tar.gz`를 풀어 `parse`를 다시 돌린 값, 1,561쪽. 권한표 표 밖 요소 103개는 `authz_ir.jsonl`에 따로 있다). 검색 단위는 요소보다 크고 문서보다 작아야 한다.
 - **문제**:
   1. 문단 중간에서 자르면 근거가 반쪽이 된다.
   2. 청크만 보고 어느 페이지·절인지 모르면 LLM이 질문 속 이름을 가져다 답한다(rag1-09).
@@ -47,6 +47,7 @@
 - `kind` 는 `article`(쪽 본문·권한표 표 밖 글)과 `row`(권한표 행·이사회 항목) 두 값만 쓴다. `version_date_before` 는 쪽은 `pages.jsonl` 값을 그대로 넘기고(없으면 `KeyError`), 권한표는 커밋 날짜를 정확히 알아 `False`
 - `chunk_id` = sha256(`rule_seq:seq:본문`) 앞 16자(같은 본문이 다른 쪽, 같은 쪽 다른 자리에 있어도 겹치지 않게). 겹침·크기 설정이 달라도 본문과 순서가 같으면 id가 같으니 한 인덱스·DB 테이블에는 설정 하나만 적재한다. G3는 `body_sha256`(머리말·겹침 제외)으로 센다
 - 출력: `data/chunks/chunks.jsonl`(본문 포함, 커밋 안 함), `data/chunks_index.jsonl`(번호·위치·지문, 커밋), `data/chunks/chunk_report.json`, `data/manifest.jsonl`(커밋)
+- manifest 한 줄 = 문서 하나(현재 1,565줄 = 핸드북 1,564쪽 + 2023 권한표 1). 칸은 `doc_id, org, title, source_url, version_id, collected_at, chunks, chars_original, chars_kept, truncated`와 건너뛴 쪽의 `skipped`(`backend/rag/ingest/load.py` `build_manifest`)다. `version_id`는 그 쪽 판 커밋의 앞 12자이고, 수집 고정 커밋 전체 sha(`129243bcffcf…`)는 manifest가 아니라 스냅샷 안 `collect_manifest.json`과 `data/data.md`에 있다
 - 비교용 고정 길이: `--mode fixed --size 800 --overlap 100`(쪽 본문을 이어 붙여 글자 수로)
 
 ## AC (Given-When-Then)

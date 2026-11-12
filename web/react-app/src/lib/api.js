@@ -192,7 +192,7 @@ export async function changeAdminRole(loginId, action) {
 export function getThreads() { return apiJson('/threads', { suppressUnauthorized: true }) }
 export function getThread(threadId) { return apiJson(`/threads/${encodeURIComponent(threadId)}`) }
 export function getMemory() { return apiJson('/me/memory', { suppressUnauthorized: true }) }
-async function csrfHeaders() {
+export async function csrfHeaders() {
   const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return { 'X-CSRF-Token': decodeURIComponent(token) }
@@ -200,7 +200,7 @@ async function csrfHeaders() {
 
 export async function patchMemory(value) { return apiJson('/me/memory', { method: 'PATCH', suppressUnauthorized: true, headers: await csrfHeaders(), body: JSON.stringify(value) }) }
 export async function deleteMemory() { return apiRequest('/me/memory', { method: 'DELETE', suppressUnauthorized: true, headers: await csrfHeaders() }) }
-export function getRecalls({ suppressUnauthorized = false } = {}) { return apiJson('/recalls', { suppressUnauthorized }) }
+export function getRecalls({ suppressUnauthorized = false, limit } = {}) { return apiJson(limit != null ? `/recalls?limit=${encodeURIComponent(limit)}` : '/recalls', { suppressUnauthorized }) }
 export function getRecall(noticeId) { return apiJson(`/recalls/${encodeURIComponent(noticeId)}`) }
 export function getRecallDigests() { return apiJson('/recalls/digests', { suppressUnauthorized: true }) }
 export async function reviewRecall(noticeId, action) {
@@ -218,6 +218,10 @@ export async function postApprovalDecision(approvalId, body) {
   return response.json()
 }
 export function getDecisionTables() { return apiJson('/decision-tables') }
+// 관리자: 핸드북 권한표의 한 업무 종류를 결정표 초안으로 바꿔 승인함에 올린다. 키 없는 데모는 201 + status=example(저장 안 됨).
+export async function convertDecisionTable(category) {
+  return apiJson('/decision-tables/convert', { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ category }) })
+}
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }
 export async function decideMaintenanceCandidate(candidateId, status) {
   return apiJson(`/maintenance-candidates/${encodeURIComponent(candidateId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ status }) })

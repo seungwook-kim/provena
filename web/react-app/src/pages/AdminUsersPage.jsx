@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, changeAdminRole, listAdminUsers, listSignupRequests, resetSignupVerification, reviewSignupRequestById } from '../lib/api'
 import { useSession } from '../lib/session'
 import DemoLayout from '../components/DemoLayout'
@@ -37,15 +37,27 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => { if (user?.is_owner) { load(); loadSignupRequests() } else setLoading(false) }, [user?.is_owner])
-  async function reviewSignup(requestId, action) {
+  const signupPending = useRef('')
+  const [signupBusy, setSignupBusy] = useState('')
+  // 가입 처리(승인·거절·인증 재설정) 요청 하나가 끝나기 전에는 어느 신청이든 다른 가입 처리를 보내지 않는다(연타 방지, 모든 행을 한꺼번에 막음).
+  // 상태는 다음 렌더에야 바뀌므로 ref로 먼저 막는다.
+  async function runSignupAction(requestId, who, send, doneMessage, failMessage) {
+    if (signupPending.current) return
+    signupPending.current = String(requestId); setSignupBusy(String(requestId))
     setError(''); setMessage('')
-    try { const result = await reviewSignupRequestById(requestId, action); setMessage(result.changed ? '가입 신청 처리가 완료되었습니다.' : '변경할 상태가 없습니다.'); await loadSignupRequests() }
-    catch (reviewError) { setError(reviewError.message || '가입 신청 처리에 실패했습니다.') }
+    try { const result = await send(); setMessage(doneMessage(result)); await loadSignupRequests() }
+    catch (actionError) { setError(`${who}: ${actionError.message || failMessage}`) }
+    finally { signupPending.current = ''; setSignupBusy('') }
   }
-  async function resetVerification(requestId) {
-    setError(''); setMessage('')
-    try { await resetSignupVerification(requestId); setMessage('인증번호를 초기화했습니다. 신청자가 새 인증번호를 받을 수 있습니다.'); await loadSignupRequests() }
-    catch (resetError) { setError(resetError.message || '인증 재설정에 실패했습니다.') }
+  const signupLabel = requestId => { const row = signupRequests.find(item => String(item.request_id) === String(requestId)); return row?.login_id || '해당 신청자' }
+  function reviewSignup(requestId, action) {
+    const who = signupLabel(requestId)
+    return runSignupAction(requestId, who, () => reviewSignupRequestById(requestId, action),
+      result => result.changed ? `${who} 가입을 ${action === 'approve' ? '승인' : '거절'}했습니다.` : `${who} 신청은 변경할 상태가 없습니다.`, '가입 신청 처리에 실패했습니다.')
+  }
+  function resetVerification(requestId) {
+    const who = signupLabel(requestId)
+    return runSignupAction(requestId, who, () => resetSignupVerification(requestId), () => `${who} 인증을 초기화했습니다. 신청자가 새 인증번호를 받을 수 있습니다.`, '인증 재설정에 실패했습니다.')
   }
   async function applyChange() {
     if (!confirm || busy) return
@@ -68,7 +80,7 @@ export default function AdminUsersPage() {
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="profile-success" role="status">{message}</p>}
-    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} onReviewSignup={reviewSignup} onTabChange={() => { setMessage(''); setError('') }} onResetVerification={resetVerification} />
+    <AdminUsersTabs users={users} loading={loading} busyLoginId={busy} onChangeRole={item => setConfirm({ login_id: item.login_id, action: item.role === 'admin' ? 'revoke' : 'promote' })} roleConfirm={confirm} roleBusy={Boolean(busy)} onCancelRole={() => setConfirm(null)} onConfirmRole={applyChange} privacyReviewer defaultTab="signup" signupRequests={signupRequests} signupLoading={signupLoading} signupBusy={signupBusy} onReviewSignup={reviewSignup} onTabChange={() => { setMessage(''); setError('') }} onResetVerification={resetVerification} />
     {false && <div>
     <header><h1>권한 관리</h1></header>
     {error && <p className="form-error" role="alert">{error}</p>}

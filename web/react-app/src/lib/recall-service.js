@@ -1,4 +1,5 @@
 import * as apiClient from './api'
+import { changedMark } from './text-diff'
 import {
   acknowledgePreviewRecall,
   filterPreviewRecalls,
@@ -84,7 +85,7 @@ export function mapNotice(notice = {}) {
     oldAnswer: typeof notice?.answer_excerpt === 'string' ? notice.answer_excerpt : '',
     oldPolicy: textOrNull(notice?.old_text),
     newPolicy: textOrNull(notice?.new_text),
-    changedText: null,
+    ...changedMark(textOrNull(notice?.old_text), textOrNull(notice?.new_text)),
     sourceUrl: textOrNull(notice?.source_url),
     ruleSeq,
     article,
@@ -199,7 +200,8 @@ export function parseImpactInput(mode, value) {
 
 export const toErrorInfo =error => ({ code: error?.code ?? 'unknown', status: error?.status ?? 0, message: error?.message ?? '' })
 
-const INITIAL_STATE = Object.freeze({ status: 'idle', records: [], unread: 0, reviewQueue: [], candidates: [], digests: [], isAdminView: false, error: null })
+export const RECALL_LIST_LIMIT = 500
+const INITIAL_STATE = Object.freeze({ status: 'idle', records: [], unread: 0, truncated: false, reviewQueue: [], candidates: [], digests: [], isAdminView: false, error: null })
 
 export function createApiRecallAdapter(api = apiClient) {
   let snapshot = INITIAL_STATE
@@ -216,14 +218,14 @@ export function createApiRecallAdapter(api = apiClient) {
     // A silent (badge) load publishes only a successful result, so it never re-renders the screen mid-flight.
     if (!silent) update({ status: 'loading', error: null })
     try {
-      const mapped = mapRecallsResponse(await api.getRecalls({ suppressUnauthorized: silent }))
+      const mapped = mapRecallsResponse(await api.getRecalls({ suppressUnauthorized: silent, limit: RECALL_LIST_LIMIT }))
       if (request !== sequence) return snapshot.records
       let candidates = mapped.candidates ?? snapshot.candidates
       if (mapped.isAdminView && mapped.candidates === null && !silent) {
         try { candidates = listOf(await api.getMaintenanceCandidates(), 'items').map(mapCandidate) } catch { candidates = snapshot.candidates }
       }
       if (request !== sequence) return snapshot.records
-      update({ status: 'ready', records: mapped.records, unread: mapped.unread, reviewQueue: mapped.reviewQueue, candidates, isAdminView: mapped.isAdminView, error: null })
+      update({ status: 'ready', records: mapped.records, truncated: mapped.records.length >= RECALL_LIST_LIMIT, unread: mapped.unread, reviewQueue: mapped.reviewQueue, candidates, isAdminView: mapped.isAdminView, error: null })
       return mapped.records
     } catch (error) {
       if (request !== sequence || silent) return snapshot.records

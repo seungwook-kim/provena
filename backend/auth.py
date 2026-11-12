@@ -90,7 +90,7 @@ SIGNUP_VERIFICATION_SENT_MESSAGE = "가입 신청이 접수되었습니다. 메�
 SIGNUP_RECEIVED_MESSAGE = "가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다."
 # 이메일 인증을 마치지 않은 대기 신청: 관리자 승인 대기가 아니라 인증이 먼저다(오류 code signup_unverified)
 SIGNUP_UNVERIFIED_CODE = "signup_unverified"
-SIGNUP_UNVERIFIED_MESSAGE = "이메일 인증을 먼저 마쳐 주세요. 로그인 화면의 '이메일 인증 이어하기'에서 인증번호를 다시 받을 수 있습니다."
+SIGNUP_UNVERIFIED_MESSAGE = "이메일 인증을 먼저 마쳐 주세요. 아래 '인증번호 다시 받기'에서 인증번호를 다시 받을 수 있습니다."
 
 
 class AuthError(Exception):
@@ -1082,7 +1082,7 @@ def create_auth_router(
         except Exception as exc:
             if type(exc).__name__ == "AccountExistsError":
                 if email_required:
-                    raise HTTPException(status_code=409, detail="회원가입을 완료할 수 없습니다. 입력값을 확인하거나 이메일 인증 이어하기를 이용해 주세요.") from None
+                    raise HTTPException(status_code=409, detail="회원가입을 완료할 수 없습니다. 이미 신청한 이메일이면 '인증번호 다시 받기'를 이용해 주세요.") from None
                 raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
             raise HTTPException(status_code=503, detail="회원가입을 처리할 수 없습니다.") from None
         # 가입은 신청 접수일 뿐이다: 이메일은 인증번호 입력 → 관리자 승인, 그 밖은 관리자 승인 뒤에 로그인할 수 있다.

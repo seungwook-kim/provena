@@ -123,8 +123,8 @@ CP 증거 파일명 `memory.py`는 저장소의 `backend/memory/` 패키지(`__i
 | 파일 | `backend/memory/profile.py`, `backend/memory/__init__.py` | 기억 읽기·쓰기·삭제와 namespace(`profile_namespace`) |
 | 파일 | `backend/api/routes.py`의 `/me/memory` 세 경로 | 로그인·CSRF 확인 뒤 위 함수를 부른다(`routes.py:359` 부근) |
 | 파일 | `backend/graph/checkpoint.py` | 기억을 담는 Store(메모리 `InMemoryStore`, Postgres `PostgresStore`)를 앱 시작에서 연다 |
-| 환경변수 | `DATABASE_URL` | 있으면 Postgres Store(`.env.example`) |
-| 환경변수 | `CHECKPOINTER` | `memory` 또는 `postgres`. 비우면 `DATABASE_URL`이 있을 때 postgres, 없으면 memory(`checkpoint.py`의 `checkpointer_kind`). memory면 서버를 다시 띄울 때 기억도 사라진다 |
+| 환경변수 | `DATABASE_URL` | 있으면 Postgres Store(`backend/graph/checkpoint.py:114`, `.env.example`) |
+| 환경변수 | `CHECKPOINTER` | `memory` 또는 `postgres`. 비우면 `DATABASE_URL`이 있을 때 postgres, 없으면 memory(`checkpoint.py:36-41`의 `checkpointer_kind`). memory면 서버를 다시 띄울 때 기억도 사라진다 |
 
 ## 남은 점
 

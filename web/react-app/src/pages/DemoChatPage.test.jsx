@@ -165,7 +165,7 @@ describe('DemoChatPage chat errors (H-08)', () => {
     fireEvent.click(screen.getByRole('button', { name: '보내기' }))
 
     expect(await screen.findByText('승인이 끝나야 다음 질문을 할 수 있습니다.')).toBeTruthy()
-    expect(screen.queryByText('답변을 생성하고 있습니다.')).toBeNull()
+    expect(screen.queryByText(/근거를 찾고 답을 확인하는 중입니다/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(2), { timeout: 5000 })
     const bodies = fetchMock.mock.calls.filter(([path]) => path === '/chat').map(([, options]) => JSON.parse(options.body).message)

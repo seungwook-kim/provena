@@ -102,6 +102,8 @@ GET  /approvals/{approval_id} 승인 건 하나(끝난 건 포함) (관리자)
 POST /decision-tables/convert 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (관리자, CSRF, 성공 201)
 ```
 
+화면: 승인함(`web/react-app/src/pages/ApprovalsPage.jsx`) 관리자에게 결정표 변환 폼(`DecisionConvertPanel.jsx`). 키 없는 데모의 예시 응답(`status: "example"`)은 "예시"로 표시하고 승인함 목록을 다시 부르지 않는다. 실제 초안이면 목록을 다시 부른다(H-21, 2026-11-12 박진형).
+
 DecisionRule과 DecisionTable (파트 사이 계약, 필드 구조는 `backend/schemas/`에서 확정):
 
 ```
@@ -148,3 +150,8 @@ DecisionTable: table_id, rule_seq, version_id, cells(json),
 - GIVEN: 질문에 결정표가 지정되어 있지 않다
 - WHEN: 업무 종류로 승인된 결정표를 찾는다
 - THEN: 정확히 1개면 실행하고, 0개이거나 2개 이상이면 실행하지 않고 거절한다
+
+**AC-07 · 결정표 변환 화면은 관리자에게만 보이고, 예시 응답은 저장하지 않는다** (H-21)
+- GIVEN: 승인함 화면(`/approvals`)
+- WHEN: 일반 사용자가 열거나, 관리자가 키 없는 데모에서 업무 종류를 넣고 확인창에서 변환을 누른다
+- THEN: 일반 사용자에게는 폼이 없고 변환 요청이 0건이다. 데모 응답(`status: "example"`)은 "예시"로 표시하고 승인함 목록에 넣지 않는다(저장·승인 없음). 시험: `web/react-app/src/decision-convert.test.jsx`

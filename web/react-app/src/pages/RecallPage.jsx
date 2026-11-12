@@ -9,9 +9,12 @@ const SEVERITY_LABEL = { high: '중요', low: '참고' }
 const CANDIDATE_STATUS_LABEL = { pending: '검토 대기', needed: '정비 필요', not_needed: '정비 불필요' }
 const NOT_FOUND = '알림을 찾을 수 없습니다.'
 
-function Marked({ text, mark }) {
+function Marked({ text, mark, at: markAt }) {
   if (!mark || !text?.includes(mark)) return text
-  const [before, after] = text.split(mark)
+  // 실서버 값은 바뀐 위치(changedAt)를 함께 준다. 같은 글이 앞에도 있으면 첫 위치가 아니라 그 위치를 강조한다.
+  const at = Number.isInteger(markAt) && text.slice(markAt, markAt + mark.length) === mark ? markAt : text.indexOf(mark)
+  const before = text.slice(0, at)
+  const after = text.slice(at + mark.length)
   return <>{before}<mark>{mark}</mark>{after}<span className="changed-text-legend"><i aria-hidden="true" />변경된 부분</span></>
 }
 
@@ -110,6 +113,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         : failedFirst ? <div className="recall-empty recall-load-error" role="alert"><p>{listErrorMessage(snapshot.error)}</p><button type="button" className="demo-outline-button" onClick={() => service.listRecalls().catch(() => {})}>다시 시도</button></div>
           : visible.length === 0 ? <p className="recall-empty">{records.length ? '해당하는 알림이 없습니다.' : '받은 알림이 없습니다.'}</p>
             : visible.map(record => <button type="button" key={record.id} className={`recall-service-item ${record.id === selected?.id ? 'selected' : ''} ${record.needsConfirmation ? 'needs-confirmation' : ''}`} onClick={() => select(record.id)}><div><strong>{record.title}</strong>{!record.acked && <i aria-label="미확인" />}</div><span>{record.question}</span><small>{[record.document, record.detectedAt].filter(Boolean).join(' · ')}</small>{live && (record.severity || record.needsConfirmation) && <span className="recall-item-badges"><JudgementBadges record={{ ...record, confidence: null }} /></span>}<em className={record.conclusionChanged ? 'changed' : ''}>{record.conclusionChanged ? '결론 변경' : record.acked ? '확인 완료' : '확인 필요'}</em></button>)}
+      {live && snapshot.truncated && <p className="recall-empty" role="status">최근 알림 500건만 표시하고 있습니다. 더 오래된 알림은 목록에 나오지 않습니다.</p>}
     </aside>
       <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{versionText(selected.oldVersionDate, selected.newVersionDate) && ` · ${versionText(selected.oldVersionDate, selected.newVersionDate)}`}</p></div>{othersNotice ? <span className="recall-owner-note">다른 사용자의 알림입니다.</span> : <button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button>}</div>
         {actionError && <p className="recall-action-error" role="alert">{actionError}</p>}
@@ -117,7 +121,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         {live && selected.question && <section className="recall-answer recall-question"><small>당시 질문</small><p>{selected.question}</p></section>}
         <section className="recall-answer"><small>영향받은 답변</small><p>{selected.oldAnswer || '저장된 답변 요약이 없습니다.'}</p></section>
         {live && selected.explanation && <section className="recall-explanation"><small>판정 설명</small><p>{selected.explanation}</p></section>}
-        {(selected.oldPolicy || selected.newPolicy) && <><h3>정책 변경 전후</h3><div className="recall-policy-grid">{selected.oldPolicy && <section><small>변경 전</small><p>{selected.oldPolicy}</p></section>}{selected.newPolicy && <section className="after"><small>변경 후</small><p><Marked text={selected.newPolicy} mark={selected.changedText} /></p></section>}</div></>}
+        {(selected.oldPolicy || selected.newPolicy) && <><h3>정책 변경 전후</h3><div className="recall-policy-grid">{selected.oldPolicy && <section><small>변경 전</small><p>{selected.oldPolicy}</p></section>}{selected.newPolicy && <section className="after"><small>변경 후</small><p><Marked text={selected.newPolicy} mark={selected.changedText} at={selected.changedAt} /></p></section>}</div></>}
         <div className="recall-detail-actions">{selected.sourceUrl && <a href={selected.sourceUrl} target="_blank" rel="noreferrer" className="demo-outline-button">원문 보기</a>}<Link to={chatLink} state={{ question: selected.question }} className="demo-dark-button">다시 질문하기</Link></div>
         {service.sendFeedback && <FeedbackControls key={selected.id} record={selected} service={service} />}
       </> : selectedId && selectedId === missingId ? <div className="recall-empty-detail" role="alert"><h2>{NOT_FOUND}</h2><p>삭제되었거나 접근할 수 없는 알림입니다. 목록에서 다른 알림을 선택해 주세요.</p></div>

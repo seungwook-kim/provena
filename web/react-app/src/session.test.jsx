@@ -4,6 +4,8 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { apiRequest } from './lib/api'
+// 문구 회귀를 잡도록 문장을 그대로 적는다(src/lib/privacy-notice.js 와 같아야 함)
+const PRIVACY_NOTICE = '이름·전화번호·근무지 주소는 암호화해 저장하며, 본인만 볼 수 있고 관리자에게도 보이지 않습니다.'
 
 const A = { user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'user', login_id: 'a-user@example.com' }
 const B = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin' }
@@ -177,6 +179,8 @@ describe('React authentication and session isolation', () => {
     await userEvent.clear(service)
     await userEvent.type(service, '결제 API')
     expect(screen.getByLabelText('이름 *')).toBeTruthy()
+    // 개인정보 안내(③, 11/12): 이름 칸 바로 위
+    expect(screen.getByLabelText('이름 *').closest('label').previousElementSibling.textContent).toBe(PRIVACY_NOTICE)
     const phone = screen.getByLabelText('전화번호 *')
     expect(phone.getAttribute('placeholder')).toBe('예시) 010-1234-5678')
     const address = screen.getByLabelText('근무지 주소 * (5~100자)')
@@ -344,6 +348,7 @@ describe('React authentication and session isolation', () => {
     expect(screen.getByRole('heading', { name: '기본 정보를 입력해 주세요.' })).toBeTruthy()
     expect(screen.getByText('이름·전화번호·근무지 주소는 필수입니다. 주소는 5~100자로 입력해 주세요.')).toBeTruthy()
     const nameInput = screen.getByRole('textbox', { name: '이름' })
+    expect(nameInput.closest('label').previousElementSibling.textContent).toBe(PRIVACY_NOTICE)   // ③ 기본 정보 단계 이름 칸 위
     const phoneInput = screen.getByRole('textbox', { name: '전화번호' })
     const addressInput = screen.getByRole('textbox', { name: '근무지 주소 (5~100자)' })
     expect(phoneInput.getAttribute('placeholder')).toBe('예시) 010-1234-5678')

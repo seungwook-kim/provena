@@ -88,7 +88,9 @@
   - `body.error?.message`, `body.error?.code`를 우선 사용하고 기존 `body.detail` 처리도 유지한다.
   - `event:`와 `data:`를 청크 경계와 무관하게 처리한다.
 - `web/react-app/src/pages/DemoChatPage.jsx`
-  - `approval_request`로 메시지 상태가 `approval`이면 “승인 대기 중”을 표시한다.
+  - `approval_request`로 메시지 상태가 `approval`이면 고정 안내 “담당자 승인을 기다리고 있습니다. 승인 단계가 끝나면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.”를 표시한다(2026-11-12, 승인 뒤 결과는 같은 대화에 남는다: `backend/graph/departments/review.py` finalize, 화면은 창으로 돌아올 때 다시 받는다).
+  - 답을 기다리는 동안 “근거를 찾고 답을 확인하는 중입니다 · N초 지남”을 표시한다. 서버는 그래프가 끝난 뒤에만 답을 보내므로(`backend/graph/stream.py`) 단계 대신 지난 시간만 보여 준다(2026-11-12).
+  - 출처·라이선스 안내는 서버 `attribution.modified`가 true이면 “원문을 요약·재서술함(수정됨)”을 함께 표시한다(TEAM_GUIDE 7장 수정 여부, 2026-11-12).
   - 현재 대화의 승인 대기 상태에 한해 입력과 전송을 비활성화한다.
   - 데모/실제 adapter 선택, 라우팅, 스트리밍, 중단 기능을 유지한다.
 ### 확인된 API 필드와 미확정 계약
@@ -112,9 +114,9 @@
 | 파일 | `web/react-app/vite.config.js` | 개발 서버가 `/auth`, `/me` 등을 백엔드로 넘기는 프록시 |
 | 빌드 변수 | `VITE_API_BASE_URL` | API 기본 주소. 비우면 같은 origin(`src/lib/api.js:1`, `web/react-app/README.md`) |
 | 빌드 변수 | `VITE_API_PROXY_TARGET` | 개발 서버 프록시 대상. 비우면 Docker 안에서는 `http://host.docker.internal:8000`, 아니면 `http://127.0.0.1:8000`(`vite.config.js:10-11`) |
-| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx:10`) |
-| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx:222, 230`) |
-| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py:95, 123`) |
+| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx:11`, `App.jsx:75`) |
+| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx:271, 279`) |
+| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py:95, 124`) |
 
 ### 검증 계획
 

@@ -19,6 +19,7 @@ export function createApprovalsService(adapter) {
     getDepartmentReviews: adapter.getDepartmentReviews ? id => adapter.getDepartmentReviews(id) : null,
     submitDepartmentReview: adapter.submitDepartmentReview ? (id, review) => adapter.submitDepartmentReview(id, review) : null,
     decideApproval: (id, decision) => adapter.decideApproval(id, decision),
+    convertDecisionTable: adapter.convertDecisionTable ? category => adapter.convertDecisionTable(category) : null,
   }
 }
 
@@ -172,6 +173,38 @@ export function mapDecisionResult(result = {}) {
   }
 }
 
+// 결정표 변환(POST /decision-tables/convert)의 응답. status가 'example'이면 키 없는 데모의 고정 응답이라 승인함에 올라가지 않았다.
+export function mapConvertResult(view = {}) {
+  return {
+    example: view?.status === 'example',
+    id: view?.approval_id == null ? '' : String(view.approval_id),
+    title: text(view?.summary) || '결정표 초안',
+    tableId: textOrNull(view?.table_id),
+    draft: mapDraft(view?.draft) ?? [],
+  }
+}
+
+// 변환 전용 오류 문구. 서버 문구(api.js가 error.message로 읽음)는 해라체라 보여 주지 않고, api.js가 읽은 error.code(옛 모양은 detail.reason)로 고른다.
+const CONVERT_ERROR_MESSAGES = {
+  bad_request: '권한표 업무 종류를 입력해 주세요.',
+  not_found: '권한표에 그 업무 종류가 없습니다. 이름을 확인해 주세요.',
+  draft_unreadable: '초안을 읽지 못해 승인함에 올리지 않았습니다. 잠시 후 다시 시도해 주세요.',
+  no_source: '권한표 칸을 읽지 못해 승인함에 올리지 않았습니다.',
+  convert_failed: '결정표 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  forbidden: '이 작업을 수행할 권한이 없습니다. 결정표 변환은 관리자만 할 수 있습니다.',
+  // 503 not_configured: 결정표 저장소·권한표 파일이 없을 때(routes.py _state·_authz_cells). 승인 쪽 문구('승인 저장소')는 맞지 않아 따로 둔다
+  not_configured: '결정표 변환에 필요한 저장소나 권한표 파일을 지금 쓸 수 없습니다. 잠시 후 다시 시도해 주세요.',
+  // 409: 같은 conflict 코드로 이유가 셋이라(routes.py 승인된 표 있음·초안 승인 대기 중·초안이 승인 대기에 이르지 못함) 셋을 다 덮는 고정 문구
+  conflict: '이미 같은 결정표가 있거나 승인 대기 중이거나, 초안이 승인 대기에 이르지 못했습니다. 승인함을 확인하고 다시 시도해 주세요.',
+}
+
+export function describeConvertError(error, fallback = '결정표 변환을 처리하지 못했습니다.') {
+  if (!error) return ''
+  if (CONVERT_ERROR_MESSAGES[error.code]) return CONVERT_ERROR_MESSAGES[error.code]
+  if (error.status === 409) return CONVERT_ERROR_MESSAGES.conflict   // code 없는 409(JSON이 아닌 응답 등)도 같은 문구
+  return describeApprovalError(error, fallback)
+}
+
 export function toApprovalRequestBody(action, reason = '') {
   const comment = typeof reason === 'string' ? reason.trim() : ''
   if (action === 'approve') return { approve: true, comment }
@@ -204,6 +237,14 @@ export function createApiApprovalsAdapter(api = apiClient) {
         return result.id ? result : { id, status: action === 'approve' ? 'approved' : 'rejected' }
       } catch (error) {
         throw localizeError(error, '승인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      }
+    },
+    async convertDecisionTable(category) {
+      try {
+        return mapConvertResult(await api.convertDecisionTable(category))
+      } catch (error) {
+        if (!(error instanceof apiClient.ApiError)) throw new apiClient.ApiError('결정표 변환을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', 0, 'request_failed')
+        throw new apiClient.ApiError(describeConvertError(error), error.status, error.code)
       }
     },
   }

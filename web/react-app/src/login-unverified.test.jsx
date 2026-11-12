@@ -24,9 +24,14 @@ describe('login of an unverified signup', () => {
   it('shows the message and a link to resume verification', async () => {
     await attempt(new ApiError('이메일 인증을 먼저 마쳐 주세요', 403, 'signup_unverified'))
     expect((await screen.findByRole('alert')).textContent).toContain('이메일 인증을 먼저 마쳐 주세요')
-    const links = screen.getAllByRole('link', { name: '이메일 인증 이어하기' })
-    expect(links.some(a => a.getAttribute('href') === '/signup?resume=1')).toBe(true)
+    // 화면 아래 고정 링크는 없앴고(11/11), 인증을 못 마친 사람에게만 오류 안 링크로 길을 남긴다
+    expect(screen.getByRole('link', { name: '인증번호 다시 받기' }).getAttribute('href')).toBe('/signup?resume=1')
     expect(screen.getByRole('alert').querySelector('a[href="/signup?resume=1"]')).toBeTruthy()
+  })
+  it('has no fixed "이메일 인증 이어하기" link on the login screen', () => {
+    render(<MemoryRouter><LoginPage /></MemoryRouter>)
+    expect(screen.queryByRole('link', { name: '이메일 인증 이어하기' })).toBeNull()
+    expect(document.querySelector('a[href="/signup?resume=1"]')).toBeNull()
   })
   it('does not show the in-alert link for other errors', async () => {
     await attempt(new ApiError('아이디 또는 비밀번호가 올바르지 않습니다.', 401, 'unauthorized'))
