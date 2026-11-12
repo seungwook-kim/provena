@@ -29,7 +29,7 @@ REST(업무시스템 -> 플랫폼)
 4. 그 밖의 경로(`/recalls`, `/approvals`, `/decision-tables/*` 등)는 `docs/api/openapi.json`에 있다(48개 경로, `docs/api/api.md`).
 
 SDK
-5. 명세 `docs/api/openapi.json`이 SDK 생성기의 입력이다. 생성기로 만든 Java·Python SDK는 **예정(미착수, 담당·기한 없음)**이다(없음). 지금 있는 것은 손으로 쓴 Python 예제 `mock_erp/python_example/provena_client.py`와 모의 업무시스템 정적 화면 `mock_erp/erp_screen.html`(`mock_erp/serve_screen.py`로 같은 주소에 띄움)이다.
+5. 명세 `docs/api/openapi.json`이 SDK 생성기의 입력이다. 생성기(openapi-generator 7.26.0)로 만든 Java·Python SDK는 `mock_erp/sdk/`에 있다(2026-11-12, 설명 `mock_erp/sdk/sdk.md`). 지금 있는 것은 손으로 쓴 Python 예제 `mock_erp/python_example/provena_client.py`와 모의 업무시스템 정적 화면 `mock_erp/erp_screen.html`(`mock_erp/serve_screen.py`로 같은 주소에 띄움)이다.
 
 웹훅(두 방향, 서로 다른 것)
 6. 수집 -> 플랫폼: `POST /webhooks/regulation-updated`. 서비스 키(`X-Service-Key` 또는 `Authorization: Bearer`, 환경변수 `SERVICE_API_KEY`)가 맞아야 하고 비어 있으면 항상 401. 성공은 202(`accepted`, `event_ids`).
@@ -56,7 +56,7 @@ SDK
 - 예제 클라이언트: `mock_erp/python_example/provena_client.py`(로그인 -> CSRF -> `/chat` SSE).
 - 웹훅 상세 형식과 알림 본문(`RecallNotice`)은 `docs/specs/recall.md`, MCP 서버(`/mcp`, 읽기 전용 도구 6개)는 `docs/specs/mcp.md`가 정한다. 이 문서는 그 둘을 다시 정하지 않고 연동 관점에서 모은 것이다.
 - 환경변수: `SERVICE_API_KEY`, `RECALL_WEBHOOK_SECRET`(구독별 `RECALL_WEBHOOK_SECRET_<이름>`), `RECALL_WEBHOOK_MAX_TRIES`, `RECALL_WEBHOOK_BACKOFF_S`, `RECALL_WEBHOOK_TIMEOUT_S`(`.env.example`).
-- 예정(미착수, 담당·기한 없음): SDK 자동 생성(Java·Python), Java(Spring Boot) 업무시스템 목업. 근거와 현재 상태는 `mock_erp/mock_erp.md`.
+- 예정(미착수, 담당·기한 없음): Java(Spring Boot) 업무시스템 목업(SDK 자동 생성은 2026-11-12 `mock_erp/sdk/`에 만듦). 근거와 현재 상태는 `mock_erp/mock_erp.md`.
 
 ## AC (Given-When-Then)
 
