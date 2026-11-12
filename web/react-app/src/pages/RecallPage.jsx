@@ -11,7 +11,9 @@ const NOT_FOUND = '알림을 찾을 수 없습니다.'
 
 function Marked({ text, mark }) {
   if (!mark || !text?.includes(mark)) return text
-  const [before, after] = text.split(mark)
+  const at = text.indexOf(mark)
+  const before = text.slice(0, at)
+  const after = text.slice(at + mark.length)
   return <>{before}<mark>{mark}</mark>{after}<span className="changed-text-legend"><i aria-hidden="true" />변경된 부분</span></>
 }
 
@@ -110,6 +112,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         : failedFirst ? <div className="recall-empty recall-load-error" role="alert"><p>{listErrorMessage(snapshot.error)}</p><button type="button" className="demo-outline-button" onClick={() => service.listRecalls().catch(() => {})}>다시 시도</button></div>
           : visible.length === 0 ? <p className="recall-empty">{records.length ? '해당하는 알림이 없습니다.' : '받은 알림이 없습니다.'}</p>
             : visible.map(record => <button type="button" key={record.id} className={`recall-service-item ${record.id === selected?.id ? 'selected' : ''} ${record.needsConfirmation ? 'needs-confirmation' : ''}`} onClick={() => select(record.id)}><div><strong>{record.title}</strong>{!record.acked && <i aria-label="미확인" />}</div><span>{record.question}</span><small>{[record.document, record.detectedAt].filter(Boolean).join(' · ')}</small>{live && (record.severity || record.needsConfirmation) && <span className="recall-item-badges"><JudgementBadges record={{ ...record, confidence: null }} /></span>}<em className={record.conclusionChanged ? 'changed' : ''}>{record.conclusionChanged ? '결론 변경' : record.acked ? '확인 완료' : '확인 필요'}</em></button>)}
+      {live && snapshot.truncated && <p className="recall-empty" role="status">최근 알림 500건만 표시하고 있습니다. 더 오래된 알림은 목록에 나오지 않습니다.</p>}
     </aside>
       <article className="recall-service-detail">{selected ? <><div className="recall-detail-top"><div><span className={`recall-result ${selected.conclusionChanged ? 'changed' : ''}`}>{selected.conclusionChanged ? '결론 변경' : '결론 유지'}</span>{live && <span className="recall-detail-badges"><JudgementBadges record={selected} /></span>}<h2>{selected.title}</h2><p>{[selected.document, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{versionText(selected.oldVersionDate, selected.newVersionDate) && ` · ${versionText(selected.oldVersionDate, selected.newVersionDate)}`}</p></div>{othersNotice ? <span className="recall-owner-note">다른 사용자의 알림입니다.</span> : <button type="button" className="demo-outline-button" disabled={selected.acked || busy} onClick={() => acknowledge(selected.id)}>{selected.acked ? '확인 완료' : '확인'}</button>}</div>
         {actionError && <p className="recall-action-error" role="alert">{actionError}</p>}
