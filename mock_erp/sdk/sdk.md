@@ -14,12 +14,12 @@
 
 | 항목 | 값 |
 |---|---|
-| 도구 | openapi-generator-cli 7.26.0 (Maven Central `org.openapitools:openapi-generator-cli`, 2026-10-06 공개) |
+| 도구 | openapi-generator-cli 7.26.0 (Maven Central `org.openapitools:openapi-generator-cli`) |
 | jar SHA-256 | `1760050094997b9cc790cc1350be095f15da8c08a996b184d3eadc4ccda5e35e` (`generate.sh`가 받은 뒤 확인) |
 | Python | 생성기 `python`, 패키지 `provena_sdk` 0.1.0, urllib3 + pydantic v2, Python 3.10 이상 |
 | Java | 생성기 `java`, 라이브러리 `native`(JDK 11+ `java.net.http`), Jackson 사용, 패키지 `com.provena.sdk` |
 | 만들지 않는 것 | 생성기의 시험·API/모델 문서 파일(`apiTests`, `modelTests`, `apiDocs`, `modelDocs` = false)로 크기를 줄임 |
-| 지우는 것 | 빌드는 `pom.xml`로 하므로 `generate.sh`가 생성 뒤 `java/gradle/`(wrapper jar 포함), `gradlew`, `gradlew.bat`, `build.gradle`, `gradle.properties`, `build.sbt`를 지운다(저장소에 바이너리를 넣지 않음) |
+| 지우는 것 | 빌드는 `pom.xml`로 하므로 `generate.sh`가 생성 뒤 `java/gradle/`(wrapper jar 포함), `gradlew`, `gradlew.bat`, `build.gradle`, `gradle.properties`, `build.sbt`, 생성기가 내는 CI 설정(`.github/`, `.gitlab-ci.yml`, `.travis.yml`)과 `src/main/AndroidManifest.xml`을 지운다(저장소에 바이너리를 넣지 않음) |
 
 ## 다시 만드는 법
 
@@ -27,7 +27,7 @@
 bash mock_erp/sdk/generate.sh
 ```
 
-jar는 `mock_erp/sdk/.tools/`(저장소에서 제외)로 내려받는다. 이미 있으면 `OPENAPI_GENERATOR_JAR=<경로>`로 지정한다. JDK 11 이상과 Python(명세 보정용, `PYTHON` 환경변수로 지정 가능)이 필요하다.
+jar는 `${TMPDIR:-/tmp}/openapi-generator/`(저장소 밖)로 내려받는다. 이미 있으면 `OPENAPI_GENERATOR_JAR=<경로>`로 지정한다. JDK 11 이상과 Python(명세 보정용, `PYTHON` 환경변수로 지정 가능)이 필요하다.
 
 ## 알려진 사정
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # docs/api/openapi.json 에서 Python·Java SDK 를 다시 만든다. 생성 결과는 손으로 고치지 않는다.
 # 사용: OPENAPI_GENERATOR_JAR=/경로/openapi-generator-cli-7.26.0.jar bash mock_erp/sdk/generate.sh
-# jar 가 없으면 Maven Central 에서 sdk/.tools/ 로 받는다(.gitignore 대상, 커밋하지 않음).
+# jar 가 없으면 Maven Central 에서 ${TMPDIR:-/tmp}/openapi-generator/ 로 받는다(저장소 밖).
 set -euo pipefail
 
 VERSION="7.26.0"
@@ -9,7 +9,7 @@ SHA256="1760050094997b9cc790cc1350be095f15da8c08a996b184d3eadc4ccda5e35e"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 SPEC="$ROOT/docs/api/openapi.json"
-JAR="${OPENAPI_GENERATOR_JAR:-$HERE/.tools/openapi-generator-cli-$VERSION.jar}"
+JAR="${OPENAPI_GENERATOR_JAR:-${TMPDIR:-/tmp}/openapi-generator/openapi-generator-cli-$VERSION.jar}"
 
 if [ ! -f "$JAR" ]; then
   mkdir -p "$(dirname "$JAR")"
@@ -40,6 +40,6 @@ java -jar "$JAR" generate -g python "${COMMON[@]}" -o "$HERE/python" \
 java -jar "$JAR" generate -g java --library native --input-spec "$JAVA_SPEC" --global-property "apiTests=false,modelTests=false,apiDocs=false,modelDocs=false" -o "$HERE/java" \
   --additional-properties invokerPackage=com.provena.sdk,apiPackage=com.provena.sdk.api,modelPackage=com.provena.sdk.model,artifactId=provena-sdk,artifactVersion=0.1.0,openApiNullable=false,useJakartaEe=true
 
-# 빌드는 pom.xml 로 한다. 바이너리(gradle-wrapper.jar)와 쓰지 않는 gradle·sbt 파일은 저장소에 넣지 않으므로 지운다.
+# 빌드는 pom.xml 로 한다. 바이너리(gradle-wrapper.jar), 쓰지 않는 gradle·sbt 파일, 생성기 CI 설정·안드로이드 매니페스트는 저장소에 넣지 않으므로 지운다.
 rm -rf "$HERE/java/gradle" "$HERE/java/gradlew" "$HERE/java/gradlew.bat" "$HERE/java/build.gradle" \
-  "$HERE/java/settings.gradle" "$HERE/java/gradle.properties" "$HERE/java/build.sbt"
+  "$HERE/java/settings.gradle" "$HERE/java/gradle.properties" "$HERE/java/build.sbt" \n  "$HERE/java/.github" "$HERE/python/.github" "$HERE/python/.gitlab-ci.yml" \n  "$HERE/java/.travis.yml" "$HERE/python/.travis.yml" "$HERE/java/src/main/AndroidManifest.xml"

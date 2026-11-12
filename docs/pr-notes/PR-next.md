@@ -2,7 +2,7 @@
 - 작업자: 박진형 (jinyeong-731) / PR: 미정 / 머지: 아직 안 함 / 기준: `origin/main` `601183c7` (7개 브랜치를 합친 통합 브랜치 `integ-1112`)
 
 ## 배포 상태
-**배포 안 함, 모든 확인은 로컬이다.** 운영 주소·운영 DB·실제 LLM 호출은 하지 않았다.
+**배포 안 함, 모든 확인은 로컬이다.** 시험·변이는 DB·키·네트워크·Docker 없이 가짜 모델로(묶음 4) 운영 주소·운영 DB·실제 LLM 호출은 하지 않았다.
 
 ## 닫는 항목
 | 번호 | 상태 | 절 |
@@ -218,7 +218,7 @@
 | 위치 | `mock_erp/sdk/` (`mock_erp/` 안: TEAM_GUIDE 5장 폴더 주인표에 `mock_erp/`는 업무시스템 목업, SDD 디렉토리 트리도 `mock_erp/` 아래. 새 최상위 폴더를 만들지 않음) |
 | 파일 | `generate.sh`(고정 버전·SHA 확인·고정 옵션), `sdk.md`(폴더 문서), `python/`(패키지 `provena_sdk`), `java/`(패키지 `com.provena.sdk`, `native` 라이브러리, `pom.xml`) |
 | 문서 | PRD P-03, SDD 5장·11장·디렉토리 트리, SPEC P-03, `specs/erp-integration.md`, `mock_erp.md`, `docs/docs.md`의 SDK 문구를 "생성함, 도구는 openapi-generator 7.26.0"으로 고침 |
-| 생성 크기 | Python 60파일 776,617바이트, Java 58파일 697,711바이트, 합계 118파일 1,474,328바이트(약 1.5MB). gradle 래퍼(바이너리 `gradle-wrapper.jar` 포함)와 미사용 gradle·sbt 파일은 `generate.sh`가 지워 저장소에 바이너리가 없다(`git diff --name-only origin/main..HEAD`에서 .jar·.class 0건). 기준(2MB)보다 작아 생성 코드를 커밋한다. 시험·모델 문서 파일은 만들지 않게 해서 줄였다 |
+| 생성 크기 | Python 57파일 795,325바이트, Java 55파일 716,817바이트, 합계 112파일 1,512,142바이트(약 1.5MB). gradle 래퍼(바이너리 `gradle-wrapper.jar` 포함)와 미사용 gradle·sbt 파일, 생성기가 내는 CI 설정(`.github/`, `.gitlab-ci.yml`, `.travis.yml`)과 `AndroidManifest.xml`은 `generate.sh`가 지워 저장소에 바이너리가 없다(`git diff --name-only origin/main..HEAD`에서 .jar·.class 0건). 기준(2MB)보다 작아 생성 코드를 커밋한다. 시험·모델 문서 파일은 만들지 않게 해서 줄였다 |
 | 재생성 | `bash mock_erp/sdk/generate.sh` |
 
 ### 왜 (근거)
@@ -309,7 +309,7 @@
 ### 무엇을
 | 번호 | 바꾼 곳 | 내용 |
 |---|---|---|
-| K-15 (I-06, P-09, F-08 관련) | `docs/decisions.md` 결정 표 맨 위 행 | "(제안, 조장 승인 대기)" 주말 11/14~15와 동결(11/16 24:00) 뒤: 새 자동 실행·배포 없음, `handbook-sync`는 `disabled_manually` 유지, 동결 뒤 코드 변경 없음 |
+| K-15 (I-06, P-09, F-08 관련) | `docs/decisions.md` 결정 표 2026-11-12 행 중 4번째(#132 결정 3행 다음) | "(제안, 조장 승인 대기)" 주말 11/14~15와 동결(11/16 24:00) 뒤: 새 자동 실행·배포 없음, `handbook-sync`는 `disabled_manually` 유지, 동결 뒤 코드 변경 없음 |
 | K-15 | `docs/TEAM_GUIDE.md` 일정 표 11/14~15 행 | `handbook-sync`는 꺼 둔 채 둔다는 제안과 `decisions.md` 가리킴 |
 | J-01, J-02, J-03, L-09, O-16 | `EVAL_REPORT.md` 6장 "아직 막지 못한 것" (7) | 문서 권한 검색 전 거르기를 동결 전에 만들지 않는 알려진 한계 |
 | 같은 번호 | `docs/SDD.md` 문서 권한(F-06) 줄 | "미구현 부분" 문장 끝에 2026-11-11 진형 결정과 EVAL_REPORT 6장 연결 |
