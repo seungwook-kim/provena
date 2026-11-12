@@ -48,6 +48,7 @@ from backend.memory.profile import get_profile
 from backend.prompts import question as P
 from backend.graph import untrusted as U
 from backend.prompts.question import leaks_internal
+from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
@@ -65,7 +66,7 @@ MAX_CHUNKS = 10  # 재검색 결과를 합친 근거 목록의 최대 길이
 MAX_SECTION_CHARS = 6000  # 섹션을 통째로 읽어 넓힐 수 있는 본문 길이. 넘으면 넓히지 않는다
 AUTHZ_TITLE = "Authorization Matrix"  # 현재 페이지와 고정 판(2023-05)의 공통 제목
 SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5)
-SPLIT_K = 8  # 나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 하위 질문과 링크 확장으로 7자리 + 끝 1자리는 원 질문 목록(`search.FULL_TAIL`). 나뉘지 않은 질문과 재검색은 `SEARCH_K` 그대로(사전 등록 62.38)
+SPLIT_K = 8  # 나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 하위 질문과 링크 확장으로 7자리 + 끝 1자리는 원 질문 목록(`search.FULL_TAIL`). 나뉘지 않은 질문과 재검색은 `SEARCH_K` 그대로(사전 등록 62.38). 달러 금액이 든 질문은 나뉘어도 `SEARCH_K`(사전 등록 62.43, `split_k`)
 MAX_CITATIONS = P.MAX_CITATIONS  # 답 하나가 인용할 수 있는 청크 수의 상한. 답 프롬프트와 같은 값이다
 JSON_ATTEMPTS = 2  # LLM 응답 형식이 깨지면 1회 다시 요청한다 (Spec EC-06)
 ROUTES = ("rule", "decision", "review", "out_of_domain")
@@ -169,9 +170,19 @@ def finish_answer(answer: str, citations: list[dict], as_of: str | None) -> str:
 mentions_period = G.mentions_period  # 질문에 시점 표현이 있는지. 없는 질문에 재작성이 기준일을 채워 내면(오늘 날짜 등) 그 값은 쓰지 않는다. 근거 판정(grounding.recode_vote)과 같은 판별이다
 
 
-def chunk_cap(sub_queries) -> int:
-    """근거 목록의 최대 길이. 나뉜 질문(하위 질문 2개 이상)은 첫 검색이 `SPLIT_K`라 그만큼 상한을 올려야 재검색이 새 청크를 받는다."""
-    return MAX_CHUNKS + (SPLIT_K - SEARCH_K if len(sub_queries or ()) >= 2 else 0)
+def has_dollar_amount(question: str | None, sub_queries) -> bool:
+    """질문이나 하위 질문에 달러 금액이 있는지. 검색기의 금액 구간 조회(`Searcher._range_expand`)가 쓰는 조건과 같다(`ranges.amounts_in`)."""
+    return bool(ranges.amounts_in([question, *(sub_queries or ())]))
+
+
+def split_k(question: str | None, sub_queries) -> int:
+    """나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 달러 금액이 든 질문은 금액 구간 조회가 정답 구간 행을 따로 넣으므로 넓히지 않고 `SEARCH_K`로 둔다(사전 등록 62.43)."""
+    return SPLIT_K if len(sub_queries or ()) >= 2 and not has_dollar_amount(question, sub_queries) else SEARCH_K
+
+
+def chunk_cap(sub_queries, question: str | None = None) -> int:
+    """근거 목록의 최대 길이. 첫 검색이 `split_k`만큼 넓어진 나뉜 질문은 그만큼 상한을 올려야 재검색이 새 청크를 받는다."""
+    return MAX_CHUNKS + split_k(question, sub_queries) - SEARCH_K
 
 
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
@@ -836,7 +847,7 @@ def build_graph(
             except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
                 log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
         mixed = [c for group in zip_longest(*lists) for c in group if c is not None]
-        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries")) + SEARCH_K)}
+        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries"), state.get("question")) + SEARCH_K)}
 
     def page_requery(state: AgentState) -> dict:
         """가(`GRAPH_RESEARCH_SAME_PAGE`): 재검색어(`search_query`)로 지금 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서만 찾는다. 전체 검색은 하지 않는다.
@@ -855,7 +866,7 @@ def build_graph(
                 found = [c for c in found if c.get("chunk_id") not in have][:REQUERY_NEW]
         except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
             log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
-        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"))), "search_stats": stats}
+        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"), state.get("question"))), "search_stats": stats}
 
     def with_intro(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
         """R3(`GRAPH_INTRO_FILL`): 첫 검색 문맥에 같은 페이지 판 청크가 3개 이상인 페이지의 도입부 절 청크(질문 벡터와 가장 가까운 1개, 절이 2개 이하 청크면 절 전체)를 뒤에 더한다.
@@ -902,7 +913,7 @@ def build_graph(
             query, subs = plan.query, plan.subs
             extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"),
-                        k=SPLIT_K if first and len(subs) >= 2 else SEARCH_K, sub_queries=subs or None)  # 나뉜 질문의 첫 검색만 SPLIT_K
+                        k=split_k(state["question"], subs) if first else SEARCH_K, sub_queries=subs or None)  # 나뉜 질문의 첫 검색만 SPLIT_K(달러 금액이 든 질문은 SEARCH_K)
         _forget_search_trace()
         try:
             found, memo = memo_search(state, q)
@@ -912,7 +923,7 @@ def build_graph(
         if not found and _search_fallback_reason() == "no_key":  # 키 없는 데모: 같은 검색을 되풀이하지 않고 끝낸다
             return {**extra, **memo, "kind": "refuse", "answer": MSG_REFUSE_NO_KEY, "citations": [], "search_error": "no_key"}
         # 재검색은 앞 결과를 버리지 않고 합친다. 판단, 인용 검사, 근거 판정은 모두 이 합친 목록과 대조한다
-        merged = merge_chunks(state.get("chunks", []), found, limit=chunk_cap(subs if first else state.get("sub_queries")))
+        merged = merge_chunks(state.get("chunks", []), found, limit=chunk_cap(subs if first else state.get("sub_queries"), state["question"]))
         return {"chunks": with_intro(state, merged, query) if first else merged, **memo, **extra}  # R3는 첫 검색에만 붙인다
 
     def judge(state: AgentState) -> dict:
@@ -1013,7 +1024,7 @@ def build_graph(
         if state.get("sub_research_phase") == "due":  # B1, B4: 빠진 하위 질문 한 번 더(그때만 재검색 상한 +1)
             return "rewrite"
         # 근거 목록이 차면 `merge_chunks`가 새 청크를 받지 못해 재검색이 아무것도 바꾸지 못한다
-        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries")))  # 섹션 읽기는 목록을 늘리지 않는다
+        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries"), state.get("question")))  # 섹션 읽기는 목록을 늘리지 않는다
         if state.get("retries", 0) <= research_limit + (state.get("section_reads", 0) if section_extra else 0) and not stalled:
             return "rewrite"
         # 재검색이 끝나도 일부 근거만 있으면 그 부분을 답한다. 나뉜 질문(사실 둘 이상)일 때만이다. 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 된다
