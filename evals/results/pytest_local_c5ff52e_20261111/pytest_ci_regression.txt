@@ -12,7 +12,7 @@
 ============================= test session starts =============================
 platform win32 -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0 -- <HOME>\Desktop\학원\메인프로젝트\3.main_project\provena\.venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: <HOME>\AppData\Local\Temp\pv_d8_pytest
+rootdir: <임시 폴더>\pv_d8_pytest
 configfile: pytest.ini
 plugins: anyio-4.15.1, langsmith-0.14.16, platformdirs-4.14.5
 collecting ... collected 19 items
