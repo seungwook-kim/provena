@@ -192,7 +192,7 @@ export async function changeAdminRole(loginId, action) {
 export function getThreads() { return apiJson('/threads', { suppressUnauthorized: true }) }
 export function getThread(threadId) { return apiJson(`/threads/${encodeURIComponent(threadId)}`) }
 export function getMemory() { return apiJson('/me/memory', { suppressUnauthorized: true }) }
-async function csrfHeaders() {
+export async function csrfHeaders() {
   const token = await fetchCsrfCookie()
   if (!token) throw new ApiError('CSRF 토큰을 받을 수 없습니다. 다시 시도해 주세요.', 0, 'csrf_unavailable')
   return { 'X-CSRF-Token': decodeURIComponent(token) }
