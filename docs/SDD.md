@@ -53,7 +53,7 @@ flowchart LR
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
 | `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | 계획은 Java(Spring Boot) 목업은 크게, Python 예제는 작게. 현재(2026-11-11)는 Python 예제(`mock_erp/python_example/`)만 있고 Java 목업은 만들지 않았다(`mock_erp/mock_erp.md` "만든 것과 만들지 않은 것") |
-| SDK | 업무시스템이 쓰는 클라이언트 | 계획은 OpenAPI 명세에서 자동 생성한 Java·Python SDK (생성 도구는 11장). 현재는 명세(`docs/api/openapi.json`)와 Python 예제만 있고 SDK 자동 생성은 하지 않았다(`mock_erp/mock_erp.md`) |
+| SDK | 업무시스템이 쓰는 클라이언트 | OpenAPI 명세에서 openapi-generator 7.26.0로 자동 생성한 Java·Python SDK (생성 도구는 11장, 산출물은 `mock_erp/sdk/`, 2026-11-12). 명세는 `docs/api/openapi.json`, 손으로 쓴 Python 예제는 `mock_erp/python_example/`(`mock_erp/sdk/sdk.md`) |
 | DB | 문서·청크·판, 사용자, 답변·인용, 결정표, 승인, 리콜 | 운영: Supabase Postgres + pgvector / 데모: 로컬 pgvector 컨테이너 |
 | 관측 | 그래프 단계별 트레이스, 평가 점수 연결 | Langfuse |
 
@@ -198,7 +198,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │     ├─ mcp_server/grounding_tool.py  # get_grounding (답 저장소의 근거 판정 기록 읽기)
 │     └─ (시험은 `tests/test_mcp_server.py`, 클라이언트는 mcp_client/client.py)
 ├─ web/   web.md   (react-app/src/pages/: 로그인, 가입, 내 정보, 채팅, 승인함, 리콜, 변경 감시, 관리자, 사용자 관리, 기억 설정, landing)
-├─ mock_erp/  mock_erp.md   (python_example/, src/는 설명 문서뿐: Spring Boot 목업은 만들지 않음)
+├─ mock_erp/  mock_erp.md   (python_example/, sdk/(sdk.md, 생성된 Python·Java SDK), src/는 설명 문서뿐: Spring Boot 목업은 만들지 않음)
 ├─ db/    db.md    (01_init.sql, 101~120번 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드. 번호대 100은 로그인·그래프, 200은 검색)
 ├─ data/  data.md  (corpus.tar.gz 원문 스냅샷(풀면 corpus/), manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처. 코드와 폴더를 나눈다, 8장)
 ├─ evals/ evals.md
@@ -658,7 +658,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
 | F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
 | README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
-| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+| SDK 생성 도구 | openapi-generator 7.26.0 (진형 선택 2026-11-11: Java·Python을 한 도구로 만듦). 산출물 `mock_erp/sdk/`, 재생성 `bash mock_erp/sdk/generate.sh`. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
 
 
 ### 11-1. 파트 사이 계약
@@ -699,7 +699,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 로그인 방식 | 자체 구현(FastAPI + Postgres + bcrypt + JWT 쿠키) / Supabase Auth | 자체 구현 (Supabase Auth는 데모 모드와 충돌) | D5 전 |
 | MCP 서버 위치 | FastAPI 앱에 붙여 같은 Cloud Run 서비스 / 별도 서비스 | 같은 서비스 (데모 모드에서 같은 컨테이너가 단순) | D0 |
 | `langchain[mcp]` 상태 | 베타 유지 여부 확인, 문제 시 공식 MCP SDK나 FastMCP 클라이언트 직접 호출 | 공식 문서에서 최신 상태 확인 | D0 |
-| SDK 생성 도구 | OpenAPI 명세에서 Java·Python SDK를 만드는 도구와 산출물 위치 | 후보를 D0에 정한다 | D0 |
+| SDK 생성 도구 | OpenAPI 명세에서 Java·Python SDK를 만드는 도구와 산출물 위치 | openapi-generator 7.26.0, 산출물 `mock_erp/sdk/` 로 정함(2026-11-12) | D0 |
 | 결정표 변환 재시도 | LLM 결과를 읽지 못하면 지금은 재시도 없이 실패로 끝난다. 재시도를 넣을지 | 추천 없음, 현재는 재시도 없음 | D4 |
 
 ### 11-4. 역할·평가·범위

@@ -1,0 +1,2472 @@
+openapi: 3.1.0
+info:
+  title: 3차 프로젝트 API
+  version: 0.1.0
+servers:
+- url: /
+paths:
+  /admin/eval/review:
+    post:
+      operationId: eval_review_admin_eval_review_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvalReviewRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Eval Review Admin Eval Review Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Eval Review
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /admin/signup-requests:
+    get:
+      operationId: list_signup_requests_admin_signup_requests_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupRequestList"
+          description: Successful Response
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner-admin or CSRF authorization failed
+        "503":
+          description: Signup approval storage unavailable
+      summary: List Signup Requests
+      x-accepts:
+      - application/json
+  /admin/signup-requests/by-id/{request_id}/reset-verification:
+    post:
+      description: Owner-admin only; requires a valid CSRF token. Clears the verification
+        code and resets the attempt and send counters of an unverified pending email
+        signup request so a new code can be issued.
+      operationId: reset_signup_verification_admin_signup_requests_by_id__request_id__reset_verification_post
+      parameters:
+      - explode: false
+        in: path
+        name: request_id
+        required: true
+        schema:
+          title: Request Id
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupVerificationResetResult"
+          description: Successful Response
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner-admin or CSRF authorization failed
+        "404":
+          description: Signup request not found
+        "409":
+          description: Verification reset is unavailable for this request
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+        "503":
+          description: Signup approval storage unavailable
+      summary: Reset Signup Verification
+      x-accepts:
+      - application/json
+  /admin/signup-requests/by-id/{request_id}/{action}:
+    post:
+      description: Owner-admin only; requires a valid CSRF token. action must be approve
+        or reject.
+      operationId: review_signup_request_by_id_admin_signup_requests_by_id__request_id___action__post
+      parameters:
+      - explode: false
+        in: path
+        name: request_id
+        required: true
+        schema:
+          title: Request Id
+          type: integer
+        style: simple
+      - explode: false
+        in: path
+        name: action
+        required: true
+        schema:
+          title: Action
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupReviewByIdResult"
+          description: Successful Response
+        "401":
+          description: Authentication required
+        "403":
+          description: Owner-admin or CSRF authorization failed
+        "404":
+          description: Signup request not found
+        "409":
+          description: Email verification is required
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+        "503":
+          description: Signup approval storage unavailable
+      summary: Review Signup Request By Id
+      x-accepts:
+      - application/json
+  /admin/signup-requests/{login_id}/{action}:
+    post:
+      operationId: review_signup_request_admin_signup_requests__login_id___action__post
+      parameters:
+      - explode: false
+        in: path
+        name: login_id
+        required: true
+        schema:
+          title: Login Id
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: action
+        required: true
+        schema:
+          title: Action
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Review Signup Request Admin Signup Requests  Login
+                  Id   Action  Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Review Signup Request
+      x-accepts:
+      - application/json
+  /admin/sync:
+    post:
+      description: 증분 수집 수동 실행(C-14). 관리자만. 기본은 dry_run=true(시작하지 않고 계획만). dry_run=false는
+        501(실제 실행 방식 미정).
+      operationId: post_sync_admin_sync_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: "#/components/schemas/SyncBody"
+              nullable: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Post Sync Admin Sync Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Post Sync
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /admin/users:
+    get:
+      operationId: list_users_admin_users_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: List Users
+      x-accepts:
+      - application/json
+  /admin/users/{login_id}/promote:
+    post:
+      operationId: promote_admin_users__login_id__promote_post
+      parameters:
+      - explode: false
+        in: path
+        name: login_id
+        required: true
+        schema:
+          title: Login Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Promote Admin Users  Login Id  Promote Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Promote
+      x-accepts:
+      - application/json
+  /admin/users/{login_id}/revoke:
+    post:
+      operationId: revoke_admin_users__login_id__revoke_post
+      parameters:
+      - explode: false
+        in: path
+        name: login_id
+        required: true
+        schema:
+          title: Login Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Revoke Admin Users  Login Id  Revoke Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Revoke
+      x-accepts:
+      - application/json
+  /approvals:
+    get:
+      operationId: list_approvals_approvals_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: List Approvals
+      x-accepts:
+      - application/json
+  /approvals/{approval_id}:
+    get:
+      description: |-
+        승인 건 하나의 상태와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`). 끝난 건도 읽는다.
+        결정 응답은 같은 결정을 다시 보내도 같게 유지하므로 재개 횟수는 여기서 읽는다.
+      operationId: get_approval_approvals__approval_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: approval_id
+        required: true
+        schema:
+          title: Approval Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalView"
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Get Approval
+      x-accepts:
+      - application/json
+    post:
+      operationId: decide_approvals__approval_id__post
+      parameters:
+      - explode: false
+        in: path
+        name: approval_id
+        required: true
+        schema:
+          title: Approval Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionResult"
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Decide
+      x-accepts:
+      - application/json
+  /auth/csrf:
+    get:
+      operationId: csrf_auth_csrf_get
+      responses:
+        "204":
+          description: Successful Response
+      summary: Csrf
+      x-accepts:
+      - application/json
+  /auth/google/callback:
+    get:
+      operationId: google_callback_auth_google_callback_get
+      parameters:
+      - explode: true
+        in: query
+        name: code
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: state
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: error
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "303":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Google Callback
+      x-accepts:
+      - application/json
+  /auth/google/start:
+    get:
+      operationId: google_start_auth_google_start_get
+      responses:
+        "303":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Google Start
+      x-accepts:
+      - application/json
+  /auth/login:
+    post:
+      operationId: login_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+          description: Successful Response
+        "403":
+          description: "Signup request is pending approval or rejected, or (error\
+            \ code signup_unverified) its email verification is not finished yet"
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Login
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /auth/logout:
+    post:
+      operationId: logout_auth_logout_post
+      responses:
+        "204":
+          description: Successful Response
+      summary: Logout
+      x-accepts:
+      - application/json
+  /auth/signup:
+    post:
+      description: "Email signup. An unverified pending request for the same email\
+        \ is replaced only after its code expired more than 24 hours ago (STALE_UNVERIFIED_SIGNUP_HOURS);\
+        \ until then the same email returns 409. Verified or approved requests and\
+        \ existing accounts (email compared case-insensitively) return 409. A rejected\
+        \ request does not block signing up again. The 201 body has code verification_sent\
+        \ (email: enter the emailed code, then wait for approval) or approval_pending\
+        \ (non-email ID), and a message; signing up does not log the user in."
+      operationId: signup_auth_signup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                  type: string
+                title: Response Signup Auth Signup Post
+                type: object
+          description: Successful Response
+        "409":
+          description: "Email already has an account, or a non-stale pending request\
+            \ or an approved request exists"
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+        "503":
+          description: "Signup storage unavailable, or the verification email could\
+            \ not be sent (the pending request is removed so the same email can sign\
+            \ up again)"
+      summary: Signup
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /auth/signup/resend:
+    post:
+      description: "Resends only for pending, unverified email signup requests. Missing,\
+        \ completed, and rate-limited requests are intentionally returned as status\
+        \ unavailable."
+      operationId: resend_signup_auth_signup_resend_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupResendRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                  type: string
+                title: Response Resend Signup Auth Signup Resend Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+        "503":
+          description: Email verification storage or provider unavailable (also returned
+            when EMAIL_PROVIDER is not configured or delivery fails)
+      summary: Resend Signup
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /auth/signup/verify:
+    post:
+      description: Requires a valid CSRF token and a six-digit verification code.
+      operationId: verify_signup_auth_signup_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupVerificationRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                  type: string
+                title: Response Verify Signup Auth Signup Verify Post
+                type: object
+          description: Successful Response
+        "400":
+          description: Incorrect verification code
+        "410":
+          description: Verification code expired
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+        "429":
+          description: Verification attempts exceeded
+        "503":
+          description: Email verification storage unavailable
+      summary: Verify Signup
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /changes:
+    get:
+      operationId: list_changes_changes_get
+      parameters:
+      - explode: true
+        in: query
+        name: since
+        required: false
+        schema:
+          maxLength: 10
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          maximum: 1000000
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangesResponse"
+          description: 화면 주소를 직접 열면 HTML이 온다.
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: List Changes
+      x-accepts:
+      - application/json
+  /changes/monitoring:
+    get:
+      operationId: get_monitoring_changes_monitoring_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Get Monitoring Changes Monitoring Get
+                type: object
+          description: Successful Response
+      summary: Get Monitoring
+      x-accepts:
+      - application/json
+    put:
+      operationId: put_monitoring_changes_monitoring_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitoringBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Put Monitoring Changes Monitoring Put
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Put Monitoring
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /changes/{event_id}:
+    get:
+      operationId: get_change_changes__event_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: event_id
+        required: true
+        schema:
+          title: Event Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Get Change
+      x-accepts:
+      - application/json
+  /chat:
+    post:
+      description: "`{thread_id?, message}` -> SSE로 `AgentEvent`. 승인 대기 중인 thread의\
+        \ 새 질문은 409 `approval_pending`."
+      operationId: chat_chat_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Chat
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /decision-tables:
+    get:
+      operationId: list_decision_tables_decision_tables_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/DecisionTableItem"
+                title: Response List Decision Tables Decision Tables Get
+                type: array
+                default: null
+          description: Successful Response
+      summary: List Decision Tables
+      x-accepts:
+      - application/json
+  /decision-tables/convert:
+    post:
+      operationId: start_convert_decision_tables_convert_post
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalView"
+          description: Successful Response
+      summary: Start Convert
+      x-accepts:
+      - application/json
+  /decision-tables/run:
+    post:
+      operationId: run_by_task_type_decision_tables_run_post
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+          description: Successful Response
+      summary: Run By Task Type
+      x-accepts:
+      - application/json
+  /decision-tables/{table_id}/run:
+    post:
+      operationId: run_table_decision_tables__table_id__run_post
+      parameters:
+      - explode: false
+        in: path
+        name: table_id
+        required: true
+        schema:
+          title: Table Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Run Table
+      x-accepts:
+      - application/json
+  /health:
+    get:
+      description: 평가자와 배포 환경이 서비스 상태를 확인하는 곳. 지우지 마세요.
+      operationId: health_health_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Health Health Get
+                type: object
+          description: Successful Response
+      summary: Health
+      x-accepts:
+      - application/json
+  /impact-preview:
+    post:
+      operationId: impact_preview_impact_preview_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImpactBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Impact Preview Impact Preview Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Impact Preview
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /maintenance-candidates:
+    get:
+      operationId: list_candidates_maintenance_candidates_get
+      parameters:
+      - explode: true
+        in: query
+        name: status
+        required: false
+        schema:
+          enum:
+          - pending
+          - needed
+          - not_needed
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response List Candidates Maintenance Candidates Get
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: List Candidates
+      x-accepts:
+      - application/json
+  /maintenance-candidates/{candidate_id}:
+    post:
+      operationId: decide_candidate_maintenance_candidates__candidate_id__post
+      parameters:
+      - explode: false
+        in: path
+        name: candidate_id
+        required: true
+        schema:
+          title: Candidate Id
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CandidateDecision"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Decide Candidate Maintenance Candidates  Candidate
+                  Id  Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Decide Candidate
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /me:
+    get:
+      operationId: me_me_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+          description: Successful Response
+      summary: Me
+      x-accepts:
+      - application/json
+  /me/memory:
+    delete:
+      operationId: memory_delete_me_memory_delete
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Memory Delete Me Memory Delete
+                type: object
+          description: Successful Response
+      summary: Memory Delete
+      x-accepts:
+      - application/json
+    get:
+      operationId: memory_get_me_memory_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Memory Get Me Memory Get
+                type: object
+          description: Successful Response
+      summary: Memory Get
+      x-accepts:
+      - application/json
+    patch:
+      operationId: memory_patch_me_memory_patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryPatch"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Memory Patch Me Memory Patch
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Memory Patch
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /me/profile:
+    get:
+      operationId: get_profile_me_profile_get
+      parameters:
+      - explode: true
+        in: query
+        name: view
+        required: false
+        schema:
+          enum:
+          - edit
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Get Profile Me Profile Get
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Get Profile
+      x-accepts:
+      - application/json
+    put:
+      operationId: put_profile_me_profile_put
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Put Profile Me Profile Put
+                type: object
+          description: Successful Response
+      summary: Put Profile
+      x-accepts:
+      - application/json
+  /recalls:
+    get:
+      operationId: list_recalls_recalls_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 500
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: List Recalls
+      x-accepts:
+      - application/json
+  /recalls/digest/flush:
+    post:
+      operationId: digest_flush_recalls_digest_flush_post
+      parameters:
+      - explode: true
+        in: query
+        name: day
+        required: false
+        schema:
+          nullable: true
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Digest Flush Recalls Digest Flush Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Digest Flush
+      x-accepts:
+      - application/json
+  /recalls/digests:
+    get:
+      operationId: list_digests_recalls_digests_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response List Digests Recalls Digests Get
+                type: object
+          description: Successful Response
+      summary: List Digests
+      x-accepts:
+      - application/json
+  /recalls/feedback-stats:
+    get:
+      operationId: feedback_stats_recalls_feedback_stats_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Feedback Stats Recalls Feedback Stats Get
+                type: object
+          description: Successful Response
+      summary: Feedback Stats
+      x-accepts:
+      - application/json
+  /recalls/process-pending:
+    post:
+      operationId: process_recalls_process_pending_post
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 500
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Process Recalls Process Pending Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Process
+      x-accepts:
+      - application/json
+  /recalls/{notice_id}:
+    get:
+      operationId: get_recall_recalls__notice_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: notice_id
+        required: true
+        schema:
+          title: Notice Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Get Recall
+      x-accepts:
+      - application/json
+  /recalls/{notice_id}/ack:
+    post:
+      operationId: ack_recalls__notice_id__ack_post
+      parameters:
+      - explode: false
+        in: path
+        name: notice_id
+        required: true
+        schema:
+          title: Notice Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Ack Recalls  Notice Id  Ack Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Ack
+      x-accepts:
+      - application/json
+  /recalls/{notice_id}/feedback:
+    post:
+      operationId: feedback_recalls__notice_id__feedback_post
+      parameters:
+      - explode: false
+        in: path
+        name: notice_id
+        required: true
+        schema:
+          title: Notice Id
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Feedback Recalls  Notice Id  Feedback Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Feedback
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /recalls/{notice_id}/review:
+    post:
+      operationId: review_recalls__notice_id__review_post
+      parameters:
+      - explode: false
+        in: path
+        name: notice_id
+        required: true
+        schema:
+          title: Notice Id
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Review Recalls  Notice Id  Review Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Review
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /threads:
+    get:
+      description: 내 대화 목록(최근 순). 다른 사용자의 thread는 나오지 않는다. 목록에는 마지막 답(`last`)을 넣지
+        않는다.
+      operationId: list_threads_threads_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response List Threads Threads Get
+                type: object
+          description: Successful Response
+      summary: List Threads
+      x-accepts:
+      - application/json
+  /threads/{thread_id}:
+    get:
+      operationId: get_thread_threads__thread_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: thread_id
+        required: true
+        schema:
+          title: Thread Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Get Thread Threads  Thread Id  Get
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Get Thread
+      x-accepts:
+      - application/json
+  /webhook-deliveries:
+    get:
+      operationId: list_deliveries_webhook_deliveries_get
+      parameters:
+      - explode: true
+        in: query
+        name: notice_id
+        required: false
+        schema:
+          maxLength: 64
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response List Deliveries Webhook Deliveries Get
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: List Deliveries
+      x-accepts:
+      - application/json
+  /webhook-subscriptions:
+    get:
+      operationId: list_subs_webhook_subscriptions_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response List Subs Webhook Subscriptions Get
+                type: object
+          description: Successful Response
+      summary: List Subs
+      x-accepts:
+      - application/json
+    post:
+      operationId: add_sub_webhook_subscriptions_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Add Sub Webhook Subscriptions Post
+                type: object
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation Error
+      summary: Add Sub
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /webhooks/regulation-updated:
+    post:
+      operationId: regulation_updated_webhooks_regulation_updated_post
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                title: Response Regulation Updated Webhooks Regulation Updated Post
+                type: object
+          description: Successful Response
+      summary: Regulation Updated
+      x-accepts:
+      - application/json
+components:
+  schemas:
+    ApprovalView:
+      description: |-
+        `ApprovalItem`과 같은 이름에 승인 화면에 필요한 값을 더했다. 결정표 건은 초안과 셀 대조표, 쟁점표 건은 `issue_table`, 팀 실패 알림 건은 `failed_teams`다.
+        `save_failed`는 결정을 받았지만 저장에 실패해 같은 결정을 다시 보내야 하는 건이고, 팀 실패 알림이면 `resolution`에 접수된 행동이 보인다.
+      example:
+        approval_id: approval_id
+        comparison:
+          key: ""
+        created_at: 2000-01-23T04:56:07.000+00:00
+        decided_at: 2000-01-23T04:56:07.000+00:00
+        decided_by: decided_by
+        draft:
+        - key: ""
+        - key: ""
+        duplicate_ignored_count: 0
+        failed_teams:
+        - key: ""
+        - key: ""
+        issue_table:
+          key: ""
+        kind: kind
+        last_resume_result: last_resume_result
+        last_resumed_at: 2000-01-23T04:56:07.000+00:00
+        rejected_resume: rejected_resume
+        resolution: resolution
+        resume_count: 6
+        save_failed: false
+        status: status
+        summary: summary
+        table_id: table_id
+      properties:
+        approval_id:
+          title: Approval Id
+          type: string
+        comparison:
+          additionalProperties: true
+          nullable: true
+          type: object
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        decided_at:
+          format: date-time
+          nullable: true
+          type: string
+        decided_by:
+          nullable: true
+          type: string
+        draft:
+          items:
+            additionalProperties: true
+            nullable: true
+            type: object
+          nullable: true
+          type: array
+          default: null
+        duplicate_ignored_count:
+          default: 0
+          title: Duplicate Ignored Count
+          type: integer
+        failed_teams:
+          items:
+            additionalProperties: true
+            type: object
+          nullable: true
+          type: array
+          default: null
+        issue_table:
+          additionalProperties: true
+          nullable: true
+          type: object
+        kind:
+          title: Kind
+          type: string
+        last_resume_result:
+          nullable: true
+          type: string
+        last_resumed_at:
+          format: date-time
+          nullable: true
+          type: string
+        rejected_resume:
+          nullable: true
+          type: string
+        resolution:
+          nullable: true
+          type: string
+        resume_count:
+          default: 0
+          title: Resume Count
+          type: integer
+        save_failed:
+          default: false
+          title: Save Failed
+          type: boolean
+        status:
+          nullable: true
+          type: string
+        summary:
+          title: Summary
+          type: string
+        table_id:
+          nullable: true
+          type: string
+      required:
+      - approval_id
+      - created_at
+      - kind
+      - summary
+      title: ApprovalView
+    CandidateDecision:
+      additionalProperties: false
+      example:
+        status: needed
+      properties:
+        status:
+          enum:
+          - needed
+          - not_needed
+          title: Status
+          type: string
+      required:
+      - status
+      title: CandidateDecision
+    ChangeItem:
+      description: '`GET /changes`의 `items` 한 건(`change_json`의 반환과 같은 칸). 명세용이며 응답을
+        걸러내지 않는다.'
+      example:
+        article: article
+        change_type: change_type
+        created_at: created_at
+        event_id: event_id
+        impacted_answer_count: 6
+        new_version_date: new_version_date
+        old_version_date: old_version_date
+        page_title: page_title
+        rule_seq: 1
+        source_url: source_url
+        status: status
+      properties:
+        article:
+          nullable: true
+          type: string
+        change_type:
+          nullable: true
+          type: string
+        created_at:
+          title: Created At
+          type: string
+        event_id:
+          nullable: true
+          type: string
+        impacted_answer_count:
+          title: Impacted Answer Count
+          type: integer
+        new_version_date:
+          nullable: true
+          type: string
+        old_version_date:
+          nullable: true
+          type: string
+        page_title:
+          nullable: true
+          type: string
+        rule_seq:
+          title: Rule Seq
+          type: integer
+        source_url:
+          nullable: true
+          type: string
+        status:
+          nullable: true
+          type: string
+      required:
+      - created_at
+      - impacted_answer_count
+      - rule_seq
+      title: ChangeItem
+    ChangeLastRun:
+      properties:
+        finished_at:
+          nullable: true
+          type: string
+        list_complete:
+          nullable: true
+          type: boolean
+        run_id:
+          $ref: "#/components/schemas/Run_Id"
+        status:
+          nullable: true
+          type: string
+        to_commit:
+          nullable: true
+          type: string
+      title: ChangeLastRun
+    ChangesResponse:
+      description: '`GET /changes` 응답 칸(명세용). `total`·`counts`는 저장소가 못 세면 null이다.'
+      example:
+        counts:
+          key: 0
+        items:
+        - article: article
+          change_type: change_type
+          created_at: created_at
+          event_id: event_id
+          impacted_answer_count: 6
+          new_version_date: new_version_date
+          old_version_date: old_version_date
+          page_title: page_title
+          rule_seq: 1
+          source_url: source_url
+          status: status
+        - article: article
+          change_type: change_type
+          created_at: created_at
+          event_id: event_id
+          impacted_answer_count: 6
+          new_version_date: new_version_date
+          old_version_date: old_version_date
+          page_title: page_title
+          rule_seq: 1
+          source_url: source_url
+          status: status
+        last_run: ""
+        monitoring: active
+        more: true
+        total: 5
+      properties:
+        counts:
+          additionalProperties:
+            type: integer
+          nullable: true
+          type: object
+        items:
+          items:
+            $ref: "#/components/schemas/ChangeItem"
+          title: Items
+          type: array
+          default: null
+        last_run:
+          allOf:
+          - $ref: "#/components/schemas/ChangeLastRun"
+          nullable: true
+        monitoring:
+          enum:
+          - active
+          - paused
+          title: Monitoring
+          type: string
+        more:
+          title: More
+          type: boolean
+        total:
+          nullable: true
+          type: integer
+      required:
+      - counts
+      - items
+      - last_run
+      - monitoring
+      - more
+      - total
+      title: ChangesResponse
+    ChatRequest:
+      additionalProperties: false
+      example:
+        as_of: as_of
+        message: message
+        org: org
+        thread_id: thread_id
+      properties:
+        as_of:
+          nullable: true
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+        message:
+          maxLength: 4000
+          minLength: 1
+          title: Message
+          type: string
+        org:
+          maxLength: 64
+          nullable: true
+          type: string
+        thread_id:
+          nullable: true
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+          type: string
+      required:
+      - message
+      title: ChatRequest
+    DecisionResult:
+      description: |-
+        쟁점표 반려와 팀 실패 알림은 저장된 표가 없어 `table_id`가 비어 있다. `next_approval`은 팀 실패 알림 건에서만 채운다.
+        팀 실패 알림의 `status`는 저장용 값이다. 사람이 고른 행동은 `resolution`(`retry` | `mark_unreviewed`)으로 읽는다.
+      example:
+        approval_id: approval_id
+        comment: ""
+        decided_by: decided_by
+        kind: kind
+        next_approval:
+          key: ""
+        resolution: resolution
+        status: status
+        table_id: table_id
+      properties:
+        approval_id:
+          title: Approval Id
+          type: string
+        comment:
+          default: ""
+          title: Comment
+          type: string
+        decided_by:
+          nullable: true
+          type: string
+        kind:
+          title: Kind
+          type: string
+        next_approval:
+          additionalProperties: true
+          nullable: true
+          type: object
+        resolution:
+          nullable: true
+          type: string
+        status:
+          title: Status
+          type: string
+        table_id:
+          nullable: true
+          type: string
+      required:
+      - approval_id
+      - kind
+      - status
+      title: DecisionResult
+    DecisionTableItem:
+      description: 승인된 결정표 한 건. `cells`의 규칙마다 정확한 금액 표기 `band_label`을 더한다. 승인한 관리자
+        id는 일반 사용자 목록에 내지 않는다.
+      example:
+        category: category
+        cells:
+        - key: ""
+        - key: ""
+        rule_seq: 0
+        status: status
+        table_id: table_id
+        version_id: version_id
+      properties:
+        category:
+          title: Category
+          type: string
+        cells:
+          items:
+            additionalProperties: true
+            nullable: true
+            type: object
+          title: Cells
+          type: array
+          default: null
+        rule_seq:
+          title: Rule Seq
+          type: integer
+        status:
+          title: Status
+          type: string
+        table_id:
+          title: Table Id
+          type: string
+        version_id:
+          title: Version Id
+          type: string
+      required:
+      - category
+      - cells
+      - rule_seq
+      - status
+      - table_id
+      - version_id
+      title: DecisionTableItem
+    EvalReviewRequest:
+      additionalProperties: false
+      example:
+        as_of: as_of
+        message: message
+        search: same
+      properties:
+        as_of:
+          nullable: true
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+        message:
+          maxLength: 4000
+          minLength: 1
+          title: Message
+          type: string
+        search:
+          default: same
+          enum:
+          - same
+          - undivided
+          title: Search
+          type: string
+      required:
+      - message
+      title: EvalReviewRequest
+    FeedbackBody:
+      additionalProperties: false
+      example:
+        reason: reason
+        useful: true
+      properties:
+        reason:
+          maxLength: 500
+          nullable: true
+          type: string
+        useful:
+          title: Useful
+          type: boolean
+      required:
+      - useful
+      title: FeedbackBody
+    HTTPValidationError:
+      description: 422 오류 봉투. `detail`은 `error.message`와 같은 고정 문구이고 입력값은 담지 않는다.
+      example:
+        detail: detail
+        error:
+          code: validation_error
+          details:
+            key: ""
+          message: message
+          request_id: request_id
+      properties:
+        detail:
+          title: Detail
+          type: string
+        error:
+          $ref: "#/components/schemas/HTTPValidationError_error"
+      required:
+      - detail
+      - error
+      title: HTTPValidationError
+    ImpactBody:
+      additionalProperties: false
+      example:
+        changes:
+        - article: article
+          change_type: modified
+          new_text: new_text
+          new_version_date: ""
+          old_text: old_text
+          old_version_date: ""
+          rule_seq: 0
+        - article: article
+          change_type: modified
+          new_text: new_text
+          new_version_date: ""
+          old_text: old_text
+          old_version_date: ""
+          rule_seq: 0
+        - article: article
+          change_type: modified
+          new_text: new_text
+          new_version_date: ""
+          old_text: old_text
+          old_version_date: ""
+          rule_seq: 0
+        - article: article
+          change_type: modified
+          new_text: new_text
+          new_version_date: ""
+          old_text: old_text
+          old_version_date: ""
+          rule_seq: 0
+        - article: article
+          change_type: modified
+          new_text: new_text
+          new_version_date: ""
+          old_text: old_text
+          old_version_date: ""
+          rule_seq: 0
+        new_version_date: new_version_date
+        old_version_date: old_version_date
+        pages:
+        - new: new
+          old: old
+          path: path
+        - new: new
+          old: old
+          path: path
+        - new: new
+          old: old
+          path: path
+        - new: new
+          old: old
+          path: path
+        - new: new
+          old: old
+          path: path
+      properties:
+        changes:
+          items:
+            $ref: "#/components/schemas/ImpactChange"
+          maxItems: 200
+          nullable: true
+          type: array
+          default: null
+        new_version_date:
+          nullable: true
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+        old_version_date:
+          nullable: true
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+        pages:
+          items:
+            $ref: "#/components/schemas/ImpactPage"
+          maxItems: 50
+          nullable: true
+          type: array
+          default: null
+      title: ImpactBody
+    ImpactChange:
+      additionalProperties: false
+      example:
+        article: article
+        change_type: modified
+        new_text: new_text
+        new_version_date: ""
+        old_text: old_text
+        old_version_date: ""
+        rule_seq: 0
+      properties:
+        article:
+          maxLength: 1000
+          minLength: 1
+          title: Article
+          type: string
+        change_type:
+          default: modified
+          enum:
+          - added
+          - removed
+          - modified
+          title: Change Type
+          type: string
+        new_text:
+          maxLength: 200000
+          nullable: true
+          type: string
+        new_version_date:
+          default: ""
+          pattern: "^(\\d{4}-\\d{2}-\\d{2})?$"
+          title: New Version Date
+          type: string
+        old_text:
+          maxLength: 200000
+          nullable: true
+          type: string
+        old_version_date:
+          default: ""
+          pattern: "^(\\d{4}-\\d{2}-\\d{2})?$"
+          title: Old Version Date
+          type: string
+        rule_seq:
+          minimum: 0.0
+          title: Rule Seq
+          type: integer
+      required:
+      - article
+      - rule_seq
+      title: ImpactChange
+    ImpactPage:
+      additionalProperties: false
+      example:
+        new: new
+        old: old
+        path: path
+      properties:
+        new:
+          maxLength: 500000
+          nullable: true
+          type: string
+        old:
+          maxLength: 500000
+          nullable: true
+          type: string
+        path:
+          maxLength: 500
+          minLength: 1
+          title: Path
+          type: string
+      required:
+      - path
+      title: ImpactPage
+    LoginRequest:
+      example:
+        login_id: login_id
+        password: password
+      properties:
+        login_id:
+          title: Login Id
+          type: string
+        password:
+          title: Password
+          type: string
+      required:
+      - login_id
+      - password
+      title: LoginRequest
+    MeResponse:
+      example:
+        is_owner: true
+        login_id: login_id
+        profile_completed: true
+        role: role
+        user_id: user_id
+      properties:
+        is_owner:
+          nullable: true
+          type: boolean
+        login_id:
+          nullable: true
+          type: string
+        profile_completed:
+          nullable: true
+          type: boolean
+        role:
+          title: Role
+          type: string
+        user_id:
+          title: User Id
+          type: string
+      required:
+      - role
+      - user_id
+      title: MeResponse
+    MemoryPatch:
+      additionalProperties: false
+      example:
+        affiliation: affiliation
+        rank: rank
+        service: service
+      properties:
+        affiliation:
+          maxLength: 100
+          nullable: true
+          type: string
+        rank:
+          maxLength: 100
+          nullable: true
+          type: string
+        service:
+          maxLength: 100
+          nullable: true
+          type: string
+      title: MemoryPatch
+    MonitoringBody:
+      additionalProperties: false
+      example:
+        status: active
+      properties:
+        status:
+          enum:
+          - active
+          - paused
+          title: Status
+          type: string
+      required:
+      - status
+      title: MonitoringBody
+    ReviewBody:
+      additionalProperties: false
+      example:
+        action: release
+      properties:
+        action:
+          enum:
+          - release
+          - dismiss
+          title: Action
+          type: string
+      required:
+      - action
+      title: ReviewBody
+    RunResponse:
+      example:
+        approvers:
+        - approvers
+        - approvers
+        band_label: band_label
+        cooperating:
+        - cooperating
+        - cooperating
+        financial_approvers:
+        - financial_approvers
+        - financial_approvers
+        functional_approvers:
+        - functional_approvers
+        - functional_approvers
+        range_note: range_note
+        source:
+          article: article
+          band: band
+          category: category
+          rule_seq: 0
+          source_url: source_url
+        table_id: table_id
+        version_id: version_id
+      properties:
+        approvers:
+          items:
+            type: string
+          title: Approvers
+          type: array
+          default: null
+        band_label:
+          title: Band Label
+          type: string
+        cooperating:
+          items:
+            type: string
+          title: Cooperating
+          type: array
+          default: null
+        financial_approvers:
+          items:
+            type: string
+          title: Financial Approvers
+          type: array
+          default: null
+        functional_approvers:
+          items:
+            type: string
+          title: Functional Approvers
+          type: array
+          default: null
+        range_note:
+          nullable: true
+          type: string
+        source:
+          $ref: "#/components/schemas/RunSource"
+        table_id:
+          title: Table Id
+          type: string
+        version_id:
+          title: Version Id
+          type: string
+      required:
+      - approvers
+      - band_label
+      - cooperating
+      - financial_approvers
+      - functional_approvers
+      - source
+      - table_id
+      - version_id
+      title: RunResponse
+    RunSource:
+      example:
+        article: article
+        band: band
+        category: category
+        rule_seq: 0
+        source_url: source_url
+      properties:
+        article:
+          title: Article
+          type: string
+        band:
+          title: Band
+          type: string
+        category:
+          title: Category
+          type: string
+        rule_seq:
+          title: Rule Seq
+          type: integer
+        source_url:
+          nullable: true
+          type: string
+      required:
+      - article
+      - band
+      - category
+      - rule_seq
+      title: RunSource
+    SignupRequest:
+      example:
+        login_id: login_id
+        password: password
+        password_confirmation: password_confirmation
+      properties:
+        login_id:
+          title: Login Id
+          type: string
+        password:
+          title: Password
+          type: string
+        password_confirmation:
+          title: Password Confirmation
+          type: string
+      required:
+      - login_id
+      - password
+      - password_confirmation
+      title: SignupRequest
+    SignupRequestItem:
+      example:
+        email_verified: true
+        login_id: login_id
+        request_id: 0
+        requested_at: requested_at
+        status: status
+      properties:
+        email_verified:
+          title: Email Verified
+          type: boolean
+        login_id:
+          title: Login Id
+          type: string
+        request_id:
+          nullable: true
+          type: integer
+        requested_at:
+          nullable: true
+          type: string
+        status:
+          title: Status
+          type: string
+      required:
+      - email_verified
+      - login_id
+      - request_id
+      - requested_at
+      - status
+      title: SignupRequestItem
+    SignupRequestList:
+      example:
+        requests:
+        - email_verified: true
+          login_id: login_id
+          request_id: 0
+          requested_at: requested_at
+          status: status
+        - email_verified: true
+          login_id: login_id
+          request_id: 0
+          requested_at: requested_at
+          status: status
+      properties:
+        requests:
+          items:
+            $ref: "#/components/schemas/SignupRequestItem"
+          title: Requests
+          type: array
+          default: null
+      required:
+      - requests
+      title: SignupRequestList
+    SignupResendRequest:
+      description: 재발송은 코드가 없는 요청이다(C-21). 옛 화면이 `code`를 같이 보내도 무시한다.
+      example:
+        login_id: login_id
+      properties:
+        login_id:
+          title: Login Id
+          type: string
+      required:
+      - login_id
+      title: SignupResendRequest
+    SignupReviewByIdResult:
+      example:
+        changed: true
+        request_id: 0
+        status: status
+      properties:
+        changed:
+          title: Changed
+          type: boolean
+        request_id:
+          title: Request Id
+          type: integer
+        status:
+          title: Status
+          type: string
+      required:
+      - changed
+      - request_id
+      - status
+      title: SignupReviewByIdResult
+    SignupVerificationRequest:
+      example:
+        code: code
+        login_id: login_id
+      properties:
+        code:
+          title: Code
+          type: string
+        login_id:
+          title: Login Id
+          type: string
+      required:
+      - code
+      - login_id
+      title: SignupVerificationRequest
+    SignupVerificationResetResult:
+      example:
+        request_id: 0
+        reset: true
+      properties:
+        request_id:
+          title: Request Id
+          type: integer
+        reset:
+          title: Reset
+          type: boolean
+      required:
+      - request_id
+      - reset
+      title: SignupVerificationResetResult
+    SubscriptionBody:
+      additionalProperties: false
+      example:
+        active: true
+        secret_ref: RECALL_WEBHOOK_SECRET
+        url: url
+      properties:
+        active:
+          default: true
+          title: Active
+          type: boolean
+        secret_ref:
+          default: RECALL_WEBHOOK_SECRET
+          maxLength: 80
+          title: Secret Ref
+          type: string
+        url:
+          maxLength: 500
+          minLength: 8
+          title: Url
+          type: string
+      required:
+      - url
+      title: SubscriptionBody
+    SyncBody:
+      additionalProperties: false
+      example:
+        dry_run: true
+      properties:
+        dry_run:
+          default: true
+          title: Dry Run
+          type: boolean
+      title: SyncBody
+    UserResponse:
+      example:
+        role: role
+        user_id: user_id
+      properties:
+        role:
+          title: Role
+          type: string
+        user_id:
+          title: User Id
+          type: string
+      required:
+      - role
+      - user_id
+      title: UserResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            nullable: true
+            type: string
+          title: Loc
+          type: array
+          default: null
+        msg:
+          title: Msg
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    Run_Id:
+      anyOf:
+      - type: string
+      - type: integer
+      nullable: true
+      title: Run Id
+    HTTPValidationError_error:
+      example:
+        code: validation_error
+        details:
+          key: ""
+        message: message
+        request_id: request_id
+      properties:
+        code:
+          enum:
+          - validation_error
+          type: string
+        details:
+          additionalProperties: true
+          description: "검증 오류 목록 또는 칸별 검사 결과(명세는 둘 중 하나, Java SDK 는 자유 형식)"
+          type: object
+        message:
+          nullable: true
+          type: string
+        request_id:
+          nullable: true
+          type: string
+      required:
+      - code
+      - message
+      - request_id
+
