@@ -58,7 +58,8 @@ describe('가입 승인 연타 방지·결과 문구 (A8)', () => {
     renderPage()
     await user.click(await screen.findByRole('button', { name: '거절' }))
     await user.click(screen.getByRole('button', { name: '확인' }))
-    expect(await screen.findByText('서버 오류')).toBeTruthy()
+    // 실패 문구에도 누구의 신청인지 나온다
+    expect(await screen.findByText('p@example.com: 서버 오류')).toBeTruthy()
     await waitFor(() => expect(screen.getByRole('button', { name: '거절' }).disabled).toBe(false))
   })
 })

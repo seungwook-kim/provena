@@ -73,7 +73,7 @@ beforeEach(() => {
       return json({ notice_id: id, useful: JSON.parse(options.body).useful, counts: { not_useful: 1 } })
     }
     match = path.match(/^\/recalls\/([^/]+)$/)
-    if (match && method === 'GET') return match[1] === 'missing' ? apiError(404, 'not_found', '알림을 찾을 수 없습니다.') : json(notice({ notice_id: match[1] }))
+    if (match && method === 'GET') return match[1] === 'missing' ? apiError(404, 'not_found', '알림을 찾을 수 없습니다.') : json(notice({ notice_id: match[1], ...(server.recallDetail ?? {}) }))
     match = path.match(/^\/maintenance-candidates\/([^/]+)$/)
     if (match && method === 'POST') return json(candidate({ candidate_id: match[1], status: JSON.parse(options.body).status, decided_by: 'admin-1' }))
     if (path === '/changes/monitoring' && method === 'PUT') { server.monitoring = JSON.parse(options.body).status; return json({ status: server.monitoring }) }
@@ -448,12 +448,23 @@ describe('live change monitoring route', () => {
     expect(mark.previousSibling?.textContent ?? '').toBe('A 절차. 검토 필요. ')
   })
 
+  it('highlights the changed position in a recall notice when the same words appear earlier (A2)', async () => {
+    const same = { old_text: 'A 절차. 검토 필요.', new_text: 'A 절차. 검토 필요. 검토 필요.' }
+    server.recalls = { items: [notice(same)], unread: 1 }
+    server.recallDetail = same
+    open('/recalls')
+    const mark = await screen.findByText('검토 필요.', { selector: 'mark' })
+    expect(mark.previousSibling?.textContent ?? '').toBe('A 절차. 검토 필요. ')
+  })
+
   it('warns that search covers only loaded records while more pages remain (A6)', async () => {
     server.changes = { ...server.changes, more: true }
     open('/changes')
     await screen.findByRole('button', { name: /Procurement/ })
     await userEvent.type(screen.getByLabelText('정책 문서 검색'), '없는문서')
-    await screen.findByText('검색 결과가 없습니다.')
+    // 일부만 불러온 상태에서는 '검색 결과가 없습니다'라고 단정하지 않고 불러온 건수 기준으로 말한다
+    await screen.findByText(/^불러온 \d+건 중 결과가 없습니다\.$/)
+    expect(screen.queryByText('검색 결과가 없습니다.')).toBeNull()
     expect(screen.getByText(/아직 일부만 불러왔습니다. 더 보기를 눌러/)).toBeTruthy()
   })
 

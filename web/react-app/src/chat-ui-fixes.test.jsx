@@ -36,8 +36,8 @@ describe('내 계정 메뉴 (A4)', () => {
 describe('좁은 화면 채팅 배치 (A5)', () => {
   const block = css.slice(css.lastIndexOf('@media(max-width:640px){.demo-chat-page'))
 
-  it('대화 목록 높이를 줄인다(200px 아님)', () => {
-    expect(block).toMatch(/\.demo-thread-sidebar\{[^}]*max-height:96px/)
+  it('대화 목록은 첫 항목 1건이 보이는 높이(224px)', () => {
+    expect(block).toMatch(/\.demo-thread-sidebar\{[^}]*max-height:224px/)
   })
 
   it('입력창이 화면 아래에 붙어 항상 닿는다', () => {

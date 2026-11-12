@@ -165,7 +165,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
         const draft = messages.findLast(item => item.role === 'assistant' && item.state === 'generating')
         if (!draft) throw error
         draft.state = 'error'
-        draft.error = error?.message || '채팅 처리 중 오류가 발생했습니다.'
+        // 우리 코드가 만든 오류(ApiError, code가 붙은 오류)만 문구를 그대로 쓴다. 스트림 도중 끊기면 브라우저가 던지는 영어 오류(TypeError 등)는 보이지 않는다.
+        draft.error = (error?.name === 'ApiError' || error?.code) && error?.message ? error.message : '채팅 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
         draft.errorCode = error?.code
         draft.question = message
         upsert(id, { messages, lastActivityAt: new Date().toISOString() })

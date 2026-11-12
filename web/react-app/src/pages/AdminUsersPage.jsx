@@ -39,24 +39,25 @@ export default function AdminUsersPage() {
   useEffect(() => { if (user?.is_owner) { load(); loadSignupRequests() } else setLoading(false) }, [user?.is_owner])
   const signupPending = useRef('')
   const [signupBusy, setSignupBusy] = useState('')
-  // 같은 신청에 대한 요청이 끝나기 전에는 다른 처리를 보내지 않는다(연타 방지). 상태는 다음 렌더에야 바뀌므로 ref로 먼저 막는다.
-  async function runSignupAction(requestId, send, doneMessage, failMessage) {
+  // 가입 처리(승인·거절·인증 재설정) 요청 하나가 끝나기 전에는 어느 신청이든 다른 가입 처리를 보내지 않는다(연타 방지, 모든 행을 한꺼번에 막음).
+  // 상태는 다음 렌더에야 바뀌므로 ref로 먼저 막는다.
+  async function runSignupAction(requestId, who, send, doneMessage, failMessage) {
     if (signupPending.current) return
     signupPending.current = String(requestId); setSignupBusy(String(requestId))
     setError(''); setMessage('')
     try { const result = await send(); setMessage(doneMessage(result)); await loadSignupRequests() }
-    catch (actionError) { setError(actionError.message || failMessage) }
+    catch (actionError) { setError(`${who}: ${actionError.message || failMessage}`) }
     finally { signupPending.current = ''; setSignupBusy('') }
   }
   const signupLabel = requestId => { const row = signupRequests.find(item => String(item.request_id) === String(requestId)); return row?.login_id || '해당 신청자' }
   function reviewSignup(requestId, action) {
     const who = signupLabel(requestId)
-    return runSignupAction(requestId, () => reviewSignupRequestById(requestId, action),
+    return runSignupAction(requestId, who, () => reviewSignupRequestById(requestId, action),
       result => result.changed ? `${who} 가입을 ${action === 'approve' ? '승인' : '거절'}했습니다.` : `${who} 신청은 변경할 상태가 없습니다.`, '가입 신청 처리에 실패했습니다.')
   }
   function resetVerification(requestId) {
     const who = signupLabel(requestId)
-    return runSignupAction(requestId, () => resetSignupVerification(requestId), () => `${who} 인증을 초기화했습니다. 신청자가 새 인증번호를 받을 수 있습니다.`, '인증 재설정에 실패했습니다.')
+    return runSignupAction(requestId, who, () => resetSignupVerification(requestId), () => `${who} 인증을 초기화했습니다. 신청자가 새 인증번호를 받을 수 있습니다.`, '인증 재설정에 실패했습니다.')
   }
   async function applyChange() {
     if (!confirm || busy) return
