@@ -9,7 +9,7 @@ k가 기본 자리 수(DEFAULT_K)보다 크면(그래프의 나뉜 질문 첫 �
 전체 질문의 후보 목록에서 아직 없는 앞 청크로 채운다(사전 등록 62.38). k가 기본 자리 수 이하면 전체 질문 목록을 만들지 않는다(확정 조합 측정과 같다).
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
-금액 구간 조회(SEARCH_RANGE_N=n, 기본 3(데모 모드는 0: 녹화가 조회 전 것), 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
+금액 구간 조회(SEARCH_RANGE_N=n, 기본 3, 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
 전체 질문 벡터의 상위 k 페이지도)의 구간 행(제목 경로 끝이 '>$25K up to $50K' 같은 금액 구간) 중 그 금액이 속한 행을 표마다 하나씩 골라, 질문이 이름을 부른 표
 (ranges.table_named: `approver`와 `Approving expense`처럼 같은 낱말)를 먼저, 그 안에서 전체 질문 벡터와 가까운 순으로 n개까지 뒤 자리를 바꾼다(ranges.py).
 
@@ -73,11 +73,6 @@ class SearchConfig:
     @classmethod
     def from_env(cls) -> "SearchConfig":
         from backend.rag.retrieve import embed, hedge, rerank
-        from backend.services.llm import is_demo_mode
-        # 데모 모드(키 없음 또는 DEMO_MODE=1)의 녹화(data/demo_replay/, 2026-11-09)는 금액 구간 조회를 넣기 전에 만든 것이라, 조회를 켜면 달러 금액 질문의
-        # 근거 청크가 달라져 판정·답 녹화 키가 맞지 않는다(5만 달러 질문이 발췌형 가짜 응답으로 나왔다). 그래서 SEARCH_RANGE_N을 안 줬으면 데모에서만 끈다.
-        # 실제 키로 도는 서비스는 그대로 3이다. 녹화를 새로 만들 때는 SEARCH_RANGE_N=0으로 녹화하거나(README) 이 예외를 지운다.
-        range_default = 0 if is_demo_mode() else 3
         cfg = cls(embed_model=embed.spec().name,
                   mode=os.environ.get("SEARCH_MODE") or "dense_en",
                   pool=int(os.environ.get("SEARCH_POOL") or 100),
@@ -85,7 +80,7 @@ class SearchConfig:
                   rerank_top=int(os.environ.get("RERANK_TOP") or 10),
                   translate=(os.environ.get("QUERY_TRANSLATE") or "1") != "0",
                   link_n=int(os.environ.get("SEARCH_LINK_N") or 2),
-                  range_n=int(os.environ.get("SEARCH_RANGE_N") or range_default),
+                  range_n=int(os.environ.get("SEARCH_RANGE_N") or 3),  # 키 없는 데모도 서비스와 같은 3이다(녹화도 3으로 만든다)
                   hedge=hedge.enabled(), hedge_s=hedge.hedge_seconds())
         cfg.check()
         return cfg

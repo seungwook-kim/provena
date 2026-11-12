@@ -12,7 +12,7 @@
 서버(`/chat`)와 같은 질문 그래프(`backend.main.build_question_graph`, 서비스 설정 61.51 포함)를 체크포인터·Store만 메모리로 두고 돌린다. 검색도 서버와 같은 Postgres 경로다
 (numpy 저장소는 DB와 검색 결과가 달라 이 녹화는 데모 재생과 키가 맞지 않는다). 모든 LLM 호출은 `llm.py`의 `get_chat_model()`을 거치고,
 `LLM_RECORD=1`(이 CLI가 켠다)이면 녹화 래퍼가 요청 키 -> 응답을 쓴다. 재생은 같은 검색 결과(같은 색인, 번역 장부가 빈 새 DB)에서만 맞는다.
-키 없는 데모(`SEARCH_RANGE_N`을 비우면 금액 구간 조회를 끈다)와 같은 검색 조건이 되도록 `SEARCH_RANGE_N`을 0으로 둔다(직접 준 값이 있으면 그 값).
+금액 구간 조회(`SEARCH_RANGE_N`)는 서비스·키 없는 데모와 같은 기본값(3)으로 녹화한다(직접 준 값이 있으면 그 값. 재생할 때도 같은 값이어야 키가 맞는다).
 데모 모드(키 없음 또는 DEMO_MODE=1)에서는 실행을 거부한다.
 """
 from __future__ import annotations
@@ -104,7 +104,6 @@ def main(argv: list[str] | None = None) -> int:
     if a.out is not None:
         os.environ["DEMO_REPLAY_DIR"] = str(a.out)
     os.environ["LLM_RECORD"] = "1"
-    os.environ.setdefault("SEARCH_RANGE_N", "0")  # 키 없는 데모는 금액 구간 조회를 끈다(search.py 데모 예외). 녹화도 같은 검색 조건이어야 키가 맞는다
     from backend.services.llm import is_demo_mode
 
     if is_demo_mode():
