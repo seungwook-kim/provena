@@ -21,6 +21,7 @@
 - 11/17 제출 문서(실패 사례 분석 등)는 동결(코드) 뒤에도 가이드 일정대로 낼 수 있다는 해석 (6절).
 - `handbook-sync`의 `disabled_manually` 상태는 GitHub 설정이라 저장소에서 확인되지 않았다. 오늘 상태 확인 (6절).
 - 되묻기 뒤 후속 메시지가 앞 질문을 이어받지 않는 것이 설계인지 (7절).
+- `docs/decisions.md` 2026-11-12 "#132 리뷰" 3행(C-14 501 유지, convert 예시 201 `status=example`, E-04 충족)이 조장 리뷰 원문과 표현이 맞는지 (2절).
 
 
 ## 1. 묶음 4: 시험 공백·변이 확인·측정 코드 (L-04 L-08 L-10 S-03 S-04 S-07)
@@ -235,13 +236,16 @@
 | Python 실제 호출 | 이 저장소 앱(`backend.main:app`)을 키·DB 없이 `127.0.0.1:8765`에 uvicorn으로 띄우고 `DefaultApi.health_health_get()` 호출 → `{'status': 'ok'}`, 서버 로그 `GET /health status=200` | 실측 |
 | Java 컴파일 | JDK 26 `javac`, Jackson 2.17.2(core·annotations·databind·jsr310)와 jakarta.annotation-api 2.1.1을 Maven Central에서 내려받아 클래스패스에 두고 컴파일: 소스 47개 → 클래스 108개, 오류 0 | 실측 |
 | 커밋 규칙 | 커밋 메시지·본문의 AI 도구 표기 0건 | 실측 |
+| `generate.sh` 다시 실행 | 리뷰에서 `generate.sh:45` 줄 이어 쓰기 자리에 `\` 대신 글자 `\n`이 들어가 `rm -rf`가 실행 폴더의 `./n`까지 지우는 버그를 찾음 → 고친 뒤 `bash -n` 통과, 빈 폴더(명세와 스크립트만 복사, 실행 폴더에 `n` 파일을 미리 둠)에서 jar 내려받기부터 끝까지 실행: 종료 0, `n` 파일 남음, 다시 만든 Python SDK는 커밋본과 같음, Java는 생성 시각 도장(`@Generated date`, README Build date)만 다름 | 실측 |
+| 명세·SDK 일치 시험 | `tests/test_sdk_matches_openapi.py` 3개 통과. 명세에서 `/health`를 지우면 Python·Java 시험 2개 실패(변이 확인 뒤 명세 원복, 차이 0) | 실측 |
+| Python 설치 | 새 가상환경(3.11)에서 `pip install -e mock_erp/sdk/python` → 의존성 같이 설치, `import provena_sdk` 성공, 동작 메서드 54개 | 실측 |
 
 ### 한계
 - Java는 컴파일만 확인했다. 실제 HTTP 호출은 하지 않았다. 컴파일에 쓴 jar는 저장소 밖에 두었고, Maven/Gradle이 없어 `pom.xml` 빌드는 해 보지 않았다(`pom.xml`의 Jackson 버전은 2.21.x, 컴파일은 2.17.2로 함).
 - Java 생성기 7.26.0은 `HTTPValidationError.error.details`의 `anyOf`(배열 | 객체)에서 컴파일 안 되는 코드(`List<ValidationError>.class`)를 낸다. 그래서 `generate.sh`가 Java 생성에만 그 한 칸을 자유 형식 객체로 바꾼 임시 명세를 쓴다. 저장소의 명세는 그대로이고, 그 한 칸만 Java SDK에서 타입이 느슨하다. 명세 쪽에서 `details`를 한 가지 모양으로 정하면 이 보정은 필요 없다.
 - 모든 API가 `default` 태그라 클래스가 `DefaultApi` 하나고 메서드 이름이 `health_health_get`처럼 길다. 고치려면 `backend/`의 라우트에 `tags`·`operation_id`를 줘야 해서(김승욱 폴더) 이번에는 건드리지 않았다.
 - 로그인·CSRF 쿠키 흐름과 `/chat` SSE는 SDK가 자동으로 처리하지 않는다. `mock_erp/python_example/provena_client.py`가 보여 준다. Java 목업은 여전히 없다.
-- `mock_erp/`와 `docs/`는 김승욱·팀장 폴더다. 이 변경은 PR로 올려 주인 확인을 받는다. 명세가 바뀌면 SDK도 `generate.sh`로 다시 만들어야 한다(자동 검사는 없다).
+- `mock_erp/`와 `docs/`는 김승욱·팀장 폴더다. 이 변경은 PR로 올려 주인 확인을 받는다. 명세가 바뀌면 SDK도 `generate.sh`로 다시 만들어야 한다. 동작 목록이 어긋나면 `tests/test_sdk_matches_openapi.py`가 실패하지만, 같은 동작의 인자·응답 모양만 바뀐 것은 이 시험이 잡지 못한다.
 
 ## 5. 이미지 크기·compose 기동 시간 로컬 실측 (K-11, S-05)
 
@@ -309,10 +313,12 @@
 ### 무엇을
 | 번호 | 바꾼 곳 | 내용 |
 |---|---|---|
-| K-15 (I-06, P-09, F-08 관련) | `docs/decisions.md` 결정 표 2026-11-12 행 중 4번째(#132 결정 3행 다음) | "(제안, 조장 승인 대기)" 주말 11/14~15와 동결(11/16 24:00) 뒤: 새 자동 실행·배포 없음, `handbook-sync`는 `disabled_manually` 유지, 동결 뒤 코드 변경 없음 |
-| K-15 | `docs/TEAM_GUIDE.md` 일정 표 11/14~15 행 | `handbook-sync`는 꺼 둔 채 둔다는 제안과 `decisions.md` 가리킴 |
+| K-15 (I-06, P-09, F-08 관련) | 이 문서 아래 "K-15 제안 원문" | 조장 승인 전이라 결정 로그(`docs/decisions.md`)와 가이드(`docs/TEAM_GUIDE.md`)에는 넣지 않았다(리뷰 지적: 확정된 것만 적는 곳). 승인되면 그때 `decisions.md`에 한 행 추가 |
 | J-01, J-02, J-03, L-09, O-16 | `EVAL_REPORT.md` 6장 "아직 막지 못한 것" (7) | 문서 권한 검색 전 거르기를 동결 전에 만들지 않는 알려진 한계 |
 | 같은 번호 | `docs/SDD.md` 문서 권한(F-06) 줄 | "미구현 부분" 문장 끝에 2026-11-11 진형 결정과 EVAL_REPORT 6장 연결 |
+
+### K-15 제안 원문 (조장 승인 대기, 저장소 결정 문서에는 없음)
+> (제안, 조장 승인 대기) 주말 11/14~15와 코드 동결(11/16 24:00) 뒤에는 자동 실행·배포를 새로 두지 않고 저장소를 바꾸지 않는다. 승인되면 11/11 결정 ②(`docs/specs/incremental.md:113`, "Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회")를 동결 기간 동안 대체한다. 구체적으로 ① GitHub Actions `handbook-sync`는 `disabled_manually` 그대로 두고 주말에 켜지 않는다(켜면 정시 `cron 7 18 * * *`, 매일 한국 03:07에 운영 DB와 Voyage를 쓰며 돈다, `.github/workflows/handbook-sync.yml:9`) ② 새 정시 실행·배포 workflow를 더하지 않는다 ③ 동결(11/16 24:00) 뒤에는 코드를 고치지 않는다(11/17 제출 문서는 가이드 일정대로이며 이 결정 대상이 아니다, `TEAM_GUIDE.md:33~34`). 필요하면 평가 파이프라인만 한 번(가이드 p.5, `TEAM_GUIDE.md:32`). F-08(증분 수집·정시 실행) 증거는 로컬 DB `--once` 1회로 남기고 workflow는 동결 뒤에도 꺼 둔다 (놓친 것 K-15, F-08, I-06, P-09)
 
 ### 왜 (근거)
 - [문서] 주말 자동 실행·배포 금지: `docs/PRD.md:378`, `docs/TEAM_GUIDE.md:32`, 동결 `TEAM_GUIDE.md:33`, 가이드 p.5(조장 목록 K-15 행).
@@ -324,7 +330,7 @@
 ### 확인한 것
 - `.github/workflows/`는 `ci.yml`, `handbook-sync.yml`, `secret-scan.yml` 3개, 주말에 도는 다른 정시 실행은 없음(`schedule:`은 handbook-sync에만, grep).
 - `handbook-sync`를 언급하는 문서: `SDD.md:318`, `TEAM_GUIDE.md:114`, `specs/incremental.md:107-113`, `specs/mcp.md:84`. 이번에 바꾼 곳과 모순 없음.
-- 일정이 주말을 적은 곳은 `PRD.md:378`과 `TEAM_GUIDE.md:32`뿐이다. PRD는 가이드 문구 그대로라 두고 `TEAM_GUIDE.md`만 고쳤다.
+- 일정이 주말을 적은 곳은 `PRD.md:378`과 `TEAM_GUIDE.md:32`뿐이다. 둘 다 그대로 두었다(제안은 승인 전이라 문서에 넣지 않음).
 - 줄 번호 인용은 이 브랜치 파일에서 직접 다시 읽어 확인했다.
 
 ### 한계

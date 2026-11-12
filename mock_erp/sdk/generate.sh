@@ -42,4 +42,6 @@ java -jar "$JAR" generate -g java --library native --input-spec "$JAVA_SPEC" --g
 
 # 빌드는 pom.xml 로 한다. 바이너리(gradle-wrapper.jar), 쓰지 않는 gradle·sbt 파일, 생성기 CI 설정·안드로이드 매니페스트는 저장소에 넣지 않으므로 지운다.
 rm -rf "$HERE/java/gradle" "$HERE/java/gradlew" "$HERE/java/gradlew.bat" "$HERE/java/build.gradle" \
-  "$HERE/java/settings.gradle" "$HERE/java/gradle.properties" "$HERE/java/build.sbt" \n  "$HERE/java/.github" "$HERE/python/.github" "$HERE/python/.gitlab-ci.yml" \n  "$HERE/java/.travis.yml" "$HERE/python/.travis.yml" "$HERE/java/src/main/AndroidManifest.xml"
+  "$HERE/java/settings.gradle" "$HERE/java/gradle.properties" "$HERE/java/build.sbt" \
+  "$HERE/java/.github" "$HERE/python/.github" "$HERE/python/.gitlab-ci.yml" \
+  "$HERE/java/.travis.yml" "$HERE/python/.travis.yml" "$HERE/java/src/main/AndroidManifest.xml"

@@ -29,6 +29,14 @@ bash mock_erp/sdk/generate.sh
 
 jar는 `${TMPDIR:-/tmp}/openapi-generator/`(저장소 밖)로 내려받는다. 이미 있으면 `OPENAPI_GENERATOR_JAR=<경로>`로 지정한다. JDK 11 이상과 Python(명세 보정용, `PYTHON` 환경변수로 지정 가능)이 필요하다.
 
+## 쓰는 법
+
+Python SDK는 생성된 `requirements.txt`의 패키지(urllib3, python-dateutil, pydantic, typing-extensions)가 있어야 import 된다. 저장소 루트에서 `pip install -e mock_erp/sdk/python`으로 설치하면 의존성까지 같이 깔린다. Java SDK는 `mock_erp/sdk/java`의 `pom.xml`로 `mvn package`(JDK 11 이상) 빌드한다. 단 만들 때 Maven이 없어 `pom.xml` 빌드는 해 보지 않았고, Jackson·jakarta.annotation jar를 클래스패스에 두고 `javac` 컴파일만 확인했다.
+
+## API가 바뀌면
+
+라우트를 추가·삭제·이름 변경하면 `python docs/api/export_openapi.py`로 명세를 다시 내보낸 뒤 `bash mock_erp/sdk/generate.sh`를 다시 실행한다. `tests/test_sdk_matches_openapi.py`가 명세의 동작 목록과 Python·Java SDK 메서드 목록을 비교해, 다시 만들지 않으면 실패한다.
+
 ## 알려진 사정
 
 - Java 생성기 7.26.0은 `HTTPValidationError.error.details`의 `anyOf`(배열 | 객체)에서 컴파일되지 않는 코드(`List<ValidationError>.class`)를 낸다. 그래서 `generate.sh`는 Java 생성에만 그 한 칸을 자유 형식 객체로 바꾼 임시 명세를 쓴다(저장소의 명세는 그대로). Python SDK는 원래 명세로 만든다.
