@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-20·O-38·O-22·Q-07·M-14: PRD 임베딩 행·SDD 11-3 임베딩 기본값을 voyage-4 확정(decisions.md:48)으로 정정, PRD 9장·SDD 5장 manifest '커밋 sha' 문구를 실제 칸(`version_id`)과 `collect_manifest.json` 위치로 정정, SCAFFOLD.md 머리말과 AGENTS.md 폴더 역할을 TEAM_GUIDE 5장·SDD 3장으로 안내, `specs/deploy.md` 신규(배포 의존 파일·환경변수; 화면 `d6-chat-frontend.md`·기억 `memory.md`는 이미 절이 있어 줄 번호만 정정), AGENTS.md 낡은 두 곳(SEARCH_MODE 위치, 후보 버전 장 번호) 수정 | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `pr-notes/PR-132.md` 추가: #131 리뷰 반영(기억 설정 소속 미전송, 판 날짜 참고 값)과 놓친 것 목록 후속 38개(E-02~R-09) 묶음의 작업 내역(갈래별 무엇을·근거·확인·한계, 해소 확인 번호, 조장 확인 필요). 코드 변경·측정·호출 없음, 모든 값은 로컬 | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 조장 리뷰 반영: 결정 ① 확정(기억 설정이 한글 팀 이름을 `affiliation`으로 보내지 않음, `specs/memory.md` 문장 수정), 결정 ② 확정(`SPEC.md`·`README.md` 판 날짜 표시는 참고 값 1.000(00037-2jt 원자료 재계산 v2 75/75)으로만 적고 이번 주 최종 운영 측정에서 조장이 다시 세어 반영), `pr-notes/PR-131.md` 결정 절 갱신. 측정·호출 없음 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 병합 후 낡은 줄 번호 인용을 현재 코드 줄로 정정(`specs/login.md`, `specs/recall.md`, `specs/decision-approval.md`, `specs/memory.md`, `SDD.md` 11-1, `db/TABLE_SPEC.md`, `web/web.md`) 하고 `TABLE_SPEC.md`의 겹친 서술어를 고쳤다. `api/api.md` 경로 데코레이터 수를 57개로 다시 세고 제외 표에 `HEAD /health`를 더했다(57 - 4 = 53개 동작). `TEAM_GUIDE.md` 일정 행을 날짜순(D4, D5, D6)으로 바꿨다. `SDD.md` 4-4 오류 표에 501 `manual_sync_not_supported` 행을 더했다(C-14). 코드 변경·측정·호출 없음 | 미정 |
