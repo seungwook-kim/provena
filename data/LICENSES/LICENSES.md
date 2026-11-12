@@ -38,7 +38,7 @@ PDF별 판정
 
 | PDF | 판정 | 근거 | 권고 |
 |---|---|---|---|
-| `gitlab-customer-journey.pdf` | 근거 약함(핸드북 전체 문장만) | 핸드북 사용 안내의 CC BY-SA 4.0 문장. PDF를 지목하지 않음, footer는 All Rights Reserved | 유지(출처 URL·라이선스 링크 표시 조건) |
+| `gitlab-customer-journey.pdf` | 근거 약함(핸드북 전체 문장만) | 핸드북 사용 안내의 CC BY-SA 4.0 문장. PDF를 지목하지 않음, footer는 All Rights Reserved | 팀 결정 전까지 유지. 근거가 PDF를 지목하지 않아 CC BY-SA 4.0을 적용했다고 쓰지 않는다. 유지하기로 하면 출처 URL 표시 |
 | `gitlab_customer_success_capabilities_roadmap.pdf` | 근거 약함 | 위와 같음 | 유지(같은 조건) |
 | `industry-ai-governance-question-bank.pdf` | 근거 약함 | 위와 같음 | 유지(같은 조건) |
 | `Incident_Response_Flow_SecOpsEngineer.pdf` | 근거 약함 | 위와 같음 | 유지(같은 조건) |
