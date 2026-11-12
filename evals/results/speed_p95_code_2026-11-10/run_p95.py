@@ -2,8 +2,8 @@
 import json, os, subprocess, sys, time
 from pathlib import Path
 
-ROOT = Path(r"C:\Users\Wook\AppData\Local\Temp\pv_speed")
-PY = r"C:\Users\Wook\AppData\Local\Temp\claude\9519414f725d5b3e\c618f6be-6202-4257-bc5c-31e5f539d45a\scratchpad\venv\Scripts\python.exe"
+ROOT = Path(r"<임시 폴더>\pv_speed")
+PY = r"<임시 폴더>\venv\Scripts\python.exe"
 OUT = ROOT / "evals" / "results" / "speed_p95_code_2026-11-10"
 LOG = OUT / "orchestrator.log"
 COST_STOP = 4.5   # 행 cost_usd 합 기준 누적 상한(사용자 상한 5달러보다 낮게)

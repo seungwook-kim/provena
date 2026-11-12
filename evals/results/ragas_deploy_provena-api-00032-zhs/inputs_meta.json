@@ -1,6 +1,6 @@
 {
   "revision": "provena-api-00032-zhs",
-  "results_dir": "C:/Users/Wook/AppData/Local/Temp/pv_int/evals/results/deploy_latency_provena-api-00032-zhs",
+  "results_dir": "evals/results/deploy_latency_provena-api-00032-zhs",
   "dataset": "dataset_v2.jsonl",
   "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
   "runs": [
