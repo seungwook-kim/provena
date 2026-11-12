@@ -12,7 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | `changes.py`에 `POST /admin/sync` 추가(C-14): 관리자·CSRF, 기본 `dry_run=true`는 계획만 돌려주고 `dry_run=false`는 프로세스를 띄우지 않고 501 `manual_sync_not_supported`를 낸다. `errors.py` 오류 표에 `manual_sync_not_supported`(501) 추가. 시험 `tests/test_api_changes.py`의 `test_manual_sync_*` 3개. 실제 수집 실행 방식은 팀장 결정 | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | `changes.py`에 `POST /admin/sync` 추가(C-14): 관리자·CSRF, 기본 `dry_run=true`는 계획만 돌려주고 `dry_run=false`는 프로세스를 띄우지 않고 501 `manual_sync_not_supported`를 낸다. `errors.py` 오류 표에 `manual_sync_not_supported`(501) 추가. 시험 `tests/test_api_changes.py`의 `test_manual_sync_*` 3개. 실제 수집 실행은 501 그대로 두고 정시 수집 workflow(`handbook-sync`)를 쓴다(2026-11-12 조장 리뷰(#132)에서 확정) | 미정 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `routes.py`: `/chat` done 이벤트에 단계별 비용·Voyage 토큰(`cost_by_step`, `embed_tokens` 등)과 거절·되묻기의 `refuse_stage`·`refuse_reason`을 더함. 기존 칸은 그대로이고 항상 켬(커밋 0a15fc2) | #119 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | `routes.py` 수정: 응답 시간 p95 단축 코드 스위치(`CHAT_FINAL_FROM_STREAM` 등, 모두 기본 꺼짐)에 맞춰 `/chat` 처리를 고침 (커밋 acd9a45) | #110 (보충) |
 | 2026-11-09 | 김승욱 (기록: 박진형) | `GET /changes`의 응답 칸을 pydantic 모델로 적어 OpenAPI에 `total`·`counts`가 보이게 함 (커밋 a118f4d) | #82 (보충) |

@@ -80,7 +80,7 @@
 
 CP 증거 파일명 `memory.py`는 저장소의 `backend/memory/` 패키지(`__init__.py`, `profile.py`)에 해당한다(강사 템플릿의 `backend/memory.py` 자리를 폴더로 쓴다, `docs/TEAM_GUIDE.md:93`).
 
-**thread_id (E-04, 일부: 팀장 판단 필요)**: 바깥 `thread_id`는 요청 본문에서 받는다(없으면 서버가 `t-`+12자리를 만든다, `backend/api/routes.py:77`, `:327`). 그래프·체크포인트의 thread는 `<인증 user_id>:<thread_id>`이고 앞의 user_id는 로그인 쿠키에서만 얻는다(`routes.py:90-91` `internal_thread`). 같은 `thread_id`를 쓰는 두 계정이 섞이지 않음은 `tests/test_api_isolation.py:12`가 확인한다. 다만 팀장 기준("요청 본문에서 받지 않음")과 달리 본문에서 받으므로, 이 방식으로 충족인지는 팀장이 판정한다.
+**thread_id (E-04, 충족 판정: 2026-11-12 조장 리뷰(#132)에서 확정)**: 바깥 `thread_id`는 요청 본문에서 받는다(없으면 서버가 `t-`+12자리를 만든다, `backend/api/routes.py:77`, `:327`). 그래프·체크포인트의 thread는 `<인증 user_id>:<thread_id>`이고 앞의 user_id는 로그인 쿠키에서만 얻는다(`routes.py:90-91` `internal_thread`). 같은 `thread_id`를 쓰는 두 계정이 섞이지 않음은 `tests/test_api_isolation.py:12`가 확인한다. 팀장 기준("요청 본문에서 받지 않음")과 달리 본문에서 받지만, 그래프 thread가 `<user_id>:<thread_id>`이고 남의 thread는 404라 기준의 목적(사용자 분리)을 충족한다고 판정했다(2026-11-12 조장 리뷰(#132)에서 확정).
 
 ### 읽기
 
