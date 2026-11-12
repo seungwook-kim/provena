@@ -164,6 +164,18 @@ def judge_quoted(system: str, query: bool = False) -> str:
     return _with_tail(system, JUDGE_QUOTE_RULE, example)
 
 
+# 넓힌 첫 검색(나뉜 질문의 첫 검색이 `SPLIT_K`자리)의 판정에만 붙인다(사전 등록 62.44). 넓힌 자리는 `format_materials(marked=...)`가 머리 줄에 `[보충]`을 붙인다.
+# 같은 값을 옆 절과 정답 절이 함께 적은 문맥에서 판정이 넓힌 자리의 옆 절을 복사해 답 후보가 그쪽으로 기우는 것을 막는다. 절차형 문장만 쓴다(조건문형은 흔들렸다)
+JUDGE_WIDENED_SENTENCE = ("머리 줄이 [보충]으로 시작하는 자료는 검색을 넓혀 더한 자료다. quote는 먼저 [보충]이 아닌 자료에서만 찾고, "
+                          "거기에 그 사실의 값이나 규칙을 적은 구절이 없을 때만 [보충] 자료에서 찾는다. ")
+_JUDGE_QUOTE_FIRST = "quote를 먼저 찾고 나서 판정한다. "
+
+
+def judge_widened(system: str) -> str:
+    """인용 먼저 판정 프롬프트(`judge_quoted`)의 구절 규칙에 `JUDGE_WIDENED_SENTENCE`를 더한다. 그 규칙이 없는 프롬프트는 그대로 둔다."""
+    return system.replace(_JUDGE_QUOTE_FIRST, _JUDGE_QUOTE_FIRST + JUDGE_WIDENED_SENTENCE, 1)
+
+
 def answer_picked(system: str) -> str:
     """답을 쓰기 전에 사실마다 값과 근거 하나를 고르게 한다."""
     rule = ('- asked 다음에 picks를 쓴다. picks에는 asked 항목마다 {"fact": 사실, "value": 자료의 값(20자 이내), "chunk_id": 그 값이 적힌 가장 직접적인 자료 하나}를 쓴다. 조건별로 값이 갈리면 조건마다 쓴다. '
@@ -371,8 +383,10 @@ def _strip_marks(text: object) -> str:
     return s
 
 
-def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
-    """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다. 머리(제목·절)도 문서 front matter에서 오므로 같이 지운다."""
+def format_materials(chunks: Iterable[dict], label: str = "자료", marked: Iterable[str] = ()) -> str:
+    """검색 원문을 구분자로 감싼다. 원문 안의 구분자 문자열은 지운다. 머리(제목·절)도 문서 front matter에서 오므로 같이 지운다.
+    `marked`의 chunk_id는 머리 줄 앞에 `[보충] `을 코드가 붙인다(넓힌 자리 표시, 사전 등록 62.44). 원문에 든 같은 글자는 머리 줄이 아니다."""
+    plus = set(marked or ())
     from backend.graph import untrusted as U  # 입력 정화(GRAPH_SANITIZE_INPUT, 기본 켬): 원문의 모델 상대 지시 문장을 입력에서 뺀다. 끄면(0) 바뀌는 것이 없다
 
     parts = []
@@ -381,7 +395,7 @@ def format_materials(chunks: Iterable[dict], label: str = "자료") -> str:
             c = U.sanitize_chunk(c)
         text = _strip_marks(c.get("text", ""))
         head = _strip_marks(
-            f"chunk_id={c.get('chunk_id')} | {c.get('org')} {c.get('rule_title')} "
+            f"{'[보충] ' if c.get('chunk_id') in plus else ''}chunk_id={c.get('chunk_id')} | {c.get('org')} {c.get('rule_title')} "
             f"{c.get('article') or ''} | 판 {c.get('version_id')} (판 날짜 {c.get('version_date')})"
         )
         parts.append(f"<<<{label}>>>\n{head}\n{text}\n<<<끝>>>")
@@ -440,10 +454,11 @@ def supervisor_route_user(facts: dict, allowed: Iterable[str]) -> str:
     return json.dumps({"facts": facts, "allowed": list(allowed)}, ensure_ascii=False)
 
 
-def judge_user(question: str, chunks: list[dict], subs: Iterable[str] = ()) -> str:
+def judge_user(question: str, chunks: list[dict], subs: Iterable[str] = (), extra: Iterable[str] = ()) -> str:
+    """판정 입력. `extra`는 검색을 넓혀 더한 자리의 chunk_id로, 그 자료의 머리 줄에 `[보충]`이 붙는다."""
     listed = [] if prompts_head_enabled() else [_strip_marks(s) for s in subs]  # 대조군: HEAD 때는 하위 질문 목록이 없었다
     head = "\n하위 질문:\n" + "\n".join(f"- {s}" for s in listed) if len(listed) >= 2 else ""
-    return f"질문: {question}{head}\n\n{format_materials(chunks)}"
+    return f"질문: {question}{head}\n\n{format_materials(chunks, marked=extra)}"
 
 
 def answer_user(question: str, chunks: list[dict], as_of: str | None, *, partial: bool = False, scope_note: str = "") -> str:

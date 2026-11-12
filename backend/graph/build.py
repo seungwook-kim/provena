@@ -185,6 +185,14 @@ def chunk_cap(sub_queries, question: str | None = None) -> int:
     return MAX_CHUNKS + split_k(question, sub_queries) - SEARCH_K
 
 
+def core_chunks(state) -> list[dict]:
+    """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리. 넓히지 않았거나 재검색 뒤면 문맥 전체다."""
+    chunks = state.get("chunks", [])
+    if state.get("retries", 0) or split_k(state.get("question"), state.get("sub_queries")) <= SEARCH_K:
+        return chunks
+    return chunks[:SEARCH_K]
+
+
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
     """앞 검색 결과를 유지하고 새 청크를 뒤에 붙인다. 같은 청크(`chunk_id`, `version_id`)는 한 번만 두고, 길이는 `limit`까지만 둔다."""
     out = list(prev)[:limit]
@@ -931,12 +939,16 @@ def build_graph(
         if not chunks:  # 자료가 없으면 LLM에 묻지 않고 부족으로 본다
             return {"judge_reason": "검색 결과 없음", "judge_partial": False, "retries": state.get("retries", 0) + 1}
         seen: dict = {"judged_chunks": len(chunks)} if stop_stalled else {}
-        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or ())
+        core_ids = [c["chunk_id"] for c in core_chunks(state)]
+        widened = judge_quote and len(core_ids) < len(chunks)  # 넓힌 첫 검색이고 인용 먼저 판정일 때만(사전 등록 62.44)
+        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or (), extra=[c["chunk_id"] for c in chunks[len(core_ids):]] if widened else ())
         guide = skill("chat-tool-guide")  # 켜져 있을 때만 판정이 다음 도구를 고른다. 호출 수는 그대로다
         terms = skill("search-terms") if requery_terms else ""  # `GRAPH_REQUERY_TERMS=1`일 때만 재검색어 용어표를 붙인다(기본 꺼짐)
         guided = P.with_skills(judge_system, [("도구 고르기 Skill", guide), ("용어 Skill", terms)])
         if judge_retry_fast and state.get("retries", 0) and state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2:
             guided = P.judge_retry(guided)  # JRF: 나뉜 질문의 재검색 뒤 판정은 단계 표지만 바꿔 추론을 끈다. 본문과 입력은 그대로
+        if widened:
+            guided = P.judge_widened(guided)  # 넓힌 자리가 있는 판정에만 구절을 앞자리에서 먼저 찾게 하는 문장을 더한다
         names = [*(["chat-tool-guide"] if guide else []), *(["search-terms"] if terms else [])]
         used = {"skills_used": note_skills(state, *names)} if names else {}
         if stop_stalled and state.get("retries", 0) and state.get("judged_chunks") == len(chunks):  # 재검색이 근거를 더하지 못했다. 입력이 같으므로 앞 판정을 그대로 두고 더 찾지 않는다
@@ -948,13 +960,13 @@ def build_graph(
         elif together == "parallel_all" or (together == "parallel" and not state.get("retries", 0)):  # 근거가 충분한 질문은 대개 첫 판정에서 끝난다. 재검색 뒤에는 순차로 둬서 버리는 호출을 줄인다
             pool = ThreadPoolExecutor(max_workers=2 if best2 else 1, thread_name_prefix="draft")  # 기본은 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
             try:
-                writing = in_background(pool, "write_answer", lambda: timed_reply(state))
+                writing = in_background(pool, "write_answer", lambda: timed_reply(state, core=bool(best2 and widened)))
                 writing2 = in_background(pool, "write_answer", lambda: timed_reply(state)) if best2 else None  # BO2: 같은 입력으로 하나 더
                 obj = ask_judge(guided, judge_input)
                 if (obj or {}).get("sufficient") is True or (answer_wait and last_partial(state, obj or {})):
                     # 충분이면 같이 쓴 답을 쓴다(부족이면 순차라면 부르지 않았을 호출이라 결과와 오류를 모두 버린다).
                     # 기다리는 답을 켜고 재검색이 끝나 일부 답으로 가면 같이 쓴 답을 그대로 쓴다(새로 쓰는 시간을 아낀다)
-                    early = writing.result() if writing2 is None else pick_two(writing, writing2, AF.quote_chunk_ids(obj, chunks), chunks)
+                    early = writing.result() if writing2 is None else pick_two(writing, writing2, AF.quote_chunk_ids(obj, chunks), chunks, core_ids if widened else None)
             finally:
                 pool.shutdown(wait=not answer_wait, cancel_futures=bool(answer_wait))  # 기다리는 답을 켜면 판정이 부족일 때 답을 기다리지 않는다
         else:
@@ -1068,11 +1080,11 @@ def build_graph(
     def answer_skills_used(state: AgentState, blocks: list[tuple[str, str]]) -> list[str]:
         return note_skills(state, *[name for name, (_, body) in zip(("citation-rules", "delegation"), blocks) if body])
 
-    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None) -> dict:
+    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None, core: bool = False) -> dict:
         blocks = answer_blocks(state)
         system = P.with_skills(answer_base if careful else answer_system, blocks)
         used = answer_skills_used(state, blocks)
-        chunks = state.get("chunks", [])
+        chunks = core_chunks(state) if core else state.get("chunks", [])
         if team_last:  # `GRAPH_TEAM_LAST=1`: 질문이 팀을 말하지 않으면 팀 문서를 답 입력 뒤로 보낸다(빼지 않고 순서만)
             chunks = AF.team_docs_last(state["question"], chunks)
         user = P.answer_user(state["question"], chunks, state.get("as_of"), partial=bool(state.get("judge_partial")), scope_note=state.get("judge_scope") or "")
@@ -1136,20 +1148,20 @@ def build_graph(
 
         start()  # 검사는 로컬 계산이라 답을 낸 쪽에서 바로 돈다. 그래야 판정이 등록된 뒤에 답이 다음 단계로 넘어가 같은 호출이 두 번 나가지 않는다
 
-    def timed_reply(state: AgentState) -> dict:
+    def timed_reply(state: AgentState, core: bool = False) -> dict:
         """`GRAPH_ANSWER_WAIT_S`가 있으면 첫 답은 추론 답을 그 시간까지 기다리고, 늦거나 실패하면 같이 보낸 빠른 답을 쓴다. 재검색 뒤의 답은 시간이 모자라 빠른 답이다."""
         if not answer_wait or state.get("retries", 0):
-            return draft_reply(state)
+            return draft_reply(state, core=core)
         wait_s = answer_wait
         if answer_budget and state.get("started_at"):
             wait_s = min(answer_wait, answer_budget - (time.monotonic() - state["started_at"]))
         if wait_s <= 0:
-            return draft_reply(state)
+            return draft_reply(state, core=core)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer")
         try:
             gave_up = threading.Event()  # 추론 답을 쓰지 않기로 하면 세운다. 늦게 끝난 추론 답이 쓰이지 않을 근거 판정을 부르지 않게 한다
-            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up))
-            fast = in_background(pool, "write_answer", lambda: draft_reply(state))
+            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up, core=core))
+            fast = in_background(pool, "write_answer", lambda: draft_reply(state, core=core))
             done, _ = wait_futures([slow], timeout=wait_s)
             if done and slow.exception() is None and slow.result().get("raw_citations"):
                 return slow.result()
@@ -1167,9 +1179,34 @@ def build_graph(
         obj, raw = ask_json(system, P.answer_user(state["question"], shown, state.get("as_of")))
         return obj, (draft_fields(obj, raw, used) if obj and obj.get("sufficient") is True and "answer" in obj else None)
 
-    def pick_two(first: Any, second: Any, quote_ids: list[str], chunks: list[dict]) -> dict:
+    def pick_core_first(first: Any, second: Any, quote_ids: list[str], core_ids: list[str]) -> dict:
+        """넓힌 첫 검색의 답 고르기(사전 등록 62.44). 판정 구절이 든 청크가 모두 앞 5자리 안이고 앞자리 답이 인용을 가진 답이면 앞자리 답(첫 후보),
+        아니면 전체 문맥 답(둘째 후보)이다. 앞자리 답이 실패하면 전체 문맥 답을 쓰고, 전체 문맥 답이 실패하면 앞자리 답을 쓴다. 고른 기록은 `best2_log`에 `rule=core_first`로 담는다."""
+        def settle(future: Any) -> dict | None:
+            try:
+                return future.result()
+            except Exception as e:  # noqa: BLE001
+                if isinstance(e, CostCapExceeded):
+                    raise
+                log.warning("넓힌 문맥 답 후보 실패: %s", type(e).__name__)
+                return None
+
+        a, b = settle(first), settle(second)
+        if a is None and b is None:
+            first.result()  # 둘 다 실패하면 현행과 같이 첫 답의 오류를 올린다
+        usable = bool(a and a.get("raw_citations") and not G.says_only_absence(str(a.get("answer") or "")))
+        in_core = set(quote_ids or []) <= set(core_ids)
+        pick = 0 if b is None or (usable and in_core) else 1
+        why = "한쪽 후보 없음" if a is None or b is None else "판정 구절이 넓힌 자리에 있음" if not in_core else "앞자리 답 없음" if not usable else "판정 구절이 모두 앞자리"
+        cited = [[c.get("chunk_id") if isinstance(c, dict) else c for c in (d or {}).get("raw_citations") or []] for d in (a, b)]
+        log_row = {"quote_ids": list(quote_ids or []), "cands": [{"cited": cited[0]}, {"cited": cited[1]}], "pick": pick, "why": why, "rule": "core_first"}
+        return {**(a if pick == 0 else b), "best2_log": log_row}
+
+    def pick_two(first: Any, second: Any, quote_ids: list[str], chunks: list[dict], core_ids: list[str] | None = None) -> dict:
         """BO2: 두 답 Future 중 하나. 첫 답의 오류는 그대로 올리고(현행과 같다), 둘째 답이 실패하면 첫 답을 쓴다. 고른 기록은 best2_log 칸에 담는다.
         BO2SD면 문맥 청크의 rule_seq로 S 밖 인용이 S 청크와 같은 문서인지 본다."""
+        if core_ids is not None:  # 사전 등록 62.44: 넓힌 첫 검색. 첫 후보는 앞 5자리만 보고 쓴 답, 둘째 후보는 전체 문맥으로 쓴 답이다
+            return pick_core_first(first, second, quote_ids, core_ids)
         a = first.result()
         try:
             b = second.result()
@@ -1188,9 +1225,11 @@ def build_graph(
             return timed_reply(state)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer2")  # BO2: 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽
         try:
-            one = in_background(pool, "write_answer", lambda: timed_reply(state))
+            core_ids = [c["chunk_id"] for c in core_chunks(state)]
+            widened = judge_quote and len(core_ids) < len(state.get("chunks", []))
+            one =in_background(pool, "write_answer", lambda: timed_reply(state, core=widened))
             two = in_background(pool, "write_answer", lambda: timed_reply(state))
-            return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []))
+            return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []), core_ids if widened else None)
         finally:
             pool.shutdown(wait=True)
 
