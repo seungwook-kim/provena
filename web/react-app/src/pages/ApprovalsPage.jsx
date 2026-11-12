@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import DecisionConvertPanel from '../components/DecisionConvertPanel'
 import DemoLayout from '../components/DemoLayout'
 import { STALE_APPROVAL_ERROR_CODES, previewApprovalsService, reviewDepartments } from '../lib/approvals-service'
 
@@ -139,6 +140,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     <header><h1>승인함</h1></header>
     {!live && <div className="approval-filters">{Object.entries(label).map(([key, value]) => <button key={key} className={filter === key ? 'selected' : ''} onClick={() => setFilter(key)}>{value}</button>)}</div>}
     {live && notice && <p className="approval-complete" role="status">{notice}</p>}
+    {live && service.convertDecisionTable && <DecisionConvertPanel service={service} onConverted={loadList} />}
     <section className="approval-service-layout">
       <aside>
         <h2>승인 요청</h2>
