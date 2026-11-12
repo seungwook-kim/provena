@@ -102,6 +102,8 @@ GET  /approvals/{approval_id} 승인 건 하나(끝난 건 포함) (관리자)
 POST /decision-tables/convert 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (관리자, CSRF, 성공 201)
 ```
 
+화면: 승인함(`web/react-app/src/pages/ApprovalsPage.jsx`) 관리자에게 결정표 변환 폼(`DecisionConvertPanel.jsx`). 키 없는 데모의 예시 응답(`status: "example"`)은 "예시"로 표시하고 승인함 목록을 다시 부르지 않는다. 실제 초안이면 목록을 다시 부른다(H-21, 2026-11-12 박진형).
+
 DecisionRule과 DecisionTable (파트 사이 계약, 필드 구조는 `backend/schemas/`에서 확정):
 
 ```
