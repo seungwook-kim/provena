@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changedSpan, MAX_DIFF_CHARS } from './text-diff'
+import { changedMark, changedSpan, MAX_DIFF_CHARS } from './text-diff'
 
 describe('changedSpan', () => {
   it('returns the inserted words of the new text', () => {
@@ -19,5 +19,18 @@ describe('changedSpan', () => {
   it('falls back to null above the size cap', () => {
     const big = 'word '.repeat(MAX_DIFF_CHARS)
     expect(changedSpan(big, `${big}extra`)).toBeNull()
+  })
+})
+
+describe('changedMark', () => {
+  it('returns the position of the change even when the same words already appear earlier', () => {
+    const before = 'A 절차. 검토 필요.'
+    const after = 'A 절차. 검토 필요. 검토 필요.'
+    const { changedText, changedAt } = changedMark(before, after)
+    expect(after.slice(changedAt, changedAt + changedText.length)).toBe(changedText)
+    expect(changedAt).toBeGreaterThan(after.indexOf(changedText))
+  })
+  it('returns nulls when there is no change', () => {
+    expect(changedMark('same', 'same')).toEqual({ changedText: null, changedAt: null })
   })
 })

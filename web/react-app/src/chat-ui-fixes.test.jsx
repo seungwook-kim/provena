@@ -55,6 +55,10 @@ describe('좁은 화면 채팅 배치 (A5)', () => {
     expect(block).toMatch(/\.demo-messages\{[^}]*min-height:200px/)
   })
 
+  it('보내기 오류 문구는 입력창 바로 위에 남는다(위로 떠오르지 않음)', () => {
+    expect(block).toMatch(/\.demo-chat-main>\.demo-answer-error\{order:4\}/)
+  })
+
   it('데스크톱 3열 규칙은 640px 밖에 그대로 있다', () => {
     expect(css).toMatch(/\.demo-chat-main\{display:flex;min-width:0;flex-direction:column\}/)
     expect(css.slice(0, css.lastIndexOf('@media(max-width:640px){.demo-chat-page'))).not.toMatch(/\.demo-chat-main\{display:contents\}/)

@@ -4,7 +4,8 @@ export const MAX_DIFF_CHARS = 50000
 
 const isSpace = ch => ch === undefined || /\s/.test(ch)
 
-export function changedSpan(oldText, newText) {
+// 바뀐 부분의 위치 { start, end }(새 본문 기준, end 제외). 같은 글이 앞에도 있을 때 위치로 강조하려고 위치를 돌려준다.
+export function changedRange(oldText, newText) {
   if (typeof oldText !== 'string' || typeof newText !== 'string') return null
   if (!oldText || !newText || oldText === newText) return null
   if (oldText.length > MAX_DIFF_CHARS || newText.length > MAX_DIFF_CHARS) return null
@@ -16,7 +17,20 @@ export function changedSpan(oldText, newText) {
   let tail = 0
   while (tail < limit - start && oldText[oldText.length - 1 - tail] === newText[newText.length - 1 - tail]) tail += 1
   while (tail > 0 && !isSpace(newText[newText.length - tail - 1]) && !isSpace(newText[newText.length - tail])) tail -= 1
-  const span = newText.slice(start, newText.length - tail).trim()
-  if (!span || span.length >= newText.trim().length) return null
-  return span
+  let end = newText.length - tail
+  while (start < end && isSpace(newText[start])) start += 1
+  while (end > start && isSpace(newText[end - 1])) end -= 1
+  if (start >= end || end - start >= newText.trim().length) return null
+  return { start, end }
+}
+
+export function changedSpan(oldText, newText) {
+  const range = changedRange(oldText, newText)
+  return range ? newText.slice(range.start, range.end) : null
+}
+
+// 화면 칸 두 개: changedText(강조할 글)와 changedAt(새 본문에서의 시작 위치). 바뀐 곳이 없으면 둘 다 null.
+export function changedMark(oldText, newText) {
+  const range = changedRange(oldText, newText)
+  return range ? { changedText: newText.slice(range.start, range.end), changedAt: range.start } : { changedText: null, changedAt: null }
 }

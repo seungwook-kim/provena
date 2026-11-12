@@ -1,5 +1,5 @@
 import * as apiClient from './api'
-import { changedSpan } from './text-diff'
+import { changedMark } from './text-diff'
 import {
   acknowledgePreviewRecall,
   filterPreviewRecalls,
@@ -85,7 +85,7 @@ export function mapNotice(notice = {}) {
     oldAnswer: typeof notice?.answer_excerpt === 'string' ? notice.answer_excerpt : '',
     oldPolicy: textOrNull(notice?.old_text),
     newPolicy: textOrNull(notice?.new_text),
-    changedText: changedSpan(textOrNull(notice?.old_text), textOrNull(notice?.new_text)),
+    ...changedMark(textOrNull(notice?.old_text), textOrNull(notice?.new_text)),
     sourceUrl: textOrNull(notice?.source_url),
     ruleSeq,
     article,

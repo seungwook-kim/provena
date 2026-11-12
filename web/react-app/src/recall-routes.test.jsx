@@ -439,6 +439,15 @@ describe('live change monitoring route', () => {
     expect(mark.tagName).toBe('MARK')
   })
 
+  it('highlights the changed position, not an earlier copy of the same words (A2)', async () => {
+    server.changes = { ...server.changes, items: [change({ old_text: 'A 절차. 검토 필요.', new_text: 'A 절차. 검토 필요. 검토 필요.' })] }
+    open('/changes')
+    const mark = await screen.findByText('검토 필요.', { selector: 'mark' })
+    const paragraph = mark.closest('p')
+    expect(paragraph.textContent.startsWith('A 절차. 검토 필요. 검토 필요.')).toBe(true)
+    expect(mark.previousSibling?.textContent ?? '').toBe('A 절차. 검토 필요. ')
+  })
+
   it('warns that search covers only loaded records while more pages remain (A6)', async () => {
     server.changes = { ...server.changes, more: true }
     open('/changes')

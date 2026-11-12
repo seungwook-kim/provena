@@ -9,9 +9,10 @@ const SEVERITY_LABEL = { high: '중요', low: '참고' }
 const CANDIDATE_STATUS_LABEL = { pending: '검토 대기', needed: '정비 필요', not_needed: '정비 불필요' }
 const NOT_FOUND = '알림을 찾을 수 없습니다.'
 
-function Marked({ text, mark }) {
+function Marked({ text, mark, at: markAt }) {
   if (!mark || !text?.includes(mark)) return text
-  const at = text.indexOf(mark)
+  // 실서버 값은 바뀐 위치(changedAt)를 함께 준다. 같은 글이 앞에도 있으면 첫 위치가 아니라 그 위치를 강조한다.
+  const at = Number.isInteger(markAt) && text.slice(markAt, markAt + mark.length) === mark ? markAt : text.indexOf(mark)
   const before = text.slice(0, at)
   const after = text.slice(at + mark.length)
   return <>{before}<mark>{mark}</mark>{after}<span className="changed-text-legend"><i aria-hidden="true" />변경된 부분</span></>
@@ -120,7 +121,7 @@ export default function RecallPage({ service = previewRecallService, isAdmin = f
         {live && selected.question && <section className="recall-answer recall-question"><small>당시 질문</small><p>{selected.question}</p></section>}
         <section className="recall-answer"><small>영향받은 답변</small><p>{selected.oldAnswer || '저장된 답변 요약이 없습니다.'}</p></section>
         {live && selected.explanation && <section className="recall-explanation"><small>판정 설명</small><p>{selected.explanation}</p></section>}
-        {(selected.oldPolicy || selected.newPolicy) && <><h3>정책 변경 전후</h3><div className="recall-policy-grid">{selected.oldPolicy && <section><small>변경 전</small><p>{selected.oldPolicy}</p></section>}{selected.newPolicy && <section className="after"><small>변경 후</small><p><Marked text={selected.newPolicy} mark={selected.changedText} /></p></section>}</div></>}
+        {(selected.oldPolicy || selected.newPolicy) && <><h3>정책 변경 전후</h3><div className="recall-policy-grid">{selected.oldPolicy && <section><small>변경 전</small><p>{selected.oldPolicy}</p></section>}{selected.newPolicy && <section className="after"><small>변경 후</small><p><Marked text={selected.newPolicy} mark={selected.changedText} at={selected.changedAt} /></p></section>}</div></>}
         <div className="recall-detail-actions">{selected.sourceUrl && <a href={selected.sourceUrl} target="_blank" rel="noreferrer" className="demo-outline-button">원문 보기</a>}<Link to={chatLink} state={{ question: selected.question }} className="demo-dark-button">다시 질문하기</Link></div>
         {service.sendFeedback && <FeedbackControls key={selected.id} record={selected} service={service} />}
       </> : selectedId && selectedId === missingId ? <div className="recall-empty-detail" role="alert"><h2>{NOT_FOUND}</h2><p>삭제되었거나 접근할 수 없는 알림입니다. 목록에서 다른 알림을 선택해 주세요.</p></div>
