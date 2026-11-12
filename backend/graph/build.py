@@ -1227,7 +1227,7 @@ def build_graph(
         try:
             core_ids = [c["chunk_id"] for c in core_chunks(state)]
             widened = judge_quote and len(core_ids) < len(state.get("chunks", []))
-            one =in_background(pool, "write_answer", lambda: timed_reply(state, core=widened))
+            one = in_background(pool, "write_answer", lambda: timed_reply(state, core=widened))
             two = in_background(pool, "write_answer", lambda: timed_reply(state))
             return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []), core_ids if widened else None)
         finally:
