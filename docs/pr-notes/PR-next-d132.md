@@ -13,21 +13,20 @@
 | `docs/api/api.md:30` | openapi 재생성 행에 501 유지 확정 표기 |
 | `backend/api/api.md:15` | "실제 수집 실행 방식은 팀장 결정"을 501 유지·정시 수집 workflow로 |
 | `backend/graph/decision/decision.md:15` | L-23 201 `status=example` 그대로 확정 |
-| `backend/services/services.md:15` | G-08 응답 캐시는 운영·최종 측정에서 켜지 않음, `.env.example`은 조장이 추가 예정 |
+| `backend/services/services.md:15` | G-08 응답 캐시는 운영·최종 측정에서 켜지 않음, `.env.example` 새 변수 4개는 이미 `.env.example`에 있다(`:134`·`:136`·`:290-291`, 조장이 넣음) |
 | `README.md:145` | L-23 201 `status=example` 그대로 확정 |
-| `README.md:179` | `LLM_RESPONSE_CACHE`는 운영·최종 측정에서 켜지 않는 이유, `.env.example` 새 변수 4개는 조장이 추가 예정 |
-| `docs/decisions.md:9-11` | 결정 0105(C-14)·0106(L-23)·0107(E-04) 행 추가, 결정자 김승욱 (조장), 2026-11-12 |
+| `README.md:179` | `LLM_RESPONSE_CACHE`는 운영·최종 측정에서 켜지 않는 이유, `.env.example` 새 변수 4개는 이미 있음 |
+| `docs/decisions.md:9-11` | C-14·L-23·E-04 세 행 추가, 결정자 김승욱 (조장), 2026-11-12 |
 | `docs/pr-notes/PR-132.md:18, 23, 58, 69, 77, 92` | 열린 질문 문장을 확정 표기로 |
 | `docs/pr-notes/PR-132.md:203-` | "13. 조장 리뷰 결정(2026-11-12)" 절 추가, 답 없는 항목 목록 |
 | `docs/docs.md:15` | 이 작업 행 추가(PR 미정) |
 
 ## 왜 (근거)
 - [조장] "승인. G-08 ... 운영과 최종 측정에서는 켜지 않음(운영 /chat 측정은 metadata.eval이 없어 켜면 측정값 오염)". 해당 문장은 위 표의 `README.md:179`, `services.md:15`.
-- [조장] "C-14 ... 501 그대로, 정시 수집 workflow를 쓰는 것으로 문서대로" → `recall.md:100`, `SDD.md:318·367`, `api.md:30`, `backend/api/api.md:15`, `decisions.md` 0105.
-- [조장] "L-23 201 status=example 그대로" → `decision.md:15`, `README.md:145`, 0106.
-- [조장] "E-04 ... 그래프 thread가 `<user_id>:<thread_id>`이고 남의 thread는 404라 기준의 목적(사용자 분리) 충족" → `memory.md:83`, 0107. 코드 근거는 이미 `memory.md`에 있던 `backend/api/routes.py:77, 90-91`, `tests/test_api_isolation.py:12`.
-- [조장] "`.env.example` 새 변수 4개는 조장이 다음 커밋에서 넣음" → "조장이 추가 예정"으로 표기. `.env.example`은 고치지 않았다.
-- 결정 번호 0105~0107은 저장소에서 인용된 최대 번호 0104(`grep -rhoE "결정 0[0-9]{3}"`) 다음 값이다. 결정 표에는 번호 칸이 없어 본문에 적었다.
+- [실측] `.env.example` 새 변수 4개: 확인 결과 origin/main에 이미 있음(`.env.example:134`·`:136`·`:290-291`, 조장이 넣음). 설명 줄 `:133`이 "운영·측정에서는 끈다"라고 적어 추가 한계 없음.
+- [조장] "C-14 ... 501 그대로, 정시 수집 workflow를 쓰는 것으로 문서대로" → `recall.md:100`, `SDD.md:318·367`, `api.md:30`, `backend/api/api.md:15`, `decisions.md` decisions.md 행.
+- [조장] "L-23 201 status=example 그대로" → `decision.md:15`, `README.md:145`.
+- [조장] "E-04 ... 그래프 thread가 `<user_id>:<thread_id>`이고 남의 thread는 404라 기준의 목적(사용자 분리) 충족" → `memory.md:83`. 코드 근거는 이미 `memory.md`에 있던 `backend/api/routes.py:77, 90-91`, `tests/test_api_isolation.py:12`.
 
 ## 확인한 것
 - [실측] 변경 파일은 모두 `.md`이고 `.env.example`·코드는 변경 0개(`git diff --stat`).
@@ -35,6 +34,4 @@
 
 ## 한계
 - 답이 없는 항목은 그대로 뒀다: I-08 MR 댓글 질문 발췌, O-23 db 번호대, J-09 결정 확정 여부, `.dockerignore` 제안, `FallbackChatModel` 비용 이중 집계, L-23 예시 응답을 Spec에 쓸지.
-- `origin/main`의 `.env.example`에는 이미 `LLM_RESPONSE_CACHE`·`GITLAB_*` 줄이 있다(`.env.example:134`, `:290-291`). 지시대로 "조장이 추가 예정"이라 적었으나 현재 상태와 맞는지 조장 확인이 필요하다.
-- 결정 번호 0105~0107은 내가 이어 붙인 값이라 조장의 번호 체계와 다르면 고쳐야 한다.
 - PR-132.md의 `파일:줄` 인용은 이 브랜치 기준이다. 코드 변경 없음, 시험 없음.

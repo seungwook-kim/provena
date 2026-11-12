@@ -176,7 +176,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 - `--max-instances 1`은 인스턴스를 최대 1개로 제한한다. 승인 결정(`POST /approvals/{approval_id}`)의 동시 요청 잠금은 Postgres 자문 잠금이라 인스턴스가 여럿이어도 막힌다(로컬에서 같은 DB를 보는 서버 프로세스 2개로 시험, `tests/test_decision_multi_instance.py`). 다만 배포 서비스에서 2개 이상으로 시험한 적은 없고, 로그인 실패 제한 같은 프로세스 안 기록은 인스턴스 사이에서 공유되지 않으므로([docs/specs/login.md](./docs/specs/login.md)) 이 값을 올리기 전에 그 부분을 따로 확인한다.
 - `.gcloudignore`가 없어 소스 업로드 대상은 `.gitignore`를 따른다. `.env`는 `.gitignore`에 있어 올라가지 않으므로 값은 서비스의 환경변수로 따로 넣는다.
 - `PROVENA_ENV`, `PROVENA_DEV_MODE`는 배포에서 설정하지 않는다(로컬 데모 전용 스위치, `.env.example`).
-- `LLM_RESPONSE_CACHE`(LLM 응답 캐시, G-08)는 비우면 꺼진다. **운영과 최종 측정에서는 켜지 않는다**: 운영 `/chat` 측정은 `metadata.eval`이 없어 캐시를 건너뛰지 않으므로 켜면 적중 때 응답 시간·토큰 집계(적중 응답은 토큰 0)가 바뀌어 측정값이 오염된다(2026-11-12 조장 리뷰(#132)에서 확정). `.env.example`에 새 변수(`LLM_RESPONSE_CACHE`, `LLM_RESPONSE_CACHE_SIZE`, `GITLAB_API_URL`, `GITLAB_TOKEN`)는 조장이 추가 예정이다.
+- `LLM_RESPONSE_CACHE`(LLM 응답 캐시, G-08)는 비우면 꺼진다. **운영과 최종 측정에서는 켜지 않는다**: 운영 `/chat` 측정은 `metadata.eval`이 없어 캐시를 건너뛰지 않으므로 켜면 적중 때 응답 시간·토큰 집계(적중 응답은 토큰 0)가 바뀌어 측정값이 오염된다(2026-11-12 조장 리뷰(#132)에서 확정). 새 변수 4개(`LLM_RESPONSE_CACHE`, `LLM_RESPONSE_CACHE_SIZE`, `GITLAB_API_URL`, `GITLAB_TOKEN`)는 이미 `.env.example`에 있다(`:134`·`:136`·`:290-291`, 조장이 넣음).
 - 운영 DB(Supabase)의 스키마와 2026-11-09 확인 결과는 [db/db.md](./db/db.md)를 따른다. LangGraph 체크포인트·Store 표는 앱 첫 기동 때 만들어진다.
 
 배포에 필요한 환경변수 이름은 다음과 같다. 값은 이 저장소에 적지 않는다.
