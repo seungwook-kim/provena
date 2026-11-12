@@ -53,7 +53,7 @@ flowchart LR
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
 | `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | 계획은 Java(Spring Boot) 목업은 크게, Python 예제는 작게. 현재(2026-11-11)는 Python 예제(`mock_erp/python_example/`)만 있고 Java 목업은 만들지 않았다(`mock_erp/mock_erp.md` "만든 것과 만들지 않은 것") |
-| SDK | 업무시스템이 쓰는 클라이언트 | 계획은 OpenAPI 명세에서 자동 생성한 Java·Python SDK (생성 도구는 11장). 현재는 명세(`docs/api/openapi.json`)와 Python 예제만 있고 SDK 자동 생성은 하지 않았다(`mock_erp/mock_erp.md`) |
+| SDK | 업무시스템이 쓰는 클라이언트 | OpenAPI 명세에서 openapi-generator 7.26.0로 자동 생성한 Java·Python SDK (생성 도구는 11장, 산출물은 `mock_erp/sdk/`, 2026-11-12). 명세는 `docs/api/openapi.json`, 손으로 쓴 Python 예제는 `mock_erp/python_example/`(`mock_erp/sdk/sdk.md`) |
 | DB | 문서·청크·판, 사용자, 답변·인용, 결정표, 승인, 리콜 | 운영: Supabase Postgres + pgvector / 데모: 로컬 pgvector 컨테이너 |
 | 관측 | 그래프 단계별 트레이스, 평가 점수 연결 | Langfuse |
 
@@ -198,7 +198,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │     ├─ mcp_server/grounding_tool.py  # get_grounding (답 저장소의 근거 판정 기록 읽기)
 │     └─ (시험은 `tests/test_mcp_server.py`, 클라이언트는 mcp_client/client.py)
 ├─ web/   web.md   (react-app/src/pages/: 로그인, 가입, 내 정보, 채팅, 승인함, 리콜, 변경 감시, 관리자, 사용자 관리, 기억 설정, landing)
-├─ mock_erp/  mock_erp.md   (python_example/, src/는 설명 문서뿐: Spring Boot 목업은 만들지 않음)
+├─ mock_erp/  mock_erp.md   (python_example/, sdk/(sdk.md, 생성된 Python·Java SDK), src/는 설명 문서뿐: Spring Boot 목업은 만들지 않음)
 ├─ db/    db.md    (01_init.sql, 101~120번 앱 표 SQL, 201·202 검색·동기화 SQL, manual/. 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드. 번호대 100은 로그인·그래프, 200은 검색)
 ├─ data/  data.md  (corpus.tar.gz 원문 스냅샷(풀면 corpus/), manifest.jsonl, chunks_index.jsonl, LICENSES/: CC BY-SA 4.0 고지와 출처. 코드와 폴더를 나눈다, 8장)
 ├─ evals/ evals.md
@@ -220,7 +220,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 | 파싱(PDF) | 핸드북 고정 커밋 `static/pdfs/` 아래 글자 층이 있는 PDF(원본 목록 `SOURCES`, 현재 7건) | 같은 요소 형식(제목·문단·목록 항목·표 행). 줄 번호 대신 쪽 번호와 좌표. 서비스 색인 전용 청크 `data/chunks/pdf_chunks.jsonl`(쪽은 `source_url`의 `#page=N`) | Docling(CPU, OCR 끔)으로 로컬에서 한 번 변환하며 운영 이미지에는 넣지 않는다. 문서 형식별 코드는 없다. 평가 색인(`chunks.jsonl`)에는 넣지 않는다. 임베딩·DB 적재는 모델 확정 뒤 같은 적재 단계로 한다 |
 | 청킹 | 구조 | Chunk (제목 단위, 긴 절은 문단 묶음 약 800자, 앞 청크 끝 약 120자 겹침, 청크 앞에 제목 경로) | 제목 단위와 고정 길이 비교, 겹침 0자와 120자 비교(D2, 골든셋). 규모는 서로 다른 본문으로 센다: 실측 청크 23,095, 서로 다른 본문 22,378(PR #23) |
 | 판 비교 | 같은 페이지의 두 커밋, 또는 git 없는 두 시점 문서 묶음(F-07) | `ChangedArticle`(바뀐 섹션, 변경 종류 added·removed·modified) 목록 | 제목 경로 기준 정렬 후 본문 비교. 제목만 바뀐 섹션은 본문 유사도로 같은 섹션으로 본다. 서식만 바뀐 커밋(링크·오탈자)은 표시만 하고 리콜에 넘기지 않는다. 두 입력 모두 같은 형식으로 리콜·영향 미리보기에 넘긴다 |
-| 적재 | Chunk | DB (청크, 임베딩, manifest) | manifest에 출처, 수집일, 커밋 sha, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부(가이드 p.15, p.21). 인젝션 시험용 `TEST` 문서는 G3 청크 수에서 뺀다 |
+| 적재 | Chunk | DB (청크, 임베딩, manifest) | manifest에 출처, 수집일, 쪽의 판 커밋 앞 12자(`version_id`; 수집 고정 커밋 전체 sha는 스냅샷 안 `collect_manifest.json`과 `data/data.md`), 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부(가이드 p.15, p.21). 인젝션 시험용 `TEST` 문서는 G3 청크 수에서 뺀다 |
 
 **증분 수집 (가산 자동화, 가이드 p.20):** 마지막으로 받은 커밋 이후의 새 커밋만 받아, 바뀐 파일만 다시 파싱한다. 삭제는 파일 목록을 완전히 받았을 때만 반영한다. 중복 실행을 막고, 정해진 시각 실행 기록과 실패 알림을 남긴다. 바뀐 섹션은 `ChangedArticle`로 리콜 그래프에 넘긴다.
 
@@ -232,7 +232,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 - 설계 당시 순서: 절·판 필터 → 벡터 검색(pgvector) + BM25 → RRF로 합치기 → 리랭킹 → 상위 k. **현재 확정 조합(2026-11-05)은 voyage-4 · `dense_en`(영어 문장 벡터만, BM25 없음) · 리랭커 없음 · k=5 · 질문 분해 · 링크 확장 L1x2 + 금액 구간 조회**다(`docs/specs/search.md` 확정 조합·Happy Path, `.env.example:156-157`). 하이브리드·리랭커는 `SEARCH_MODE`·`RERANK_*`로 켤 수 있는 비교용이다
 - **한국어 질문, 영어 문서:** 설계 당시에는 다국어 임베딩으로 한국어 질문을 그대로 쓰는 방식과 번역 후 검색을 비교하기로 했다. 비교 결과 현재 기본은 LLM이 질문을 영어 문장으로 바꿔(`QUERY_TRANSLATE`, 번역은 장부에 저장) 그 문장의 벡터로 검색하는 `dense_en`이다(`docs/specs/search.md` 3·4단계).
 - `as_of`가 있으면 그 날짜에 유효했던 커밋 판만 검색한다.
-- **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. **(2026-11-11 현재 미구현 부분: `data/acl_policy.json`과 `SearchQuery.allowed_groups`는 코드에 없다(`backend/schemas/chunk.py:35-40`, grep 0건). `chunks.acl`·`users.groups` 칸과 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만 있고 코퍼스 `acl`은 전부 비어 있다. 검색 단계 거르기를 만들지는 팀장 판단이다.)** 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
+- **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. **(2026-11-11 현재 미구현 부분: `data/acl_policy.json`과 `SearchQuery.allowed_groups`는 코드에 없다(`backend/schemas/chunk.py:35-40`, grep 0건). `chunks.acl`·`users.groups` 칸과 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만 있고 코퍼스 `acl`은 전부 비어 있다. 검색 단계 거르기를 만들지는 팀장 판단이다. 2026-11-11 진형 결정: 검색 결과와 평가 점수가 바뀌므로 동결 전에는 만들지 않는다, 알려진 한계로 EVAL_REPORT 6장에 적었다.)** 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
 - **한국어 문서:** BM25 토큰에 한글 토큰을 더한다. 영어 토큰은 바꾸지 않아 기존 색인을 그대로 쓴다.
 - 바꾸는 순서는 한 번에 하나: 청킹 → 임베딩 → 하이브리드 → 리랭킹. 나머지는 고정한 채(lasagna 방식) 바꿀 때마다 Recall·MRR을 다시 잰다.
 - GraphRAG(가산, 가이드 p.20): 핸드북 페이지 사이 링크 19,366개(전체 4,195쪽 중 2,622쪽이 링크를 가짐, 실측)로 정책 참조 그래프를 만든다. 비공개 주소로 가는 링크(450쪽에서 발견)는 끝점 없는 간선이라 뺀다. 벡터 검색이 지는 질문 유형(예: "배포 승인 정책이 바뀌면 영향받는 다른 정책은?")을 정의하고 개선 전후를 보인다. F-02 연결 정책 리콜도 이 그래프를 쓴다.
@@ -315,7 +315,7 @@ flowchart TD
 | GET | `/recalls/feedback-stats`, `/recalls/digests` | 로그인(통계는 관리자) | 의견 집계(유형별 정밀도), 하루 요약 목록(본인 것, 관리자는 전체) |
 | POST | `/recalls/digest/flush`, `/recalls/process-pending` | 관리자, CSRF | 하루 요약 보내기, 쌓인 변경 처리(스위치와 무관하게 한 번 실행) |
 | GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
-| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 실행 방식 미정, 정시 수집 workflow `handbook-sync` 사용) |
+| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 수동 실행은 두지 않고 정시 수집 workflow `handbook-sync` 사용, 2026-11-12 조장 리뷰(#132)에서 확정) |
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |
@@ -364,7 +364,7 @@ flowchart TD
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
 | 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
-| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집 방식 미정, `backend/api/changes.py:171`) |
+| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집은 두지 않음, 정시 수집 workflow 사용, 2026-11-12 조장 리뷰(#132)에서 확정, `backend/api/changes.py:171`) |
 | 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
@@ -658,7 +658,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
 | F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
 | README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
-| SDK 생성 도구 | 선택 기록을 저장소에서 찾지 못했다. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
+| SDK 생성 도구 | openapi-generator 7.26.0 (진형 선택 2026-11-11: Java·Python을 한 도구로 만듦). 산출물 `mock_erp/sdk/`, 재생성 `bash mock_erp/sdk/generate.sh`. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
 
 
 ### 11-1. 파트 사이 계약
@@ -691,15 +691,15 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 항목 | 선택지 | 추천 | 정할 때 |
 |---|---|---|---|
 | 생성 LLM | `haiku-5.5` / `gpt-6-luna`. `LLM_PROVIDER`(기본 anthropic)·`openai` 둘 다 받고, 키가 없으면 데모 모드 | `haiku-5.5`. 평가셋 v1로 `gpt-6-luna`와 비교하려던 계획은 실행하지 않음: 운영에 계속 쓸 수 있는 키가 Anthropic 키뿐이라 같은 공급자 안에서 Haiku 5.5와 Sonnet 5.5를 비교했다(EVAL_REPORT 8장) | D0 후보, D2 확정 |
-| 임베딩 | `bge-m3` / 비교 후보(Qwen3-Embedding-0.6B 등). 한국어 질문 → 영어 문서라 다국어 모델이 필요하다 | `bge-m3` 기본 | D0 후보, D2~D3 확정 |
+| 임베딩 | `bge-m3` / 비교 후보(Qwen3-Embedding-0.6B 등). 한국어 질문 → 영어 문서라 다국어 모델이 필요하다 | D0 당시 추천은 `bge-m3` 기본. **확정: `voyage-4` API**(2026-11-03 결정 `docs/decisions.md:48`, 위 11-0 표). `bge-m3`는 기준선 | D0 후보, 11/3 확정 |
 | 한→영 질의 변환 | LLM이 BM25용 영어 검색어를 만든다 / 다국어 임베딩만 쓴다 | 두 방식을 평가셋으로 비교 | D2~D3 |
-| 로컬 모델 실행, Cloud Run 메모리·이미지 크기 | 각자 PC에서 `bge-m3`를 불러 보고 확인 | 오늘 확인 | D0 |
+| 로컬 모델 실행, Cloud Run 메모리·이미지 크기 | 각자 PC에서 `bge-m3`를 불러 보고 확인(D0 당시 계획. 기본 임베딩이 `voyage-4` API로 확정돼 서비스 이미지에는 로컬 모델을 넣지 않는다, `docs/specs/search.md:89`) | 오늘 확인 | D0 |
 | 리랭커 속도 | CPU(Cloud Run)에서 질문당 수 초가 걸릴 수 있다. 검색+리랭킹 p95 3초 기준(SPEC 3장)을 지킬 수 있는지, 리랭킹 후보 수를 줄일지 | 재고 정한다 | D2 |
 | Skill 폴더 이름 | `security`, `infra`(인프라·SRE), `itops`(IT 운영), `finance` | 이 이름 | D0 |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres + bcrypt + JWT 쿠키) / Supabase Auth | 자체 구현 (Supabase Auth는 데모 모드와 충돌) | D5 전 |
 | MCP 서버 위치 | FastAPI 앱에 붙여 같은 Cloud Run 서비스 / 별도 서비스 | 같은 서비스 (데모 모드에서 같은 컨테이너가 단순) | D0 |
 | `langchain[mcp]` 상태 | 베타 유지 여부 확인, 문제 시 공식 MCP SDK나 FastMCP 클라이언트 직접 호출 | 공식 문서에서 최신 상태 확인 | D0 |
-| SDK 생성 도구 | OpenAPI 명세에서 Java·Python SDK를 만드는 도구와 산출물 위치 | 후보를 D0에 정한다 | D0 |
+| SDK 생성 도구 | OpenAPI 명세에서 Java·Python SDK를 만드는 도구와 산출물 위치 | openapi-generator 7.26.0, 산출물 `mock_erp/sdk/` 로 정함(2026-11-12) | D0 |
 | 결정표 변환 재시도 | LLM 결과를 읽지 못하면 지금은 재시도 없이 실패로 끝난다. 재시도를 넣을지 | 추천 없음, 현재는 재시도 없음 | D4 |
 
 ### 11-4. 역할·평가·범위

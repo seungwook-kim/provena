@@ -63,7 +63,7 @@ def test_duplicate_email_signup_does_not_claim_pending_application(monkeypatch):
     assert duplicate.status_code == 409
     detail = duplicate.json()["detail"]
     assert "진행 중인 가입 신청" not in detail
-    assert "이메일 인증 이어하기" in detail
+    assert "인증번호 다시 받기" in detail
 
 
 def test_code_is_single_use_and_attempt_limited(monkeypatch):

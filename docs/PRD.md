@@ -173,7 +173,7 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 |---|---|---|
 | P-01 | 로그인과 사용자별 기억 | 로그인을 구현한다. 사용자 id로 대화(thread)와 장기 기억(Store namespace)을 분리하고, Store 기반 시멘틱 메모리(팀·역할·담당 서비스)를 둔다(현재 코드가 저장하는 칸은 소속·직급·담당 서비스 셋뿐이다, `docs/specs/memory.md`. 칸을 늘릴지는 팀장 판단). 무엇을 기억할지 기준, State와 Store의 경계, 틀린 기억을 고치는 절차, DB 기반 Store를 둔다(가이드 p.10) (G4) |
 | P-02 | 문서 적재 | Markdown·PDF 파싱, 청킹, 임베딩, 인덱스 목록(`data/manifest.jsonl`)을 만든다. manifest에는 출처, 수집일, 커밋, 문서당 청크 수, 원문 길이, 보존 길이, 잘림 여부를 적는다(가이드 p.15, p.21). 새 커밋만 받는 증분 수집을 한다 |
-| P-03 | 업무시스템 연동 | REST API(OpenAPI 명세), 자동 생성 SDK(Java·Python), FastMCP 서버(`extras/mcp_skill/`), 웹훅을 제공한다. 시연용 업무시스템 목업(`mock_erp/`)은 Java(Spring Boot)와 Python으로 만든다(계획. 2026-11-11 현재 Python 예제와 OpenAPI 명세만 있고 Java 목업·SDK 자동 생성은 만들지 않았다, `mock_erp/mock_erp.md`) |
+| P-03 | 업무시스템 연동 | REST API(OpenAPI 명세), 자동 생성 SDK(Java·Python, openapi-generator 7.26.0, `mock_erp/sdk/`), FastMCP 서버(`extras/mcp_skill/`), 웹훅을 제공한다. 시연용 업무시스템 목업(`mock_erp/`)은 Java(Spring Boot)와 Python으로 만든다(계획. 2026-11-11 현재 Python 예제와 OpenAPI 명세가 있고 Java 목업은 만들지 않았다. SDK는 2026-11-12 `mock_erp/sdk/`에 생성했다, `mock_erp/mock_erp.md`) |
 | P-04 | 데모 모드 | `docker compose up` 한 줄로, 키 없이 뜬다. 로컬 pgvector 스냅샷과 기록된 응답을 쓰고, 데모 전용 계정 2개를 시드로 넣는다 (G2) |
 
 ### 6-3. 확장 기능 (핵심과 필수를 끝낸 뒤 진행, 빼지 않는다: 결정 0059, 0066)
@@ -245,7 +245,7 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
 - 권한표에는 "승인 기준은 내부 문서 참고(internal only)"로만 걸린 칸이 1개 있다. 결정표에서 뺀다.
 - 리콜 시험용 개정 커밋 목록은 `backend/rag/ingest/history.py`가 git 이력에서 만든다.
 
-**수집 규칙:** 공개 저장소를 git으로 받는다(API를 쓰면 요청 간격 1초 이상). 받은 커밋 sha를 manifest에 남겨 재현할 수 있게 한다. 원문 스냅샷은 `data/corpus.tar.gz`(풀면 `corpus/`)로 두고 코드와 폴더를 나눈다.
+**수집 규칙:** 공개 저장소를 git으로 받는다(API를 쓰면 요청 간격 1초 이상). 받은 커밋 sha는 스냅샷 안 `collect_manifest.json`과 `data/data.md`(코퍼스 고정 커밋)에 남기고, `data/manifest.jsonl`에는 쪽마다 판 커밋 앞 12자(`version_id`)를 둬 재현할 수 있게 한다. 원문 스냅샷은 `data/corpus.tar.gz`(풀면 `corpus/`)로 두고 코드와 폴더를 나눈다.
 
 **청킹 방식** (두 가지를 비교해 고른다, 가이드 축 ②)
 
@@ -295,7 +295,7 @@ MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정
 |---|---|---|
 | 생성 LLM | `anthropic/claude-haiku-5.5`를 쓴다. 처음 계획은 `openai/gpt-6-luna`와 평가셋 v1 30건으로 비교하는 것이었으나 실행하지 않았다: 운영에 계속 쓸 수 있는 키가 Anthropic 키뿐이라 같은 공급자 안에서 Haiku 5.5와 Sonnet 5.5를 평가셋 v2 관련 25건, 로컬 1회로 비교했다(EVAL_REPORT 8장). 계획 당시 단가는 둘 다 $0.10/$0.50이고 도구 호출을 지원한다 | 조당 예산 $30(가이드 p.12). 한국어 답 작성과 영어 검색어 변환을 함께 한다 |
 | 채점용 LLM | 생성 모델과 다른 회사의 한 단계 위 모델 (예: `openai/gpt-6.1-terra`, $1/$5). 평가셋을 돌릴 때만 쓴다 | 같은 모델이 자기 답을 채점하지 않게 한다. 정답 근거 판정은 사람이 한다 |
-| 임베딩 | 로컬 `BAAI/bge-m3`(MIT, 1024차원) 기본, `Qwen3-Embedding-0.6B`(Apache-2.0)와 비교 | 한국어 질문 → 영어 문서 공개 수치가 있는 후보는 bge-m3다(MKQA 한국어 질의 Recall@100 71.6, 논문 arXiv 2402.03216). KURE-v1은 한국어 단일 언어 수치만 있어 뺐다 |
+| 임베딩 | D0 후보였던 로컬 `BAAI/bge-m3`(MIT, 1024차원)를 기본으로 두고 `Qwen3-Embedding-0.6B`(Apache-2.0)와 비교하려 했다. **최종 기본값은 `voyage-4` API다**(2026-11-03 결정, `docs/decisions.md:48`·`backend/rag/retrieve/embed.py:53` DEFAULT_MODEL). 로컬 모델은 비교 후보·기준선이다 | 한국어 질문 → 영어 문서 공개 수치가 있는 후보는 bge-m3다(MKQA 한국어 질의 Recall@100 71.6, 논문 arXiv 2402.03216). KURE-v1은 한국어 단일 언어 수치만 있어 뺐다 |
 | BM25 | LLM이 질문을 영어 검색어로 바꾼 뒤 계산 | 한국어 질의를 그대로 넣은 BM25는 MKQA에서 27.9로 dense(71.6)보다 크게 낮다 |
 | 리랭커 | 로컬 `bge-reranker-v2-m3`와 `Qwen3-Reranker-0.6B`(Apache-2.0) 비교, 리랭킹 없음과도 비교 | 축 ②의 "하이브리드와 리랭킹 개선 전후". 한→영 리랭킹 공개 수치는 둘 다 없어 직접 잰다 |
 

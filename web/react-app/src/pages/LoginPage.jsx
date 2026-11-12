@@ -114,9 +114,6 @@ export default function LoginPage() {
           <p className="signup-link">
             아직 계정이 없으신가요? <Link to="/signup">회원가입</Link>
           </p>
-          <p className="signup-link">
-            <Link to="/signup?resume=1">이메일 인증 이어하기</Link>
-          </p>
           {import.meta.env.DEV && (
             <div className="demo-login-area">
               <span>로컬 데모 전용 · 실제 계정/API와 분리</span>

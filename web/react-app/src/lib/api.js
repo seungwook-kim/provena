@@ -218,6 +218,10 @@ export async function postApprovalDecision(approvalId, body) {
   return response.json()
 }
 export function getDecisionTables() { return apiJson('/decision-tables') }
+// 관리자: 핸드북 권한표의 한 업무 종류를 결정표 초안으로 바꿔 승인함에 올린다. 키 없는 데모는 201 + status=example(저장 안 됨).
+export async function convertDecisionTable(category) {
+  return apiJson('/decision-tables/convert', { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ category }) })
+}
 export function getMaintenanceCandidates() { return apiJson('/maintenance-candidates') }
 export async function decideMaintenanceCandidate(candidateId, status) {
   return apiJson(`/maintenance-candidates/${encodeURIComponent(candidateId)}`, { method: 'POST', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
