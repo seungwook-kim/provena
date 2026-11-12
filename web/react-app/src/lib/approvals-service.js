@@ -192,13 +192,14 @@ const CONVERT_ERROR_MESSAGES = {
   no_source: '권한표 칸을 읽지 못해 승인함에 올리지 않았습니다.',
   convert_failed: '결정표 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
   forbidden: '이 작업을 수행할 권한이 없습니다. 결정표 변환은 관리자만 할 수 있습니다.',
+  // 409: 서버 문구는 해라체이고 같은 코드로 이유가 여럿(승인된 표 있음·승인 대기 중)이라 고정 문구로 바꾼다
+  conflict: '이 업무 종류의 결정표가 이미 있거나 승인을 기다리고 있습니다. 승인함에서 확인해 주세요.',
 }
 
 export function describeConvertError(error, fallback = '결정표 변환을 처리하지 못했습니다.') {
   if (!error) return ''
   if (CONVERT_ERROR_MESSAGES[error.code]) return CONVERT_ERROR_MESSAGES[error.code]
-  // 409(이미 승인된 표가 있음·이미 승인 대기 중)는 서버가 이유를 한국어로 준다
-  if (error.status === 409 && error.message) return error.message
+  if (error.status === 409) return CONVERT_ERROR_MESSAGES.conflict
   return describeApprovalError(error, fallback)
 }
 

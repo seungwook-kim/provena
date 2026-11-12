@@ -9,6 +9,9 @@ const ADMIN = { user_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'admin', 
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const apiError = (status, code, message) => json({ error: { code, message, request_id: 'req-1' } }, status)
+// 실제 서버 모양(backend/api/errors.py error_body): detail은 문자열, error 봉투에 code·message·request_id
+const realError = (status, code, message) => json({ detail: message, error: { code, message, request_id: 'req-1' } }, status)
+// 옛 모양(detail이 {reason, message}). api.js가 아직 받아 주므로 한 건만 남긴다
 const detailError = (status, reason, message) => json({ detail: { reason, message } }, status)
 
 const RULES = [{ category: 'Approving expense', band: 'Up to $5K', band_label: '5,000달러 이하', approvers: ['Manager'], financial_approvers: ['Finance'], cooperating_depts: [], range_note: null }]
@@ -128,12 +131,16 @@ describe('decision table convert panel on the approvals page', () => {
   })
 
   it.each([
-    [409, detailError(409, 'conflict', '이 업무 종류로 승인된 결정표가 이미 있다'), '이 업무 종류로 승인된 결정표가 이미 있다'],
-    [404, detailError(404, 'not_found', '권한표에 그 업무 종류가 없다'), '권한표에 그 업무 종류가 없습니다. 이름을 확인해 주세요.'],
-    [502, detailError(502, 'draft_unreadable', '초안을 읽지 못해 승인함에 올리지 않았다'), '초안을 읽지 못해 승인함에 올리지 않았습니다. 잠시 후 다시 시도해 주세요.'],
-    [503, detailError(503, 'convert_failed', '결정표 초안을 만들지 못했다'), '결정표 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.'],
+    [409, realError(409, 'conflict', '이 업무 종류로 승인된 결정표가 이미 있다'), '이 업무 종류의 결정표가 이미 있거나 승인을 기다리고 있습니다. 승인함에서 확인해 주세요.'],
+    [409, realError(409, 'conflict', '이 업무 종류의 결정표 초안이 이미 승인을 기다리고 있다'), '이 업무 종류의 결정표가 이미 있거나 승인을 기다리고 있습니다. 승인함에서 확인해 주세요.'],
+    [400, realError(400, 'bad_request', 'category가 비어 있다'), '권한표 업무 종류를 입력해 주세요.'],
+    [404, realError(404, 'not_found', '권한표에 그 업무 종류가 없다'), '권한표에 그 업무 종류가 없습니다. 이름을 확인해 주세요.'],
+    [502, realError(502, 'draft_unreadable', '초안을 읽지 못해 승인함에 올리지 않았다'), '초안을 읽지 못해 승인함에 올리지 않았습니다. 잠시 후 다시 시도해 주세요.'],
+    [502, realError(502, 'no_source', '권한표 칸을 읽지 못했다'), '권한표 칸을 읽지 못해 승인함에 올리지 않았습니다.'],
+    [503, realError(503, 'convert_failed', '결정표 초안을 만들지 못했다'), '결정표 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.'],
     [403, apiError(403, 'forbidden', '권한 없음'), '이 작업을 수행할 권한이 없습니다. 결정표 변환은 관리자만 할 수 있습니다.'],
-  ])('shows a Korean message for a %i error and keeps the form usable', async (_status, response, message) => {
+    [409, detailError(409, 'conflict', '이 업무 종류로 승인된 결정표가 이미 있다'), '이 업무 종류의 결정표가 이미 있거나 승인을 기다리고 있습니다. 승인함에서 확인해 주세요.'],
+  ])('shows a fixed polite Korean message for a %i error and keeps the form usable', async (_status, response, message) => {
     server.convert = () => response
     open()
     await startConvert()
