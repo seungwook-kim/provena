@@ -1,4 +1,4 @@
-# PR-next — 놓친 것 목록 마무리 묶음 (F-16, F-08, H-21, K-16·A-14·I-06, R-03)
+# PR-next — 놓친 것 목록 마무리 묶음 (F-16, F-08, H-21, K-16·A-14·I-06, R-03, 11/11 화면 수정 되살리기)
 - 작업자: 박진형 (jinyeong-731) / PR: 미정 / 머지: 아직 안 함 / 기준: origin/main `601183c7` 위 묶음 브랜치 `pr-next-1112` (브랜치 5개를 `git merge`)
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 조장 목록·팀 문서 / [실측] 직접 돌린 결과 / [추정].
 - 이 PR은 배포하지 않았다. 운영 호출은 배포 주소 `GET /health` 1회(A-14)뿐이다. 운영 DB 쓰기, LLM 호출 없음. F-08의 Voyage 임베딩 호출(약 0.003달러)은 로컬 임시 DB에만 썼다.
@@ -30,6 +30,15 @@
 - 결과 [실측]: `succeeded`, 핸드북 `129243bc → d92556d4`. 추가 3, 수정 149, 서식만 152, 삭제 반영 2. 새 임베딩 436, 재사용 6,946. Voyage 4회 52,539토큰(약 0.003달러), 62.8초.
 - 기록: `docs/specs/incremental.md` 결정 ①을 "했음"으로, `backend/rag/ingest/ingest.md` 기록 행. 원본 출력은 저장소 밖에 보관(키 없음).
 - 덤으로 본 것: `sync_runs.started_at`과 `finished_at`이 같은 값으로 저장된다(코드가 같은 시각을 두 칸에 씀). 실행 시간이 DB에 안 남는 작은 결함이라 기록만 한다.
+
+### main에 안 들어간 11/11 화면 수정 되살리기 (`web/`)
+- 계기: 진형이 로컬 데모와 배포 주소에서 "이메일 인증 이어하기" 링크가 아직 있는 것을 발견(11/12). 11/11에 지운 커밋이 로컬 브랜치(`web-pr-1111`, `web-pr-1111-onmain`)에만 있고 PR에 실리지 않았다 [실측: `git merge-base --is-ancestor` → main에 없음, `git cherry` 4개 중 3개가 main에 없음].
+- 가져온 것
+  - `fb518934` 로그인·회원가입 화면의 고정 "이메일 인증 이어하기" 링크 제거. 미인증 로그인·회원가입 409일 때만 오류 칸 안 "인증번호 다시 받기" 링크. `backend/auth.py` 안내 문구 2곳, `docs/specs/login.md` AC-08, 시험 `signup-conflict.test.jsx`(새로)·`login-unverified.test.jsx`·`tests/test_email_signup.py`.
+  - `bd49a0d0` 리콜·승인함 좁은 화면 깨짐. main에 같은 CSS 규칙 7개 중 5개가 없었다 [실측: `styles.css` 문자열 검색]. 시험 `styles-layout.test.js`(새로).
+- 가져오지 않은 것: `1d149f71`(하루 요약 `digests`, 남의 알림 확인 버튼, 수집 상태 한국어). main에 이미 같은 동작이 있다 [코드: `recall-service.js:132`, `:295`, `RecallPage.jsx:52`, `ChangeMonitoringPage.jsx:13`].
+- 충돌: `web/web.md`(기록 행), `styles.css`(파일 끝 규칙) — 양쪽 다 살림.
+- 확인 [실측]: vitest 334개, 가입 pytest 10개, `vite build` 성공, 새로 띄운 로컬 서버 화면 빌드에 링크 문구 0건.
 
 ## 3. 확인·기록한 것
 ### F-16 PDF 7건 이용 조건 (`data/LICENSES/LICENSES.md`, 조장 폴더)
@@ -67,7 +76,7 @@
 ## 5. 확인한 것
 | 대상 | 결과 |
 |---|---|
-| vitest 전체 | 325개 통과 [실측, 11/12 묶음 브랜치] |
+| vitest 전체 | 334개 통과 [실측, 11/12 묶음 브랜치, 되살린 화면 수정 포함] |
 | 결정표 변환 시험 | 18개 통과 [실측]. 변이: 409 분기 `approvals-service.js:204`(code 없는 409)를 끄면 1개 실패, 예시 판정(`status === 'example'`)을 깨면 3개 실패, `CONVERT_ERROR_MESSAGES.no_source`를 지우면 1개 실패. 503 `not_configured` 시험은 전용 문구(`approvals-service.js:196`)를 넣기 전에 실패해 "승인 저장소" 문구가 나오던 것을 잡았다 |
 | `vite build` | 성공 [실측] |
 | pytest | 묶음 브랜치는 백엔드 코드를 바꾸지 않았다. 전체 실행 결과는 올리기 전에 붙인다 |
@@ -78,7 +87,8 @@
 - `data/LICENSES/LICENSES.md`(조장, `TEAM_GUIDE.md:89`): F-16 기록.
 - `docs/`(조장): `docs/docs.md` 기록 행, `docs/pr-notes/`(이 문서와 점검 노트), `docs/specs/decision-approval.md` 화면 한 줄과 AC-07, `docs/specs/incremental.md` 결정 ①(진형 파트 절).
 - `docs/deliverables/`(조장): `ai_tools_log.md` 한 줄, `portfolio-박진형.md`(본인 제출물).
-- `web/`(주인 강경희, 조장 지시 11/11로 진형이 맡음): H-21 화면·시험, `web/web.md` 기록 행.
+- `web/`(주인 강경희, 조장 지시 11/11로 진형이 맡음): H-21 화면·시험, 되살린 로그인·좁은 화면 수정, `web/web.md` 기록 행.
+- `backend/auth.py`(조장): 가입 안내 문구 2곳(없는 링크를 가리키던 문구). `docs/specs/login.md` AC-08 같은 표현.
 - `.env.example` 변수 추가는 조장 결정으로 남김.
 
 ## 7. 한계·남은 일
