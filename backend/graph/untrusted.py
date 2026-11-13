@@ -25,9 +25,14 @@
 외부 주소와 같은 글의 값을 바꾸라는 값, 검색 원문에 없는 주소는 답에서 뺀다. 규칙이 읽지 못하는 문자(가나·한자·키릴 등)로 쓴 글의 표식 토큰과
 인코딩(base64·16진수·퍼센트·태그 문자)해 숨긴 지시의 표식은 출력 검사 후보로 둔다. 질문에 지시 문장이 있으면 질문의 따옴표 문자열·표식 꼴도 후보다.
 
+보강(PREREGISTER 62.50, 본문 값 뒤집기): 같은 본문(같은 섹션)의 값을 오기·정정이라며 다른 값으로 뒤집는 문장(거짓 정정)은 지시가 아니어도 믿을 수 없는 문장으로 본다.
+그 문장은 입력에서 빼고, 그 문장이 새로 내세운 값(다른 원문과 질문에 없는 것)이 든 답 문장과 그 주장을 옮긴 답 문장은 출력 검사가 뺀다.
+섹션 제목이 변경 이력인 청크와 오기·정정 주장이 없는 변경 기록("15분에서 45분으로 변경")은 대상이 아니다. 자세한 조건은 아래 "본문의 값을 뒤집는 문장" 절 주석.
+
 한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
-지시가 아닌 사실처럼 쓴 거짓은 못 잡는다. 사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다.
+지시가 아닌 사실처럼 쓴 거짓 가운데 오기·정정 주장 없이 값만 다르게 적은 것, 변경 기록처럼 쓴 것, 숫자와 단위가 아닌 값(낱말, 한글 수사)을 뒤집는 것은 못 잡는다.
+사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다. 본문에 적힌 진짜 정정 문장도 같은 꼴이면 빠진다(그때 답은 정정 전 값이 된다).
 """
 from __future__ import annotations
 
@@ -256,6 +261,186 @@ def _utf8(raw: bytes) -> str:
     return t if t.strip() and not any(unicodedata.category(ch) == "Cc" and ch not in "\n\t\r" for ch in t) else ""
 
 
+# ---------- 본문의 값을 뒤집는 문장(거짓 정정, PREREGISTER 62.50) ----------
+# 지시가 아니라 사실처럼 쓴 문장이라 지시 판정으로는 잡히지 않는다. 한 문장에 아래 셋이 모두 있을 때만 "값을 뒤집는 문장"으로 본다.
+#   주장: 오기·오타·잘못·typo·in error 같은 틀렸다는 말(강한 말)이나 정정·실제로는·actually 같은 말(약한 말)
+#   가리킴: 그 말 가까이(`_FLIP_WIN`자)에 본문의 값을 가리키는 것. (가) 문장 밖 본문에 이미 있는 값을 다시 적고 바로 뒤(`_FLIP_AFTER`자)에 강한 말이 온 것,
+#          (나) "위 15분", "the 15 minutes above"처럼 가리키는 말이 붙은 값, (다) "위 기준", "the limit above"처럼 값을 가리키는 이름.
+#          문장 머리의 정정 이름표("정정:", "Correction (날짜):", "Erratum:")는 가리킴 없이도 주장으로 본다(대신 문장 밖에 같은 종류의 다른 값이 있어야 한다)
+#   새 값: 그 문장(없으면 바로 다음 문장)에 든, 문장 밖 본문에 없는 숫자+단위 값
+# 변경 기록("15분에서 45분으로 변경", "2025-07-03 개정")은 틀렸다는 주장이 없어 대상이 아니고, 섹션 제목이 변경 이력인 청크는 통째로 대상에서 뺀다.
+# 값은 숫자+단위만 읽는다(시간은 분으로, 금액은 통화별로 환산해 "45 minutes"와 "45분"을 같은 값으로 본다). 날짜는 값이 아니다.
+_FLIP_WIN = 40
+_FLIP_ADJ = 8
+_FLIP_AFTER = 25
+_COND_BEFORE = re.compile(r"\b(?:if|when(?:ever)?|whether|unless|in\s+case|should\s+you)\b|만약|만일", _I)   # 틀렸다는 말 앞에 오는 조건 말
+_COND_AFTER = re.compile(r"경우|[가-힣]면(?![가-힣])|(?:을|를|할|될|된|난|한)\s*때(?![가-힣])")                  # 틀렸다는 말 뒤에 붙는 조건 꼴("잘못 입력하면", "오류가 난 경우")
+_FLIP_STRONG = re.compile(
+    r"오기|오타|오식|오류|잘못|틀린|틀렸|착오|"
+    r"\b(?:typos?|typographical|misprint(?:s|ed)?|errat(?:um|a)|corrigend(?:um|a)|mistakes?|mistaken(?:ly)?|in\s+error|erroneous(?:ly)?|incorrect(?:ly)?|wrong(?:ly)?|misstated?|"
+    r"should\s+(?:read|say|have\s+(?:read|said)))\b", _I)
+_FLIP_WEAK = re.compile(
+    r"정정|바로잡|실제(?:로는?|\s*(?:기준|값|시행|적용|한도|기한|금액))|"
+    r"\b(?:corrections?|corrected|correcting|actually|in\s+(?:fact|reality|practice)|the\s+(?:real|actual|true|correct)\s+\w+)\b", _I)
+_DEICTIC = re.compile(
+    r"(?<![가-힣])위(?:의|에|에서)?(?![가-힣])|상기|(?<![가-힣])앞(?:의|서|에서)(?![가-힣])|본문|전술한|"
+    r"\b(?:above|earlier|previous(?:ly)?|preceding|aforementioned|foregoing|stated|listed|mentioned|quoted|the\s+body|"
+    r"in\s+this\s+(?:section|page|document|policy|table|paragraph))\b", _I)
+_VALUE_NOUN = (r"(?:기준|값|수치|기한|시간|한도|금액|숫자|표기|기재|일수|비율|횟수|기간|"
+               r"values?|figures?|numbers?|limits?|deadlines?|time(?:frame|line)?s?|targets?|thresholds?|amounts?|durations?|periods?|windows?|sla|slo|caps?|rates?|percentages?|fees?|prices?|costs?)")
+_VALUE_REF = re.compile(
+    rf"(?:(?<![가-힣])위(?:의|에|에서)?|상기|(?<![가-힣])앞(?:의|서|에서)|본문(?:의|에|에서)?|전술한)\s*(?:[가-힣]+\s+){{0,2}}?{_VALUE_NOUN}|"
+    rf"\b(?:above|earlier|previous(?:ly)?|preceding|aforementioned|stated|listed|documented)\s+(?:\w+\s+)?{_VALUE_NOUN}\b|"
+    rf"\b{_VALUE_NOUN}\s+(?:\w+\s+){{0,2}}?(?:above|earlier|previously)\b", _I)
+_FLIP_LABEL = re.compile(
+    r"\s*(?:[※*•>#\-–—\[(（【]\s*)*(?:정정|정오표|바로잡습니다|corrections?|errat(?:um|a)|corrigend(?:um|a))(?:\s*(?:사항|공지|안내|notice|note))?"
+    r"\s*(?:[(（\[][^)\]）\n]{0,30}[)）\]])?\s*[:：\]】)]", _I)
+_CHANGE_HISTORY = re.compile(
+    r"(?:변경|개정|수정|제정|제\s*·?\s*개정)\s*(?:이력|내역|기록|연혁)|연혁|부칙|"
+    r"\b(?:change\s?logs?|(?:revision|version|change|document|edit)\s+history|release\s+notes?|what['’]?s\s+(?:new|changed))\b", _I)
+_DATEISH = re.compile(
+    r"\d{4}\s*[-./]\s*\d{1,2}\s*[-./]\s*\d{1,2}|\d{4}\s*년(?:\s*\d{1,2}\s*월)?(?:\s*\d{1,2}\s*일)?|\d{1,2}\s*월\s*\d{1,2}\s*일|"
+    r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?\b|"
+    r"\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?(?:,?\s+\d{4})?\b", _I)
+_KO_AFTER = r"(?=(?:은|는|이|가|을|를|의|에|도|만|으|로|과|와|입|간|마|씩|까|부|동|뒤|후|전|내|당|보|쯤|정|짜|미|초|안)|[^가-힣]|$)"   # 한글 단위 뒤에는 조사·꼬리말만 온다("3분기"는 값이 아니다)
+# (단위 정규식, 환산 단위, 곱, 종류). 앞에서부터 먼저 맞는 것을 쓴다
+_UNITS: list[tuple[str, str, float, str]] = [
+    (r"(?:영업일|근무일)" + _KO_AFTER + r"|(?:business|working)\s+days?\b", "bday", 1, "time"),
+    (r"분" + _KO_AFTER + r"|minutes?\b|mins?\b", "min", 1, "time"),
+    (r"시간" + _KO_AFTER + r"|hours?\b|hrs?\b", "min", 60, "time"),
+    (r"일" + _KO_AFTER + r"|(?:calendar\s+)?days?\b", "min", 1440, "time"),
+    (r"주(?:일)?" + _KO_AFTER + r"|weeks?\b", "min", 10080, "time"),
+    (r"(?:개월|달)" + _KO_AFTER + r"|months?\b", "month", 1, "time"),
+    (r"년" + _KO_AFTER + r"|years?\b", "month", 12, "time"),
+    (r"%|퍼센트|percent\b|pct\b", "pct", 1, "pct"),
+    (r"억\s*원", "krw", 1e8, "money"), (r"만\s*원", "krw", 1e4, "money"), (r"천\s*원", "krw", 1e3, "money"), (r"원" + _KO_AFTER + r"|krw\b|won\b", "krw", 1, "money"),
+    (r"달러|usd\b|dollars?\b", "usd", 1, "money"), (r"유로|eur\b|euros?\b", "eur", 1, "money"),
+    (r"건" + _KO_AFTER + r"|tickets?\b|requests?\b", "case", 1, "case"),
+    (r"(?:회|번|차례)" + _KO_AFTER + r"|times\b|attempts?\b", "times", 1, "times"),
+    (r"명" + _KO_AFTER + r"|people\b|persons?\b|employees?\b|members?\b|users?\b|approvers?\b|reviewers?\b|approvals?\b", "person", 1, "person"),
+    (r"개" + _KO_AFTER + r"|items?\b", "item", 1, "item"),
+    (r"tb\b", "mb", 1e6, "data"), (r"gb\b", "mb", 1e3, "data"), (r"mb\b", "mb", 1, "data"),
+]
+_ONES = {w: i for i, w in enumerate("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split())}
+_TENS = {w: 10 * i for i, w in enumerate("twenty thirty forty fifty sixty seventy eighty ninety".split(), start=2)}
+_WORDNUM = r"(?:(?:" + "|".join(_TENS) + r")(?:[-\s](?:" + "|".join(list(_ONES)[1:10]) + r"))?|" + "|".join(sorted(_ONES, key=len, reverse=True)) + r")"
+_NUM = r"\d[\d,]*(?:\.\d+)?"
+_QTY = re.compile(
+    rf"(?P<cur>[$₩€])\s*(?P<n1>{_NUM})\s*(?P<m1>[km]\b|thousand\b|million\b|만|천|억)?|"
+    rf"(?:(?<![A-Za-z\d.,])(?P<n2>{_NUM})|\b(?P<w>{_WORDNUM}))\s*(?P<m2>k\b|thousand\b|million\b)?[\s\-]*(?P<u>" + "|".join(f"(?P<u{i}>{rx})" for i, (rx, *_rest) in enumerate(_UNITS)) + ")", _I)
+_MULT = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "만": 1e4, "천": 1e3, "억": 1e8}
+_CUR = {"$": "usd", "₩": "krw", "€": "eur"}
+
+
+def quantities(text: str) -> list[tuple[str, str, str, int, int]]:
+    """글의 숫자+단위 값 목록: (환산한 수, 환산 단위, 종류, 시작, 끝). 날짜는 값으로 읽지 않는다."""
+    s = _DATEISH.sub(lambda m: " " * len(m.group(0)), text or "")
+    out: list[tuple[str, str, str, int, int]] = []
+    for m in _QTY.finditer(s):
+        if m.group("cur"):
+            n, unit, kind = float(m.group("n1").replace(",", "")) * _MULT.get((m.group("m1") or "").casefold(), 1), _CUR[m.group("cur")], "money"
+        else:
+            w = (m.group("w") or "").casefold()
+            n = float(m.group("n2").replace(",", "")) if m.group("n2") else sum(_TENS.get(p, _ONES.get(p, 0)) for p in re.split(r"[-\s]+", w))
+            _rx, unit, mult, kind = next(u for i, u in enumerate(_UNITS) if m.group(f"u{i}"))
+            n *= mult * _MULT.get((m.group("m2") or "").casefold(), 1)
+        out.append((f"{n:.6g}", unit, kind, m.start(), m.end()))
+    return out
+
+
+def _vkeys(text: str) -> set[tuple[str, str]]:
+    return {q[:2] for q in quantities(text)}
+
+
+def is_change_history(c: dict) -> bool:
+    """섹션 제목(문서 제목·절 제목)이 변경 이력·개정 이력·changelog 인 청크. 이런 청크의 정정·개정 문장은 값을 뒤집는 문장으로 보지 않는다."""
+    return bool(_CHANGE_HISTORY.search(f"{c.get('rule_title') or ''} > {c.get('article') or ''}"))
+
+
+def section_context(c: dict, chunks: list[dict]) -> str:
+    """같은 문서·같은 섹션·같은 판의 다른 청크 본문(한 섹션이 여러 청크로 나뉘었을 때 앞 청크의 값을 뒤 청크의 문장이 뒤집는 경우를 본다)."""
+    key = (c.get("org"), c.get("rule_seq"), c.get("rule_title"), c.get("article"), c.get("version_id"))
+    return "\n".join(str(o.get("text") or "") for o in chunks
+                     if o is not c and o.get("chunk_id") != c.get("chunk_id") and (o.get("org"), o.get("rule_seq"), o.get("rule_title"), o.get("article"), o.get("version_id")) == key)
+
+
+def _near(a: tuple[int, int], b: tuple[int, int], gap: int) -> bool:
+    return a[0] - b[1] <= gap and b[0] - a[1] <= gap
+
+
+def _flip_claim(s: str, outside: set[tuple[str, str]]) -> tuple[str, list[tuple[str, str, str, int, int]]]:
+    """(주장 종류, 옛 값). 종류: "old"=본문 값을 다시 적고 틀렸다고 함, "ref"=값을 가리키는 이름과 틀렸다는 말, "label"=정정 이름표, ""=주장 아님."""
+    before = [m.span() for m in _COND_BEFORE.finditer(s)]
+    after = [m.span() for m in _COND_AFTER.finditer(s)]
+
+    def asserted(m: tuple[int, int]) -> bool:
+        """조건절 안의 말("if the amount is wrong", "잘못 입력하면", "오류가 난 경우")은 틀렸다는 주장이 아니다."""
+        return not any(0 <= m[0] - c[1] <= 60 for c in before) and not any(0 <= c[0] - m[1] <= 12 for c in after)
+
+    strong = [m.span() for m in _FLIP_STRONG.finditer(s) if asserted(m.span())]
+    weak = [m.span() for m in _FLIP_WEAK.finditer(s) if asserted(m.span())]
+    if not strong and not weak:
+        return "", []
+    qs = quantities(s)
+    pointed: set[int] = set()   # 가리키는 말("위", "above")은 가장 가까운 값 하나에만 붙는다
+    for d in _DEICTIC.finditer(s):
+        gaps = [(max(q[3] - d.end(), d.start() - q[4], 0), k) for k, q in enumerate(qs)]
+        if gaps and min(gaps)[0] <= _FLIP_ADJ:
+            pointed.add(min(gaps)[1])
+    # 가리키는 말이 붙은 값은 주장 말이 앞뒤 어디에 있어도 되고, 본문 값을 다시 적기만 한 값은 강한 말이 바로 뒤에 올 때만("$5,000 is incorrect", "15분은 오기")
+    old = [q for k, q in enumerate(qs)
+           if (k in pointed and any(_near(q[3:], m, _FLIP_WIN) for m in strong + weak))
+           or (q[:2] in outside and any(0 <= m[0] - q[4] <= _FLIP_AFTER for m in strong))]
+    if old:
+        return "old", old
+    if any(_near(r.span(), m, _FLIP_WIN) for r in _VALUE_REF.finditer(s) for m in strong + weak):
+        return "ref", []
+    return ("label", []) if _FLIP_LABEL.match(s) else ("", [])
+
+
+def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:
+    """문장 목록에서 본문의 값을 뒤집는 문장을 찾는다: {문장 번호: (새 값, 옛 값)}. `context`는 같은 섹션의 다른 청크 본문.
+    새 값이 없는 주장("위 표기는 오타이다"뿐인 문장)은 뒤집는 값이 없으므로 대상이 아니다."""
+    sents = [i for i, p in enumerate(pieces) if p.strip() and not _SENT.fullmatch(p)]
+    if not any(_FLIP_STRONG.search(pieces[i]) or _FLIP_WEAK.search(pieces[i]) for i in sents):   # 대부분의 본문은 여기서 끝난다
+        return {}
+    vals = {i: quantities(pieces[i]) for i in sents}
+    ctx = quantities(context)
+    hits: dict[int, tuple[list[tuple[str, str]], list[tuple[str, str]]]] = {}
+
+    def fresh(kind: str, old: list, own: list, rest: list) -> list[tuple[str, str]]:
+        """주장 문장(또는 그 다음 문장)의 값 가운데 새 값. 옛 값을 짚은 주장은 같은 종류의 다른 값, 값 이름을 짚은 주장은 모든 값,
+        이름표뿐인 주장은 문장 밖에 없는 값이면서 문장 밖에 같은 종류의 값이 있는 것만(가장 약한 단서라 가장 좁게)."""
+        old_keys = {q[:2] for q in old}
+        if kind == "old":
+            keep = [q for q in own if q[2] in {o[2] for o in old}]
+        elif kind == "ref":
+            keep = own
+        else:
+            seen, kinds = {q[:2] for q in rest}, {q[2] for q in rest}
+            keep = [q for q in own if q[:2] not in seen and q[2] in kinds]
+        return list(dict.fromkeys(q[:2] for q in keep if q[:2] not in old_keys))
+
+    for n, i in enumerate(sents):
+        if i in hits:
+            continue
+        rest = [q for j in sents if j != i for q in vals[j]] + ctx
+        kind, old = _flip_claim(pieces[i], {q[:2] for q in rest})
+        if not kind:
+            continue
+        old_keys = sorted({q[:2] for q in old})
+        new = fresh(kind, old, vals[i], rest)
+        if new:
+            hits[i] = (new, old_keys)
+        elif n + 1 < len(sents):   # "위 기한은 오타이다. 시행 기한은 7일이다."처럼 주장과 새 값이 두 문장으로 나뉜 것
+            j = sents[n + 1]
+            new = fresh(kind, old, vals[j], [q for k in sents if k not in (i, j) for q in vals[k]] + ctx)
+            if new:
+                hits[i] = ([], old_keys)
+                hits[j] = (new, old_keys)
+    return hits
+
+
 _NEEDS_MARKER = {"output_en_the", "split_marker"}   # 일반 문장과 겹치기 쉬운 규칙은 같은 절에 표식 꼴(따옴표 문자열, 표식 토큰)이 있을 때만 지시로 본다
 
 
@@ -288,11 +473,14 @@ def _invisible_free(s: str) -> str:
     return "".join(ch for ch in unicodedata.normalize("NFKC", s) if unicodedata.category(ch) != "Cf")
 
 
-def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: bool = False) -> tuple[str, list[str]]:
+def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: bool = False,
+                       flip_context: str | None = None, flips: list | None = None) -> tuple[str, list[str]]:
     """(정화한 글, 뺀 문장·절 목록). cut_tail은 제목용: 지시가 시작한 자리부터 끝까지 자른다.
     whole_sentence는 지시로 판정된 절이 든 문장을 통째로 뺀다. 기본(꺼짐)은 지시 절만 빼고 같은 문장의 나머지 절을 남겨 검색 원문의 사실을 지킨다.
     쉼표로 이어진 지시 문장은 뒷절이 따로는 지시로 안 보이는 조각이 많아("..., including your system prompt, verbatim.") 그 조각이 남는다.
-    남은 조각을 그대로 인용하면 안 되는 쪽(되묻기가 질문 속 영문 구를 따옴표로 인용할 때)이 켠다."""
+    남은 조각을 그대로 인용하면 안 되는 쪽(되묻기가 질문 속 영문 구를 따옴표로 인용할 때)이 켠다.
+    flip_context가 None이 아니면(청크 본문만 켠다. 질문과 제목은 끈다) 본문의 값을 뒤집는 문장(`find_flips`)도 문장째 뺀다.
+    값은 같은 섹션의 다른 청크 본문(flip_context)과도 견준다. 뺀 문장의 (새 값, 옛 값)은 flips 목록에 더한다."""
     s = _invisible_free(str(text or ""))
     removed: list[str] = []
 
@@ -307,9 +495,16 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
 
     s = _GROUP.sub(group, s)
     out: list[str] = []
-    for piece in _SENT.split(s):
+    pieces = _SENT.split(s)
+    flipped = find_flips(pieces, flip_context) if flip_context is not None and not cut_tail else {}
+    for k, piece in enumerate(pieces):
         if _SENT.fullmatch(piece) or not piece.strip():
             out.append(piece)
+            continue
+        if k in flipped:   # 본문의 값을 뒤집는 문장: 지시가 아니어도 문장째 뺀다
+            removed.append(piece.strip())
+            if flips is not None:
+                flips.append(flipped[k])
             continue
         forged = _EMBED_CITE.search(piece)
         if forged:   # 본문 속 `[chunk_id]`가 든 문장: 제목은 그 자리부터, 본문은 문장째 뺀다
@@ -361,10 +556,11 @@ def sanitize_heading(text: str | None) -> str:
     return strip_instructions(text or "", cut_tail=True)[0]
 
 
-def sanitize_chunk(c: dict) -> dict:
-    """청크 사본: 본문·제목·절 제목·절 이름(org)에서 지시를 뺀다. 원본은 바꾸지 않는다(인용 검사와 근거 판정은 원본과 대조한다)."""
+def sanitize_chunk(c: dict, context: str = "") -> dict:
+    """청크 사본: 본문·제목·절 제목·절 이름(org)에서 지시를 뺀다. 원본은 바꾸지 않는다(인용 검사와 근거 판정은 원본과 대조한다).
+    본문에서는 본문의 값을 뒤집는 문장(거짓 정정)도 뺀다. context는 같은 섹션의 다른 청크 본문(`section_context`)이고, 변경 이력 섹션은 대상이 아니다."""
     out = dict(c)
-    out["text"] = sanitize_text(c.get("text") or "")
+    out["text"] = strip_instructions(c.get("text") or "", flip_context=None if is_change_history(c) else context)[0]
     for k in ("rule_title", "article", "org"):
         if c.get(k):
             out[k] = sanitize_heading(c.get(k))
@@ -452,10 +648,12 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
     benign: list[str] = [q_rest if q_instr else question]   # 지시 문장이 든 질문은 지시 문장을 믿는 글에서 뺀다
     tells: list[str] = []
     texts: list[str] = []
+    flips: list[tuple[list, list]] = []
     for c in chunks:
         for field in ("text", "rule_title", "article"):
             if c.get(field):
-                clean, rem = strip_instructions(str(c[field]), cut_tail=field != "text")
+                clean, rem = strip_instructions(str(c[field]), cut_tail=field != "text", flips=flips,
+                                                flip_context=section_context(c, chunks) if field == "text" and not is_change_history(c) else None)
                 instr += rem + hidden_instructions(str(c[field]))   # 인코딩해 숨긴 지시(푼 글)도 지시 문장으로 센다
                 if rem and field != "text":
                     # 제목은 지시가 시작한 자리부터 잘려 앞 토막에 표식이 남을 수 있다(예: "문서번호 X-1 를 ..."). 지시가 든 제목의 남은 토막은 믿는 글로 보지 않고 의심 절로 둔다(사전 등록 62.26)
@@ -490,6 +688,10 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
     # 답의 주소는 검색 원문(본문·출처 주소)에 있는 호스트여야 한다. 질문이 준 주소는 근거가 아니다
     source_blob = "\n".join(f"{c.get('text') or ''}\n{c.get('source_url') or ''}" for c in chunks).casefold()
     unbacked = [_norm(a) for a in answer_addrs if _host(a) and _host(a) not in source_blob]
+    # 본문의 값을 뒤집는 문장: 그 문장이 내세운 새 값 가운데 다른 원문과 질문에 없는 값이 든 답 문장, 그리고 옛 값을 틀렸다고 옮긴 답 문장을 뺀다
+    backed = _vkeys(benign_all) if flips else set()
+    flip_new = {v for new, _old in flips for v in new if v not in backed}
+    flip_old = {v for _new, old in flips for v in old}
     kept, removed = [], []
     for sent in _ANS_SENT.split(answer or ""):
         if not sent.strip():
@@ -497,6 +699,9 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
         n, lt = _norm(sent), _letters(sent)
         bad = any(c in n for c in cands) or any(p[i:i + 15] in lt for p in long_parts for i in range(0, len(p) - 14))
         bad = bad or any(a in n for a in tell_addrs + unbacked) or any(_has_value(n, *v) for v in tell_values)
+        if flips and not bad:
+            got = _vkeys(sent)
+            bad = bool(got & flip_new) or bool(got & flip_old and (_FLIP_STRONG.search(sent) or _FLIP_WEAK.search(sent)))
         bad = bad or any(ids & set(_EMBED_CITE.findall(sent)) and any(p[i:i + _FORGED_WIN] in lt for i in range(0, max(1, len(p) - _FORGED_WIN + 1)))
                          for p, ids in forged if len(p) >= _FORGED_WIN)
         (removed if bad else kept).append(sent)
