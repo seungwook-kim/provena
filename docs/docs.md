@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-14 | 박진형 (jinyeong-731) | 파싱 요소 수를 515acc3d 뒤 다시 센 값 85,332로(`EVAL_REPORT.md` 1장 표, `specs/chunk.md` 상황, `GATES.md` G3 칸, 재실행 `python -m backend.rag.ingest.parse`), `EVAL_REPORT.md` 9장 재현 안내에 색인을 다시 만들기 전에는 `data/index/chunks.jsonl`만 쓰라는 줄, 포트폴리오 맡은 축의 Langfuse를 "담당(구현은 김승욱·강경희)"으로(`TEAM_GUIDE.md` 5장과 맞춤) | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | 문서 참조 정리(줄 번호를 함수·절 이름으로, #153·#155 뒤 낡은 참조, mcp 겹침 규칙, parse 단축코드 수) | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `specs/recall.md` 규정 웹훅 응답 코드, 하루 요약 보내기(`?day=`)·영향 미리보기 줄에 없는 날짜 422 추가. `deliverables/portfolio-박진형.md` 근거 줄 번호를 main의 `EVAL_REPORT.md` 줄 이동에 맞춰 옮김(숫자 36개 0 불일치). #148 후속(작업 내역 `PR-148.md` 이름, 기록 칸 `#148`)이 main에 내용 없이 합쳐져 다시 적용 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | 조장 11/13 재점검 후속 묶음 작업 내역 `pr-notes/PR-next.md`(박진형 몫 새로 발견 #3·#4·#6·#7·#8·H-33, 실패 분석 검색 파트, 데이터·Spec 문서, #148 리뷰 반영)와 `deliverables/ai_tools_log.md` 한 행 | 미정 |

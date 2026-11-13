@@ -35,6 +35,7 @@
 | #148 조장 리뷰 | `.gitattributes`의 검증 20건 줄 중복은 main이 이미 한 줄로 정리함(`.gitattributes:12`). #148 작업 내역 이름을 `PR-148.md`로, 기록 칸 5곳 `#148`(`docs.md` 2, `ingest.md`, `mock_erp.md`, `sdk.md`). #148 후속 커밋이 main에 이력만 합쳐져 내용이 빠졌던 것을 다시 적용 | [문서] 조장 #148 리뷰 "한 줄이 중복되니 하나만 남겨 주세요" |
 | 3차 점검 문서 참조 | #153·#155 뒤 낡은 `파일:줄` 참조를 함수·절 이름으로(`incremental.md`, `failure_analysis.md`, `mcp.md`, `search.md`, `data.md`, `ingest.md`, `d6-chat-frontend.md`). `parse.md` 데이터 단축코드 36종 → 34종과 `lxml`, `data.md` 515acc3d 전후 청크 id 차이(옛 쪽 37·새 쪽 37), `mcp.md` 겹침 규칙(표 행 최대 400자), 비공개 칸 처리 설명을 코드대로 | [실측] 참조마다 같은 판 코드·문서를 열어 대조, 청크 id는 `data/index.tar.gz`와 `chunks_index.jsonl` 대조 |
 | 문제 기록(지침서 4장 규칙 8·5-1장) | 고친 문제를 폴더 md 문제 기록에 '해결'로 올림: `api.md` P-001·P-002, `backend.md` B-001, `recall.md` A-001, `web.md` W-001~W-007, `mcp_skill.md` MCP-001. 판정 근거는 시험 이름 | [문서] `docs/TEAM_GUIDE.md` 5-1장 판정 규칙 |
+| 파싱 요소 수·포트폴리오 표기(11/14 점검) | 파싱 요소 수 85,388 → 85,332(`EVAL_REPORT.md` 1장, `specs/chunk.md`, `GATES.md` G3), 9장 재현 안내 한 줄, 포트폴리오 맡은 축 "Langfuse 연결" → "Langfuse 연결 담당(구현은 김승욱·강경희)" | [실측] Docker `python:3.12`에서 `python -m backend.rag.ingest.parse` → "1561쪽 → 요소 85332개", 원문 되찾기 실패 0. [문서] `TEAM_GUIDE.md:99` "구현은 커밋 이력 기준으로 강경희와 김승욱이 했다" |
 | 포트폴리오 근거 줄 | `deliverables/portfolio-박진형.md`: main을 합칠 때마다 `EVAL_REPORT.md` 줄이 밀려 근거 줄 칸 10행을 새 줄로 옮기고 기준 커밋 표기를 바꿈 | [실측] 표의 숫자 36개가 모두 근거 줄에 있음(0 불일치) |
 
 ## 3. 진형이 결정한 것
