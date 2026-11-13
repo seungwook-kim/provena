@@ -175,26 +175,29 @@ def _local_demo() -> bool:
     return is_local_demo()
 
 
-def _http_post(timeout: float) -> Callable[..., int]:
+def _http_post(timeout: float, transport: Any = None) -> Callable[..., int]:
+    """기본 전송 함수. 최상위 `httpx.post`에는 `extensions` 인자가 없어(httpx 0.28) `httpx.Client`로 보낸다.
+    `transport`는 시험에서 가짜 전송을 끼우는 자리이고, 운영에서는 None(httpx 기본 전송)이다."""
     def post(url: str, content: bytes, headers: dict, extensions: dict | None = None) -> int:
         import httpx
 
-        return httpx.post(url, content=content, headers=headers, timeout=timeout, follow_redirects=False,
-                          extensions=extensions or None).status_code
+        with httpx.Client(timeout=timeout, follow_redirects=False, transport=transport) as client:
+            return client.post(url, content=content, headers=headers, extensions=extensions or None).status_code
 
     return post
 
 
 class WebhookSender:
-    """켜진 구독마다 본문을 보내고 시도를 기록한다. `post(url, bytes, headers) -> 상태 코드`와 `sleep`은 시험에서 바꿔 넣는다."""
+    """켜진 구독마다 본문을 보내고 시도를 기록한다. `post(url, bytes, headers) -> 상태 코드`, `sleep`, `transport`(httpx 가짜 전송)는 시험에서 바꿔 넣는다."""
 
     def __init__(self, store: Any, *, post: Callable[[str, bytes, dict], int] | None = None, sleep: Callable[[float], None] = time.sleep,
-                 max_tries: int | None = None, backoff: float | None = None, local_demo: bool | None = None) -> None:
+                 max_tries: int | None = None, backoff: float | None = None, local_demo: bool | None = None,
+                 transport: Any = None) -> None:
         self.store = store
         self.max_tries = max(1, int(max_tries if max_tries is not None else _env_number(MAX_TRIES_ENV, DEFAULT_MAX_TRIES, int)))
         self.backoff = backoff if backoff is not None else _env_number(BACKOFF_ENV, DEFAULT_BACKOFF, float)
         self._pins = post is None   # 기본 전송만 IP 고정(J-12). 시험에서 넣은 post는 (url, bytes, headers) 그대로 받는다
-        self.post = post or _http_post(_env_number(TIMEOUT_ENV, DEFAULT_TIMEOUT, float))
+        self.post = post or _http_post(_env_number(TIMEOUT_ENV, DEFAULT_TIMEOUT, float), transport)
         self.sleep = sleep
         self.local_demo = _local_demo() if local_demo is None else local_demo
 
