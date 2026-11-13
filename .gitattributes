@@ -15,3 +15,4 @@ data/corpus/** -text
 
 # 새 동결 시험 세트(PREREGISTER 62.5)는 sha256을 사전 등록에 적었으므로 줄바꿈을 고정한다
 evals/safety/injection_cases_holdout_v2.jsonl text eol=lf
+evals/dataset_holdout_v1.jsonl text eol=crlf

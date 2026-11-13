@@ -142,6 +142,19 @@ IT 조직의 정책·런북을 근거로 답하고, 정책이 바뀌면 이미 �
   | Glean | 공개 가격 없음(영업 문의, "Get a demo") | https://www.glean.com/pricing |
 
   위 표는 코드 보조·협업 제품의 가격이라 지식 플랫폼과 같은 범주의 가격은 아니다. 우리 서비스 쪽 비용은 질문 하나에 쓰는 LLM 비용만 쟀다. 11/13 01시 운영 배포판(provena-api-00047-wjn) 운영 측정에서 평가셋 v2 50건 3회(150요청)에 1.141913달러여서 질문당 0.007613달러이다(EVAL_REPORT 8장, `evals/results/deploy_latency_provena-api-00047-wjn`). 구독 가격은 정하지 않았다.
+- **같은 범주 가격 근거** (사내 문서 기반 지식 검색·답변 AI. 체크포인트 ① 코멘트(2026-11-13) "같은 범주 가격" 대응. 2026-11-13 09:40~09:44 KST에 공식 페이지를 브라우저로 열어 본문에 보이는 값만 적었다)
+
+  | 제품 | 공개 가격 | 출처 |
+  |---|---|---|
+  | Glean | 공개 가격 없음. 가격 페이지가 따로 없고 "Get a demo"로 안내한다 | https://www.glean.com/ |
+  | Guru | 공개 가격 없음. 규모에 맞춘 구성이며 "Talk to sales"로 안내한다 | https://www.getguru.com/pricing |
+  | Coveo | 공개 가격 없음("Request Pricing"). 연 또는 3년 구독이다 | https://www.coveo.com/en/pricing |
+  | Notion Business(Enterprise Search 베타 포함) | 한국어 화면 기준 좌석당 월 30,000원(연간 결제, 월간 결제는 36,000원). Enterprise는 "Custom pricing" | https://www.notion.com/ko/pricing |
+  | Slack | Pro 사용자당 월 8.75달러, Business+ 18달러(월 결제 정가). Enterprise search는 Enterprise+에 포함되며 가격은 영업 문의 | https://slack.com/pricing |
+  | Microsoft 365 Copilot Business(부가 상품) | 사용자당 월 18달러(연 결제, 정가 21달러, 2026-07-01~2026-12-31 첫 1년 할인, 연 약정 필수). 한국어 페이지는 24,343원(정가 28,400원) | https://www.microsoft.com/en-us/copilot/pricing/business |
+  | Atlassian Rovo | 별도 구매 없이 Jira·Confluence 유료 플랜에 포함. 사용자당 월 크레딧 25(Standard)/70(Premium)/150(Enterprise), 초과분 크레딧당 0.01달러 | https://www.atlassian.com/licensing/rovo |
+
+  지식 검색·답변 제품은 사용자(좌석)당 월 정액이거나 기존 협업 도구 요금에 포함되어 있고, 전용 제품(Glean·Guru·Coveo)은 가격을 공개하지 않는다. 구매 결재 주체는 공개 근거가 없어 가설이다. SafetyCulture(Glean)와 Procore(Atlassian Rovo) 사례는 엔지니어링 조직 소속 인물(Engineering Director, Director of Engineering Enablement)이 사용 가치를 말한 벤더 게시 자료일 뿐, 누가 예산을 냈는지는 밝히지 않는다.
 - **한계:** 국내에서 어느 부서가 예산을 갖는지 다룬 설문은 찾지 못했다. 위 가격은 구매 의사가 아니라 비교 기준이다. 구매 의사는 확인하지 않았다. 그래서 지불 주체는 가설로 둔다. 외부 검토자 1명(현직 개발자)에게 "누가 예산을 내나"를 물어 보강한다.
 
 ## 5. 대표 질문과 사용 흐름

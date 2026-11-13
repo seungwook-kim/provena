@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 김승욱 (Claude Code) | 합동 검토 재측정 0원 후처리 `analyze_pooled.py` 추가(리뷰 요청 대응). 저장된 결과 폴더만 읽어 팀 대 같은 자료 1인의 정답 쟁점 단위 짝 표, 문항 단위 부트스트랩 95% 구간(2000회, seed 7), 검색 천장(같은 자료 1인 런의 검색 결과에 정답 섹션이 든 정답 쟁점 수)과 도달 가능한 최대 차이, 충돌 행 수를 낸다. LLM·운영 호출 없음. 사전 등록 62.47 근거 칸의 00044 재분석 값 출력은 `evals/results/review_deploy_provena-api-00044-49s/pooled_reanalysis.txt`, 00049와 합친 값은 `evals/results/review_deploy_provena-api-00049-nph/pooled_report.txt`. 재현: `python -m evals.agent.analyze_pooled --dataset evals/dataset_review_v1_gold_draft.jsonl --runs 00044=evals/results/review_deploy_provena-api-00044-49s new=evals/results/review_deploy_provena-api-00049-nph` | PR #146 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 박진형이 J-14로 깨진 줄을 고침(조장 지시 11/11 목록 작업 중): `approval_latency.py` `run_http_bench`가 고정값 `"csrf"` 대신 `create_csrf_token(secret)`으로 서명된 토큰을 쓰게 하고, `APPROVAL_PG_URL`이 있을 때 도는 시험 `test_http_bench_passes_signed_csrf` 추가 | #131 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `classify_overrefuse.py` 추가: 분류 단계만 불러 도메인 밖 분류를 확인(사전 등록 62.30, 62.A·62.34 프로브 문항 포함, 검색·답 작성 호출 없음, 커밋 8722491·4af95cc). `exp_joint_review.py`·`exp_multi_v2.py`에서 제목 경로 검색(`HeadingSearch`)을 지움(e1e37e1) | #119 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | 합동 검토(F-03) 평가 측정기 `exp_review_v1.py`(팀 에이전트 갈래 대 에이전트 하나 갈래, 만든 시점에는 재지 않음)와 평가셋 v2 38번 정답 변경의 영향을 저장된 결과로 다시 계산하는 `rescore_v2_item38.py`(LLM·검색 호출 없음) 추가. 결과 `evals/results/v2_item38_rescore/` (보충, PR #112 본문 기준) | #112 |

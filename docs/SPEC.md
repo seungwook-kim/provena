@@ -51,11 +51,11 @@ IT 조직의 정책·런북(GitLab 공개 핸드북, CC BY-SA 4.0)을 섹션과 
 
 공통 규칙:
 
-- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결 해시는 `evals/FROZEN.json`에 있다. v1은 2026-11-01, v2는 2026-11-02에 동결했고 v2는 2026-11-07에 38번 정답을 판정자 확인에 맞춰 고치고 다시 동결했다(결정 0075, 현재 해시 `810d01f1…24d9f`). 검증 20건(`evals/dataset_holdout_v1.jsonl`)은 v2와 겹치지 않는 문항으로 결정 0074에 따라 따로 둔다. 이 20건은 팀장이 검토했고 두 판정자의 판정 기록은 찾지 못해 판정을 다시 받았다. 2026-11-11 두 판정자(박진형, 강경희) 재판정 완료, 20건 모두 Y, 정답 변화 없음(`evals/judge_sheet_holdout_v1.csv`, 결정 0096). 이 20건은 `evals/FROZEN.json`의 동결 목록에 없고 sha256 `c877c065…`(CRLF 기준, `evals/PREREGISTER.md` 61.18)으로만 고정한다. 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
+- 평가셋은 v1(`evals/dataset_v1.jsonl`), v2(`evals/dataset_v2.jsonl`)이고 동결 해시는 `evals/FROZEN.json`에 있다. v1은 2026-11-01, v2는 2026-11-02에 동결했고 v2는 2026-11-07에 38번 정답을 판정자 확인에 맞춰 고치고 다시 동결했다(결정 0075, 현재 해시 `810d01f1…24d9f`). 검증 20건(`evals/dataset_holdout_v1.jsonl`)은 v2와 겹치지 않는 문항으로 결정 0074에 따라 따로 둔다. 이 20건은 팀장이 검토했고 두 판정자의 판정 기록은 찾지 못해 판정을 다시 받았다. 2026-11-11 두 판정자(박진형, 강경희) 재판정 완료, 20건 모두 Y, 정답 변화 없음(`evals/judge_sheet_holdout_v1.csv`, 결정 0096). 검증 20건 파일은 2026-11-09 뒤 바뀌지 않았고 2026-11-13 동결 목록(`evals/FROZEN.json`)에 넣었다(sha256 `c877c065…` CRLF 기준, LF 기준 `51c020fb…`, `evals/PREREGISTER.md` 61.18, 결정 0113). 다만 사전 등록 62.30이 109번의 실패를 보고 코드를 고쳤으므로 그 뒤 값은 109번만큼 낙관적일 수 있다. 동결 확인은 `python evals/freeze.py --check`이며 `tests/test_frozen_evals.py`가 PR마다 검사한다.
 - 실험은 바꾸기 전에 `evals/PREREGISTER.md`에 기대를 먼저 적고 한 번에 하나만 바꾼다.
 - 숫자는 실행 결과에서 나온 값만 쓰고, 실행 명령을 함께 적는다. 점수가 오르지 않았으면 오르지 않았다고 쓴다.
 - 평가 결과는 `EVAL_REPORT.md`에 개선 전후, 달라진 문항, 지표 5개 분리 보고로 옮긴다.
-- 한 번에 재는 명령(`evals/run_all.py`)은 만들지 않았다. 지표마다 위 표의 명령을 쓰고, CI는 커밋된 최종 측정 결과를 통과선과 견주는 `python evals/ci_compare.py`와 `pytest -q`를 돌린다(`.github/workflows/ci.yml`).
+- 한 번에 재는 명령(`evals/run_all.py`)은 만들지 않았다. 지표마다 위 표의 명령을 쓰고, CI는 커밋된 최종 측정 결과와 가장 최근 운영 측정 결과를 통과선과 견주는 `python evals/ci_compare.py`, `pytest -q`, 키 없는 데모 녹화 대조 `pytest -q -m demo_replay`를 돌린다(`.github/workflows/ci.yml`).
 
 ## 4. 데모 모드 (P-04, G2)
 
