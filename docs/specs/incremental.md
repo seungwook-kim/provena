@@ -55,7 +55,7 @@
 | 바뀐 쪽 안에서 | 청크 본문(머리말·겹침 포함, 임베딩 입력 그대로)이 같은 글은 DB의 벡터를 재사용하고 없는 글만 임베딩한다. 키는 **글 전체 문자열**이지 `text_sha256` 해시가 아니다 | `schedule.py:187-200`(`known`·`need`·`reused`) |
 | 재사용 범위 | **같은 쪽(`rule_seq`)의 기존 청크 한정** + 같은 `embedder`. 다른 쪽에 같은 글이 있어도(예: 쪽 사이 이동) 새로 임베딩한다 | `schedule.py:189-193`(`WHERE rule_seq = ANY(%s) AND embedder = %s`) |
 | 해시 단위로 안 한 것 | 전역 `text_sha256` 조회로 넓히면 쪽 이동·복제 문단도 재사용할 수 있으나, 아직 하지 않았다(같은 쪽 범위만으로 11/2 DB 사본 실행에서 새로 124·재사용 4,007) | ingest.md 작업 기록 11/02 |
-| 성공 실행 기록 | 코드는 한 트랜잭션 끝에서 `sync_runs.status='succeeded'` 를 남긴다(`schedule.py:287`). 그러나 **운영 DB에서 정시 실행이 성공한 기록은 아직 없다**: Actions 정시 실행 3회(UTC 11/3 00:54, 11/3 23:14, 11/4 23:36) 모두 `sync` 작업의 "증분 수집 한 번" 단계에서 실패했고 이후 workflow는 `disabled_manually` | Actions API 실행 id 41556125760·41737577192·41935004516 |
+| 성공 실행 기록 | 코드는 한 트랜잭션 끝에서 `sync_runs.status='succeeded'` 를 남긴다(`schedule.py:287`). 그러나 **운영 DB에서 정시 실행이 성공한 기록은 아직 없다**: Actions 정시 실행 3회(UTC 11/3 00:54, 11/3 23:14, 11/4 23:36) 모두 `sync` 작업의 "증분 수집 한 번" 단계에서 실패했고 이후 workflow는 `disabled_manually`(11/11 API 확인). 로컬 새 DB에서 손으로 돌린 `--once`는 11/12 성공(아래 결정 ①)이며 운영 DB·Actions 기록은 아니다 | Actions API 실행 id 41556125760·41737577192·41935004516 |
 | 실패 원인(추정) | 저장소 비밀값 `DATABASE_URL`·`VOYAGE_API_KEY` 가 만들어진 시각이 2026-11-09 07:03Z로, 세 실행보다 뒤다. 그 단계는 `DATABASE_URL` 이 없으면 `SystemExit("DATABASE_URL이 없다")`(`schedule.py:365-366`)로 종료 코드 1을 낸다. 작업 로그는 API로 읽을 수 없어(종료 코드 1 주석만 남음) 직접 확인한 것은 아니며, 단계 순서(캐시·pip 성공 → 수집 단계 실패)와 비밀값 시각이 일치하는 정황이다 | 비밀값 목록·변수 조회(값은 보지 않음), 작업 단계 결과 |
 | 다시 켜기 전 | `SYNC_ALERT_WEBHOOK` 비밀값은 아직 없다(실패 알림은 "알림 꺼짐"으로 끝남). 켜는 일은 조장 결정이고 이 문서는 켜지 않는다 | 비밀값 목록 |
 
@@ -111,6 +111,7 @@ backend/rag/ingest/schedule.py
 - 켜고 첫 실행: workflow는 현재 비활성(`disabled_manually`)이다. 비밀값·변수를 등록한 뒤 `gh workflow enable handbook-sync.yml`, `gh workflow run handbook-sync.yml`로 한 번 돌리고 `gh run list --workflow handbook-sync.yml`로 결과를 본다. 손으로 돌린 실행은 `GITHUB_EVENT_NAME`이 `workflow_dispatch`라 `trigger=manual`로 기록되고, 슬롯은 기본으로 그날 UTC 날짜라 같은 날 정시 실행이 이미 있었으면 슬롯 충돌로 아무것도 하지 않는다. 첫 성공 뒤 DB `sync_runs`의 마지막 행(`status`, `to_commit`, `embedded`, `reused`)을 확인한다.
 - 지금까지 실행 3건(2026-11-03~04)은 모두 "증분 수집 한 번" 단계에서 실패했다. 원인은 비밀값 미등록(`DATABASE_URL` 없음)으로 **추정**한다(작업 로그를 API로 읽을 수 없어 직접 확인하지 못했다, 위 표 "실패 원인(추정)").
 - 결정(11/11): ① 로컬 DB에서 `--once`를 1회 실행해 성공 기록 남기기(**했음**, 11/12 로컬: 127.0.0.1 새 DB에 `data/index.tar.gz` 스냅샷(고정 커밋 129243bc, 23,095청크)을 적재한 뒤 `--slot manual-f08-1112`로 1회 실행, `status=succeeded`, 129243bc → d92556d4(11/11), 추가 3·수정 149·서식만 152·삭제 반영 2, 새로 임베딩 436·재사용 6,946, Voyage 4회 호출 52,539토큰(약 0.003달러), 63초. 운영 DB·Actions는 건드리지 않았다) ②  Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회. 결제 한도는 조직 설정이라 해소 요청 필요(11/11 Actions 실행 20건 러너 미기동, API 확인).
+- 실행 기록의 현재 상태 (2026-11-13 정리, 저장소·문서만 읽음, 새 호출 없음). **알려진 것**: ① Actions 정시 실행 3회 모두 실패, 성공 0회(위 표, 11/11 API 확인) ② 로컬 새 DB 수동 `--once` 1회 성공(11/12, 운영 DB·Actions 아님) ③ workflow 파일의 cron `7 18 * * *`(UTC)은 11/02(`3eba2624`) 처음 들어온 뒤 바뀐 적이 없다(`git log -p`로 확인, 11/09 `a118f4d2`는 다른 줄만 고침) ④ 11/12 박진형 제안은 동결 뒤에도 비활성 유지이고 조장 승인 대기다(`docs/pr-notes/PR-135.md` 6절, 결정 문서에는 아직 없음). **모르는 것**: ① 지금 workflow가 켜져 있는지: 켜기·끄기는 GitHub 저장소 설정이라 저장소 파일에는 보이지 않고, 마지막 확인은 11/11(`disabled_manually`)이다 ② 3회 실패의 직접 원인(위 "추정"만 있음) ③ 비밀값이 지금도 등록돼 있는지(11/11 목록 이후 미확인). 이 셋은 `gh workflow list`·`gh run list --workflow handbook-sync.yml`·저장소 설정에서 조장 권한으로 확인한다
 
 **재시도 규칙**
 
