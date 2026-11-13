@@ -344,7 +344,7 @@ describe('DemoChatPage stopping the first question of a new conversation (M3)', 
       if (path === '/me') return json(user)
       if (path === '/threads') { listCalls += 1; return json([]) }
       if (path === '/auth/csrf') return new Response(null, { status: 204 })
-      if (path === '/chat') return new Response(new ReadableStream({ start(controller) { options.signal?.addEventListener('abort', () => controller.close()) } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      if (path === '/chat') return new Response(new ReadableStream({ start(controller) { options.signal?.addEventListener('abort', () => controller.error(new DOMException('', 'AbortError'))) } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
       return json({ items: [], threads: [] })
     }))
     render(<App />)

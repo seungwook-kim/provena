@@ -354,7 +354,7 @@ export default function DemoChatPage({ api = false }) {
     if (!result) return
     // 새 대화의 첫 질문을 중지하면 대화 id가 없다 → 질문을 입력칸에 남기고, 서버가 만든 대화가 목록에 나타나게 다시 받는다(M3)
     if (result.threadId == null) {
-      serviceRef.current?.listThreads().catch(() => {})
+      await serviceRef.current?.listThreads().catch(() => {})
       return
     }
     setSelectedId(result.threadId)

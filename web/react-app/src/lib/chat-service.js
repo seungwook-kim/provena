@@ -100,7 +100,15 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     draft.citations = citations
   }
   return {
-    async listThreads() { const { getThreads } = await import('./api'); threads = mapThreadResponse(await getThreads()); notify(); return structuredClone(threads) },
+    async listThreads() {
+      const { getThreads } = await import('./api')
+      const fetched = mapThreadResponse(await getThreads())
+      // 지금 스트리밍 중인 대화는 로컬 사본이 더 최신이다(중지 뒤 남은 질문을 바로 다시 보낸 경우) → 목록으로 덮어쓰지 않는다
+      const live = threads.filter(thread => [...controllers.values()].some(request => request.activeThreadId === thread.id))
+      threads = [...live, ...fetched.filter(item => !live.some(thread => thread.id === item.id))]
+      notify()
+      return structuredClone(threads)
+    },
     // Server copy unless the local one is fresher: streaming now, or already holding a user turn (fetched or sent this session).
     // fresh: 화면을 떠난 사이 서버가 이어서 만든 답을 받을 때 로컬 사본을 건너뛴다
     async getThread(id, { fresh = false } = {}) {
@@ -110,9 +118,18 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       const waiting = local?.messages?.some(message => message.role === 'assistant' && (message.state === 'approval' || message.state === 'stopped'))
       if (local && (streaming() || (local.messages?.some(message => message.role === 'user') && !waiting))) return structuredClone(local)
       const { getThread } = await import('./api')
-      const thread = mapThreadRecord(await getThread(id))
+      const kept = threads.find(item => item.id === id)
+      let thread
+      try { thread = mapThreadRecord(await getThread(id)) } catch (error) {
+        // 다시 받지 못해도 로컬 사본이 있으면 오류 화면 대신 그것을 보인다(M4)
+        if (kept?.messages?.length) return structuredClone(kept)
+        throw error
+      }
       const latest = threads.find(item => item.id === id)
       if (latest && streaming()) return structuredClone(latest)
+      // 서버가 아직 답을 만드는 중이면 질문만 오므로, 중지한 답이 든 로컬 사본을 덮어쓰지 않는다 → 다음에 열 때 다시 받는다(M4)
+      const running = thread.status === 'running' || thread.messages?.at(-1)?.role === 'user'
+      if (latest && running && latest.messages?.some(message => message.role === 'assistant' && message.state === 'stopped')) return structuredClone(latest)
       threads = latest ? threads.map(item => item.id === id ? { ...item, ...thread } : item) : [thread, ...threads]
       notify()
       return structuredClone(thread)
