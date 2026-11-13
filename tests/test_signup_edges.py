@@ -376,3 +376,31 @@ def test_pg_ensure_schema_reruns_after_rejected_email_signs_up_again():
     finally:
         with psycopg.connect(DB, autocommit=True) as conn:
             conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+
+
+BAD_SIGNUP_IDS = ["<script>alert(1)</script>", "a b", "a\tb", "a\x00b", "a\x1fb", "'or'1", "한글아이디", "a/b", "a;b", "a<b@x.com"]
+
+
+@pytest.mark.parametrize("bad", BAD_SIGNUP_IDS)
+def test_signup_rejects_login_ids_with_unsafe_characters(monkeypatch, bad):
+    """가입 아이디는 영문·숫자와 . _ @ + - 만 허용한다(docs/specs/106-signup-approval.md Edge Cases)."""
+    client, store, _ = build(monkeypatch)
+    res = client.post("/auth/signup", json={"login_id": bad, "password": OLD, "password_confirmation": OLD}, headers=csrf(client))
+    assert res.status_code == 422, bad
+    assert store.get_signup_by_login_id(bad.strip().lower()) is None
+
+
+@pytest.mark.parametrize("good", ["demo-user", "demo-admin", "Kim_01.x+y", "kim@example.com", "A.B@Example.COM"])
+def test_signup_accepts_demo_style_ids_and_emails(monkeypatch, good):
+    client, store, _ = build(monkeypatch)
+    res = client.post("/auth/signup", json={"login_id": good, "password": OLD, "password_confirmation": OLD}, headers=csrf(client))
+    assert res.status_code == 201, (good, res.text)
+    assert store.get_signup_by_login_id(good.strip().lower()) is not None
+
+
+def test_existing_account_with_unusual_id_still_logs_in(monkeypatch):
+    """제한은 가입에만 건다: 규칙 밖 글자가 든 옛 계정도 로그인된다."""
+    client, store, _ = build(monkeypatch)
+    store.upsert_user("Legacy ID!", hash_password(OLD), "user")
+    res = client.post("/auth/login", json={"login_id": "Legacy ID!", "password": OLD}, headers=csrf(client))
+    assert res.status_code == 200
