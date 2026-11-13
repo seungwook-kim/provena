@@ -18,7 +18,7 @@ import pytest
 from evals.agent import exp_review_v1 as X
 from evals.agent import review_deploy as D
 
-DATASET = X.EVALS / "dataset_review_v1_gold_draft.jsonl"
+DATASET = X.EVALS / "dataset_review_v1_gold.jsonl"  # 확정 정답(기본값). 초안 파일로도 돌 수 있다(아래 draft 시험)
 ITEMS = X.load_review_dataset(DATASET)
 BY_INPUT = {it["input"]: it for it in ITEMS}
 BY_ID = {str(it["id"]): it for it in ITEMS}
@@ -228,6 +228,23 @@ def test_summary_separates_routing_from_the_comparison(base_url, tmp_path, monke
     assert p["n_pairs"] == 3 * 8                                                              # 10문항 중 3번·7번 제외, x 3회
     md = (out / "summary.md").read_text(encoding="utf-8")
     assert "주 기준선은 same" in md and "주 판정: 방식별 전체 런" in md and "보조: 짝을 맞춘 런" in md and "비용 배수" in md
+
+
+def test_default_dataset_is_the_confirmed_gold_and_the_draft_still_reproduces_old_runs(base_url, tmp_path, monkeypatch):
+    # 기본 평가셋은 조원 2명이 확인한 정답이고 결과 문서에도 그렇게 적는다
+    out = tmp_path / "confirmed"
+    assert run(base_url, ["--repeats", "1", "--out", str(out)], monkeypatch=monkeypatch)[0] == 0  # --dataset을 주지 않는다
+    meta = json.loads((out / "summary.json").read_text(encoding="utf-8"))["meta"]
+    assert meta["dataset"] == "dataset_review_v1_gold.jsonl"
+    assert meta["gold_status"] == [X.CONFIRMED_STATUS] and meta["gold_draft"] is False
+    assert f"확정 정답(`{X.CONFIRMED_STATUS}`)" in (out / "summary.md").read_text(encoding="utf-8")
+    # 00044·00049와 같은 초안 파일을 직접 주면 그대로 읽어 초안 기준이라고 적는다
+    old = tmp_path / "draft"
+    draft = X.EVALS / "dataset_review_v1_gold_draft.jsonl"
+    assert run(base_url, ["--dataset", str(draft), "--repeats", "1", "--out", str(old)], monkeypatch=monkeypatch)[0] == 0
+    meta = json.loads((old / "summary.json").read_text(encoding="utf-8"))["meta"]
+    assert meta["gold_status"] == [X.DRAFT_STATUS] and meta["gold_draft"] is True
+    assert f"초안(`{X.DRAFT_STATUS}`)" in (old / "summary.md").read_text(encoding="utf-8")
 
 
 def test_cost_ratio_needs_team_cost_from_the_server_log_then_is_filled(base_url, tmp_path, monkeypatch):

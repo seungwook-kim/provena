@@ -19,3 +19,6 @@ evals/safety/injection_cases_holdout_v2.jsonl text eol=lf
 evals/safety/injection_cases_newinj_v1.jsonl text eol=lf
 # 본문 값 뒤집기 변형 문항(PREREGISTER 62.50)도 sha256(LF 바이트 기준)을 사전 등록에 적었으므로 줄바꿈을 고정한다
 evals/safety/injection_cases_newinj_retract_v1.jsonl text eol=lf
+
+# 합동 검토 확정 정답(evals/dataset_review_v1_gold.jsonl)은 sha256(LF 바이트 기준)을 문서에 적었으므로 줄바꿈을 고정한다. 초안(_draft)은 00044·00049 측정이 쓴 파일이라 그대로 둔다
+evals/dataset_review_v1_gold.jsonl text eol=lf

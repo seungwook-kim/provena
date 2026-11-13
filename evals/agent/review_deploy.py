@@ -9,7 +9,7 @@
 - 순서: 문항·회차마다 세 갈래를 하나씩(동시 요청 없음) 부르고, 부르는 순서는 번갈아 뒤집는다(팀 -> same -> undivided, 다음 문항은 반대).
 
 판정(사전 등록 62.41과 같은 정의)
-- 공식 지표는 62.35와 같은 정답 쟁점 누락률(같은 팀, 근거 섹션 일치, `exp_review_v1.compute_review_metrics`). 정답은 팀장 초안(판정자 확인 전)이다.
+- 공식 지표는 62.35와 같은 정답 쟁점 누락률(같은 팀, 근거 섹션 일치, `exp_review_v1.compute_review_metrics`). 정답은 조원 2명이 확인한 확정 정답(`evals/dataset_review_v1_gold.jsonl`, 2026-11-13, 결정기록 0117)이다. 00044·00049는 팀장 초안 파일(`evals/dataset_review_v1_gold_draft.jsonl`, 판정자 확인 전)로 재서 지금 정답과 쟁점 문장이 7개 다르다.
 - 기준선: 주 기준선 `same`, 보조 기준선 `undivided`. "팀이 낫다"는 팀의 누락률이 상대보다 0.10 이상 낮고 회차 모두 같은 방향일 때만 쓰고, 그 밖은 "차이 없음"(반대 방향도 같은 규칙).
 - 62.39(라우팅) 분리: 팀 갈래는 분류를 지나므로 합동 검토로 분류되지 않은 런이 비교를 흐릴 수 있다. 그래서 두 가지를 모두 낸다.
   `all`(주 판정: 방식별 전체 30런, 팀이 합동 검토 경로에 닿지 않은 회차는 찾은 이슈 0건으로 셈)과 `paired`(보조: 팀이 합동 검토 경로에 닿은 문항·회차 쌍만, 세 갈래를 같은 쌍으로 맞춤)를 이 이름으로 함께 낸다(사용자 결정 2026-11-11).
@@ -22,7 +22,7 @@
 - rows.jsonl에는 질문 원문 대신 문항 id만 적는다. 쟁점 문장(`issue`)과 `topic`은 쟁점 문장 기준 채점을 위해 남긴다(핸드북 근거 위의 모델 문장이고 요청 원문이 아니다).
 - 비용 상한(`--max-cost`, 기본 1.0): 관찰한 비용 + 비용을 못 본 런과 다음 세 런의 추정(`EST_RUN_USD`)이 상한을 넘으면 다음 문항을 보내지 않고 종료 코드 3으로 멈춘다.
 
-    PYTHONPATH=. python -m evals.agent.review_deploy --dataset evals/dataset_review_v1_gold_draft.jsonl --repeats 3 --revision <리비전> --commit <해시> --out <폴더> [--max-cost 1.0]
+    PYTHONPATH=. python -m evals.agent.review_deploy --dataset evals/dataset_review_v1_gold.jsonl --repeats 3 --revision <리비전> --commit <해시> --out <폴더> [--max-cost 1.0]
     PYTHONPATH=. python -m evals.agent.review_deploy fill-cost --out <폴더> --log-file <gcloud logging read 출력>
 
 종료 코드: 0 완료, 2 환경·입력·접속 문제(플래그 꺼짐 404, 하루 상한 429 포함), 3 비용 상한으로 멈춤.
@@ -378,7 +378,9 @@ def render_markdown(s: dict) -> str:
     meta, cmp_ = s["meta"], s["comparison"]
     L = [f"# 운영 합동 검토 공정 비교 ({meta['dataset']} {meta['n_items']}문항 x {meta['repeats']}회, 팀 / 단일 same / 단일 undivided)", "",
          f"- 대상: 리비전 {meta.get('revision') or '미기재'}, 커밋 {meta.get('commit') or '미기재'}. 측정 시각 {meta.get('started_at')} ~ {meta.get('finished_at')}",
-         f"- 평가셋: {meta['dataset']} (sha256 {meta['dataset_sha256'][:12]}), 정답 쟁점은 초안(`{X.DRAFT_STATUS}`) 기준이다.",
+         f"- 평가셋: {meta['dataset']} (sha256 {meta['dataset_sha256'][:12]}), " + (
+             f"정답 쟁점은 확정 정답(`{X.CONFIRMED_STATUS}`) 기준이다."
+             if meta.get("gold_status") == [X.CONFIRMED_STATUS] else f"정답 쟁점은 초안(`{X.DRAFT_STATUS}`) 기준이다."),
          "- 방식: 문항·회차마다 세 갈래를 한 건씩(동시 요청 없음), 호출 순서를 번갈아 뒤집었다. 팀은 `POST /chat`, 단일은 `POST /admin/eval/review`다. 시간은 클라이언트 쪽 값이다.",
          "- 주 기준선은 same, 보조 기준선은 undivided. 판정 범위: 주 판정은 방식별 전체 30런(팀이 합동 검토 경로에 닿지 않은 회차는 찾은 이슈 0건으로 센다), 팀이 합동 검토 경로에 닿은 쌍만 본 값은 보조. 판정 문구는 62.35와 같다(0.10 이상이고 모든 회차가 같은 방향일 때만 이긴 쪽을 적는다).", ""]
     if meta.get("stopped_by"):
@@ -492,7 +494,7 @@ def run_cmd(args) -> int:
     meta: dict[str, Any] = {
         "dataset": dataset_path.name, "dataset_path": dataset_path.as_posix(), "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(), "n_items": len(items),
         "repeats": args.repeats, "base_url": base, "revision": args.revision, "commit": args.commit, "timeout_s": args.timeout, "max_cost_usd": args.max_cost,
-        "gold_draft": True, "rejected_enabled": not args.no_reject, "request_id_prefix": f"rvfair-{tag}-", "arms": list(ARMS), "started_at": now_iso(), "finished_at": None,
+        "gold_status": sorted({it.get("gold_status") or "" for it in items}), "gold_draft": any(it.get("gold_status") == X.DRAFT_STATUS for it in items), "rejected_enabled": not args.no_reject, "request_id_prefix": f"rvfair-{tag}-", "arms": list(ARMS), "started_at": now_iso(), "finished_at": None,
         "stopped_by": None, "note": "팀은 /chat, 단일은 /admin/eval/review. 시간은 클라이언트 측(요청 전송부터 마지막 이벤트나 응답까지), 로그인·CSRF 준비 시간 제외.",
     }
     rows: list[dict] = []
@@ -590,7 +592,7 @@ def main(argv: list[str] | None = None) -> int:
         ap.add_argument("--dataset", default="")
         return fill_cost_cmd(ap.parse_args(argv[1:]))
     ap = argparse.ArgumentParser(description="운영 합동 검토 공정 비교(팀 / 단일 same / 단일 undivided, 로그인 정보는 환경 변수로만)")
-    ap.add_argument("--dataset", default=str(X.EVALS / "dataset_review_v1_gold_draft.jsonl"))
+    ap.add_argument("--dataset", default=str(X.EVALS / "dataset_review_v1_gold.jsonl"))  # 확정 정답. 00044·00049 재현은 dataset_review_v1_gold_draft.jsonl를 직접 준다
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--revision", default="")
     ap.add_argument("--commit", default="")

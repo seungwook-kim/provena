@@ -11,7 +11,7 @@
 문항: `evals/dataset_v2.jsonl` 50, `evals/dataset_holdout_v1.jsonl` 20, `evals/overrefuse_probe_v1.jsonl` 10(사내 규정을 묻는 기술 질문 5, 일반 기술 질문 5),
 `evals/review_probe_v1.jsonl` 4(규정상 필요 여부를 예·아니오로 묻는 정책 질문, 사전 등록 62.34. 평가셋과 겹치지 않는다).
 합동 검토 경로는 서버처럼 연결된 것으로 두어(자리만 채운 값, 부르지 않는다) 분류 뒤 코드의 되돌림까지 적용한 경로를 적는다.
-`--with-review-set`: 합동 검토 평가셋 10건(`evals/dataset_review_v1_gold_draft.jsonl`)을 더한다(번호 1001~1010). 이 10건은 모두 review여야 하고(문항마다 3회 중 2회 이상, 62.39 초안),
+`--with-review-set`: 합동 검토 평가셋 10건(`evals/dataset_review_v1_gold.jsonl`, 확정 정답 파일. 질문 원문은 초안 파일과 같다)을 더한다(번호 1001~1010). 이 10건은 모두 review여야 하고(문항마다 3회 중 2회 이상, 62.39 초안),
 이 묶음 밖 문항이 review로 가면(v2, 검증, 프로브 94건 중) 기준 미달이다. 수정 전 운영 기록에서 이 묶음 밖 review는 0이었다.
 종료 코드: 0 통과, 1 기준 미달(뒤 단계를 돌리기 전에 멈춘다), 2 실행 불가(키 없음, 문항 없음).
 
@@ -40,7 +40,7 @@ EST_INPUT_TOKENS, EST_OUTPUT_TOKENS = 1050, 25
 EST_SECOND_CALL_SHARE = 0.25  # 도메인 밖이 나와 확인 호출이 한 번 더 나가는 문항 비율(80문항 가운데 약 20)
 
 
-REVIEW_SET = "evals/dataset_review_v1_gold_draft.jsonl"  # 합동 검토 평가셋 10건(`--with-review-set`일 때만 더한다). 문항 종류가 full, partial, clarify, low_issue이고 모두 합동 검토 요청이다
+REVIEW_SET = "evals/dataset_review_v1_gold.jsonl"  # 합동 검토 평가셋 10건(`--with-review-set`일 때만 더한다). 문항 종류가 full, partial, clarify, low_issue이고 모두 합동 검토 요청이다
 REVIEW_PROBE = "review_request"  # 이 묶음 문항은 분류 경로가 review여야 한다(사전 등록 62.39 초안)
 MIN_REVIEW_RUNS = 2  # 문항마다 회차 중 이만큼 이상 review여야 통과(3회 중 2회)
 
