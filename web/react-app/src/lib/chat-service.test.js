@@ -279,6 +279,35 @@ describe('createApiChatAdapter HTTP errors (H-08)', () => {
     await service.sendMessage({ threadId: 't1', message: '질문' })
     expect(snapshots.at(-1)[0].messages.at(-1).question).toBe('질문')
   })
+
+  // 새로 발견 7: 같은 오류에 '다시 시도'를 거듭 눌러도 실패한 턴은 한 쌍(질문+오류 말풍선)만 남는다
+  it('replaces the failed turn on retry instead of stacking another error bubble', async () => {
+    const fail = { type: 'error', thread_id: 't1', data: { code: 'limit_exceeded', message: 'x' } }
+    const { snapshots, service } = setup([fail])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(2)
+    for (let i = 0; i < 3; i += 1) {
+      streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent(fail) })
+      await service.sendMessage({ threadId: 't1', message: '질문', retry: true })
+    }
+    const messages = snapshots.at(-1)[0].messages
+    expect(messages).toHaveLength(2)
+    expect(messages.map(message => message.role)).toEqual(['user', 'assistant'])
+    expect(messages[1].state).toBe('error')
+  })
+
+  it('keeps earlier turns and a fresh send still appends a new turn', async () => {
+    const { snapshots, service } = setup([{ type: 'done', thread_id: 't1', data: {} }])
+    await service.sendMessage({ threadId: 't1', message: '앞 질문' })
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '다음 질문' })
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '다음 질문', retry: true })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(4)
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '새 질문' })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(6)
+  })
 })
 
 // H-15: 승인이 끝난 대화는 다시 열 때 서버 상태를 받아와야 한다

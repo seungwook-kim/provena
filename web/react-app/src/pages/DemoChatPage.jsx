@@ -230,14 +230,14 @@ export default function DemoChatPage({ api = false }) {
     setInput('')
   }
 
-  async function ask(value) {
+  async function ask(value, retry = false) {
     // 오류 말풍선의 '다시 시도'에 question이 없던 옛 말풍선이 와도 TypeError가 나지 않게 한다(H-08)
     const message = typeof value === 'string' ? value.trim() : ''
     if (!message || message.length > MAX_MESSAGE_LENGTH || processing || approvalPending || !serviceRef.current) return
     setSendError('')
     let result
     try {
-      result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
+      result = await serviceRef.current.sendMessage({ threadId: selectedId, message, retry })
     } catch (error) {
       setSendError(error?.message || '질문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
@@ -270,7 +270,7 @@ export default function DemoChatPage({ api = false }) {
     <main className="demo-chat-main">
       <div className="demo-chat-status">{processing && <span className="demo-generating">{PROGRESS_TEXT}.</span>}</div>
       <div className="demo-messages">
-        {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
+        {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={question => ask(question, true)} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
       {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
       <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>

@@ -63,7 +63,7 @@ beforeEach(() => {
     if (path === '/recalls/process-pending' && method === 'POST') return server.pendingResponse ? server.pendingResponse() : json({ status: 'done', processed: 3, sent: 2, failed: 1, skipped: 0, notices: 4, review: 1, judge_failures: 0, candidates: 0 })
     if (path === '/webhook-subscriptions' && method === 'GET') return json({ items: server.subs ?? [] })
     if (path === '/webhook-subscriptions' && method === 'POST') return server.addSubResponse ? server.addSubResponse() : json({ sub_id: 'ws-1', url: JSON.parse(options.body).url, secret_ref: 'X', active: true, created_at: '2026-11-11T00:00:00Z', secret_configured: true }, 201)
-    if (path === '/impact-preview' && method === 'POST') return json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
+    if (path === '/impact-preview' && method === 'POST') return server.impactResponse ? server.impactResponse() : json({ invalid_answers: 3, markdown: '## 영향 미리보기\n- 무효가 될 답변 3건' })
     let match = path.match(/^\/recalls\/([^/]+)\/(ack|review|feedback)$/)
     if (match && method === 'POST') {
       const [, id, action] = match
@@ -317,6 +317,41 @@ describe('live recall route for administrators', () => {
     await within(panel).findByText(/무효가 될 답변 3건/)
     expect(JSON.parse(requestsTo('POST', '/impact-preview')[0].options.body)).toEqual({ old_version_date: '2026-11-01', new_version_date: '2026-11-10', pages: [{ path: 'a.md', old: 'x', new: 'y' }] })
     expect(within(panel).queryByRole('button', { name: 'MR diff' })).toBeNull()
+  })
+
+  // 새로 발견 6: 제목 줄 없는 본문은 섹션 이름이 빈다 → 이유를 알려 주고, 예시(placeholder)는 제목 줄을 포함한다
+  it('explains an empty section column and shows heading lines in the page-pair example', async () => {
+    server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '', change_type: 'modified' }], markdown: '| 섹션 | 변경 |\n|---|---|\n|  | modified |' })
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '개정 전후 본문(JSON)' }))
+    const box = within(panel).getByLabelText('개정 전후 본문(JSON)')
+    expect(JSON.parse(box.getAttribute('placeholder')).pages[0].old).toContain('## 1조')
+    await userEvent.click(box)
+    await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect((await within(panel).findByRole('note')).textContent).toContain('제목 줄')
+  })
+
+  it('points to the article field when a section-list input has an empty name', async () => {
+    server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '', change_type: 'modified' }], markdown: '요약' })
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":1,"article":""}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect((await within(panel).findByRole('note')).textContent).toContain('article 칸')
+  })
+
+  it('shows no empty-section note when every section has a name', async () => {
+    server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '문서 제목 > 1조', change_type: 'modified' }], markdown: '요약' })
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":1,"article":"x"}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    await within(panel).findByText('요약')
+    expect(within(panel).queryByRole('note')).toBeNull()
   })
 
   it('rejects invalid impact preview JSON before calling the server', async () => {
