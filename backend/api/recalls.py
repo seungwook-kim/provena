@@ -21,11 +21,13 @@ import json
 import logging
 import os
 import uuid
-from typing import Any, Literal
+from datetime import date
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, ValidationError, field_validator
 
 from backend.api.errors import ApiError
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, create_require_admin_dependency, require_csrf
@@ -43,6 +45,22 @@ SERVICE_KEY_ENV = "SERVICE_API_KEY"
 DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 MAX_EVENTS = 100          # /webhooks/regulation-updated 한 번에 받는 바뀐 섹션 수
 MSG_NOT_FOUND = "리콜 알림을 찾을 수 없습니다."
+
+
+def real_date(value: str | None) -> str | None:
+    """`2026-02-30`처럼 형식만 맞고 없는 날짜, 전각 숫자 날짜를 막는다(`routes.py` ChatRequest._real_date와 같은 규칙).
+    패턴의 숫자 클래스는 전각·아랍 숫자도 받고 fromisoformat 오류 문구에는 입력값이 들어가므로, 고정 문구로 바꿔 입력값을 응답에 담지 않는다. 빈 값은 통과."""
+    if value:
+        try:
+            if not value.isascii():
+                raise ValueError
+            date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("존재하지 않는 날짜입니다.") from None
+    return value
+
+
+DayParam = Annotated[str | None, Query(pattern=DATE_PATTERN), AfterValidator(real_date)]
 
 
 class ReviewBody(BaseModel):
@@ -77,6 +95,11 @@ class RegulationUpdate(BaseModel):
     new_version_date: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$")
     change_type: Literal["added", "removed", "modified"] = "modified"
 
+    @field_validator("old_version_date", "new_version_date")
+    @classmethod
+    def _real_date(cls, value: str) -> str:
+        return real_date(value) or ""
+
 
 class ImpactPage(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -96,6 +119,11 @@ class ImpactBody(BaseModel):
     pages: list[ImpactPage] | None = Field(default=None, max_length=50)
     old_version_date: str | None = Field(default=None, pattern=DATE_PATTERN)
     new_version_date: str | None = Field(default=None, pattern=DATE_PATTERN)
+
+    @field_validator("old_version_date", "new_version_date")
+    @classmethod
+    def _real_date(cls, value: str | None) -> str | None:
+        return real_date(value)
 
 
 def service_of(request: Request) -> Any:
@@ -209,7 +237,7 @@ def create_recall_router(*, store: AuthStore, secret: str | None = None, revocat
 
     @router.post("/recalls/digest/flush")
     def digest_flush(request: Request, background: BackgroundTasks, _admin: AuthUser = Depends(admin_user),
-                     _csrf: None = Depends(require_csrf), day: str | None = Query(None, pattern=DATE_PATTERN)) -> dict:
+                     _csrf: None = Depends(require_csrf), day: DayParam = None) -> dict:
         svc = service_of(request)
         bodies: list[tuple[str, bytes]] = []
         made = flush_digests(svc, day=day, deliver=lambda did, body: bodies.append((did, body)))
@@ -330,7 +358,9 @@ def create_recall_router(*, store: AuthStore, secret: str | None = None, revocat
             raise ApiError(400, "bad_request", f"본문은 바뀐 섹션 객체 하나 또는 1~{MAX_EVENTS}개의 목록이어야 합니다.")
         try:
             changes = [ChangedArticle(**RegulationUpdate.model_validate(i).model_dump()) for i in items]
-        except ValidationError:
+        except ValidationError as e:
+            if any(err.get("type") == "value_error" for err in e.errors()):   # 없는 날짜·전각 숫자 날짜는 공통 422 봉투(입력값은 담지 않는다)
+                raise RequestValidationError(e.errors(include_input=False, include_context=False)) from None
             raise ApiError(400, "bad_request", "바뀐 섹션 형식이 올바르지 않습니다.") from None
         from backend.rag.ingest.schedule import event_id
 
