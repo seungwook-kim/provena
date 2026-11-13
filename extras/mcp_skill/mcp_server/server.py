@@ -181,7 +181,7 @@ def _failure(tool: str, source: str, exc: BaseException) -> ToolResponse:
 
 def _check_text(value: str, name: str) -> None:
     """제어문자(탭·줄바꿈·캐리지리턴 제외)가 든 글은 거절한다. NUL은 psycopg가 DataError로 막아 error로 새므로 미리 invalid로(Spec EC-03)."""
-    if any(ord(ch) < 32 and ch not in "\t\n\r" for ch in value):
+    if any((ord(ch) < 32 and ch not in "\t\n\r") or 0xD800 <= ord(ch) <= 0xDFFF for ch in value):
         raise Invalid(f"{name}에 제어문자가 들어 있습니다")
 
 

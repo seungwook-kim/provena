@@ -43,7 +43,7 @@
 |---|---|---|
 | EC-01 | 검색 결과 0개 | `status=not_found`. `ok` + 빈 목록으로 돌려주지 않는다 |
 | EC-02 | `get_section`에 없는 섹션 이름 | `not_found` + 그 페이지 같은 판의 섹션 이름 후보(`seq` 순서, 최대 10개) |
-| EC-03 | 날짜 형식이 틀림, `k`·`limit`·`offset` 범위 밖, 모르는 `org` | `status=invalid`, `retryable=false`, `note`에 무엇이 틀렸는지. 가까운 값으로 고쳐서 돌리지 않는다 |
+| EC-03 | 날짜 형식이 틀림, `k`·`limit`·`offset` 범위 밖, 모르는 `org`, 글 입력(`query`·`sub_queries`·`article`·`table_id`·`answer_id`)에 제어문자(탭·줄바꿈·CR 제외)나 짝 없는 서로게이트 | `status=invalid`, `retryable=false`, `note`에 무엇이 틀렸는지. 가까운 값으로 고쳐서 돌리지 않는다 |
 | EC-04 | DB 연결 실패(`ConnectionError`, psycopg `OperationalError`·풀 대기 초과)·시간 초과 | `status=unavailable`, `retryable=true`. 예외 글·DB 주소는 응답에 넣지 않고 서버 로그에 종류만 |
 | EC-15 | 그 밖의 예외(내부 `ValueError`, 코드·설정 오류 등) | `status=error`, `retryable=false`, 고정 `note`("다시 불러도 같음"). 예외 글은 응답에 넣지 않는다. `invalid`는 서버가 입력을 검사해 직접 만든 오류(`Invalid`)만 — 안쪽에서 난 `ValueError`를 입력 오류로 보지 않는다 (#45 리뷰) |
 | EC-16 | 바뀐 섹션이 `limit`보다 많음 | `status=ok` + 앞 `limit`개 + `note`에 "더 있음: offset=N". 한 줄 더 읽어 잘렸는지 안다. 정렬이 날짜·`rule_seq`·`article`·`change_type`·`event_id`로 고정이라 `offset`으로 이어 받으면 겹침·빠짐이 없다. 날짜로 이어 받지 않는 이유: 같은 날 줄이 겹치거나 빠진다 (#45 리뷰) |

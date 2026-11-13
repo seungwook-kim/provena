@@ -230,7 +230,7 @@ def test_get_section_bad_input(args):
     assert call(make(), "get_section", args)["status"] == "invalid"
 
 
-@pytest.mark.parametrize("bad", ["A\x00B", "\x00", "A\x1fB", "A\x01"])
+@pytest.mark.parametrize("bad", ["A\x00B", "\x00", "A\x1fB", "A\x01", "A\ud800B"])
 def test_get_section_control_char_article_is_invalid_and_not_read(monkeypatch, bad):
     """B13: NUL 등 제어문자가 든 article은 DB(psycopg DataError → error)까지 가지 않고 invalid(Spec EC-03)."""
     from backend.rag.retrieve import section
@@ -241,7 +241,7 @@ def test_get_section_control_char_article_is_invalid_and_not_read(monkeypatch, b
 
 
 def test_get_section_tab_newline_article_is_allowed():
-    r = call(make(store=section_rows(["x"])), "get_section", {"rule_seq": 7, "article": "A\tB\nC"})
+    r = call(make(store=section_rows(["x"])), "get_section", {"rule_seq": 7, "article": "A\tB\nC\rD"})
     assert r["status"] == "not_found"        # 검사는 통과해 저장소까지 갔고 그 섹션이 없을 뿐
 
 
