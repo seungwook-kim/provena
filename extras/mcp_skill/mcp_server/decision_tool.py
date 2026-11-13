@@ -30,7 +30,7 @@ from typing import Any
 from pydantic import StrictFloat
 
 from extras.mcp_skill.mcp_server.server import (
-    READ_ONLY, Invalid, ToolResponse, _failure, _resp, _run, missing_table, pg_pool, redact,
+    READ_ONLY, Invalid, ToolResponse, _check_text, _failure, _resp, _run, missing_table, pg_pool, redact,
 )
 
 MAX_TEXT = 200        # task_type·table_id·band 길이 상한. 2023 권한표 업무 종류 이름 최대 39자, table_id는 `new_id` 22자 안팎
@@ -76,6 +76,8 @@ def _check(task_type, amount_usd, table_id, band) -> None:
     for name, value in (("table_id", table_id), ("band", band)):
         if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > MAX_TEXT):
             raise Invalid(f"{name}는 1~{MAX_TEXT}자 또는 비움")
+        if value is not None:
+            _check_text(value, name)     # table_id는 SQL로 간다. NUL이면 psycopg DataError → error로 새므로 미리 invalid
 
 
 class _Repo:

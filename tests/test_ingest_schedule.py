@@ -365,3 +365,32 @@ def test_new_chunks_get_link_targets_like_first_load(conn):
     rows = conn.execute("SELECT text, link_targets FROM chunks WHERE version_id = 'lnkv00000000' ORDER BY seq").fetchall()
     assert rows and {tuple(t) for _, t in rows} == {(), (rule_seq(other),)}
     assert all(("Ask the team" in text) == bool(t) for text, t in rows)    # 링크가 든 섹션만(본문엔 링크 글만 남음)
+
+
+# ---------- fetch_main: git fetch 재시도(간격을 늘려 3번) ----------
+class _Done:
+    def __init__(self, code: int, err: bytes = b""):
+        self.returncode, self.stderr = code, err
+
+
+def _patch_fetch(monkeypatch, codes: list[int]):
+    sleeps, calls = [], []
+    monkeypatch.setattr(schedule.subprocess, "run", lambda cmd, **kw: (calls.append(cmd), _Done(codes[len(calls) - 1], b"boom"))[1])
+    monkeypatch.setattr(schedule.time, "sleep", lambda s: sleeps.append(s))
+    import backend.rag.ingest.handbook as hb
+    monkeypatch.setattr(hb, "git", lambda cache, *a: b"abc123\n")
+    return sleeps, calls
+
+
+def test_fetch_main_retries_with_growing_sleeps(monkeypatch, tmp_path):
+    sleeps, calls = _patch_fetch(monkeypatch, [1, 1, 0])
+    assert schedule.fetch_main(tmp_path) == "abc123"
+    assert sleeps == [5, 10] and len(calls) == 3
+
+
+def test_fetch_main_three_failures_raise_fetch_failed(monkeypatch, tmp_path):
+    sleeps, calls = _patch_fetch(monkeypatch, [1, 1, 1])
+    with pytest.raises(schedule.SyncError) as e:
+        schedule.fetch_main(tmp_path)
+    assert e.value.kind == "fetch_failed" and "boom" in e.value.detail
+    assert sleeps == [5, 10] and len(calls) == 3      # 마지막 실패 뒤에는 자지 않는다

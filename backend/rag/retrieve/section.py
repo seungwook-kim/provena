@@ -1,12 +1,15 @@
 """섹션 원문 조회 `get_section` · `section_names` (docs/specs/mcp.md How 2).
 
 DB 청크 글 = `머리말 한 줄 + 앞 청크 끝 겹침 + 본문`(chunk.make_chunk)이라 그대로 이으면 겹친 글이 두 번 나온다.
-겹침을 어림으로 찾지 않고 청킹과 같은 함수(chunk.overlap_tail)로 다시 계산해 뗀다. 뗀 본문 sha256이 청크의
-text_sha256(본문만의 지문)과 같아야 쓴다 — 하나라도 다르면 틀린 원문을 돌려주지 않고 SectionIntegrityError.
+겹침을 어림으로 찾지 않고 청킹과 같은 규칙으로 다시 계산해 뗀다. 일반 글은 chunk.overlap_tail(CHUNK_OVERLAP자),
+표 행 안에서 시작한 겹침은 chunk.overlap_for(행 처음부터, 행이 ROW_TAIL_MAX=400자를 넘으면 첫 칸(라벨)만 붙임)라 길이가
+CHUNK_OVERLAP과 다를 수 있다. 그래서 body_of는 먼저 overlap_tail로 떼 보고 지문이 안 맞으면 줄바꿈 자리마다 떼 보며,
+뗀 본문 sha256이 청크의 text_sha256(본문만의 지문)과 같고 떼어낸 앞부분이 앞 청크 본문의 끝일 때만 그 자리를 쓴다
+(퍼지 검색 없음: 지문과 앞 청크 끝이 둘 다 맞는 자리만). 하나라도 안 맞으면 틀린 원문을 돌려주지 않고 SectionIntegrityError.
 
 판 고르기는 검색과 같다(search._FILTER): as_of가 없으면 valid_to가 빈 현재 판, 있으면 valid_from <= as_of < valid_to.
 알려진 한계(Spec EC-13): 긴 요소 하나가 청크 둘 이상으로 쪼개진 섹션은 조각 경계에 줄바꿈이 하나 더 들어간다.
-글자는 같고 공백만 다르다. DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없기 때문이다(스냅샷 15,901섹션 중 438).
+글자는 같고 공백만 다르다. DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없기 때문이다(스냅샷 15,901섹션 중 438, 515acc3d 이전 기준).
 """
 from __future__ import annotations
 

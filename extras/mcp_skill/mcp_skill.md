@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | B13 수정: `get_section`의 `article`, `search_handbook`의 `query`·`sub_queries`에 제어문자(탭·줄바꿈·캐리지리턴 제외, NUL 포함)가 들면 `invalid`로 거절하고 저장소·검색기는 부르지 않음(`_check_text`). 고치기 전 실측: pgvector pg16 컨테이너에 표 3개를 만들고 `article="A\x00B"`로 `get_section`을 부르면 psycopg `DataError`가 `status=error`(서버 내부 오류)로 나옴(Spec EC-03은 invalid). 시험 `tests/test_mcp_server.py` 3개 추가, 변이 3/3. 서버 주석의 SDD·PRD 줄 번호 인용을 장 이름으로, 스냅샷 개수에 "515acc3d 이전 기준" 표시 | 미정 |
 | 2026-11-10 | 박진형 (jinyeong-731) | 클라이언트 `section_via_mcp`(11/6 추가, 그래프 `mcp_retriever.make_mcp_section_reader`가 씀)에 시험이 없어 `tests/test_mcp_client.py`에 6개 추가(같은 프로세스 서버, 네트워크·DB 없음): 섹션 dict, 없는 섹션·판은 None, 저장소 연결 실패는 `McpUnavailable`(재시도 가능), 원문 지문 불일치는 `McpSearchError`(error, 재시도 불가), 닫힌 포트·이벤트 루프 안 호출. Spec `mcp.md` 클라이언트 절 "섹션이 없으면 None, 실패 구분은 `search_via_mcp`와 같다"를 확인. 변이 3/3. 동작 변경 없음 | #131 |
 | 2026-11-09 | 김승욱 (Claude Code) | 개요의 "도구 3개"를 현재 도구 6개로 고침(`docs/specs/mcp.md`, `backend/requirements.txt` 주석도 같이). 동작 변경 없음 | 미정 |
 | 2026-11-06 | 김승욱 (Claude Code) | 읽기 전용 도구 `get_grounding` 추가(팀장 결정, 결정 0062, 도구 6개): `grounding_tool.py`, `register()` 방식. 답 저장소의 `get_grounding`을 읽기만 하고 판정 결과·규칙 건수·쓴 Skill·인용 id만 내보냄. 비공개 주소 가리기를 그래프와 같은 `backend/rag/retrieve/privacy.py`로 옮김, 클라이언트에 `section_via_mcp` 추가. 시험 `tests/test_mcp_new_tools.py` | 미정 |
