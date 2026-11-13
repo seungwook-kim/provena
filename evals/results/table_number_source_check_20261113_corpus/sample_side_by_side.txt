@@ -1,0 +1,732 @@
+
+
+######## 표 청크
+
+### 2ec7d538b0feacd1  (일반)  handbook/security/security-observations-risk-management.md  238~255  겹침 0자
+--- 청크 글 ---
+Unified Security Risk Management (USRM) Program > Procedure > Risk Acceptance > Periodic Review Schedule
+The finding coordinator performs periodic reviews at these intervals:
+Risk Level: Critical | Review Frequency: Every 6 months
+Risk Level: High | Review Frequency: Every 12 months
+Risk Level: Medium | Review Frequency: Every 18 months
+Risk Level: Low | Review Frequency: Every 24 months
+For each review, the finding coordinator will:
+- Evaluate if original conditions still exist
+- Assess whether severity has changed
+- Review changes to threat landscape or business environment
+- Confirm acceptance justification remains valid
+- Evaluate if remediation options have become available
+- Verify compensating controls are still effective
+--- 원문 (줄 번호 | 글) ---
+   236 | #### Periodic Review Schedule
+   237 | 
+>  238 | The finding coordinator performs periodic reviews at these intervals:
+>  239 | 
+>  240 | | Risk Level | Review Frequency |
+>  241 | |------------|------------------|
+>  242 | | Critical | Every 6 months |
+>  243 | | High | Every 12 months |
+>  244 | | Medium | Every 18 months |
+>  245 | | Low | Every 24 months |
+>  246 | 
+>  247 | For each review, the finding coordinator will:
+>  248 | 
+>  249 | 1. Evaluate if original conditions still exist
+>  250 | 2. Assess whether severity has changed
+>  251 | 3. Review changes to threat landscape or business environment
+>  252 | 4. Confirm acceptance justification remains valid
+>  253 | 5. Evaluate if remediation options have become available
+>  254 | 6. Verify compensating controls are still effective
+>  255 | 
+   256 | ### Security Acknowledgment
+
+### 04ca31de1e4a75b0  (일반)  handbook/engineering/infrastructure-platforms/environments/_index.md  80~85  겹침 0자
+--- 청크 글 ---
+Infrastructure Environments > Environments > Production-Canary
+Name: Production-Canary | Short Name: gprd-cny | URL: gitlab.com | Purpose: Canary for Production | Deploy: Release Candidate | Database: Production | Terminal access: Production team
+Production-Canary is a environment subset or deployment "stage" in the Production environment, sharing most of the same infrastructure as Production. This additional stage is designed to assist us with rolling out new releases to end users in a more controlled fashion, hoping to catch issues affecting users in a way that minimises impact.
+Information on how to access production-canary, use it, and what services it covers is documented in our handbook page on canary stage environments.
+--- 원문 (줄 번호 | 글) ---
+    78 | | **Name** | **Short Name** | **URL** | **Purpose** | **Deploy** | **Database** | **Terminal access** |
+    79 | | -------- | -------------- | ------- | ----------- | ---------- | ------------ | ------------------- |
+>   80 | | Production-Canary | `gprd-cny` | [gitlab.com](https://gitlab.com/) | Canary for Production | Release Candidate | Production | Production team |
+>   81 | 
+>   82 | Production-Canary is a environment subset or deployment "stage" in the Production environment, sharing most of the same infrastructure as Production. This additional stage is designed to assist us with rolling out new releases to end users in a more controlled fashion, hoping
+>   83 | to catch issues affecting users in a way that minimises impact.
+>   84 | 
+>   85 | Information on how to access production-canary, use it, and what services it covers is documented in our [handbook page on canary stage environments](/handbook/engineering/infrastructure-platforms/environments/canary-stage/).
+    86 | 
+
+### e91fc6ad680a2252  (일반)  handbook/engineering/development/sec/delineate-sec.md  16~22  겹침 0자
+--- 청크 글 ---
+Sec sub-department delineation > Page/Function responsibilities
+Page/Function: Secure Partner Onboarding Docs | PM: abellucci | Primary Group: Sec by their categories
+Page/Function: Security Configuration | Primary Group: Sec by their categories
+Page/Function: Vulnerability ingestion and DB storage | PM: abellucci | Primary Group: Govern:Threat Insights
+Page/Function: Dependency ingestion and DB storage | PM: abellucci | Primary Group: Govern:Threat Insights
+Page/Function: Dependency List | PM: abellucci | Primary Group: Govern:Threat Insights | Example: Example
+Page/Function: License Compliance Page | PM: abellucci | Primary Group: Govern:Threat Insights
+Page/Function: Interact with findings and vulnerabilities | PM: abellucci | Primary Group: Govern:Threat Insights
+--- 원문 (줄 번호 | 글) ---
+    14 | | Page/Function | PM | Primary Group | Example |
+    15 | | ---      | ---      | ---      | ---      |
+>   16 | | [Secure Partner Onboarding Docs](https://docs.gitlab.com/ee/development/integrations/secure_partner_integration.html) | {{< member-by-gitlab "abellucci" >}} | [Sec by their categories](/handbook/product/categories/#sec-section) |  |
+>   17 | | [Security Configuration](https://docs.gitlab.com/ee/user/application_security/configuration/) | | [Sec by their categories](/handbook/product/categories/#sec-section) |  |
+>   18 | | Vulnerability ingestion and DB storage | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) |  |
+>   19 | | Dependency ingestion and DB storage | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) |  |
+>   20 | | [Dependency List](https://docs.gitlab.com/ee/user/application_security/dependency_list/) | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) | [Example](https://gitlab.com/gitlab-examples/security/security-reports/-/licenses#licenses) |
+>   21 | | [License Compliance Page](https://docs.gitlab.com/ee/user/compliance/license_approval_policies.html) | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) |  |
+>   22 | | [Interact with findings and vulnerabilities](https://docs.gitlab.com/ee/user/application_security/index.html#interact-with-findings-and-vulnerabilities) | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) |  |
+    23 | | [Merge Request Security Widget](https://docs.gitlab.com/ee/user/application_security/#view-security-scan-information-in-merge-requests) | {{< member-by-gitlab "abellucci" >}} | [Govern:Threat Insights](/handbook/product/categories/#threat-insights-group) | [Example](https://gitlab.com/gitlab-org/security-products/tests/webgoat/-/merge_requests/26) |
+
+### 1f5a1d09537d1c59  (일반)  handbook/engineering/ai/ai-core-infra/_index.md  18~22  겹침 0자
+--- 청크 글 ---
+AI Core Infra Group > Stable Counterparts
+The following members of other functional teams are our stable counterparts:
+Name: Ashraf Khamis | Role: Senior Technical Writer
+--- 원문 (줄 번호 | 글) ---
+    16 | ## Stable Counterparts
+    17 | 
+>   18 | The following members of other functional teams are our stable counterparts:
+>   19 | 
+>   20 | | **Name**                                                 | **Role** |
+>   21 | | ---------------------------------------------------------| ------------------------------------------------------------------------------- |
+>   22 | | [Ashraf Khamis](/handbook/company/team#ashrafkhamis)     | [Senior Technical Writer](/job-description-library/product/technical-writer/) |
+    23 | 
+
+### 66a01030d737d3d3  (일반)  handbook/engineering/devops/verify/pipeline-authoring/_index.md  21~23  겹침 0자
+--- 청크 글 ---
+Verify:Pipeline Authoring Group > Team Handles
+Category: GitLab Team Handle | Handle: @verify-pa-team
+Category: Slack Channel | Handle: #g_pipeline-authoring
+Category: Slack Handle (Engineers) | Handle: @verify-pa-engineering
+--- 원문 (줄 번호 | 글) ---
+    19 | | Category | Handle |
+    20 | |---------------|------|
+>   21 | |GitLab Team Handle | @verify-pa-team |
+>   22 | | Slack Channel | [#g_pipeline-authoring](https://gitlab.slack.com/archives/C019R5JD44E) |
+>   23 | | Slack Handle (Engineers) | @verify-pa-engineering |
+    24 | 
+
+### fef711e65284bfbb  (일반)  handbook/support/knowledge-base/article-creation-workflow.md  96~107  겹침 0자
+--- 청크 글 ---
+Knowledge Base Article Creation Workflow > Article types
+Choose the template that best matches your content. Templates are in Knowledge Articles/Templates/.
+Type: Break/Fix | Template file: breakfix.md | Use when: A specific issue needs an immediate fix with a direct solution
+Type: FAQ | Template file: faq.md | Use when: Answering a common question
+Type: How-To | Template file: how-to.md | Use when: Providing step-by-step instructions for a task
+Type: Process | Template file: process.md | Use when: Documenting an internal process
+Type: Troubleshooting | Template file: troubleshooting.md | Use when: Diagnosing and resolving issues, focusing on root cause
+The article type does not need to match the section. For example, a Break/Fix article about an error goes in the Errors section.
+--- 원문 (줄 번호 | 글) ---
+    94 | ## Article types
+    95 | 
+>   96 | Choose the template that best matches your content. Templates are in `Knowledge Articles/Templates/`.
+>   97 | 
+>   98 | | Type | Template file | Use when |
+>   99 | |------|--------------|----------|
+>  100 | | Break/Fix | `breakfix.md` | A specific issue needs an immediate fix with a direct solution |
+>  101 | | FAQ | `faq.md` | Answering a common question |
+>  102 | | How-To | `how-to.md` | Providing step-by-step instructions for a task |
+>  103 | | Process | `process.md` | Documenting an internal process |
+>  104 | | Troubleshooting | `troubleshooting.md` | Diagnosing and resolving issues, focusing on root cause |
+>  105 | 
+>  106 | The article type does not need to match the section. For example, a Break/Fix article about an
+>  107 | error goes in the `Errors` section.
+   108 | 
+
+### b36c530f2a21a296  (HTML 표 행)  handbook/security/corporate/systems/_index.md  블록 24~1153  겹침 106자
+--- 청크 글 ---
+CorpSec Systems and Tech Stack > CorpSec Systems Directory
+@gitlab-com/corpsys/sandbox-cloud
+@corpsysadmins-sandbox-cloud
+#sandbox-cloud-questions
+USER SSO
+ADMIN SSH
+System (Handbook Page): SentinelOne | User Guides and Issues: Sysadmin Access Request
+Engineering Issue | System Owners: ARs
+/ Issues
+/ Epics
+Administration Runbooks
+corpsys-sentinelone
+@gitlab-com/corpsys/sentinelone
+@corpsysadmins-sentinelone
+Please contact us via the Compass app in Slack (type "Compass" in the top search bar to find it) or it-help@gitlab.com.
+ADMIN SSO
+ADMIN APP ROLE
+System (Handbook Page): Slack
+gitlab.enterprise.slack.com | User Guides and Issues: Open an Access Request
+Engineering Issue | System Owners: ARs
+/ Issues
+/ Epics
+Administration Runbooks
+corpsys-slack
+@gitlab-com/corpsys/slack
+@corpsysadmins-slack
+Please contact us via the Compass app in Slack (type "Compass" in the top search bar to find it) or it-help@gitlab.com.
+USER SSO
+USER APP ADMIN ROLE
+--- 원문 (줄 번호 | 글), 표 머리 행과 이 청크의 행만 ---
+>   26 | <tr>
+>   27 | <th>System (Handbook Page)</th>
+>   28 | <th>User Guides and Issues</th>
+>   29 | <th>System Owners</th>
+>   30 | </tr>
+        ...
+> 1084 | <tr>
+> 1085 | <td>
+> 1086 | <a href="/handbook/security/corporate/systems/sentinelone">SentinelOne</a><br>
+> 1087 | </td>
+> 1088 | <td>
+> 1089 | <i class="fas fa-user-plus mr-2"></i><a href="https://gitlab.com/gitlab-com/team-member-epics/access-requests/-/issues/new?issuable_template=sentinelone_sysadmin">Sysadmin Access Request</a><br>
+> 1090 | <i class="fas fa-gear mr-2"></i><a href="https://gitlab.com/gitlab-com/gl-security/corp/issue-tracker/-/issues/new?issuable_template=sentinelone_default">Engineering Issue</a>
+> 1091 | </td>
+> 1092 | <td>
+> 1093 | <a href="https://gitlab.com/gitlab-com/team-member-epics/access-requests/-/issues/?label_name%5B%5D=corpsys-sentinelone">ARs</a>
+> 1094 | &nbsp;/&nbsp;<a href="https://gitlab.com/gitlab-com/gl-security/corp/issue-tracker/-/issues/?label_name%5B%5D=corpsys-sentinelone">Issues</a>
+> 1095 | &nbsp;/&nbsp;<a href="https://gitlab.com/groups/gitlab-com/gl-security/corp/-/epics?label_name[]=corpsys-sentinelone">Epics</a>
+> 1096 | <br>
+> 1097 | <i class="fas fa-book mr-2"></i><a href="https://handbook.gitlab.systems/sentinelone">Administration Runbooks</a><br>
+> 1098 | <i class="fas fa-tag mr-2"></i><code>corpsys-sentinelone</code><br>
+> 1099 | <i class="fa-brands fa-gitlab mr-2"></i><a href="https://gitlab.com/groups/gitlab-com/corpsys/sentinelone">@gitlab-com/corpsys/sentinelone</a><br>
+> 1100 | <i class="fa-brands fa-slack mr-2"></i><code>@corpsysadmins-sentinelone</code><br>
+> 1101 | <i class="fa-brands fa-slack mr-2"></i><code>Please contact us via the Compass app in Slack (type "Compass" in the top search bar to find it) or it-help@gitlab.com.</code><br>
+> 1102 | <i class="fas fa-shield-halved mr-2"></i>
+> 1103 | <span style="background-color: #b91c1c; color: #ffffff; font-weight: normal; padding: 2px 4px; border-radius: 0.25rem; letter-spacing: 0.05em; font-size: 10px;">ADMIN SSO</span>
+> 1104 | <span style="background-color: #71717a; color: #ffffff; font-weight: normal; padding: 2px 4px; border-radius: 0.25rem; letter-spacing: 0.05em; font-size: 10px;">ADMIN APP ROLE</span>
+> 1105 | </td>
+> 1106 | </tr>
+        ...
+> 1108 | <tr>
+> 1109 | <td>
+> 1110 | <a href="/handbook/security/corporate/systems/slack">Slack</a><br>
+> 1111 | <code>gitlab.enterprise.slack.com</code><br>
+> 1112 | </td>
+> 1113 | <td>
+> 1114 | <i class="fas fa-user-plus mr-2"></i><a href="https://gitlab.com/gitlab-com/team-member-epics/access-requests/-/issues/new?issuable_template=slack_default">Open an Access Request</a><br>
+> 1115 | <i class="fas fa-gear mr-2"></i><a href="https://gitlab.com/gitlab-com/gl-security/corp/issue-tracker/-/issues/new?issuable_template=slack_default">Engineering Issue</a>
+> 1116 | </td>
+> 1117 | <td>
+> 1118 | <a href="https://gitlab.com/gitlab-com/team-member-epics/access-requests/-/issues/?label_name%5B%5D=corpsys-slack">ARs</a>
+> 1119 | &nbsp;/&nbsp;<a href="https://gitlab.com/gitlab-com/gl-security/corp/issue-tracker/-/issues/?label_name%5B%5D=corpsys-slack">Issues</a>
+> 1120 | &nbsp;/&nbsp;<a href="https://gitlab.com/groups/gitlab-com/gl-security/corp/-/epics?label_name[]=corpsys-slack">Epics</a>
+> 1121 | <br>
+> 1122 | <i class="fas fa-book mr-2"></i><a href="https://handbook.gitlab.systems/slack">Administration Runbooks</a><br>
+> 1123 | <i class="fas fa-tag mr-2"></i><code>corpsys-slack</code><br>
+> 1124 | <i class="fa-brands fa-gitlab mr-2"></i><a href="https://gitlab.com/groups/gitlab-com/corpsys/slack">@gitlab-com/corpsys/slack</a><br>
+> 1125 | <i class="fa-brands fa-slack mr-2"></i><code>@corpsysadmins-slack</code><br>
+> 1126 | <i class="fa-brands fa-slack mr-2"></i><code>Please contact us via the Compass app in Slack (type "Compass" in the top search bar to find it) or it-help@gitlab.com.</code><br>
+> 1127 | <i class="fas fa-shield-halved mr-2"></i>
+> 1128 | <span style="background-color: #0284c7; color: #ffffff; font-weight: normal; padding: 2px 4px; border-radius: 0.25rem; letter-spacing: 0.05em; font-size: 10px;">USER SSO</span>
+> 1129 | <span style="background-color: #71717a; color: #ffffff; font-weight: normal; padding: 2px 4px; border-radius: 0.25rem; letter-spacing: 0.05em; font-size: 10px;">USER APP ADMIN ROLE</span>
+> 1130 | </td>
+> 1131 | </tr>
+        ...
+
+### fce0c6356ff3e96f  (일반)  handbook/engineering/devops/create/code-review/frontend.md  58~59  겹침 0자
+--- 청크 글 ---
+Create:Code Review FE Team > Projects > Active Project Table
+Start Date: 2019 | Project: Merge Requests Vue app | Description: The frontend application that renders Merge Requests | Tech Lead: —
+Start Date: 2023-09 | Project: New Diffs (Epic) | Description: A project to deliver a reusable and performant way of rendering diffs across GitLab | Tech Lead: —
+--- 원문 (줄 번호 | 글) ---
+    56 | | Start Date | Project  | Description | Tech Lead |
+    57 | | ------ | ------ | ------ |  ------ |
+>   58 | | 2019 | Merge Requests Vue app | The frontend application that renders Merge Requests | — |
+>   59 | | 2023-09 | [New Diffs](/handbook/engineering/architecture/design-documents/rapid_diffs/) ([Epic](https://gitlab.com/groups/gitlab-org/-/epics/11559)) | A project to deliver a reusable and performant way of rendering diffs across GitLab | — |
+    60 | 
+
+### 026d7ffe989a4f89  (일반)  handbook/support/amer.md  114~121  겹침 119자
+--- 청크 글 ---
+Support Team AMER > General policies > AMER Holiday Coverage Targets > Coverage targets
+64%
+Holiday: Remembrance Day / Veterans Day | Date: 2026-11-11 | Day: Wed | Region: US + Canada | Target % working: 62%
+Holiday: Thanksgiving (US) | Date: 2026-11-26 | Day: Thu | Region: US | Target % working: 55%
+Holiday: Day after Thanksgiving | Date: 2026-11-27 | Day: Fri | Region: US | Target % working: 47%
+Holiday: Christmas Eve | Date: 2026-12-24 | Day: Thu | Region: US + Canada | Target % working: 15%
+Holiday: Christmas Day | Date: 2026-12-25 | Day: Fri | Region: US + Canada | Target % working: 15%
+Holiday: Boxing Day (observed) | Date: 2026-12-28 | Day: Mon | Region: Canada | Target % working: 21%
+Holiday: New Year's Eve | Date: 2026-12-31 | Day: Thu | Region: US + Canada | Target % working: 15%
+Holiday: New Year's Day | Date: 2027-01-01 | Day: Fri | Region: US + Canada | Target % working: 15%
+Holiday: Martin Luther King Jr. Day | Date: 2027-01-18 | Day: Mon | Region: US | Target % working: 65%
+--- 원문 (줄 번호 | 글) ---
+   112 | | Thanksgiving (Canada) / Indigenous Peoples' Day | 2026-10-12 | Mon | US + Canada | 64% |
+   113 | | Remembrance Day / Veterans Day | 2026-11-11 | Wed | US + Canada | 62% |
+>  114 | | Thanksgiving (US) | 2026-11-26 | Thu | US | 55% |
+>  115 | | Day after Thanksgiving | 2026-11-27 | Fri | US | 47% |
+>  116 | | Christmas Eve | 2026-12-24 | Thu | US + Canada | 15% |
+>  117 | | Christmas Day | 2026-12-25 | Fri | US + Canada | 15% |
+>  118 | | Boxing Day (observed) | 2026-12-28 | Mon | Canada | 21% |
+>  119 | | New Year's Eve | 2026-12-31 | Thu | US + Canada | 15% |
+>  120 | | New Year's Day | 2027-01-01 | Fri | US + Canada | 15% |
+>  121 | | Martin Luther King Jr. Day | 2027-01-18 | Mon | US | 65% |
+   122 | 
+
+### 80b1d5cc653055a3  (일반)  handbook/security/product-security/vulnerability-management/labels.md  32~35  겹침 119자
+--- 청크 글 ---
+Vulnerability Management - Standard Issue Labels > Tracking Issue Labels > Vulnerability Information and Workflow Labels
+not be a fix made available for the vulnerable software package (typically because the vulnerability is not applicable)
+Label: Vulnerability::Vendor Base Container::Fix Available | Purpose: An updated vendor base container image is available which fixes this vulnerability
+Label: Vulnerability::Vendor Base Container::Fix Unavailable | Purpose: There is no updated base container image fixing this vulnerability, but there may be in the future, when published by the vendor
+Label: Vulnerability::Vendor Base Container::Will Not Be Fixed | Purpose: There will not be a fixed container made available for the vulnerable container image (typically because the vulnerability is not applicable)
+Label: Vulnerability Impact::Scan Severity::[High/Medium/Low] | Purpose: The severity reported by the vulnerability as detected by the scanner which detected the vulnerability
+--- 원문 (줄 번호 | 글) ---
+    30 | | `Vulnerability::Vendor Package::Fix Unavailable`| | There is no vendor fix for this vulnerability, but there may be in the future, when published by the vendor |
+    31 | | `Vulnerability::Vendor Package::Will Not Be Fixed` | | There will not be a fix made available for the vulnerable software package (typically because the vulnerability is not applicable)  |
+>   32 | | `Vulnerability::Vendor Base Container::Fix Available` | | An updated vendor base container image is available which fixes this vulnerability |
+>   33 | | `Vulnerability::Vendor Base Container::Fix Unavailable` | | There is no updated base container image fixing this vulnerability, but there may be in the future, when published by the vendor  |
+>   34 | | `Vulnerability::Vendor Base Container::Will Not Be Fixed` | | There will not be a fixed container made available for the vulnerable container image (typically because the vulnerability is not applicable) |
+>   35 | | `Vulnerability Impact::Scan Severity::[High/Medium/Low]` | | The severity reported by the vulnerability as detected by the scanner which detected the vulnerability |
+    36 | | `Vulnerability Impact::Scan CVSS::(x.x)` | | The CVSS (which defaults to CVSSv3, and falls back to CVSSv2 if v3 is not available) reported by the vulnerability scanner which detected the vulnerability |
+
+### 0ff86c3e8f40b550  (일반)  handbook/engineering/devops/runner/runner-core/bug-triage-matrix.md  41~43  겹침 0자
+--- 청크 글 ---
+Runner Core Bug Triage Decision Matrix > The RICE-Adapted Priority Score > Scoring Components > 3. Community Signal (0-2 points)
+Score: 2 | Criteria: 20+ upvotes
+Score: 1 | Criteria: 10-19 upvotes
+Score: 0 | Criteria: <10 upvotes
+--- 원문 (줄 번호 | 글) ---
+    39 | | Score | Criteria |
+    40 | |-------|----------|
+>   41 | | 2 | 20+ upvotes |
+>   42 | | 1 | 10-19 upvotes |
+>   43 | | 0 | \<10 upvotes |
+    44 | 
+
+### 90d2185908336f79  (일반)  handbook/enterprise-data/ai/context-layer/_index.md  130~134  겹침 119자
+--- 청크 글 ---
+AI Context Layer > Glossary
+| Meaning: The known correct SQL for a test case. The harness runs it live and compares its result set with the agent's
+Term: relationships.md | Meaning: The skill file that defines canonical keys, join chains and cardinality facts that cannot be derived from grain
+Term: Routing | Meaning: How the agent picks which domain file and which vq_* view to read for a question
+Term: Routing check | Meaning: A fast eval run that grades only whether the agent opened the right documentation. It runs no answer query
+Term: schema.yml | Meaning: The dbt file that registers each vq_* view and describes every column. Persisted to Snowflake as column comments
+Term: Semantic schema | Meaning: PROD.SEMANTIC or PROD.RESTRICTED_SAFE_SEMANTIC, the governed Snowflake schemas that hold the vq_* views. See AI Semantic Schemas
+--- 원문 (줄 번호 | 글) ---
+   128 | | Judge checks | Written, checkable assertions that an LLM judge scores the answer against. They catch what execution accuracy cannot, such as a refusal or a missing period |
+   129 | | Reference query | The known correct SQL for a test case. The harness runs it live and compares its result set with the agent's |
+>  130 | | `relationships.md` | The skill file that defines canonical keys, join chains and cardinality facts that cannot be derived from grain |
+>  131 | | Routing | How the agent picks which domain file and which `vq_*` view to read for a question |
+>  132 | | Routing check | A fast eval run that grades only whether the agent opened the right documentation. It runs no answer query |
+>  133 | | `schema.yml` | The dbt file that registers each `vq_*` view and describes every column. Persisted to Snowflake as column comments |
+>  134 | | Semantic schema | `PROD.SEMANTIC` or `PROD.RESTRICTED_SAFE_SEMANTIC`, the governed Snowflake schemas that hold the `vq_*` views. See [AI Semantic Schemas](/handbook/enterprise-data/platform/edw/#ai-semantic-schemas) |
+   135 | | `semantic.md` doc block | The `{% docs vq_<name> %}` block in dbt that documents one view: summary, use cases, must apply filters, keys, scope rules and example queries. Persisted as the view comment |
+
+### 1fa9aaf41986b129  (일반)  handbook/enterprise-data/marketing-analytics/marketing-analytics-data/marketing-analytics-data-l2r.md  83~92  겹침 0자
+--- 청크 글 ---
+Marketing Analytics Data - L2R Models > Rpt_l2r_campaign_interactions > Data Lineage
+- Data is sourced from SFDC and L2R
+- The full lineage can be seen here
+Field: Custom attribution fields (i.e. custom_sao) | Business Logic: Defined in model
+Field: person_status_change | Business Logic: Defined in model
+Field: is_mdf_campaign | Business Logic: Defined in model
+Field: report_opportunity_* | Business Logic: Defined in model
+Field: is_sales_dev_owned_record | Business Logic: Defined in model
+--- 원문 (줄 번호 | 글) ---
+    81 | ### Data Lineage
+    82 | 
+>   83 | 1. Data is sourced from SFDC and L2R
+>   84 | 1. The full lineage can be seen [here](https://dbt.gitlabdata.com/#!/model/model.gitlab_snowflake.rpt_l2r_campaign_interactions)
+>   85 | 
+>   86 | | Field                                       | Business Logic   |
+>   87 | |---------------------------------------------|------------------|
+>   88 | | Custom attribution fields (i.e. custom_sao) | [Defined in model](https://gitlab.com/gitlab-data/analytics/-/blob/master/transform/snowflake-dbt/models/common_mart_marketing/restricted_safe/rpt_l2r_campaign_interactions.sql#L176) |
+>   89 | | person_status_change                        | [Defined in model](https://gitlab.com/gitlab-data/analytics/-/blob/master/transform/snowflake-dbt/models/common_mart_marketing/restricted_safe/rpt_l2r_campaign_interactions.sql#L979) |
+>   90 | | is_mdf_campaign                             | [Defined in model](https://gitlab.com/gitlab-data/analytics/-/blob/master/transform/snowflake-dbt/models/common_mart_marketing/restricted_safe/rpt_l2r_campaign_interactions.sql#L1022) |
+>   91 | | report_opportunity_*                        | [Defined in model](https://gitlab.com/gitlab-data/analytics/-/blob/master/transform/snowflake-dbt/models/common_mart_marketing/restricted_safe/rpt_l2r_campaign_interactions.sql#L1034) |
+>   92 | | is_sales_dev_owned_record                   | [Defined in model](https://gitlab.com/gitlab-data/analytics/-/blob/master/transform/snowflake-dbt/models/common_mart_marketing/restricted_safe/rpt_l2r_campaign_interactions.sql#L1062) |
+    93 | 
+
+### 168d83c43af6018a  (일반)  handbook/enterprise-data/ai/context-layer/add-a-domain/eval-harness.md  233~244  겹침 114자
+--- 청크 글 ---
+Eval Harness > Running in CI
+A view you leave out keeps its old comment in the clone, and the eval tests the old documentation with no warning.
+- run_grants_eval_harness copies the eval service account's read grants onto the clone. If you skip it, queries fail on permissions and the execute rate is 0.
+- 🔬sqg-eval runs the eval. Set its inputs to the scope your change needs.
+- sqg-eval-comment runs automatically and posts the summary on the MR.
+For a skill markdown only change, skip steps 1 to 3 and set target_db to PROD.
+The 🔬sqg-eval inputs, from sqg-eval-ci.yml:
+Input: mode | Default: full | What it does: full runs the whole eval. routing runs only the routing check, one run per case, with no judge and no reference queries
+Input: models | Default: gitlab/duo-chat-sonnet-5 | What it does: Comma separated agent models for the sweep
+--- 원문 (줄 번호 | 글) ---
+   231 |    List every view whose doc block or columns changed. A view you leave out keeps its old comment in the clone, and the eval tests the old documentation with no warning.
+   232 | 
+>  233 | 1. **`run_grants_eval_harness`** copies the eval service account's read grants onto the clone. If you skip it, queries fail on permissions and the execute rate is 0.
+>  234 | 1. **`🔬sqg-eval`** runs the eval. Set its inputs to the scope your change needs.
+>  235 | 1. **`sqg-eval-comment`** runs automatically and posts the summary on the MR.
+>  236 | 
+>  237 | For a skill markdown only change, skip steps 1 to 3 and set `target_db` to `PROD`.
+>  238 | 
+>  239 | The `🔬sqg-eval` inputs, from [`sqg-eval-ci.yml`](https://gitlab.com/gitlab-data/analytics/-/blob/master/agents/evals/snowflake_query_guidance/sqg-eval-ci.yml):
+>  240 | 
+>  241 | | Input | Default | What it does |
+>  242 | |---|---|---|
+>  243 | | `mode` | `full` | `full` runs the whole eval. `routing` runs only the routing check, one run per case, with no judge and no reference queries |
+>  244 | | `models` | `gitlab/duo-chat-sonnet-5` | Comma separated agent models for the sweep |
+   245 | | `domain` | Empty, which runs every domain | Comma separated domains to include, matching `test_cases/<domain>.yaml` |
+
+### 0bf9861989809ac3  (일반)  handbook/engineering/infrastructure-platforms/project-management/index.md  180~181  겹침 120자
+--- 청크 글 ---
+The Infrastructure Platforms Project Management > Labels > Workflow labels
+abandoned due to external factors or decision to not resolve the issue. After applying this label, issue will be closed.
+State Label: Stalled | Description: Work is not abandoned but other work has higher priority. After applying this label, team Engineering Manager is mentioned in the issue to either change the priority or find more help.
+State Label: Blocked | Description: Work is blocked due external dependencies or other external factors. Where possible, a blocking issue should also be set. After applying this label, issue will be regularly triaged by the team until the label can be removed.
+--- 원문 (줄 번호 | 글) ---
+   178 | | ----------- | ----------- |
+   179 | | ![Cancelled](/images/engineering/infrastructure-platforms/project-management/label-cancelled.png) | Work in the issue is being abandoned due to external factors or decision to not resolve the issue. After applying this label, issue will be closed. |
+>  180 | | ![Stalled](/images/engineering/infrastructure-platforms/project-management/label-stalled.png) | Work is not abandoned but other work has higher priority. After applying this label, team Engineering Manager is mentioned in the issue to either change the priority or find more help. |
+>  181 | | ![Blocked](/images/engineering/infrastructure-platforms/project-management/label-blocked.png) | Work is blocked due external dependencies or other external factors. Where possible, a [blocking issue](https://docs.gitlab.com/ee/user/project/issues/related_issues.html) should also be set. After applying this label, issue will be regularly triaged by the team until the label can be removed. |
+   182 | 
+
+### 6cfb6df5e6bda72a  (일반)  handbook/engineering/infrastructure-platforms/gitlab-dedicated/dedicated-migrations.md  24~28  겹침 0자
+--- 청크 글 ---
+Dedicated Migration Team > Team Mission > Team members
+Name: Douglas Alexandre | Role: Staff Backend Engineer
+Name: Eren Akca | Role: Staff Migration Engineer
+Name: Petar Prokić | Role: Staff Migration Engineer
+Name: Jessykah Bird | Role: Senior Migration Engineer
+Name: Glen Miller | Role: Senior Manager, Software Engineering
+--- 원문 (줄 번호 | 글) ---
+    22 | | Name          | Role                                 |
+    23 | |---------------|--------------------------------------|
+>   24 | | Douglas Alexandre | Staff Backend Engineer           |
+>   25 | | Eren Akca     | Staff Migration Engineer             |
+>   26 | | Petar Prokić  | Staff Migration Engineer             |
+>   27 | | Jessykah Bird | Senior Migration Engineer            |
+>   28 | | Glen Miller   | Senior Manager, Software Engineering |
+    29 | 
+
+### 0cc2358a4bd54fba  (일반)  handbook/finance/committee-composition.md  85~91  겹침 115자
+--- 청크 글 ---
+Committee Composition > Timetable for the Preparation of Annual and Quarterly Reports
+| DRIs: SEC & SOX Director
+Days Prior Filing Date: 14 days | Task: Draft 2 of 8-K comments back | DRIs: All parties
+Days Prior Filing Date: 13 days | Task: Draft 2 of 10-Q comments back | DRIs: Certifying officers, Disclosure Committee, internal business partners, outside legal counsel
+Days Prior Filing Date: 12 days | Task: Draft of 8-K and 10-Q to Audit Committee | DRIs: SEC & SOX Director
+Days Prior Filing Date: 8 days | Task: Disclosure Committee meeting | DRIs: Disclosure Committee and certifying officers
+Days Prior Filing Date: 5 days | Task: Audit Committee meeting | DRIs: Audit Committee & CFO
+Days Prior Filing Date: 4 days | Task: Final draft of 8-K/10-Q to all parties | DRIs: SEC & SOX Director
+Days Prior Filing Date: 2 - 4 days | Task: Provide final comments | DRIs: All parties
+Days Prior Filing Date: 1 - 2 days | Task: Finalize and EDGARize 8-K/10-Q | DRIs: SEC & SOX Director
+--- 원문 (줄 번호 | 글) ---
+    83 | | 16 days | Draft 2 of 10-Q to outside legal counsel, certifying officers and Disclosure Committee members | SEC & SOX Director |
+    84 | | 14 days | Draft 2 of 8-K comments back | All parties |
+>   85 | | 13 days | Draft 2 of 10-Q comments back | Certifying officers, Disclosure Committee, internal business partners, outside legal counsel |
+>   86 | | 12 days | Draft of 8-K and 10-Q to Audit Committee | SEC & SOX Director |
+>   87 | | 8 days | Disclosure Committee meeting | Disclosure Committee and certifying officers |
+>   88 | | 5 days | Audit Committee meeting | Audit Committee & CFO |
+>   89 | | 4 days | Final draft of 8-K/10-Q to all parties | SEC & SOX Director |
+>   90 | | 2 - 4 days | Provide final comments | All parties |
+>   91 | | 1 - 2 days | Finalize and EDGARize 8-K/10-Q | SEC & SOX Director |
+    92 | | Filing Date | File 8-K/10-Q reports with Workiva | SEC & SOX Director |
+
+### 9bd7f78d2eab215c  (일반)  handbook/security/corporate/systems/okta/policy/device-posture-checks/device-posture-windows/_index.md  9~13  겹침 0자
+--- 청크 글 ---
+Okta Device Posture Checks - Windows > OS version
+Outdated operating systems contain unpatched vulnerabilities that can be exploited to compromise your device and the GitLab resources it accesses. GitLab requires a minimum Windows version to ensure devices are protected by current security patches.
+Remediation: Windows 10: 
+1. Go to Start → Settings → Update & Security → Windows Update. 
+2. Windows will automatically check for and download available updates. 
+3. Click Restart now once the download completes. 
+
+ Windows 11: 
+1. Go to Start → Settings → Windows Update. 
+2. Click Download and install if updates are available. 
+3. Follow the on-screen instructions. Your device may restart multiple times.
+--- 원문 (줄 번호 | 글) ---
+     7 | ## OS version
+     8 | 
+>    9 | Outdated operating systems contain unpatched vulnerabilities that can be exploited to compromise your device and the GitLab resources it accesses. GitLab requires a minimum Windows version to ensure devices are protected by current security patches.
+>   10 | 
+>   11 | | Remediation |
+>   12 | |-------------|
+>   13 | | **Windows 10:** <br>1. Go to **Start** → **Settings** → **Update & Security** → **Windows Update**. <br>2. Windows will automatically check for and download available updates. <br>3. Click **Restart now** once the download completes. <br><br> **Windows 11:** <br>1. Go to **Start** → **Settings** → **Windows Update**. <br>2. Click **Download and install** if updates are available. <br>3. Follow the on-screen instruc
+    14 | 
+
+### 1aaa65c90174a51e  (일반)  handbook/security/policies_and_standards/password-standard.md  24~26  겹침 0자
+--- 청크 글 ---
+GitLab Password Standards > Roles & Responsibilities
+Role: GitLab Team Members | Responsibility: Responsible for adhering to the requirements outlined in this standard
+Role: Security | Responsibility: Responsible for defining and monitoring implementation of these standards for critical applications
+Role: Security Management (Code Owners) | Responsibility: Responsible for approving significant changes and exceptions to these standards
+--- 원문 (줄 번호 | 글) ---
+    22 | | Role  | Responsibility |
+    23 | |-----------|-----------|
+>   24 | | GitLab Team Members | Responsible for adhering to the requirements outlined in this standard |
+>   25 | | Security | Responsible for defining and monitoring implementation of these standards for critical applications |
+>   26 | | Security Management (Code Owners) | Responsible for approving significant changes and exceptions to these standards |
+    27 | 
+
+### a8a0139d83f52a52  (일반)  handbook/engineering/infrastructure-platforms/production-engineering/fleet-management/_index.md  32~34  겹침 0자
+--- 청크 글 ---
+Fleet Management Team > Common Links
+Workflow | Infrastructure Platforms Project Management
+GitLab.com | @gitlab-org/production-engineering/fleet-management
+Team Slack Channels | [#g_fleet_management](https://gitlab.enterprise.slack.com/archives/C0ACE4T2R6W) - Team channel
+--- 원문 (줄 번호 | 글) ---
+    30 | | | |
+    31 | |--------------------------------|---------------------------------------------------------------------------------------------------|
+>   32 | | **Workflow**                   | [Infrastructure Platforms Project Management](/handbook/engineering/infrastructure-platforms/project-management/) |
+>   33 | | **GitLab.com**                 | `@gitlab-org/production-engineering/fleet-management` |
+>   34 | | **Team Slack Channels**        | `[#g_fleet_management](https://gitlab.enterprise.slack.com/archives/C0ACE4T2R6W)` - Team channel |
+    35 | 
+
+
+
+######## 수치 문단 청크
+
+### 88be72621052cf95  (일반)  handbook/security/product-security/security-platforms-architecture/security-interlock/prodsec-to-product-workflow/_index.md  126~135  겹침 117자
+--- 청크 글 ---
+ProdSec to Product Process > Co-create workflow > Phase 3: Hand over to Engineering
+activities:
+- Confirm with the owning Engineering team that the feature meets their standards for long-term ownership
+- If the feature shipped behind a feature flag, work with the owning team on the plan for flag removal and general availability
+- Transfer any remaining context: documentation, ADRs, known issues, performance data
+- If applicable, update the tooling inventory to reflect that the capability has been integrated into the product
+Outputs
+- Feature owned and maintained by the Engineering team
+- If applicable, ProdSecEng's internal tooling updated or scheduled for transition and sunset
+- Tooling inventory updated (if applicable)
+--- 원문 (줄 번호 | 글) ---
+   124 | 
+   125 | 1. Confirm with the owning Engineering team that the feature meets their standards for long-term ownership
+>  126 | 1. If the feature shipped behind a feature flag, work with the owning team on the plan for flag removal and general availability
+>  127 | 1. Transfer any remaining context: documentation, ADRs, known issues, performance data
+>  128 | 1. If applicable, update the [tooling inventory](https://internal.gitlab.com/handbook/security/product_security/product_security_engineering/) to reflect that the capability has been integrated into the product
+>  129 | 
+>  130 | **Outputs**
+>  131 | 
+>  132 | 1. Feature owned and maintained by the Engineering team
+>  133 | 1. If applicable, ProdSecEng's internal tooling updated or scheduled for [transition and sunset](#transition-and-sunset-workflow)
+>  134 | 1. Tooling inventory updated (if applicable)
+>  135 | 
+   136 | ### Key considerations
+
+### 0cc2bf8465b7dd60  (일반)  handbook/support/knowledge-base/knowledge-base-training.md  6~32  겹침 0자
+--- 청크 글 ---
+Knowledge Base Training Resources
+The following resources are available.
+Creating a Knowledge Article in the Sync repo
+- LevelUp(Internal)
+- Video: 5 minutes
+- Link: https://levelup.edcast.com/insights/ECL-a5671246-4a5e-4321-b30b-cf3f397c196a
+How to Link a knowledge article to a Support Ticket in Zendesk
+- LevelUp (Internal)
+- Video: 2 minutes
+- Link: https://levelup.edcast.com/insights/ECL-1fac4c9d-bf93-461e-a256-4ba6bde3d450
+How to Create a knowledge article if you are NOT in Zendesk or a Light agent
+- LevelUp (Internal)
+- Video: 5 Minutes
+- Link: https://levelup.edcast.com/insights/how-to-create-a-knowledge-article-if-you-are-not-in-zendesk
+Support Portal
+- GitLab University (GLU)
+- Video: 5 minutes
+- Link: https://university.gitlab.com/courses/gitlab-support-portal-redesign-00
+KCS (Knowledge Centered Service)
+--- 원문 (줄 번호 | 글) ---
+     4 | ---
+     5 | 
+>    6 | The following resources are available.
+>    7 | 
+>    8 | **Creating a Knowledge Article in the Sync repo**
+>    9 | 
+>   10 | - LevelUp(Internal)
+>   11 | - Video: 5 minutes
+>   12 | - Link: https://levelup.edcast.com/insights/ECL-a5671246-4a5e-4321-b30b-cf3f397c196a
+>   13 | 
+>   14 | **How to Link a knowledge article to a Support Ticket in Zendesk**
+>   15 | 
+>   16 | - LevelUp (Internal)
+>   17 | - Video: 2 minutes
+>   18 | - Link: https://levelup.edcast.com/insights/ECL-1fac4c9d-bf93-461e-a256-4ba6bde3d450
+>   19 | 
+>   20 | **How to Create a knowledge article if you are NOT in Zendesk or a Light agent**
+>   21 | 
+>   22 | - LevelUp (Internal)
+>   23 | - Video: 5 Minutes
+>   24 | - Link:  https://levelup.edcast.com/insights/how-to-create-a-knowledge-article-if-you-are-not-in-zendesk
+>   25 | 
+>   26 | **Support Portal**
+>   27 | 
+>   28 | - GitLab University (GLU)
+>   29 | - Video: 5 minutes
+>   30 | - Link:  https://university.gitlab.com/courses/gitlab-support-portal-redesign-00
+>   31 | 
+>   32 | **KCS (Knowledge Centered Service)**
+    33 | 
+
+### 8730f8ad1802dbbf  (일반)  handbook/enterprise-data/platform/_index.md  1204~1204  겹침 0자
+--- 청크 글 ---
+Data Team Platform > Data Pump
+To send data from Snowflake to other applications in GitLab's tech stack, we partnered with the Enterprise Applications Integration Engineering team to build a data integration framework called Data Pump, which extracts data to S3 for Workato processer further downstream. Another route is currently setup to directly push data from Snowflake to downstream systems via Fivetran (Integrations).
+--- 원문 (줄 번호 | 글) ---
+  1202 | ## Data Pump
+  1203 | 
+> 1204 | To send data from Snowflake to other applications in GitLab's tech stack, we partnered with the Enterprise Applications Integration Engineering team to build a data integration framework called **Data Pump**, which extracts data to S3 for Workato processer further downstream. Another route is currently [setup](https://internal.gitlab.com/handbook/enterprise-data/platform/census/index) to directly push data from Snowf
+  1205 | 
+
+### dbf699a6d1835cef  (일반)  handbook/engineering/infrastructure-platforms/gitlab-dedicated/_index.md  661~701  겹침 119자
+--- 청크 글 ---
+GitLab Dedicated Group > How we work > Capacity Planning
+it ~capacity-planning::in-progress,
+    - Add or update the due date to next week, and
+    - Create a remediation issue
+    - Take into consideration whether we have existing remediation options (for example: performance-based overlays, or entire reference architecture upsizing) or if we will need to add capabilities to handle the particular saturation problem. Err on the side of raising an issue for further discussion; we can always close it and return to monitoring status.
+    - Any permanent change to a Tenant's environment requires approval from the PM. The remediation issue template has further details.
+  - If it's in capacity-planning::in-progress check on the remediation issue and ensure it is making progress, and update the due-date to be 1 week in the future. If remediation has completed, move the issue to capacity-planning::verification or, if results are already clearly sufficient, close it.
+
+--- 원문 (줄 번호 | 글) ---
+   659 |      `violation:hard` is more important than `violation:soft`,
+   660 |      and `severity::` provides additional signal.
+>  661 | 1. For each saturation issue that is up for review,
+>  662 |    evaluate the prediction given in the issue:
+>  663 |    - Check the tips below for suggestions on quickly assessing predictions as false positives;
+>  664 |      this is a good way to quickly reduce the number of issues requiring more work
+>  665 |    - If evaluation requires non-trivial investigation over more than a day calendar time,
+>  666 |      label it `capacity-planning::investigate` and investigate when you have dealt with higher priority capacity planning issues
+>  667 |    - If you assess that it warrants active action in the near future and is not already `capacity-planning::in-progress`:
+>  668 |       1. Label it `~capacity-planning::in-progress`,
+>  669 |       1. Add or update the due date to next week, and
+>  670 |       1. Create a remediation [issue](https://gitlab.com/gitlab-com/gl-infra/gitlab-dedicated/team/-/issues/new?issuable_template=saturation_risk)
+>  671 |       - Take into consideration whether we have existing remediation options
+>  672 |         (for example: performance-based overlays, or entire reference architecture upsizing)
+>  673 |         or if we will need to add capabilities to handle the particular saturation problem.
+>  674 |         Err on the side of raising an issue for further discussion;
+>  675 |         we can always close it and return to monitoring status.
+>  676 |       - Any permanent change to a Tenant's environment requires approval
+>  677 |         from the PM. The remediation issue template has further details.
+>  678 |    - If it's in `capacity-planning::in-progress` check on the remediation issue and ensure it is making progress,
+>  679 |      and update the due-date to be 1 week in the future.
+>  680 |      If remediation has completed,
+>  681 |      move the issue to `capacity-planning::verification`
+>  682 |      or, if results are already clearly sufficient, close it.
+>  683 |    - If it is in `capacity-planning::verification`,
+>  684 |      check if the remediation results can be considered sufficient,
+>  685 |      and if so close the issue.
+>  686 |      If not, update the due date to next week for further review.
+>  687 |    - If the prediction has a wide-range and there is no indication that it will breach any time soon,
+>  688 |      or the lead time is sufficient that there is no urgency (for example 3+ months for Gitaly disk saturation),
+>  689 |      label the issue with `~capacity-planning::monitor`
+>  690 |      and update the due-date to just before the start of the next shift
+>  691 |      for review by the incoming duty engineer.
+>  692 |    - If a metric is of a nature (perhaps for reasons specific to Dedicated)
+>  693 |      that predictions are consistently unusable across all customers for that metric,
+>  694 |      or if the prediction is plausibly useful but needs tuning:
+>  695 |       1. Label it `capacity-planning::tune-model`,
+>  696 |       1. Update the due-date to 2 weeks in the future,
+>  697 |       1. Work on the tamland
+>  698 |          [manifest](https://gitlab.com/gitlab-com/runbooks/-/blob/master/reference-architectures/get-hybrid/config/tamland/manifest.json)
+>  699 |         to exclude or tweak the specific saturation signal.
+>  700 |          - The [Observability team](/handbook/engineering/infrastructure-platforms/production-engineering/observability/)
+>  701 |         can offer advice on the finer details of the tamland configuration.
+   702 | 1. Check that Tamland is [running](https://gitlab.com/gitlab-com/gl-infra/capacity-planning-trackers/gitlab-dedicated/-/pipeline_schedules).
+
+### 06d7200e611bb565  (일반)  handbook/business-technology/_index.md  22~25  겹침 0자
+--- 청크 글 ---
+IT Enterprise Applications > Strategic Objectives & Operating Principles
+- Breakdown Silos: As a centralized team we talk to every part of the business. Business partners effectively connect the dots and bring people together to solve business problems.
+- Architect & Iterate: Know where you are going and then work toward the goal in small parts. This is true for finance, analytics or engineering work.
+- Be The Solution: Be empowered to drive change within our team and the company. We want to solve the most interesting problems. This leads to one of the best career experiences of our lives.
+- Lead With Data: Our teams have tier 1 metrics to define success. Create strong business processes and systems that capture data. Use the data to drive optimal business decisions across GitLab.
+--- 원문 (줄 번호 | 글) ---
+    20 | ## <i class="fas fa-rocket" id="biz-tech-icons"></i> Strategic Objectives & Operating Principles
+    21 | 
+>   22 | 1. **Breakdown Silos:** As a centralized team we talk to every part of the business. Business partners effectively connect the dots and bring people together to solve business problems.
+>   23 | 2. **Architect & Iterate:** Know where you are going and then work toward the goal in small parts. This is true for finance, analytics or engineering work.
+>   24 | 3. **Be The Solution:** Be empowered to drive change within our team and the company. We want to solve the most interesting problems. This leads to one of the best career experiences of our lives.
+>   25 | 4. **Lead With Data:** Our teams have tier 1 metrics to define success. Create strong business processes and systems that capture data. Use the data to drive optimal business decisions across GitLab.
+    26 | 5. **GitLab for GitLab:** We keep to our core values and the belief that everyone can contribute, we are committed to dogfooding, actively use, give feedback and contribute to the development of the GitLab our product.
+
+### 881253a5c2d9ce50  (일반)  handbook/engineering/development/sec/security-platform/abuse-engineering/_index.md  6~9  겹침 0자
+--- 청크 글 ---
+Abuse Engineering Group
+The Abuse Engineering group is part of the Security Platform stage. It was named Anti-Abuse before the FY27 Sec reorg; the group::anti-abuse label was renamed to group::abuse engineering, so its history is preserved.
+--- 원문 (줄 번호 | 글) ---
+     4 | ---
+     5 | 
+>    6 | The Abuse Engineering group is part of the
+>    7 | [Security Platform stage](/handbook/engineering/development/sec/security-platform/).
+>    8 | It was named Anti-Abuse before the FY27 Sec reorg; the `group::anti-abuse` label was
+>    9 | renamed to `group::abuse engineering`, so its history is preserved.
+    10 | 
+
+### ddb2133eb4566109  (일반)  handbook/support/workflows/account_deletion_access_request_workflows.md  238~247  겹침 120자
+--- 청크 글 ---
+Account Deletion & Data Access Requests - Workflows > Procedure > Stage 2: Request Processing > Deletion Requests
+the user a message to inform them that their request has been fulfilled once all tasks are completed.
+Marketing Deletion
+Support Enginers have no tasks in marketing deletion requests. No tasks should be assigned from the system to Support for this type of request.
+Portal Account Deletion
+This workflow applies to deletion requests where the data subject identifies themself as the owner of a customers portal account (customers.gitlab.com).
+- If a customers portal account is located, mark the Support Engineer (Zendesk/cDot Deletion) task as complete.
+- If a customers portal account is not located, mark the Support Engineer (Zendesk/cDot Deletion) task as not found.
+Support Engineers do not perform the deletion of customers portal account. After the Support Engineer (Zendesk/cDot Deletion) task is resolved, a separate task will be triggered for a Console Engineer to delete the account.
+--- 원문 (줄 번호 | 글) ---
+   236 | ##### Marketing Deletion
+   237 | 
+>  238 | Support Enginers have no tasks in marketing deletion requests. No tasks should be assigned from the system to Support for this type of request.
+>  239 | 
+>  240 | ##### **Portal Account Deletion**
+>  241 | 
+>  242 | This workflow applies to deletion requests where the data subject identifies themself as the owner of a customers portal account (customers.gitlab.com).
+>  243 | 
+>  244 | - If a customers portal account is located, mark the `Support Engineer (Zendesk/cDot Deletion)` task as complete.
+>  245 | - If a customers portal account is not located, mark the `Support Engineer (Zendesk/cDot Deletion)` task as not found.
+>  246 | 
+>  247 | Support Engineers do not perform the deletion of customers portal account. After the `Support Engineer (Zendesk/cDot Deletion)` task is resolved, a separate task will be triggered for a Console Engineer to delete the account.
+   248 | 
+
+### c0a4237e384cd1f0  (일반)  handbook/engineering/infrastructure-platforms/change-management/_index.md  344~344  겹침 116자
+--- 청크 글 ---
+Change Management > Production Change Lock (PCL) > Hard PCL
+response (requires approval from both EOC and Incident Manager On Call)
+Approval process for S1/S2 incident changes:
+In case of an active S1/S2 incident, the EOC must interact with the Incident Manager On Call prior to making any decision. It is at their discretion to approve whether a change should be executed. If approved, the Incident Manager On Call must inform the Infrastructure Leadership Escalation of this decision (who will inform the executive team as necessary).
+--- 원문 (줄 번호 | 글) ---
+   342 | **Approval process for S1/S2 incident changes:**
+   343 | 
+>  344 | In case of an active S1/S2 incident, the EOC must interact with the Incident Manager On Call prior to making any decision. It is at their discretion to approve whether a change should be executed. If approved, the Incident Manager On Call must inform the [Infrastructure Leadership Escalation](/handbook/engineering/infrastructure-platforms/incident-management/#infrastructure-leadership-responsibilities) of this decisi
+   345 | 
+
+### 7635540301f031c5  (일반)  handbook/engineering/deployments-and-releases/deployments/index.md  139~151  겹침 119자
+--- 청크 글 ---
+Deployments > Overview and terminology > Deployment blockers > Blocking deployments with an incident
+- Lowering the severity below severity2 will unset the flag and allow deployments, unless it has been manually changed.
+- From the incident Slack channel, run the /incident field command to update custom fields, then select 'Yes' under Block Deployments.
+- Alert the Release Managers in the #releases channel.
+What does the blocks deployments flag do?
+When the blocks deployments flag is set:
+- Canary deployments continue: Deployments to staging-canary (gstg-cny) and production-canary (gprd-cny) are not blocked
+- Migrations are not blocked: Database migrations execute as part of canary deployments. If you would like to block migrations, please contact Release Managers
+- Main environment promotions are blocked: Promotions to staging (gstg) and production (gprd) are prevented
+- Post-deploy migrations are blocked: The post-deployment migration pipeline is blocked
+--- 원문 (줄 번호 | 글) ---
+   137 |    - Lowering the severity **below severity2** will **unset** the flag and allow deployments, unless it has been manually changed.
+   138 | 
+>  139 | 2. From the incident Slack channel, run the `/incident field` command to update [custom fields](https://gitlab.com/gitlab-com/runbooks/docs/incident-io-onboard/oncall.md#on-call-alert-handling-process), then select **'Yes'** under *Block Deployments*.
+>  140 | 
+>  141 | 3. Alert the Release Managers in the [#releases](https://gitlab.slack.com/archives/C0XM5UU6B) channel.
+>  142 | 
+>  143 | ##### What does the `blocks deployments` flag do?
+>  144 | 
+>  145 | When the `blocks deployments` flag is set:
+>  146 | 
+>  147 | - **Canary deployments continue**: Deployments to staging-canary (gstg-cny) and production-canary (gprd-cny) are not blocked
+>  148 | - **Migrations are not blocked**: Database migrations execute as part of canary deployments. If you would like to block migrations, please [contact Release Managers](/handbook/engineering/deployments-and-releases/#how-to-contact-a-release-manager)
+>  149 | - **Main environment promotions are blocked**: Promotions to staging (gstg) and production (gprd) are prevented
+>  150 | - **Post-deploy migrations are blocked**: The post-deployment migration pipeline is blocked
+>  151 | 
+   152 | This design ensures continuous validation of code changes and migrations while creating deploy pressure only for main environment promotions.
+
+### 13d2f4cb86347ae8  (일반)  handbook/support/workflows/dedicated_cmoc.md  106~108  겹침 0자
+--- 청크 글 ---
+How to Perform GitLab Dedicated CMOC Duties > Incident Management for GDCMOC > Sending Notifications Using Switchboard > Providing Ongoing Incident Updates Using Switchboard
+Update the customer on the incident status by creating a new incident status notification. If the last update hasn't changed, use the same information.
+Ensure to provide an update every 60 minutes, or whenever the incident progresses to a new stage (Investigation Start → Investigation Update → Mitigation in Progress → Resolved), whichever comes first.
+--- 원문 (줄 번호 | 글) ---
+   104 | #### Providing Ongoing Incident Updates Using Switchboard
+   105 | 
+>  106 | Update the customer on the incident status by [creating a new incident status notification](#creating-an-incident-status-notification-using-switchboard). If the last update hasn't changed, use the same information.
+>  107 | 
+>  108 | Ensure to provide an update **every 60 minutes**, or whenever the incident progresses to a new stage (Investigation Start → Investigation Update → Mitigation in Progress → Resolved), whichever comes first.
+   109 | 
+

@@ -1,0 +1,155 @@
+{
+  "run_at_utc": "2026-11-13T04:38:47.1804442Z",
+  "project": "gitlab-com/content-sites/handbook (id 42817607)",
+  "months": [
+    {
+      "month": "2025-11",
+      "weekdays": 20,
+      "merged_mrs": 412,
+      "opened_mrs": 536,
+      "commits_security": 52,
+      "commits_finance": 8,
+      "commits_people_policies": 4,
+      "commits_legal": 6,
+      "commits_it_eta": 0,
+      "group_public_issues_title_access_request": 0
+    },
+    {
+      "month": "2025-12",
+      "weekdays": 23,
+      "merged_mrs": 286,
+      "opened_mrs": 405,
+      "commits_security": 25,
+      "commits_finance": 6,
+      "commits_people_policies": 1,
+      "commits_legal": 7,
+      "commits_it_eta": 0,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-01",
+      "weekdays": 22,
+      "merged_mrs": 398,
+      "opened_mrs": 471,
+      "commits_security": 30,
+      "commits_finance": 6,
+      "commits_people_policies": 1,
+      "commits_legal": 11,
+      "commits_it_eta": 0,
+      "group_public_issues_title_access_request": 0
+    },
+    {
+      "month": "2026-02",
+      "weekdays": 20,
+      "merged_mrs": 435,
+      "opened_mrs": 521,
+      "commits_security": 50,
+      "commits_finance": 5,
+      "commits_people_policies": 2,
+      "commits_legal": 9,
+      "commits_it_eta": 2,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-03",
+      "weekdays": 22,
+      "merged_mrs": 378,
+      "opened_mrs": 480,
+      "commits_security": 58,
+      "commits_finance": 8,
+      "commits_people_policies": 0,
+      "commits_legal": 11,
+      "commits_it_eta": 1,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-04",
+      "weekdays": 22,
+      "merged_mrs": 373,
+      "opened_mrs": 458,
+      "commits_security": 29,
+      "commits_finance": 2,
+      "commits_people_policies": 0,
+      "commits_legal": 15,
+      "commits_it_eta": 0,
+      "group_public_issues_title_access_request": 0
+    },
+    {
+      "month": "2026-05",
+      "weekdays": 21,
+      "merged_mrs": 295,
+      "opened_mrs": 326,
+      "commits_security": 24,
+      "commits_finance": 2,
+      "commits_people_policies": 0,
+      "commits_legal": 9,
+      "commits_it_eta": 0,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-06",
+      "weekdays": 22,
+      "merged_mrs": 262,
+      "opened_mrs": 309,
+      "commits_security": 22,
+      "commits_finance": 2,
+      "commits_people_policies": 0,
+      "commits_legal": 12,
+      "commits_it_eta": 3,
+      "group_public_issues_title_access_request": 0
+    },
+    {
+      "month": "2026-07",
+      "weekdays": 23,
+      "merged_mrs": 294,
+      "opened_mrs": 367,
+      "commits_security": 43,
+      "commits_finance": 9,
+      "commits_people_policies": 3,
+      "commits_legal": 21,
+      "commits_it_eta": 13,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-08",
+      "weekdays": 21,
+      "merged_mrs": 261,
+      "opened_mrs": 327,
+      "commits_security": 11,
+      "commits_finance": 3,
+      "commits_people_policies": 4,
+      "commits_legal": 5,
+      "commits_it_eta": 14,
+      "group_public_issues_title_access_request": 0
+    },
+    {
+      "month": "2026-09",
+      "weekdays": 22,
+      "merged_mrs": 302,
+      "opened_mrs": 377,
+      "commits_security": 18,
+      "commits_finance": 4,
+      "commits_people_policies": 2,
+      "commits_legal": 5,
+      "commits_it_eta": 13,
+      "group_public_issues_title_access_request": 1
+    },
+    {
+      "month": "2026-10",
+      "weekdays": 22,
+      "merged_mrs": 322,
+      "opened_mrs": 493,
+      "commits_security": 24,
+      "commits_finance": 7,
+      "commits_people_policies": 2,
+      "commits_legal": 3,
+      "commits_it_eta": 17,
+      "group_public_issues_title_access_request": 1
+    }
+  ],
+  "access_requests_tracker_http_status": {
+    "https://gitlab.com/api/v4/projects/gitlab-com%2Fteam-member-epics%2Faccess-requests": 404,
+    "https://gitlab.com/gitlab-com/team-member-epics/access-requests/-/issues": 403
+  },
+  "total_http_calls": 108
+}
