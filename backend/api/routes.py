@@ -94,6 +94,14 @@ class ChatRequest(BaseModel):
                 raise ValueError("존재하지 않는 날짜입니다.") from None
         return value
 
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, value: str) -> str:
+        """공백만 있는 질문은 422로 막는다(앞뒤 공백을 지운 뒤 비면 거절). 값은 그대로 두어 검색·녹화 재생의 입력 글자는 바뀌지 않는다."""
+        if not value.strip():
+            raise ValueError("질문은 공백만으로 보낼 수 없습니다.")
+        return value
+
 
 class MemoryPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")  # 기억해도 되는 칸(affiliation, rank, service) 밖의 값은 422

@@ -3,12 +3,12 @@
 export function createChatService(adapter) {
   return {
     listThreads: () => adapter.listThreads(),
-    getThread: threadId => adapter.getThread(threadId),
+    getThread: (threadId, options) => adapter.getThread(threadId, options),
     createConversation: () => adapter.createConversation(),
     sendMessage: ({ threadId, message, retry }) => adapter.sendMessage({ threadId, message, retry }),
     stopMessage: threadId => adapter.stopMessage(threadId),
     searchThreads: query => adapter.searchThreads(query),
-    dispose: () => adapter.dispose?.(),
+    dispose: () => adapter.dispose?.() ?? [],
   }
 }
 
@@ -102,9 +102,10 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
   return {
     async listThreads() { const { getThreads } = await import('./api'); threads = mapThreadResponse(await getThreads()); notify(); return structuredClone(threads) },
     // Server copy unless the local one is fresher: streaming now, or already holding a user turn (fetched or sent this session).
-    async getThread(id) {
+    // fresh: 화면을 떠난 사이 서버가 이어서 만든 답을 받을 때 로컬 사본을 건너뛴다
+    async getThread(id, { fresh = false } = {}) {
       const streaming = () => [...controllers.values()].some(request => request.activeThreadId === id)
-      const local = threads.find(thread => thread.id === id)
+      const local = fresh ? null : threads.find(thread => thread.id === id)
       // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있어 서버에서 다시 받는다(H-15)
       const waiting = local?.messages?.some(message => message.role === 'assistant' && message.state === 'approval')
       if (local && (streaming() || (local.messages?.some(message => message.role === 'user') && !waiting))) return structuredClone(local)
@@ -207,6 +208,12 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     async searchThreads(query) { const q = query.trim().toLowerCase(); return threads.filter(thread => thread.title.toLowerCase().includes(q)) },
     // controllers 값은 AbortController가 아니라 요청 기록 { controller, activeThreadId, cancelled }다.
     // 예전 코드는 기록에 abort()를 불러 TypeError → 답을 받는 중 화면이 내려가면 React가 화면 전체를 지웠다(배포 실측 11/9).
-    dispose() { controllers.forEach(request => { request.cancelled = true; request.controller.abort() }); controllers.clear() },
+    // 돌려주는 값: 끊은 요청의 대화 id. 서버는 연결이 끊겨도 답을 끝까지 만들어 저장하므로(backend/api/routes.py iterate_in_one_thread)
+    // 채팅 화면으로 돌아오면 이 대화를 서버에서 다시 받는다.
+    dispose() {
+      const active = [...controllers.values()].map(request => request.activeThreadId).filter(Boolean)
+      controllers.forEach(request => { request.cancelled = true; request.controller.abort() }); controllers.clear()
+      return active
+    },
   }
 }

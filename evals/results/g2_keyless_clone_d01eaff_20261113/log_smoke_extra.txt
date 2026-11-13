@@ -1,0 +1,17 @@
+root / 200 200
+[unauth chat] 401
+user login True ok
+wrong pw 401
+[unrecorded] GitLab에서 휴가 정책은 어떻게 돼? -> refuse 0 검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다.
+[unrecorded] 프로덕션 배포 전에 필요한 승인 절차는? -> refuse 0 검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다.
+[ws diff] refuse 핸드북과 관련 없는 질문이라 답하지 않습니다.
+[inject] refuse 핸드북과 관련 없는 질문이라 답하지 않습니다.
+[decision-tables list (user)] HTTP 200 []
+[approvals as user] HTTP 403 {"detail": "관리자 권한이 필요합니다.", "error": {"code": "forbidden", "message": "관리자 권한이 필요합니다.", "request_id": "c9968de7f75b452e87b08dcbecb6d765"}}
+[convert as user] HTTP 403 {"detail": "관리자 권한이 필요합니다.", "error": {"code": "forbidden", "message": "관리자 권한이 필요합니다.", "request_id": "6d79b9ab24b2498f88d04f4366a6a62b"}}
+admin login True ok
+[approvals as admin] HTTP 200 []
+[decision-tables list (admin)] HTTP 200 []
+[convert as admin(category=Software)] HTTP 404 {"detail": "권한표에 그 업무 종류가 없다", "error": {"code": "not_found", "message": "권한표에 그 업무 종류가 없다", "request_id": "5f13fce369fb4299aa230668a2b1a528"}}
+[convert as admin(empty)] HTTP 400 {"detail": "category(권한표 업무 종류)가 필요하다", "error": {"code": "bad_request", "message": "category(권한표 업무 종류)가 필요하다", "request_id": "e8c33b104b244ff8981f8cd11667688a"}}
+[admin/users as admin non-owner] 403

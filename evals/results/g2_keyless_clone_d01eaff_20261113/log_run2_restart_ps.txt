@@ -1,0 +1,4 @@
+NAME                          IMAGE                       COMMAND                  SERVICE   CREATED          STATUS                     PORTS
+provena_cleanclone-api-1      provena_cleanclone-api      "uvicorn backend.mai…"   api       17 seconds ago   Up 7 seconds               0.0.0.0:18000->8000/tcp, [::]:18000->8000/tcp
+provena_cleanclone-db-1       pgvector/pgvector:pg16      "docker-entrypoint.s…"   db        18 seconds ago   Up 16 seconds (healthy)    5432/tcp
+provena_cleanclone-loader-1   provena_cleanclone-loader   "python -m backend.r…"   loader    17 seconds ago   Exited (0) 8 seconds ago   

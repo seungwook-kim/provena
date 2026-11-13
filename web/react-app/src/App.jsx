@@ -72,7 +72,8 @@ function SessionRoutes() {
   }, [pathname, refresh, status])
 
   return <Routes>
-    <Route path="/" element={logoutPending ? <LandingPage /> : user && import.meta.env.VITE_ENABLE_MOCK_SESSION !== 'true' ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <LandingPage />} />
+    {/* 구글 로그인 콜백은 `/`로 보낸다(backend/auth.py google_callback). 세션 확인 전에 랜딩을 그리면 잠깐 보였다가 채팅으로 넘어가므로 확인이 끝날 때까지 비워 둔다(경희님 화면 점검 2026-11-13) */}
+    <Route path="/" element={logoutPending ? <LandingPage /> : status === 'checking' ? <main className="status-page" aria-busy="true" /> : user &&import.meta.env.VITE_ENABLE_MOCK_SESSION !== 'true' ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <LandingPage />} />
     <Route path="/login" element={user ? <Navigate to={user.profile_completed === false ? '/myinfo' : '/chat'} replace /> : <LoginPage />} />
     <Route path="/signup" element={user ? <Navigate to="/chat" replace /> : <SignupPage />} />
     <Route path="/myinfo" element={<Protected><ProfileRequiredPage /></Protected>} />

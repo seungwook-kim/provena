@@ -1,0 +1,14 @@
+loader-1  | data/index.tar.gz ????? 泥?겕 23095媛? 踰≫꽣 voyage-4, chunks sha256 86e6c26c8a0ca561
+loader-1  |   2000/23095
+loader-1  |   4000/23095
+loader-1  |   6000/23095
+loader-1  |   8000/23095
+loader-1  |   10000/23095
+loader-1  |   12000/23095
+loader-1  |   14000/23095
+loader-1  |   16000/23095
+loader-1  |   18000/23095
+loader-1  |   20000/23095
+loader-1  |   22000/23095
+loader-1  |   23095/23095
+loader-1  | ?곸옱 ?꾨즺: voyage-4, 泥?겕 23095媛? 留곹겕 ?덈뒗 泥?겕 2661媛? 踰덉뿭 0媛? 15.6珥? generation 1

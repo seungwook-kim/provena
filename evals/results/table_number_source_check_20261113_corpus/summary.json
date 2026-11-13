@@ -1,0 +1,71 @@
+{
+ "markup_only_kinds": {
+  "code": 13,
+  "list_item": 32,
+  "paragraph": 16,
+  "html": 10
+ },
+ "overlap": {
+  "overlap_chunks": 7106,
+  "tail_not_prev_suffix": 0,
+  "mid_element_any": 6724,
+  "mid_by_kind": {
+   "list_item": 3233,
+   "table_row": 724,
+   "paragraph": 2112,
+   "code": 584,
+   "quote": 44,
+   "heading": 18,
+   "html": 9
+  },
+  "table_row_mid": 724,
+  "table_row_complete": 43,
+  "table_row_mid_recv_table": 638,
+  "first_cell_missing": 610,
+  "first_cell_label_cut_only": 13,
+  "cells_lost_whole_ge1": 610,
+  "lost_cells_have_digit": 177,
+  "cut_inside_value_only": 101,
+  "cut_inside_label_only": 13
+ },
+ "extra": {
+  "ordered_list_elements": 10877,
+  "ordered_list_elements_not_numbered_1": 1987,
+  "chunks_with_ordered_list": 3964,
+  "values_only_grade_s_p_chunks": 170,
+  "table_chunks_with_overlap": 839,
+  "html_table_row_chunks": 53
+ },
+ "structure_problems": 0,
+ "total_chunks": 23095,
+ "selected": 4319,
+ "by_reason": {
+  "수치": 2427,
+  "표": 1553,
+  "표+수치": 339
+ },
+ "table_total": 1892,
+ "table_ir": 1774,
+ "table_markup_only": 71,
+ "table_authz_row": 47,
+ "table_old_rule": 1930,
+ "values_only": 2427,
+ "has_values": 2766,
+ "other_digit": 5047,
+ "no_digit": 13729,
+ "mismatch": 3,
+ "numbers_mismatch": 2,
+ "rows_mismatch": 1,
+ "via_raw_markup": 0,
+ "other_digit_mismatch": 0,
+ "snapshot_sha256": "51227fb1842f9eda1c216472a7f57203c75023a39cba2063e44f25280a9ce4d7",
+ "table_rows_checked": 5694,
+ "overlap_chunks": 7106,
+ "split_cuts_total": 13,
+ "split_cuts_digit_token": 2,
+ "split_cuts_digit_split": 2,
+ "broken_html_tables": 10,
+ "broken_html_chunks": 18,
+ "sample_current_checked": 30,
+ "sample_current_match": 30
+}

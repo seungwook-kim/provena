@@ -260,7 +260,7 @@
 .change-service-page .changed-text-legend i{background:#CFE0F8}
 .change-service-detail .change-policy-grid section:nth-child(2){background:#F7F9FF}
 .change-detail-actions{border-top:1px solid var(--line);padding-top:16px}
-@media(max-width:760px){.change-service-page{padding:22px 16px 56px}.change-service-heading{padding:18px 20px}.change-service-heading h1{font-size:28px}.change-service-detail{padding:22px 18px}.change-service-list{padding:14px}.change-detail-head{padding:16px}.change-policy-grid section{padding:16px}}
+@media(max-width:760px){.change-service-page{padding:22px 16px 56px}.change-service-layout{grid-template-columns:minmax(0,1fr)}.change-service-heading{padding:18px 20px}.change-service-heading h1{font-size:28px}.change-service-detail{padding:22px 18px}.change-service-list{padding:14px}.change-detail-head{padding:16px}.change-policy-grid section{padding:16px}}
 
 /* Visualization experiment: policy-change screen only. */
 .change-service-page .change-policy-grid section,.change-service-page .change-policy-grid section.highlight{border-color:#DFE7F5;background:#F7F9FF}
@@ -577,3 +577,7 @@
 .recall-owner-note{color:var(--muted);font-size:12px;white-space:nowrap}
 @media(max-width:760px){.recall-service-page .recall-service-layout{grid-template-columns:1fr}.recall-service-page .recall-service-list{max-height:360px;overflow:auto}}
 .approval-id-line{margin:20px 0 0;color:var(--faint);font-size:12px;overflow-wrap:anywhere}
+/* 입력칸은 글에 맞춰 약 8줄까지 늘어나고 그 뒤로는 칸 안에서 스크롤(DemoChatPage COMPOSER_MAX_HEIGHT_PX) */
+.demo-composer textarea{max-height:208px;overflow-y:auto}
+/* 기억 설정 첫 단계는 '이전'을 숨기므로 혼자 남은 '다음'을 오른쪽에 둔다 */
+.onboarding-demo .demo-form-actions>:only-child{margin-left:auto}

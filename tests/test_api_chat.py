@@ -172,6 +172,19 @@ def test_chat_rejects_impossible_as_of_with_422_not_sse_error(monkeypatch):
         assert r.status_code == 200
 
 
+def test_chat_rejects_a_message_of_only_whitespace(monkeypatch):
+    """앞뒤 공백을 지운 뒤 비는 질문(스페이스, 탭, 줄바꿈, 전각 공백만)은 422이고, 글자가 있으면 앞뒤 공백이 있어도 받는다."""
+    with Env(monkeypatch) as env:
+        c = env.client(env.alice)
+        for blank in (" ", "   ", "\t", "\n", " \r\n\t ", "　", " "):
+            r = c.post("/chat", json={"message": blank})
+            err = r.json()["error"]
+            assert r.status_code == 422 and err["code"] == "validation_error", repr(blank)
+            assert all(set(d) == {"loc", "msg", "type"} for d in err["details"]) and err["details"][0]["loc"][-1] == "message"
+        r, ev = ask(c, f"  {Q}\n", "t1", as_of=AS_OF)
+        assert r.status_code == 200 and ev[-1][0] == "done"
+
+
 def test_chat_requires_login_and_csrf(monkeypatch):
     with Env(monkeypatch) as env:
         r = env.client(None).post("/chat", json={"message": ""})

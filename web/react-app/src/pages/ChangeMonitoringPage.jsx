@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
 import { previewChangeMonitoringService } from '../lib/change-monitoring-service'
 import { describeApiError } from '../lib/recall-service'
 import { useServiceSnapshot } from '../lib/live-services'
+
+// styles.css 의 `@media(max-width:760px){... .change-service-layout{grid-template-columns:1fr}}` 와 같은 기준
+export const NARROW_LAYOUT_QUERY = '(max-width: 760px)'
 
 const CHANGE_TYPES = ['MODIFIED', 'ADDED', 'REMOVED', 'HELD']
 const CHANGE_LABELS = { MODIFIED: '수정', ADDED: '추가', REMOVED: '삭제', HELD: '동결 보류' }
@@ -71,6 +74,14 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
   const [query, setQuery] = useState('')
   const [enabled, setEnabled] = useState({ MODIFIED: true, ADDED: true, REMOVED: true, HELD: true })
   const [selectedId, setSelectedId] = useState(() => records[0]?.id ?? null)
+  // 좁은 화면(760px 이하)은 목록 아래에 상세가 붙어, 목록이 길면 항목을 눌러도 변경 전후가 화면 밖에 있다
+  // → 항목을 누르면 상세로 내려간다(경희님 화면 점검 2026-11-13). 넓은 화면은 옆에 보이므로 움직이지 않는다.
+  const detailRef = useRef(null)
+  function chooseRecord(id) {
+    setSelectedId(id)
+    const narrow = typeof window.matchMedia === 'function' && window.matchMedia(NARROW_LAYOUT_QUERY).matches
+    if (narrow) requestAnimationFrame(() => detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
+  }
   const [detailError, setDetailError] = useState({ id: null, message: '' })
   const visible = useMemo(() => service.filterChanges(records, { query, types: enabled }), [enabled, query, records, service])
   const selected = visible.find(record => record.id === selectedId) ?? visible[0] ?? null
@@ -106,11 +117,11 @@ export default function ChangeMonitoringPage({ service = previewChangeMonitoring
     <section className="change-service-layout"><aside className="change-service-list"><h2>정책 변경 목록</h2>
       {loadingFirst ? <p className="change-service-empty" role="status">변경 기록을 불러오고 있습니다.</p>
         : failedFirst ? <div className="change-service-empty recall-load-error" role="alert"><p>{listErrorMessage(snapshot.error)}</p><button type="button" className="demo-outline-button" onClick={() => service.listChanges().catch(() => {})}>다시 시도</button></div>
-          : visible.length ? visible.map(record => <button type="button" key={record.id} className={`change-service-item ${record.id === selected?.id ? 'selected' : ''}`} onClick={() => setSelectedId(record.id)}><div><strong>{record.document}</strong><span className={`change-type ${record.type.toLowerCase()}`}>{CHANGE_LABELS[record.type]}</span></div><p>{record.summary}</p><small>{[record.area, record.detectedAt].filter(Boolean).join(' · ')}</small>{typeof record.impactedAnswerCount === 'number' && <em>영향받는 답변 {record.impactedAnswerCount}건</em>}</button>) : <p className="change-service-empty">{!records.length ? '변경 기록이 없습니다.' : live && snapshot.more ? `불러온 ${records.length}건 중 결과가 없습니다.` : '검색 결과가 없습니다.'}</p>}
+          : visible.length ? visible.map(record => <button type="button" key={record.id} className={`change-service-item ${record.id === selected?.id ? 'selected' : ''}`} onClick={() => chooseRecord(record.id)}><div><strong>{record.document}</strong><span className={`change-type ${record.type.toLowerCase()}`}>{CHANGE_LABELS[record.type]}</span></div><p>{record.summary}</p><small>{[record.area, record.detectedAt].filter(Boolean).join(' · ')}</small>{typeof record.impactedAnswerCount === 'number' && <em>영향받는 답변 {record.impactedAnswerCount}건</em>}</button>) : <p className="change-service-empty">{!records.length ? '변경 기록이 없습니다.' : live && snapshot.more ? `불러온 ${records.length}건 중 결과가 없습니다.` : '검색 결과가 없습니다.'}</p>}
       {live && snapshot.more && query.trim() && <p className="change-service-empty" role="status">아직 일부만 불러왔습니다. 더 보기를 눌러 나머지에서도 찾아 주세요.</p>}
       {live && snapshot.more && <button type="button" className="demo-outline-button change-load-more" disabled={status === 'loading'} onClick={() => service.loadMore?.().catch(() => {})}>{status === 'loading' ? '불러오는 중입니다.' : '더 보기'}</button>}
     </aside>
-      <article className="change-service-detail">{selected ? <><div className="change-detail-head"><div><span className={`change-type ${selected.type.toLowerCase()}`}>{CHANGE_LABELS[selected.type]}</span><h2>{selected.document}</h2><p>{[selected.area, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{selected.deliveryStatus && ` · ${DELIVERY_LABELS[selected.deliveryStatus]}`}</p></div></div><section className="change-summary"><small>변경 내용 요약</small><p>{selected.summary}</p></section>
+      <article className="change-service-detail" ref={detailRef}>{selected ? <><div className="change-detail-head"><div><span className={`change-type ${selected.type.toLowerCase()}`}>{CHANGE_LABELS[selected.type]}</span><h2>{selected.document}</h2><p>{[selected.area, `변경 감지 ${selected.detectedAt}`].filter(Boolean).join(' · ')}{selected.deliveryStatus && ` · ${DELIVERY_LABELS[selected.deliveryStatus]}`}</p></div></div><section className="change-summary"><small>변경 내용 요약</small><p>{selected.summary}</p></section>
         {detailState.loading && <p className="change-service-empty" role="status">변경 전후 본문을 불러오고 있습니다.</p>}
         {detailState.error && <p className="recall-action-error" role="alert">{detailState.error}</p>}
         {(selected.oldPolicy || selected.newPolicy) && <><h3>정책 변경 전후</h3><div className={`change-policy-grid ${!selected.oldPolicy || !selected.newPolicy ? 'single' : ''}`}>{selected.oldPolicy && <section className={selected.type === 'REMOVED' ? 'highlight' : ''}><small>변경 전</small><p><Marked text={selected.oldPolicy} mark={selected.type === 'REMOVED' ? selected.changedText : null} /></p></section>}{selected.newPolicy && <section className={selected.type === 'ADDED' || selected.type === 'MODIFIED' ? 'highlight' : ''}><small>변경 후</small><p><Marked text={selected.newPolicy} mark={selected.type === 'ADDED' || selected.type === 'MODIFIED' ? selected.changedText : null} at={selected.changedAt} /></p></section>}</div></>}

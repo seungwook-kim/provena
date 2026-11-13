@@ -1,0 +1,19 @@
+Cloning into 'proj3-c'...
+error: unable to create file data/pdf/marketing/brand-and-product-marketing/product-and-solution-marketing/roles-personas/assets/Incident_Response_Flow_SecOpsEngineer.pdf: Filename too long
+Updating files:  90% (1666/1834)
+Updating files:  91% (1669/1834)
+Updating files:  92% (1688/1834)
+Updating files:  93% (1706/1834)
+Updating files:  94% (1724/1834)
+Updating files:  95% (1743/1834)
+Updating files:  96% (1761/1834)
+Updating files:  97% (1779/1834)
+Updating files:  98% (1798/1834)
+Updating files:  99% (1816/1834)
+Updating files: 100% (1834/1834)
+Updating files: 100% (1834/1834), done.
+fatal: unable to checkout working tree
+warning: Clone succeeded, but checkout failed.
+You can inspect what was checked out with 'git status'
+and retry with 'git restore --source=HEAD :/'
+

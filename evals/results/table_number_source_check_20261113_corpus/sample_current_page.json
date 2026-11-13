@@ -1,0 +1,302 @@
+[
+ {
+  "chunk_id": "2ec7d538b0feacd1",
+  "url": "https://handbook.gitlab.com/handbook/security/security-observations-risk-management/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "04ca31de1e4a75b0",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/environments/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "e91fc6ad680a2252",
+  "url": "https://handbook.gitlab.com/handbook/engineering/development/sec/delineate-sec/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "1f5a1d09537d1c59",
+  "url": "https://handbook.gitlab.com/handbook/engineering/ai/ai-core-infra/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "66a01030d737d3d3",
+  "url": "https://handbook.gitlab.com/handbook/engineering/devops/verify/pipeline-authoring/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "fef711e65284bfbb",
+  "url": "https://handbook.gitlab.com/handbook/support/knowledge-base/article-creation-workflow/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "b36c530f2a21a296",
+  "url": "https://handbook.gitlab.com/handbook/security/corporate/systems/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "fce0c6356ff3e96f",
+  "url": "https://handbook.gitlab.com/handbook/engineering/devops/create/code-review/frontend/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "026d7ffe989a4f89",
+  "url": "https://handbook.gitlab.com/handbook/support/amer/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "80b1d5cc653055a3",
+  "url": "https://handbook.gitlab.com/handbook/security/product-security/vulnerability-management/labels/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "0ff86c3e8f40b550",
+  "url": "https://handbook.gitlab.com/handbook/engineering/devops/runner/runner-core/bug-triage-matrix/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "90d2185908336f79",
+  "url": "https://handbook.gitlab.com/handbook/enterprise-data/ai/context-layer/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "1fa9aaf41986b129",
+  "url": "https://handbook.gitlab.com/handbook/enterprise-data/marketing-analytics/marketing-analytics-data/marketing-analytics-data-l2r/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "168d83c43af6018a",
+  "url": "https://handbook.gitlab.com/handbook/enterprise-data/ai/context-layer/add-a-domain/eval-harness/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "0bf9861989809ac3",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/project-management/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "6cfb6df5e6bda72a",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/gitlab-dedicated/dedicated-migrations/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "0cc2358a4bd54fba",
+  "url": "https://handbook.gitlab.com/handbook/finance/committee-composition/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "9bd7f78d2eab215c",
+  "url": "https://handbook.gitlab.com/handbook/security/corporate/systems/okta/policy/device-posture-checks/device-posture-windows/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "1aaa65c90174a51e",
+  "url": "https://handbook.gitlab.com/handbook/security/policies_and_standards/password-standard/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "a8a0139d83f52a52",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/production-engineering/fleet-management/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "88be72621052cf95",
+  "url": "https://handbook.gitlab.com/handbook/security/product-security/security-platforms-architecture/security-interlock/prodsec-to-product-workflow/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "0cc2bf8465b7dd60",
+  "url": "https://handbook.gitlab.com/handbook/support/knowledge-base/knowledge-base-training/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "8730f8ad1802dbbf",
+  "url": "https://handbook.gitlab.com/handbook/enterprise-data/platform/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "dbf699a6d1835cef",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/gitlab-dedicated/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "06d7200e611bb565",
+  "url": "https://handbook.gitlab.com/handbook/business-technology/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "881253a5c2d9ce50",
+  "url": "https://handbook.gitlab.com/handbook/engineering/development/sec/security-platform/abuse-engineering/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "ddb2133eb4566109",
+  "url": "https://handbook.gitlab.com/handbook/support/workflows/account_deletion_access_request_workflows/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "c0a4237e384cd1f0",
+  "url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/change-management/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "7635540301f031c5",
+  "url": "https://handbook.gitlab.com/handbook/engineering/deployments-and-releases/deployments/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ },
+ {
+  "chunk_id": "13d2f4cb86347ae8",
+  "url": "https://handbook.gitlab.com/handbook/support/workflows/dedicated_cmoc/",
+  "http_status": 200,
+  "mode": "쪽 전체 글자",
+  "match": true,
+  "missing": [],
+  "ctx_diff": [],
+  "checked_at": "2026-11-13T14:20:45+09:00"
+ }
+]

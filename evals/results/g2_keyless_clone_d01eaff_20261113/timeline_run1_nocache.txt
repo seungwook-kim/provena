@@ -1,0 +1,5 @@
+start 2026-11-13T13:46:25.2391119+09:00
+build_done 172.3s
+up_cmd_returned 259.7s
+health_200 272.8s ok=True
+logs_saved 275.9s
