@@ -15,6 +15,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 김승욱 (Claude Code) | `rechunk_increments.py` 신설(일회성, 결정 0118, 사전 등록 62.62): 증분 수집이 넣은 현재 판(스냅샷 `manifest.jsonl`에 없는 판)의 청크를 고친 청크 생성 코드로 판마다 한 트랜잭션으로 다시 만든다. `--dry-run`, `--max-cost`(기본 0.10달러), 색인 준비·실행 중 증분 수집 거부, 두 번째 실행 0. `schedule.py`의 fetch 반복을 `fetch_main()`으로 뽑았다(동작 변화 없음). 시험 `tests/test_rechunk_increments.py`. 명세 `docs/specs/incremental.md` |  |
 | 2026-11-13 | 박진형 (jinyeong-731) | F-10: `DocumentSource`가 `handbook.collect()`·`schedule.py`를 거치지 않는 것을 알려진 한계로 적었다(위 한계 항목, `docs/SDD.md` 3장). 코드 변경 없음. 근거: `source.py:7`·`:29`, `handbook.py:254`, `grep DocumentSource`로 쓰는 곳 `source.py`·`tests/test_ingest_source.py`뿐(실측) | #148 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-38 나머지: 문제 기록 I-004·I-006을 결정됨으로(판정일 2026-10-30, decisions.md:70·71), `docs/specs/chunk.md` 요소 수를 85,389에서 85,388로(`data/corpus.tar.gz`를 풀어 `parse` 재실행: 1,561쪽 85,388개, `chunk` 재실행: 청크 23,095·서로 다른 본문 22,378이 `chunks_index.jsonl`·G3와 같음) 정정하고 manifest 칸 설명 추가(manifest에는 수집 고정 커밋 전체 sha가 없고 `version_id` 12자만 있음) | #138 |
 | 2026-11-12 | 박진형 (jinyeong-731) | F-08: 증분 수집 `schedule.py --once` 로컬 DB 1회 실행(코드 변경 없음, 운영 DB 안 씀): 스냅샷 적재 뒤 129243bc → d92556d4, 성공, 추가 3·수정 149·서식만 152, 새 임베딩 436·재사용 6,946(Voyage 52,539토큰, 약 0.003달러), 63초. 결과는 `docs/specs/incremental.md` 결정 ① | #138 |

@@ -47,6 +47,9 @@
 8. 한 트랜잭션으로: 옛 판의 `valid_to` 를 닫고 새 판·청크를 넣고, 사라진 쪽(목록이 완전할 때만)을 닫고, 바뀐 섹션을 `changed_articles` 에 넣고, `index_meta.generation` 을 올리고(api가 BM25를 다시 만듦), 실행 기록을 `succeeded` 로 확정한다.
 9. 실패하면 전부 되돌리고 실행 기록을 `failed`(`error_kind`)로 남긴 뒤 종료 코드 1 → workflow의 `if: failure()` 단계가 디스코드로 알린다.
 
+**일회성 보정: 증분 판 다시 청킹 (결정 0118, 사전 등록 62.62)**
+`schedule.apply`는 이미 반영한 (rule_seq, version_id)를 건너뛰므로, 청크 생성 코드를 고쳐도 이미 들어간 증분 판은 다시 만들어지지 않는다. `python -m backend.rag.ingest.rechunk_increments`가 현재 판(`valid_to IS NULL`)이면서 스냅샷(`data/manifest.jsonl`)에 없는 판만 `schedule.page_chunks`로 다시 만든다. 쪽 원문은 그 판을 만든 실행의 `sync_runs.to_commit`에서 읽고(경로는 `detail`의 added·modified·format_only), 그 커밋에서 쪽의 마지막 수정이 `version_id`와 같은지 대조한다. 판마다 옛 행과 새 청크를 chunk_id로 맞춰 같음·바뀜·새로·사라짐을 세고, 바뀐 판은 한 트랜잭션으로 그 판의 행을 통째로 바꾼다(옛 행과 새 행이 한 판에 섞이지 않는다). 같은 글의 벡터는 DB에서 재사용하고(`schedule.apply`와 같은 질의) 없는 글만 임베딩하며, 추정 비용이 `--max-cost`(기본 0.10달러)를 넘으면 쓰기 전에 멈춘다. 스냅샷 행과 닫힌 증분 판은 바꾸지 않고 개수만 보고한다. 색인 장부가 `ready`가 아니거나 증분 수집이 실행 중이면 거부한다. 끝에서 `generation`을 한 번만 올리고, 바뀐 판이 없으면 올리지 않는다(두 번째 실행은 0). `--dry-run`은 연결을 읽기 전용으로 두고 Voyage를 부르지 않는다.
+
 **재임베딩 단위와 실행 기록의 현재 상태 (F-17·F-08, 2026-11-11 확인)**
 
 | 항목 | 현재 동작 | 근거 |
@@ -91,6 +94,11 @@ backend/rag/ingest/schedule.py
   run(conn, *, trigger, now, slot, model, dim, source, embed_fn) -> {status, run_id, 개수}
       # 시각·원천·임베딩은 인자로 받는다(시험 재현). 실패면 기록 뒤 SyncError
   python -m backend.rag.ingest.schedule --once [--slot manual-<시각>] [--cache <핸드북 캐시>]
+  fetch_main(cache) -> 새 끝 커밋             # git fetch 재시도(rechunk_increments도 같이 씀)
+
+backend/rag/ingest/rechunk_increments.py   (일회성, 결정 0118)
+  run(conn, *, model, dim, read, embed_fn, dry_run, max_cost, snap, ...) -> 보고(dict)
+  python -m backend.rag.ingest.rechunk_increments [--dry-run] [--max-cost 0.10] [--manifest data/manifest.jsonl] [--cache <핸드북 캐시>]
 ```
 
 **DB** (`db/202_sync.sql`, 판·청크는 `201_search.sql` 표 그대로)
@@ -174,3 +182,8 @@ backend/rag/ingest/schedule.py
 - GIVEN: `commit_missing` 또는 `ls-tree` 실패가 이유인 보고서
 - WHEN: 반영한다
 - THEN: `failed`(`list_failed`), 표·마지막 성공 커밋은 그대로
+
+**AC-11 · 증분 판 다시 청킹은 스냅샷을 건드리지 않고 두 번째 실행은 0이다 (결정 0118)**
+- GIVEN: 옛 청크 생성 코드로 만든 현재 증분 판, 스냅샷 판, 닫힌 증분 판이 있는 DB
+- WHEN: `rechunk_increments`를 돌린다(`--dry-run`은 쓰기 0, 임베딩 호출 0)
+- THEN: 현재 증분 판만 한 판씩 통째로 바뀌고(한 판이 실패하면 그 판은 옛 행 그대로), 스냅샷·닫힌 판의 행은 그대로이며, 같은 글의 벡터는 재사용되고 `generation`은 한 번만 +1. 두 번째 실행은 바뀐 것 0, `generation` 그대로. 시험 `tests/test_rechunk_increments.py`
