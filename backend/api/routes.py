@@ -85,7 +85,13 @@ class ChatRequest(BaseModel):
     def _real_date(cls, value: str | None) -> str | None:
         """`2026-02-30`처럼 형식만 맞고 없는 날짜는 422로 막는다. 검색기(`search.py`의 `check_query`)가 `date.fromisoformat`으로 멈추기 전에 걸러, SSE error 이벤트가 아니라 공통 422 봉투가 나가게 한다."""
         if value is not None:
-            date.fromisoformat(value)   # ValueError는 pydantic이 422 검증 오류로 바꾼다(입력값은 응답에 담지 않음)
+            # 패턴의 \d는 전각·아랍 숫자도 받고, 그때 fromisoformat 오류 문구에는 입력값이 들어간다 → 고정 문구로 바꿔 입력값을 응답에 담지 않는다
+            try:
+                if not value.isascii():
+                    raise ValueError
+                date.fromisoformat(value)
+            except ValueError:
+                raise ValueError("존재하지 않는 날짜입니다.") from None
         return value
 
 
