@@ -262,3 +262,30 @@ describe('DemoChatPage same-title threads (H-32)', () => {
     expect(new Set(stamps).size).toBe(2)
   })
 })
+
+// 체크포인트 대응: 공백만 있는 입력은 조용히 무시하지 않고 "질문을 입력해 주세요"를 보여 주고, 서버에는 보내지 않는다
+describe('DemoChatPage empty input notice', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('shows a notice for a whitespace-only question on Enter, sends nothing, and clears the notice when typing', async () => {
+    window.history.replaceState({}, '', '/chat')
+    document.cookie = 'provena_csrf=test-token'
+    const sent = []
+    vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([])
+      if (path === '/auth/csrf') return new Response(null, { status: 204 })
+      if (path === '/chat') { sent.push(JSON.parse(options.body).message); return new Response(null, { status: 204 }) }
+      return json({ items: [], threads: [] })
+    }))
+    render(<App />)
+    const box = await screen.findByRole('textbox', { name: '질문' })
+    await waitFor(() => expect(box.disabled).toBe(false))
+    fireEvent.change(box, { target: { value: '   ' } })
+    fireEvent.keyDown(box, { key: 'Enter', code: 'Enter' })
+    expect((await screen.findByRole('alert')).textContent).toContain('질문을 입력해 주세요.')
+    expect(sent).toEqual([])
+    fireEvent.change(box, { target: { value: '연차' } })
+    await waitFor(() => expect(screen.queryByText('질문을 입력해 주세요.')).toBeNull())
+  })
+})

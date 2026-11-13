@@ -404,6 +404,7 @@ def build_graph(
     spec_lock = threading.Lock()
     speculate_ground = AF.speculate_ground_enabled()  # SG: 답 후보가 나오는 대로 근거 판정을 미리 부르고, 같은 입력의 판정이 필요할 때 그 결과를 쓴다
     ground_runs: dict[str, tuple[float, Any]] = {}  # SG: 판정 입력의 해시 -> (시작 시각, 미리 돌린 판정 Future). 쓰면 꺼낸다
+    ground_twins: dict[str, tuple[str, ...]] = {}  # SG: 같은 답 후보를 일부 답 여부만 달리해 미리 부른 판정의 열쇠들(사전 등록 62.49). 하나를 쓰면 나머지를 지운다
     ground_lock = threading.Lock()
     ground_pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="ground_ahead") if speculate_ground else None
     if AF.cite_pick_enabled():  # CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서를 답 프롬프트에 더한다(추론 답, 빠른 답, 다시 쓰는 답)
@@ -962,8 +963,9 @@ def build_graph(
         elif together == "parallel_all" or (together == "parallel" and not state.get("retries", 0)):  # 근거가 충분한 질문은 대개 첫 판정에서 끝난다. 재검색 뒤에는 순차로 둬서 버리는 호출을 줄인다
             pool = ThreadPoolExecutor(max_workers=2 if best2 else 1, thread_name_prefix="draft")  # 기본은 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
             try:
-                writing = in_background(pool, "write_answer", lambda: timed_reply(state, core=bool(best2 and widened)))
-                writing2 = in_background(pool, "write_answer", lambda: timed_reply(state)) if best2 else None  # BO2: 같은 입력으로 하나 더
+                ahead = ground_partials(state)  # 사전 등록 62.49: 이 판정이 충분·일부 어느 쪽으로 끝나도 같이 쓴 답의 근거 판정이 미리 돌아 있게 한다
+                writing = in_background(pool, "write_answer", lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead))
+                writing2 = in_background(pool, "write_answer", lambda: timed_reply(state, partials=ahead)) if best2 else None  # BO2: 같은 입력으로 하나 더
                 obj = ask_judge(guided, judge_input)
                 if (obj or {}).get("sufficient") is True or (answer_wait and last_partial(state, obj or {})):
                     # 충분이면 같이 쓴 답을 쓴다(부족이면 순차라면 부르지 않았을 호출이라 결과와 오류를 모두 버린다).
@@ -1082,7 +1084,7 @@ def build_graph(
     def answer_skills_used(state: AgentState, blocks: list[tuple[str, str]]) -> list[str]:
         return note_skills(state, *[name for name, (_, body) in zip(("citation-rules", "delegation"), blocks) if body])
 
-    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None, core: bool = False) -> dict:
+    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None, core: bool = False, partials: tuple[bool, ...] | None = None) -> dict:
         blocks = answer_blocks(state)
         system = P.with_skills(answer_base if careful else answer_system, blocks)
         used = answer_skills_used(state, blocks)
@@ -1099,7 +1101,7 @@ def build_graph(
                 obj, raw = again, raw2
         out = draft_fields(obj, raw, used)
         if abandoned is None or not abandoned.is_set():  # 추론 답이 대기 시간을 넘겨 빠른 답으로 넘어갔으면 이 답의 근거 판정은 쓰이지 않으므로 미리 부르지 않는다
-            ground_ahead(state, out)
+            ground_ahead(state, out, partials)
         return out
 
     def verdict_key(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool) -> str:
@@ -1110,15 +1112,35 @@ def build_graph(
     def verdict_for(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool = False) -> dict:
         """근거 판정 LLM 한 번. SG가 같은 입력으로 미리 돌려 둔 판정이 있으면 그 결과를 쓰고(`ahead` 표시), 없으면 `llm_verdict`를 부른다."""
         if speculate_ground:
+            key = verdict_key(question, draft, cited, as_of, body, chunks, partial)
             with ground_lock:
-                run = ground_runs.pop(verdict_key(question, draft, cited, as_of, body, chunks, partial), None)
+                run = ground_runs.pop(key, None)
+                twins = ground_twins.pop(key, ())
+                others = [ground_runs.pop(k, None) for k in twins]
+                for k in twins:
+                    ground_twins.pop(k, None)
+            for other in others:  # 같은 답의 다른 일부 답 값으로 미리 부른 판정은 이제 쓰이지 않는다. 시작 전이면 취소한다(이미 간 호출은 결과를 버린다)
+                if other is not None:
+                    other[1].cancel()
             if run is not None:
                 return {**run[1].result(), "ahead": True}
         return llm_verdict(question, draft, cited, as_of, body, chunks, partial=partial)
 
-    def ground_ahead(state: AgentState, cand: dict) -> None:
+    def ground_partials(state: AgentState) -> tuple[bool, ...] | None:
+        """SG(사전 등록 62.49): 판정과 같이 쓰는 답의 근거 판정을 미리 부를 때, 이 판정이 끝난 뒤 `ground_once`가 볼 수 있는 일부 답 여부(`judge_partial`) 값들.
+        답을 쓰는 시점의 값(지금까지 미리 부르던 값)을 먼저 두고, 판정이 충분이면 False, 일부이면서 답 작성으로 바로 가는 경우(`last_partial`)면 True를 더한다.
+        재검색 뒤 판정이 일부에서 충분으로 바뀌면 미리 부른 판정의 입력이 달라 다시 부르던 것을 없앤다. 판정 입력과 기준은 그대로다."""
+        if not speculate_ground:
+            return None
+        values = [bool(state.get("judge_partial")), False]
+        if answer_wait and last_partial(state, {"partial": True}):
+            values.append(True)
+        return tuple(dict.fromkeys(values))
+
+    def ground_ahead(state: AgentState, cand: dict, partials: tuple[bool, ...] | None = None) -> None:
         """SG: 답 후보(`cand`)가 나오는 대로 `verify`와 같은 검사를 거친 뒤 `ground_once`가 부를 근거 판정을 같은 입력으로 미리 부른다.
-        나중에 뽑힌 답이 이 후보와 같으면 `verdict_for`가 그 결과를 받는다. 뽑히지 않은 후보의 판정은 쓰이지 않고 버려진다(비용만). 실패하면 아무 일도 없다(그때는 지금처럼 부른다)."""
+        나중에 뽑힌 답이 이 후보와 같으면 `verdict_for`가 그 결과를 받는다. 뽑히지 않은 후보의 판정은 쓰이지 않고 버려진다(비용만). 실패하면 아무 일도 없다(그때는 지금처럼 부른다).
+        `partials`(판정과 같이 쓰는 답에만 준다, `ground_partials`)가 있으면 그 값마다 미리 부른다. 없으면 지금 상태의 값 하나다."""
         if not speculate_ground or ground_pool is None or not cand.get("raw_citations") or not cand.get("answer"):
             return
 
@@ -1133,37 +1155,45 @@ def build_graph(
                 if reads_authz(state):  # ground_once와 같은 입력
                     body = f"{body}\n\n[승인 권한표 Skill]\n{skill('delegation')}"
                 cited, draft, chunks = v.get("citations", []), v.get("answer", ""), state.get("chunks", [])
-                partial = bool(state.get("judge_partial"))
                 llm_on = grounding_llm if grounding_llm is not None else not is_demo_mode()
-                if not llm_on or not G.check_rules(state["question"], cited, chunks).ok or (skip_ground and not partial and G.values_backed(draft, cited)):
+                if not llm_on or not G.check_rules(state["question"], cited, chunks).ok:
                     return
-                key = verdict_key(state["question"], draft, cited, state.get("as_of"), body, chunks, partial)
+                wanted = [p for p in dict.fromkeys(partials if partials is not None else (bool(state.get("judge_partial")),))
+                          if not (skip_ground and not p and G.values_backed(draft, cited))]
+                keys = {p: verdict_key(state["question"], draft, cited, state.get("as_of"), body, chunks, p) for p in wanted}
                 now = time.monotonic()
                 with ground_lock:
                     for old in [k for k, (t, _) in ground_runs.items() if now - t > 120.0]:
                         ground_runs.pop(old, None)
-                    if key in ground_runs or len(ground_runs) >= 64:
-                        return
-                    ground_runs[key] = (now, in_background(ground_pool, "ground", lambda: llm_verdict(state["question"], draft, cited, state.get("as_of"), body, chunks, partial=partial)))
+                        ground_twins.pop(old, None)
+                    added: list[str] = []
+                    for partial, key in keys.items():
+                        if key in ground_runs or len(ground_runs) >= 64:
+                            continue
+                        ground_runs[key] = (now, in_background(ground_pool, "ground", lambda partial=partial: llm_verdict(state["question"], draft, cited, state.get("as_of"), body, chunks, partial=partial)))
+                        added.append(key)
+                    if len(added) >= 2:
+                        for key in added:
+                            ground_twins[key] = tuple(k for k in added if k != key)
             except Exception as e:  # noqa: BLE001 - 미리 하는 일이 실패해도 답 경로는 그대로 간다
                 log.debug("근거 판정 미리 부르기 실패: %s", type(e).__name__)
 
         start()  # 검사는 로컬 계산이라 답을 낸 쪽에서 바로 돈다. 그래야 판정이 등록된 뒤에 답이 다음 단계로 넘어가 같은 호출이 두 번 나가지 않는다
 
-    def timed_reply(state: AgentState, core: bool = False) -> dict:
+    def timed_reply(state: AgentState, core: bool = False, partials: tuple[bool, ...] | None = None) -> dict:
         """`GRAPH_ANSWER_WAIT_S`가 있으면 첫 답은 추론 답을 그 시간까지 기다리고, 늦거나 실패하면 같이 보낸 빠른 답을 쓴다. 재검색 뒤의 답은 시간이 모자라 빠른 답이다."""
         if not answer_wait or state.get("retries", 0):
-            return draft_reply(state, core=core)
+            return draft_reply(state, core=core, partials=partials)
         wait_s = answer_wait
         if answer_budget and state.get("started_at"):
             wait_s = min(answer_wait, answer_budget - (time.monotonic() - state["started_at"]))
         if wait_s <= 0:
-            return draft_reply(state, core=core)
+            return draft_reply(state, core=core, partials=partials)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer")
         try:
             gave_up = threading.Event()  # 추론 답을 쓰지 않기로 하면 세운다. 늦게 끝난 추론 답이 쓰이지 않을 근거 판정을 부르지 않게 한다
-            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up, core=core))
-            fast = in_background(pool, "write_answer", lambda: draft_reply(state, core=core))
+            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up, core=core, partials=partials))
+            fast = in_background(pool, "write_answer", lambda: draft_reply(state, core=core, partials=partials))
             done, _ = wait_futures([slow], timeout=wait_s)
             if done and slow.exception() is None and slow.result().get("raw_citations"):
                 return slow.result()

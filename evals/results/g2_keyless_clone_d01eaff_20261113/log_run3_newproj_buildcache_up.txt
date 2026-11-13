@@ -1,0 +1,240 @@
+ Image provena_cleanclone2-api Building 
+ Image provena_cleanclone2-loader Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.42kB 0.0s done
+#1 DONE 0.0s
+
+#2 [loader internal] load build definition from Dockerfile
+#2 transferring dockerfile: 5.09kB 0.0s done
+#2 DONE 0.1s
+
+#3 [loader internal] load metadata for docker.io/library/node:22-alpine
+#3 ...
+
+#4 [loader internal] load metadata for docker.io/library/python:3.12-slim
+#4 DONE 0.3s
+
+#3 [api internal] load metadata for docker.io/library/node:22-alpine
+#3 DONE 1.7s
+
+#5 [api internal] load .dockerignore
+#5 transferring context: 439B done
+#5 DONE 0.2s
+
+#5 [loader internal] load .dockerignore
+#5 DONE 0.2s
+
+#6 [loader internal] load build context
+#6 transferring context: 29.08kB 0.1s done
+#6 DONE 0.4s
+
+#7 [loader stage-1  1/18] FROM docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
+#7 resolve docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
+#7 ...
+
+#6 [api internal] load build context
+#6 DONE 0.4s
+
+#8 [loader web-build 1/6] FROM docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+#8 resolve docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+#8 ...
+
+#7 [loader stage-1  1/18] FROM docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
+#7 resolve docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 0.7s done
+#7 DONE 0.8s
+
+#7 [api stage-1  1/18] FROM docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
+#7 resolve docker.io/library/python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 0.7s done
+#7 DONE 0.8s
+
+#8 [loader web-build 1/6] FROM docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+#8 resolve docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a 0.8s done
+#8 DONE 0.8s
+
+#9 [loader stage-1 12/18] COPY --from=web-build /web/dist/ ./web/react-app/dist/
+#9 CACHED
+
+#10 [loader stage-1 15/18] COPY db/ ./db/
+#10 CACHED
+
+#11 [loader stage-1  3/18] WORKDIR /app
+#11 CACHED
+
+#12 [loader stage-1  7/18] COPY backend/ ./backend/
+#12 CACHED
+
+#13 [loader stage-1 17/18] COPY extras/ ./extras/
+#13 CACHED
+
+#14 [loader stage-1  2/18] RUN groupadd --system --gid 10001 app     && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
+#14 CACHED
+
+#15 [loader stage-1 10/18] RUN python -m backend.rag.ingest.snapshot unpack-index
+#15 CACHED
+
+#16 [loader web-build 2/6] WORKDIR /web
+#16 CACHED
+
+#17 [loader stage-1 11/18] COPY web/ ./web/
+#17 CACHED
+
+#18 [loader stage-1 16/18] COPY skills/ ./skills/
+#18 CACHED
+
+#19 [loader web-build 6/6] RUN npm run build
+#19 CACHED
+
+#20 [loader stage-1  9/18] RUN python -m backend.rag.ingest.snapshot unpack
+#20 CACHED
+
+#21 [loader stage-1  8/18] COPY --chown=app:app data/ ./data/
+#21 CACHED
+
+#22 [loader stage-1 13/18] RUN cp web/react-app/dist/index.html web/index.html
+#22 CACHED
+
+#23 [loader stage-1  6/18] RUN ( [ -z "" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt     && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; } )     && mkdir -p "/app/.hf" && chown -R app:app "/app/.hf"
+#23 CACHED
+
+#24 [loader web-build 3/6] COPY web/react-app/package.json web/react-app/package-lock.json ./
+#24 CACHED
+
+#25 [loader web-build 5/6] COPY web/react-app/ ./
+#25 CACHED
+
+#26 [loader stage-1  4/18] COPY backend/requirements.txt backend/requirements-local-models.txt backend/
+#26 CACHED
+
+#27 [loader web-build 4/6] RUN npm ci
+#27 CACHED
+
+#28 [loader stage-1 14/18] RUN cp web/react-app/dist/index.html web/login.html
+#28 CACHED
+
+#29 [loader stage-1  5/18] RUN pip install --no-cache-dir -r backend/requirements.txt
+#29 CACHED
+
+#30 [loader stage-1 18/18] COPY mock_erp/ ./mock_erp/
+#30 CACHED
+
+#12 [api stage-1  7/18] COPY backend/ ./backend/
+#12 CACHED
+
+#17 [api stage-1 11/18] COPY web/ ./web/
+#17 CACHED
+
+#9 [api stage-1 12/18] COPY --from=web-build /web/dist/ ./web/react-app/dist/
+#9 CACHED
+
+#28 [api stage-1 14/18] RUN cp web/react-app/dist/index.html web/login.html
+#28 CACHED
+
+#26 [api stage-1  4/18] COPY backend/requirements.txt backend/requirements-local-models.txt backend/
+#26 CACHED
+
+#16 [api web-build 2/6] WORKDIR /web
+#16 CACHED
+
+#19 [api web-build 6/6] RUN npm run build
+#19 CACHED
+
+#22 [api stage-1 13/18] RUN cp web/react-app/dist/index.html web/index.html
+#22 CACHED
+
+#18 [api stage-1 16/18] COPY skills/ ./skills/
+#18 CACHED
+
+#20 [api stage-1  9/18] RUN python -m backend.rag.ingest.snapshot unpack
+#20 CACHED
+
+#27 [api web-build 4/6] RUN npm ci
+#27 CACHED
+
+#24 [api web-build 3/6] COPY web/react-app/package.json web/react-app/package-lock.json ./
+#24 CACHED
+
+#23 [api stage-1  6/18] RUN ( [ -z "" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt     && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; } )     && mkdir -p "/app/.hf" && chown -R app:app "/app/.hf"
+#23 CACHED
+
+#21 [api stage-1  8/18] COPY --chown=app:app data/ ./data/
+#21 CACHED
+
+#14 [api stage-1  2/18] RUN groupadd --system --gid 10001 app     && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
+#14 CACHED
+
+#13 [api stage-1 17/18] COPY extras/ ./extras/
+#13 CACHED
+
+#11 [api stage-1  3/18] WORKDIR /app
+#11 CACHED
+
+#29 [api stage-1  5/18] RUN pip install --no-cache-dir -r backend/requirements.txt
+#29 CACHED
+
+#10 [api stage-1 15/18] COPY db/ ./db/
+#10 CACHED
+
+#25 [api web-build 5/6] COPY web/react-app/ ./
+#25 CACHED
+
+#15 [api stage-1 10/18] RUN python -m backend.rag.ingest.snapshot unpack-index
+#15 CACHED
+
+#31 [api] exporting to image
+#31 exporting layers
+#31 exporting layers done
+#31 exporting manifest sha256:466a74e0c867ca860fc8272392a18b9f42d5b60a808a7d3e5564aec27c9fb2a5
+#31 exporting manifest sha256:466a74e0c867ca860fc8272392a18b9f42d5b60a808a7d3e5564aec27c9fb2a5 0.7s done
+#31 exporting config sha256:df3b4416ce2d8e4cb2264692a910ecef3692c59186bb367f52a77f6c3c2baa7a
+#31 exporting config sha256:df3b4416ce2d8e4cb2264692a910ecef3692c59186bb367f52a77f6c3c2baa7a 0.4s done
+#31 exporting attestation manifest sha256:10a75dba112d8fabf4297d27ca777d3a762ab9156f277440e22cd5d099dbc1ee
+#31 exporting attestation manifest sha256:10a75dba112d8fabf4297d27ca777d3a762ab9156f277440e22cd5d099dbc1ee 0.3s done
+#31 exporting manifest list sha256:9edac263196a09617dcc1fee2c4e2074d8f64bfaeac85c4fb0fc4faa81687457
+#31 exporting manifest list sha256:9edac263196a09617dcc1fee2c4e2074d8f64bfaeac85c4fb0fc4faa81687457 0.0s done
+#31 naming to docker.io/library/provena_cleanclone2-api:latest done
+#31 unpacking to docker.io/library/provena_cleanclone2-api:latest 0.0s done
+#31 DONE 1.8s
+
+#32 [loader] exporting to image
+#32 exporting layers done
+#32 exporting manifest sha256:5df1c6d1839fbf3cc5c2bd50af25835ea7bafcc035081465495171bc0f90f2d1 0.7s done
+#32 exporting config sha256:7ba93f92301779fdf243a33dbe91fc0ddd31923eb65d5d4e337dd0aa5f350054 0.3s done
+#32 exporting attestation manifest sha256:9c2ebd5b7395b177a80c436c7350596bf9269b0bb2bee03df30ddba13696d60b 0.2s done
+#32 exporting manifest list sha256:c2648f1c41d59acaad7dde39b0cc2438d0aba6bec83648785760737bf5c599a4 0.0s done
+#32 naming to docker.io/library/provena_cleanclone2-loader:latest done
+#32 unpacking to docker.io/library/provena_cleanclone2-loader:latest 0.0s done
+#32 DONE 1.7s
+
+#33 [api] resolving provenance for metadata file
+#33 DONE 0.0s
+
+#34 [loader] resolving provenance for metadata file
+#34 DONE 0.0s
+ Image provena_cleanclone2-loader Built 
+ Image provena_cleanclone2-api Built 
+ Volume provena_cleanclone2_pgdata Creating 
+ Network provena_cleanclone2_default Creating 
+ Volume provena_cleanclone2_pgdata Creating 
+ Network provena_cleanclone2_default Creating 
+ Volume provena_cleanclone2_pgdata Created 
+ Volume provena_cleanclone2_pgdata Created 
+ Network provena_cleanclone2_default Created 
+ Network provena_cleanclone2_default Created 
+ Container provena_cleanclone2-db-1 Creating 
+ Container provena_cleanclone2-db-1 Created 
+ Container provena_cleanclone2-loader-1 Creating 
+ Container provena_cleanclone2-loader-1 Created 
+ Container provena_cleanclone2-api-1 Creating 
+ Container provena_cleanclone2-api-1 Created 
+ Container provena_cleanclone2-db-1 Starting 
+ Container provena_cleanclone2-db-1 Started 
+ Container provena_cleanclone2-db-1 Waiting 
+ Container provena_cleanclone2-db-1 Healthy 
+ Container provena_cleanclone2-loader-1 Starting 
+ Container provena_cleanclone2-loader-1 Started 
+ Container provena_cleanclone2-loader-1 Waiting 
+ Container provena_cleanclone2-db-1 Waiting 
+ Container provena_cleanclone2-db-1 Healthy 
+ Container provena_cleanclone2-loader-1 Exited 
+ Container provena_cleanclone2-api-1 Starting 
+ Container provena_cleanclone2-api-1 Started 

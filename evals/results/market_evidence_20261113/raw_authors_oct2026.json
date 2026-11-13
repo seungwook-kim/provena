@@ -1,0 +1,28 @@
+{
+  "run_at_utc": "2026-11-13T04:42:26.8983376Z",
+  "merged_mrs": 322,
+  "distinct_authors": 170,
+  "bot_like_author_mrs": 2,
+  "bot_like_authors": "employment-bot=2",
+  "top_authors": [
+    "dnsmichi=15",
+    "jcolyer=13",
+    "tkuah=9",
+    "mwoolf=9",
+    "kkloss=8",
+    "ddieulivol=8",
+    "jdrpereira=7",
+    "vshushlin=6",
+    "igorwwwwwwwwwwwwwwwwwwww=6",
+    "ashrafkhamis=6"
+  ],
+  "mrs_by_weekday_of_merge": [
+    "Sunday=3",
+    "Monday=46",
+    "Tuesday=62",
+    "Wednesday=66",
+    "Thursday=71",
+    "Friday=73",
+    "Saturday=1"
+  ]
+}

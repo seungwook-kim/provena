@@ -1,0 +1,6 @@
+
+[convert as user] HTTP 403 {"detail": "관리자 권한이 필요합니다.", "error": {"code": "forbidden", "message": "관리자 권한이 필요합니다.", "request_id": "5d409a4f10f14decb790f8d8732c220c"}}
+admin login True ok
+[convert as admin(category=Approving expense)] HTTP 201 {"kind": "decision_table", "approval_id": "example-convert", "summary": "예시 응답: Approving expense 결정표 초안 (키 없는 데모, 저장·승인되지 않음)", "created_at": "2026-11-13T04:59:22.863620", "table_id": null, "draft": [{"category": "Approving expense", "band": ">$0K to $25K", "band_lo": 0, "band_hi": 25000, "approvers": ["Manager"], "financial_approvers": ["PAO or VP Finance"], "cooperating_depts": [], "range_note"
+[convert as admin(empty)] HTTP 400 {"detail": "category(권한표 업무 종류)가 필요하다", "error": {"code": "bad_request", "message": "category(권한표 업무 종류)가 필요하다", "request_id": "5a7d88e365504939ae8903c3a9b2f461"}}
+
