@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | 조장 11/13 재점검 후속 묶음 작업 내역 `pr-notes/PR-next.md`(박진형 몫 새로 발견 #3·#4·#6·#7·#8·H-33, 실패 분석 검색 파트, 데이터·Spec 문서, #148 리뷰 반영)와 `deliverables/ai_tools_log.md` 한 행 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `specs/106-signup-approval.md` Edge Cases에 가입 아이디 허용 글자 규칙 한 줄 추가(조장 11/13 재확인 #4). 근거: 데모 아이디·이메일이 모두 통과하는 최소 규칙 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | M-05: `deliverables/failure_analysis.md` 검색·데이터 파트 보강. 낡은 문장 2곳(2장 색인 1행, 6장 지금 상태)을 00047까지의 38번 값(`EVAL_REPORT.md:724`)으로 갱신, 5-5절 문항 단위 표 요약, 검색 이전 단계 실패 표(파서·53건·증분 수집·PDF·지연·권한) 추가. 모든 숫자는 `파일:줄` 인용 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | K-03·F-08·S-08 문서 정리: `PRD.md` 9장 라이브러리 표를 `backend/requirements.txt`와 행마다 대조해 `bcrypt` 5.0.0을 요구 범위 4.x(`>=4.2,<5`)로, `langfuse` 행을 요구 `>=4`로 고침(`pyjwt` 2.15.1은 `>=2.9,<3` 안이라 그대로), `specs/incremental.md`에 실행 기록 현재 상태(알려진 것·모르는 것) 추가, `specs/parse.md`의 PDF "현재 색인 대상"(7건 vs 치트시트 1건 불일치)을 "파싱 대상, 검색 색인에는 아직 없음"으로 정정(`data/data.md` S-08), `AGENTS.md`의 `SEARCH_MODE` 위치를 줄 번호(어긋나 있었음) 대신 `SearchConfig.from_env()`로 바꿈. 코드·workflow 변경 없음 `specs/parse.md` 핸드북 파싱 Spec의 해결 목표 줄이 11/03 PDF 파싱 추가 때 PDF 목표로 덮여 있던 것을 원래 문장으로 되돌림(`git show 1e8eeecf`). | 미정 |
