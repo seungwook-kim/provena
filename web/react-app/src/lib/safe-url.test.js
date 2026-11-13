@@ -12,6 +12,8 @@ describe('safeHttpUrl', () => {
     expect(safeHttpUrl('data:text/html,x')).toBeNull()
     expect(safeHttpUrl('/relative/path')).toBeNull()
     expect(safeHttpUrl('not a url')).toBeNull()
+    expect(safeHttpUrl('https:example.com')).toBeNull()
+    expect(safeHttpUrl('http:/example.com')).toBeNull()
     expect(safeHttpUrl('')).toBeNull()
     expect(safeHttpUrl(null)).toBeNull()
     expect(safeHttpUrl(42)).toBeNull()

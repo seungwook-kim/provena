@@ -42,6 +42,8 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
   const [notice, setNotice] = useState('')
   const requestRef = useRef(0)
   const cancelRef = useRef(null)
+  const dialogRef = useRef(null)
+  const openerRef = useRef(null)
 
   const loadList = useCallback(async () => {
     const request = ++requestRef.current
@@ -64,7 +66,11 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
   }, [loadList])
 
   useEffect(() => {
-    if (confirm) cancelRef.current?.focus()
+    if (confirm) { cancelRef.current?.focus(); return undefined }
+    const opener = openerRef.current
+    openerRef.current = null
+    if (opener?.isConnected) opener.focus()
+    return undefined
   }, [confirm])
 
   useEffect(() => {
@@ -96,16 +102,32 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     if ((status === 'rejected' || status === 'revision') && !reason.trim()) return
     if (status === 'approved' && ((approveNeedsReason && !reason.trim()) || (!live && selected.kind === 'issue' && !allReviewed))) return
     setActionError('')
-    setConfirm({ status, id: selected.id, title: selected.title })
+    openerRef.current = document.activeElement
+    setConfirm({ status, id: selected.id, title: selected.title, reason })
+  }
+
+  function onDialogKeyDown(event) {
+    if (event.key === 'Escape') {
+      if (!busy) { event.stopPropagation(); setConfirm(null) }
+      return
+    }
+    if (event.key !== 'Tab') return
+    const buttons = [...(dialogRef.current?.querySelectorAll('button:not([disabled])') ?? [])]
+    if (!buttons.length) { event.preventDefault(); return }
+    const first = buttons[0]
+    const last = buttons[buttons.length - 1]
+    if (!dialogRef.current.contains(document.activeElement)) { event.preventDefault(); first.focus() }
+    else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
   }
 
   async function confirmDecision() {
     if (!confirm || busy) return
-    const { status, id } = confirm
+    const { status, id, reason: confirmedReason } = confirm
     setBusy(true)
     setActionError('')
     try {
-      const updated = await service.decideApproval(id, { action: actionByConfirm[status] ?? 'reject', reason })
+      const updated = await service.decideApproval(id, { action: actionByConfirm[status] ?? 'reject', reason: confirmedReason })
       if (live) {
         setNotice(`${doneMessage[status] ?? '처리했습니다.'}${updated?.nextApproval ? ' 다음 승인 요청이 올라왔습니다.' : ''}`)
         setReason('')
@@ -210,7 +232,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
         </> : <p>{loading ? '상세 정보를 불러오는 중입니다.' : live && !loadError ? '왼쪽 목록에서 승인 요청을 선택하면 상세 내용이 표시됩니다.' : '상세 정보를 불러오지 못했습니다.'}</p>}
       </article>
     </section>
-    {confirm && <div className="approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-confirm-title">
+    {confirm && <div className="approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-confirm-title" ref={dialogRef} onKeyDown={onDialogKeyDown}>
       <section>
         <h2 id="approval-confirm-title">{confirmTitle[confirm.status] ?? '처리하시겠습니까?'}</h2>
         <p>{confirm.title}</p>

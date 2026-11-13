@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, apiJson, apiRequest, deleteMemory, patchMemory, streamChatMessage } from './api'
 
 function sseResponse(...chunks) {
@@ -167,19 +167,26 @@ describe('가입 요청의 CSRF는 api.js 공용 경로를 쓴다 (A9)', () => {
 })
 
 describe('rate limit message', () => {
+  afterEach(() => { vi.unstubAllGlobals() })
+  const limited = headers => vi.fn(async () => new Response(JSON.stringify({ error: { code: 'rate_limited', message: '요청이 너무 많습니다.' } }), { status: 429, headers: { 'Content-Type': 'application/json', ...headers } }))
+
   it('adds the Retry-After seconds to a 429 error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'rate_limited', message: '요청이 너무 많습니다.' } }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '30' } })))
+    vi.stubGlobal('fetch', limited({ 'Retry-After': '30' }))
     const error = await apiJson('/anything').catch(caught => caught)
     expect(error).toBeInstanceOf(ApiError)
     expect(error.status).toBe(429)
     expect(error.message).toContain('약 30초 뒤')
-    vi.unstubAllGlobals()
   })
 
   it('leaves a 429 without Retry-After as the plain message', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'rate_limited', message: '요청이 너무 많습니다.' } }), { status: 429, headers: { 'Content-Type': 'application/json' } })))
+    vi.stubGlobal('fetch', limited({}))
     const error = await apiJson('/anything').catch(caught => caught)
     expect(error.message).toBe('요청이 너무 많습니다.')
-    vi.unstubAllGlobals()
+  })
+
+  it('adds no seconds text when Retry-After is an HTTP date', async () => {
+    vi.stubGlobal('fetch', limited({ 'Retry-After': 'Wed, 21 Oct 2026 07:28:00 GMT' }))
+    const error = await apiJson('/anything').catch(caught => caught)
+    expect(error.message).toBe('요청이 너무 많습니다.')
   })
 })

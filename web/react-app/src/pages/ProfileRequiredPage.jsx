@@ -224,11 +224,20 @@ function ProfileOnboardingPage() {
     setForm(currentForm => ({ ...currentForm, [field]: nextValue }))
     setFieldErrors(({ [field]: _cleared, ...rest }) => rest)
     setError('')
+    setMemoryFailed(false)
   }
 
   async function continueLater() {
-    await refresh()
-    navigate('/chat', { replace: true })
+    if (saving) return
+    setSaving(true)
+    try {
+      await refresh()
+      navigate('/chat', { replace: true })
+    } catch (refreshError) {
+      setError(refreshError?.message || '세션을 새로 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function next() {

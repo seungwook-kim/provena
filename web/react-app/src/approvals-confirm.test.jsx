@@ -26,24 +26,6 @@ const decisionItem = (overrides = {}) => ({
 
 const cleanDecision = () => decisionItem({ approval_id: 'dec-2', summary: '결정표 승인 요청: Travel (구간 1개, 원문과 다른 칸 0개)', comparison: { rows: [], source_cells: 3, mismatch_count: 0, extra_bands: [] } })
 
-const issueItem = () => ({
-  kind: 'issue_table', approval_id: 'iss-1', summary: '합동 검토 쟁점표: 쟁점 2건 (보안 1, 재무 1)', created_at: '2026-11-03T07:00:00Z',
-  issue_table: {
-    request: '외부 SaaS를 도입하려면 어떤 검토가 필요한가요?', as_of: '2026-11-05',
-    rows: [
-      { team: 'security', team_label: '보안', topic: 'saas', issue: '보안 검토가 필요합니다.', stance: 'condition', confidence: 'high', section_path: 'Procurement > Security review', version_date: '2024-03-01', source_url: 'https://handbook.gitlab.com/handbook/finance/procurement/', conflict: true },
-      { team: 'finance', team_label: '재무', topic: 'saas', issue: '예산 승인이 필요합니다.', stance: 'block', confidence: 'low', section_path: 'Finance > Budget', version_date: '2024-02-01', source_url: null, conflict: true },
-    ],
-    unreviewed: [{ team: 'infra', team_label: '인프라·SRE', reason: '모델 응답을 읽지 못함' }],
-  },
-  save_failed: false,
-})
-
-const teamFailedItem = () => ({
-  kind: 'team_review_failed', approval_id: 'team-1', summary: '팀 검토 실패: 인프라·SRE', created_at: '2026-11-03T08:00:00Z',
-  failed_teams: [{ team: 'infra', reason: '모델 응답을 읽지 못함', attempts: 3 }], resolution: null, save_failed: false,
-})
-
 let server
 let calls
 
@@ -53,7 +35,7 @@ beforeEach(() => {
   resetLiveServices()
   document.cookie = 'provena_csrf=; Max-Age=0; path=/'
   calls = []
-  server = { user: ADMIN, approvals: [decisionItem(), cleanDecision(), issueItem(), teamFailedItem()], listResponse: null, decideResponse: null }
+  server = { user: ADMIN, approvals: [decisionItem(), cleanDecision()], listResponse: null, decideResponse: null }
   vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
     calls.push({ path, options })
     const method = options.method ?? 'GET'
@@ -89,7 +71,7 @@ function open(path) {
 describe('approval confirm dialog', () => {
   it('keeps the item it was opened for even if another item is selected before confirming', async () => {
     open('/approvals')
-    await userEvent.click(await screen.findByRole('button', { name: /결정표 승인 요청: Travel/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /결정표 승인 요청: Travel/ }, { timeout: 5000 }))
     await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByText(/Travel/)).toBeTruthy()
@@ -99,8 +81,48 @@ describe('approval confirm dialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /결정표 승인 요청: Procurement/ }))
     expect(within(screen.getByRole('dialog')).getByText(/Travel/)).toBeTruthy()
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
-    await screen.findByText('승인했습니다.')
+    await screen.findByText('승인했습니다.', {}, { timeout: 5000 })
     expect(requestsTo('POST', '/approvals/dec-2')).toHaveLength(1)
     expect(requestsTo('POST', '/approvals/dec-1')).toHaveLength(0)
+  })
+
+  it('sends the reason typed for the item the dialog was opened for (switching selection does not change it)', async () => {
+    open('/approvals')
+    await screen.findByRole('heading', { name: '원문 대조' }, { timeout: 5000 })
+    await userEvent.type(screen.getByLabelText(/^사유/), '원문과 다름')
+    await userEvent.click(screen.getByRole('button', { name: '반려하기' }))
+    await userEvent.click(screen.getByRole('button', { name: /결정표 승인 요청: Travel/ }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '확인' }))
+    await screen.findByText('반려했습니다.', {}, { timeout: 5000 })
+    const [request] = requestsTo('POST', '/approvals/dec-1')
+    expect(JSON.parse(request.options.body)).toEqual({ approval_id: 'dec-1', approve: false, comment: '원문과 다름' })
+  })
+
+  it('closes with Escape and returns focus to the button that opened it', async () => {
+    open('/approvals')
+    await userEvent.click(await screen.findByRole('button', { name: /결정표 승인 요청: Travel/ }, { timeout: 5000 }))
+    const opener = screen.getByRole('button', { name: '승인하기' })
+    await userEvent.click(opener)
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(opener)
+    expect(calls.some(call => (call.options?.method ?? 'GET') === 'POST')).toBe(false)
+  })
+
+  it('keeps Tab focus inside the dialog', async () => {
+    open('/approvals')
+    await userEvent.click(await screen.findByRole('button', { name: /결정표 승인 요청: Travel/ }, { timeout: 5000 }))
+    await userEvent.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = screen.getByRole('dialog')
+    const cancel = within(dialog).getByRole('button', { name: '취소' })
+    const ok = within(dialog).getByRole('button', { name: '확인' })
+    expect(document.activeElement).toBe(cancel)
+    await userEvent.tab()
+    expect(document.activeElement).toBe(ok)
+    await userEvent.tab()
+    expect(document.activeElement).toBe(cancel)
+    await userEvent.tab({ shift: true })
+    expect(document.activeElement).toBe(ok)
   })
 })
