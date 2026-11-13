@@ -218,12 +218,6 @@ export default function DemoChatPage({ api = false }) {
   }, [activeCitationId])
 
   useEffect(() => {
-    const composer = document.querySelector('.demo-composer')
-    composer?.querySelector('textarea')?.toggleAttribute('disabled', composerDisabled)
-    composer?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', composerDisabled || !input.trim())
-  }, [composerDisabled, input])
-
-  useEffect(() => {
     const adapter = api ? createApiChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId }) : createPreviewChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId })
     const service = createChatService(adapter)
     serviceRef.current = service
@@ -358,6 +352,11 @@ export default function DemoChatPage({ api = false }) {
       setDraftQuestion('')
     }
     if (!result) return
+    // 새 대화의 첫 질문을 중지하면 대화 id가 없다 → 질문을 입력칸에 남기고, 서버가 만든 대화가 목록에 나타나게 다시 받는다(M3)
+    if (result.threadId == null) {
+      serviceRef.current?.listThreads().catch(() => {})
+      return
+    }
     setSelectedId(result.threadId)
     setSelectedCitation(null)
     setInput('')
@@ -388,7 +387,7 @@ export default function DemoChatPage({ api = false }) {
         {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={question => ask(question, true)} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
       {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
-      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea ref={composerRef} value={input} onChange={event => { setInput(event.target.value); if (sendError === EMPTY_INPUT_NOTICE) setSendError('') }} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing || resuming} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
+      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea ref={composerRef} value={input} onChange={event => { setInput(event.target.value); if (sendError === EMPTY_INPUT_NOTICE) setSendError('') }} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={composerDisabled} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={composerDisabled || !input.trim()}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
     </main>
     <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation({ ...citation, messageIndex: panelMessageIndex })}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
   </div></div></DemoLayout>

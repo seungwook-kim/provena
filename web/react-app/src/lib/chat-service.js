@@ -106,8 +106,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     async getThread(id, { fresh = false } = {}) {
       const streaming = () => [...controllers.values()].some(request => request.activeThreadId === id)
       const local = fresh ? null : threads.find(thread => thread.id === id)
-      // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있어 서버에서 다시 받는다(H-15)
-      const waiting = local?.messages?.some(message => message.role === 'assistant' && message.state === 'approval')
+      // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있고, 중지한 답은 서버가 끝까지 만들어 저장하므로 서버에서 다시 받는다(H-15, M4)
+      const waiting = local?.messages?.some(message => message.role === 'assistant' && (message.state === 'approval' || message.state === 'stopped'))
       if (local && (streaming() || (local.messages?.some(message => message.role === 'user') && !waiting))) return structuredClone(local)
       const { getThread } = await import('./api')
       const thread = mapThreadRecord(await getThread(id))
