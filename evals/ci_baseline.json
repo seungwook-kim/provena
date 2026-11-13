@@ -1,5 +1,5 @@
 {
-  "source": "EVAL_REPORT.md 4장 최종 두 행 (단일 최종, Supervisor + 서브에이전트 최종): evals/results/agent_v2_q_d6151_r1_bo2sda2_api, _r2_, _r3_ 의 3회 평균. 평가셋 dataset_v2.jsonl 현재 동결 해시로 잰 값. 이 값보다 나빠진 결과는 CI 비교 단계가 실패시킨다. 새 측정으로 기준을 올릴 때만 이 파일을 고친다.",
+  "source": "EVAL_REPORT.md 4장 최종 두 행 (단일 최종, Supervisor + 서브에이전트 최종): evals/results/agent_v2_q_d6151_r1_bo2sda2_api, _r2_, _r3_ 의 3회 평균. 평가셋 dataset_v2.jsonl 현재 동결 해시로 잰 값. 이 값보다 나빠진 결과는 CI 비교 단계가 실패시킨다. 새 측정으로 기준을 올릴 때만 이 파일을 고친다. 운영 배포판 측정은 아래 operating 항목이 따로 맡는다.",
   "dataset": "dataset_v2.jsonl",
   "runs": [
     "agent_v2_q_d6151_r1_bo2sda2_api",
@@ -24,6 +24,18 @@
       "hallucination_risk_rate": 0.0,
       "wrong_citation_rate": 0.027,
       "latency_p95_s": 9.695
+    }
+  },
+  "operating": {
+    "source": "운영 배포판 최신 측정. evals/results/deploy_latency_provena-api-*/ 중 평가셋 해시가 동결 해시와 같고 측정 종료 시각이 가장 늦은 폴더를 CI 비교가 자동으로 읽는다. 아래 값은 provena-api-00047-wjn(커밋 4c8d8bc, 2026-11-13 01시)의 v2 50건 3회 평균이다(정답 근거 대조 citation_gold.json의 회차 평균, p95는 회차별 전체 질문 p95의 평균). 위 arms 값은 평가 실행기로 잰 이전 최종 측정이라 운영 배포 경로 값과 같지 않고, 운영 값이 더 낮다. 환각 위험은 운영 측정에 없어 넣지 않았다. 더 좋은 운영 측정이 커밋되면 이 값을 올린다.",
+    "revision": "provena-api-00047-wjn",
+    "metrics": {
+      "cited_correct_rate": 0.942,
+      "citation_accuracy": 0.95,
+      "correct_refusal_rate": 1.0,
+      "over_refusal_rate": 0.0,
+      "wrong_citation_rate": 0.067,
+      "latency_p95_s": 8.51
     }
   }
 }

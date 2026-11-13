@@ -8,7 +8,12 @@
    해시가 다른 옛 결과(첫 동결 해시로 잰 값 등)는 비교에서 빼고 표에 적는다.
 3. 통과선(README 목표 지표, EVAL_REPORT 4장)과 기준 결과(`evals/ci_baseline.json`)와 비교한다.
    통과선 미달이거나 기준보다 나빠지면 종료 코드 1.
-4. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
+4. 기준 파일에 `operating` 항목이 있으면 가장 최근 운영 배포판 측정도 같은 방식으로 비교한다.
+   `evals/results/deploy_latency_provena-api-*/`(배포 응답 시간 측정과 그 정답 근거 대조 `citation_gold.json`) 중
+   평가셋 해시가 현재 동결 해시와 같은 것 가운데 측정 종료 시각이 가장 늦은 폴더를 자동으로 고른다.
+   새 운영 측정을 커밋하면 이 비교가 그 결과를 읽으므로 코드가 바뀐 뒤의 운영 점수 하락이 여기서 드러난다.
+   운영 측정에는 환각 위험 지표가 없어 그 지표는 이 비교에서 뺀다.
+5. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
 
 통과선: 인용 정확도 0.85 이상, 정답 근거 인용률 0.85 이상, 비관련 질문 거절 0.90 이상, 전체 p95 10초 이하.
 기준 결과 비교: 정답 근거·인용 정확도·거절은 기준보다 낮아지면, 오답 근거·과잉 거절·환각 위험은 기준보다
@@ -20,6 +25,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 EVALS = Path(__file__).resolve().parent
@@ -49,6 +55,11 @@ HIGHER_IS_BETTER = ("citation_accuracy", "cited_correct_rate", "correct_refusal_
 LOWER_IS_BETTER = ("wrong_citation_rate", "over_refusal_rate", "hallucination_risk_rate")
 
 EPS = 1e-9
+
+# 운영 배포판 측정 폴더(`evals/latency/deploy_latency.py`와 `deploy_citation_gold.py`의 결과). 검증 20건·새 인용 5건 폴더는 이름이 달라 들지 않는다.
+OPERATING_GLOB = "deploy_latency_provena-api-*"
+# 운영 측정에서 구할 수 있는 지표(환각 위험은 운영 측정에 없다)
+OPERATING_KEYS = ("citation_accuracy", "cited_correct_rate", "correct_refusal_rate", "wrong_citation_rate", "over_refusal_rate", "latency_p95_s")
 
 
 def load_summary(results_dir: Path, run: str, arm: str) -> dict | None:
@@ -87,6 +98,75 @@ def average(metrics_list: list[dict]) -> dict:
     return {k: round(sum(m[k] for m in metrics_list) / len(metrics_list), 3) for k in keys}
 
 
+def _verdict(key: str, label: str, value: float, ref) -> tuple[str, str | None]:
+    """한 지표의 판정과 실패 사유(있으면)를 돌려준다. 사유에는 구성 이름을 붙이지 않는다."""
+    if key in FLOORS and value < FLOORS[key] - EPS:
+        return "통과선 미달", f"{label} {value} < 통과선 {FLOORS[key]}"
+    if key in CEILINGS and value > CEILINGS[key] + EPS:
+        return "통과선 초과", f"{label} {value} > 통과선 {CEILINGS[key]}"
+    if key in HIGHER_IS_BETTER and ref is not None and value < ref - EPS:
+        return "기준보다 낮음", f"{label} {value} < 기준 {ref}"
+    if key in LOWER_IS_BETTER and ref is not None and value > ref + EPS:
+        return "기준보다 높음", f"{label} {value} > 기준 {ref}"
+    return "통과", None
+
+
+def _gate_text(key: str) -> str:
+    gate = FLOORS.get(key)
+    return f">= {gate}" if gate is not None else (f"<= {CEILINGS[key]}" if key in CEILINGS else "-")
+
+
+def find_latest_operating(results_dir: Path, frozen: dict, dataset: str) -> dict | None:
+    """평가셋 해시가 현재 동결 해시와 같은 운영 측정 폴더 중 측정 종료 시각이 가장 늦은 것의 지표(회차 평균)를 돌려준다. 없으면 None."""
+    want = frozen.get(dataset, {})
+    found = []
+    for folder in sorted(results_dir.glob(OPERATING_GLOB)):
+        summary_path, gold_path = folder / "summary.json", folder / "citation_gold.json"
+        if not (summary_path.is_file() and gold_path.is_file()):
+            continue
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        gold = json.loads(gold_path.read_text(encoding="utf-8"))
+        meta = summary.get("meta", {})
+        if meta.get("dataset") != dataset or meta.get("dataset_sha256") != want.get("sha256"):
+            continue
+        gold_runs = gold.get("summary", {}).get("per_run", [])
+        time_runs = summary.get("per_run", [])
+        if not gold_runs or len(gold_runs) != len(time_runs) or any(r.get("n") != want.get("count") for r in gold_runs):
+            continue
+        metrics = {
+            key: round(sum(r[key] for r in gold_runs) / len(gold_runs), 3)
+            for key in OPERATING_KEYS if key != "latency_p95_s"
+        }
+        metrics["latency_p95_s"] = round(sum(r["total_s"]["p95"] for r in time_runs) / len(time_runs), 3)
+        stamp = datetime.fromisoformat(meta["finished_at"])
+        found.append((stamp, folder.name, {"folder": folder.name, "revision": meta.get("revision"), "commit": meta.get("commit"),
+                                          "finished_at": meta["finished_at"], "runs": len(gold_runs), "metrics": metrics}))
+    if not found:
+        return None
+    return max(found, key=lambda x: (x[0], x[1]))[2]
+
+
+def evaluate_operating(latest: dict | None, baseline: dict) -> tuple[list[dict], list[str]]:
+    """가장 최근 운영 측정을 기준 파일의 `operating` 항목과 통과선에 견준다."""
+    rows, failures = [], []
+    if latest is None:
+        failures.append("운영: 동결 해시와 일치하는 운영 측정 결과(deploy_latency_provena-api-*)가 없어 비교할 수 없습니다")
+        return rows, failures
+    base = baseline["operating"]
+    arm = f"운영 {latest['revision']}"
+    if latest["revision"] != base.get("revision"):
+        rows.append({"arm": arm, "note": f"기준 파일은 {base.get('revision')} 측정, 가장 최근 측정은 {latest['revision']}({latest['finished_at']})"})
+    if latest["runs"] < len(DEFAULT_RUNS):
+        rows.append({"arm": arm, "note": f"{latest['runs']}회 평균(기준은 {len(DEFAULT_RUNS)}회)"})
+    for key in OPERATING_KEYS:
+        label, value, ref = LABELS[key], latest["metrics"][key], base["metrics"].get(key)
+        verdict, reason = _verdict(key, label, value, ref)
+        if reason:
+            failures.append(f"{arm} {reason}")
+        rows.append({"arm": arm, "label": label, "value": value, "baseline": ref, "gate": _gate_text(key), "verdict": verdict})
+    return rows, failures
+
+
 def evaluate(collected: dict, baseline: dict) -> tuple[list[dict], list[str]]:
     """표 행과 실패 사유 목록을 돌려준다."""
     rows, failures = [], []
@@ -103,22 +183,10 @@ def evaluate(collected: dict, baseline: dict) -> tuple[list[dict], list[str]]:
         base = baseline["arms"][arm]
         for key, label in LABELS.items():
             value, ref = avg[key], base.get(key)
-            verdict = "통과"
-            if key in FLOORS and value < FLOORS[key] - EPS:
-                verdict = "통과선 미달"
-                failures.append(f"{arm} {label} {value} < 통과선 {FLOORS[key]}")
-            elif key in CEILINGS and value > CEILINGS[key] + EPS:
-                verdict = "통과선 초과"
-                failures.append(f"{arm} {label} {value} > 통과선 {CEILINGS[key]}")
-            elif key in HIGHER_IS_BETTER and ref is not None and value < ref - EPS:
-                verdict = "기준보다 낮음"
-                failures.append(f"{arm} {label} {value} < 기준 {ref}")
-            elif key in LOWER_IS_BETTER and ref is not None and value > ref + EPS:
-                verdict = "기준보다 높음"
-                failures.append(f"{arm} {label} {value} > 기준 {ref}")
-            gate = FLOORS.get(key)
-            gate_text = f">= {gate}" if gate is not None else (f"<= {CEILINGS[key]}" if key in CEILINGS else "-")
-            rows.append({"arm": arm, "label": label, "value": value, "baseline": ref, "gate": gate_text, "verdict": verdict})
+            verdict, reason = _verdict(key, label, value, ref)
+            if reason:
+                failures.append(f"{arm} {reason}")
+            rows.append({"arm": arm, "label": label, "value": value, "baseline": ref, "gate": _gate_text(key), "verdict": verdict})
     return rows, failures
 
 
@@ -161,6 +229,10 @@ def main(argv: list[str] | None = None) -> int:
 
     collected = collect(args.results_dir, args.runs, frozen, dataset)
     rows, failures = evaluate(collected, baseline)
+    if "operating" in baseline:
+        op_rows, op_failures = evaluate_operating(find_latest_operating(args.results_dir, frozen, dataset), baseline)
+        rows += op_rows
+        failures += op_failures
     text = render(rows, failures, args.runs, dataset, frozen[dataset]["sha256"])
 
     if hasattr(sys.stdout, "reconfigure"):

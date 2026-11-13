@@ -106,6 +106,78 @@ def test_writes_the_table_to_the_github_step_summary(tmp_path, monkeypatch):
     assert "| single | 인용 정확도 | 1.0 | 1.0 | >= 0.85 | 통과 |" in text
 
 
+# ------------------------------------------------ 가장 최근 운영 측정 (deploy_latency_provena-api-*)
+OP_GOOD = {"cited_correct_rate": 0.942, "citation_accuracy": 0.95, "correct_refusal_rate": 1.0, "wrong_citation_rate": 0.067, "over_refusal_rate": 0.0}
+OP_BASELINE = {**BASELINE, "operating": {"revision": "provena-api-00047-wjn", "metrics": {**OP_GOOD, "latency_p95_s": 8.51}}}
+
+
+def _write_operating(tmp_path, revision, finished_at, metrics=None, p95=8.51, sha=SHA, n=50):
+    folder = tmp_path / "results" / f"deploy_latency_provena-api-{revision}"
+    folder.mkdir(parents=True, exist_ok=True)
+    meta = {"dataset": "dataset_v2.jsonl", "dataset_sha256": sha, "revision": f"provena-api-{revision}", "finished_at": finished_at}
+    per_run = [{"run": i, "total_s": {"p95": p95}} for i in (1, 2, 3)]
+    (folder / "summary.json").write_text(json.dumps({"meta": meta, "per_run": per_run}), encoding="utf-8")
+    gold = {"summary": {"per_run": [{"run": i, "n": n, **OP_GOOD, **(metrics or {})} for i in (1, 2, 3)]}}
+    (folder / "citation_gold.json").write_text(json.dumps(gold), encoding="utf-8")
+
+
+def _setup_operating(tmp_path):
+    args = _setup(tmp_path)
+    (tmp_path / "baseline.json").write_text(json.dumps(OP_BASELINE), encoding="utf-8")
+    return args
+
+
+def test_operating_measurement_equal_to_the_baseline_passes(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00")
+    assert ci_compare.main(args) == 0
+    assert "운영 provena-api-00047-wjn" in capsys.readouterr().out
+
+
+def test_newest_operating_measurement_is_the_one_compared(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00")
+    _write_operating(tmp_path, "00050-new", "2026-11-14T10:00:00+09:00", {"cited_correct_rate": 0.8})   # 더 늦은 측정이 나빠졌다
+    assert ci_compare.main(args) == 1
+    out = capsys.readouterr().out
+    assert "운영 provena-api-00050-new 정답 근거 인용률 0.8 < 통과선 0.85" in out and "기준 파일은 provena-api-00047-wjn 측정" in out
+
+
+def test_an_older_bad_operating_measurement_is_not_compared(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00040-old", "2026-11-10T01:54:02+09:00", {"correct_refusal_rate": 0.5})
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00")
+    assert ci_compare.main(args) == 0
+
+
+def test_operating_drop_below_the_baseline_fails_even_above_the_floor(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00", {"citation_accuracy": 0.9})
+    assert ci_compare.main(args) == 1
+    assert "인용 정확도 0.9 < 기준 0.95" in capsys.readouterr().out
+
+
+def test_operating_p95_over_the_ceiling_fails(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00", p95=10.4)
+    assert ci_compare.main(args) == 1
+
+
+def test_operating_measurement_with_an_old_dataset_hash_or_wrong_count_is_not_used(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_operating(tmp_path)
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00", sha="b" * 64)
+    assert ci_compare.main(args) == 1
+    assert "운영 측정 결과(deploy_latency_provena-api-*)가 없어" in capsys.readouterr().out
+    _write_operating(tmp_path, "00047-wjn", "2026-11-13T01:54:02+09:00", n=30)
+    assert ci_compare.main(args) == 1
+
+
 def test_committed_final_results_pass_against_the_committed_baseline(monkeypatch):
     # 저장소에 커밋된 실제 최종 결과(EVAL_REPORT 4장)와 기준 파일이 어긋나지 않는다.
     monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)

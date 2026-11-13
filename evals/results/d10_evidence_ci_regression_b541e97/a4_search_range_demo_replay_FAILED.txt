@@ -1,0 +1,222 @@
+F
+================================== FAILURES ===================================
+_ test_every_llm_request_of_the_demo_questions_is_in_the_recording[reasoning_answer_in_time] _
+
+keyless_db = 'postgresql://app:pw@127.0.0.1:64870/provena_demo_replay_44c233cd'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018B43E86780>
+budget = '1000', slow_answers_sent = True
+
+    @pytest.mark.demo_replay
+    @pytest.mark.parametrize("budget,slow_answers_sent", [("1000", True), ("0.001", False)], ids=["reasoning_answer_in_time", "reasoning_answer_skipped"])
+    def test_every_llm_request_of_the_demo_questions_is_in_the_recording(keyless_db, monkeypatch, budget, slow_answers_sent):
+        """질문마다 서버와 같은 그래프를 키 없이 돌려, 재생 저장소에서 찾지 못한 요청 키(역할)를 모은다. 하나라도 있으면 녹화가 오래된 것이다.
+        추론 답이 녹화에 없는 것(차가운 첫 질문으로 녹화된 질문)은 빠른 답으로 넘어가므로 허용하되, 답 글은 가짜 대체 답이 아니어야 하고 인용은 녹화 답에서 와야 한다."""
+        from types import SimpleNamespace
+    
+        from langgraph.checkpoint.memory import InMemorySaver
+        from langgraph.store.memory import InMemoryStore
+    
+        from backend.graph.decision.repo import InMemoryDecisionRepo
+        from backend.graph.departments.store import InMemoryIssueTableStore
+        from backend.graph.recall.runtime import make_answer_store
+        from backend.graph.service_profile import service_profile
+        from backend.main import build_question_graph
+        from backend.services import demo_replay as dr
+        from backend.services.llm import finish_run, run_config
+    
+        search = importlib.import_module("backend.rag.retrieve.search")   # `backend.rag.retrieve.search`는 패키지 속성으로는 같은 이름의 함수다
+        for name in _ENV_CLEAR:
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("DATABASE_URL", keyless_db)
+        monkeypatch.setenv("DEMO_REPLAY_DIR", str(REPLAY_DIR))
+        assert dr.replay_dir() == REPLAY_DIR                # SEARCH_DECOMPOSE도 지웠다: tests/conftest.py가 끈 값이 아니라 코드 기본(켬), 서버와 같다
+        state = {"roles": []}
+    
+        class SpyStore(dr.ReplayStore):
+            """질문 벡터(get)를 못 찾은 경우도 모은다. LLM 요청(pick)을 못 찾은 경우는 아래 demo_fallback 감시가 역할과 함께 모은다."""
+    
+            def get(self, key):
+                row = super().get(key)
+                if row is None:
+                    state["roles"].append("query_embedding")
+                return row
+    
+        store = SpyStore(REPLAY_DIR)
+        assert len(store) > 0, f"녹화 폴더가 비었다: {REPLAY_DIR}"
+        monkeypatch.setitem(dr._stores, str(REPLAY_DIR), store)
+        monkeypatch.setattr(dr, "_warned", True)           # 첫 미적중 경고 한 줄을 시험 출력에 섞지 않는다
+    
+        real_role = dr.message_role
+    
+        def spy_fallback(messages, _orig=dr.demo_fallback):
+            state["roles"].append(real_role(messages))
+            return _orig(messages)
+    
+        monkeypatch.setattr(dr, "demo_fallback", spy_fallback)
+        monkeypatch.setattr(search, "_searcher", None)     # 이 DB로 새로 연다. 끝나면 monkeypatch가 되돌린다
+        monkeypatch.setenv("GRAPH_ANSWER_BUDGET_S", budget)  # service_profile()은 비어 있는 값만 채운다
+    
+        slow = {"sent": 0, "missed": 0}
+        real_generate = dr.ReplayChatModel._generate
+    
+        def counting_generate(self, messages, *a, **kw):
+            sent = real_role(messages) == dr.SLOW_ANSWER_ROLE
+            slow["sent"] += sent
+            try:
+                return real_generate(self, messages, *a, **kw)
+            except dr.ReplayMiss:
+                slow["missed"] += 1
+                raise
+    
+        monkeypatch.setattr(dr.ReplayChatModel, "_generate", counting_generate)
+    
+        results: list[dict] = []
+        answers, _ = _readme_demo_questions()
+        try:
+            with service_profile():
+                st = SimpleNamespace(issue_store=InMemoryIssueTableStore(), decision_repo=InMemoryDecisionRepo(), checkpointer=InMemorySaver(),
+                                     store=InMemoryStore(), answer_store=make_answer_store(None))
+                graph = build_question_graph(st)
+                for q in _file_questions():
+                    state["roles"].clear()
+                    tid = "demo-replay-check-" + uuid.uuid4().hex[:8]
+                    cfg = run_config("demo_replay_check", thread_id=tid, configurable={"thread_id": tid})
+                    try:
+                        out = graph.invoke({"question": q, "user_id": "demo-replay-check", "thread_id": tid, "org": None, "as_of": None}, cfg)
+                    finally:
+                        finish_run(cfg)
+                    results.append({"question": q, "kind": out.get("kind"), "citations": len(out.get("citations") or []), "missed_roles": sorted(set(state["roles"])),
+                                    "missed_calls": len(state["roles"]), "answer": out.get("answer") or "", "cited": [c.get("chunk_id") for c in out.get("citations") or []]})
+        finally:
+            s = search._searcher
+            if s is not None and hasattr(s.store, "close"):
+                s.store.close()
+    
+        stale = [r for r in results if r["missed_calls"]]
+        report = json.dumps(results, ensure_ascii=False, indent=1)
+>       assert not stale, (
+            f"{RERECORD_HINT}\n녹화에 없는 요청이 있는 질문 {len(stale)}/{len(results)}개 (역할: {sorted({x for r in stale for x in r['missed_roles']})}).\n{report}"
+        )
+E       AssertionError: 녹화가 현재 코드와 맞지 않는다. 다시 녹화하라: 새 Postgres에 색인을 적재하고(`db/*.sql` 적용, `python -m backend.rag.retrieve.load_snapshot`) `data/demo_replay/recorded.jsonl`을 치운 뒤 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`를 LLM_API_KEY·LLM_PROVIDER·VOYAGE_API_KEY·DATABASE_URL을 프로세스 환경에 두고 돌린다(저장소 밖 실행기 run_demo_rerecord.ps1). 그 뒤 이 시험을 다시 돌린다.
+E         녹화에 없는 요청이 있는 질문 3/9개 (역할: ['answer_fast', 'judge']).
+E         [
+E          {
+E           "question": "제3자가 프로덕션 데이터에 접근하거나 영향을 줄 수 있다면 보안 검토가 필요한가요?",
+E           "kind": "answer",
+E           "citations": 1,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "자료에는 제3자가 프로덕션 데이터에 접근하거나 영향을 주는 경우를 직접 규정한 문장이 없습니다. 다만 새로운 또는 기존 시스템 간 통합, 특히 더 민감한 데이터를 처리하는 통합은 평가가 필요할 수 있다고 되어 있습니다 [1].\n\n기준일 2026-11-13 · 근거 판 날짜 2026-09-13 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+E           "cited": [
+E            "d96029d78f460b1a"
+E           ]
+E          },
+E          {
+E           "question": "CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)하고 얼마 안에 수정(remediate)해야 해?",
+E           "kind": "answer",
+E           "citations": 2,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "CVSS 9.0 이상 크리티컬 취약점은 24시간 이내에 완화(mitigate)해야 하고 [1][2], 30일 SLA 안에 수정(remediate)해야 합니다 [1].\n\n기준일 2026-11-13 · 근거 판 날짜 2026-04-09 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+E           "cited": [
+E            "c3b5296636ea8c06",
+E            "1760f9bd2b094dd5"
+E           ]
+E          },
+E          {
+E           "question": "클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?",
+E           "kind": "answer",
+E           "citations": 1,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "클라우드 호스팅 업체의 약정 사용 할인(CUD) 승인은 VP Infrastructure와 VP Finance에게 위임되어 있다. [1]\n\n기준일 2026-11-13 · 근거 판 날짜 2023-05-11 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+E           "cited": [
+E            "fa4c75698c139086"
+E           ]
+E          },
+E          {
+E           "question": "EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이 없으면?",
+E           "kind": "answer",
+E           "citations": 2,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "EOC가 페이지에 응답하지 않으면 해당 페이지는 Incident Manager(IM)에게 에스컬레이션된다. [1] IMOC가 15분 안에 페이지에 응답하지 못하면 Infrastructure Leadership이 페이지를 받는다. [2]\n\n기준일 2026-11-13 · 근거 판 날짜 2026-08-18 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+E           "cited": [
+E            "3069923da5795b3f",
+E            "7cd641d28bcdfeb5"
+E           ]
+E          },
+E          {
+E           "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+E           "kind": "refuse",
+E           "citations": 0,
+E           "missed_roles": [
+E            "answer_fast",
+E            "judge"
+E           ],
+E           "missed_calls": 7,
+E           "answer": "답에 쓸 근거 인용을 확인하지 못해 답하지 않습니다.",
+E           "cited": []
+E          },
+E          {
+E           "question": "외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+E           "kind": "refuse",
+E           "citations": 0,
+E           "missed_roles": [
+E            "answer_fast",
+E            "judge"
+E           ],
+E           "missed_calls": 7,
+E           "answer": "답에 쓸 근거 인용을 확인하지 못해 답하지 않습니다.",
+E           "cited": []
+E          },
+E          {
+E           "question": "구매 승인에는 어떤 승인자가 필요한가요?",
+E           "kind": "refuse",
+E           "citations": 0,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.",
+E           "cited": []
+E          },
+E          {
+E           "question": "오늘 점심 메뉴 추천해줘",
+E           "kind": "refuse",
+E           "citations": 0,
+E           "missed_roles": [],
+E           "missed_calls": 0,
+E           "answer": "핸드북과 관련 없는 질문이라 답하지 않습니다.",
+E           "cited": []
+E          },
+E          {
+E           "question": "외부 SaaS 계약 금액이 10만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?",
+E           "kind": "refuse",
+E           "citations": 0,
+E           "missed_roles": [
+E            "answer_fast",
+E            "judge"
+E           ],
+E           "missed_calls": 7,
+E           "answer": "답에 쓸 근거 인용을 확인하지 못해 답하지 않습니다.",
+E           "cited": []
+E          }
+E         ]
+E       assert not [{'question': '외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?', 'kind': 'refuse', 'citations': 0, 'missed_r...때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?', 'kind': 'refuse', 'citations': 0, 'missed_roles': ['answer_fast', 'judge'], ...}]
+
+tests\test_demo_replay_fresh.py:211: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+  2000/23095
+  4000/23095
+  6000/23095
+  8000/23095
+  10000/23095
+  12000/23095
+  14000/23095
+  16000/23095
+  18000/23095
+  20000/23095
+  22000/23095
+  23095/23095
+적재 완료: voyage-4, 청크 23095개, 링크 있는 청크 2661개, 번역 0개, 5.3초, generation 1
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 3770 deselected in 28.46s

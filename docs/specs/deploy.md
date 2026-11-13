@@ -41,7 +41,7 @@
 | 파일 | `.env.example` | 환경변수 이름·기본값 목록 |
 | 파일 | `data/index.tar.gz`, `data/demo_replay/` | 검색 색인 스냅샷과 키 없는 데모의 녹화 재생(`docs/specs/search.md`, `data/data.md`) |
 | 파일 | `db/*.sql` | 운영 DB 스키마. 운영에서는 사람이 적용한다(`README.md` "Google 로그인 설정"·내 정보 절, `db/db.md`) |
-| 파일 | `.github/workflows/ci.yml` | `python -m pytest -q`와 `evals/ci_compare.py`를 Python 3.12에서 돌린다(키·네트워크 없음) |
+| 파일 | `.github/workflows/ci.yml` | `python -m pytest -q`, `python -m pytest -q -m demo_replay`(pgvector Postgres 서비스를 곁에 띄움, 건너뛰면 실패), `evals/ci_compare.py`를 Python 3.12에서 돌린다(키·네트워크 없음). 점수 비교는 가장 최근 운영 측정 폴더도 자동으로 읽는다 |
 | 파일 | `backend/main.py` | 환경변수를 시작할 때 읽고 모드를 정한다 |
 | 환경변수 | `DATABASE_URL` | 운영 Supabase 풀러 연결 문자열, 데모는 compose가 로컬 db로 넣는다(`backend/main.py:261, 331`) |
 | 환경변수 | `AUTH_SECRET` | 로그인 토큰 서명 키(`backend/main.py:118`) |

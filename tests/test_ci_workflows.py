@@ -49,6 +49,26 @@ def test_ci_runs_pytest_then_the_score_comparison_on_pull_requests():
     assert (ROOT / "evals" / "ci_baseline.json").is_file()
 
 
+def test_ci_also_runs_the_demo_replay_tests_that_the_default_run_skips():
+    # pytest.ini의 addopts가 `-m "not demo_replay"`라 기본 실행은 키 없는 데모 녹화 대조를 건너뛴다. CI가 따로 돌려야 녹화 키가 깨진 PR을 잡는다.
+    wf = load("ci.yml")
+    assert "not demo_replay" in (ROOT / "pytest.ini").read_text(encoding="utf-8")
+    runs = [s.get("run", "") for s in steps(wf)]
+    assert any(re.search(r"python -m pytest\b.*-m demo_replay", r) for r in runs)
+    assert next(i for i, r in enumerate(runs) if "-m demo_replay" in r) < next(i for i, r in enumerate(runs) if "ci_compare.py" in r)
+
+
+def test_ci_demo_replay_step_has_a_database_and_fails_when_skipped():
+    # 이 시험은 Postgres가 없으면 건너뛴다. 건너뛴 채 초록이 되지 않도록 DB 서비스와 건너뜀 검사가 있어야 한다.
+    wf = load("ci.yml")
+    job = next(iter(wf["jobs"].values()))
+    assert "pgvector/pgvector" in job["services"]["postgres"]["image"]
+    step = next(s for s in steps(wf) if "-m demo_replay" in s.get("run", ""))
+    assert step["env"]["PROVENA_D5_PG_URL"].startswith("postgresql://")
+    assert step.get("shell") == "bash"     # pipefail로 pytest 실패가 tee에 가려지지 않는다
+    assert "skipped" in step["run"] and "exit 1" in step["run"]
+
+
 def test_ci_installs_from_an_existing_requirements_file_and_python_version_is_pinned():
     wf = load("ci.yml")
     req = re.findall(r"pip install -r (\S+)", run_text(wf))
