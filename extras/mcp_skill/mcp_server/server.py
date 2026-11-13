@@ -41,8 +41,9 @@ MAX_ARTICLE = 500
 MAX_NAMES = 10
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
-# 비공개 주소(internal.gitlab.com)는 공개 핸드북 본문에도 링크로 남아 있다(스냅샷 23,095청크 중 `text` 7청크, 다른 칸 0). 도구는 근거로 내보내지 않고
-# "비공개 문서"로 표시한다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 하고, 내보낼 때만 바꾼다.
+# 비공개 주소(internal.gitlab.com)는 공개 핸드북 본문에도 링크로 남아 있다(스냅샷 23,095청크 중 `text` 7청크, 다른 칸 0, 515acc3d 이전 기준). 도구는 근거로 내보내지 않고
+# "비공개 문서"로 표시한다(SDD 2-3장 "MCP 도구와 런타임 Skill", PRD 3장 비목표 "GitLab의 비공개 문서는 다루지 않는다").
+# 검색 순위·섹션 지문 검사는 바꾸기 전 글로 하고, 내보낼 때만 바꾼다.
 # 가리는 함수는 그래프와 같은 것을 쓴다(backend/rag/retrieve/privacy.py).
 
 
@@ -178,6 +179,12 @@ def _failure(tool: str, source: str, exc: BaseException) -> ToolResponse:
     return _resp("error", source, retryable=False, note="서버 내부 오류입니다. 다시 불러도 같으니 다른 방법으로 답하세요.")
 
 
+def _check_text(value: str, name: str) -> None:
+    """제어문자(탭·줄바꿈·캐리지리턴 제외)가 든 글은 거절한다. NUL은 psycopg가 DataError로 막아 error로 새므로 미리 invalid로(Spec EC-03)."""
+    if any(ord(ch) < 32 and ch not in "\t\n\r" for ch in value):
+        raise Invalid(f"{name}에 제어문자가 들어 있습니다")
+
+
 def _check_org(org: str | None, deps: _Deps) -> None:
     if org is None:
         return
@@ -225,6 +232,7 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
         try:
             if not isinstance(query, str) or not query.strip() or len(query) > MAX_QUERY:
                 raise Invalid(f"query는 1~{MAX_QUERY}자(지금 {len(query or '')}자)")
+            _check_text(query, "query")
             if not 1 <= k <= MAX_K:
                 raise Invalid(f"k는 1~{MAX_K}: {k}")
             _check_date(as_of, "as_of")
@@ -234,6 +242,8 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
                 if not 2 <= len(subs) <= MAX_SUB_QUERIES or not all(
                         isinstance(s, str) and s.strip() and len(s) <= MAX_QUERY for s in subs):
                     raise Invalid(f"sub_queries는 2~{MAX_SUB_QUERIES}개, 각 1~{MAX_QUERY}자(지금 {len(subs)}개)")
+                for sub in subs:
+                    _check_text(sub, "sub_queries")
             await _run(_check_org, org, deps)
             try:
                 q = SearchQuery(query=query, org=org, as_of=as_of, k=k, sub_queries=subs)
@@ -264,6 +274,8 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
                 raise Invalid(f"rule_seq는 0~{MAX_RULE_SEQ}: {rule_seq}")
             if article is not None and (not article.strip() or len(article) > MAX_ARTICLE):
                 raise Invalid(f"article은 1~{MAX_ARTICLE}자 또는 비움")
+            if article is not None:
+                _check_text(article, "article")
             _check_date(as_of, "as_of")
             from backend.rag.retrieve import section
             st = deps.section_store()
