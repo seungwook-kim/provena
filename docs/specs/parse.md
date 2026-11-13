@@ -12,7 +12,7 @@
 
 ## Goal
 
-- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 파싱 대상은 고정 커밋 `static/pdfs/` 아래 PDF 7건이다(`data/pdf/pdf_manifest.json`). 글자가 같은 `customer_dpa_05_01_26.pdf`와 `customer_dpa_5_1_26.pdf`는 하나만 둔다. 7건은 아직 검색 색인(`chunks_index.jsonl`·`manifest.jsonl`·`index.tar.gz`)에 PDF가 0건이다(2026-11-13 실측). DB에 적재하는 코드는 없다(코드 확인, 운영 DB는 조회하지 않았다). `data/data.md` PDF 절 "알려진 한계" 참고.
+- **해결 목표**: 원문을 요소 단위 중간 표현(`document_ir.jsonl`)과 권한표 칸 목록(`authz_cells.jsonl`)으로 바꾸고, 무엇을 지웠고 무엇을 못 했는지 기록한다. (2026-11-13: 11/03 PDF 파싱 추가 때 이 줄이 PDF 목표로 덮였던 것을 되돌림. PDF 목표는 아래 "PDF 파싱" Spec)
 - **성공 기준**: 처음 보는 단축코드 0종(있으면 그 쪽은 검토 대기) / 요소 원문 되찾기 실패 0 / 권한표 363칸 역할 주석 불일치 0 / 금액 구간 끊김은 실패가 아니라 목록으로 보고
 - **Out of Scope**: 청킹·청크 수(B-3), include 26곳 끌어오기(데이터카드에 기록), 결정표 만들기(F-04), 이모지를 그림 글자로 바꾸기
 
