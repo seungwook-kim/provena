@@ -41,6 +41,7 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
   const [actionError, setActionError] = useState('')
   const [notice, setNotice] = useState('')
   const requestRef = useRef(0)
+  const cancelRef = useRef(null)
 
   const loadList = useCallback(async () => {
     const request = ++requestRef.current
@@ -61,6 +62,10 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     loadList()
     return () => { requestRef.current += 1 }
   }, [loadList])
+
+  useEffect(() => {
+    if (confirm) cancelRef.current?.focus()
+  }, [confirm])
 
   useEffect(() => {
     if (live || !selectedId) { setReviews({}); return undefined }
@@ -91,17 +96,18 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
     if ((status === 'rejected' || status === 'revision') && !reason.trim()) return
     if (status === 'approved' && ((approveNeedsReason && !reason.trim()) || (!live && selected.kind === 'issue' && !allReviewed))) return
     setActionError('')
-    setConfirm(status)
+    setConfirm({ status, id: selected.id, title: selected.title })
   }
 
   async function confirmDecision() {
-    if (!selected || !confirm || busy) return
+    if (!confirm || busy) return
+    const { status, id } = confirm
     setBusy(true)
     setActionError('')
     try {
-      const updated = await service.decideApproval(selected.id, { action: actionByConfirm[confirm] ?? 'reject', reason })
+      const updated = await service.decideApproval(id, { action: actionByConfirm[status] ?? 'reject', reason })
       if (live) {
-        setNotice(`${doneMessage[confirm] ?? '처리했습니다.'}${updated?.nextApproval ? ' 다음 승인 요청이 올라왔습니다.' : ''}`)
+        setNotice(`${doneMessage[status] ?? '처리했습니다.'}${updated?.nextApproval ? ' 다음 승인 요청이 올라왔습니다.' : ''}`)
         setReason('')
         setConfirm(null)
         await loadList()
@@ -204,12 +210,12 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
         </> : <p>{loading ? '상세 정보를 불러오는 중입니다.' : live && !loadError ? '왼쪽 목록에서 승인 요청을 선택하면 상세 내용이 표시됩니다.' : '상세 정보를 불러오지 못했습니다.'}</p>}
       </article>
     </section>
-    {confirm && <div className="approval-dialog" role="dialog" aria-modal="true">
+    {confirm && <div className="approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-confirm-title">
       <section>
-        <h2>{confirmTitle[confirm] ?? '처리하시겠습니까?'}</h2>
-        <p>{selected?.title}</p>
+        <h2 id="approval-confirm-title">{confirmTitle[confirm.status] ?? '처리하시겠습니까?'}</h2>
+        <p>{confirm.title}</p>
         <div>
-          <button type="button" disabled={busy} onClick={() => setConfirm(null)}>취소</button>
+          <button type="button" ref={cancelRef} disabled={busy} onClick={() => setConfirm(null)}>취소</button>
           <button type="button" disabled={busy} onClick={confirmDecision}>확인</button>
         </div>
       </section>

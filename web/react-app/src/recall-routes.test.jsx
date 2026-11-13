@@ -343,6 +343,20 @@ describe('live recall route for administrators', () => {
     expect((await within(panel).findByRole('note')).textContent).toContain('article 칸')
   })
 
+  it('keeps the note wording of the mode that produced the result after switching tabs (L14)', async () => {
+    server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '', change_type: 'modified' }], markdown: '요약' })
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByRole('button', { name: '개정 전후 본문(JSON)' }))
+    await userEvent.click(within(panel).getByLabelText('개정 전후 본문(JSON)'))
+    await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect((await within(panel).findByRole('note')).textContent).toContain('제목 줄')
+    await userEvent.click(within(panel).getByRole('button', { name: '바뀐 섹션 목록(JSON)' }))
+    expect(within(panel).getByRole('note').textContent).toContain('제목 줄')
+    expect(within(panel).getByRole('note').textContent).not.toContain('article 칸')
+  })
+
   it('shows no empty-section note when every section has a name', async () => {
     server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '문서 제목 > 1조', change_type: 'modified' }], markdown: '요약' })
     open('/recalls')

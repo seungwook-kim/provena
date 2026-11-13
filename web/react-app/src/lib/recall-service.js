@@ -1,5 +1,6 @@
 import * as apiClient from './api'
 import { changedMark } from './text-diff'
+import { safeHttpUrl } from './safe-url'
 import {
   acknowledgePreviewRecall,
   filterPreviewRecalls,
@@ -86,7 +87,7 @@ export function mapNotice(notice = {}) {
     oldPolicy: textOrNull(notice?.old_text),
     newPolicy: textOrNull(notice?.new_text),
     ...changedMark(textOrNull(notice?.old_text), textOrNull(notice?.new_text)),
-    sourceUrl: textOrNull(notice?.source_url),
+    sourceUrl: safeHttpUrl(notice?.source_url),
     ruleSeq,
     article,
     oldVersionDate: changed.old_version_date ?? null,
