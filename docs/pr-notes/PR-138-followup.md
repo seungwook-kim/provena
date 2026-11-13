@@ -39,7 +39,7 @@ Q-24(키 없는 기동)·K-22(main pytest)·Q-21·K-16은 조장 #142 D10 증거
 |---|---|
 | 포트폴리오 인용 | 표의 숫자 36개가 모두 근거 줄에 있음(`EVAL_REPORT.md` main `b541e97a`) [실측] |
 | 갈래별 독립 검증 | SDK 링크·문서 맞추기 갈래마다 작업과 다른 검증자가 diff만 보고 다시 셈(깨진 링크 수, 인용 줄, 새 clone 해시) [실측] |
-| AI 표기 검사 | 커밋 메시지 0. 추가 줄 1건은 원래 있던 `docs/docs.md` 행(`.claude/skills/` 경로를 가리키는 #132 기록)의 PR 칸만 바꾼 것이라 새 표기 0(`ai_tools_log.md` 제외) |
+| AI 표기 검사 | 커밋 메시지 0. 추가 줄에서 걸린 것은 코드 패키지 이름(`langchain-anthropic`·`langchain_anthropic`, AGENTS·PRD·SDD와 이 문서)과, 그 밖의 1건은 원래 있던 `docs/docs.md` 행(`.claude/skills/` 경로를 가리키는 #132 기록)의 PR 칸만 바꾼 것이라 새 표기 0(`ai_tools_log.md` 제외) |
 
 ## 5. 남의 폴더 (조장 확인 필요)
 - `docs/`(조장): `docs/docs.md` 기록 칸·행, `docs/pr-notes/`(이름 바꾸기, 이 문서), `docs/PRD.md` 9장 표, `docs/SDD.md:50·52`·트리.
