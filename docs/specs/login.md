@@ -96,6 +96,7 @@
 - 스키마는 `db/114_google_identities.sql`: `user_identities(provider, subject, user_id, email, created_at, PK(provider, subject), UNIQUE(provider, user_id))`, `signup_requests.google_sub`(부분 유일 색인), `users`·`signup_requests`의 `password_hash` NULL 허용(+ `signup_requests`는 비밀번호 해시나 `google_sub` 중 하나 필수 CHECK). 기존 설계(`users`·`signup_requests`에 provider 칸 4개·유일 색인 2개·CHECK 4개)보다 `users`를 건드리지 않고 이메일 연결과 구글 전용 가입이 같은 표 하나로 풀려서 이쪽으로 정했다. 동시에 같은 구글 계정이 와도 기본키·유일키와 `ON CONFLICT DO NOTHING` 뒤 재조회로 한 줄만 남는다(Postgres 시험으로 확인). 113·114를 적용하기 전의 DB(운영은 109까지)에서도 앱은 돈다: 저장소가 `signup_requests.google_sub`·`user_identities`가 있는지 저장소마다 한 번 확인해(`information_schema`) 없으면 비밀번호 로그인·가입·승인 쿼리에서 `google_sub` 조건을 빼고 Google 로그인만 `/login?oauth_error=google_unavailable` 안내로 보낸다. 113이 없으면 거절된 이메일 재가입이 409일 뿐 오류는 없다. 114를 적용한 뒤에는 서버를 다시 시작해야 Google 로그인이 켜진다(확인 결과를 캐시함). 시험 `tests/test_auth_schema_compat.py`.
 - `/auth/google/start`는 Google 키(환경 변수 3개 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)가 하나라도 없으면 JSON 503 대신 `/login?oauth_error=google_unavailable`로 303 이동한다. 콜백 오류도 같은 `oauth_error` 방식이다. 로그인 화면(`web/react-app/src/pages/LoginPage.jsx`)이 승인 대기·거절·실패·사용 불가 문구를 보여 준다.
 - 배포에 Google 키를 넣고 운영 DB에 마이그레이션을 적용하는 일, GCP 콘솔 설정은 조장이 한다(`README.md`의 "Google 로그인 설정"). 실제 Google 계정으로 한 브라우저 왕복은 하지 않았다(미검증).
+- 콜백이 성공하면 `/`로 보낸다(`backend/auth.py` `google_callback`, 303 `Location: /`). 화면은 `/`에서 세션 확인(`/me`)이 끝나기 전에는 랜딩을 그리지 않고 확인 중 안내를 보인 뒤, 로그인돼 있으면 `/chat`(또는 `/myinfo`)으로 보낸다. 확인 전에 랜딩이 잠깐 보였다가 채팅으로 넘어가던 것을 고쳤다(2026-11-13, 경희님 화면 점검).
 
 ## AC (Given-When-Then)
 
