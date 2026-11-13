@@ -71,6 +71,10 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| W-004 | 2026-11-13 | 박진형 | 리콜·변경 감시·쟁점표의 원문 링크에 `javascript:` 같은 http(s)가 아닌 주소가 그대로 들어갈 수 있음 | 누르면 원문 대신 다른 동작 | 박진형 | 해결 | 2026-11-13 | `lib/safe-url.test.js`, `lib/recall-service.test.js`·`lib/change-monitoring-service.test.js`·`lib/approvals-service.test.js`의 http(s) 링크 시험 |
+| W-003 | 2026-11-13 | 박진형 | 첫 등록 화면에서 프로필은 저장됐는데 기억 저장이 실패하면 다음으로 넘어갈 수 없음 | 사용자가 등록 화면에 갇힘 | 박진형 | 해결 | 2026-11-13 | `profile-memory-fail.test.jsx` 2개('나중에 입력하고 계속' 버튼) |
+| W-002 | 2026-11-13 | 박진형 | 승인함 확인창을 연 채 다른 건을 고르면 나중에 고른 건이 처리되고 반려 사유가 빈 값으로 감 | 엉뚱한 건 승인·반려, '반려는 사유 필수' 우회 | 박진형 | 해결 | 2026-11-13 | `approvals-confirm.test.jsx` 4개(연 건·사유 고정, Esc 닫기와 초점 복원, Tab 가두기) |
+| W-001 | 2026-11-13 | 김승욱 | 채팅에서 같은 오류로 '다시 시도'를 누르면 오류 말풍선이 하나 더 쌓임(놓친 것 11/13 새로 발견 7) | 실패한 질문이 겹쳐 보임 | 박진형 | 해결 | 2026-11-13 | `lib/chat-service.test.js`·`lib/chat-preview.test.js`의 retry 시험, `pages/DemoChatPage.test.jsx`, `chat-error-status.test.jsx` |
 # 작업 기록 (2026-11-10)
 
 kkh-hue (Codex): 이메일 인증·request_id 관리자 승인 API 정합성을 문서화했다.

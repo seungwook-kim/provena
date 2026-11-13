@@ -27,3 +27,4 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| MCP-001 | 2026-11-13 | 박진형 | 글 입력(`article`·`query`·`sub_queries`·`table_id`·`answer_id`)에 NUL 같은 제어문자가 있으면 psycopg `DataError`로 `status=error`(Spec EC-03은 invalid) | 클라이언트가 '서버 오류'로 보고 재시도·우회 판단을 잘못함 | 박진형 | 해결 | 2026-11-13 | 임시 pgvector DB에서 고치기 전 `error` 재현, `tests/test_mcp_server.py::test_get_section_control_char_article_is_invalid_and_not_read`·`test_search_control_char_query_is_invalid_and_not_searched`, `test_mcp_decision_tool.py`·`test_mcp_new_tools.py`의 NUL 입력 |

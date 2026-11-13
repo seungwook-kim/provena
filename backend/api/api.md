@@ -27,3 +27,5 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| P-002 | 2026-11-13 | 박진형 | `recalls.py` 날짜 칸(`digest/flush`의 `day`, `impact-preview`의 날짜, 규정 웹훅의 날짜)이 형식만 보고 없는 날짜(`2026-02-30`)를 받음 | 영향 건수가 조용히 틀리고, 사용자에게 '확인 필요' 알림이 잘못 가며, 하루 요약이 되돌릴 수 없게 저장됨 | 박진형 | 해결 | 2026-11-13 | `tests/test_recalls_date_validation.py`의 `test_impossible_or_non_ascii_date_is_422`·`test_bad_day_does_not_store_digest`·`test_webhook_mixed_errors_stay_400` |
+| P-001 | 2026-11-13 | 김승욱 | `/chat`의 `as_of`가 형식만 검사해 없는 날짜(`2026-02-30`·`2026-13-45`)에 스트림 `error` 이벤트(놓친 것 11/13 새로 발견 3) | 사용자에게 원인 없는 오류 | 박진형 | 해결 | 2026-11-13 | `tests/test_api_chat.py::test_chat_rejects_impossible_as_of_with_422_not_sse_error`(422, 입력 글자를 되비치지 않음) |
