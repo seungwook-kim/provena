@@ -12,6 +12,8 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | M-05: `deliverables/failure_analysis.md` 검색·데이터 파트 보강. 낡은 문장 2곳(2장 색인 1행, 6장 지금 상태)을 00047까지의 38번 값(`EVAL_REPORT.md:724`)으로 갱신, 5-5절 문항 단위 표 요약, 검색 이전 단계 실패 표(파서·53건·증분 수집·PDF·지연·권한) 추가. 모든 숫자는 `파일:줄` 인용 | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 목록 마무리 묶음 작업 내역 `pr-notes/PR-next.md`, 동결 전 점검 노트 `pr-notes/k16-a14-i06-check-1112.md`(K-16·A-14·I-06), `specs/decision-approval.md`에 결정표 변환 화면 한 줄(H-21), `deliverables/ai_tools_log.md` 한 줄 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | 문서를 코드에 맞춤(코드 변경 없음). K-03: `PRD.md` 9장 표의 BM25를 `rank-bm25`(`requirements.txt:19`, `search.py:622`), 저장을 `pgvector`+`psycopg`(`:17-18`, `langchain-postgres` 없음), bcrypt를 `>=4.2,<5`(`:8`)로. O-07: `SDD.md` 모듈 표에 LangChain은 `langchain_core` 타입·채팅 모델(`llm.py`)에만 쓴다고 적음(`grep langchain backend/`). M-14: `AGENTS.md`의 `SEARCH_MODE` 줄을 `search.py:82`→`:77`, LLM 규칙에 `deploy_ragas.py:265` 예외를 적음. F-10: `SDD.md`에 `DocumentSource` 한계 기록. L-27: `.gitattributes`에 `dataset_holdout_v1`·`dataset_cite_new_v1`을 `eol=crlf`로 고정(새 clone에서 sha256이 문서 값과 같음을 확인) | #148 |
 | 2026-11-13 | 박진형 (jinyeong-731) | #138 후속: `pr-notes/PR-next.md`를 `pr-notes/PR-138.md`로 바꾸고 프론트 절·숫자 채움, 이 PR 작업 내역 `pr-notes/PR-148.md`, 포트폴리오 LangGraph·멀티에이전트 줄(M-22), 박진형 기록 칸 `미정` 38칸을 PR 번호로 | #148 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-20·O-38·O-22·Q-07·M-14: PRD 임베딩 행·SDD 11-3 임베딩 기본값을 voyage-4 확정(decisions.md:48)으로 정정, PRD 9장·SDD 5장 manifest '커밋 sha' 문구를 실제 칸(`version_id`)과 `collect_manifest.json` 위치로 정정, SCAFFOLD.md 머리말과 AGENTS.md 폴더 역할을 TEAM_GUIDE 5장·SDD 3장으로 안내, `specs/deploy.md` 신규(배포 의존 파일·환경변수; 화면 `d6-chat-frontend.md`·기억 `memory.md`는 이미 절이 있어 줄 번호만 정정), AGENTS.md 낡은 두 곳(SEARCH_MODE 위치, 후보 버전 장 번호) 수정 | #138 |
