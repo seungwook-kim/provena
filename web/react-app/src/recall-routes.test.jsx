@@ -330,7 +330,17 @@ describe('live recall route for administrators', () => {
     await userEvent.click(box)
     await userEvent.paste('{"old_version_date":"2026-11-01","new_version_date":"2026-11-10","pages":[{"path":"a.md","old":"x","new":"y"}]}')
     await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
-    expect(await within(panel).findByRole('note')).toBeTruthy()
+    expect((await within(panel).findByRole('note')).textContent).toContain('제목 줄')
+  })
+
+  it('points to the article field when a section-list input has an empty name', async () => {
+    server.impactResponse = () => json({ changes: [{ rule_seq: 1, article: '', change_type: 'modified' }], markdown: '요약' })
+    open('/recalls')
+    const panel = (await screen.findByRole('heading', { name: '변경 전 영향 미리보기' })).closest('section')
+    await userEvent.click(within(panel).getByLabelText('바뀐 섹션 목록(JSON)'))
+    await userEvent.paste('[{"rule_seq":1,"article":""}]')
+    await userEvent.click(within(panel).getByRole('button', { name: '미리보기 실행' }))
+    expect((await within(panel).findByRole('note')).textContent).toContain('article 칸')
   })
 
   it('shows no empty-section note when every section has a name', async () => {
