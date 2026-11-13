@@ -84,6 +84,8 @@ def page_recorder(found):
     pages = []
 
     def page_search(query, seqs, org, as_of, k):
+        if query == Q_ESC:  # 사전 등록 62.55: 나뉜 질문의 첫 검색 뒤 같은 페이지 보충 검색은 여기서 세지 않는다(재검색 시험)
+            return []
         pages.append((query, list(seqs)))
         return [c for c in found if c.rule_seq in seqs]
     return page_search, pages

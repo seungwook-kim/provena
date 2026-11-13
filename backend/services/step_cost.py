@@ -151,3 +151,34 @@ def refuse_meta(stage: str, kind: str | None, state: dict, messages: dict[str, s
         if not reason:
             reason = "clarify" if kind == "clarify" else "no_evidence"
     return {"refuse_stage": stage, "refuse_reason": str(reason)}
+
+
+# 답 경로 기록(측정용). 검색·판정·답 고르기에서 코드가 정한 값만 싣는다: 하위 질문, 문맥 청크 id, 판정 구절이 든 청크 id(구절 글은 싣지 않는다), 답 후보의 인용과 고른 쪽, 인용 후처리 기록.
+# 답 본문·초안·판정 이유 문장·판정 구절 글은 싣지 않는다. 상태를 읽기만 하므로 답 경로는 그대로다.
+PATH_TEXT_WIDTH = 200
+_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead")
+
+
+def path_meta(state: dict) -> dict:
+    """{"path": {...}}. 검색을 하지 않은 실행(도메인 밖, 결정표, 합동 검토)은 빈 dict다. 측정 도구(`evals/latency/deploy_latency.py`)가 행에 그대로 남긴다."""
+    chunks = state.get("chunks")
+    if not isinstance(chunks, list) or (not chunks and not state.get("sub_queries")):
+        return {}
+    best2 = state.get("best2_log") if isinstance(state.get("best2_log"), dict) else None
+    grounding = state.get("grounding") if isinstance(state.get("grounding"), dict) else {}
+    quotes = [[str(i) for i in q] for q in state.get("judge_quotes") or [] if isinstance(q, (list, tuple))]   # 사실마다 판정 구절이 든 청크 id(구절 글은 싣지 않는다)
+    path = {
+        "sub_queries": [str(s)[:PATH_TEXT_WIDTH] for s in state.get("sub_queries") or []],
+        "decompose_source": state.get("decompose_source") or "",
+        "context_ids": [c.get("chunk_id") for c in chunks if isinstance(c, dict)],
+        "intro_chunk_ids": list(state.get("intro_chunk_ids") or []),
+        "retries": int(state.get("retries") or 0),
+        "search_stats": {k: v for k, v in (state.get("search_stats") or {}).items() if isinstance(v, (int, float))},
+        "judge_partial": bool(state.get("judge_partial")),
+        "judge_quote_ids": list(state.get("judge_quote_ids") or []),
+        "judge_quotes": quotes,
+        "best2": {k: best2.get(k) for k in ("quote_ids", "cands", "pick", "why", "rule")} if best2 else None,
+        "trimmed_citations": list(state.get("trimmed_citations") or []),
+        "grounding": {k: grounding[k] for k in _PATH_GROUNDING_KEYS if k in grounding},
+    }
+    return {"path": path}

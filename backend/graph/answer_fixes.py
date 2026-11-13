@@ -187,6 +187,12 @@ def speculate_enabled() -> bool:
     return _flag("GRAPH_SPECULATE_FIRST")
 
 
+def speculate_early_search_enabled() -> bool:
+    """SE `GRAPH_SPECULATE_EARLY_SEARCH=1`(`GRAPH_SPECULATE_FIRST`와 같이 쓴다): 예비 분해(`decompose_gate`)가 끝나길 기다리지 않고 원 질문의 첫 검색을 같은 시각에 시작한다.
+    예비 분해가 나누지 않고 분류가 정책 경로이면 그 결과를 쓰고(입력은 같다), 아니면 버린다. 코드 기본은 꺼짐이고 서비스 설정(`service_profile.SERVICE_ENV`)에서 켠다(사전 등록 62.53)."""
+    return _flag("GRAPH_SPECULATE_EARLY_SEARCH")
+
+
 def speculate_ground_enabled() -> bool:
     """SG `GRAPH_SPECULATE_GROUND=1`: 답 후보가 나오는 대로 그 답의 근거 판정을 미리 부르고, 나중에 같은 입력의 판정이 필요하면 그 결과를 쓴다(입력과 판정 기준은 그대로)."""
     return _flag("GRAPH_SPECULATE_GROUND")
@@ -293,14 +299,36 @@ def _own_body(c: dict, cited: list[dict]) -> str:
     return body[cut:]
 
 
-def _value_lines(body: str, keys: set[tuple[str, str]]) -> list[tuple[set[tuple[str, str]], set[str]]]:
-    """본문에서 `keys`의 값을 담은 줄마다 (그 줄의 값, 그 줄의 단어). 세 줄 이상인 본문에서 줄의 절반 이상에 되풀이되는 단어(표의 열 이름 등)는 뺀다."""
+def _value_lines(body: str, keys: set[tuple[str, str]]) -> list[tuple[set[tuple[str, str]], set[str], str]]:
+    """본문에서 `keys`의 값을 담은 줄마다 (그 줄의 값, 그 줄의 단어, 그 줄 글). 세 줄 이상인 본문에서 줄의 절반 이상에 되풀이되는 단어(표의 열 이름 등)는 뺀다."""
     lines = [ln for ln in body.split("\n") if ln.strip()]
     toks = [_tokens(ln) for ln in lines]
     common: set[str] = set()
     if len(lines) >= 3:
         common = {t for t in set().union(*toks) if sum(t in x for x in toks) * 2 >= len(lines)}
-    return [(value_keys(ln) & keys, t - common) for ln, t in zip(lines, toks) if value_keys(ln) & keys]
+    return [(value_keys(ln) & keys, t - common, ln) for ln, t in zip(lines, toks) if value_keys(ln) & keys]
+
+
+TABLE_SEP = " | "  # 표 행의 칸 구분(`이름: 값 | 이름: 값 ...`)
+
+
+def _alnum(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def is_table_row(line: str) -> bool:
+    return TABLE_SEP in line
+
+
+def row_first_cell(line: str) -> str:
+    """표 행의 첫 칸 값. `이름: 값`이면 값, 이름 칸이 없으면 칸 전체(영숫자 소문자만)."""
+    cell = line.split(TABLE_SEP, 1)[0]
+    return _alnum(cell.split(":", 1)[1] if ":" in cell else cell)
+
+
+def _same_section(c: dict, cited: list[dict]) -> bool:
+    """사전 등록 62.56: 같은 페이지(rule_seq) 같은 절 제목(article)의 청크는 한 표나 한 절이 청크로 나뉜 것이라 같은 값을 말해도 다른 사실의 근거가 아니다."""
+    return c.get("rule_seq") is not None and bool(c.get("article")) and any(x.get("rule_seq") == c.get("rule_seq") and x.get("article") == c.get("article") for x in cited)
 
 
 def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[tuple[dict, int]]:
@@ -319,12 +347,14 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
             break
-        if c["chunk_id"] in have:
+        if c["chunk_id"] in have or _same_section(c, cited):  # 62.56(가): 같은 절의 다른 청크는 더하지 않는다
             continue
         anchor, score = -1, 0.0
-        for k, t in _value_lines(_own_body(c, cited), keys):
+        for k, t, ln in _value_lines(_own_body(c, cited), keys):
             for i, rows in enumerate(cited_lines):
-                for k2, t2 in rows:
+                for k2, t2, ln2 in rows:
+                    if is_table_row(ln) and is_table_row(ln2) and (row_first_cell(ln) != row_first_cell(ln2) or not row_first_cell(ln)):
+                        continue  # 62.56(나): 표 행끼리는 첫 칸이 같을 때만 같은 값 줄로 본다
                     if t and k & k2 and len(t & t2) / len(t) > score:
                         anchor, score = i, len(t & t2) / len(t)
         if score >= MIN_OVERLAP:
@@ -384,6 +414,21 @@ def longest_shared_run(a: list[str], b: list[str]) -> int:
     return best
 
 
+def _words_whole_rows(body: str, other: str, gap: str) -> list[str]:
+    """사전 등록 62.57: `body`의 단어열. 표 행(` | `이 있는 줄)은 그 줄 전체가 `other`에도 그대로(영숫자 비교) 있을 때만 넣고, 아니면 건너뛰며 그 자리에 서로 맞지 않는 표지(`gap`)를 둔다.
+    산문 줄은 지금처럼 이어 붙인다. 표 행의 뒤 칸 일부만 같은 다른 문서의 행은 같은 문장으로 세지 않는다."""
+    other_norm = _alnum(other)
+    out: list[str] = []
+    for ln in body.split("\n"):
+        if is_table_row(ln):
+            norm = _alnum(ln)
+            if not norm or norm not in other_norm:
+                out.append(gap)
+                continue
+        out.extend(_words(ln))
+    return out
+
+
 def _other_team_page(c: dict, anchor: dict) -> bool:
     title = str(c.get("rule_title") or "")
     return bool(_TEAM_TITLE.search(title)) and title != str(anchor.get("rule_title") or "")
@@ -395,18 +440,16 @@ def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n
     if not cited or len(cited) >= cap:
         return []
     have = {c["chunk_id"] for c in cited}
-    cited_words = [_words(_body(c)) for c in cited]
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
             break
         if c["chunk_id"] in have:
             continue
-        w = _words(_body(c))
         for i, x in enumerate(cited):
             if c.get("rule_seq") == x.get("rule_seq") or _other_team_page(c, x):
                 continue
-            if longest_shared_run(w, cited_words[i]) >= n:
+            if longest_shared_run(_words_whole_rows(_body(c), _body(x), "\x00c"), _words_whole_rows(_body(x), _body(c), "\x00x")) >= n:
                 added.append((c, i))
                 have.add(c["chunk_id"])
                 break
@@ -767,6 +810,21 @@ def quote_chunk_ids(obj: dict | None, chunks: list[dict]) -> list[str]:
     return out
 
 
+def quote_rows(obj: dict | None, chunks: list[dict], *, limit: int = 8) -> list[list[str]]:
+    """판정 checks를 측정 기록용으로 줄인 것: 사실마다 그 구절을 그대로 담은 문맥 청크 id 목록(구절이 없거나 NOTHING FOUND이면 빈 목록).
+    `quote_chunk_ids`와 같은 대조를 사실별로 한다. 사실 문장과 구절 글은 싣지 않고 청크 id만 남긴다. 답 경로는 이 값을 읽지 않는다."""
+    checks = (obj or {}).get("checks")
+    rows: list[list[str]] = []
+    for c in checks if isinstance(checks, list) else []:
+        if not isinstance(c, dict):
+            continue
+        found = _squash_quote(c.get("quote")) not in ("", _NOTHING)
+        q = _alnum(c.get("quote")) if found else ""
+        ids = [x.get("chunk_id") for x in chunks or [] if x.get("chunk_id") and len(q) >= BEST2_MIN_QUOTE and q in _alnum(x.get("text"))]
+        rows.append(list(dict.fromkeys(ids)))
+    return rows[:limit]
+
+
 def _cited_ids(draft: dict) -> list[str]:
     ids: list[str] = []
     for c in draft.get("raw_citations") or []:
@@ -810,3 +868,74 @@ def pick_best2(first: dict | None, second: dict | None, quote_ids: list[str], do
     else:
         log["why"] = "동점, 첫 후보"
     return (second if log["pick"] else first), log
+
+
+# ---------- HO 겹친 머리 인용 바로잡기(스위치 없이 기본 동작, 사전 등록 62.52) ----------
+# 청킹은 앞 청크의 끝 글을 다음 청크의 머리에 겹쳐 둔다. 답이 다음 청크 X를 인용했는데 그 주장을 받친 구절(근거 확인이 복사한 원문 구절)이 모두 X의 겹친 머리에만 있으면,
+# 그 글의 원래 자리는 앞 청크 Y다(X의 머리는 문장 중간에서 시작하고, 그 사실을 묻는 제목이나 문단 첫머리는 Y에 있다). Y가 문맥에 있으면 인용을 Y로 바꾼다.
+# 근거 확인이 끝난 뒤의 코드 단계이고 LLM 호출이 없다. Y의 본문은 X의 머리 글을 그대로 담고 있어 근거 확인 결과가 달라지지 않는다.
+# 구절이 X의 자기 본문에도 있거나, 구절을 찾지 못했거나, Y가 문맥에 없으면 그대로 둔다.
+HEAD_MIN_CHARS = 40  # 이보다 짧은 겹침은 우연히 같은 글일 수 있어 겹친 머리로 보지 않는다
+HEAD_READ_MAX_CHARS = 400  # 62.58: 문맥 밖 앞 청크를 읽어 보는 것은 구절이 본문 앞 이만큼 안에 있을 때만(겹친 머리는 본문 앞쪽이다. 101번의 머리는 119자)
+
+
+def head_overlap(chunk: dict, prev: dict) -> int:
+    """`chunk` 본문의 머리 중 `prev` 본문의 끝과 그대로 같은 글자 수(`HEAD_MIN_CHARS` 미만이면 0). 같은 페이지 판의 다른 청크일 때만 잰다."""
+    if chunk.get("chunk_id") == prev.get("chunk_id") or chunk.get("rule_seq") is None or chunk.get("rule_seq") != prev.get("rule_seq") or chunk.get("version_id") != prev.get("version_id"):
+        return 0
+    body, tail = _body(chunk), _body(prev)
+    for n in range(min(len(body), len(tail)), HEAD_MIN_CHARS - 1, -1):
+        if tail.endswith(body[:n]):
+            return n
+    return 0
+
+
+def head_owner_cites(body: str, cited: list[dict], context: list[dict], quotes: list[str] | None, prev_reader=None) -> tuple[str, list[dict], list[dict]] | None:
+    """HO: `finish_answer`를 거친 본문(표시 `[n]`)과 인용 목록에서, 근거 구절이 겹친 머리에만 있는 인용 청크를 그 글의 원래 청크로 바꾼다.
+    (본문, 인용, 바꾼 기록 [{from, to}(문맥 밖 청크로 바꿨으면 outside: True)]). 바꿀 것이 없으면 None. 원래 청크가 이미 인용돼 있으면 표시를 그 번호로 합치고 번호를 다시 매긴다.
+    사전 등록 62.58: 원래 청크가 문맥에 없으면 `prev_reader(청크)`가 같은 페이지 판의 바로 앞 청크를 읽어 돌려주고(문맥에는 넣지 않는다), 그 끝이 머리와 그대로 같을 때만 바꾼다.
+    읽기가 실패하거나 None이면 그대로 둔다."""
+    qs = [q for q in (_alnum(x) for x in quotes or []) if len(q) >= BEST2_MIN_QUOTE and q != "nothingfound"]
+    if not qs or not cited:
+        return None
+    swaps: dict[int, dict] = {}
+    outside: set[int] = set()
+    for i, x in enumerate(cited):
+        text = _body(x)
+        mine = [q for q in qs if q in _alnum(text)]
+        if not mine:
+            continue
+
+        def owns(y: dict) -> bool:
+            n = head_overlap(x, y)
+            return bool(n) and all(q in _alnum(text[:n]) and q not in _alnum(text[n:]) for q in mine)
+
+        for y in context or []:
+            if owns(y):
+                swaps[i] = y
+                break
+        else:
+            if prev_reader is None or not all(q in _alnum(text[:HEAD_READ_MAX_CHARS]) for q in mine):  # 머리는 본문 앞쪽이다. 구절이 그보다 뒤에 있으면 읽지 않는다(DB 읽기를 아낀다)
+                continue
+            try:
+                y = prev_reader(x)
+            except Exception:  # noqa: BLE001 - 앞 청크 읽기 실패가 답을 막지 않는다
+                continue
+            if isinstance(y, dict) and y.get("chunk_id") and owns(y):
+                swaps[i] = y
+                outside.add(i)
+    if not swaps:
+        return None
+    out: list[dict] = []
+    number: dict[int, int] = {}
+    for i, x in enumerate(cited):
+        c = swaps.get(i, x)
+        ids = [k["chunk_id"] for k in out]
+        if c["chunk_id"] in ids:
+            number[i + 1] = ids.index(c["chunk_id"]) + 1
+        else:
+            out.append(c)
+            number[i + 1] = len(out)
+    new_body = _NUM.sub(lambda m: f"[{number[int(m.group(1))]}]" if int(m.group(1)) in number else m.group(0), body)
+    new_body = re.sub(r"(\[\d+\])(?:\s*\1)+", r"\1", new_body)  # 합쳐져 되풀이된 같은 번호는 한 번만
+    return new_body, out, [{"from": cited[i]["chunk_id"], "to": y["chunk_id"], **({"outside": True} if i in outside else {})} for i, y in sorted(swaps.items())]

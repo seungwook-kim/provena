@@ -85,7 +85,7 @@ RETRIEVER = AgentSpec(
     writes=frozenset({"search_query", "search_org", "skills_used", "as_of", "sub_queries", "decompose_source", "kind", "answer", "citations",
                       "search_error", "chunks", "search_cache", "search_stats", "judge_reason", "judge_partial", "retries", "clarify_question",
                       "early_answer", "judged_chunks", "search_stalled", "judge_missing", "judge_query", "judge_scope", "next_section", "section_reads",
-                      "query_targets", "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids"}),
+                      "query_targets", "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids", "intro_chunk_ids", "judge_quotes"}),
 )
 WRITER = AgentSpec(
     "writer",
@@ -320,6 +320,7 @@ def build_multi_graph(
     json_only: bool | None = None,
     page_search=None,
     intro_search=None,
+    prev_chunk=None,
 ):
     """컴파일된 멀티 에이전트 질문 그래프. 라우팅 방식(`router`)을 뺀 인자와 뜻은 `build_graph`와 같다(그대로 넘긴다).
 
@@ -336,7 +337,7 @@ def build_multi_graph(
     single = build_graph(retriever, None, llm=llm, answer_store=answer_store, store=store, use_skills=use_skills,
                          grounding_llm=grounding_llm, decompose=decompose, section_reader=section_reader, decision_repo=decision_repo, review_graph=review_graph,
                          parallel_intake=parallel_intake, brief_output=brief_output, max_research=research_limit, judge_answer=judge_answer,
-                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, intro_search=intro_search)
+                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, intro_search=intro_search, prev_chunk=prev_chunk)
     parts = SingleParts(single)
     agents = build_agents(parts)
     specs = {name: {**AGENTS, **CONNECTED_AGENTS}[name] for name in agents}

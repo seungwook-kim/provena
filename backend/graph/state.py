@@ -39,11 +39,13 @@ class AgentState(TypedDict, total=False):
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
     search_cache: dict  # 이번 실행 안의 검색 결과 기억. `GRAPH_PARALLEL_INTAKE`를 켜면 첫 재작성과 첫 검색에서 쓸 때까지 미리 받은 LLM 응답도 잠깐 담긴다
     search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수}
+    intro_chunk_ids: list[str]  # R3(`GRAPH_INTRO_FILL`)가 첫 검색 문맥 뒤에 더한 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산(`build.core_chunks`)이 넓힌 자리와 가른다(사전 등록 62.51)
     sub_queries: list[str]  # 첫 검색 전에 나눈 한국어 하위 질문(나누지 않았거나 분해를 끄면 빈 목록)
     started_at: float  # `GRAPH_ANSWER_BUDGET_S`를 켰을 때 질문을 받은 시각(time.monotonic). 첫 답의 추론 대기를 남은 시간으로 줄인다
     judge_checks_log: list[dict]  # FL(`GRAPH_FACTS_LOG=1`, 진단): 판정마다 대표 표의 checks, sufficient, partial, 표 수
     answer_facts: dict  # FL(`GRAPH_FACTS_LOG=1`, 진단): 첫 답 초안의 asked와 picks
     judge_quote_ids: list[str]  # BO2(`GRAPH_ANSWER_BEST2=1`): 마지막 판정의 구절이 든 문맥 청크
+    judge_quotes: list[list[str]]  # BO2: 마지막 판정의 사실별로 그 구절이 든 문맥 청크 id 목록(구절 글은 싣지 않는다). 측정 기록용이고 답 경로는 읽지 않는다
     best2_log: dict  # BO2: 두 답 후보의 인용, S 안/밖 수, 고른 쪽과 이유
     early_answer: dict  # `GRAPH_JUDGE_ANSWER`를 켰을 때 판정과 같이 받은 답(`write_answer`가 낼 칸들). 충분 판정일 때만 있다
     judged_chunks: int  # `GRAPH_STOP_STALLED_SEARCH`를 켰을 때 마지막 판정이 본 근거 수
