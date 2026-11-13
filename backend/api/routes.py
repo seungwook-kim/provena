@@ -31,7 +31,7 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
 from backend.api.errors import ApiError
@@ -78,6 +78,14 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     as_of: str | None = Field(default=None, pattern=DATE_PATTERN)
     org: str | None = Field(default=None, max_length=64)
+
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, value: str) -> str:
+        """공백만 있는 질문은 422로 막는다(앞뒤 공백을 지운 뒤 비면 거절). 값은 그대로 두어 검색·녹화 재생의 입력 글자는 바뀌지 않는다."""
+        if not value.strip():
+            raise ValueError("질문은 공백만으로 보낼 수 없습니다.")
+        return value
 
 
 class MemoryPatch(BaseModel):
