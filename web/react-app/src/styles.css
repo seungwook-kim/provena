@@ -577,3 +577,5 @@
 .recall-owner-note{color:var(--muted);font-size:12px;white-space:nowrap}
 @media(max-width:760px){.recall-service-page .recall-service-layout{grid-template-columns:1fr}.recall-service-page .recall-service-list{max-height:360px;overflow:auto}}
 .approval-id-line{margin:20px 0 0;color:var(--faint);font-size:12px;overflow-wrap:anywhere}
+/* 입력칸은 글에 맞춰 약 8줄까지 늘어나고 그 뒤로는 칸 안에서 스크롤(DemoChatPage COMPOSER_MAX_HEIGHT_PX) */
+.demo-composer textarea{max-height:208px;overflow-y:auto}

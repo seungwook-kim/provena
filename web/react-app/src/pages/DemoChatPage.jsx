@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { loadDraft, saveDraft } from '../lib/draft'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
@@ -17,6 +17,29 @@ export const PROGRESS_TEXT = '근거를 찾고 답을 확인하는 중입니다'
 // 승인 뒤 재개는 같은 대화에 결과를 남기고(backend/graph/departments/review.py finalize), 화면은 탭으로 돌아올 때 다시 받는다(아래 H-15 effect).
 // 팀 검토 실패 건은 승인·반려가 아니라 다시 검토·검토 못 한 팀 표시이고 다음 승인 건이 이어질 수 있어(backend/graph/decision/routes.py next_approval) "승인 단계가 끝나면"으로 쓴다
 export const APPROVAL_WAITING_TEXT = '담당자 승인을 기다리고 있습니다. 승인 단계가 끝나면 결과가 이 대화에 붙습니다. 이 화면으로 다시 돌아오거나 새로고침하면 보입니다. 다른 질문은 새 대화에서 해 주세요.'
+
+// 답을 받는 중에 다른 메뉴로 가면 화면이 연결을 끊지만 서버는 답을 끝까지 만들어 저장한다(backend/api/routes.py iterate_in_one_thread).
+// 끊은 대화 id를 탭 안에 남겨 두고, 채팅으로 돌아오면 그 대화를 열어 서버가 끝낼 때까지 다시 받는다.
+export const RESUME_KEY = 'provena-chat-resume'
+export const RESUME_TEXT = '다른 화면에 있는 동안 이어서 만든 답을 불러오는 중입니다'
+export const RESUME_POLL_MS = 3000
+const RESUME_LIMIT_MS = 180000
+// 맨 아래에서 이만큼(px) 안이면 새 말풍선이 생길 때 따라 내려간다. 위로 올려 읽는 중이면 끌어내리지 않는다.
+const STICK_THRESHOLD_PX = 80
+// 입력칸은 글이 길어지면 이 높이(px, 약 8줄)까지 늘어나고 그 뒤로는 칸 안에서 스크롤한다.
+export const COMPOSER_MAX_HEIGHT_PX = 208
+
+function takeResumeId() {
+  try {
+    const id = sessionStorage.getItem(RESUME_KEY)
+    sessionStorage.removeItem(RESUME_KEY)
+    return id
+  } catch { return null }
+}
+
+function saveResumeId(id) {
+  try { sessionStorage.setItem(RESUME_KEY, id) } catch { /* 저장소를 못 쓰면 돌아와서 목록에서 직접 연다 */ }
+}
 
 // 답은 그래프가 끝난 뒤 한 번에 오므로(backend/graph/stream.py) 단계 대신 지난 시간만 보여 준다
 function GeneratingProgress() {
@@ -129,6 +152,10 @@ export default function DemoChatPage({ api = false }) {
   const [sendError, setSendError] = useState('')
   const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
   const threadRequestRef = useRef(null)
+  const [resumeId, setResumeId] = useState(null)
+  const messagesRef = useRef(null)
+  const stickToBottomRef = useRef(true)
+  const composerRef = useRef(null)
 
   const current = useMemo(() => {
     const thread = threads.find(item => item.id === selectedId)
@@ -163,7 +190,8 @@ export default function DemoChatPage({ api = false }) {
   const approvalPending = isApprovalPending(current)
   const threadLoading = threadLoad.id === selectedId && threadLoad.status === 'loading' && !current?.messages?.length
   const threadError = threadLoad.id === selectedId && threadLoad.status === 'error'
-  const composerDisabled = loading || processing || approvalPending || threadLoading
+  const resuming = resumeId !== null && resumeId === selectedId
+  const composerDisabled = loading || processing || approvalPending || threadLoading || resuming
 
   useEffect(() => {
     if (activeCitationId && typeof citationPanelRef.current?.scrollTo === 'function') citationPanelRef.current.scrollTo({ top: 0, behavior: 'auto' })
@@ -181,11 +209,61 @@ export default function DemoChatPage({ api = false }) {
     serviceRef.current = service
     service.listThreads().then(items => {
       setThreads(items)
+      const pending = api ? takeResumeId() : null
+      if (pending && items.some(item => item.id === pending)) {
+        stickToBottomRef.current = true
+        setSelectedId(pending)
+        setResumeId(pending)
+      }
     }).catch(() => {
       setThreads([])
     }).finally(() => setLoading(false))
-    return () => service.dispose()
+    return () => {
+      const cut = service.dispose()
+      if (api && cut.length) saveResumeId(cut[cut.length - 1])
+    }
   }, [])
+
+  // 돌아온 대화를 서버에서 다시 받는다. 서버가 아직 만드는 중(status running)이면 끝날 때까지 몇 초마다 다시 받는다.
+  useEffect(() => {
+    if (resumeId === null) return undefined
+    let stopped = false
+    let timer = null
+    const started = Date.now()
+    const poll = async () => {
+      try {
+        const loaded = await serviceRef.current?.getThread(resumeId, { fresh: true })
+        if (stopped) return
+        if (loaded?.status === 'running' && Date.now() - started < RESUME_LIMIT_MS) {
+          timer = setTimeout(poll, RESUME_POLL_MS)
+          return
+        }
+        if (loaded) setSelectedCitation(firstCitation(loaded))
+      } catch { /* 못 받으면 목록에서 대화를 다시 눌러 받을 수 있다 */ }
+      if (!stopped) setResumeId(null)
+    }
+    poll()
+    return () => { stopped = true; clearTimeout(timer) }
+  }, [resumeId])
+
+  // 맨 아래 근처에 있을 때만 새 말풍선·답을 따라 내려간다. 질문을 보내거나 대화를 열면 맨 아래로 간다.
+  useLayoutEffect(() => {
+    const box = messagesRef.current
+    if (box && stickToBottomRef.current) box.scrollTop = box.scrollHeight
+  }, [current, threadLoading, resumeId])
+
+  function handleMessagesScroll(event) {
+    const box = event.currentTarget
+    stickToBottomRef.current = box.scrollHeight - box.scrollTop - box.clientHeight <= STICK_THRESHOLD_PX
+  }
+
+  // 입력칸 높이를 글에 맞춘다(최대 COMPOSER_MAX_HEIGHT_PX). 보내서 비우면 한 줄로 돌아간다.
+  useLayoutEffect(() => {
+    const box = composerRef.current
+    if (!box) return
+    box.style.height = 'auto'
+    if (box.scrollHeight) box.style.height = `${Math.min(box.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`
+  }, [input])
 
   // 승인함에서 승인이 끝나고 돌아오면 입력창이 잠긴 채라, 화면으로 돌아올 때 서버 상태를 다시 받는다(H-15)
   useEffect(() => {
@@ -207,6 +285,7 @@ export default function DemoChatPage({ api = false }) {
 
   async function selectThread(thread) {
     setSendError('')
+    stickToBottomRef.current = true
     setSelectedId(thread.id)
     setSelectedCitation(firstCitation(thread))
     if (!serviceRef.current) return
@@ -233,8 +312,9 @@ export default function DemoChatPage({ api = false }) {
   async function ask(value) {
     // 오류 말풍선의 '다시 시도'에 question이 없던 옛 말풍선이 와도 TypeError가 나지 않게 한다(H-08)
     const message = typeof value === 'string' ? value.trim() : ''
-    if (!message || message.length > MAX_MESSAGE_LENGTH || processing || approvalPending || !serviceRef.current) return
+    if (!message || message.length > MAX_MESSAGE_LENGTH || processing || approvalPending || resuming || !serviceRef.current) return
     setSendError('')
+    stickToBottomRef.current = true
     let result
     try {
       result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
@@ -268,12 +348,12 @@ export default function DemoChatPage({ api = false }) {
       {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => selectThread(thread)}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
     </aside>
     <main className="demo-chat-main">
-      <div className="demo-chat-status">{processing && <span className="demo-generating">{PROGRESS_TEXT}.</span>}</div>
-      <div className="demo-messages">
+      <div className="demo-chat-status">{processing && <span className="demo-generating">{PROGRESS_TEXT}.</span>}{!processing && resuming && <span className="demo-generating" role="status">{RESUME_TEXT}.</span>}</div>
+      <div className="demo-messages" ref={messagesRef} onScroll={handleMessagesScroll}>
         {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={ask} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
       {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
-      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
+      <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea ref={composerRef} value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={loading || processing || resuming} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={!input.trim() || loading || processing}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
     </main>
     <aside ref={citationPanelRef} className="demo-citation-sidebar" aria-label="참고 근거"><h2>참고 근거</h2>{!activeCitation && <p>인용을 선택하면 관련 근거를 확인할 수 있습니다.</p>}{citationOptions.length > 1 && <div className="citation-source-tabs" role="tablist" aria-label="출처 선택">{citationOptions.map((citation, index) => <button type="button" role="tab" aria-selected={activeCitation?.id === citation.id} aria-label={`출처 ${index + 1}: ${citation.title}`} title={citation.title} key={citation.id} className={`citation-chip ${activeCitation?.id === citation.id ? 'selected' : ''}`} onClick={() => setSelectedCitation({ ...citation, messageIndex: panelMessageIndex })}>[{index + 1}]</button>)}</div>}{activeCitation ? <article className="demo-citation"><strong>출처</strong><span>{activeCitation.path}</span><blockquote>{activeCitation.text}</blockquote><dl><dt>문서명</dt><dd>{activeCitation.title}</dd><dt>문서 버전</dt><dd>{activeCitation.version}</dd></dl><a href={citationHref(activeCitation)} target="_blank" rel="noreferrer">원문 보기 →</a></article> : <p className="demo-citation-empty">선택한 인용이 없습니다.</p>}</aside>
   </div></div></DemoLayout>
