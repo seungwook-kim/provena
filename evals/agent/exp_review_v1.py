@@ -31,8 +31,9 @@
 
     python -m evals.agent.exp_review_v1 run --out evals/results/review_v1_<이름>
     python -m evals.agent.exp_review_v1 run --limit 2 --out <폴더>          # 점검용(partial)
-    python -m evals.agent.exp_review_v1 plan --dataset evals/dataset_review_v1_gold_draft.jsonl --repeats 3 --max-cost 1   # 0원 예상
-    python -m evals.agent.exp_review_v1 run --llm anthropic --dataset evals/dataset_review_v1_gold_draft.jsonl --gold-draft --repeats 3 --max-cost 1 --out <폴더>   # 사전 등록 62.35
+    python -m evals.agent.exp_review_v1 plan --dataset evals/dataset_review_v1_gold.jsonl --repeats 3 --max-cost 1   # 0원 예상(확정 정답)
+    python -m evals.agent.exp_review_v1 run --llm anthropic --dataset evals/dataset_review_v1_gold.jsonl --repeats 3 --max-cost 1 --out <폴더>   # 확정 정답(스위치 불필요)
+    python -m evals.agent.exp_review_v1 run --llm anthropic --dataset evals/dataset_review_v1_gold_draft.jsonl --gold-draft --repeats 3 --max-cost 1 --out <폴더>   # 사전 등록 62.35 초안 정답 재현용
 
 동결 전 평가셋(판정 전)으로 돌리면 정답 지표는 "판정 전"이고 시간, 비용, 되묻기, 근거 포함률, 승인 전 저장 건수만 나온다. 동결 뒤에는 동결 해시를 확인하고 돈다.
 모델 비용 상한은 평가 실행기와 같이 질문 한 건 기본 $0.05(`LLM_COST_CAP_USD`)다. 팀 갈래는 한 건에 모델을 5번 이상 부르므로 넘으면 환경 변수로 올린다.
@@ -95,7 +96,8 @@ KINDS = ("full", "partial", "clarify", "low_issue")
 PENDING = "판정 전"
 OPENROUTER_MODEL = "anthropic/claude-haiku-5.5"
 ANTHROPIC_MODEL = "claude-haiku-5-5"
-DRAFT_STATUS = "팀장 검토 초안, 판정자 확인 전"  # 정답 쟁점 초안 표시(`evals/dataset_review_v1_gold_draft.jsonl`). `--gold-draft`일 때만 정답 지표에 쓴다
+DRAFT_STATUS = "팀장 검토 초안, 판정자 확인 전"  # 정답 쟁점 초안 표시(`evals/dataset_review_v1_gold_draft.jsonl`). 00044·00049 재현용이고 `--gold-draft`일 때만 정답 지표에 쓴다
+CONFIRMED_STATUS = "조원 2명 확인(박진형, 강경희, 2026-11-13)"  # 확정 정답 표시(`evals/dataset_review_v1_gold.jsonl`, 결정기록 0117). 스위치 없이 정답 지표에 쓴다
 # 예상 비용(`plan`): 런 하나(문항 하나, 갈래 하나)의 상한 추정. 근거는 사전 등록 62.11 측정의 합동 검토 런
 # (`evals/results/joint_review_vs_single_2026-11-10/detail/joint/rows.jsonl`, 쟁점표가 나온 런 0.0035~0.0041달러, LLM 9~10회, 번역 포함)이다.
 # single 갈래는 쟁점 호출 1회에 네 팀 자료를 한 번에 넣어 입력 토큰이 팀 4회의 합과 비슷하다고 보고 같은 값을 쓴다
@@ -176,9 +178,12 @@ def judged_state(item: dict, allow_draft: bool = False) -> str:
 
     판정자 칸(`judges`)이 비었으면 판정 전이다. 판정자가 있는데 정답 쟁점이 비었으면 `no_gold_issues: true`로 "쟁점 없음"을 확인했을 때만 끝난 것으로 본다.
     `allow_draft`(`--gold-draft`)이면 `gold_status`가 초안 표시(`DRAFT_STATUS`)이고 정답 쟁점이 있는 문항을 판정자 없이도 계산한다(결과에 초안 기준이라고 적는다).
+    `gold_status`가 확정 표시(`CONFIRMED_STATUS`, 조원 2명 확인)이고 정답 쟁점이 있는 문항은 스위치 없이 `ready`다(판정자 칸이 비어 있어도 확인을 마친 정답이다).
     """
     if item["kind"] == "clarify":
         return "n/a"
+    if item.get("gold_status") == CONFIRMED_STATUS and item["gold_issues"]:
+        return "ready"
     if allow_draft and not item["judges"] and item.get("gold_status") == DRAFT_STATUS and item["gold_issues"]:
         return "ready"
     if not item["judges"]:
@@ -427,6 +432,7 @@ def compute_review_metrics(rows: list[dict], items: dict[str, dict], allow_draft
         return judged_state(it, allow_draft)
 
     drafted = any(not it["judges"] and it.get("gold_status") == DRAFT_STATUS for it in (items[str(r["id"])] for r in rows))
+    confirmed = any(it.get("gold_status") == CONFIRMED_STATUS for it in (items[str(r["id"])] for r in rows))
     n = len(rows)
     issue_rows = [x for r in rows for x in r["issue_rows"]]
     iso = [bool(ISO_DATE.fullmatch(str(x.get("version_date") or ""))) for x in issue_rows]
@@ -445,7 +451,8 @@ def compute_review_metrics(rows: list[dict], items: dict[str, dict], allow_draft
     elif scored:
         ms = [match_gold(items[str(r["id"])], r["issue_rows"]) for r in scored]
         total, found = sum(m["total"] for m in ms), sum(m["found"] for m in ms)
-        gold.update(gold_status=f"계산함(초안 정답 기준: {DRAFT_STATUS})" if allow_draft and drafted else "계산함",
+        gold.update(gold_status=(f"계산함(초안 정답 기준: {DRAFT_STATUS})" if allow_draft and drafted
+                                 else f"계산함(확정 정답 기준: {CONFIRMED_STATUS})" if confirmed and not drafted else "계산함"),
                     gold_items=len(scored), gold_total=total, gold_found=found,
                     missed_issue_rate=_rate(total - found, total),
                     date_agree_rate=_rate(sum(m["date_agree"] for m in ms), sum(m["date_checked"] for m in ms)),
@@ -609,7 +616,7 @@ def main(argv=None) -> int:
     p.add_argument("--limit", type=int, help="앞에서 N문항만 돈다(partial, 점수로 쓰지 않는다)")
     p.add_argument("--repeats", type=int, default=1, help="같은 문항을 N회 번갈아 돈다(회차마다 갈래 순서를 바꾼다)")
     p.add_argument("--max-cost", type=float, default=None, help="누적 LLM 비용 상한(달러). 다음 런 예상치를 더해 넘으면 멈추고 종료 코드 3")
-    p.add_argument("--gold-draft", action="store_true", help=f"gold_status가 '{DRAFT_STATUS}'인 초안 정답으로 정답 지표를 계산한다(결과에 초안 기준이라고 적는다)")
+    p.add_argument("--gold-draft", action="store_true", help=f"gold_status가 '{DRAFT_STATUS}'인 초안 정답(evals/dataset_review_v1_gold_draft.jsonl, 00044·00049 재현용)으로 정답 지표를 계산한다(결과에 초안 기준이라고 적는다). 확정 정답(evals/dataset_review_v1_gold.jsonl)에는 필요 없다")
     p.add_argument("--out", required=True, help="team/, single/, compare.json을 쓸 폴더")
     p.set_defaults(fn=run_cmd)
     q = sub.add_parser("plan", help="모델과 검색을 부르지 않고 런 수와 예상 호출 수·비용만 낸다(0원)")

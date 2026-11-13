@@ -2,6 +2,21 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-13 김승욱: 증분 판 일회성 다시 청킹 도구(결정 0118, 사전 등록 62.62)
+
+- 원인: `schedule.apply`가 이미 있는 (rule_seq, version_id)를 건너뛰어, 증분 수집이 넣은 현재 판은 옛 청크 생성 코드의 행으로 남는다. `as_of` 없는 실제 질문은 현재 판만 보므로 그 쪽 답이 옛 청크에서 나온다. 평가셋은 `as_of=2026-10-27`이라 영향이 없다.
+- 코드: `backend/rag/ingest/rechunk_increments.py`(`python -m`, `--dry-run`, `--fake`(로컬 DB만), `--max-cost` 기본 0.10달러)를 새로 만들고, `schedule.py`의 fetch 반복을 `fetch_main()`으로 뽑아 같이 쓴다(동작 변화 없음). 대상은 현재 판이면서 스냅샷(`data/manifest.jsonl`)에 없는 판뿐이고, 판마다 한 트랜잭션으로 행을 통째로 바꾸며 끝에서 `generation`을 한 번 올린다.
+- 시험: `tests/test_rechunk_increments.py` 17개(로컬 pgvector 컨테이너로 돌림): 스냅샷·닫힌 판 그대로, 현재 증분 판만 교체, 판 단위 원자성, 벡터 재사용, 두 번째 실행 0, dry-run 쓰기 0, generation 한 번, 거부 조건, 비용 상한.
+- 문서: `docs/specs/incremental.md`(How와 AC-11), `backend/rag/ingest/ingest.md`, 결정 0118, 사전 등록 62.62(측정 전)를 적었다.
+- 막힌 것·다음: 운영 DB를 읽지 못해 바뀔 행 수와 임베딩 비용은 모른다. 배포 때 `load_snapshot` 뒤에 `--dry-run`으로 먼저 확인하고 사용자가 실행한다.
+
+## 2026-11-13 김승욱: 합동 검토 정답 쟁점 확정(결정 0117), 확정 정답 0원 재계산(사전 등록 62.61), 리콜 화면 안내문 삭제
+
+- 정답: 박진형, 강경희가 합동 검토 정답 쟁점 37개를 확인했다(동의 30, 수정 7, 삭제 0, 추가 0, 8·9번 0개 맞음). 확인을 반영한 `evals/dataset_review_v1_gold.jsonl`(sha256 `9b235976eff5a29b4b89bba9f6eb7ab857e2e6e795be8bf553df885be8ab6b7e`, LF)을 새로 만들고 상태 표시를 "조원 2명 확인(박진형, 강경희, 2026-11-13)"으로 했다. 초안 파일은 00044·00049가 읽은 그대로 두었다. `exp_review_v1.py`(확정 표시는 `--gold-draft` 없이 계산), `review_deploy.py`, `classify_overrefuse.py`의 기본 평가셋을 확정 파일로 바꾸고 초안은 `--gold-draft`와 `--dataset`으로 읽게 남겼다. 시험을 더했다(`tests/test_exp_review_draft.py`, `tests/test_review_deploy.py`). 저장된 00044와 00049의 행을 확정 정답으로 0원 다시 계산하면 찾음 수가 초안과 같다(공식 지표가 쟁점 문장을 비교하지 않는다). 도구 `evals/agent/review_gold_confirmed_recalc.py`를 더하고 결과를 `evals/results/review_gold_confirmed_recalc_20261113/`에 남겼다.
+- 문서: EVAL_REPORT 4장, README, GATES G4, `docs/deliverables/failure_analysis.md`, `docs/ARCHITECTURE.md`, `evals/review_judge_guide.md`의 "초안, 판정자 확인 전" 문장을 "측정 당시 초안, 2026-11-13 확정, 확정 정답 0원 재계산 값은 같고 재측정 없음"으로 고쳤다. 결정 0117, 사전 등록 62.61(0원 재계산 기록)을 적었다.
+- 화면: 리콜 웹훅 구독 설명에서 "서버에 삭제 기능이 없어 화면에서도 삭제할 수 없습니다." 문장을 지웠다(`RecallPage.jsx`, `web/web.md`).
+- 막힌 것·다음: 확정 정답으로 합동 검토를 다시 재지 않는다(사용자 결정 2026-11-13). 공식 지표가 팀과 근거 섹션만 맞춰 0원 재계산 값이 같고, 묶음의 합동 검토 단계는 `EVAL_REVIEW_SINGLE=1` 측정용 리비전을 따로 요구하기 때문이다.
+
 ## 2026-11-13 김승욱: 체크포인트 3조 코멘트 대응, 수정 반영(사전 등록 62.51~62.59, 청크 생성 코드, CI 비교, Recall@5)
 
 - 코드: 사전 등록 62.51(넓힌 첫 검색의 앞자리에 도입부 채우기 청크 포함), 62.52(겹친 머리 인용 바로잡기, 스위치 없음), 62.53(원 질문 재작성과 첫 검색을 질문 접수와 동시에 시작, `GRAPH_SPECULATE_EARLY_SEARCH`, 서비스 설정), 62.55(나뉜 질문 첫 검색 뒤 같은 페이지 보충 청크 1개), 62.56·62.57(인용 더하기에서 같은 절 제외, 표 행은 첫 칸·줄 전체 일치), 62.58(겹친 머리 바로잡기를 문맥 밖 앞 청크까지, `Searcher.prev_chunk`), 62.59(앞자리 인용끼리 판정 구절 청크 수로 후보 고르기). 측정 기록 행에 답 경로 `path`를 싣는다. 62.55~62.59는 사용자 지시로 새 스위치 없이 기본 동작으로 넣었다(결정 0116). 청크 생성 코드 수정(겹침 라벨 소실, 숫자 갈라짐, 끊긴 HTML 표)을 적용했고 `ROW_TAIL_MAX`는 400자(결정 0115)이다.
