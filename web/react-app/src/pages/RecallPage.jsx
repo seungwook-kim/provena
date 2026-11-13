@@ -355,7 +355,7 @@ function WebhookPanel({ service }) {
 
   return <section className="recall-admin-section" aria-labelledby="recall-webhook-title">
     <div className="recall-admin-heading"><h2 id="recall-webhook-title">웹훅 구독</h2><span>{items ? `${items.length}건` : '불러오는 중'}</span></div>
-    <p className="recall-admin-lede">리콜 알림을 받을 외부 주소입니다. 서버에 삭제 기능이 없어 화면에서도 삭제할 수 없습니다.</p>
+    <p className="recall-admin-lede">리콜 알림을 받을 외부 주소입니다.</p>
     {items && (items.length === 0 ? <p className="recall-empty">등록된 웹훅 구독이 없습니다.</p> : <ul>{items.map(item => <li key={item.id}><strong>{item.url}</strong> <span>{[item.active ? '사용 중' : '꺼짐', item.secretConfigured ? '서명 키 있음' : '서명 키 없음', item.createdAt].filter(Boolean).join(' · ')}</span></li>)}</ul>)}
     <form className="impact-preview-form" onSubmit={add}>
       <label>웹훅 주소<input type="url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com/hook" maxLength={500} /></label>

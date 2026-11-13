@@ -1,5 +1,7 @@
 # 합동 검토 평가셋 판정 안내 (dataset_review_v1)
 
+> 진행 결과(2026-11-13, 결정 0117): 판정자가 처음부터 적는 방식 대신 팀장이 정답 쟁점 초안 37개를 쓰고 박진형, 강경희가 확인했다(동의 30, 수정 7, 삭제 0, 추가 0). 확인을 반영한 파일은 `evals/dataset_review_v1_gold.jsonl`이고 초안은 `evals/dataset_review_v1_gold_draft.jsonl`에 그대로 있다. 아래는 처음 계획한 절차이다.
+
 대상 파일: `evals/dataset_review_v1.jsonl` (합동 검토 요청 초안 10건)
 판정자: 박진형, 강경희 (팀 결정 0064)
 사용처: `evals/agent/exp_review_v1.py`가 정답 쟁점 누락률을 재는 기준
