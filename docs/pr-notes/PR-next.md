@@ -1,5 +1,5 @@
 # 조장 11/13 재점검 후속 — 박진형 몫 낮음 5건, 실패 분석 검색 파트, 데이터·Spec 문서, #148 리뷰 반영
-- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `29e887f5`(#153까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`, `l1-dates-1113`, `l2-front-tests-1113`을 git merge로 묶음
+- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `8122c86e`(#154까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`, `l1-dates-1113`, `l2-front-tests-1113`을 git merge로 묶음
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 팀 문서 / [실측] 직접 돌린 결과 / [추정].
 - 운영 호출 없음. LLM·Voyage 호출 없음. 조장 "놓친 것 목록 (2026-11-13)" 6절 새로 발견 중 박진형 몫(#3·#4·#6·#7·#8)과 H-33, 2차 재검토로 찾은 리콜 날짜 칸·빈 섹션 표시·H-08 화면 시험을 다룸.
 
@@ -25,7 +25,8 @@
 | F-08 증분 실행 기록 | `docs/specs/incremental.md` 실행 기록의 현재 상태(정시 실행 꺼짐) | [실측] GitHub API 워크플로 상태 `disabled_manually` |
 | K-03 후속 PRD | `docs/PRD.md` 9장 bcrypt·pyjwt·langfuse를 판 요구(`requirements.txt`)와 조사 시점 판으로 나눠 적음 | [코드] `backend/requirements.txt` |
 | AGENTS 검색 모드 위치 | 줄 번호 대신 `SearchConfig.from_env()` 함수 이름으로 가리킴(코드가 바뀌어도 낡지 않게) | [코드] `backend/rag/retrieve/search.py` |
-| #148 조장 리뷰 | `.gitattributes`의 검증 20건 줄 중복을 하나로(main `fdd7e409` 줄 유지). #148 작업 내역 이름을 `PR-148.md`로, 기록 칸 5곳 `#148` | [문서] 조장 #148 리뷰 "한 줄이 중복되니 하나만 남겨 주세요" |
+| #148 조장 리뷰 | `.gitattributes`의 검증 20건 줄 중복은 main이 이미 한 줄로 정리함(`.gitattributes:12`). #148 작업 내역 이름을 `PR-148.md`로, 기록 칸 5곳 `#148`(`docs.md` 2, `ingest.md`, `mock_erp.md`, `sdk.md`). #148 후속 커밋이 main에 이력만 합쳐져 내용이 빠졌던 것을 다시 적용 | [문서] 조장 #148 리뷰 "한 줄이 중복되니 하나만 남겨 주세요" |
+| 포트폴리오 근거 줄 | `deliverables/portfolio-박진형.md`: main을 합칠 때마다 `EVAL_REPORT.md` 줄이 밀려 근거 줄 칸 10행을 새 줄로 옮기고 기준 커밋 표기를 바꿈 | [실측] 표의 숫자 36개가 모두 근거 줄에 있음(0 불일치) |
 
 ## 3. 진형이 결정한 것
 | 결정 | 고른 것 | 왜 | 버린 대안 |
@@ -50,11 +51,12 @@
 - `backend/api/recalls.py`(김승욱): 날짜 칸 세 곳 검사, 웹훅 날짜 오류 422. `backend/graph/recall/impact.py`: 표의 빈 섹션 표시.
 - `web/`(강경희, 프론트 작업은 박진형 배정 11/11): `chat-service.js`, `chat-preview.js`, `DemoChatPage.jsx`, `RecallPage.jsx`와 시험.
 - `docs/`(조장): `PRD.md` 9장, `deliverables/failure_analysis.md`, `specs/parse.md`·`incremental.md`·`106-signup-approval.md`·`recall.md`, `docs.md` 기록, `pr-notes/`.
-- `data/data.md`, `AGENTS.md`, `.gitattributes`, `mock_erp/` 기록 칸.
+- `data/data.md`, `AGENTS.md`, `mock_erp/mock_erp.md`·`mock_erp/sdk/sdk.md`·`backend/rag/ingest/ingest.md` 기록 칸(#148).
 
 ## 6. 한계·남은 일
 - 영향 미리보기: 제목 줄이 없는 본문의 섹션 이름은 데이터에서 계속 빈 값이다(인용 대조 기준값이라 바꾸지 않음). 표에는 "(제목 없는 구간)"으로 보인다.
 - 형식만 보는 날짜 칸이 `/eval/review`(`eval_review.py`)에 남아 있다. 평가 전용 경로라 이번에 넣지 않았다.
+- `docs/api/openapi.json`의 `/webhooks/regulation-updated`는 202만 적혀 있고 400·422가 없다(main부터 그랬고 생성물이라 손대지 않음).
 - 링크 확장 청크의 조직·기준일 필터: 지금 코드는 거른다(`search.py`의 링크 후보도 `org`·`as_of`를 넘김). `EVAL_REPORT.md:107`의 "필터를 거치지 않는다"는 링크 확장이 검색 코드에 들어오기 전 실험 기준일 가능성이 있다 [추정, 조장 확인 필요].
 - 다시 시도는 서버에 질문을 한 번 더 보낸다. 서버가 실패한 질문을 저장하는 오류라면 새로고침 뒤 서버 기록에는 중복이 남을 수 있다 [추정].
 - PR 번호가 나오면 이 문서를 `PR-<번호>.md`로 바꾸고 기록 칸 `미정`을 채운다.
