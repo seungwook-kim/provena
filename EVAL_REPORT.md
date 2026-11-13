@@ -17,7 +17,7 @@
 | manifest 위치 | `data/manifest.jsonl` |
 | manifest의 원문 길이·보존 길이·잘림 여부 | 문서마다 `chars_original`(원문 글자 수), `chars_kept`(청크 본문 글자 합, 겹침과 머리말 제외), `truncated`가 있다(1,565행 전부). 파일을 직접 세면 `chars_kept`가 `chars_original`보다 작은 행이 1,563행, 같은 행이 0행, 큰 행이 2행(doc_id 2425934853, 713252304)이다. 작은 이유는 Hugo 단축코드와 front matter를 청크 본문에서 지웠기 때문이고, 큰 2행은 표 행 글자에 열 이름이 붙은 쪽이다(`backend/rag/ingest/load.py` 5~6줄). 길이로 문서를 자른 적이 없어 `truncated`는 1,565행 모두 `false`이다(같은 파일 41줄). 그래서 `data/README.md` 20줄의 "길이가 다르면 `truncated`가 true"라는 설명과 달리 이 manifest에서 길이 차이는 잘림이 아니라 정리한 양이다 |
 
-**원문 대조 4건**(가이드 D1 요구는 3건 이상): 파싱 결과를 원문과 나란히 놓고 틀어진 곳을 적었다.
+**원문 대조 4건**(가이드 D1 요구는 3건 이상): 파싱 결과를 원문과 나란히 놓고 틀어진 곳을 적었다. 5번 행은 2026-11-13 체크포인트 3조 코멘트(②)에 따라 정답 근거 청크의 표·수치를 프로그램으로 원문과 맞춘 것이다(앞 4건처럼 사람이 문장을 하나씩 읽은 대조가 아니다).
 
 | # | 문서 | 원문에서 본 것 | 파싱 결과 | 틀어진 곳 |
 |---|---|---|---|---|
@@ -25,6 +25,7 @@
 | 2 | Test Environments Catalog (`engineering/testing/test-environments-catalog.md`) | Markdown 표가 많은 쪽, 요소 15개 | 15개 모두 같은 내용, 표 행은 머리 이름과 칸이 짝지어짐 | 없음 (박진형 판정) |
 | 3 | 2023 승인 권한표 (`www-gitlab-com` 커밋 0a3de83375) | 글자 있는 칸 71개의 값·업무·금액 구간·역할 | 71칸 모두 일치. 363칸 전부 칸마다 붙은 역할 주석과 열 이름을 코드로 대조해 불일치 0 | 파서 오류 없음. 원문 자체의 'Non Billable Expenses' 금액 구간 겹침은 문제 기록 I-004 (박진형 판정) |
 | 4 | Trust and Safety (`security/security-operations/trustandsafety/_index.md`) | HTML 표 팀원 5명. 원문 HTML이 깨짐(46줄 `</tr>` 자리에 `<tr>`) | `lxml` 엔진: 5명 5행. 처음 쓴 Python 기본 엔진(`html.parser`)은 4명을 한 행으로 뭉쳤음 → PRD 9장대로 `lxml` 로 바꿈 | 바꾼 뒤 없음 (Claude Code 확인, 사람 대조 전. 이 쪽 말고 바뀐 요소 0) |
+| 5 | 정답 근거 청크 중 표·수치가 든 55개 (v2 관련 25문항과 검증 20건 관련 10문항의 정답 위치에 맞는 청크 118개 중. 금액, 비율, 기간, 등급, 개수가 든 청크와 표 청크) | 스냅샷 `data/corpus.tar.gz`의 해당 페이지와 줄 범위(`line_start`~`line_end`), 그리고 청크 `source_url` 28개 주소의 2026-11-13 09:39 현재 공개 본문(GET 28건, 모두 HTTP 200) | 55개 모두 수치 값과 값 앞뒤 낱말 3개가 스냅샷 줄 범위와 일치하고 현재 공개 본문과도 일치. 값 하나를 일부러 바꾼 글로 맞춰 보면 스냅샷 39건, 현재 본문 38건 모두 불일치로 잡힘 | 불일치 0건. 한계: 현재 본문은 섹션이 아니라 쪽 전체 글자와 맞췄고, 표 청크의 단위 없는 숫자는 줄 범위(스냅샷) 또는 쪽 전체(현재 본문)에서 찾는 약한 대조이며, 값 이외의 문장 변화는 보지 않는다. 청크 id, 문항, 수치 값, 일치 여부, 확인 시각은 [evals/results/table_number_source_check_20261113/report.md](evals/results/table_number_source_check_20261113/report.md), 스크립트와 결과는 같은 폴더 |
 
 ## 2. 평가셋 (G5)
 
