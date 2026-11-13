@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | K-03·F-08·S-08 문서 정리: `PRD.md` 9장 라이브러리 표를 `backend/requirements.txt`와 행마다 대조해 `bcrypt` 5.0.0을 요구 범위 4.x(`>=4.2,<5`)로, `langfuse` 행을 요구 `>=4`로 고침(`pyjwt` 2.15.1은 `>=2.9,<3` 안이라 그대로), `specs/incremental.md`에 실행 기록 현재 상태(알려진 것·모르는 것) 추가, `specs/parse.md`의 PDF "현재 색인 대상"(7건 vs 치트시트 1건 불일치)을 "파싱 대상, 검색 색인에는 아직 없음"으로 정정(`data/data.md` S-08), `AGENTS.md`의 `SEARCH_MODE` 위치를 줄 번호(어긋나 있었음) 대신 `SearchConfig.from_env()`로 바꿈. 코드·workflow 변경 없음 | 미정 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-20·O-38·O-22·Q-07·M-14: PRD 임베딩 행·SDD 11-3 임베딩 기본값을 voyage-4 확정(decisions.md:48)으로 정정, PRD 9장·SDD 5장 manifest '커밋 sha' 문구를 실제 칸(`version_id`)과 `collect_manifest.json` 위치로 정정, SCAFFOLD.md 머리말과 AGENTS.md 폴더 역할을 TEAM_GUIDE 5장·SDD 3장으로 안내, `specs/deploy.md` 신규(배포 의존 파일·환경변수; 화면 `d6-chat-frontend.md`·기억 `memory.md`는 이미 절이 있어 줄 번호만 정정), AGENTS.md 낡은 두 곳(SEARCH_MODE 위치, 후보 버전 장 번호) 수정 | 미정 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 목록 마무리 묶음 작업 내역 `pr-notes/PR-next.md`, 동결 전 점검 노트 `pr-notes/k16-a14-i06-check-1112.md`(K-16·A-14·I-06), `specs/decision-approval.md`에 결정표 변환 화면 한 줄(H-21), `deliverables/ai_tools_log.md` 한 줄 | 미정 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 포트폴리오 갱신(`deliverables/portfolio-박진형.md`): EVAL_REPORT 줄 번호를 현재 본문 기준으로 다시 찾음, 배포 숫자를 최종 운영 배포판 `provena-api-00044-49s` 값으로 교체(응답 p95 11.524초는 SPEC 10초 초과로 명시, 로컬 값과 구분), 내 PR 수 32건→37건(origin/main `601183c7`, 11/12), 놓친 것 목록 처리 #127·#130·#131·#132 추가 | 미정 |

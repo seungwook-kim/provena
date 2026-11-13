@@ -17,9 +17,9 @@
 | 기록 위치 | 스냅샷 안 `data/corpus/collect_manifest.json`(`commit`, `corpus_id`), 쪽마다 받은 판은 `data/manifest.jsonl`의 `version_id` |
 | 규모 | 문서 1,565(1,564쪽 + 2023 권한표), 청크 23,095, 서로 다른 `chunk_sha256` 22,378 |
 
-## PDF (서비스 색인 전용)
+## PDF (서비스 색인 전용, 아직 검색 색인에 없음)
 
-글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱한다. 문서 형식별 코드는 없고 `backend/rag/ingest/pdf.py`의 원본 목록(`SOURCES`)에 추가하면 된다. 현재 색인 대상은 고정 커밋 `129243bcffcf`의 `static/pdfs/` 아래 PDF 7건이다.
+글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱한다. 문서 형식별 코드는 없고 `backend/rag/ingest/pdf.py`의 원본 목록(`SOURCES`)에 추가하면 된다. 현재 파싱 대상은 고정 커밋 `129243bcffcf`의 `static/pdfs/` 아래 PDF 7건이다.
 
 | 항목 | 값 |
 |---|---|
@@ -27,6 +27,7 @@
 | 뺀 것 | `legal/privacy/customer_dpa_05_01_26.pdf`: `customer_dpa_5_1_26.pdf`와 추출한 글자가 같아 하나만 둔다 |
 | 파생 | `data/parsed/pdf_ir.jsonl`(요소 800개), `data/chunks/pdf_chunks.jsonl`(청크 205개). 커밋하지 않고 `python -m backend.rag.ingest.pdf run`으로 다시 만든다(Docling 필요, `backend/requirements-ingest-pdf.txt`) |
 | 평가와의 관계 | 평가 색인(`chunks.jsonl`, `manifest.jsonl`, `chunks_index.jsonl`)과 동결 평가셋에는 포함하지 않는다. G3 청크 수에도 더하지 않았다 |
+| 알려진 한계 (S-08) | 이 7건은 아직 검색 색인에 없다. 2026-11-13 실측: `grep -c '"pdf' data/chunks_index.jsonl` 0건, `static/pdfs` 0건, `manifest.jsonl`의 `pdf` 0건, `index.tar.gz`는 `chunks.jsonl`·`links.jsonl`·`meta.json`·`vectors/voyage-4.npy`뿐(색인 23,095청크가 모두 Markdown). `pdf_chunks.jsonl`을 DB나 색인에 넣는 코드도 없다(`backend/`에서 `pdf_chunks`를 쓰는 곳은 `ingest/pdf.py`뿐). 그래서 답변은 PDF 내용을 근거로 인용하지 못한다. 이유 둘: ① 라이선스 근거가 PDF를 지목하지 못하고 핸드북이 Creative Commons라는 근거가 2016년 블로그 글 한 건뿐이다(`LICENSES/LICENSES.md:17-18`) ② 적재는 임베딩 모델 확정 뒤로 미뤘고 평가 색인에 PDF를 넣지 않기로 했다(`docs/specs/parse.md` Out of Scope). 색인에 넣으려면 라이선스 확인(팀장)과 적재 코드가 먼저 필요하다 |
 | 라이선스 | 미확인(`LICENSES/LICENSES.md`) |
 | Spec | `docs/specs/parse.md` "PDF 파싱" 절 |
 
@@ -57,6 +58,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | S-08: PDF 절에 알려진 한계 기록(PDF 7건이 검색 색인에 없음, 실측 4곳 0건, 이유는 라이선스 근거 부족·적재 미룸). 제목과 "현재 색인 대상" 문구를 "현재 파싱 대상"으로 정정. 코드·데이터 변경 없음 | 미정 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `data/demo_replay/questions.txt`(녹화한 데모 질문 9개) 추가, `recorded.jsonl`을 최종 판정·분류·인용 수정 뒤로 다시 녹화(커밋 3c9a1ad, a03ac9f) | #119 |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | 고정 커밋 `static/pdfs/`의 PDF 7건을 `data/pdf/`에 받아 두고(고정 커밋 원본과 sha256·git blob id 대조) Docling(OCR 끔)으로 파싱·청킹하는 `backend/rag/ingest/pdf.py`를 추가함. 산출물은 평가 색인과 분리(`pdf_ir.jsonl` 요소 800개, `pdf_chunks.jsonl` 청크 205개). `chunks.jsonl`·`manifest.jsonl`·`chunks_index.jsonl` 해시 변동 없음, 임베딩·DB 적재는 하지 않음 | |
 | 2026-11-02 | 박진형 (jinyeong-731) | 판 날짜 UTC(I-011)로 `data/corpus.tar.gz` 다시 만듦: 같은 고정 커밋을 `handbook --skip-authz --fetched-at 2026-10-31`·`history --skip-authz`로 다시 읽음. 바뀐 것은 `pages.jsonl` 72쪽의 `version_date`, `history/handbook_commits.jsonl` 219건의 `date`, `collect_manifest.json`의 `version_rule` 글자·`git_version`(2.54→2.55)뿐. 원문·`corpus_id`·`manifest.jsonl`·`chunks_index.jsonl` 그대로 | 이 PR |

@@ -339,8 +339,8 @@ MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정
 | rag: BM25 | `bm25s` | 0.3.15, MIT | `rank-bm25`는 2022-02 이후 릴리스 없음. Postgres 전문검색(`ts_rank`)은 BM25가 아니라 비교 대상으로만 |
 | rag: 저장 | `langchain-postgres`(PGVector), `pgvector`, `psycopg` 3 | 0.0.19 MIT / 0.5.1 MIT / 3.3.6 LGPL-3.0 | langchain-postgres는 0.0.x라 판을 고정한다 |
 | api | `fastapi`, `uvicorn`, `sse-starlette` | 0.162.0 MIT / 0.54.0 BSD-3 / 3.6.0 BSD-3 | - |
-| api: 로그인 | `bcrypt`, `pyjwt` | 5.0.0 Apache-2.0 / 2.15.1 MIT | `passlib`은 2020-10 이후 릴리스 없음 |
-| 관측 | `langfuse` v5 | 5.0.4, MIT | 핸들러는 `from langfuse.langchain import CallbackHandler` |
+| api: 로그인 | `bcrypt`, `pyjwt` | `bcrypt` 4.x(요구 `>=4.2,<5`) Apache-2.0 / `pyjwt` 2.15.1(요구 `>=2.9,<3`) MIT | `passlib`은 2020-10 이후 릴리스 없음 |
+| 관측 | `langfuse` (요구 `>=4`, D0 조사 시점 5.0.4) | MIT | 핸들러는 `from langfuse.langchain import CallbackHandler` |
 | mcp | 서버 `fastmcp` 4.x, 클라이언트 `langchain[mcp]` (베타, langchain 1.4.0 이상) | 4.1.4 Apache-2.0 | `langchain[mcp]`가 `fastmcp>=4.0.11`에 의존해 서버와 판이 맞는다. `langchain-mcp-adapters`는 보관(archived)됐고 `mcp` 2.x와 안 맞는다 |
 | 평가 보조 | `ragas` 0.4.3 | Apache-2.0 | 0.4.3 이후 릴리스가 없고, 새로 깔면 `langchain_community` vertexai import로 깨진다(이슈 #2995 열림). import 전에 대체 모듈을 넣어 우회한다. 가이드 5지표를 대신하지 않으므로 깨지면 뺀다 |
 
