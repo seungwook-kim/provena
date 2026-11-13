@@ -12,6 +12,8 @@
 
 `python/`과 `java/`는 전부 생성기 출력이다. 고치려면 명세(`docs/api/openapi.json`)나 `generate.sh`를 고치고 다시 만든다. 명세는 `python docs/api/export_openapi.py`로 다시 내보낸다.
 
+단 README 두 개는 생성 뒤 `strip_dead_links.py`가 한 번 더 고친다. 만들지 않는 `docs/*.md`로 가는 링크(404)를 글자만 남기고 푼다(`generate.sh` 끝에서 실행).
+
 | 항목 | 값 |
 |---|---|
 | 도구 | openapi-generator-cli 7.26.0 (Maven Central `org.openapitools:openapi-generator-cli`) |
@@ -47,4 +49,5 @@ Python SDK는 생성된 `requirements.txt`의 패키지(urllib3, python-dateutil
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | README 후처리 추가: 없는 `docs/*.md` 링크 231개를 `strip_dead_links.py`로 풀고 `generate.sh` 끝에서 실행(C-26) | 미정 |
 | 2026-11-12 | 박진형 (jinyeong-731) | 신규. openapi-generator 7.26.0으로 Python·Java SDK 생성, `generate.sh`와 이 문서 추가(C-15·P-07) | #135 |
