@@ -1,0 +1,815 @@
+{
+  "meta": {
+    "dataset": "dataset_review_v1_gold_draft.jsonl",
+    "dataset_path": "evals/dataset_review_v1_gold_draft.jsonl",
+    "dataset_sha256": "d0d1537f27671e6c216713fbf64d65a871d8d0f326fe8b8099a2b1b6e7875620",
+    "n_items": 10,
+    "repeats": 3,
+    "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+    "revision": "provena-api-00049-nph",
+    "commit": "eb531af",
+    "timeout_s": 180.0,
+    "max_cost_usd": 0.6,
+    "gold_draft": true,
+    "rejected_enabled": true,
+    "request_id_prefix": "rvfair-7a3048-",
+    "arms": [
+      "team",
+      "same",
+      "undivided"
+    ],
+    "started_at": "2026-11-13T10:04:44+09:00",
+    "finished_at": "2026-11-13T10:18:38+09:00",
+    "stopped_by": null,
+    "note": "팀은 /chat, 단일은 /admin/eval/review. 시간은 클라이언트 측(요청 전송부터 마지막 이벤트나 응답까지), 로그인·CSRF 준비 시간 제외.",
+    "partial": false,
+    "pending_approvals_left": []
+  },
+  "comparison": {
+    "all": {
+      "n_pairs": 30,
+      "arms": {
+        "team": {
+          "n_runs": 30,
+          "paths": {
+            "other_route": 3,
+            "review_clarify": 7,
+            "review_table": 20
+          },
+          "rows_unknown": 0,
+          "gold_found": 47,
+          "gold_total": 111,
+          "missed_issue_rate": 0.5765765765765766,
+          "missed_by_repeat": {
+            "1": 0.5945945945945946,
+            "2": 0.5675675675675675,
+            "3": 0.5675675675675675
+          },
+          "latency_s": {
+            "mean": 8.593,
+            "p50": 9.33,
+            "p95": 11.554,
+            "max": 14.138
+          },
+          "cost": {
+            "runs_with_cost": 29,
+            "runs_without_cost": 1,
+            "known_sum_usd": 0.116935,
+            "mean_usd": 0.004032
+          },
+          "llm_calls_mean": null
+        },
+        "same": {
+          "n_runs": 30,
+          "paths": {
+            "review_clarify": 1,
+            "review_table": 29
+          },
+          "rows_unknown": 0,
+          "gold_found": 46,
+          "gold_total": 111,
+          "missed_issue_rate": 0.5855855855855856,
+          "missed_by_repeat": {
+            "1": 0.5945945945945946,
+            "2": 0.5945945945945946,
+            "3": 0.5675675675675675
+          },
+          "latency_s": {
+            "mean": 10.633,
+            "p50": 10.26,
+            "p95": 13.487,
+            "max": 21.718
+          },
+          "cost": {
+            "runs_with_cost": 30,
+            "runs_without_cost": 0,
+            "known_sum_usd": 0.079701,
+            "mean_usd": 0.002657
+          },
+          "llm_calls_mean": 1.0
+        },
+        "undivided": {
+          "n_runs": 30,
+          "paths": {
+            "review_clarify": 8,
+            "review_table": 22
+          },
+          "rows_unknown": 0,
+          "gold_found": 13,
+          "gold_total": 111,
+          "missed_issue_rate": 0.8828828828828829,
+          "missed_by_repeat": {
+            "1": 0.8648648648648649,
+            "2": 0.8648648648648649,
+            "3": 0.918918918918919
+          },
+          "latency_s": {
+            "mean": 8.164,
+            "p50": 8.171,
+            "p95": 10.305,
+            "max": 15.486
+          },
+          "cost": {
+            "runs_with_cost": 30,
+            "runs_without_cost": 0,
+            "known_sum_usd": 0.076053,
+            "mean_usd": 0.002535
+          },
+          "llm_calls_mean": 1.033
+        }
+      },
+      "team_vs_same": {
+        "role": "main",
+        "diff": 0.009009,
+        "per_repeat": {
+          "1": 0.0,
+          "2": 0.027027,
+          "3": 0.0
+        },
+        "text": "차이 없음(0.10 미만이거나 회차 방향이 갈림)"
+      },
+      "cost_ratio_team_over_same": 1.518,
+      "team_vs_undivided": {
+        "role": "aux",
+        "diff": 0.306306,
+        "per_repeat": {
+          "1": 0.27027,
+          "2": 0.297297,
+          "3": 0.351351
+        },
+        "text": "팀이 낫다(차이 0.10 이상, 모든 회차 같은 방향)"
+      },
+      "cost_ratio_team_over_undivided": 1.591
+    },
+    "paired": {
+      "n_pairs": 27,
+      "arms": {
+        "team": {
+          "n_runs": 27,
+          "paths": {
+            "review_clarify": 7,
+            "review_table": 20
+          },
+          "rows_unknown": 0,
+          "gold_found": 47,
+          "gold_total": 105,
+          "missed_issue_rate": 0.5523809523809524,
+          "missed_by_repeat": {
+            "1": 0.5714285714285714,
+            "2": 0.5428571428571428,
+            "3": 0.5428571428571428
+          },
+          "latency_s": {
+            "mean": 8.53,
+            "p50": 9.33,
+            "p95": 11.554,
+            "max": 14.138
+          },
+          "cost": {
+            "runs_with_cost": 26,
+            "runs_without_cost": 1,
+            "known_sum_usd": 0.093748,
+            "mean_usd": 0.003606
+          },
+          "llm_calls_mean": null
+        },
+        "same": {
+          "n_runs": 27,
+          "paths": {
+            "review_clarify": 1,
+            "review_table": 26
+          },
+          "rows_unknown": 0,
+          "gold_found": 46,
+          "gold_total": 105,
+          "missed_issue_rate": 0.5619047619047619,
+          "missed_by_repeat": {
+            "1": 0.5714285714285714,
+            "2": 0.5714285714285714,
+            "3": 0.5428571428571428
+          },
+          "latency_s": {
+            "mean": 10.334,
+            "p50": 10.588,
+            "p95": 13.219,
+            "max": 13.487
+          },
+          "cost": {
+            "runs_with_cost": 27,
+            "runs_without_cost": 0,
+            "known_sum_usd": 0.072432,
+            "mean_usd": 0.002683
+          },
+          "llm_calls_mean": 1.0
+        },
+        "undivided": {
+          "n_runs": 27,
+          "paths": {
+            "review_clarify": 8,
+            "review_table": 19
+          },
+          "rows_unknown": 0,
+          "gold_found": 11,
+          "gold_total": 105,
+          "missed_issue_rate": 0.8952380952380953,
+          "missed_by_repeat": {
+            "1": 0.8857142857142857,
+            "2": 0.8857142857142857,
+            "3": 0.9142857142857143
+          },
+          "latency_s": {
+            "mean": 8.147,
+            "p50": 8.171,
+            "p95": 10.305,
+            "max": 15.486
+          },
+          "cost": {
+            "runs_with_cost": 27,
+            "runs_without_cost": 0,
+            "known_sum_usd": 0.068785,
+            "mean_usd": 0.002548
+          },
+          "llm_calls_mean": 1.037
+        }
+      },
+      "team_vs_same": {
+        "role": "main",
+        "diff": 0.009524,
+        "per_repeat": {
+          "1": 0.0,
+          "2": 0.028571,
+          "3": 0.0
+        },
+        "text": "차이 없음(0.10 미만이거나 회차 방향이 갈림)"
+      },
+      "cost_ratio_team_over_same": 1.344,
+      "team_vs_undivided": {
+        "role": "aux",
+        "diff": 0.342857,
+        "per_repeat": {
+          "1": 0.314286,
+          "2": 0.342857,
+          "3": 0.371429
+        },
+        "text": "팀이 낫다(차이 0.10 이상, 모든 회차 같은 방향)"
+      },
+      "cost_ratio_team_over_undivided": 1.415
+    },
+    "pairs_excluded": {
+      "team_not_routed": 3,
+      "total_team_runs": 30
+    }
+  },
+  "per_item": [
+    {
+      "id": 1,
+      "kind": "full",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 19
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 20
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 20
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 11
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 11
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 12
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 2,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "full",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 19
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 20
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 20
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 16
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 16
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 18
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 2,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 5
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "full",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 17
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 19
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 12
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 15
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 15
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 11
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "full",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 20
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 19
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 20
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 12
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 13
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 11
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 13
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 14
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "partial",
+      "team": [
+        {
+          "rep": 1,
+          "path": "other_route",
+          "rows": null
+        },
+        {
+          "rep": 2,
+          "path": "other_route",
+          "rows": null
+        },
+        {
+          "rep": 3,
+          "path": "other_route",
+          "rows": null
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 8
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 9
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 9
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 10
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "partial",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 18
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 18
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 18
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 12
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 14
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 9
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 8
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 9
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "partial",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 11
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 15
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 14
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 9
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 6
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 10
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 5
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 5
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 8
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "clarify",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 2,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 10
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 14
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 8
+        },
+        {
+          "rep": 2,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "clarify",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 2,
+          "path": "review_clarify",
+          "rows": 0
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 16
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 15
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 12
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 12
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 15
+        },
+        {
+          "rep": 3,
+          "path": "review_clarify",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "low_issue",
+      "team": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 13
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 14
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 15
+        }
+      ],
+      "same": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 9
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 8
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 6
+        }
+      ],
+      "undivided": [
+        {
+          "rep": 1,
+          "path": "review_table",
+          "rows": 11
+        },
+        {
+          "rep": 2,
+          "path": "review_table",
+          "rows": 7
+        },
+        {
+          "rep": 3,
+          "path": "review_table",
+          "rows": 7
+        }
+      ]
+    }
+  ]
+}
