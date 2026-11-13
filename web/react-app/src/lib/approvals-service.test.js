@@ -96,6 +96,13 @@ describe('approval mapping', () => {
     expect(item.issue.asOf).toBe('2026-11-05')
     expect(item.issue.rows[0]).toMatchObject({ teamLabel: '보안', stance: 'condition', confidence: 'high', conflict: true, sourceUrl: 'https://handbook.gitlab.com/handbook/finance/procurement/' })
     expect(item.issue.rows[1].sourceUrl).toBeNull()
+  })
+
+  it('drops source links that are not plain http(s) addresses', () => {
+    const base = issueItem()
+    const row = url => ({ ...base.issue_table.rows[0], source_url: url })
+    const item = mapApproval({ ...base, issue_table: { ...base.issue_table, rows: [row('data:text/html,x'), row('https:example.com'), row('http://example.com/a')] } })
+    expect(item.issue.rows.map(r => r.sourceUrl)).toEqual([null, null, 'http://example.com/a'])
     expect(item.issue.unreviewed).toEqual([{ team: 'infra', teamLabel: '인프라·SRE', reason: '모델 응답을 읽지 못함' }])
   })
 

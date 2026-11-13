@@ -258,7 +258,7 @@ function ImpactPreviewPanel({ service }) {
     try { payload = parseImpactInput(mode, input) } catch (parseError) { setError(parseError.message); return }
     setRunning(true)
     try {
-      setResult(await service.previewImpact(payload))
+      setResult({ ...(await service.previewImpact(payload)), mode })
     } catch (previewError) {
       setResult(null)
       setError(describeApiError(previewError, '영향 미리보기 기능을 찾을 수 없습니다.'))
@@ -276,7 +276,7 @@ function ImpactPreviewPanel({ service }) {
       <div className="recall-admin-actions"><button type="submit" className="demo-dark-button" disabled={running}>{running ? '계산 중입니다.' : '미리보기 실행'}</button></div>
     </form>
     {error && <p role="alert" className="recall-action-error">{error}</p>}
-    {result && hasUnnamedSection(result) && <p className="recall-admin-lede" role="note">{mode === 'pages' ? "섹션 이름이 비어 있는 항목이 있습니다. 섹션 이름은 본문의 제목 줄('## 1조'처럼 #로 시작)에서 가져오므로, 개정 전후 본문(old·new)에 제목 줄을 넣어 주세요." : '섹션 이름이 비어 있는 항목이 있습니다. 바뀐 섹션 목록의 article 칸에 조항 이름을 넣어 주세요.'}</p>}
+    {result && hasUnnamedSection(result) && <p className="recall-admin-lede" role="note">{result.mode === 'pages' ? "섹션 이름이 비어 있는 항목이 있습니다. 섹션 이름은 본문의 제목 줄('## 1조'처럼 #로 시작)에서 가져오므로, 개정 전후 본문(old·new)에 제목 줄을 넣어 주세요." : '섹션 이름이 비어 있는 항목이 있습니다. 바뀐 섹션 목록의 article 칸에 조항 이름을 넣어 주세요.'}</p>}
     {result && <div className="impact-preview-result"><small>MR 댓글용 요약</small><pre>{result.markdown || '요약 내용이 없습니다.'}</pre></div>}
   </section>
 }
