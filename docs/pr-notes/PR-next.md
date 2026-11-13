@@ -1,7 +1,7 @@
 # 조장 11/13 재점검 후속 — 박진형 몫 낮음 5건, 실패 분석 검색 파트, 데이터·Spec 문서, #148 리뷰 반영
-- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `d01eafff`(#150까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`을 git merge로 묶음
+- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `d01eafff`(#150까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`, `l1-dates-1113`, `l2-front-tests-1113`을 git merge로 묶음
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 팀 문서 / [실측] 직접 돌린 결과 / [추정].
-- 운영 호출 없음. LLM·Voyage 호출 없음. 조장 "놓친 것 목록 (2026-11-13)" 6절 새로 발견 중 박진형 몫(#3·#4·#6·#7·#8)과 H-33을 다룸.
+- 운영 호출 없음. LLM·Voyage 호출 없음. 조장 "놓친 것 목록 (2026-11-13)" 6절 새로 발견 중 박진형 몫(#3·#4·#6·#7·#8)과 H-33, 2차 재검토로 찾은 리콜 날짜 칸·빈 섹션 표시·H-08 화면 시험을 다룸.
 
 ## 1. 한 것 — 코드
 | 항목 | 문제 | 고친 것 | 근거 |
@@ -11,6 +11,9 @@
 | 새로 발견 #7 다시 시도 말풍선 | 채팅 '다시 시도'를 누를 때마다 질문+오류 말풍선 한 쌍이 계속 쌓였다 | `lib/chat-service.js`·`lib/chat-preview.js`: 다시 시도일 때 마지막이 같은 질문의 오류 말풍선이면 그 쌍을 새 턴으로 바꿈. 일반 전송은 그대로 뒤에 붙음. `DemoChatPage.jsx`가 다시 시도를 구분해 넘김 | [실측] 3번 다시 시도해도 메시지 2개 유지, 같은 질문 일반 전송은 4개 |
 | 새로 발견 #6 영향 미리보기 섹션 칸 | '섹션' 칸이 늘 비었다. 서버는 본문의 제목 줄(#)에서 섹션 이름을 만드는데(`backend/rag/ingest/diff.py` `article_of`), 화면 예시 본문에 제목 줄이 없었다 | `RecallPage.jsx` 예시에 제목 줄을 넣고, 섹션 이름이 빈 항목이 오면 입력 형식별 안내문을 보임 | [실측] 제목 줄 없는 본문 → `article=''`, 있으면 "제목 > 1조" |
 | 새로 발견 #8 가입 화면 `type=email` | 바꾸지 않음 | — | [문서] 가입은 이메일 인증 흐름(`specs/107-email-signup-verification.md`). 이메일이 아닌 데모 아이디는 시드 계정이라 가입 화면을 쓰지 않음 |
+| 리콜 날짜 칸(2차 재검토) | `/recalls/digest/flush`의 `day`, `/impact-preview` 날짜, 규정 변경 웹훅 날짜에 없는 날짜·전각 숫자를 넣으면 200으로 받고 결과가 조용히 틀렸다: 영향 미리보기는 날짜를 글자로 비교해 전각 숫자면 과거 답 전부 "영향 있음", `0000-00-00`이면 0건, 웹훅은 본문을 못 찾아 사용자에게 "확인 필요" 알림이 잘못 나가고, 묶음 알림은 없는 날짜로 저장되며 대기 알림이 "보냄"으로 바뀌어 되돌릴 수 없다 | `backend/api/recalls.py`에 `/chat`과 같은 규칙의 `real_date()`를 두고 세 곳에 적용 → 422 `validation_error`(고정 문구). 웹훅은 날짜 오류만 있을 때 422, 다른 형식 오류가 섞이면 원래대로 400, 오류 위치에 항목 번호. `docs/specs/recall.md` 응답 코드에 422 한 줄 | [코드] `backend/graph/recall/notice.py:82` 글자 비교, `digest.py:74-76`, `judge.py:62-64`. [실측] 3개 날짜 × 7개 경로 422, 윤일 200, 잘못된 day로는 묶음이 저장되지 않고 대기 알림 수 그대로 |
+| 빈 섹션 표시(2차 재검토) | 영향 미리보기 표(화면 응답·MR 댓글)의 '섹션' 칸이 빈칸으로 나왔다 | `backend/graph/recall/impact.py` `render_markdown`의 두 표에서 빈 이름을 "(제목 없는 구간)"으로 보임. 리포트 JSON의 `article`은 그대로 `''` | [코드] 빈 이름은 인용을 찾는 기준값(`impact.py` `find_by_article`)이라 데이터는 바꾸지 않고 표시만 바꿈 |
+| H-08 화면 시험(2차 재검토) | 채팅 422·403 오류는 처리 코드만 있고 화면 시험이 없었다 | 새 `web/react-app/src/chat-error-status.test.jsx` 4개: 422·403(보안 토큰)·403(본문 없음) 오류 말풍선, 생성 중 말풍선 없음, 다시 시도, `/chat` 호출 수(보안 토큰 오류만 2번). 제품 코드 변경 없음 | [실측] 오류 처리 줄을 망가뜨리면 실패(변이 4종) |
 | H-33 로그아웃 때 `/me` 401 | 바꾸지 않음(조장 결정 필요) | — | [코드] 콘솔의 빨간 줄은 브라우저가 401 응답에 찍는 것이라 JS로 못 지움. 보내지 않으려면 "세션 없음" 단서가 필요한데 로그인 쿠키는 httpOnly(`backend/auth.py` 쿠키 설정), Google 콜백은 CSRF 쿠키를 심지 않음 |
 
 ## 2. 한 것 — 문서
@@ -34,21 +37,23 @@
 ## 4. 확인한 것
 | 대상 | 결과 |
 |---|---|
-| 전체 pytest | 3608 passed, 0 failed, 180 skipped, 2 deselected, 785초 [실측, 11/13, Docker `python:3.12`, 묶음 브랜치 `git archive` → `pip install -r backend/requirements-dev.txt` → `python -m pytest -q`] |
-| 전체 vitest | 31 파일 377 passed [실측, 11/13, 묶음 브랜치] |
+| 전체 pytest | PYTEST_RESULT [실측, 11/13, Docker `python:3.12`, 묶음 브랜치 `git archive` → `pip install -r backend/requirements-dev.txt` → `python -m pytest -q`] |
+| 전체 vitest | 32 파일 381 passed [실측, 11/13, 묶음 브랜치] |
 | 변이 시험 | 고친 줄을 되돌리면 새 시험이 실패: 다시 시도 3개(화면 1개 포함), 미리보기 모드 1개, 영향 안내 2개, `as_of` 1개(전각 숫자 입력값 노출로 실패), 가입 거절 7개 [실측] |
-| 갈래별 독립 검증 | 작업과 다른 검증자가 diff만 보고 확인. 프론트 지적 2건(미리보기 모드 다시 시도, 섹션 목록 입력 안내 문구), 백엔드 지적 1건(전각·아랍 숫자 날짜의 오류 문구에 입력값이 담김)을 고침 |
+| 갈래별 독립 검증 | 작업과 다른 검증자가 diff만 보고 확인. 프론트 지적 2건(미리보기 모드 다시 시도, 섹션 목록 입력 안내 문구), 백엔드 지적 1건(전각·아랍 숫자 날짜의 오류 문구에 입력값이 담김)을 고침. 2차: 리콜 날짜 칸을 "문제 없음"으로 둔 판단이 틀렸다는 지적(조용히 틀린 결과 3경로)으로 고침, 버그를 못 잡던 시험 2개(대기 알림 0건인 묶음 시험, 보안 토큰 재전송 횟수) 보강, 섞인 오류 400 유지 |
 | AI 표기 검사 | 커밋 메시지 0, 추가 줄은 `ai_tools_log.md` 한 행 말고 0 |
 
 ## 5. 남의 폴더 (확인 필요)
 - `backend/auth.py`(강경희): 가입 아이디 검사 2줄.
 - `backend/api/routes.py`(김승욱): `ChatRequest.as_of` 검사.
+- `backend/api/recalls.py`(김승욱): 날짜 칸 세 곳 검사, 웹훅 날짜 오류 422. `backend/graph/recall/impact.py`: 표의 빈 섹션 표시.
 - `web/`(강경희, 프론트 작업은 박진형 배정 11/11): `chat-service.js`, `chat-preview.js`, `DemoChatPage.jsx`, `RecallPage.jsx`와 시험.
-- `docs/`(조장): `PRD.md` 9장, `deliverables/failure_analysis.md`, `specs/parse.md`·`incremental.md`·`106-signup-approval.md`, `docs.md` 기록, `pr-notes/`.
+- `docs/`(조장): `PRD.md` 9장, `deliverables/failure_analysis.md`, `specs/parse.md`·`incremental.md`·`106-signup-approval.md`·`recall.md`, `docs.md` 기록, `pr-notes/`.
 - `data/data.md`, `AGENTS.md`, `.gitattributes`, `mock_erp/` 기록 칸.
 
 ## 6. 한계·남은 일
-- 영향 미리보기: 제목 줄이 없는 본문이 오면 서버가 섹션 이름을 비워 보낸다. 근본 해결(이름 채우기 또는 400)은 백엔드 `impact.py`·`diff.py` 쪽이라 조장 판단.
-- `as_of` 같은 형식만 보는 날짜 칸이 `/eval/review`(`eval_review.py`)와 `recalls.py`에도 있다. 이번 범위 밖.
+- 영향 미리보기: 제목 줄이 없는 본문의 섹션 이름은 데이터에서 계속 빈 값이다(인용 대조 기준값이라 바꾸지 않음). 표에는 "(제목 없는 구간)"으로 보인다.
+- 형식만 보는 날짜 칸이 `/eval/review`(`eval_review.py`)에 남아 있다. 평가 전용 경로라 이번에 넣지 않았다.
+- 링크 확장 청크의 조직·기준일 필터: 지금 코드는 거른다(`search.py`의 링크 후보도 `org`·`as_of`를 넘김). `EVAL_REPORT.md:107`의 "필터를 거치지 않는다"는 링크 확장이 검색 코드에 들어오기 전 실험 기준일 가능성이 있다 [추정, 조장 확인 필요].
 - 다시 시도는 서버에 질문을 한 번 더 보낸다. 서버가 실패한 질문을 저장하는 오류라면 새로고침 뒤 서버 기록에는 중복이 남을 수 있다 [추정].
 - PR 번호가 나오면 이 문서를 `PR-<번호>.md`로 바꾸고 기록 칸 `미정`을 채운다.
