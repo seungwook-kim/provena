@@ -14,5 +14,14 @@
     "frozen_at": "2026-11-02",
     "refrozen_at": "2026-11-07",
     "refreeze_reason": "38번 정답을 판정자 확인에 맞춰 고침(결정기록 0075)"
+  },
+  "dataset_holdout_v1.jsonl": {
+    "sha256": "c877c0657ff086a174135cc22e4d71858b776a4c02555325ce63721f1af51d07",
+    "count": 20,
+    "relevant": 10,
+    "irrelevant": 10,
+    "frozen_at": "2026-11-13",
+    "sha256_lf": "51c020fb10b8b0d18990932b24205810eff1cef96c7a9541e1193bd7c5104771",
+    "sha256_note": "sha256는 CRLF 기준(freeze.py가 작업 폴더 바이트를 해시, .gitattributes eol=crlf로 고정). sha256_lf는 같은 내용을 LF로 둔 값(git 저장소 안 바이트)이다"
   }
 }

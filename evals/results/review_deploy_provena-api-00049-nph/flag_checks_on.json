@@ -1,0 +1,29 @@
+{
+  "phase": "on",
+  "path": "/admin/eval/review",
+  "checked_at": "2026-11-13T10:04:41+09:00",
+  "checks": {
+    "anon_with_csrf_header": {
+      "status": 401,
+      "expected": [
+        401
+      ],
+      "ok": true
+    },
+    "user_b_with_csrf_header": {
+      "status": 403,
+      "expected": [
+        403
+      ],
+      "ok": true
+    },
+    "admin_a_without_csrf_header": {
+      "status": 403,
+      "expected": [
+        403
+      ],
+      "ok": true
+    }
+  },
+  "all_ok": true
+}

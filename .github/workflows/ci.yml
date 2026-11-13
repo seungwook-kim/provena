@@ -16,6 +16,20 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # 키 없는 데모 녹화 대조(demo_replay)가 새 DB에 색인을 적재하므로 pgvector 이미지를 곁에 띄운다(tests/test_decision_approval.py의 pg_admin_url이 PROVENA_D5_PG_URL을 쓴다)
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,5 +39,15 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r backend/requirements-dev.txt
       - run: python -m pytest -q
+      # 키 없는 데모의 녹화 대조는 색인을 풀어 그래프를 돌리는 느린 시험이라 pytest.ini의 기본 실행(-m "not demo_replay")에서 빠진다.
+      # 프롬프트·검색·분해를 바꾼 PR이 녹화 키를 깨도 위 단계는 통과하므로 현재 코드로 여기서 따로 돌린다(키·네트워크 없음).
+      # 이 시험은 Postgres가 필요하고 없으면 건너뛰므로, 건너뛴 채 통과하지 않도록 아래에서 결과 줄에 skipped가 없는지 확인한다.
+      - name: 키 없는 데모 녹화 대조 (현재 코드, 키·네트워크 없음)
+        env:
+          PROVENA_D5_PG_URL: postgresql://app:pw@127.0.0.1:5432/postgres
+        shell: bash
+        run: |
+          python -m pytest -q -m demo_replay -rs | tee demo_replay.log
+          if grep -q "skipped" demo_replay.log; then echo "demo_replay 시험이 건너뛰어졌습니다(Postgres 연결 확인)"; exit 1; fi
       - name: 평가 점수 비교 (커밋된 결과 파일만, 키·네트워크 없음)
         run: python evals/ci_compare.py

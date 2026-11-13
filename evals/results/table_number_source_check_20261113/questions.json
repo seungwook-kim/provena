@@ -1,0 +1,370 @@
+[
+ {
+  "dataset": "v2",
+  "id": 1,
+  "expected": "호출(page)이 오면 15분 안에 확인(acknowledge)해야 함 / 슬랙 @멘션은 일반 메시지와 같게 취급되어 별도 응답 기한(SLA) 없음",
+  "chunk_ids": [
+   "34032311f59f0f48",
+   "159e4f13dc80e656",
+   "fb3ba634a8d30bda",
+   "9fb825ed83c31843",
+   "9959baf3c8f4f4dd",
+   "24a485a6ba92892f",
+   "92b237219ea249df",
+   "35792cd8fb054365"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 2,
+  "expected": "EOC가 호출에 응답하지 않으면 Incident Manager(IM)로 에스컬레이션됨 / IMOC도 15분 안에 응답하지 않으면 Infrastructure Leadership이 호출됨.",
+  "chunk_ids": [
+   "7cd641d28bcdfeb5",
+   "d23336c2bb0af64a",
+   "c0b70df826324df3",
+   "ece9c56501261bbd",
+   "3069923da5795b3f",
+   "1bcdf8557f4f92c2"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 3,
+  "expected": "정기 릴리스는 매월 세번째 목요일 / 패치 릴리스는 한달에 두번",
+  "chunk_ids": [
+   "d55fdad5821a802f",
+   "984967e06e6236f6",
+   "0cc12479bce827c3"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 4,
+  "expected": "카나리에 올라간 뒤 30분 관찰 후 아무 문제 없으면 / 수동 승격",
+  "chunk_ids": [
+   "98f3fd335aae5cb7",
+   "3a83faadedf82302",
+   "c8367415ba48ad91",
+   "e5068fd933fbbb2d",
+   "57e141b336fd3aa7"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 5,
+  "expected": "문제가 된 변경 되돌려 정상 상태로 복구 / maintainer 1명",
+  "chunk_ids": [
+   "c7816d5decaeecba",
+   "be9b291af45f9d5b",
+   "85c981d5878397d2",
+   "8a04d3a1b05112fe"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 6,
+  "expected": "24시간 안에 고쳐야 하고, 못 하면 Severity 3(S3) 프로덕션 인시던트로 격상되어 사후 검토 절차를 밟음. 격리는 빠른 격리(fast) 최대 3일, 장기 격리(long-term) 최대 3개월.",
+  "chunk_ids": [
+   "377c9fd1edb06d26",
+   "f8ad5739e3666b41"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 7,
+  "expected": "CEO와 Fellow Engineer 1명에게 모두",
+  "chunk_ids": [
+   "78621d46c7424c88"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 8,
+  "expected": "영업일 기준 2일 이내 (GitLab 팀원 대상 Review-response SLO)",
+  "chunk_ids": [
+   "a28e2bc1ab86d482",
+   "1e96e77a038841f2",
+   "ab3bfbc2de540cad"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 9,
+  "expected": "24시간 안에 완화하고 30일 안에 수정",
+  "chunk_ids": [
+   "c3b5296636ea8c06",
+   "1760f9bd2b094dd5",
+   "d27e11d7c4c1bce5"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 10,
+  "expected": "Red 데이터 시스템은 연 1회 / SOX 대상 애플리케이션은 분기별로 1회로 연 4회",
+  "chunk_ids": [
+   "b8f138d76e58138e"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 11,
+  "expected": "최대 30일",
+  "chunk_ids": [
+   "c3b5296636ea8c06",
+   "1760f9bd2b094dd5",
+   "d27e11d7c4c1bce5",
+   "afbf8346bd662039",
+   "4de9926da327a146"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 12,
+  "expected": "어떤 권한이 필요한지 명확하게 작성하고 Manager와 Business Owner 모두의 승인이 필요하며, 사용자 기록의 스크린샷이 필요함",
+  "chunk_ids": [
+   "9096a5b57bfdd026"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 13,
+  "expected": "무상 지원 기간은 30일 최대 2회 연장 가능하며 동시에 30곳까지 가능함",
+  "chunk_ids": [
+   "0cbc62bd8d22eda8",
+   "7ad651dbe57bb485"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 14,
+  "expected": "더 높은 등급을 선택",
+  "chunk_ids": [
+   "a52b92e341c32575",
+   "297784a4d33c8839"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 15,
+  "expected": "VP Infrastructure와 VP Finance",
+  "chunk_ids": [
+   "fa4c75698c139086"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 31,
+  "expected": "인시던트 리뷰는 해결 후 5영업일 안에 닫는다. S1 공개 RCA는 해결 후 7일 안에 나와야 한다(RCA 페이지는 \"7 business days\"로 표기, 내부 SLO는 더 엄격).",
+  "chunk_ids": [
+   "cc7e86c9948b205d",
+   "466343fe561e453b"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 32,
+  "expected": "알림 응답은 주말에도 해야 하지만, S3/S4의 완화 작업은 평일 업무시간(월~금)에 해도 된다. 주말에 즉시 완화하는 것은 S1/S2뿐이고, S3/S4가 반복되어 주말 작업이 필요하면 하나의 S2로 합쳐 처리한다.",
+  "chunk_ids": [
+   "c5001e2f7e7f5c52"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 33,
+  "expected": "패치 윈도우 동안 Release Manager는 GitLab.com 배포를 롤백할 수 있어야 하는데, PDM이 프로덕션에서 한 번 실행되면 롤백이 불가능해지기 때문이다. 패치 윈도우는 패치 프로세스 시작부터 패키지 게시까지이며 예약 패치는 보통 목표일 이틀 전에 시작한다.",
+  "chunk_ids": [
+   "cb4d50afbf0db572",
+   "1c6033e929e3640c",
+   "d14967065c66b93e",
+   "50e518b9a6f0091a",
+   "68b56195b2b85fb9",
+   "ee6b973c265fabc1"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 34,
+  "expected": "고심각도 버그나 critical 취약점 완화에만 쓸 수 있다. 사전에 exception request가 필수이고, 인시던트를 선언해야 하며(Out-of-Band Patch 표시, S1 또는 S2, Contributing Factor 지정), 버그 수정이면 incident review와 FCL이 필수다.",
+  "chunk_ids": [
+   "56c85d4c6a5d0beb",
+   "81553ffe7ab8e2b8",
+   "c07479ec82f10149",
+   "7373a0cc7191a2aa"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 35,
+  "expected": "작성자가 병합 전에 `devex-ai-assistance` scoped 라벨을 붙인다. 1(AI 미사용)부터 5(전면 AI 주도)까지 5단계이고, scoped 라벨이라 한 번에 한 단계만 붙는다.",
+  "chunk_ids": [
+   "133f8fdfd459e861",
+   "5fff43a9dd7762b5",
+   "cb53c1982c77310e"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 36,
+  "expected": "평가 유효 기간은 Tier 1·2(Mission/Business Critical)는 12개월, Tier 3·4(Business Operational/Administrative)는 24개월이다(Red 데이터 접근은 Tier 1, Orange는 Tier 3 기준). 기간이 지나면 추가 requisition을 승인하기 전에 새 평가가 필요하고, 벤더 갱신 때 최근 평가가 만료됐으면 승인 전에 재평가가 필요할 수 있다.",
+  "chunk_ids": [
+   "eb716842d2574546",
+   "e92ff33755911829",
+   "71546862abfa5085",
+   "17997f24b5e563bd",
+   "8d1287e09ae75d03",
+   "d96029d78f460b1a",
+   "46febe6f4a6ae0bc",
+   "931a9097b6def468",
+   "556f4a5aac4c4c31",
+   "258f74b290e56034",
+   "85970f95b1996c8d",
+   "bf31f2661c6cdfdf"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 37,
+  "expected": "최소 12자, 10회 실패 시 임시 잠금, MFA 필수다. 특수문자는 요구하지 않고(권장도 안 함) 일반적으로 비밀번호 만료도 없다. 단 비밀번호가 유일한 인증 수단인 시스템은 최대 90일 안에 만료시킨다.",
+  "chunk_ids": [
+   "e426f23ef1c805be",
+   "28f705901df4164f",
+   "1f56e00edc2f2e1f",
+   "349e97b509c1da3a"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 38,
+  "expected": "Zip에서 새 구매 요청(+New Request)을 만든다. 신규 벤더는 Zip에서 추가하면 Procurement가 Coupa에 등록한다. 새 벤더/시스템이 Orange 또는 Red 데이터에 접근하면 승인 전에 TPRM 검토가 필수다.",
+  "chunk_ids": [
+   "0acdc0bbc5942410",
+   "d25f9f93aad4ca80",
+   "7275b0b9f027798b",
+   "ccfb6ebf411e08fb",
+   "2981c3e50443587a",
+   "606edcfe1ad39912",
+   "545c9b4c93c12ebe",
+   "e3795a70819996a4",
+   "bd7843b719cf9ef8",
+   "c0ed951b47fd9544",
+   "cf6369672f7a4846",
+   "688a20f47638813c",
+   "8d1287e09ae75d03",
+   "d96029d78f460b1a"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 39,
+  "expected": "GitLab 팀원인지, GitLab.com 사용자(고객)인지 되묻는다. 팀원은 IT Ops에 문의한다. GitLab.com 사용자는 top-level group owner가 대신 티켓을 내야 하며 본인이 직접 낸 티켓은 받지 않는다. 무료 사용자는 지원 대상이 아니다. 분기를 병기하면 정답.",
+  "chunk_ids": [
+   "6a3b20f538fd3649",
+   "cb99f52f7a78e20c",
+   "be4371acb58882e4",
+   "42fb803d03f8e8fc",
+   "1349310bf3d9c2f7",
+   "e2cd1fa67aea0163",
+   "b579ee5fefd307d2"
+  ]
+ },
+ {
+  "dataset": "v2",
+  "id": 40,
+  "expected": "원래 거래와 후속 거래의 총액을 합산해 승인 한도를 정하고, 필요하면 추가 승인을 위해 다시 제출한다. 승인 레벨이 바뀔 수 있게 거래를 둘 이상으로 쪼개 따로 승인받는 것은 어떤 경우에도 금지다.",
+  "chunk_ids": [
+   "74664b2724e87c96",
+   "8a59fedaa6acd8e3"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 101,
+  "expected": "미국 외 팀원은 모든 경비에 영수증이 필요하다(미국 팀원만 50달러 초과분부터 필요). 구매일로부터 90일이 지난 청구는 매니저 승인이 없으면 환급되지 않는다.",
+  "chunk_ids": [
+   "5529f76ff65dffe4",
+   "0455d5d3f3342461",
+   "09b3cf4eaec6798c"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 102,
+  "expected": "허용 항목이다. 팀 식사는 최대 20명까지이고 1인당 100달러를 넘지 않아야 한다.",
+  "chunk_ids": [
+   "1625c847bacf5675"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 103,
+  "expected": "가져가거나 그곳에서 일하면 안 된다는 취지면 정답이다. 두 근거 중 하나 또는 둘 다 들면 인정한다. (가) 출장 안내: 무역 규제 때문에 회사 소유 기기를 러시아·벨라루스로 가져가거나 그곳에서 일할 수 없다(쿠바·이란·북한·시리아와 우크라이나 크림·도네츠크·루한스크 같은 미국 금수 국가·지역은 어떤 경우에도 불가). (나) 회사 자산 물리 보안 표준: 금수 국가에는 법무팀과 상의 없이 회사 기기를 가져가지 않는다.",
+  "chunk_ids": [
+   "d4b6bace55908456",
+   "374c0d332ab0abff"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 104,
+  "expected": "훈련임을 알리는 안내 페이지로 이동하고, 짧은 피싱 교육(ProofPoint)이 자동으로 배정된다. 훈련에서 빠질(opt out) 수는 없다.",
+  "chunk_ids": [
+   "09641a703103bd26",
+   "b1a95b12e63bb289",
+   "65b354ed06c8e3ad"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 105,
+  "expected": "프로덕션 감사 로그는 1년, 연간 보안 인식 교육 이수 기록은 3년 보관한다.",
+  "chunk_ids": [
+   "6ae438193abc5b4f",
+   "3b259d9d77bd1d56"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 106,
+  "expected": "3주차부터는 최소 두 번 페어링하고, 가능하면 주 1회를 목표로 한다. 처음 2주 안에 자리를 비우거나 일정이 많으면, 매니저와 상의해 다른 사람이 버디를 맡게 하거나 자기 업무를 줄여 버디 역할을 할 수 있게 한다.",
+  "chunk_ids": [
+   "bb5eee21805e7c1b",
+   "d4918e31a5b3c954"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 107,
+  "expected": "제안 내용을 이슈로 만들고, 부서장 승인 다음 CTO 승인을 받는다(먼저 매니저와 상의하며, 최종적으로는 경영진이 건별로 승인한다).",
+  "chunk_ids": [
+   "98c79d67ffeaad00"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 108,
+  "expected": "Technical Reviewers가 승인하고 게시한다. 내릴 때는 article 저장소에서 문서가 Gov/Global/Sandbox 중 어디에 있는지 확인해 삭제하고, CSS에 FR(기능 요청)을 만들어 어떤 문서를 내릴지 알린다.",
+  "chunk_ids": [
+   "95301b7ac46e267c",
+   "2c39c7dcf58fcc3d",
+   "845dd723260c289e"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 109,
+  "expected": "서브쿼리보다 CTE(공통 테이블 식)를 쓰도록 권장한다(가독성이 좋고 성능도 낫다는 이유).",
+  "chunk_ids": [
+   "bc6af7e4fdfb5a63",
+   "ca5a4662e0eab722"
+  ]
+ },
+ {
+  "dataset": "검증",
+  "id": 110,
+  "expected": "아니다. 회사 관리 기기의 브라우저 확장 프로그램은 허용 목록(allowlist) 방식이라 Corporate Security가 검토·승인한 것만 설치할 수 있고 나머지는 기본으로 막힌다. OAuth 앱이 읽기 전용 API 권한처럼 기밀 데이터에 접근할 수 있는 권한을 요구하면 인증을 진행하지 말고 앱을 지운다(공개 프로필 정도의 최소 권한만 허용).",
+  "chunk_ids": [
+   "798ec69846322c4e",
+   "81a0bb5a1fd16abd"
+  ]
+ }
+]
