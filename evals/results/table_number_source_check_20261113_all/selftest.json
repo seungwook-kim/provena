@@ -1,0 +1,445 @@
+{
+ "checked": 44,
+ "detected": 44,
+ "cases": [
+  {
+   "chunk_id": "34032311f59f0f48",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "159e4f13dc80e656",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "fb3ba634a8d30bda",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "24a485a6ba92892f",
+   "changed": "2 days -> 9 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "7cd641d28bcdfeb5",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "d23336c2bb0af64a",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "98f3fd335aae5cb7",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "c8367415ba48ad91",
+   "changed": "30 minutes -> 37 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "377c9fd1edb06d26",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "f8ad5739e3666b41",
+   "changed": "3 days -> 10 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "a28e2bc1ab86d482",
+   "changed": "2 business days -> 9 business days",
+   "detected": true
+  },
+  {
+   "chunk_id": "1e96e77a038841f2",
+   "changed": "2 business days -> 9 business days",
+   "detected": true
+  },
+  {
+   "chunk_id": "c3b5296636ea8c06",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "1760f9bd2b094dd5",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "b8f138d76e58138e",
+   "changed": "6 months -> 13 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "afbf8346bd662039",
+   "changed": "30 days -> 37 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "4de9926da327a146",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "0cbc62bd8d22eda8",
+   "changed": "30 days -> 37 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "7ad651dbe57bb485",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "cc7e86c9948b205d",
+   "changed": "5 working days -> 12 working days",
+   "detected": true
+  },
+  {
+   "chunk_id": "e92ff33755911829",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "8d1287e09ae75d03",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "46febe6f4a6ae0bc",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "931a9097b6def468",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "e426f23ef1c805be",
+   "changed": "12 characters -> 19 characters",
+   "detected": true
+  },
+  {
+   "chunk_id": "28f705901df4164f",
+   "changed": "12 characters -> 19 characters",
+   "detected": true
+  },
+  {
+   "chunk_id": "1f56e00edc2f2e1f",
+   "changed": "90 calendar days -> 97 calendar days",
+   "detected": true
+  },
+  {
+   "chunk_id": "349e97b509c1da3a",
+   "changed": "10 attempts -> 17 attempts",
+   "detected": true
+  },
+  {
+   "chunk_id": "ccfb6ebf411e08fb",
+   "changed": "$25k -> $32k",
+   "detected": true
+  },
+  {
+   "chunk_id": "2981c3e50443587a",
+   "changed": "$250K -> $257K",
+   "detected": true
+  },
+  {
+   "chunk_id": "74664b2724e87c96",
+   "changed": "60 days -> 67 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "5529f76ff65dffe4",
+   "changed": "$50  -> $57 ",
+   "detected": true
+  },
+  {
+   "chunk_id": "0455d5d3f3342461",
+   "changed": "90 days -> 97 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "09b3cf4eaec6798c",
+   "changed": "90 days -> 97 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "1625c847bacf5675",
+   "changed": "$100  -> $107 ",
+   "detected": true
+  },
+  {
+   "chunk_id": "65b354ed06c8e3ad",
+   "changed": "1-week -> 8-week",
+   "detected": true
+  },
+  {
+   "chunk_id": "6ae438193abc5b4f",
+   "changed": "1 year -> 8 year",
+   "detected": true
+  },
+  {
+   "chunk_id": "3b259d9d77bd1d56",
+   "changed": "3 years -> 10 years",
+   "detected": true
+  },
+  {
+   "chunk_id": "d4918e31a5b3c954",
+   "changed": "2 weeks -> 9 weeks",
+   "detected": true
+  },
+  {
+   "chunk_id": "8346358e1a239c03",
+   "changed": "4 hours -> 11 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "405d7236eab82379",
+   "changed": "1 Week -> 8 Week",
+   "detected": true
+  },
+  {
+   "chunk_id": "5ebbb861d33d404e",
+   "changed": "1 week -> 8 week",
+   "detected": true
+  },
+  {
+   "chunk_id": "eec6f89825ff7fc2",
+   "changed": "1 day -> 8 day",
+   "detected": true
+  },
+  {
+   "chunk_id": "0038ce8d57073dcf",
+   "changed": "5 days -> 12 days",
+   "detected": true
+  }
+ ],
+ "current_page_checked": 43,
+ "current_page_detected": 43,
+ "current_page_cases": [
+  {
+   "chunk_id": "34032311f59f0f48",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "159e4f13dc80e656",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "fb3ba634a8d30bda",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "24a485a6ba92892f",
+   "changed": "2 days -> 9 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "7cd641d28bcdfeb5",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "d23336c2bb0af64a",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "98f3fd335aae5cb7",
+   "changed": "15 minutes -> 22 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "c8367415ba48ad91",
+   "changed": "30 minutes -> 37 minutes",
+   "detected": true
+  },
+  {
+   "chunk_id": "377c9fd1edb06d26",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "f8ad5739e3666b41",
+   "changed": "3 days -> 10 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "a28e2bc1ab86d482",
+   "changed": "2 business days -> 9 business days",
+   "detected": true
+  },
+  {
+   "chunk_id": "1e96e77a038841f2",
+   "changed": "2 business days -> 9 business days",
+   "detected": true
+  },
+  {
+   "chunk_id": "c3b5296636ea8c06",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "1760f9bd2b094dd5",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "b8f138d76e58138e",
+   "changed": "6 months -> 13 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "afbf8346bd662039",
+   "changed": "30 days -> 37 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "4de9926da327a146",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "0cbc62bd8d22eda8",
+   "changed": "30 days -> 37 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "7ad651dbe57bb485",
+   "changed": "24 hours -> 31 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "cc7e86c9948b205d",
+   "changed": "5 working days -> 12 working days",
+   "detected": true
+  },
+  {
+   "chunk_id": "e92ff33755911829",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "8d1287e09ae75d03",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "46febe6f4a6ae0bc",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "931a9097b6def468",
+   "changed": "12 months -> 19 months",
+   "detected": true
+  },
+  {
+   "chunk_id": "e426f23ef1c805be",
+   "changed": "12 characters -> 19 characters",
+   "detected": true
+  },
+  {
+   "chunk_id": "28f705901df4164f",
+   "changed": "12 characters -> 19 characters",
+   "detected": true
+  },
+  {
+   "chunk_id": "1f56e00edc2f2e1f",
+   "changed": "90 calendar days -> 97 calendar days",
+   "detected": true
+  },
+  {
+   "chunk_id": "349e97b509c1da3a",
+   "changed": "10 attempts -> 17 attempts",
+   "detected": true
+  },
+  {
+   "chunk_id": "ccfb6ebf411e08fb",
+   "changed": "$25k -> $32k",
+   "detected": true
+  },
+  {
+   "chunk_id": "2981c3e50443587a",
+   "changed": "$250K -> $257K",
+   "detected": true
+  },
+  {
+   "chunk_id": "5529f76ff65dffe4",
+   "changed": "$50  -> $57 ",
+   "detected": true
+  },
+  {
+   "chunk_id": "0455d5d3f3342461",
+   "changed": "90 days -> 97 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "09b3cf4eaec6798c",
+   "changed": "90 days -> 97 days",
+   "detected": true
+  },
+  {
+   "chunk_id": "1625c847bacf5675",
+   "changed": "$100  -> $107 ",
+   "detected": true
+  },
+  {
+   "chunk_id": "65b354ed06c8e3ad",
+   "changed": "1-week -> 8-week",
+   "detected": true
+  },
+  {
+   "chunk_id": "6ae438193abc5b4f",
+   "changed": "1 year -> 8 year",
+   "detected": true
+  },
+  {
+   "chunk_id": "3b259d9d77bd1d56",
+   "changed": "3 years -> 10 years",
+   "detected": true
+  },
+  {
+   "chunk_id": "d4918e31a5b3c954",
+   "changed": "2 weeks -> 9 weeks",
+   "detected": true
+  },
+  {
+   "chunk_id": "8346358e1a239c03",
+   "changed": "4 hours -> 11 hours",
+   "detected": true
+  },
+  {
+   "chunk_id": "405d7236eab82379",
+   "changed": "1 Week -> 8 Week",
+   "detected": true
+  },
+  {
+   "chunk_id": "5ebbb861d33d404e",
+   "changed": "1 week -> 8 week",
+   "detected": true
+  },
+  {
+   "chunk_id": "eec6f89825ff7fc2",
+   "changed": "1 day -> 8 day",
+   "detected": true
+  },
+  {
+   "chunk_id": "0038ce8d57073dcf",
+   "changed": "5 days -> 12 days",
+   "detected": true
+  }
+ ]
+}

@@ -1,0 +1,2388 @@
+{
+ "summary": {
+  "chunks": 123,
+  "all_words_in_line_range": 101,
+  "extra_words_only_repeats_or_other_lines": 22,
+  "extra_words_all_table_chunks": true,
+  "chunks_with_words_not_in_page": 0
+ },
+ "rows": [
+  {
+   "chunk_id": "0038ce8d57073dcf",
+   "questions": [
+    "새 인용 305"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/development/sec/security-factory/code-scanning/_index.md",
+   "line_start": 104,
+   "line_end": 110,
+   "body_words": 89,
+   "words_over_line_range_count": 5,
+   "words_only_elsewhere_in_page": 3,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "weight": 4,
+    "days": 1
+   },
+   "elsewhere_examples": {
+    "reference": 3
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "0455d5d3f3342461",
+   "questions": [
+    "검증 101"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/expenses.md",
+   "line_start": 56,
+   "line_end": 57,
+   "body_words": 41,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "09641a703103bd26",
+   "questions": [
+    "검증 104"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/governance/phishing.md",
+   "line_start": 26,
+   "line_end": 26,
+   "body_words": 72,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "09b3cf4eaec6798c",
+   "questions": [
+    "검증 101"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/spending-company-money.md",
+   "line_start": 12,
+   "line_end": 14,
+   "body_words": 67,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "0acdc0bbc5942410",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/business-technology/enterprise-applications/guides/zip-guide/_index.md",
+   "line_start": 38,
+   "line_end": 43,
+   "body_words": 99,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "0cbc62bd8d22eda8",
+   "questions": [
+    "v1 13",
+    "v2 13"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/priority_prospects.md",
+   "line_start": 16,
+   "line_end": 32,
+   "body_words": 114,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "0cc12479bce827c3",
+   "questions": [
+    "v1 3",
+    "v2 3"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 75,
+   "line_end": 79,
+   "body_words": 34,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "133f8fdfd459e861",
+   "questions": [
+    "v2 35"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/ai/_index.md",
+   "line_start": 29,
+   "line_end": 34,
+   "body_words": 95,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1349310bf3d9c2f7",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 17,
+   "line_end": 17,
+   "body_words": 60,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "159e4f13dc80e656",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/devops/oncall/communication-and-culture.md",
+   "line_start": 170,
+   "line_end": 170,
+   "body_words": 20,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1625c847bacf5675",
+   "questions": [
+    "검증 102"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/accounts-payable/corp-credit-cards.md",
+   "line_start": 41,
+   "line_end": 50,
+   "body_words": 125,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1760f9bd2b094dd5",
+   "questions": [
+    "v1 9",
+    "v1 11",
+    "v2 9",
+    "v2 11"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/product-security/vulnerability-management/sla.md",
+   "line_start": 14,
+   "line_end": 23,
+   "body_words": 96,
+   "words_over_line_range_count": 2,
+   "words_only_elsewhere_in_page": 21,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "cvssv3": 2
+   },
+   "elsewhere_examples": {
+    "time": 6,
+    "to": 6,
+    "mitigate": 3,
+    "remediate": 3,
+    "ttr": 3
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "17997f24b5e563bd",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 59,
+   "line_end": 60,
+   "body_words": 76,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 4,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "question": 2,
+    "answer": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1bcdf8557f4f92c2",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 318,
+   "line_end": 318,
+   "body_words": 25,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1c6033e929e3640c",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 76,
+   "line_end": 82,
+   "body_words": 108,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1e96e77a038841f2",
+   "questions": [
+    "v1 8",
+    "v2 8"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/code-review.md",
+   "line_start": 583,
+   "line_end": 596,
+   "body_words": 129,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "1f56e00edc2f2e1f",
+   "questions": [
+    "v2 37"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/policies_and_standards/password-standard.md",
+   "line_start": 61,
+   "line_end": 64,
+   "body_words": 76,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "24a485a6ba92892f",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 113,
+   "line_end": 116,
+   "body_words": 137,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "258f74b290e56034",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 372,
+   "line_end": 376,
+   "body_words": 111,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "28f705901df4164f",
+   "questions": [
+    "v2 37"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/policies_and_standards/password-standard.md",
+   "line_start": 56,
+   "line_end": 60,
+   "body_words": 103,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "297784a4d33c8839",
+   "questions": [
+    "v1 14",
+    "v2 14"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/enterprise-data/data-governance/incident-management.md",
+   "line_start": 68,
+   "line_end": 71,
+   "body_words": 75,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "2981c3e50443587a",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/_index.md",
+   "line_start": 140,
+   "line_end": 145,
+   "body_words": 52,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "2c39c7dcf58fcc3d",
+   "questions": [
+    "검증 108"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/knowledge-base/knowledge-roles.md",
+   "line_start": 13,
+   "line_end": 20,
+   "body_words": 110,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "3069923da5795b3f",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 307,
+   "line_end": 316,
+   "body_words": 108,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "34032311f59f0f48",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/development/sec/oncall/communication-and-culture.md",
+   "line_start": 187,
+   "line_end": 187,
+   "body_words": 20,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "349e97b509c1da3a",
+   "questions": [
+    "v2 37"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/policies_and_standards/password-standard.md",
+   "line_start": 65,
+   "line_end": 67,
+   "body_words": 71,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "35792cd8fb054365",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 117,
+   "line_end": 118,
+   "body_words": 34,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "374c0d332ab0abff",
+   "questions": [
+    "검증 103"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/policies_and_standards/physical-security-standard-for-company-assets.md",
+   "line_start": 62,
+   "line_end": 69,
+   "body_words": 89,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "377c9fd1edb06d26",
+   "questions": [
+    "v1 6",
+    "v2 6"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/testing/flaky-tests/_index.md",
+   "line_start": 79,
+   "line_end": 83,
+   "body_words": 80,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "3a83faadedf82302",
+   "questions": [
+    "v1 4",
+    "v2 4"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 57,
+   "line_end": 58,
+   "body_words": 109,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "3b259d9d77bd1d56",
+   "questions": [
+    "검증 105"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/policies_and_standards/records-retention-deletion.md",
+   "line_start": 57,
+   "line_end": 62,
+   "body_words": 83,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 30,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "requirement": 12,
+    "record": 6,
+    "retention": 6,
+    "disposal": 6
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "405d7236eab82379",
+   "questions": [
+    "새 인용 302"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/enterprise-data/how-we-work/planning/index.md",
+   "line_start": 60,
+   "line_end": 63,
+   "body_words": 90,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 32,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "size": 4,
+    "dedicated": 4,
+    "person": 4,
+    "time": 4,
+    "weight": 4,
+    "issue": 4
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "42fb803d03f8e8fc",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 10,
+   "line_end": 15,
+   "body_words": 76,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "466343fe561e453b",
+   "questions": [
+    "v2 31"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/root-cause-analysis.md",
+   "line_start": 41,
+   "line_end": 41,
+   "body_words": 21,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "46febe6f4a6ae0bc",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 353,
+   "line_end": 359,
+   "body_words": 112,
+   "words_over_line_range_count": 1,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "window": 1
+   },
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "4de9926da327a146",
+   "questions": [
+    "v1 11",
+    "v2 11"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-observations-risk-management.md",
+   "line_start": 148,
+   "line_end": 149,
+   "body_words": 67,
+   "words_over_line_range_count": 1,
+   "words_only_elsewhere_in_page": 12,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "notification": 1
+   },
+   "elsewhere_examples": {
+    "label": 2,
+    "criteria": 2,
+    "target": 2,
+    "resolution": 2,
+    "equivalent": 2,
+    "mappings": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "50e518b9a6f0091a",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 99,
+   "line_end": 99,
+   "body_words": 16,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "545c9b4c93c12ebe",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 142,
+   "line_end": 146,
+   "body_words": 138,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "5529f76ff65dffe4",
+   "questions": [
+    "검증 101"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/expenses.md",
+   "line_start": 53,
+   "line_end": 55,
+   "body_words": 108,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "556f4a5aac4c4c31",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 368,
+   "line_end": 371,
+   "body_words": 121,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "56c85d4c6a5d0beb",
+   "questions": [
+    "v2 34"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 90,
+   "line_end": 97,
+   "body_words": 63,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "57e141b336fd3aa7",
+   "questions": [
+    "v1 4",
+    "v2 4"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 66,
+   "line_end": 70,
+   "body_words": 52,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "5ebbb861d33d404e",
+   "questions": [
+    "새 인용 303"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/ai/duo-chat/_index.md",
+   "line_start": 170,
+   "line_end": 172,
+   "body_words": 83,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 18,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "priority": 3,
+    "typically": 3,
+    "used": 3,
+    "for": 3,
+    "expected": 3,
+    "resolution": 3
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "5fff43a9dd7762b5",
+   "questions": [
+    "v2 35"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/ai/_index.md",
+   "line_start": 35,
+   "line_end": 41,
+   "body_words": 118,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 6,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "label": 3,
+    "meaning": 3
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "606edcfe1ad39912",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 139,
+   "line_end": 141,
+   "body_words": 56,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "65b354ed06c8e3ad",
+   "questions": [
+    "검증 104"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/governance/phishing.md",
+   "line_start": 109,
+   "line_end": 115,
+   "body_words": 116,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "688a20f47638813c",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 159,
+   "line_end": 164,
+   "body_words": 99,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "68b56195b2b85fb9",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 82,
+   "line_end": 84,
+   "body_words": 119,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "6a3b20f538fd3649",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 35,
+   "line_end": 43,
+   "body_words": 125,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "6ae438193abc5b4f",
+   "questions": [
+    "검증 105"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/policies_and_standards/records-retention-deletion.md",
+   "line_start": 39,
+   "line_end": 44,
+   "body_words": 94,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 30,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "requirement": 12,
+    "record": 6,
+    "retention": 6,
+    "disposal": 6
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "71546862abfa5085",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 57,
+   "line_end": 58,
+   "body_words": 79,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 4,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "question": 2,
+    "answer": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "7275b0b9f027798b",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/business-technology/enterprise-applications/guides/zip-guide/_index.md",
+   "line_start": 111,
+   "line_end": 111,
+   "body_words": 46,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "7373a0cc7191a2aa",
+   "questions": [
+    "v2 34"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 123,
+   "line_end": 128,
+   "body_words": 68,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "74664b2724e87c96",
+   "questions": [
+    "v2 40"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "authz/authorization-matrix-2023-05.html.md",
+   "line_start": 559,
+   "line_end": 559,
+   "body_words": 119,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "78621d46c7424c88",
+   "questions": [
+    "v1 7",
+    "v2 7"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/development/required-approvals.md",
+   "line_start": 11,
+   "line_end": 18,
+   "body_words": 90,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "798ec69846322c4e",
+   "questions": [
+    "검증 110"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/tools-and-tips/other-apps.md",
+   "line_start": 43,
+   "line_end": 45,
+   "body_words": 56,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "7ad651dbe57bb485",
+   "questions": [
+    "v1 13",
+    "v2 13"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/priority_prospects.md",
+   "line_start": 33,
+   "line_end": 40,
+   "body_words": 58,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "7cd641d28bcdfeb5",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 190,
+   "line_end": 198,
+   "body_words": 93,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "81553ffe7ab8e2b8",
+   "questions": [
+    "v2 34"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 98,
+   "line_end": 122,
+   "body_words": 103,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "81a0bb5a1fd16abd",
+   "questions": [
+    "검증 110"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/tools-and-tips/other-apps.md",
+   "line_start": 21,
+   "line_end": 28,
+   "body_words": 124,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "8346358e1a239c03",
+   "questions": [
+    "새 인용 301"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/support/data-analysis.md",
+   "line_start": 66,
+   "line_end": 70,
+   "body_words": 120,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 60,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "local": 10,
+    "start": 10,
+    "end": 10,
+    "utc": 10,
+    "region": 5,
+    "anchor": 5
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "845dd723260c289e",
+   "questions": [
+    "검증 108"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/knowledge-base/kb-faq.md",
+   "line_start": 41,
+   "line_end": 49,
+   "body_words": 55,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "85970f95b1996c8d",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 378,
+   "line_end": 378,
+   "body_words": 80,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "85c981d5878397d2",
+   "questions": [
+    "v1 5",
+    "v2 5"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/_index.md",
+   "line_start": 102,
+   "line_end": 110,
+   "body_words": 118,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "8a04d3a1b05112fe",
+   "questions": [
+    "v1 5",
+    "v2 5"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/_index.md",
+   "line_start": 112,
+   "line_end": 112,
+   "body_words": 21,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "8a59fedaa6acd8e3",
+   "questions": [
+    "v2 40"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "authz/authorization-matrix-2023-05.html.md",
+   "line_start": 559,
+   "line_end": 559,
+   "body_words": 26,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "8d1287e09ae75d03",
+   "questions": [
+    "v2 36",
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 64,
+   "line_end": 69,
+   "body_words": 110,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "9096a5b57bfdd026",
+   "questions": [
+    "v1 12",
+    "v2 12"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/business-technology/enterprise-applications/entapps-crm/finsys-access-requests.md",
+   "line_start": 38,
+   "line_end": 42,
+   "body_words": 35,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "92b237219ea249df",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 113,
+   "line_end": 116,
+   "body_words": 12,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "931a9097b6def468",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 360,
+   "line_end": 364,
+   "body_words": 87,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 3,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "system": 1,
+    "approval": 1,
+    "window": 1
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "95301b7ac46e267c",
+   "questions": [
+    "검증 108"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/support/knowledge-base/kb-faq.md",
+   "line_start": 55,
+   "line_end": 58,
+   "body_words": 89,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 8,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "feature": 4,
+    "notes": 4
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "984967e06e6236f6",
+   "questions": [
+    "v1 3",
+    "v2 3"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 69,
+   "line_end": 71,
+   "body_words": 47,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "98c79d67ffeaad00",
+   "questions": [
+    "검증 107"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/fast-boot.md",
+   "line_start": 38,
+   "line_end": 41,
+   "body_words": 36,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "98f3fd335aae5cb7",
+   "questions": [
+    "v1 4",
+    "v2 4"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 44,
+   "line_end": 56,
+   "body_words": 82,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "9959baf3c8f4f4dd",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 111,
+   "line_end": 112,
+   "body_words": 39,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "9fb825ed83c31843",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 109,
+   "line_end": 110,
+   "body_words": 115,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "a28e2bc1ab86d482",
+   "questions": [
+    "v1 8",
+    "v2 8"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/code-review.md",
+   "line_start": 572,
+   "line_end": 582,
+   "body_words": 67,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "a52b92e341c32575",
+   "questions": [
+    "v1 14",
+    "v2 14"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/enterprise-data/data-governance/incident-management.md",
+   "line_start": 58,
+   "line_end": 67,
+   "body_words": 87,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "ab3bfbc2de540cad",
+   "questions": [
+    "v1 8",
+    "v2 8"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/code-review.md",
+   "line_start": 598,
+   "line_end": 600,
+   "body_words": 27,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "afbf8346bd662039",
+   "questions": [
+    "v1 11",
+    "v2 11"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-observations-risk-management.md",
+   "line_start": 146,
+   "line_end": 147,
+   "body_words": 78,
+   "words_over_line_range_count": 1,
+   "words_only_elsewhere_in_page": 12,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "notification": 1
+   },
+   "elsewhere_examples": {
+    "label": 2,
+    "criteria": 2,
+    "target": 2,
+    "resolution": 2,
+    "equivalent": 2,
+    "mappings": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "b1a95b12e63bb289",
+   "questions": [
+    "검증 104"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/governance/phishing.md",
+   "line_start": 48,
+   "line_end": 48,
+   "body_words": 92,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "b579ee5fefd307d2",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 31,
+   "line_end": 31,
+   "body_words": 13,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "b8f138d76e58138e",
+   "questions": [
+    "v1 10",
+    "v2 10"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-compliance/access-reviews.md",
+   "line_start": 78,
+   "line_end": 81,
+   "body_words": 61,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 24,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "review": 8,
+    "system": 4,
+    "type": 4,
+    "frequency": 4,
+    "scope": 4
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "bb5eee21805e7c1b",
+   "questions": [
+    "검증 106"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/support/training/onboarding_buddy.md",
+   "line_start": 28,
+   "line_end": 31,
+   "body_words": 95,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 5,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "task": 4,
+    "estimated": 1
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "bc6af7e4fdfb5a63",
+   "questions": [
+    "검증 109"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/enterprise-data/platform/sql-style-guide.md",
+   "line_start": 300,
+   "line_end": 336,
+   "body_words": 108,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "bd7843b719cf9ef8",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 152,
+   "line_end": 158,
+   "body_words": 78,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "be4371acb58882e4",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 50,
+   "line_end": 57,
+   "body_words": 88,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "be9b291af45f9d5b",
+   "questions": [
+    "v1 5",
+    "v2 5"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/_index.md",
+   "line_start": 99,
+   "line_end": 101,
+   "body_words": 71,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "bf31f2661c6cdfdf",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 380,
+   "line_end": 380,
+   "body_words": 58,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c07479ec82f10149",
+   "questions": [
+    "v2 34"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 98,
+   "line_end": 122,
+   "body_words": 91,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c0b70df826324df3",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 211,
+   "line_end": 213,
+   "body_words": 81,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c0ed951b47fd9544",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 152,
+   "line_end": 158,
+   "body_words": 70,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c3b5296636ea8c06",
+   "questions": [
+    "v1 9",
+    "v1 11",
+    "v2 9",
+    "v2 11"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/product-security/vulnerability-management/sla.md",
+   "line_start": 9,
+   "line_end": 13,
+   "body_words": 102,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c5001e2f7e7f5c52",
+   "questions": [
+    "v2 32"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 300,
+   "line_end": 303,
+   "body_words": 105,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c7816d5decaeecba",
+   "questions": [
+    "v1 5",
+    "v2 5"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/workflow/_index.md",
+   "line_start": 91,
+   "line_end": 98,
+   "body_words": 137,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "c8367415ba48ad91",
+   "questions": [
+    "v1 4",
+    "v2 4"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 59,
+   "line_end": 60,
+   "body_words": 84,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "ca5a4662e0eab722",
+   "questions": [
+    "검증 109"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/enterprise-data/platform/sql-style-guide.md",
+   "line_start": 337,
+   "line_end": 341,
+   "body_words": 73,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "cb4d50afbf0db572",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 73,
+   "line_end": 74,
+   "body_words": 82,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "cb53c1982c77310e",
+   "questions": [
+    "v2 35"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/ai/_index.md",
+   "line_start": 42,
+   "line_end": 45,
+   "body_words": 67,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "cb99f52f7a78e20c",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 44,
+   "line_end": 46,
+   "body_words": 32,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "cc7e86c9948b205d",
+   "questions": [
+    "v2 31"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-review/_index.md",
+   "line_start": 149,
+   "line_end": 149,
+   "body_words": 54,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "ccfb6ebf411e08fb",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/_index.md",
+   "line_start": 126,
+   "line_end": 139,
+   "body_words": 115,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "cf6369672f7a4846",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 152,
+   "line_end": 158,
+   "body_words": 68,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d14967065c66b93e",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 83,
+   "line_end": 97,
+   "body_words": 116,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d23336c2bb0af64a",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 199,
+   "line_end": 208,
+   "body_words": 102,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d25f9f93aad4ca80",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/business-technology/enterprise-applications/guides/zip-guide/_index.md",
+   "line_start": 44,
+   "line_end": 51,
+   "body_words": 56,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d27e11d7c4c1bce5",
+   "questions": [
+    "v1 9",
+    "v1 11",
+    "v2 9",
+    "v2 11"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/product-security/vulnerability-management/sla.md",
+   "line_start": 24,
+   "line_end": 24,
+   "body_words": 41,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d4918e31a5b3c954",
+   "questions": [
+    "검증 106"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/training/onboarding_buddy.md",
+   "line_start": 16,
+   "line_end": 19,
+   "body_words": 104,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d4b6bace55908456",
+   "questions": [
+    "검증 103"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/travel/_index.md",
+   "line_start": 21,
+   "line_end": 21,
+   "body_words": 93,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d55fdad5821a802f",
+   "questions": [
+    "v1 3",
+    "v2 3"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/releases/monthly-releases/index.md",
+   "line_start": 87,
+   "line_end": 89,
+   "body_words": 32,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 6,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "step": 3,
+    "purpose": 3
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "d96029d78f460b1a",
+   "questions": [
+    "v2 36",
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 70,
+   "line_end": 72,
+   "body_words": 49,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "e2cd1fa67aea0163",
+   "questions": [
+    "v2 39"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/support/workflows/2fa-removal.md",
+   "line_start": 179,
+   "line_end": 188,
+   "body_words": 92,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "e3795a70819996a4",
+   "questions": [
+    "v2 38"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/finance/procurement/tips-for-submitting-a-zip-request.md",
+   "line_start": 147,
+   "line_end": 151,
+   "body_words": 83,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "e426f23ef1c805be",
+   "questions": [
+    "v2 37"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/security/policies_and_standards/password-standard.md",
+   "line_start": 36,
+   "line_end": 42,
+   "body_words": 57,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "e5068fd933fbbb2d",
+   "questions": [
+    "v1 4",
+    "v2 4"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/deployments-and-releases/deployments/index.md",
+   "line_start": 61,
+   "line_end": 65,
+   "body_words": 96,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "e92ff33755911829",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 55,
+   "line_end": 56,
+   "body_words": 106,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 4,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "question": 2,
+    "answer": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "eb716842d2574546",
+   "questions": [
+    "v2 36"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "line_start": 53,
+   "line_end": 54,
+   "body_words": 74,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 4,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "question": 2,
+    "answer": 2
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "ece9c56501261bbd",
+   "questions": [
+    "v1 2",
+    "v2 2"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "line_start": 215,
+   "line_end": 231,
+   "body_words": 58,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "ee6b973c265fabc1",
+   "questions": [
+    "v2 33"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/releases/patch-releases/index.md",
+   "line_start": 86,
+   "line_end": 86,
+   "body_words": 19,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "eec6f89825ff7fc2",
+   "questions": [
+    "새 인용 304"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/security/product-security/infrastructure-security/metrics/capacity.md",
+   "line_start": 50,
+   "line_end": 53,
+   "body_words": 87,
+   "words_over_line_range_count": 3,
+   "words_only_elsewhere_in_page": 20,
+   "words_not_in_page": 0,
+   "count_only_examples": {
+    "label": 3
+   },
+   "elsewhere_examples": {
+    "weight": 4,
+    "classification": 4,
+    "description": 4,
+    "estimation": 4,
+    "guide": 4
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "f8ad5739e3666b41",
+   "questions": [
+    "v1 6",
+    "v2 6"
+   ],
+   "kind": "article",
+   "table": true,
+   "page": "handbook/engineering/testing/quarantine-process.md",
+   "line_start": 100,
+   "line_end": 103,
+   "body_words": 51,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 16,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {
+    "phase": 4,
+    "duration": 4,
+    "action": 4,
+    "required": 4
+   },
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "fa4c75698c139086",
+   "questions": [
+    "v1 15",
+    "v2 15"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "authz/authorization-matrix-2023-05.html.md",
+   "line_start": 522,
+   "line_end": 524,
+   "body_words": 28,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  },
+  {
+   "chunk_id": "fb3ba634a8d30bda",
+   "questions": [
+    "v1 1",
+    "v2 1"
+   ],
+   "kind": "article",
+   "table": false,
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/on-call/_index.md",
+   "line_start": 98,
+   "line_end": 100,
+   "body_words": 111,
+   "words_over_line_range_count": 0,
+   "words_only_elsewhere_in_page": 0,
+   "words_not_in_page": 0,
+   "count_only_examples": {},
+   "elsewhere_examples": {},
+   "absent_examples": {}
+  }
+ ]
+}
