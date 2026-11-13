@@ -105,13 +105,13 @@
 |---|---|---|---|---|
 | 파서 엔진 | 원문 HTML이 깨진 Trust and Safety 표(팀원 5명)에서 Python 기본 엔진(`html.parser`)은 4명을 한 행으로 뭉쳤고 `lxml`은 5명 5행 | 원문 대조로 발견, PRD 9장대로 `lxml`로 바꿈 | 바꾼 뒤 불일치는 없으나 사람 대조 전 | `EVAL_REPORT.md:27` |
 | 본문 없는 문서 | 문서 1,565건 중 청크가 없는 문서 53건(본문 없음 50건, 다른 쪽으로 넘김 3건). 원문 길이는 모두 1,117자 이하 | `data/manifest.jsonl`의 `skipped`로 공개 | 이 53건은 질문에 답할 수 없음 | `EVAL_REPORT.md:12` |
-| 원문 금액 구간 겹침 | 2023 권한표 'Non Billable Expenses'의 구간 끝이 비어 있음(I-004). 파서 오류가 아니라 원문 문제 | 다음 구간 시작($50K)을 끝으로 보고 답하며 답에 "구간 끝이 비어 있다"는 주의를 붙이기로 결정 | 원문 자체의 한계 | `EVAL_REPORT.md:26`, `docs/decisions.md:79` |
-| 정시 증분 수집 | 정시 실행 3건(2026-11-03~04)이 모두 "증분 수집 한 번" 단계에서 실패. 원인은 비밀값 미등록으로 **추정**(작업 로그를 읽지 못함). 11/11 Actions 실행 20건은 러너가 뜨지 않음 | 11/12 로컬 새 DB에서 `--once` 1회가 `status=succeeded`(고정 커밋 129243bc에서 d92556d4로). 운영 DB·Actions는 건드리지 않음 | workflow는 `disabled_manually` 상태이고 정시 실행의 성공 기록은 없음 | `docs/specs/incremental.md:111~113` |
+| 원문 금액 구간 겹침 | 2023 권한표 'Non Billable Expenses'의 구간 끝이 비어 있음(I-004). 파서 오류가 아니라 원문 문제 | 다음 구간 시작($50K)을 끝으로 보고 답하며 답에 "구간 끝이 비어 있다"는 주의를 붙이기로 결정 | 원문 자체의 한계 | `EVAL_REPORT.md:26`, `docs/decisions.md`의 I-004 결정(2026-10-30) |
+| 정시 증분 수집 | 정시 실행 3건(2026-11-03~04)이 모두 "증분 수집 한 번" 단계에서 실패. 원인은 비밀값 미등록으로 **추정**(작업 로그를 읽지 못함). 11/11 Actions 실행 20건은 러너가 뜨지 않음 | 11/12 로컬 새 DB에서 `--once` 1회가 `status=succeeded`(고정 커밋 129243bc에서 d92556d4로). 운영 DB·Actions는 건드리지 않음 | workflow는 `disabled_manually` 상태이고 정시 실행의 성공 기록은 없음 | `docs/specs/incremental.md`의 "재임베딩 단위와 실행 기록의 현재 상태" 표(성공 실행 기록·실패 원인 행)와 "실행 기록의 현재 상태" 항목 |
 | PDF | 핸드북이 링크하는 PDF 7건은 평가 색인 범위 밖이다. 저장소의 검색 색인(`data/chunks_index.jsonl`)에 PDF 청크는 0건이다(2026-11-13 실측 `grep -c '"pdf'`), 보고서의 색인 23,095청크도 Markdown 파싱 결과다. 서비스 색인 적재는 임베딩 모델 확정 뒤로 정해 두었다 | Docling(OCR 끔) 파싱 Spec만 있다 | 운영 DB에 PDF가 들어 있는지는 보지 않았다 | `EVAL_REPORT.md:13`, `EVAL_REPORT.md:16`, `docs/specs/parse.md:90`, `docs/specs/parse.md:122` |
 | 검색 지연 | 무료 등급 Nano에서 전수 비교 벡터 질의가 SPEC 검색 p95 3초를 넘음 | 한계로 보고서에 기록 | 한계로 남음 | `EVAL_REPORT.md:16` |
-| 문서 권한 | 검색 전에 권한으로 거르는 기능(F-06)은 만들지 않음. 코퍼스 `acl`은 전부 비어 있음 | 2026-11-11 진형 결정: 검색 결과와 평가 점수가 바뀌므로 동결 전에는 만들지 않음 | 그룹이 붙은 청크가 생기면 거르지 못함 | `docs/SDD.md:235` |
+| 문서 권한 | 검색 전에 권한으로 거르는 기능(F-06)은 만들지 않음. 코퍼스 `acl`은 전부 비어 있음 | 2026-11-11 진형 결정: 검색 결과와 평가 점수가 바뀌므로 동결 전에는 만들지 않음 | 그룹이 붙은 청크가 생기면 거르지 못함 | `docs/SDD.md`의 "문서 권한(F-06)" 항목 |
 
-정시 증분 수집 workflow는 꺼 둔 상태이고(`docs/specs/incremental.md:111`의 `disabled_manually`), 동결 뒤에도 비활성을 유지하자는 제안은 조장 승인 대기다(`docs/pr-notes/PR-135.md:25`, `docs/pr-notes/PR-135.md:326`). GitHub 설정의 오늘 상태는 다시 보지 않았다. MCP 서버는 실패 상태값(`invalid`, `unavailable` 등)을 설계로 정해 두었으나(`docs/specs/mcp.md:46~47`) 실제로 몇 번 나왔는지는 재지 않았다.
+정시 증분 수집 workflow는 꺼 둔 상태이고(`docs/specs/incremental.md` "켜고 첫 실행" 항목의 `disabled_manually`), 동결 뒤에도 비활성을 유지하자는 제안은 조장 승인 대기다(`docs/pr-notes/PR-135.md:25`, `docs/pr-notes/PR-135.md:326`). GitHub 설정의 오늘 상태는 다시 보지 않았다. MCP 서버는 실패 상태값(`invalid`, `unavailable` 등)을 설계로 정해 두었으나(`docs/specs/mcp.md:46~47`) 실제로 몇 번 나왔는지는 재지 않았다.
 
 ## 3. 원인을 어떻게 찾았나
 

@@ -41,7 +41,7 @@
   2. 고친다: 수집기를 다시 돌린다(`python -m backend.rag.ingest.handbook`, `history`). 수집기가 `pages.jsonl`의 쪽별 sha256과 `collect_manifest.json`의 `corpus_id`를 새로 적는다. 원문 파일을 손으로만 고치면 sha256이 맞지 않아 다음 단계에서 멈춘다(바뀐 원문이 모르게 들어가지 않게 하려는 의도)
   3. 다시 압축한다: `python -m backend.rag.ingest.snapshot pack` (sha256을 확인한 뒤 `data/corpus.tar.gz`를 새로 만든다. 같은 원문이면 같은 파일이 나와 diff가 없다)
   4. 파싱·청킹·manifest를 다시 돌리고 `data/corpus.tar.gz`, `manifest.jsonl`, `chunks_index.jsonl`을 같은 PR로 커밋한다. 아래 작업 기록에 한 줄 남긴다
-- 평가셋 동결(11/3) 뒤에 원문이 바뀌어 정답이 달라진 문항은 평가셋을 고치지 않고 `evals/exclusions.json`에 적는다(`docs/PRD.md` 341행).
+- 평가셋 동결(11/3) 뒤에 원문이 바뀌어 정답이 달라진 문항은 평가셋을 고치지 않고 `evals/exclusions.json`에 적는다(`docs/PRD.md` 10장 평가 계획, 동결 뒤 정답이 달라진 문항 항목).
 
 ## 검색 색인 스냅샷 쓰는 법
 
@@ -58,6 +58,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | 팀장 커밋 515acc3d(표 행 겹침 상한 400자, 결정 0115)가 `data/manifest.jsonl`·`data/chunks_index.jsonl`을 바꾼 것을 기록. `data/index.tar.gz`의 `chunks.jsonl`(옛 색인)과 지금 `chunks_index.jsonl`을 chunk_id로 대조(Python `tarfile`)하면 23,095개 중 37개가 달라졌다(옛 쪽에만 37, 새 쪽에만 37). 청크 수와 서로 다른 본문 수는 그대로다. 겹침만 바뀌어 id가 그대로인 청크는 이 대조에 안 잡히며(커밋 메시지는 바뀐 청크 762개 = id 유지 725 + 새 id 37이라 적었다, 725는 여기서 재지 않았다) `index.tar.gz`는 그 커밋에서 바뀌지 않았다. 코드·데이터 변경 없음, 문서만 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | S-08: PDF 절에 알려진 한계 기록(PDF 7건이 검색 색인에 없음, 실측 4곳 0건, 이유는 라이선스 근거 부족·적재 미룸). 제목과 "현재 색인 대상" 문구를 "현재 파싱 대상"으로 정정. 코드·데이터 변경 없음 | 미정 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `data/demo_replay/questions.txt`(녹화한 데모 질문 9개) 추가, `recorded.jsonl`을 최종 판정·분류·인용 수정 뒤로 다시 녹화(커밋 3c9a1ad, a03ac9f) | #119 |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | 고정 커밋 `static/pdfs/`의 PDF 7건을 `data/pdf/`에 받아 두고(고정 커밋 원본과 sha256·git blob id 대조) Docling(OCR 끔)으로 파싱·청킹하는 `backend/rag/ingest/pdf.py`를 추가함. 산출물은 평가 색인과 분리(`pdf_ir.jsonl` 요소 800개, `pdf_chunks.jsonl` 청크 205개). `chunks.jsonl`·`manifest.jsonl`·`chunks_index.jsonl` 해시 변동 없음, 임베딩·DB 적재는 하지 않음 | |

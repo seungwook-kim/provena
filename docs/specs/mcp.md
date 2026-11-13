@@ -2,15 +2,15 @@
 
 > 2026-11-06: 팀장 결정(결정 0062)으로 저장된 답의 근거 판정 기록(`get_grounding`) 도구 1개를 더했다(아래 "도구 6" 절). 도구 수가 강의 실습 목표(워크플로 도구 3~5개, AI Agent 4. MCP_Server 03강·07강)를 하나 넘는다(열린 항목 10). 다른 도구 5개의 약속은 그대로다.
 > 2026-11-05: 조장 요청으로 결정표 실행 결과(`explain_decision`)·체크포인트 실행 단계(`get_agent_trace`) 도구 2개를 더했다(아래 "도구 4·5" 절). 검색 도구 3개의 약속은 그대로다.
-> 2026-11-03판(구현과 같이 고침, 조장 확인 전, 당시 검색 도구 3개 기준이며 현재 도구는 6개). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 486줄(시험), 501줄(섹션 조회), 529줄(같은 서비스)과 PRD 319줄(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
+> 2026-11-03판(구현과 같이 고침, 조장 확인 전, 당시 검색 도구 3개 기준이며 현재 도구는 6개). SDD 2-3절(도구 3개·쓰기 금지·`SEARCH_VIA_MCP`·토큰·Langfuse), 10장 "MCP 경로 결과 일치"(시험), 11-1 결정 3-4(섹션 조회), 11-3 "MCP 서버 위치"(같은 서비스)와 PRD 9장 기술 구성의 mcp 행(`fastmcp` 4.x)을 따른다. 설계 근거와 강의 출처는 박진형 설계안(개인 공부 폴더)에 있고, 여기에는 팀이 지킬 약속만 적는다. 기본값으로 정한 곳은 "(기본값, 리뷰에서 확인)"으로 표시했다.
 
 ## Why
 
 - **페르소나**: 질문·리콜 그래프(김승욱), 그리고 "RAG 검색을 FastMCP 서버로 노출하고 에이전트가 MCP 클라이언트로 호출하는지"를 확인하는 평가자(가이드 p.20)
-- **상황**: 검색(`search()`)·증분 수집(`changed_articles`)은 머지됐지만 서버 안 파이썬 함수로만 부를 수 있다. 리콜은 "같은 섹션의 개정 전후 원문"이 필요한데(SDD 501줄 3-4) 섹션 하나를 통째로 돌려주는 함수가 없다.
+- **상황**: 검색(`search()`)·증분 수집(`changed_articles`)은 머지됐지만 서버 안 파이썬 함수로만 부를 수 있다. 리콜은 "같은 섹션의 개정 전후 원문"이 필요한데(SDD 11-1 결정 3-4) 섹션 하나를 통째로 돌려주는 함수가 없다.
 - **문제**:
   1. 바깥 클라이언트(에이전트, Claude Code 같은 IDE)가 우리 검색을 표준 방식으로 부를 길이 없다. 가산 MCP·Skill의 인정 조건이다.
-  2. DB 청크 글은 `머리말 + 앞 청크 끝 겹침(최대 120자) + 본문`이라(`chunk.py:95`) 그대로 이으면 겹친 글이 두 번 나온다. 섹션 원문을 되살리는 규칙이 정해져 있지 않다.
+  2. DB 청크 글은 `머리말 + 앞 청크 끝 겹침 + 본문`이다(`chunk.make_chunk`). 겹침은 일반 글이면 최대 120자, 표 행 안에서 시작하면 그 행 처음부터 최대 400자다(`chunk.overlap_for`, `ROW_TAIL_MAX`). 그래서 그대로 이으면 겹친 글이 두 번 나온다. 섹션 원문을 되살리는 규칙이 정해져 있지 않다.
   3. 글만 돌려주는 도구는 "못 찾음"·"고장"을 그럴듯한 문장으로 감춘다. 에이전트가 다음 행동을 고를 상태값이 필요하다.
 - **측정 지표**: MCP 경로와 직접 호출의 결과 일치(평가셋 v1 30문항, chunk_id 순서까지), `get_section` 원문 대조 일치 수(3건 이상), MCP 경로가 더하는 지연(p50·p95), 출력에 비공개 주소가 나온 수(0)
 
@@ -24,8 +24,8 @@
   - `list_changed_sections`를 불러도 `changed_articles`가 바뀌지 않는다(호출 전후 표 지문이 같음).
   - 빈 결과·틀린 입력·DB 끊김을 각각 다른 `status`로 돌려준다.
   - `MCP_TOKEN`이 비어 있으면 `/mcp`가 열리지 않고, 토큰 없이 부르면 401.
-  - 외부 MCP 클라이언트 하나(Claude Code)에서 `search_handbook` 결과가 나온다(SDD 486줄, 시연 영상용).
-- **Out of Scope**: 그래프 쪽 MCP 클라이언트와 `SEARCH_VIA_MCP` 스위치(김승욱, SDD 78줄), 런타임 Skill과 Skill 유무 점수 비교(김승욱), 운영용 OAuth, MCP resource·prompt, 인젝션 시험(D7 인젝션 시험 문서에서)
+  - 외부 MCP 클라이언트 하나(Claude Code)에서 `search_handbook` 결과가 나온다(SDD 10장 "MCP 경로 결과 일치", 시연 영상용).
+- **Out of Scope**: 그래프 쪽 MCP 클라이언트와 `SEARCH_VIA_MCP` 스위치(김승욱, SDD 2-3절), 런타임 Skill과 Skill 유무 점수 비교(김승욱), 운영용 OAuth, MCP resource·prompt, 인젝션 시험(D7 인젝션 시험 문서에서)
 
 ## What
 
@@ -53,10 +53,10 @@
 | EC-08 | `as_of`가 가장 이른 판보다 앞 | `not_found`(그날 판 없음). 가장 가까운 판으로 바꾸지 않는다 |
 | EC-09 | 토큰 없음·틀림·URL 쿼리로 보냄 | 401. 쿼리 토큰은 받지 않는다 |
 | EC-10 | `MCP_TOKEN` 빈 값 | `/mcp`를 붙이지 않는다(정적 파일 쪽으로 넘어가 404·405). 앱의 나머지는 그대로 뜬다 |
-| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 권한표 칸만 "비공개"로 바꾼다(`parse.py:149`). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 76줄). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
+| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 권한표 칸만 "비공개"로 바꾼다(`parse.private_cell`이 판정하고 `parse.table_rows`가 바꾼다). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 2-3절·9장). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
 | EC-12 | 검색이 번역 실패 등으로 내려감 | `status=ok` + `note`에 `fallback_reason` |
 | EC-13 | 쪽 통째 삭제(새 판 없음) | `changed_articles.new_version_date`가 빈 칸이다(`diff.py`). `since`와 비교할 날짜는 그 줄을 적은 날(`created_at`, UTC)로 본다. 안 그러면 사라진 쪽이 목록에 영영 안 나온다 |
-| EC-14 | 긴 요소 하나가 청크 둘 이상으로 쪼개진 섹션 | 조각 경계에 줄바꿈이 하나 더 들어간다(글자는 같고 공백만 다름). DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없다. 스냅샷 15,901섹션 중 438개, 나머지 15,463개는 파싱 결과와 글자까지 같다 |
+| EC-14 | 긴 요소 하나가 청크 둘 이상으로 쪼개진 섹션 | 조각 경계에 줄바꿈이 하나 더 들어간다(글자는 같고 공백만 다름). DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없다. 스냅샷 15,901섹션 중 438개, 나머지 15,463개는 파싱 결과와 글자까지 같다(515acc3d 이전 기준, 표 행 겹침을 400자까지 바꾼 뒤에는 다시 세지 않았다) |
 
 ## How
 
@@ -79,13 +79,13 @@
 
 | 함수 | 파일 | 하는 일 |
 |---|---|---|
-| `get_section(rule_seq, article, as_of=None) -> Section \| None` | `backend/rag/retrieve/section.py` | 판 고르기는 search와 같다: `as_of` 없으면 `valid_to IS NULL`, 있으면 `valid_from <= as_of < valid_to`. 그 판의 `(rule_seq, article)` 청크를 `seq` 순서로 읽고, 청크마다 머리말 줄을 떼고, 앞 청크 본문으로 `chunk.overlap_tail(prev, 120)`을 다시 계산해 뗀다(겹침을 어림으로 찾지 않는다). 뗀 본문 sha256 = `text_sha256` 확인 뒤 `"\n"`으로 잇는다. `article`이 없는 페이지(제목 없음)는 `article=None`으로 부른다 |
+| `get_section(rule_seq, article, as_of=None) -> Section \| None` | `backend/rag/retrieve/section.py` | 판 고르기는 search와 같다: `as_of` 없으면 `valid_to IS NULL`, 있으면 `valid_from <= as_of < valid_to`. 그 판의 `(rule_seq, article)` 청크를 `seq` 순서로 읽고, 청크마다 머리말 줄을 떼고, 앞 청크 본문으로 `section.body_of`가 겹침을 뗀다. 기본은 `chunk.overlap_tail(prev, 120)`을 다시 계산해 떼고, 표 행 겹침(`chunk.overlap_for`, 행 처음부터 최대 400자, 길면 첫 칸 라벨을 앞에 붙임)이라 그 값과 본문 지문이 다르면 청크의 `text_sha256`과 같아지는 줄바꿈 자리를 찾아 뗀다(글자 어림 검색이 아니라 지문 일치로 정한다). 뗀 본문 sha256 = `text_sha256` 확인 뒤 `"\n"`으로 잇는다. `article`이 없는 페이지(제목 없음)는 `article=None`으로 부른다 |
 | `section_names(rule_seq, as_of=None) -> list[str]` | 같은 파일 | EC-02 후보 |
 | `list_changed(since, org=None, limit=200, store=None, offset=0) -> (list[ChangedArticle], LastRun \| None, more: bool)` | `backend/rag/ingest/changes.py` | `changed_articles` SELECT만(org는 `docs`로 거름). 기준 날짜 = `new_version_date`, 빈 칸(쪽 통째 삭제)이면 `created_at`의 UTC 날짜(EC-13). 정렬 기준 날짜·`rule_seq`·`article`·`change_type`·`event_id`(쪽 나눔이 흔들리지 않게). `limit + 1`개를 읽어 `more`를 정한다. `LastRun` = `sync_runs`(job `handbook-sync`) 중 `status IN ('succeeded','noop')`인 마지막 줄 |
 
 **3. 서버** (`extras/mcp_skill/mcp_server/server.py`)
 
-- `fastmcp==4.1.4`(PRD 319줄). 템플릿의 `from mcp.server.fastmcp import FastMCP`는 `from fastmcp import FastMCP`로 바꾼다.
+- `fastmcp==4.1.4`(PRD 9장 기술 구성의 mcp 행). 템플릿의 `from mcp.server.fastmcp import FastMCP`는 `from fastmcp import FastMCP`로 바꾼다.
 - 입력 제한(기본값, 리뷰에서 확인): `query` 1~1,000자, `k` 1~20(기본 5 = `backend/schemas/chunk.py` `DEFAULT_K`, 그래프와 같은 상수), `limit` 1~200(기본 200), `offset` 0~1,000,000(기본 0), 날짜 `YYYY-MM-DD`, `org`는 `docs.org`에 있는 값, `rule_seq` 0~4,294,967,295.
 - 도구 하나의 제한 시간 30초(기본값, 리뷰에서 확인). 번역 시간 초과가 15초(`translate.py` `TIMEOUT_S`)라 검색 한 번이 이 안에 끝나고, 로드밸런서 유휴 60초보다 짧다.
 - `FastMCP.from_fastapi` 같은 자동 변환은 쓰지 않는다. 로그인·관리 경로까지 도구로 나가기 때문이다.
@@ -125,7 +125,7 @@
 1. ~~담당 나눔~~ 정함(11/3): 서버 = 박진형, 그래프 쪽 클라이언트·Skill·점수 비교 = 김승욱
 2. ~~순서~~ 정함(11/3): 함수와 서버를 한 PR로 같이 낸다(11/6 가산 판단을 기다리지 않음)
 3. `Section`을 계약 밖 모델로 둘지 (위 How 1)
-4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 79줄): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다
+4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다
 5. 배포 호출 제한(#45 리뷰): 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용. 넣기 전까지 배포에서는 `MCP_TOKEN`을 비워 `/mcp`를 열지 않는다(EC-10)
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다
 
@@ -136,9 +136,9 @@
 
 ## 클라이언트 (그래프 쪽 MCP 호출, 2026-11-05 추가)
 
-가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 194줄). 서버를 부르는 쪽을 `extras/mcp_skill/mcp_client/client.py`에 둔다. 그래프에 붙이는 일(`SEARCH_VIA_MCP`, SDD 2-3절)은 김승욱이 `backend/graph/build.py`에서 한다 — 이 절은 `build.py`·`search.py`를 고치지 않는다.
+가산 MCP·Skill은 "에이전트가 MCP 클라이언트로 호출"해야 인정된다(가이드 p.20, PRD 6-4 "가산점 목표"의 MCP와 Skill 행). 서버를 부르는 쪽을 `extras/mcp_skill/mcp_client/client.py`에 둔다. 그래프에 붙이는 일(`SEARCH_VIA_MCP`, SDD 2-3절)은 김승욱이 `backend/graph/build.py`에서 한다 — 이 절은 `build.py`·`search.py`를 고치지 않는다.
 
-- 라이브러리: `langchain[mcp]` 1.4.9(PRD 319줄·SDD 77줄, 베타). `langchain.mcp.MCPAdapter`가 FastMCP `Client` 위에서 MCP 도구를 LangChain `StructuredTool`로 바꾼다(결과의 `structured_content`는 `ToolMessage.artifact`). sandbox에서 `fastmcp==4.1.4`와 같이 설치되는 것을 확인했다(`langchain-core` 1.7.5 이상을 끌어온다). 공식 문서: https://docs.langchain.com/oss/python/langchain/mcp
+- 라이브러리: `langchain[mcp]` 1.4.9(PRD 9장 mcp 행·SDD 2-3절, 베타). `langchain.mcp.MCPAdapter`가 FastMCP `Client` 위에서 MCP 도구를 LangChain `StructuredTool`로 바꾼다(결과의 `structured_content`는 `ToolMessage.artifact`). sandbox에서 `fastmcp==4.1.4`와 같이 설치되는 것을 확인했다(`langchain-core` 1.7.5 이상을 끌어온다). 공식 문서: https://docs.langchain.com/oss/python/langchain/mcp
 - `load_tools(target, token)` → LangChain 도구 6개(서버 도구 전부). 에이전트가 도구를 직접 고르게 할 때.
 - `search_via_mcp(q: SearchQuery, target, token) -> list[Chunk]` → `search(q)`와 같은 모양. 검색 노드가 `search()` 대신 부르면 된다. 이미 이벤트 루프 안이어도 부를 수 있다(새 스레드). 서버 note(`fallback_reason` 등)는 `last_mcp_note()`.
 - `section_via_mcp(rule_seq, article, as_of?, target, token) -> dict | None` → `get_section` 도구를 부른다. 근거 판정이 섹션 읽기를 골랐을 때 그래프(`backend/graph/mcp_retriever.py`)가 쓴다. 섹션이 없으면 None이고, 실패 구분은 `search_via_mcp`와 같다.
