@@ -74,7 +74,7 @@ ROUTES = ("rule", "decision", "review", "out_of_domain")
 # 남아 있을 때만 쓴다: 체크포인터 없는 실행의 결과에 없던 칸이 생기지 않는다
 LEFTOVER_FIELDS = {"search_query": "", "search_org": None, "decision_query": {}, "decision_result": {}, "decision_error": {}, "review_status": "", "issue_table": {},
                    "early_answer": {}, "judged_chunks": 0, "search_stalled": False, "judge_missing": [], "judge_query": "", "judge_scope": "", "section_reads": 0,
-                   "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False}
+                   "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False, "intro_chunk_ids": [], "judge_quotes": []}
 MAX_MISSING = 4  # 판정이 적은 빠진 사실을 재작성에 넘기는 개수의 상한
 REQUERY_NEW = 5  # SS: 페이지 재검색이 더하는 새 청크 수(문맥에 있는 청크는 세지 않는다). 61.10: 3이면 2번 7cd641이 4번째로 빠진 행이 있다
 JUDGE_ANSWER_MODES = ("parallel", "parallel_all", "joint")  # `GRAPH_JUDGE_ANSWER`: 근거 충분 판정과 답 작성을 동시에 부르거나(parallel) 한 호출로 합친다(joint)
@@ -180,17 +180,25 @@ def split_k(question: str | None, sub_queries) -> int:
     return SPLIT_K if len(sub_queries or ()) >= 2 and not has_dollar_amount(question, sub_queries) else SEARCH_K
 
 
-def chunk_cap(sub_queries, question: str | None = None) -> int:
-    """근거 목록의 최대 길이. 첫 검색이 `split_k`만큼 넓어진 나뉜 질문은 그만큼 상한을 올려야 재검색이 새 청크를 받는다."""
-    return MAX_CHUNKS + split_k(question, sub_queries) - SEARCH_K
+def chunk_cap(sub_queries, question: str | None = None, page_fill: int = 0) -> int:
+    """근거 목록의 최대 길이. 첫 검색이 `split_k`만큼 넓어진 나뉜 질문은 그만큼 상한을 올려야 재검색이 새 청크를 받는다.
+    같은 페이지 보충 청크(`page_fill`, 사전 등록 62.55)가 붙은 실행은 그 수만큼 더 올린다(재검색이 새 5청크를 다 받게)."""
+    return MAX_CHUNKS + split_k(question, sub_queries) - SEARCH_K + page_fill
+
+
+def page_filled(state) -> int:
+    """이 실행의 첫 검색이 같은 페이지 보충 청크를 붙였으면 그 수(`search_stats.page_fill`), 아니면 0."""
+    return int((state.get("search_stats") or {}).get("page_fill") or 0)
 
 
 def core_chunks(state) -> list[dict]:
-    """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리. 넓히지 않았거나 재검색 뒤면 문맥 전체다."""
+    """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리와 도입부 채우기(R3)가 뒤에 더한 청크(`intro_chunk_ids`). 넓히지 않았거나 재검색 뒤면 문맥 전체다.
+    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51)."""
     chunks = state.get("chunks", [])
     if state.get("retries", 0) or split_k(state.get("question"), state.get("sub_queries")) <= SEARCH_K:
         return chunks
-    return chunks[:SEARCH_K]
+    intro = set(state.get("intro_chunk_ids") or ())
+    return chunks[:SEARCH_K] + [c for c in chunks[SEARCH_K:] if c.get("chunk_id") in intro]
 
 
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
@@ -316,6 +324,7 @@ def build_graph(
     json_only: bool | None = None,
     page_search: Callable[..., list] | None = None,
     intro_search: Callable[..., list] | None = None,
+    prev_chunk: Callable[..., Any] | None = None,
 ):
     """컴파일된 질문 그래프를 만든다.
 
@@ -398,6 +407,7 @@ def build_graph(
     best2 = AF.answer_best2_enabled()  # BO2: 답을 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽을 고른다(`--judge-quote`와 함께)
     best2_samedoc = AF.best2_samedoc_enabled()  # BO2SD: BO2의 둘째 규칙에서 S 청크와 같은 문서인 S 밖 인용은 세지 않는다
     speculate = AF.speculate_enabled()  # SP: 분해를 기다리는 동안 원 질문으로 첫 검색과 판정을 미리 돌리고, 분해가 나누지 않으면 그 결과를 쓴다
+    speculate_early = speculate and AF.speculate_early_search_enabled()  # SE(사전 등록 62.53, 62.15 재도입): SP의 원 질문 재작성·첫 검색을 예비 분해가 끝나길 기다리지 않고 같이 시작한다. 분해가 나누거나 경로가 정책이 아니면 결과를 버린다
     save_one_conn = env_flag("ANSWER_SAVE_ONE_CONN")  # 62.16: 답 저장과 근거 기록 저장을 연결 하나로(`PgAnswerStore.save_with_grounding`). 기본 꺼짐
     spec_runs: dict[str, tuple[str, Any]] = {}  # SP: 열쇠(search_cache[SPEC_KEY]) -> ("use" | "drop", 미리 돌린 결과 Future)
     spec_boxes: dict[str, dict] = {}  # SP: 열쇠 -> 미리 돌리기 상태(돌렸는지). 첫 검색 노드가 기록 표시를 쓰고 지운다
@@ -675,21 +685,49 @@ def build_graph(
         token = uuid.uuid4().hex
         box: dict = {"token": token, "routed": threading.Event(), "stop": threading.Event(), "route": ""}
         pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="speculate")
+        early: Any = None  # SE: 일찍 돌린 재작성·검색의 Future(꺼짐이면 None). 아래에서 chain보다 먼저 시작한다
 
         def as_node(node: str, fn: Callable[[], Any]) -> Any:
             base = var_child_runnable_config.get() or {}
             var_child_runnable_config.set({**base, "metadata": {**(base.get("metadata") or {}), "langgraph_node": node}})
             return fn()
 
+        def start_state(route: str) -> dict:
+            return {**state, "route": route, "search_cache": {**(state.get("search_cache") or {}), INTAKE_KEY: {"decompose": [[], "llm"]}, SPEC_KEY: token}}
+
+        def early_chain() -> dict:
+            """SE(`GRAPH_SPECULATE_EARLY_SEARCH`): 예비 분해와 같은 시각에 시작하는 재작성(LLM 없음)과 원 질문 첫 검색. 경로(route)는 이 두 노드가 읽지 않는다(`reads_authz`는 답 쓰기에서만 읽는다)."""
+            s = start_state("")
+            out: dict = {}
+            for node, fn in (("rewrite", rewrite), ("search", search)):
+                out[node] = as_node(node, lambda fn=fn: fn(s))
+                s = {**s, **out[node]}
+            return out
+
+        def settle_early() -> None:
+            """쓰지 않기로 한 일찍 돌린 검색은 끝날 때까지 기다린다(요청이 끝난 뒤에 호출이 돌지 않게). 오류는 버리고 비용 상한만 올린다."""
+            if early is not None:
+                drain_speculation(early)
+
         def chain() -> dict | None:
             if as_node("search", lambda: gate_split(ask, state["question"])) is not False:
+                settle_early()
                 return None
             box["routed"].wait()
             if not takes_policy_path(box["route"]) or box["stop"].is_set():
+                settle_early()
                 return None
-            s: dict = {**state, "route": box["route"], "search_cache": {**(state.get("search_cache") or {}), INTAKE_KEY: {"decompose": [[], "llm"]}, SPEC_KEY: token}}
+            s: dict = start_state(box["route"])
             out: dict = {}
             box["ran"] = True
+            if early is not None:   # 게이트가 나누지 않고 경로가 정책이므로 일찍 돌린 재작성·검색을 그대로 쓴다. 오류는 그 노드가 직접 돌았을 때처럼 올린다
+                out.update(early.result())
+                s = {**s, **out["rewrite"], **out["search"]}
+                if not s.get("search_error"):   # 검색 오류면 순차와 같이 판정 없이 끝난다
+                    if box["stop"].is_set():
+                        return None
+                    out["judge"] = as_node("judge", lambda: judge(s))
+                return out
             for node, fn in (("rewrite", rewrite), ("search", search), ("judge", judge)):
                 if box["stop"].is_set():
                     return None
@@ -699,6 +737,11 @@ def build_graph(
                     break
             return out
 
+        if speculate_early:
+            box["ran"] = True
+            pool_early = ThreadPoolExecutor(max_workers=1, thread_name_prefix="speculate_early")
+            early = pool_early.submit(contextvars.copy_context().run, early_chain)
+            pool_early.shutdown(wait=False)
         box["future"] = pool.submit(contextvars.copy_context().run, chain)
         pool.shutdown(wait=False)
         return box
@@ -858,7 +901,7 @@ def build_graph(
             except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
                 log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
         mixed = [c for group in zip_longest(*lists) for c in group if c is not None]
-        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries"), state.get("question")) + SEARCH_K)}
+        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state)) + SEARCH_K)}
 
     def page_requery(state: AgentState) -> dict:
         """가(`GRAPH_RESEARCH_SAME_PAGE`): 재검색어(`search_query`)로 지금 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서만 찾는다. 전체 검색은 하지 않는다.
@@ -877,7 +920,7 @@ def build_graph(
                 found = [c for c in found if c.get("chunk_id") not in have][:REQUERY_NEW]
         except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
             log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
-        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"), state.get("question"))), "search_stats": stats}
+        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state))), "search_stats": stats}
 
     def with_intro(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
         """R3(`GRAPH_INTRO_FILL`): 첫 검색 문맥에 같은 페이지 판 청크가 3개 이상인 페이지의 도입부 절 청크(질문 벡터와 가장 가까운 1개, 절이 2개 이하 청크면 절 전체)를 뒤에 더한다.
@@ -892,6 +935,28 @@ def build_graph(
             return chunks
         added = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
         return merge_chunks(chunks, added, limit=len(chunks) + len(added)) if added else chunks
+
+    def read_prev_chunk(chunk: dict) -> dict | None:
+        """사전 등록 62.58: 인용 청크의 같은 페이지 판 바로 앞 청크(가림 처리 뒤). 없으면 None. 예외는 부른 쪽(`AF.head_owner_cites`)이 삼킨다."""
+        got = prev_chunk(chunk) if prev_chunk is not None else None
+        return redact_chunk(got.model_dump() if hasattr(got, "model_dump") else dict(got)) if got else None
+
+    def page_fill_chunk(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
+        """사전 등록 62.55: 나뉜 질문(하위 질문 2개 이상, 달러 금액 질문 제외 = `split_k` > `SEARCH_K`)의 첫 검색 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서
+        원 질문(`query`)과 가까운 청크 중 문맥에 없는 첫 1개를 찾아 돌려준다(없으면 빈 목록). 검색이 실패하면 빈 목록이라 문맥은 그대로다. 문맥은 건드리지 않는다."""
+        if page_search is None or not chunks:
+            return []
+        seqs = list(dict.fromkeys(int(c["rule_seq"]) for c in chunks if c.get("rule_seq") is not None))
+        if not seqs:
+            return []
+        have = {(c["chunk_id"], c.get("version_id")) for c in chunks}
+        try:
+            got = page_search(query, seqs, state.get("search_org"), state.get("as_of"), len(chunks) + 1)
+            rows = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
+        except Exception as e:  # noqa: BLE001 - 같은 페이지 보충 실패가 답을 막지 않는다
+            log.warning("같은 페이지 보충 실패: %s", type(e).__name__)
+            return []
+        return [c for c in rows if (c["chunk_id"], c.get("version_id")) not in have][:1]
 
     def search(state: AgentState) -> dict:
         if state.get("next_section"):
@@ -934,8 +999,23 @@ def build_graph(
         if not found and _search_fallback_reason() == "no_key":  # 키 없는 데모: 같은 검색을 되풀이하지 않고 끝낸다
             return {**extra, **memo, "kind": "refuse", "answer": MSG_REFUSE_NO_KEY, "citations": [], "search_error": "no_key"}
         # 재검색은 앞 결과를 버리지 않고 합친다. 판단, 인용 검사, 근거 판정은 모두 이 합친 목록과 대조한다
-        merged = merge_chunks(state.get("chunks", []), found, limit=chunk_cap(subs if first else state.get("sub_queries"), state["question"]))
-        return {"chunks": with_intro(state, merged, query) if first else merged, **memo, **extra}  # R3는 첫 검색에만 붙인다
+        merged = merge_chunks(state.get("chunks", []), found, limit=chunk_cap(subs if first else state.get("sub_queries"), state["question"], 0 if first else page_filled(state)))
+        if not first:
+            return {"chunks": merged, **memo, **extra}
+        fill_ahead = None
+        if page_search is not None and split_k(state["question"], subs) > SEARCH_K:  # 62.55: 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
+            fill_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pagefill")
+            fill_ahead = fill_pool.submit(contextvars.copy_context().run, page_fill_chunk, state, merged, query)
+            fill_pool.shutdown(wait=False)
+        filled = with_intro(state, merged, query)  # R3는 첫 검색에만 붙인다
+        intro_ids = [c["chunk_id"] for c in filled[len(merged):]]  # 뒤에 더해진 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산이 넓힌 자리와 가른다(`core_chunks`)
+        if fill_ahead is not None:
+            have = {(c["chunk_id"], c.get("version_id")) for c in filled}
+            extra_chunk = [c for c in fill_ahead.result() if (c["chunk_id"], c.get("version_id")) not in have]  # 순서는 도입부 → 보충. 보충은 앞자리도 도입부 청크도 아니다
+            if extra_chunk:
+                filled = [*filled, *extra_chunk]
+                memo = {**memo, "search_stats": {**(memo.get("search_stats") or state.get("search_stats") or {}), "page_fill": len(extra_chunk)}}  # 이 실행에서만 뜻이 있다(`load_memory`가 통계를 비운다)
+        return {"chunks": filled, **memo, **extra, **({"intro_chunk_ids": intro_ids} if intro_ids else {})}
 
     def judge(state: AgentState) -> dict:
         chunks = state.get("chunks", [])
@@ -944,7 +1024,7 @@ def build_graph(
         seen: dict = {"judged_chunks": len(chunks)} if stop_stalled else {}
         core_ids = [c["chunk_id"] for c in core_chunks(state)]
         widened = judge_quote and len(core_ids) < len(chunks)  # 넓힌 첫 검색이고 인용 먼저 판정일 때만(사전 등록 62.44)
-        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or (), extra=[c["chunk_id"] for c in chunks[len(core_ids):]] if widened else ())
+        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or (), extra=[c["chunk_id"] for c in chunks if c["chunk_id"] not in set(core_ids)] if widened else ())
         guide = skill("chat-tool-guide")  # 켜져 있을 때만 판정이 다음 도구를 고른다. 호출 수는 그대로다
         terms = skill("search-terms") if requery_terms else ""  # `GRAPH_REQUERY_TERMS=1`일 때만 재검색어 용어표를 붙인다(기본 꺼짐)
         guided = P.with_skills(judge_system, [("도구 고르기 Skill", guide), ("용어 Skill", terms)])
@@ -977,7 +1057,7 @@ def build_graph(
             obj = ask_judge(guided, judge_input)
         obj = obj or {}
         if best2:  # BO2: 판정 구절이 든 청크(나중에 따로 쓰는 답이 고를 때 쓴다)
-            used = {**used, "judge_quote_ids": AF.quote_chunk_ids(obj, chunks)}
+            used = {**used, "judge_quote_ids": AF.quote_chunk_ids(obj, chunks), "judge_quotes": AF.quote_rows(obj, chunks)}  # judge_quotes는 측정 기록용(답 경로는 읽지 않는다)
         if facts_log:  # FL: 판정 기록만 쌓는다(결론과 다음 단계는 그대로)
             used = {**used, "judge_checks_log": [*(state.get("judge_checks_log") or []), AF.judge_facts(obj, state.get("retries", 0))]}
         if scope_refuse and AF.scope_note_refuses(obj):
@@ -1040,7 +1120,7 @@ def build_graph(
         if state.get("sub_research_phase") == "due":  # B1, B4: 빠진 하위 질문 한 번 더(그때만 재검색 상한 +1)
             return "rewrite"
         # 근거 목록이 차면 `merge_chunks`가 새 청크를 받지 못해 재검색이 아무것도 바꾸지 못한다
-        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries"), state.get("question")))  # 섹션 읽기는 목록을 늘리지 않는다
+        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state)))  # 섹션 읽기는 목록을 늘리지 않는다
         if state.get("retries", 0) <= research_limit + (state.get("section_reads", 0) if section_extra else 0) and not stalled:
             return "rewrite"
         # 재검색이 끝나도 일부 근거만 있으면 그 부분을 답한다. 나뉜 질문(사실 둘 이상)일 때만이다. 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 된다
@@ -1231,6 +1311,11 @@ def build_graph(
         pick = 0 if b is None or (usable and in_core) else 1
         why = "한쪽 후보 없음" if a is None or b is None else "판정 구절이 넓힌 자리에 있음" if not in_core else "앞자리 답 없음" if not usable else "판정 구절이 모두 앞자리"
         cited = [[c.get("chunk_id") if isinstance(c, dict) else c for c in (d or {}).get("raw_citations") or []] for d in (a, b)]
+        if pick == 0 and why == "판정 구절이 모두 앞자리" and b is not None and cited[1] and set(cited[1]) <= set(core_ids) and not G.says_only_absence(str(b.get("answer") or "")):
+            # 사전 등록 62.59: 둘째 후보도 앞자리 청크만 인용했고 판정 구절 청크를 첫 후보보다 더 많이 인용했으면 둘째 후보(같거나 적으면 첫 후보, 둘째가 앞자리 밖·보충 청크를 인용해도 첫 후보)
+            quotes = set(quote_ids or [])
+            if len(quotes & set(cited[1])) > len(quotes & set(cited[0])):
+                pick, why = 1, "앞자리 인용끼리 판정 구절 청크 수"
         log_row = {"quote_ids": list(quote_ids or []), "cands": [{"cited": cited[0]}, {"cited": cited[1]}], "pick": pick, "why": why, "rule": "core_first"}
         return {**(a if pick == 0 else b), "best2_log": log_row}
 
@@ -1505,6 +1590,8 @@ def build_graph(
             if verdict.get("ahead"):
                 info["ground_ahead"] = True
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
+            if verdict["state"] == "grounded" and verdict.get("quotes"):
+                info["_claim_quotes"] = list(verdict["quotes"])  # HO가 쓰고 `ground`가 지운다(기록에 남기지 않는다)
             if verdict.get("error"):
                 info["llm_error"] = verdict["error"]
             if verdict.get("caveat_only"):
@@ -1545,7 +1632,12 @@ def build_graph(
     def ground(state: AgentState) -> dict:
         """근거 판정(`ground_once`). `GRAPH_CITE_EXPAND=1`이면 판정이 끝난 답에 같은 값을 말하는 다른 청크의 인용을 코드가 더한다(LLM 호출 없음, 판정 입력은 그대로)."""
         out = ground_once(state)
-        if not (cite_expand or cite_phrase or drop_scoped or consensus) or out.get("kind", state.get("kind")) != "answer":
+        claim_quotes: list[str] = []
+        if isinstance(out.get("grounding"), dict) and "_claim_quotes" in out["grounding"]:  # HO 입력은 꺼내고 기록에서 지운다
+            kept_info = dict(out["grounding"])
+            claim_quotes = kept_info.pop("_claim_quotes") or []
+            out = {**out, "grounding": kept_info}
+        if not (cite_expand or cite_phrase or drop_scoped or consensus or claim_quotes) or out.get("kind", state.get("kind")) != "answer":
             return out
         cited = out.get("citations", state.get("citations", []))
         body, sep, _ = str(out.get("answer") or "").rpartition("\n\n기준일 ")
@@ -1553,10 +1645,15 @@ def build_graph(
             return out
         info, more = dict(out.get("grounding") or {}), cited
         context = state.get("chunks", [])  # G가 뺀 청크도 다시 쓰기 뒤와 같이 A1, A1b가 볼 수 있다(지금 동작과 같게 둔다)
+        if claim_quotes and not (info.get("revised") or info.get("redrafted")):  # HO(사전 등록 62.52): 처음 답이 그대로 받쳐졌을 때만(구절이 그 답의 것이다)
+            got = AF.head_owner_cites(body, more, context, claim_quotes, prev_reader=read_prev_chunk if prev_chunk is not None else None)  # 62.58: 원래 청크가 문맥에 없으면 앞 청크를 읽는다
+            if got:
+                body, more, info["head_owner"] = got
         if cite_expand:
+            before = len(more)
             body, more = AF.expand_numbered(body, more, context, cap=MAX_CITATIONS)
-            if len(more) > len(cited):
-                info["cite_expand"] = [c["chunk_id"] for c in more[len(cited):]]
+            if len(more) > before:
+                info["cite_expand"] = [c["chunk_id"] for c in more[before:]]
         if cite_phrase:  # A1b: A1 뒤에 문장 공유 규칙으로 더한다(A1이 더한 청크도 인용으로 본다)
             before = len(more)
             body, more = AF.expand_numbered(body, more, context, cap=MAX_CITATIONS, picker=AF.pick_phrase_extra)

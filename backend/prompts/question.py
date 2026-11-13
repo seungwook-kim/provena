@@ -472,9 +472,10 @@ def format_materials(chunks: Iterable[dict], label: str = "자료", marked: Iter
     from backend.graph import untrusted as U  # 입력 정화(GRAPH_SANITIZE_INPUT, 기본 켬): 원문의 모델 상대 지시 문장을 입력에서 뺀다. 끄면(0) 바뀌는 것이 없다
 
     parts = []
+    chunks = list(chunks)
     for c in chunks:
         if U.sanitize_enabled():
-            c = U.sanitize_chunk(c)
+            c = U.sanitize_chunk(c, U.section_context(c, chunks))   # 같은 섹션의 다른 청크 본문: 본문의 값을 뒤집는 문장(거짓 정정) 판정에 쓴다
         text = _strip_marks(c.get("text", ""))
         head = _strip_marks(
             f"{'[보충] ' if c.get('chunk_id') in plus else ''}chunk_id={c.get('chunk_id')} | {c.get('org')} {c.get('rule_title')} "

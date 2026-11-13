@@ -410,7 +410,7 @@ MODEL_OFF = {"LLM_REASONING": "", "LLM_PROVIDER_SORT": "", "LLM_DEADLINE_S": "",
              "GRAPH_INTRO_FILL": "", 
              "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
              "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
-            "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": ""}
+            "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": "", "GRAPH_SPECULATE_EARLY_SEARCH": ""}
 
 
 def test_switches_default_to_off_and_ignore_the_environment(monkeypatch):

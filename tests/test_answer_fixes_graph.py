@@ -174,6 +174,8 @@ def test_page_research_searches_inside_the_context_pages(monkeypatch):
     pages = []
 
     def page_search(query, seqs, org, as_of, k):
+        if query == Q_ESC:  # 사전 등록 62.55: 나뉜 질문의 첫 검색 뒤 같은 페이지 보충 검색은 여기서 세지 않는다
+            return []
         pages.append((query, seqs))
         return [IMOC] if 70004 in seqs else []
     out = run(build_graph(lambda q: [ESC], llm=esc_llm(), decompose=True, max_research=1, page_search=page_search), Q_ESC)

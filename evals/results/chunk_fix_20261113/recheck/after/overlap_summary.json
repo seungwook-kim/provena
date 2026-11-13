@@ -1,0 +1,23 @@
+{
+ "overlap_chunks": 7107,
+ "tail_not_prev_suffix": 0,
+ "tail_label_prefixed": 85,
+ "mid_element_any": 5996,
+ "mid_by_kind": {
+  "list_item": 3231,
+  "paragraph": 2111,
+  "code": 584,
+  "quote": 44,
+  "heading": 18,
+  "html": 8
+ },
+ "table_row_mid": 0,
+ "table_row_complete": 689,
+ "table_row_mid_recv_table": 0,
+ "first_cell_missing": 0,
+ "first_cell_label_cut_only": 0,
+ "cells_lost_whole_ge1": 0,
+ "lost_cells_have_digit": 0,
+ "cut_inside_value_only": 0,
+ "cut_inside_label_only": 0
+}

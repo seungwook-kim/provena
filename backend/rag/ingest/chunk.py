@@ -33,15 +33,55 @@ def sha(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+CELL_SEP = " | "         # 표 행 글자(parse.row_text)에서 칸 사이
+DELIMS = ("|", ",;", "/")  # 공백이 하나도 없는 긴 토큰에서 그나마 자를 수 있는 구분 글자(강한 것부터)
+
+
+def cut_at(s: str, size: int) -> int:
+    """size 넘는 글 s를 앞에서 자를 자리(왼쪽 조각 길이, 1~size). 낱말·숫자 한가운데를 피한다.
+    표 칸 경계(`| ` 뒤)가 size의 절반 이후에 있으면 거기서, 아니면 size 안의 마지막 공백 뒤(또는 공백 앞)에서 자른다.
+    공백이 하나도 없으면 구분 글자(| → , ; → /) 뒤, 그것도 없으면 영숫자 덩어리의 시작에서, 그래도 안 되면 size에서 자른다."""
+    cell = s[:size].rfind(CELL_SEP)
+    if cell >= 0 and cell + len(CELL_SEP) >= size // 2:
+        return cell + len(CELL_SEP)
+    for q in range(size, 0, -1):         # q = 왼쪽 조각 길이. 경계 양쪽 중 하나가 공백이면 낱말이 안 쪼개진다
+        if s[q - 1].isspace() or s[q].isspace():
+            return q
+    hits = [max(s.rfind(ch, 0, size) for ch in group) + 1 for group in DELIMS]
+    for q in hits:                       # 강한 구분 글자(|)부터, 조각이 너무 짧아지지 않는 것(size의 1/3 이후)을 쓴다
+        if q >= size // 3:
+            return q
+    if any(hits):
+        return max(hits)
+    q = size
+    if s[q - 1].isalnum() and s[q].isalnum():
+        run = q
+        while run > 1 and s[run - 1].isalnum():
+            run -= 1
+        if run > size // 2:
+            q = run
+    return q
+
+
+def split_hard(sent: str, size: int) -> list[str]:
+    """문장 하나가 size를 넘을 때 cut_at 자리마다 자른다. 조각을 이어 붙이면 원래 글자와 같다."""
+    out = []
+    while len(sent) > size:
+        q = cut_at(sent, size)
+        out.append(sent[:q])
+        sent = sent[q:]
+    return out + [sent] if sent else out
+
+
 def split_long(text: str, size: int) -> list[str]:
-    """size 넘는 요소 하나를 줄 → 문장 → 글자 순으로 쪼갠다. 조각을 이어 붙이면 원래 글자와 같다."""
+    """size 넘는 요소 하나를 줄 → 문장 → (표 칸·공백 경계) → 글자 순으로 쪼갠다. 조각을 이어 붙이면 원래 글자와 같다."""
     units = []
     for line in re.split(r"(?<=\n)", text):
         if len(line) <= size:
             units.append(line)
             continue
         for sent in re.split(r"(?<=[.!?] )", line):
-            units += [sent[i:i + size] for i in range(0, len(sent), size)] if len(sent) > size else [sent]
+            units += split_hard(sent, size) if len(sent) > size else [sent]
     pieces, cur = [], ""
     for u in units:
         if cur and len(cur) + len(u) > size:
@@ -53,15 +93,67 @@ def split_long(text: str, size: int) -> list[str]:
     return pieces
 
 
+ROW_TAIL_MAX = 400       # 표 행 겹침(행 처음부터)의 글자 수 상한. 이보다 길면 행 처음 대신 첫 칸(라벨)만 앞에 붙인다. 표 행 글자 5,688개 중 99%가 493자 이하
+
+
+def overlap_span(prev_body: str, n: int) -> tuple[str, int]:
+    """앞 청크 끝 n자와 prev_body 안의 시작 위치. 단어 중간에서 시작하지 않게 첫 공백 뒤부터."""
+    if n <= 0 or not prev_body:
+        return "", len(prev_body)
+    start = max(len(prev_body) - n, 0)
+    if len(prev_body) > n and not prev_body[-n - 1].isspace():
+        cut = re.search(r"\s", prev_body[start:])
+        if not cut:
+            return "", len(prev_body)
+        start += cut.end()
+    tail = prev_body[start:]
+    return tail.strip(), start + len(tail) - len(tail.lstrip())
+
+
 def overlap_tail(prev_body: str, n: int) -> str:
     """앞 청크 끝 n자. 단어 중간에서 시작하지 않게 첫 공백 뒤부터."""
-    if n <= 0 or not prev_body:
-        return ""
-    tail = prev_body[-n:]
-    if len(prev_body) > n and not prev_body[-n - 1].isspace():
-        cut = re.search(r"\s", tail)
-        tail = tail[cut.end():] if cut else ""
-    return tail.strip()
+    return overlap_span(prev_body, n)[0]
+
+
+def first_cell(el: dict) -> str:
+    """표 행의 첫 칸을 행 글자(parse.row_text)와 같은 모양(`열 이름: 값`)으로. 빈 칸은 건너뛴다."""
+    header = el.get("header") or []
+    for h, v in zip(header + [""] * len(el.get("cells") or []), el.get("cells") or []):
+        if v:
+            seg = f"{h}: {v}" if h else v
+            if el["text"].startswith(seg):
+                return seg
+            break
+    return el["text"].split(CELL_SEP, 1)[0]
+
+
+def overlap_for(items: list[tuple[dict, str, int]], n: int, cap: int = ROW_TAIL_MAX) -> str:
+    """앞 청크(items = (요소, 담긴 글, 그 글이 요소 안에서 시작하는 위치))의 겹침 글.
+    표 행(table_row) 안에서 시작하면 첫 칸(라벨)이 잘려 나가 뒤 칸 값이 무슨 열인지 모르게 되므로, 그 행의 처음부터 가져온다.
+    행이 길어 cap을 넘거나 행의 처음이 앞 청크에 없으면(쪼갠 행의 뒤 조각) 첫 칸을 겹침 앞에 붙인다. 표가 아닌 요소는 overlap_tail 그대로."""
+    body = "\n".join(t for _, t, _ in items)
+    tail, start = overlap_span(body, n)
+    if not tail:
+        return tail
+    pos = 0
+    for el, text, off in items:
+        if pos <= start < pos + len(text) + 1:
+            break
+        pos += len(text) + 1
+    else:
+        return tail
+    if el["kind"] != "table_row" or (start == pos and off == 0):
+        return tail                                   # 표가 아니거나, 마침 행의 처음이다
+    label = first_cell(el)
+    if off == 0:
+        whole = body[pos:].rstrip()
+        if len(whole) <= cap:
+            return whole
+        if start < pos + len(label) + len(CELL_SEP):
+            return tail                               # 첫 칸이 아주 길어 라벨을 따로 붙일 수 없다
+    if len(label) > cap:
+        label = label[:cap].rsplit(None, 1)[0] if len(label[:cap].split()) > 1 else label[:cap]
+    return f"{label}{CELL_SEP}{tail}"
 
 
 def pack_section(elements: list[dict], size: int) -> list[list[tuple[dict, str]]]:
@@ -123,20 +215,21 @@ def chunk_structure(page: dict, elements: list[dict], size: int, overlap: int, h
     chunks = []
     for path, els in sections.items():
         article = " > ".join(path) or None
-        prev, done = "", collections.Counter()      # done: 쪼갠 요소에서 이미 쓴 글자 수
+        prev, done = [], collections.Counter()      # prev: 앞 청크의 (요소, 글, 요소 안 시작 위치). done: 쪼갠 요소에서 이미 쓴 글자 수
         for group in pack_section(els, size):
             body = "\n".join(t for _, t in group)
-            tail = overlap_tail(prev, overlap)
+            tail = overlap_for(prev, overlap)
             lines = {}
             first, piece = group[0]
             if len(group) == 1 and len(piece) < len(first["text"]) and first["kind"] == "code" and first.get("line_start") is not None:
                 start = first["line_start"] + 1 + first["text"][:done[first["element_id"]]].count("\n")   # 펜스 줄 다음부터
                 lines = {"line_start": start, "line_end": start + piece.rstrip("\n").count("\n")}
+            offsets = [done[first["element_id"]] if len(group) == 1 else 0] * len(group)
             if len(group) == 1:
                 done[first["element_id"]] += len(piece)
             chunks.append(make_chunk(page, article, len(chunks), body, tail, [e for e, _ in group], header_on,
                                      "article", config, **lines))
-            prev = body
+            prev = [(e, t, o) for (e, t), o in zip(group, offsets)]
     return chunks
 
 

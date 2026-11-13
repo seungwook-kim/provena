@@ -182,3 +182,56 @@ def test_committed_final_results_pass_against_the_committed_baseline(monkeypatch
     # 저장소에 커밋된 실제 최종 결과(EVAL_REPORT 4장)와 기준 파일이 어긋나지 않는다.
     monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
     assert ci_compare.main([]) == 0
+
+
+# ---------- 현재 코드 0원 평가(--current) ----------
+CURRENT_BASE = {"n_questions": 9, "answers_ok": 6, "refusals_ok": 3, "missed_calls": 0, "fake_answers": 0}
+
+
+def _current_result(tmp_path, **override):
+    summary = {**CURRENT_BASE, "answers_expected": 6, "refusals_expected": 3, "stale_questions": [], **override}
+    body = {"summary": summary, "rows": []}
+    path = tmp_path / "current.json"
+    path.write_text(json.dumps({"meta": {"commit": "abc1234"}, "paths": {"reasoning_answer_in_time": body, "reasoning_answer_skipped": body}}), encoding="utf-8")
+    return path
+
+
+def _setup_current(tmp_path, with_base=True):
+    args = _setup(tmp_path)
+    if with_base:
+        (tmp_path / "baseline.json").write_text(json.dumps({**BASELINE, "current": {"metrics": CURRENT_BASE}}), encoding="utf-8")
+    return args
+
+
+def test_current_result_equal_to_the_baseline_passes(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_current(tmp_path)
+    assert ci_compare.main([*args, "--current", str(_current_result(tmp_path))]) == 0
+    assert "현재 코드 abc1234" in capsys.readouterr().out
+
+
+def test_current_result_fails_when_the_recording_misses_a_call(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_current(tmp_path)
+    assert ci_compare.main([*args, "--current", str(_current_result(tmp_path, missed_calls=5, stale_questions=["q"]))]) == 1
+    assert "녹화에 없는 요청" in capsys.readouterr().out
+
+
+def test_current_result_fails_when_answers_or_refusals_fall_or_fake_answers_appear(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_current(tmp_path)
+    for key, value in (("answers_ok", 5), ("refusals_ok", 2), ("fake_answers", 1), ("n_questions", 8)):
+        assert ci_compare.main([*args, "--current", str(_current_result(tmp_path, **{key: value}))]) == 1, key
+
+
+def test_current_option_fails_without_a_result_file_or_a_baseline_entry(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    args = _setup_current(tmp_path)
+    assert ci_compare.main([*args, "--current", str(tmp_path / "none.json")]) == 1
+    args = _setup_current(tmp_path, with_base=False)
+    assert ci_compare.main([*args, "--current", str(_current_result(tmp_path))]) == 1
+
+
+def test_without_the_current_option_the_current_baseline_is_not_read(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    assert ci_compare.main(_setup_current(tmp_path)) == 0

@@ -2,7 +2,7 @@
 
 흐름: 그래프를 `stream_mode="updates"`로 돌리며 상태 갱신을 모은다.
 - 사람 승인(interrupt)이 나오면 `approval_request` 이벤트를 내고 멈춘다(`done` 없음). 이어 가기는 `Command(resume=...)`를 input으로 다시 부른다.
-- 끝나면 답을 `token` 이벤트로 나눠 내고, 인용마다 `citation`, 마지막에 `done`. 거절·되묻기면 `done.data`에 `refuse_stage`(그 결과를 쓴 노드), `refuse_reason`(사유 코드)가 더해진다.
+- 끝나면 답을 `token` 이벤트로 나눠 내고, 인용마다 `citation`, 마지막에 `done`. 거절·되묻기면 `done.data`에 `refuse_stage`(그 결과를 쓴 노드), `refuse_reason`(사유 코드)가 더해진다. 검색을 한 실행이면 `done.data.path`(답 경로 기록, `step_cost.path_meta`)도 더해진다.
 - 예외는 `error` 이벤트 하나로 바꾼다(`done` 없음).
 토큰 단위 LLM 스트리밍은 하지 않는다(답은 인용 검사를 통과한 뒤에야 내보낸다).
 """
@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from backend.schemas import AgentEvent
-from backend.services.step_cost import refuse_meta
+from backend.services.step_cost import path_meta, refuse_meta
 
 # 질문마다 주는 입력. 그래프는 입력에 없는 칸과 앞 실행에서 남은 칸을 구분하지 못하므로, 주지 않았으면 없음(None)으로 넘겨 같은 thread의 앞 질문 값을 이어 받지 않게 한다
 PER_QUESTION_INPUTS = {"as_of": None, "org": None}
@@ -64,4 +64,5 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
     if refuse_node and final.get("kind") in ("refuse", "clarify"):
         from backend.graph.build import REFUSE_REASON_BY_MESSAGE
         data.update(refuse_meta(refuse_node, final.get("kind"), final, REFUSE_REASON_BY_MESSAGE))   # 거절·되묻기를 낸 노드와 사유 코드(측정 도구가 읽는다)
+    data.update(path_meta(final))   # 답 경로 기록(하위 질문, 문맥 청크 id, 판정 구절, 답 후보와 고른 쪽). 측정 도구가 읽는다. 검색하지 않은 실행은 없다
     yield AgentEvent(type="done", thread_id=thread_id, data=data)

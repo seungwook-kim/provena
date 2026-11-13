@@ -19,7 +19,7 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
-from backend.rag.ingest.chunk import overlap_tail
+from backend.rag.ingest.chunk import CELL_SEP, overlap_tail
 from backend.rag.ingest.schedule import CHUNK_OVERLAP
 
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -64,25 +64,35 @@ def _sha(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
-def body_of(text: str, kind: str, prev_body: str) -> str:
+def body_of(text: str, kind: str, prev_body: str, want_sha: str | None = None) -> str:
     """청크 글에서 머리말(첫 줄)과 겹침을 뗀 본문. 겹침은 섹션 안 앞 청크 본문으로 다시 계산한다.
-    권한표 행(kind=row)은 겹침 없이 만들었다(chunk.authz_chunks)."""
+    권한표 행(kind=row)은 겹침 없이 만들었다(chunk.authz_chunks).
+    표 행 안에서 시작한 겹침은 행 처음부터(또는 첫 칸을 붙여) 가져오므로(chunk.overlap_for) overlap_tail과 다를 수 있다.
+    그때는 want_sha(청크의 text_sha256)와 지문이 같아지는 줄바꿈 자리를 찾아 겹침을 뗀다."""
     _, sep, rest = text.partition("\n")
     if not sep:
         return ""                          # 머리말뿐인 글은 없다 → 지문 검사에서 걸린다
     tail = overlap_tail(prev_body, CHUNK_OVERLAP) if kind == "article" else ""
+    body = rest
     if tail:
-        if not rest.startswith(tail + "\n"):
-            return rest                    # 겹침 자리가 다르면 그대로 두고 지문 검사가 잡게 한다
-        rest = rest[len(tail) + 1:]
-    return rest
+        if rest.startswith(tail + "\n"):
+            body = rest[len(tail) + 1:]
+    if want_sha and kind == "article" and prev_body and _sha(body) != want_sha:
+        prev = prev_body.rstrip()
+        i = rest.find("\n")
+        while i != -1:
+            cand = rest[:i]            # 겹침 후보: 앞 청크 본문의 끝이거나, 첫 칸(라벨)을 붙인 그 끝
+            if _sha(rest[i + 1:]) == want_sha and (prev.endswith(cand) or (CELL_SEP in cand and prev.endswith(cand.split(CELL_SEP, 1)[1]))):
+                return rest[i + 1:]
+            i = rest.find("\n", i + 1)
+    return body
 
 
 def rebuild(rows: list[dict]) -> list[str]:
     """seq 순서 청크 → 본문 목록. 하나라도 지문이 다르면 SectionIntegrityError."""
     bodies, prev = [], ""
     for r in rows:
-        body = body_of(r["text"], r["kind"], prev)
+        body = body_of(r["text"], r["kind"], prev, r.get("text_sha256"))
         if not r.get("text_sha256") or _sha(body) != r["text_sha256"]:
             raise SectionIntegrityError(f"섹션 본문 지문 불일치: chunk_id={r['chunk_id']}")
         bodies.append(body)

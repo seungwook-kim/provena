@@ -908,13 +908,9 @@ class Searcher:
         cfg = self.cfg
         if not rule_seqs or not (query or "").strip() or cfg.mode not in VECTOR_ONLY_MODES:
             return []
-        text: str | None = query
-        if cfg.mode == "dense_en":
-            text, _, _ = self._translate_one(query, "sentence")
-            if not text:
-                return []
-        qvec = self.embed([text])[0]
-        self._remember(cfg.mode, query, qvec)
+        qvec = self.query_vector(query)  # 같은 질문을 방금 검색했으면 그 벡터를 다시 임베딩하지 않는다(사전 등록 62.55의 같은 페이지 보충). 없으면 지금처럼 번역·임베딩한다
+        if qvec is None:
+            return []
         keys = [key for key, _ in self.store.page_vector_top(qvec, cfg.embed_model, [int(s) for s in rule_seqs], org, as_of, [], k)]
         rows = self.store.fetch(keys) if keys else {}
         return [to_chunk(rows[key]) for key in keys if key in rows]
@@ -943,6 +939,21 @@ class Searcher:
         vec = self.embed([text])[0]
         self._remember(mode, query, vec)
         return np.asarray(vec, dtype=np.float32)
+
+    def prev_chunk(self, chunk) -> Chunk | None:
+        """사전 등록 62.58: 같은 페이지 판(rule_seq, version_id)에서 `chunk` 바로 앞 청크(ord 순) 1개. 첫 청크이거나 못 찾으면 None. DB 읽기(`page_chunks`, `fetch`) 각 1번이다."""
+        self._refresh()
+        d = chunk.model_dump() if hasattr(chunk, "model_dump") else dict(chunk)
+        top = getattr(self.store, "page_chunks", None)
+        if top is None or d.get("rule_seq") is None or not d.get("version_id"):
+            return None
+        page = [k for k, _ in top(int(d["rule_seq"]), d["version_id"])]
+        me = (d["chunk_id"], d["version_id"])
+        if me not in page or page.index(me) == 0:
+            return None
+        key = page[page.index(me) - 1]
+        rows = self.store.fetch([key])
+        return to_chunk(rows[key]) if key in rows else None
 
     def intro_fill(self, chunks: list, query: str, org: str | None = None, as_of: str | None = None) -> list[Chunk]:
         """R3 도입부 채우기(그래프 `GRAPH_INTRO_FILL=1`, 기본 꺼짐) 전용. 문맥(`chunks`)에 같은 페이지 판(rule_seq, version_id)의 청크가 `INTRO_MIN`개 이상이면
