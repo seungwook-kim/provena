@@ -113,6 +113,8 @@ def test_requery_skip_seen_takes_only_new_chunks(monkeypatch, multi):
     asked: list = []
 
     def page_search(query, seqs, org, as_of, k):
+        if query == Q_ESC:  # 사전 등록 62.55: 첫 검색 뒤 같은 페이지 보충 검색은 세지 않는다
+            return []
         asked.append(k)
         return [ESC, IMOC, EXTRA][:k]  # ESC는 이미 문맥에 있다
     m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)],
@@ -130,6 +132,8 @@ def test_requery_skip_seen_caps_new_chunks_and_off_keeps_k(monkeypatch):
     asked: list = []
 
     def page_search(query, seqs, org, as_of, k):
+        if query == Q_ESC:  # 사전 등록 62.55: 첫 검색 뒤 같은 페이지 보충 검색은 세지 않는다
+            return []
         asked.append(k)
         return [ESC, *many][:k]
     m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)], answer=lambda u: cite(ESC))

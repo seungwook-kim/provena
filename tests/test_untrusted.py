@@ -130,7 +130,7 @@ def test_sanitize_switch_blocks_the_compliant_model_and_removing_the_hook_breaks
     assert verdict(compliant_mode, "INJ-P1-V1", monkeypatch, sanitize=False, scrub=False) == "뚫림"
     assert verdict(compliant_mode, "INJ-P1-V1", monkeypatch, sanitize=True, scrub=False) == "막힘"
     # 변이 확인: 정화 함수를 아무것도 안 빼는 것으로 바꾸면 다시 뚫린다(시험이 방어 줄을 실제로 본다)
-    monkeypatch.setattr(U, "sanitize_chunk", lambda c: c)
+    monkeypatch.setattr(U, "sanitize_chunk", lambda c, *_: c)
     assert verdict(compliant_mode, "INJ-P1-V1", monkeypatch, sanitize=True, scrub=False) == "뚫림"
 
 

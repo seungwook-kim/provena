@@ -249,3 +249,106 @@ def test_run_and_manifest_end_to_end(tmp_path):
     rows = {r["doc_id"]: r for r in map(json.loads, (data / "manifest.jsonl").open(encoding="utf-8"))}
     assert rows[7]["chunks"] == 2 and rows[7]["chars_kept"] == len("First paragraph.") + len("Second paragraph.")
     assert rows[8]["skipped"] == "redirect" and rows[9]["skipped"] == "no_body"
+
+
+# ---- 2026-11-13 청크 결함 3가지 수정: 쪼갤 때 낱말·숫자 보존, 표 행 겹침은 행 처음부터 ----
+def tokens_whole(text, pieces):
+    """조각 경계 양쪽이 모두 공백이 아닌 곳(= 낱말·숫자 한가운데)이 없다."""
+    pos = 0
+    for p in pieces[:-1]:
+        pos += len(p)
+        assert text[pos - 1].isspace() or text[pos].isspace(), (text[max(pos - 8, 0):pos], text[pos:pos + 8])
+
+
+def test_split_long_never_cuts_inside_a_number_or_word():
+    # metrics.md의 이슈 번호 목록처럼 문장 부호 없이 800자를 넘는 글(결함 1: 1174, → 117 / 4,)
+    text = "Issues: " + " ".join(f"#{n}," for n in range(1000, 1300))
+    pieces = C.split_long(text, 100)
+    assert len(pieces) > 1 and "".join(pieces) == text and max(map(len, pieces)) <= 100
+    tokens_whole(text, pieces)
+    assert all(not p.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",")) for p in pieces)   # 숫자 한가운데서 시작하지 않음
+    lines = "word " * 40
+    tokens_whole(lines, C.split_long(lines, 33))                    # 낱말도 마찬가지
+
+
+def test_split_long_prefers_table_cell_boundary():
+    row = " | ".join(f"Column {i}: " + "value " * 9 for i in range(8))
+    pieces = C.split_long(row, 150)
+    assert "".join(pieces) == row and len(pieces) > 1
+    assert all(p.endswith(" | ") for p in pieces[:-1])             # 칸 경계(| 뒤)에서 자른다
+    assert all(p.startswith("Column ") for p in pieces)
+
+
+def test_split_long_token_without_spaces_cuts_at_delimiters_then_characters():
+    token = "||".join(f"file[x]:app/{n}/models" for n in range(60))
+    pieces = C.split_long(token, 120)
+    assert "".join(pieces) == token and max(map(len, pieces)) <= 120
+    assert all(p.endswith("|") for p in pieces[:-1])                # 구분 글자 뒤에서
+    assert C.split_long("x" * 30, 12) == ["x" * 12, "x" * 12, "x" * 6]    # 정말 아무 경계도 없으면 글자 단위(기존 동작)
+    digits = "ab 1234567890 cd"                                     # 공백 자리에서만 자른다(숫자 덩어리를 반으로 안 가른다)
+    assert C.split_long(digits, 12) == ["ab ", "1234567890 ", "cd"]
+
+
+def tail_of(chunk):
+    """청크 글에서 머리말 줄 다음의 겹침 글(overlap_chars 만큼)."""
+    return chunk["text"][len(chunk["header"]) + 1:][:chunk["overlap_chars"]]
+
+
+def row_el(n, label, rest, **kw):
+    """표 행 요소. text 는 parse.row_text 모양(`열 이름: 값 | 열 이름: 값`)."""
+    cells = [label, rest]
+    header = ["Label", "When it's used"]
+    text = " | ".join(f"{h}: {v}" for h, v in zip(header, cells))
+    return el(n, text, kind="table_row", header=header, cells=cells, **kw)
+
+
+# 결함 3: 겹침이 표 행 중간에서 시작하면 첫 칸(라벨)이 빠진다
+def test_overlap_starting_inside_table_row_takes_the_whole_row():
+    rows = [row_el(1, "bt-infra::access-request", "Applied to all access requests that we are responsible for provisioning " * 2),
+            row_el(2, "bt-infra::other", "Something else entirely " * 4)]
+    old_tail = C.overlap_tail(rows[0]["text"], 120)
+    assert not old_tail.startswith("Label:")                                 # 이전 방식: 라벨이 잘렸다
+    chunks = run(rows, size=len(rows[0]["text"]) + 5, overlap=120)
+    assert len(chunks) == 2
+    assert tail_of(chunks[1]) == rows[0]["text"].rstrip()                # 행 전체(라벨 포함)를 가져옴
+    assert chunks[1]["overlap_chars"] == len(rows[0]["text"].rstrip())
+    assert chunks[1]["body_sha256"] == C.sha(rows[1]["text"]) and chunks[1]["chunk_id"] == run(rows, size=len(rows[0]["text"]) + 5, overlap=0)[1]["chunk_id"]   # 본문·id는 그대로
+
+
+def test_overlap_in_long_table_row_gets_first_cell_label():
+    long_row = row_el(1, "bt-infra::access-request", "Applied to all access requests, " * 20)
+    assert len(long_row["text"]) > C.ROW_TAIL_MAX
+    chunks = run([long_row, row_el(2, "next", "x y z " * 40)], size=len(long_row["text"]) + 5, overlap=120)
+    tail = tail_of(chunks[1])
+    assert tail == "Label: bt-infra::access-request | " + C.overlap_tail(long_row["text"], 120)    # 라벨 + 평소 겹침
+    assert len(tail) < 200
+
+
+def test_overlap_in_second_piece_of_split_row_gets_label():
+    # 행이 800자를 넘어 쪼개지면 뒤 조각에는 행 처음이 없으니 라벨을 붙인다
+    big = row_el(1, "bt-infra::access-request", "Applied to all access requests we handle. " * 12)
+    chunks = run([big, row_el(2, "last", "q w e " * 30)], size=200, overlap=60)
+    pieces = C.split_long(big["text"], 200)
+    assert len(pieces) >= 3
+    assert chunks[0]["overlap_chars"] == 0                                   # 첫 조각
+    assert tail_of(chunks[1]).startswith("Label: bt-infra::access-request | ")    # 둘째 조각 앞 겹침(첫 조각 끝)
+    assert chunks[1]["body_sha256"] == C.sha(pieces[1])
+
+
+def test_overlap_from_non_table_elements_is_unchanged():
+    paras = [el(1, "alpha beta gamma delta " * 12), el(2, "epsilon zeta eta " * 12)]
+    chunks = run(paras, size=len(paras[0]["text"]) + 5, overlap=120)
+    assert tail_of(chunks[1]) == C.overlap_tail(paras[0]["text"], 120)    # 표 아님 = 평소 겹침
+    code = [el(1, "line one\n" * 30, kind="code"), el(2, "zzz yyy", kind="paragraph")]
+    for kind_els in (code, [el(1, "item " * 30, kind="list_item"), el(2, "y " * 20)]):
+        out = run(kind_els, size=len(kind_els[0]["text"]) + 3, overlap=120)
+        assert tail_of(out[1]) == C.overlap_tail(kind_els[0]["text"], 120)
+
+
+def test_overlap_starting_exactly_at_row_start_is_unchanged():
+    row = row_el(2, "label", "tiny")
+    first = el(1, "p " * 10)
+    chunks = run([first, row], size=len(first["text"]) + 3, overlap=len(row["text"]))
+    assert tail_of(chunks[1]) == C.overlap_tail(first["text"], len(row["text"]))
+    chunks = run([row_el(1, "a", "b c d " * 6), row_el(2, "z", "y " * 30)], size=60, overlap=10_000)
+    assert tail_of(chunks[1]) == chunks[0]["_body"]            # 행 처음부터 = 앞 청크 본문 전체

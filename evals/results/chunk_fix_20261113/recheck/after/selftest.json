@@ -1,0 +1,45 @@
+{
+ "숫자 +7 (수치 청크 전체에서)": {
+  "tried": 400,
+  "detected": 399,
+  "not_detected_examples": [
+   {
+    "chunk_id": "f6e070bbe060bd8e",
+    "changed": "23 days -> 30 days"
+   }
+  ]
+ },
+ "쪽의 다른 곳에만 있는 숫자로 바꿈": {
+  "tried": 400,
+  "detected": 397,
+  "not_detected_examples": [
+   {
+    "chunk_id": "dcc3d7f8b986b40a",
+    "changed": "12 -> 15 (쪽의 다른 곳에만 있는 숫자)"
+   },
+   {
+    "chunk_id": "46015b4bb83b9d2a",
+    "changed": "10 -> 123 (쪽의 다른 곳에만 있는 숫자)"
+   },
+   {
+    "chunk_id": "b48a691af77b4e1b",
+    "changed": "01 -> 00 (쪽의 다른 곳에만 있는 숫자)"
+   }
+  ]
+ },
+ "표 칸 맞바꿈(같은 행 두 칸)": {
+  "tried": 400,
+  "detected": 400,
+  "not_detected_examples": []
+ },
+ "표 행 섞음(두 행의 같은 열 값)": {
+  "tried": 400,
+  "detected": 400,
+  "not_detected_examples": []
+ },
+ "표 행 하나 삭제": {
+  "tried": 400,
+  "detected": 400,
+  "not_detected_examples": []
+ }
+}

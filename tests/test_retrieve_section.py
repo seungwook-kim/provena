@@ -235,3 +235,24 @@ def test_pg_section_as_of(pg_two_versions):
         assert section.get_section(page["rule_seq"], "Disclosure", "2026-08-01", store=st) is None
     finally:
         st.pool.close()
+
+
+# 표 행 안에서 시작한 겹침은 행 처음부터(또는 첫 칸을 붙여) 가져오므로, 섹션 원문 되살리기가 그것도 떼어 내야 한다(2026-11-13)
+TABLE_RAW = ("---\ntitle: Test Table\n---\n\n## Labels\n\n| Label | When it is used | Links |\n|---|---|---|\n"
+             + "\n".join(f"| label-{i} | " + f"Applied to request number {i} that we handle. " * (2 + 7 * (i % 3)) + f"| Link {i} |"
+                         for i in range(12)) + "\n\nClosing note.\n")
+
+
+def test_rebuild_with_table_row_overlap():
+    page, rows, meta = make(TABLE_RAW, "v1", "2026-09-01")
+    labels = [r for r in rows if r["article"] == "Labels"]
+    tails = [r["text"].split("\n")[1] for r in labels if r["overlap_chars"]]
+    assert len(labels) >= 4 and any(t.startswith("Label: label-") for t in tails)       # 행 처음(또는 첫 칸)부터 시작한 겹침이 있다
+    got = section.get_section(page["rule_seq"], "Labels", store=MemorySectionStore(rows, [meta]))
+    assert got.text == elements_text(page, TABLE_RAW)["Labels"]
+    bad = [dict(r) for r in rows]
+    i = next(i for i, r in enumerate(bad) if r["article"] == "Labels" and r["overlap_chars"])
+    head, tail, rest = bad[i]["text"].split("\n", 2)
+    bad[i]["text"] = "\n".join([head, tail[:-1] + "!", rest])                             # 겹침 글만 바꿔도 여전히 멈춘다
+    with pytest.raises(SectionIntegrityError):
+        section.get_section(page["rule_seq"], "Labels", store=MemorySectionStore(bad, [meta]))

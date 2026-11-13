@@ -13,7 +13,9 @@
    평가셋 해시가 현재 동결 해시와 같은 것 가운데 측정 종료 시각이 가장 늦은 폴더를 자동으로 고른다.
    새 운영 측정을 커밋하면 이 비교가 그 결과를 읽으므로 코드가 바뀐 뒤의 운영 점수 하락이 여기서 드러난다.
    운영 측정에는 환각 위험 지표가 없어 그 지표는 이 비교에서 뺀다.
-5. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
+5. `--current <결과 파일>`을 주면(CI는 줌) `evals/ci_current_eval.py`가 현재 코드로 돌린 0원(키 없는 데모 재생, 오프라인) 평가 결과를 기준 파일의 `current` 항목과 견준다.
+   커밋된 옛 측정 파일은 코드가 바뀌어도 그대로라 현재 코드의 회귀를 못 잡으므로, 이 항목이 그 구멍을 맡는다. 파일을 주지 않으면 이 비교를 하지 않는다.
+6. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
 
 통과선: 인용 정확도 0.85 이상, 정답 근거 인용률 0.85 이상, 비관련 질문 거절 0.90 이상, 전체 p95 10초 이하.
 기준 결과 비교: 정답 근거·인용 정확도·거절은 기준보다 낮아지면, 오답 근거·과잉 거절·환각 위험은 기준보다
@@ -190,6 +192,32 @@ def evaluate(collected: dict, baseline: dict) -> tuple[list[dict], list[str]]:
     return rows, failures
 
 
+CURRENT_LABELS = {"answers_ok": "인용 답이 나온 질문", "refusals_ok": "거절이 나온 질문", "missed_calls": "녹화에 없는 요청", "fake_answers": "발췌형 대체 답"}
+
+
+def evaluate_current(result: dict, baseline: dict) -> tuple[list[dict], list[str]]:
+    """현재 코드의 0원 평가 결과(`ci_current_eval.py`)를 기준 파일의 `current` 항목과 견준다. 두 경로(추론 답을 보냄, 빠른 답만 보냄) 모두 본다.
+    인용 답·거절 수는 기준보다 낮아지면, 녹화에 없는 요청·발췌형 대체 답은 기준보다 많아지면 실패한다."""
+    rows, failures = [], []
+    base = baseline["current"]["metrics"]
+    commit = result.get("meta", {}).get("commit") or "?"
+    paths = result.get("paths") or {}
+    if not paths:
+        return rows, ["현재 코드 평가: 결과 파일에 경로별 결과가 없습니다"]
+    for label, body in paths.items():
+        arm, s = f"현재 코드 {commit} {label}", body["summary"]
+        if s.get("n_questions") != base.get("n_questions"):
+            failures.append(f"{arm} 질문 수 {s.get('n_questions')} != 기준 {base.get('n_questions')}")
+        for key, text in CURRENT_LABELS.items():
+            value, ref = s[key], base[key]
+            bad = value < ref if key in ("answers_ok", "refusals_ok") else value > ref
+            verdict = "기준보다 " + ("낮음" if key in ("answers_ok", "refusals_ok") else "많음") if bad else "통과"
+            if bad:
+                failures.append(f"{arm} {text} {value} vs 기준 {ref}" + (f" (녹화가 오래된 질문: {len(s.get('stale_questions', []))}개)" if key == "missed_calls" else ""))
+            rows.append({"arm": arm, "label": text, "value": value, "baseline": ref, "gate": "-", "verdict": verdict})
+    return rows, failures
+
+
 def render(rows: list[dict], failures: list[str], runs, dataset: str, sha: str) -> str:
     lines = [
         "## 평가 점수 비교 (저장소에 커밋된 결과 파일, 키·네트워크 없음)",
@@ -218,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runs", nargs="+", default=list(DEFAULT_RUNS))
     parser.add_argument("--baseline", type=Path, default=BASELINE)
     parser.add_argument("--frozen", type=Path, default=FROZEN)
+    parser.add_argument("--current", type=Path, default=None, help="`evals/ci_current_eval.py`가 현재 코드로 낸 0원 평가 결과 파일. 주면 기준 파일의 `current` 항목과 비교한다")
     args = parser.parse_args(argv)
 
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
@@ -233,6 +262,15 @@ def main(argv: list[str] | None = None) -> int:
         op_rows, op_failures = evaluate_operating(find_latest_operating(args.results_dir, frozen, dataset), baseline)
         rows += op_rows
         failures += op_failures
+    if args.current is not None:
+        if "current" not in baseline:
+            failures.append("현재 코드 평가: 기준 파일에 current 항목이 없습니다")
+        elif not args.current.is_file():
+            failures.append(f"현재 코드 평가: 결과 파일 {args.current}이 없습니다(evals/ci_current_eval.py를 먼저 돌려야 합니다)")
+        else:
+            cur_rows, cur_failures = evaluate_current(json.loads(args.current.read_text(encoding="utf-8")), baseline)
+            rows += cur_rows
+            failures += cur_failures
     text = render(rows, failures, args.runs, dataset, frozen[dataset]["sha256"])
 
     if hasattr(sys.stdout, "reconfigure"):

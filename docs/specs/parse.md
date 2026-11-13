@@ -22,6 +22,7 @@
 1. `python -m backend.rag.ingest.parse`
 2. 페이지마다: front matter와 단축코드를 **줄 수를 바꾸지 않고** 정리 → markdown-it-py(CommonMark + table)로 토큰화
 3. 블록마다 요소 하나: 제목·문단·목록 항목(최상위)·표 행·코드·HTML 표 행·HTML 문단. 요소에 제목 경로·부모 제목·순서·원본 줄 범위를 붙인다
+3-1. 셀 안에 빈 줄이 든 HTML 표(`<table>`~`</table>`)는 한 블록으로 읽는다(`join_html_tables`): markdown-it의 HTML 블록은 빈 줄에서 끝나 표가 끊기고 뒤 칸이 열 이름 없는 목록·문단 요소가 되므로, 표 안의 빈 줄만 `<!-- -->` 한 줄로 바꾼다(줄 수 그대로). 코드 블록(펜스) 안의 표는 건드리지 않는다. 칸 안 마크다운 링크 `[글자](주소)`는 글자만 남긴다
 4. 권한표: BeautifulSoup으로 본표(`div.grid-auth-matrix`) 363칸, 이사회 표(`div.treasury-auth-matrix`), 각주 (1)~(6). 표 밖 글(계약 승인 절차·각주 목록·Authorization Matrix Policy)은 쪽과 같은 방식으로 요소로 만들고(`authz_ir.jsonl`), 두 표의 줄은 빼서 칸과 겹치지 않게 한다. 정책 본문(Primary Authorized Signatories)이 없거나 예상 밖 HTML이 있으면 `ParseError`
 5. `data/parsed/` 에 쓰고 다시 읽어 건수를 대조, `parse_report.json` 에 집계
 

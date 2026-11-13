@@ -31,7 +31,7 @@ from backend.rag.retrieve.embed import EmbedNoKey, EmbedUnavailable
 from backend.rag.retrieve.search import MemoryStore, SearchConfig, Searcher, last_search_trace
 from backend.schemas.chunk import SearchQuery
 
-SWITCHES = ("SEARCH_HEDGE", "SEARCH_HEDGE_S", "GRAPH_SPECULATE_FIRST", "CHAT_FINAL_FROM_STREAM", "ANSWER_SAVE_ONE_CONN",
+SWITCHES = ("SEARCH_HEDGE", "SEARCH_HEDGE_S", "GRAPH_SPECULATE_FIRST", "GRAPH_SPECULATE_EARLY_SEARCH", "CHAT_FINAL_FROM_STREAM", "ANSWER_SAVE_ONE_CONN",
             "GRAPH_PARALLEL_INTAKE", "GRAPH_SKIP_FIRST_REWRITE", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_JUDGE_ANSWER",
             "GRAPH_SPECULATE_GROUND", "USE_SKILLS")
 
@@ -214,6 +214,164 @@ def test_search_hedge_second_request_rescues_a_first_request_that_fails_late():
     assert got == _ids(_searcher(Embedder()).search(Q_SEARCH))
     assert tr.hedged is True and tr.hedge_winner == 1
 
+
+# ============================ D: 원 질문 첫 검색 일찍 시작(사전 등록 62.53, 62.15 재도입) ============================
+
+def _graph(multi, fn, m, **kw):
+    return build_multi_graph(fn, llm=m, **kw) if multi else build_graph(fn, llm=m, **kw)
+
+
+def _sp(monkeypatch, multi, *, early, gate, split, route="rule", gate_delay=0.0, search_fn=None):
+    monkeypatch.setenv("GRAPH_SPECULATE_FIRST", "1")
+    if early:
+        monkeypatch.setenv("GRAPH_SPECULATE_EARLY_SEARCH", "1")
+    searched: list = []
+    times: dict = {}
+
+    def fn(q):
+        times.setdefault("search_start", time.monotonic())
+        searched.append((q.query, tuple(q.sub_queries or ()), q.k, q.org, q.as_of))
+        if search_fn is not None:
+            return search_fn(q)
+        return [ESC, IMOC]
+
+    def gate_answer(_u):
+        time.sleep(gate_delay)
+        times["gate_end"] = time.monotonic()
+        return j(split=gate, sub_questions=SUBS if gate else [])
+
+    m = llm(decompose=j(split=split, sub_questions=SUBS if split else []), decompose_gate=gate_answer, judge=j(sufficient=True, reason="", clarify=None),
+            classify=j(route=route), answer=lambda u: cite(ESC))
+    out = run_graph(_graph(multi, fn, m, decompose=True, parallel_intake=True, skip_first_rewrite=True), Q_ESC)
+    return out, m, searched, times
+
+
+def _same_answer(a, b):
+    assert a["kind"] == b["kind"] and a["answer"] == b["answer"]
+    assert [c["chunk_id"] for c in a.get("citations", [])] == [c["chunk_id"] for c in b.get("citations", [])]
+
+
+def test_early_search_flag_is_off_in_code_and_on_in_the_service_profile(monkeypatch):
+    assert F.speculate_early_search_enabled() is False
+    monkeypatch.setenv("GRAPH_SPECULATE_EARLY_SEARCH", "1")
+    assert F.speculate_early_search_enabled() is True
+    assert SP.SERVICE_ENV["GRAPH_SPECULATE_EARLY_SEARCH"] == "1" and SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"
+    env: dict = {}
+    SP.apply_service_profile(env)
+    assert env["GRAPH_SPECULATE_EARLY_SEARCH"] == "1"
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_off_starts_the_search_after_the_gate(monkeypatch, multi):
+    out, m, s, t = _sp(monkeypatch, multi, early=False, gate=False, split=False, gate_delay=0.3)
+    assert t["search_start"] >= t["gate_end"] and len(s) == 1 and out["search_stats"].get("speculated") == "used"
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_on_starts_the_search_with_the_gate_and_gives_the_same_answer(monkeypatch, multi):
+    base, m0, s0, _ = _sp(monkeypatch, multi, early=False, gate=False, split=False, gate_delay=0.3)
+    out, m, s, t = _sp(monkeypatch, multi, early=True, gate=False, split=False, gate_delay=0.3)
+    assert t["search_start"] < t["gate_end"] - 0.15     # 게이트가 끝나기 전에 검색이 시작됐다
+    assert s == s0 and len(s) == 1                       # 같은 검색을 한 번, 검색 입력(질문, 하위 질문, 자리 수, 조직, 기준일)이 같다
+    assert m.count("judge") == m0.count("judge") == 1 and m.count("decompose_gate") == 1
+    _same_answer(out, base)
+    assert out["search_stats"].get("speculated") == "used"
+    assert out["chunks"] == base["chunks"] and out["search_query"] == base["search_query"]   # 문맥과 재작성 결과도 같다
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_result_is_dropped_when_the_gate_splits(monkeypatch, multi):
+    base, m0, s0, _ = _sp(monkeypatch, multi, early=False, gate=True, split=True)
+    out, m, s, _ = _sp(monkeypatch, multi, early=True, gate=True, split=True)
+    assert len(s0) == 1 and s0[0][1] == tuple(SUBS)
+    assert len(s) == 2 and s[0][1] == () and s[1] == s0[0]      # 일찍 돌린 원 질문 검색은 버리고 하위 질문 검색을 쓴다
+    assert out["sub_queries"] == SUBS == base["sub_queries"]
+    assert m.count("judge") == m0.count("judge") == 1           # 버린 쪽은 판정까지 가지 않는다
+    _same_answer(out, base)
+    assert out["search_stats"].get("speculated") == "dropped"
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_result_is_dropped_when_the_split_disagrees_with_the_gate(monkeypatch, multi):
+    base, m0, s0, _ = _sp(monkeypatch, multi, early=False, gate=False, split=True)
+    out, m, s, _ = _sp(monkeypatch, multi, early=True, gate=False, split=True)
+    assert out["sub_queries"] == SUBS == base["sub_queries"] and s[-1] == s0[-1]
+    _same_answer(out, base)
+    assert out["search_stats"].get("speculated") == "dropped"
+
+
+def test_early_search_is_dropped_when_the_route_is_not_the_policy_path(monkeypatch):
+    base, m0, s0, _ = _sp(monkeypatch, False, early=False, gate=False, split=False, route="out_of_domain")
+    out, m, s, _ = _sp(monkeypatch, False, early=True, gate=False, split=False, route="out_of_domain")
+    assert out["kind"] == base["kind"] == "refuse" and out["answer"] == base["answer"]
+    assert m.count("judge") == 0 and len(s) <= 1 and s0 == []     # 일찍 돌린 검색은 최대 하나이고 결과는 쓰지 않는다
+
+
+def test_early_search_error_that_is_not_used_does_not_break_the_answer(monkeypatch):
+    def only_subs(q):
+        if not q.sub_queries:
+            raise ValueError("원 질문 검색 오류")
+        return [ESC, IMOC]
+
+    base, *_ = _sp(monkeypatch, False, early=False, gate=True, split=True, search_fn=only_subs)
+    out, m, s, _ = _sp(monkeypatch, False, early=True, gate=True, split=True, search_fn=only_subs)
+    _same_answer(out, base)
+    assert out["kind"] == "answer"
+
+
+def test_early_search_embed_unavailable_ends_like_the_sequential_path(monkeypatch):
+    def down(_q):
+        raise EmbedUnavailable("503")
+
+    base, m0, *_ = _sp(monkeypatch, False, early=False, gate=False, split=False, search_fn=down)
+    out, m, *_ = _sp(monkeypatch, False, early=True, gate=False, split=False, search_fn=down)
+    assert out["kind"] == base["kind"] == "refuse" and out["search_error"] == base["search_error"] == "unavailable"
+    assert out["answer"] == base["answer"] and m.count("judge") == m0.count("judge") == 0
+
+
+def test_early_search_off_without_speculate_first_changes_nothing(monkeypatch):
+    monkeypatch.setenv("GRAPH_SPECULATE_EARLY_SEARCH", "1")      # SP(GRAPH_SPECULATE_FIRST) 없이는 아무 일도 하지 않는다
+    searched: list = []
+
+    def fn(q):
+        searched.append(q)
+        return [ESC, IMOC]
+
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=j(sufficient=True, reason="", clarify=None), answer=lambda u: cite(ESC))
+    out = run_graph(build_graph(fn, llm=m, decompose=True, parallel_intake=True, skip_first_rewrite=True), Q_ESC)
+    assert out["kind"] == "answer" and len(searched) == 1 and m.count("decompose_gate") == 0 and "speculated" not in out["search_stats"]
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_starts_the_judge_earlier_than_the_sequential_path(monkeypatch, multi):
+    """판정 시작이 검색 시간만큼 당겨진다: 검색이 0.3초 걸리고 게이트가 0.3초 걸릴 때, 일찍 시작하면 판정이 게이트 직후에 시작한다."""
+    marks: dict = {}
+
+    def slow_search(q):
+        time.sleep(0.3)
+        return [ESC, IMOC]
+
+    def run(early):
+        monkeypatch.setenv("GRAPH_SPECULATE_FIRST", "1")
+        if early:
+            monkeypatch.setenv("GRAPH_SPECULATE_EARLY_SEARCH", "1")
+        else:
+            monkeypatch.delenv("GRAPH_SPECULATE_EARLY_SEARCH", raising=False)
+        t0 = time.monotonic()
+
+        def judge(_u):
+            marks.setdefault(early, time.monotonic() - t0)
+            return j(sufficient=True, reason="", clarify=None)
+
+        def gate(_u):
+            time.sleep(0.3)
+            return j(split=False, sub_questions=[])
+        m = llm(decompose=j(split=False, sub_questions=[]), decompose_gate=gate, judge=judge, answer=lambda u: cite(ESC))
+        return run_graph(_graph(multi, slow_search, m, decompose=True, parallel_intake=True, skip_first_rewrite=True), Q_ESC)
+
+    a, b = run(False), run(True)
+    _same_answer(a, b)
+    assert marks[True] < marks[False] - 0.2     # 순차: 게이트 0.3 + 검색 0.3. 일찍 시작: 게이트와 검색이 겹쳐 0.3 안팎
 
 
 # ============================ E: 그래프 밖 왕복 ============================
@@ -471,7 +629,7 @@ def test_measurement_runner_takes_the_new_switches_and_the_answer_wait_arguments
     import evals.agent.exp_multi_v2 as M
     from test_exp_multi import MODEL_OFF, _parse
 
-    args = _parse(["--speculate-first", "--search-hedge", "1.5"])
-    assert M.chosen_model_switches(args) == {**MODEL_OFF, "GRAPH_SPECULATE_FIRST": "1", "SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
+    args = _parse(["--speculate-first", "--speculate-early-search", "--search-hedge", "1.5"])
+    assert M.chosen_model_switches(args) == {**MODEL_OFF, "GRAPH_SPECULATE_FIRST": "1", "GRAPH_SPECULATE_EARLY_SEARCH": "1", "SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
     args = _parse(["--answer-wait", "4.0", "--answer-budget", "6.5"])
     assert M.chosen_model_switches(args) == {**MODEL_OFF, "GRAPH_ANSWER_WAIT_S": "4.0", "GRAPH_ANSWER_BUDGET_S": "6.5"}

@@ -111,6 +111,9 @@ SERVICE_ENV: dict[str, str] = {
     # 사전 등록 62.14의 검색 hedge(사용자 결정 11/11 26). 운영 Cloud Run 리비전에 이미 같은 값으로 켜져 있어 서비스 값으로 올려도 운영 동작은 그대로다. 측정 실행기 인자에는 없다(서비스 경로만)
     "SEARCH_HEDGE": "1",                   # 62.14: 첫 검색(임베딩 + 벡터 질의)이 SEARCH_HEDGE_S초 안에 안 오면 같은 검색을 하나 더 보내 먼저 온 결과를 씀
     "SEARCH_HEDGE_S": "1.5",               # 운영 값(Cloud Run 리비전 환경 변수, 2026-11-11 확인)
+    # 사전 등록 62.53(62.15 재도입, 입력이 같은 변경): 원 질문 재작성과 첫 검색을 질문 접수와 동시에 시작한다. 예비 분해가 "안 나눔"이고 분류가 정책 경로일 때만 그 결과를 쓰고 아니면 버린다
+    # (GRAPH_SPECULATE_FIRST가 켜져 있어야 한다). 측정 실행기 인자 --speculate-early-search는 있으나 측정 묶음 인자(MEASURED_ARGS)에는 넣지 않았다(서비스 경로만)
+    "GRAPH_SPECULATE_EARLY_SEARCH": "1",   # 62.53
 }
 
 
@@ -226,6 +229,11 @@ def intro_search(chunks: list, query: str, org: str | None, as_of: str | None) -
     return _searcher().intro_fill(chunks, query, org, as_of)
 
 
+def prev_chunk(chunk: Any) -> Any:
+    """겹친 머리 인용 바로잡기(사전 등록 62.58): 문맥 밖 앞 청크 읽기. `Searcher.prev_chunk`다."""
+    return _searcher().prev_chunk(chunk)
+
+
 def service_searches() -> dict[str, Any]:
-    """`build_graph`에 넘길 페이지·도입부 검색. 그래프는 해당 스위치가 켜졌을 때만 부른다."""
-    return {"page_search": page_search, "intro_search": intro_search}
+    """`build_graph`에 넘길 페이지·도입부 검색과 앞 청크 읽기. 페이지·도입부 검색은 해당 스위치가 켜졌을 때(같은 페이지 보충은 나뉜 질문의 첫 검색에서 항상), 앞 청크 읽기는 겹친 머리 인용 바로잡기가 바꿀 때만 부른다."""
+    return {"page_search": page_search, "intro_search": intro_search, "prev_chunk": prev_chunk}

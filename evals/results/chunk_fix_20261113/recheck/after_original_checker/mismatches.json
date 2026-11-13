@@ -1,0 +1,3698 @@
+{
+ "selected": 4318,
+ "mismatch": 80,
+ "items": [
+  {
+   "chunk_id": "cc1dcf20d39f1f25",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/business-technology/enterprise-applications/pmo/pmo-governance.md",
+   "title": "Governance and IT Program Management",
+   "article": "Program governance > Clear documentation for compliance > Program Development / Implementation of the system (1 time controls)",
+   "line_start": 186,
+   "line_end": 188,
+   "overlap_chars": 244,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "eabb74af05aa6d97",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/business-technology/tech-stack-applications.md",
+   "title": "Tech Stack Applications",
+   "article": "Tech Stack Updates > What data lives in the Tech Stack?",
+   "line_start": 80,
+   "line_end": 81,
+   "overlap_chars": 136,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "064ad271e89799ce",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/business-technology/tech-stack-applications.md",
+   "title": "Tech Stack Applications",
+   "article": "Tech Stack Updates > What data lives in the Tech Stack?",
+   "line_start": 83,
+   "line_end": 84,
+   "overlap_chars": 140,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "359b88210b4cd4a7",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/ai/search/_index.md",
+   "title": "Global Search Group",
+   "article": "Work > MR reviews > Reviewer and maintainer types",
+   "line_start": 223,
+   "line_end": 225,
+   "overlap_chars": 190,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "3b1c2583083b2459",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/data-engineering/quarterly-planning.md",
+   "title": "Quarterly planning",
+   "article": "Who does what",
+   "line_start": 103,
+   "line_end": 103,
+   "overlap_chars": 199,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "60c05469e8518d40",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/data-engineering/quarterly-planning.md",
+   "title": "Quarterly planning",
+   "article": "Who does what",
+   "line_start": 104,
+   "line_end": 105,
+   "overlap_chars": 141,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "6e105cc7e54353cc",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-factory/products/metrics.md",
+   "title": "Secure Product Metrics",
+   "article": null,
+   "line_start": 32,
+   "line_end": 32,
+   "overlap_chars": 154,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 172,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#352",
+      "#359",
+      "#370",
+      "#374",
+      "#375",
+      "#377",
+      "#378",
+      "#379",
+      "#386",
+      "#402",
+      "#403",
+      "#419",
+      "#420",
+      "#421",
+      "#422",
+      "#424",
+      "#425",
+      "#426",
+      "#427",
+      "#428",
+      "#433",
+      "#441",
+      "#470",
+      "#472",
+      "#488",
+      "#491",
+      "#492",
+      "#493",
+      "#497",
+      "#498",
+      "#499",
+      "#500",
+      "#502",
+      "#520",
+      "#521",
+      "#522",
+      "#523",
+      "#524",
+      "#525",
+      "#526",
+      "#527",
+      "#528",
+      "#529",
+      "#530",
+      "#531",
+      "#532",
+      "#535",
+      "#536",
+      "#537",
+      "#538",
+      "#539",
+      "#540",
+      "#541",
+      "#548",
+      "#549",
+      "#550",
+      "#551",
+      "#552",
+      "#553",
+      "#555",
+      "#556",
+      "#565",
+      "#566",
+      "#582",
+      "#583",
+      "#593",
+      "#598",
+      "#599",
+      "#601",
+      "#603",
+      "#608",
+      "#612",
+      "#615",
+      "#619",
+      "#620",
+      "#621",
+      "#623",
+      "#627",
+      "#638",
+      "#639",
+      "#640",
+      "#642",
+      "#645",
+      "#647",
+      "#648",
+      "#651",
+      "#668",
+      "#706",
+      "#708",
+      "#732",
+      "#767",
+      "#784",
+      "#798",
+      "#804",
+      "#827",
+      "#836",
+      "#842",
+      "#862",
+      "#863",
+      "#913",
+      "#914",
+      "#915",
+      "#918",
+      "#921",
+      "#922",
+      "#923",
+      "#925",
+      "#926",
+      "#927",
+      "#939",
+      "#940",
+      "#941",
+      "#942",
+      "#1004",
+      "#1021",
+      "#1022",
+      "#1189",
+      "#1191",
+      "#1220",
+      "#1222",
+      "#1224",
+      "#1230",
+      "#1231",
+      "#1242",
+      "#1243",
+      "#1244",
+      "#1252",
+      "#1254",
+      "#1255",
+      "#1256",
+      "#1257",
+      "#1258",
+      "#1259",
+      "#1260",
+      "#1262",
+      "#1263",
+      "#1267",
+      "#1268",
+      "#1270",
+      "#1273",
+      "#1274",
+      "#1275",
+      "#1276",
+      "#1280",
+      "#1282",
+      "#1283",
+      "#1290",
+      "#1292",
+      "#1294",
+      "#1295",
+      "#1296",
+      "#1297",
+      "#1299",
+      "#1300",
+      "#1302",
+      "#1303",
+      "#1304",
+      "#1311",
+      "#1312",
+      "#1313",
+      "#1314",
+      "#1315",
+      "#1316",
+      "#1317",
+      "#1320",
+      "#1321",
+      "#1323",
+      "#1324",
+      "#1327",
+      "#1328",
+      "#1334",
+      "#1336"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "00e4f58fb1da1c5d",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-factory/products/metrics.md",
+   "title": "Secure Product Metrics",
+   "article": null,
+   "line_start": 33,
+   "line_end": 33,
+   "overlap_chars": 153,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 66,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1299",
+      "#1300",
+      "#1302",
+      "#1303",
+      "#1304",
+      "#1311",
+      "#1312",
+      "#1313",
+      "#1314",
+      "#1315",
+      "#1316",
+      "#1317",
+      "#1320",
+      "#1321",
+      "#1323",
+      "#1324",
+      "#1327",
+      "#1328",
+      "#1334",
+      "#1336",
+      "#5",
+      "#6",
+      "#259",
+      "#261",
+      "#296",
+      "#310",
+      "#319",
+      "#321",
+      "#322",
+      "#323",
+      "#324",
+      "#325",
+      "#326",
+      "#327",
+      "#328",
+      "#329",
+      "#330",
+      "#331",
+      "#332",
+      "#333",
+      "#334",
+      "#335",
+      "#336",
+      "#337",
+      "#338",
+      "#339",
+      "#340",
+      "#341",
+      "#342",
+      "#343",
+      "#344",
+      "#347",
+      "#523",
+      "#587",
+      "#720",
+      "#757",
+      "#759",
+      "#760",
+      "#780",
+      "#798",
+      "#804",
+      "#818",
+      "#916",
+      "#1204",
+      "#1240",
+      "#1241"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "e502f3f485638236",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-factory/products/metrics.md",
+   "title": "Secure Product Metrics",
+   "article": null,
+   "line_start": 34,
+   "line_end": 34,
+   "overlap_chars": 139,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 32,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#788",
+      "#789",
+      "#790",
+      "#791",
+      "#792",
+      "#793",
+      "#794",
+      "#795",
+      "#796",
+      "#797",
+      "#805",
+      "#806",
+      "#822",
+      "#823",
+      "#824",
+      "#825",
+      "#838",
+      "#914",
+      "#917",
+      "#918",
+      "#943",
+      "#1021",
+      "#1173",
+      "#1174",
+      "#1236",
+      "#1284",
+      "#1285",
+      "#1286",
+      "#1287",
+      "#1288",
+      "#1289",
+      "#1336"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "08e2cdd8de4c1789",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-factory/products/metrics.md",
+   "title": "Secure Product Metrics",
+   "article": null,
+   "line_start": 35,
+   "line_end": 36,
+   "overlap_chars": 75,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 130,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1174",
+      "#1236",
+      "#1284",
+      "#1285",
+      "#1286",
+      "#1287",
+      "#1288",
+      "#1289",
+      "#1336",
+      "#5",
+      "#9",
+      "#13",
+      "#15",
+      "#73",
+      "#102",
+      "#105",
+      "#106",
+      "#108",
+      "#109",
+      "#114",
+      "#183",
+      "#209",
+      "#210",
+      "#211",
+      "#213",
+      "#235",
+      "#250",
+      "#256",
+      "#257",
+      "#258",
+      "#259",
+      "#260",
+      "#266",
+      "#267",
+      "#268",
+      "#269",
+      "#270",
+      "#271",
+      "#272",
+      "#273",
+      "#274",
+      "#280",
+      "#302",
+      "#307",
+      "#308",
+      "#309",
+      "#311",
+      "#312",
+      "#313",
+      "#314",
+      "#315",
+      "#316",
+      "#317",
+      "#318",
+      "#319",
+      "#321",
+      "#350",
+      "#419",
+      "#424",
+      "#425",
+      "#426",
+      "#430",
+      "#434",
+      "#444",
+      "#447",
+      "#451",
+      "#455",
+      "#472",
+      "#501",
+      "#520",
+      "#522",
+      "#523",
+      "#525",
+      "#535",
+      "#536",
+      "#537",
+      "#539",
+      "#549",
+      "#550",
+      "#554",
+      "#555",
+      "#556",
+      "#565",
+      "#579",
+      "#598",
+      "#602",
+      "#603",
+      "#614",
+      "#623",
+      "#636",
+      "#637",
+      "#638",
+      "#642",
+      "#646",
+      "#648",
+      "#650",
+      "#653",
+      "#654",
+      "#655",
+      "#656",
+      "#657",
+      "#671",
+      "#784",
+      "#798",
+      "#799",
+      "#807",
+      "#837",
+      "#840",
+      "#841",
+      "#927",
+      "#942",
+      "#1007",
+      "#1021",
+      "#1022",
+      "#1173",
+      "#1192",
+      "#1331",
+      "#2",
+      "#7",
+      "#11",
+      "#12",
+      "#16",
+      "#526",
+      "#541",
+      "#547",
+      "#611",
+      "#756",
+      "#776",
+      "#1004",
+      "#1032"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "e44f73b59678517d",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-platform/secrets-manager/_index.md",
+   "title": "Secrets Manager Group",
+   "article": "How we work > Planning > Issue weight system",
+   "line_start": 125,
+   "line_end": 125,
+   "overlap_chars": 136,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#5"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "383a75a7eb7a2d89",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/development/sec/security-platform/secrets-manager/_index.md",
+   "title": "Secrets Manager Group",
+   "article": "How we work > Planning > Issue weight system",
+   "line_start": 126,
+   "line_end": 128,
+   "overlap_chars": 137,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#5",
+      "#8"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "fcc10a93f83aa1bb",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/devops/create/code-review/_index.md",
+   "title": "Create:Code Review Group",
+   "article": "Metrics of success > Secondary metrics",
+   "line_start": 151,
+   "line_end": 151,
+   "overlap_chars": 171,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2021"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ee5aa4b8589ab6a3",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/devops/verify/pipeline-execution/risk-map.md",
+   "title": "Pipeline Execution Group - Risk Map",
+   "article": "Overview > General Risk Map > Map key",
+   "line_start": 32,
+   "line_end": 33,
+   "overlap_chars": 143,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 6,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1",
+      "#5",
+      "#3",
+      "#12",
+      "#4",
+      "#16"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "888f9c48b64933f7",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/bug-prioritization.md",
+   "title": "Bug Prioritization",
+   "article": "Bug Prioritization Dashboard > Dashboard Walkthrough",
+   "line_start": 68,
+   "line_end": 70,
+   "overlap_chars": 176,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "s1"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 3,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ab7a45b032a20977",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/custom-tooling-and-dogfooding.md",
+   "title": "Custom Tooling and Dogfooding",
+   "article": "Current Custom Tooling > CI/CD Pipeline Observability",
+   "line_start": 27,
+   "line_end": 27,
+   "overlap_chars": 157,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "09e308fcc8460284",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/design-documents/component_performance_testing/_index.md",
+   "title": "Component Performance Testing",
+   "article": "Responsibilities",
+   "line_start": 115,
+   "line_end": 166,
+   "overlap_chars": 169,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "5b56fca31e532bd0",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/_index.md",
+   "title": "GitLab Dedicated Group",
+   "article": "How we work > Protecting Customer Identity",
+   "line_start": 244,
+   "line_end": 244,
+   "overlap_chars": 150,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "073356ec9ddc981e",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/_index.md",
+   "title": "GitLab Dedicated Group",
+   "article": "How we work > Labels > Workflow labels",
+   "line_start": 576,
+   "line_end": 578,
+   "overlap_chars": 128,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 3,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "f6e97b850bf03965",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/environment-automation.md",
+   "title": "Dedicated Commercial (was Environment Automation)",
+   "article": "Functional Teams after Act 2",
+   "line_start": 27,
+   "line_end": 27,
+   "overlap_chars": 157,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "fac1c8ecce2082ba",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/environment-automation.md",
+   "title": "Dedicated Commercial (was Environment Automation)",
+   "article": "Functional Teams after Act 2",
+   "line_start": 28,
+   "line_end": 28,
+   "overlap_chars": 158,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ceeccea5889a345b",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/environment-automation.md",
+   "title": "Dedicated Commercial (was Environment Automation)",
+   "article": "Functional Teams after Act 2",
+   "line_start": 29,
+   "line_end": 29,
+   "overlap_chars": 168,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ac8f7c8e560072c7",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/gitlab-dedicated/environment-automation.md",
+   "title": "Dedicated Commercial (was Environment Automation)",
+   "article": "Functional Teams after Act 2",
+   "line_start": 30,
+   "line_end": 30,
+   "overlap_chars": 167,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "da9a4879c7fe331a",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Incident Response Roles",
+   "line_start": 105,
+   "line_end": 106,
+   "overlap_chars": 138,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "s1",
+      "s2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "df27c47072576502",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Response Teams > Tier 1",
+   "line_start": 125,
+   "line_end": 128,
+   "overlap_chars": 149,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 5,
+   "detail": {
+    "numbers": {
+     "values": [
+      "tier 1",
+      "#1",
+      "s4",
+      "tier 2",
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "11a94145fcf2cf30",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Severities > Incident Severity",
+   "line_start": 570,
+   "line_end": 570,
+   "overlap_chars": 142,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 3,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1",
+      "0 day",
+      "#0"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "c8d95d3e5ad1efe6",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Severities > Incident Severity",
+   "line_start": 571,
+   "line_end": 571,
+   "overlap_chars": 151,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1",
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "810949b0ff8dd3eb",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Severities > Incident Severity",
+   "line_start": 571,
+   "line_end": 571,
+   "overlap_chars": 147,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "13c6fa70608774cd",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Severities > Incident Severity",
+   "line_start": 572,
+   "line_end": 572,
+   "overlap_chars": 142,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2",
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "2bd01d65bc51315a",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/engineering/infrastructure-platforms/incident-management/_index.md",
+   "title": "Incident Management",
+   "article": "Severities > Incident Severity",
+   "line_start": 573,
+   "line_end": 573,
+   "overlap_chars": 144,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "28f7c9411cbcea27",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/ai/context-layer/add-a-domain/_index.md",
+   "title": "Add a Domain Guide",
+   "article": "Using the contextlayer-setup-assistance skill",
+   "line_start": 213,
+   "line_end": 214,
+   "overlap_chars": 149,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "p0",
+      "p3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "91f68414afd026c9",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/data-governance/data-management.md",
+   "title": "Data Team Data Management Page",
+   "article": "Standard > Data Categorization",
+   "line_start": 49,
+   "line_end": 49,
+   "overlap_chars": 151,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "36a8f241c0c48300",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/how-we-work/_index.md",
+   "title": "Data Team - How We Work",
+   "article": "How We Work > Workflow Summary",
+   "line_start": 344,
+   "line_end": 345,
+   "overlap_chars": 170,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 3,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1",
+      "#3",
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "004639febe6e0e02",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/platform/_index.md",
+   "title": "Data Team Platform",
+   "article": "Extract and Load > Data Sources > Tier definition",
+   "line_start": 146,
+   "line_end": 147,
+   "overlap_chars": 142,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 12,
+   "detail": {
+    "numbers": {
+     "values": [
+      "$100k",
+      "24 hour",
+      "5 day",
+      "tier 1",
+      "tier 2",
+      "tier 3",
+      "#1",
+      "#24",
+      "#15",
+      "#2",
+      "#5",
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "3c69b12821d28f15",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/platform/_index.md",
+   "title": "Data Team Platform",
+   "article": "Extract and Load > Data Sources > Tier definition",
+   "line_start": 148,
+   "line_end": 148,
+   "overlap_chars": 130,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 7,
+   "detail": {
+    "numbers": {
+     "values": [
+      "tier 1",
+      "tier 2",
+      "tier 3",
+      "#5",
+      "#1",
+      "#2",
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "2d18121f4ee52002",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/enterprise-data/platform/tableau/_index.md",
+   "title": "Tableau",
+   "article": "Support",
+   "line_start": 867,
+   "line_end": 868,
+   "overlap_chars": 157,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "a65ec37147164ab0",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 153,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ecd417086feb0d15",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 247,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "181763bead64b4c2",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 167,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "766aad4d481b9261",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 171,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ed13c801b8131477",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 175,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "3e1894da98e28be5",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 177,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "a225078705beb729",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 181,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "ce056854c66083ac",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 153,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "split_piece"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "facb39a0018b7138",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 156,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "381cabb83dbb539d",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 180,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "1d50ce057fddf6dd",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 193,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "e85bdb32a395dbee",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 178,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "b2ee6b0ee5099f48",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/corporate/systems/_index.md",
+   "title": "CorpSec Systems and Tech Stack",
+   "article": "CorpSec Systems Directory",
+   "line_start": 24,
+   "line_end": 1153,
+   "overlap_chars": 180,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "4930e36cc4f0e437",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/product-security/psirt/runbooks/psirt-case-lifecycle.md",
+   "title": "PSIRT Case Lifecycle",
+   "article": "PSIRT Case Investigation",
+   "line_start": 32,
+   "line_end": 33,
+   "overlap_chars": 134,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "237f4445d735a923",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/product-security/security-platforms-architecture/_index.md",
+   "title": "Security Platforms & Architecture",
+   "article": "FY27 Metrics > Strategic Metrics",
+   "line_start": 92,
+   "line_end": 92,
+   "overlap_chars": 167,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "25ba2ee447c6a054",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/product-security/security-platforms-architecture/_index.md",
+   "title": "Security Platforms & Architecture",
+   "article": "FY27 Metrics > Strategic Metrics",
+   "line_start": 93,
+   "line_end": 93,
+   "overlap_chars": 170,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "a936cd42bb7303ab",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/product-security/vulnerability-management/_index.md",
+   "title": "Vulnerability Management",
+   "article": "Roles & Responsibilities",
+   "line_start": 64,
+   "line_end": 67,
+   "overlap_chars": 153,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 4,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "bc4511fad08d67bc",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/governance/security-assurance-automation.md",
+   "title": "Security Assurance Automation",
+   "article": "Control Automation Maturity > Control Automation Maturity Scale",
+   "line_start": 248,
+   "line_end": 249,
+   "overlap_chars": 125,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 6,
+   "detail": {
+    "numbers": {
+     "values": [
+      "80%",
+      "#4",
+      "90%",
+      "#5",
+      "95%",
+      "#6"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "cfe4ff7090e63f83",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-compliance/_index.md",
+   "title": "Security Compliance Team",
+   "article": "Success Metrics",
+   "line_start": 195,
+   "line_end": 195,
+   "overlap_chars": 160,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#5"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "05485bc5d7a058ed",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-compliance/_index.md",
+   "title": "Security Compliance Team",
+   "article": "Success Metrics",
+   "line_start": 196,
+   "line_end": 196,
+   "overlap_chars": 185,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "90%"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "7951aef266a961d8",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-compliance/_index.md",
+   "title": "Security Compliance Team",
+   "article": "Success Metrics",
+   "line_start": 197,
+   "line_end": 197,
+   "overlap_chars": 209,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "80%"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "370286f5578a1002",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-compliance/poam-deviation-request-procedure.md",
+   "title": "FedRAMP Vulnerability Deviation Request Procedure",
+   "article": "Procedure > Workflow Labels",
+   "line_start": 94,
+   "line_end": 95,
+   "overlap_chars": 128,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 3,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3",
+      "#4",
+      "#5"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "386029c3b248d666",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "Roles and Responsibilities",
+   "line_start": 36,
+   "line_end": 36,
+   "overlap_chars": 143,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 1,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "159e7bcc31412a33",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "Roles and Responsibilities",
+   "line_start": 37,
+   "line_end": 37,
+   "overlap_chars": 133,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3",
+      "tier 3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "00326e63092d8335",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "Roles and Responsibilities",
+   "line_start": 38,
+   "line_end": 38,
+   "overlap_chars": 139,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "c51a54e0d0f75369",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Establishing Risk Appetite and Tolerance > How GitLab Determines Risk Appetite",
+   "line_start": 60,
+   "line_end": 60,
+   "overlap_chars": 163,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "666c6a6163c7decb",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Establishing Risk Appetite and Tolerance > How GitLab Determines Risk Appetite",
+   "line_start": 61,
+   "line_end": 61,
+   "overlap_chars": 169,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "3da82847205b1ce4",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Establishing Risk Appetite and Tolerance > How GitLab Determines Risk Appetite",
+   "line_start": 62,
+   "line_end": 64,
+   "overlap_chars": 163,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#800",
+      "#1"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "f38bd8919c568085",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Risk Identification > Risk Factors and Risk Scoring",
+   "line_start": 128,
+   "line_end": 128,
+   "overlap_chars": 138,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 8,
+   "detail": {
+    "numbers": {
+     "values": [
+      "$999",
+      "#1",
+      "$1000",
+      "$9999",
+      "30%",
+      "40%",
+      "#2",
+      "#72"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "86ff7afff9a2e175",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Risk Identification > Risk Factors and Risk Scoring",
+   "line_start": 129,
+   "line_end": 129,
+   "overlap_chars": 143,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 9,
+   "detail": {
+    "numbers": {
+     "values": [
+      "$1000",
+      "$9999",
+      "#2",
+      "$10000",
+      "$499999",
+      "40%",
+      "50%",
+      "#3",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "a3a03e6a5da88c4c",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Risk Identification > Risk Factors and Risk Scoring",
+   "line_start": 130,
+   "line_end": 130,
+   "overlap_chars": 146,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 9,
+   "detail": {
+    "numbers": {
+     "values": [
+      "$10000",
+      "$499999",
+      "#3",
+      "$500000",
+      "$999999",
+      "50%",
+      "75%",
+      "4 hour",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "36e844bb34780963",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/storm-program/_index.md",
+   "title": "Security and Technology Operational Risk Management (STORM) Program & Procedures",
+   "article": "STORM Procedures > Risk Identification > Risk Factors and Risk Scoring",
+   "line_start": 131,
+   "line_end": 133,
+   "overlap_chars": 140,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 6,
+   "detail": {
+    "numbers": {
+     "values": [
+      "$500000",
+      "$999999",
+      "#4",
+      "$1000000",
+      "75%",
+      "#5"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "15e961941fdf3099",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-assurance/security-risk/third-party-risk-management.md",
+   "title": "Security Third Party Risk Management",
+   "article": "Third Party Minimum Security Standards > Acceptable Third-Party Attestations > Complementary User Entity Controls (CUECs)",
+   "line_start": 275,
+   "line_end": 276,
+   "overlap_chars": 125,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 3,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#4",
+      "#5",
+      "#6"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "c82b403a68eb97ac",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+   "title": "Security Incident Communications Plan",
+   "article": "Defining the scope/severity of an incident > Roles and responsibilities in a Security incident > Security team roles and responsibilities",
+   "line_start": 52,
+   "line_end": 52,
+   "overlap_chars": 168,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "dd74644dda630e8f",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+   "title": "Security Incident Communications Plan",
+   "article": "Communicating with GitLab team members > Engaging key internal stakeholders (when/how)",
+   "line_start": 119,
+   "line_end": 120,
+   "overlap_chars": 208,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "e906db40e439e42b",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+   "title": "Security Incident Communications Plan",
+   "article": "Other helpful information > Potential channels for use in a security incident",
+   "line_start": 232,
+   "line_end": 232,
+   "overlap_chars": 172,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "dfcf8820267ff262",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+   "title": "Security Incident Communications Plan",
+   "article": "Other helpful information > Potential channels for use in a security incident",
+   "line_start": 233,
+   "line_end": 233,
+   "overlap_chars": 180,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "acc2558c9cfa44d0",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+   "title": "Security Incident Communications Plan",
+   "article": "Other helpful information > Potential channels for use in a security incident",
+   "line_start": 234,
+   "line_end": 235,
+   "overlap_chars": 176,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "2d5647f80f5ed267",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/severity-matrix.md",
+   "title": "Security Incident Severity Matrix",
+   "article": "Procedure > Severity",
+   "line_start": 37,
+   "line_end": 37,
+   "overlap_chars": 151,
+   "reason": "표+수치",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 4,
+   "detail": {
+    "numbers": {
+     "values": [
+      "0 day",
+      "#1",
+      "#0",
+      "#2"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "1e381609a96afd22",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/severity-matrix.md",
+   "title": "Security Incident Severity Matrix",
+   "article": "Procedure > Severity",
+   "line_start": 38,
+   "line_end": 38,
+   "overlap_chars": 142,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2",
+      "#3"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "0c2dfe5eed517f28",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/security/security-operations/sirt/severity-matrix.md",
+   "title": "Security Incident Severity Matrix",
+   "article": "Procedure > Severity",
+   "line_start": 39,
+   "line_end": 39,
+   "overlap_chars": 144,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 2,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#3",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "0606831fad1ad806",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/support/license-and-renewals/workflows/self-managed/troubleshoot_license_upload_issues.md",
+   "title": "Troubleshooting and categorising license activation errors",
+   "article": null,
+   "line_start": 19,
+   "line_end": 19,
+   "overlap_chars": 150,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 3,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#13.9",
+      "#2020",
+      "#2021"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 1,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "78aebe1f44850664",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/support/training/_index.md",
+   "title": "Support Learning & Training",
+   "article": "Support Engineer Onboarding Pathway > Support Engineer Achievable Progress - First 6 Months",
+   "line_start": 165,
+   "line_end": 165,
+   "overlap_chars": 128,
+   "reason": "수치",
+   "table_ir": false,
+   "table_markup": false,
+   "table_old_rule": false,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 4,
+   "detail": {
+    "numbers": {
+     "values": [
+      "6 month",
+      "#6",
+      "#3",
+      "#4"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 0,
+     "ok": true
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "711812e7c3f942ec",
+   "kind": "article",
+   "config": "structure-s800-o120-h",
+   "page": "handbook/support/workflows/saas_sm_cheatsheet.md",
+   "title": "SaaS, Self-Managed and Dedicated Troubleshooting tables",
+   "article": "How to use this page > Logs and Performance",
+   "line_start": 26,
+   "line_end": 27,
+   "overlap_chars": 133,
+   "reason": "표",
+   "table_ir": true,
+   "table_markup": true,
+   "table_old_rule": true,
+   "ok": false,
+   "numbers_ok": true,
+   "rows_ok": true,
+   "n_values": 0,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 2,
+     "ok": true,
+     "how": "same"
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  }
+ ],
+ "other_digit_chunks": 5052,
+ "other_digit_mismatch": 3,
+ "other_digit_items": [
+  {
+   "chunk_id": "c87f172cf3fb6c17",
+   "ok": false,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#1"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 0,
+     "ok": true
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "e1eff0899d64c1ce",
+   "ok": false,
+   "detail": {
+    "numbers": {
+     "values": [],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 0,
+     "ok": true
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  },
+  {
+   "chunk_id": "b2b416d8331e5d1e",
+   "ok": false,
+   "detail": {
+    "numbers": {
+     "values": [
+      "#2020",
+      "#2021",
+      "#13.5",
+      "#13.6"
+     ],
+     "missing": [],
+     "outside_range": [],
+     "header_not_in_headings": [],
+     "ctx_diff": [],
+     "via_raw_markup": [],
+     "ok": true
+    },
+    "rows": {
+     "rows": 0,
+     "ok": true
+    },
+    "overlap_ok": false,
+    "header_ok": true,
+    "ok": false
+   }
+  }
+ ]
+}
