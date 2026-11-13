@@ -141,7 +141,7 @@ def _readme_demo_questions() -> tuple[list[str], list[str]]:
 def test_readme_demo_questions_are_recorded_as_written():
     """README가 키 없이 된다고 적은 질문은 적힌 글자 그대로 녹화돼 있어야 한다(괄호 설명을 붙이면 다른 질문이라 녹화에 없다)."""
     answers, refusals = _readme_demo_questions()
-    assert len(answers) == 5 and len(refusals) == 2
+    assert len(answers) == 6 and len(refusals) == 3
     rows = [json.loads(x) for x in (RECORDED / "recorded.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
     classified = [r["user_preview"] for r in rows if r["role"] == "classify"]
     for q in answers + refusals:
@@ -149,17 +149,17 @@ def test_readme_demo_questions_are_recorded_as_written():
         assert any(f"질문: {q}\n" in p for p in classified), f"녹화에 이 글자 그대로의 질문이 없다: {q}"
 
 
-def test_demo_defaults_range_search_off_only_without_a_key(monkeypatch):
-    """녹화가 금액 구간 조회 전 것이라, 키 없는 데모만 SEARCH_RANGE_N을 비우면 0이다. 키가 있는 서비스는 3, 직접 준 값이 이긴다."""
+def test_demo_and_service_share_the_range_search_default(monkeypatch):
+    """키 없는 데모도 서비스와 같이 SEARCH_RANGE_N 기본 3이다(녹화를 금액 구간 조회를 켠 채 만든다). 직접 준 값이 이긴다."""
     from backend.rag.retrieve.search import SearchConfig
 
     for name in ("LLM_API_KEY", "DEMO_MODE", "LLM_PROVIDER", "SEARCH_RANGE_N"):
         monkeypatch.delenv(name, raising=False)
-    assert SearchConfig.from_env().range_n == 0                  # 키 없음 = 데모
+    assert SearchConfig.from_env().range_n == 3                  # 키 없음 = 데모
     monkeypatch.setenv("LLM_API_KEY", "dummy-llm")
     assert SearchConfig.from_env().range_n == 3                  # 키가 있는 서비스
     monkeypatch.setenv("DEMO_MODE", "1")
-    assert SearchConfig.from_env().range_n == 0                  # 키가 있어도 DEMO_MODE=1이면 데모
+    assert SearchConfig.from_env().range_n == 3                  # 키가 있어도 DEMO_MODE=1이면 데모
     monkeypatch.setenv("SEARCH_RANGE_N", "2")
     assert SearchConfig.from_env().range_n == 2                  # 직접 준 값은 그대로
 

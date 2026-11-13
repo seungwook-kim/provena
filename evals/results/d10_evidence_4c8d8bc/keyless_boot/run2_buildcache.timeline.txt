@@ -1,0 +1,23 @@
+== run2_buildcache ==
+compose: Docker Compose version v5.5.0
+builder du before:
+qgzw3u0kwxwzdkan4k2jf4plx    true          3.654GB*   13 days ago
+Shared:		11.16GB
+Private:	14.14GB
+Reclaimable:	25.3GB
+Total:		25.3GB
+01:35:39.197 +0s start (clone already done; .env absent: True)
+01:35:39.239 +0s compose up started pid=25472
+01:36:04.803 +25.6s loader finished: Exited (0) Less than a second ago
+01:36:09.546 +30.4s health 200 {"status":"ok"}
+01:36:21.372 +42.2s smoke done
+builder du after:
+qgzw3u0kwxwzdkan4k2jf4plx    true          3.654GB*   13 days ago
+Shared:		12.14GB
+Private:	13.16GB
+Reclaimable:	25.3GB
+Total:		25.3GB
+images:
+e1fresh-api:latest 1.16GB
+e1fresh-loader:latest 1.16GB
+01:36:24.028 +44.8s down -v done

@@ -1,0 +1,43 @@
+..........F                                                              [100%]
+================================== FAILURES ===================================
+______ test_committed_final_results_pass_against_the_committed_baseline _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F81DB2CC90>
+
+    def test_committed_final_results_pass_against_the_committed_baseline(monkeypatch):
+        # 저장소에 커밋된 실제 최종 결과(EVAL_REPORT 4장)와 기준 파일이 어긋나지 않는다.
+        monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+>       assert ci_compare.main([]) == 0
+E       assert 1 == 0
+E        +  where 1 = <function main at 0x000001F81DB10900>([])
+E        +    where <function main at 0x000001F81DB10900> = ci_compare.main
+
+tests\test_ci_compare.py:112: AssertionError
+---------------------------- Captured stdout call -----------------------------
+## 평가 점수 비교 (저장소에 커밋된 결과 파일, 키·네트워크 없음)
+
+평가셋 `dataset_v2.jsonl` 동결 해시 `810d01f1c27d`, 결과 폴더 `agent_v2_q_d6151_r1_bo2sda2_api` 등 3개의 3회 평균
+
+| 구성 | 지표 | 이번 값 | 기준 결과 | 통과선 | 판정 |
+|---|---|---|---|---|---|
+| single | 인용 정확도 | 1.0 | 1.0 | >= 0.85 | 통과 |
+| single | 정답 근거 인용률 | 0.996 | 0.999 | >= 0.85 | 기준보다 낮음 |
+| single | 비관련 질문 거절 | 1.0 | 1.0 | >= 0.9 | 통과 |
+| single | 오답 근거 | 0.0 | 0.0 | - | 통과 |
+| single | 과잉 거절 | 0.0 | 0.0 | - | 통과 |
+| single | 환각 위험 | 0.0 | 0.0 | - | 통과 |
+| single | 응답 시간 p95(초) | 9.806 | 9.806 | <= 10.0 | 통과 |
+| multi | 인용 정확도 | 0.992 | 0.992 | >= 0.85 | 통과 |
+| multi | 정답 근거 인용률 | 0.991 | 0.991 | >= 0.85 | 통과 |
+| multi | 비관련 질문 거절 | 1.0 | 1.0 | >= 0.9 | 통과 |
+| multi | 오답 근거 | 0.027 | 0.027 | - | 통과 |
+| multi | 과잉 거절 | 0.0 | 0.0 | - | 통과 |
+| multi | 환각 위험 | 0.0 | 0.0 | - | 통과 |
+| multi | 응답 시간 p95(초) | 9.695 | 9.695 | <= 10.0 | 통과 |
+
+결과: **실패**
+- single 정답 근거 인용률 0.996 < 기준 0.999
+
+=========================== short test summary info ===========================
+FAILED tests/test_ci_compare.py::test_committed_final_results_pass_against_the_committed_baseline
+1 failed, 10 passed in 0.70s

@@ -194,7 +194,36 @@ def test_keep_premise_leaves_subs_alone_otherwise():
 
 def test_content_stems_strip_particles_and_skip_predicates():
     assert D._content_stems(PREMISE) == ["외부", "saas", "도입"]
-    assert D._content_stems("우리 팀이 지금 합니다.") == []
+    assert D._content_stems("우리는 지금 합니다.") == []
+
+
+def test_content_stems_keep_nouns_that_start_like_a_predicate():
+    # 첫 글자가 하·해로 시작해도 낱말 전체가 활용형이 아니면 내용어다
+    assert D._content_stems("해외 하드웨어를 구매합니다.") == ["해외", "하드", "구매"]
+    assert D._content_stems("해고와 해지 절차는 합의를 거칩니다.") == ["해고", "해지", "절차", "합의", "거칩"]
+
+
+def test_content_stems_keep_two_syllable_nouns_that_end_like_a_particle():
+    # 끝 글자가 가·의·도여도 조사를 떼고 남는 줄기가 한 글자면 떼지 않는다
+    assert D._content_stems("평가 회의 한도") == ["평가", "회의", "한도"]
+    assert D._content_stems("평가와 회의에서 한도를") == ["평가", "회의", "한도"]  # 줄기가 두 글자 이상이면 조사는 뗀다
+
+
+def test_content_stems_skip_predicate_forms():
+    assert D._content_stems("승인해야 합니다. 구매하려고 했다. 신청하는 경우 있습니다 없는데") == ["승인", "구매", "신청", "경우"]
+    assert D._content_stems("합니다 해야 했다 하는 하고 하려고 있는데") == []
+    assert D._content_stems("(연 3천 달러)으로 갱신합니다") == ["3천", "달러", "갱신"]  # 조사만 떨어진 낱말은 내용어가 아니다
+
+
+def test_keep_premise_attaches_when_a_two_syllable_noun_is_missing():
+    q = "해외 하드웨어를 구매합니다. 승인자는 누구인가요?"
+    lost = ["구매 승인자는 누구인가요?", "구매 금액 한도는 얼마인가요?"]
+    assert D.keep_premise(q, lost) == [f"해외 하드웨어를 구매합니다. {s}" for s in lost]  # 해외·하드웨어가 하위 질문에 없다
+    kept = ["해외 하드웨어 구매 승인자는 누구인가요?", "해외 하드웨어 구매 한도는 얼마인가요?"]
+    assert D.keep_premise(q, kept) == kept  # 내용어가 모두 있으면 그대로
+    meeting = "평가 회의 한도가 있습니다. 승인자는 누구인가요?"
+    assert D.keep_premise(meeting, ["승인자는 누구인가요?", "승인 절차는?"]) == [f"평가 회의 한도가 있습니다. {s}" for s in ["승인자는 누구인가요?", "승인 절차는?"]]
+    assert D.keep_premise(meeting, ["평가 회의 승인자는?", "한도 승인 절차는?"]) == ["평가 회의 승인자는?", "한도 승인 절차는?"]
 
 
 def test_decompose_question_keeps_the_premise_in_the_returned_subs():

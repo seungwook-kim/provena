@@ -1,0 +1,24 @@
+== run1_nocache ==
+compose: Docker Compose version v5.5.0
+builder du before:
+qgzw3u0kwxwzdkan4k2jf4plx    true          3.654GB*   13 days ago
+Shared:		11.16GB
+Private:	12.92GB
+Reclaimable:	24.07GB
+Total:		24.07GB
+01:32:56.508 +0s start (clone already done; .env absent: True)
+01:34:35.036 +98.5s build --no-cache done exit=0
+01:34:35.077 +98.6s compose up started pid=38048
+01:35:09.390 +132.9s loader finished: Exited (0) 2 seconds ago
+01:35:12.526 +136s health 200 {"status":"ok"}
+01:35:24.563 +148.1s smoke done
+builder du after:
+qgzw3u0kwxwzdkan4k2jf4plx    true          3.654GB*   13 days ago
+Shared:		12.14GB
+Private:	13.16GB
+Reclaimable:	25.3GB
+Total:		25.3GB
+images:
+e1fresh-api:latest 1.16GB
+e1fresh-loader:latest 1.16GB
+01:35:27.065 +150.6s down -v done

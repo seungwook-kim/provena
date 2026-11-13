@@ -3,7 +3,7 @@ import json, math, statistics as st, sys
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(r"C:\Users\Wook\AppData\Local\Temp\pv_speed")
+ROOT = Path(r"<임시 폴더>\pv_speed")
 sys.path.insert(0, str(ROOT))
 from evals.agent.run_eval import compute_metrics, _p95  # noqa: E402
 
