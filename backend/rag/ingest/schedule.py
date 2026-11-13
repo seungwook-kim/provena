@@ -79,11 +79,9 @@ class Source:
     head_paths: set[str] | None = None      # 새 커밋의 쪽 경로 전부(목록이 완전할 때만). 보류한 삭제를 다시 확인할 때 쓴다
 
 
-def git_source(cache: Path, from_commit: str, log=print) -> Source:
-    """핸드북 캐시를 준비하고(blob:none + 고른 폴더) 새 커밋을 받은 뒤 from_commit 과 비교한다."""
-    from backend.rag.ingest import diff
-    from backend.rag.ingest.handbook import ensure_checkout, git, list_pages
-    ensure_checkout(cache)
+def fetch_main(cache: Path) -> str:
+    """캐시에서 origin main을 받고(간격을 늘려 FETCH_TRIES번) 그 커밋을 돌려준다. rechunk_increments.py도 같은 함수를 쓴다."""
+    from backend.rag.ingest.handbook import git
     for i in range(FETCH_TRIES):
         done = subprocess.run(["git", "-C", str(cache), "fetch", "-q", "--filter=blob:none", "origin", "main"],
                               capture_output=True)
@@ -92,7 +90,15 @@ def git_source(cache: Path, from_commit: str, log=print) -> Source:
         if i == FETCH_TRIES - 1:
             raise SyncError("fetch_failed", done.stderr.decode("utf-8", "replace").strip()[-500:])
         time.sleep(5 * 2 ** i)
-    head = git(cache, "rev-parse", "FETCH_HEAD").decode().strip()
+    return git(cache, "rev-parse", "FETCH_HEAD").decode().strip()
+
+
+def git_source(cache: Path, from_commit: str, log=print) -> Source:
+    """핸드북 캐시를 준비하고(blob:none + 고른 폴더) 새 커밋을 받은 뒤 from_commit 과 비교한다."""
+    from backend.rag.ingest import diff
+    from backend.rag.ingest.handbook import ensure_checkout, list_pages
+    ensure_checkout(cache)
+    head = fetch_main(cache)
     head_date = commit_day(cache, head)
     if head == from_commit:
         return Source(head, head_date, {})
