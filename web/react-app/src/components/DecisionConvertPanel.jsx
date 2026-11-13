@@ -41,7 +41,7 @@ export default function DecisionConvertPanel({ service, onConverted }) {
 
   return <section className="convert-panel" aria-labelledby="convert-title">
     <div className="convert-heading"><h2 id="convert-title">결정표 변환</h2><span>관리자 전용</span></div>
-    <p className="convert-lede">핸드북 권한표의 업무 종류 하나를 결정표 초안으로 바꿔 아래 승인함에 올립니다. API 키가 있으면 LLM을 호출합니다.</p>
+    <p className="convert-lede">핸드북 권한표의 업무 종류 하나를 결정표 초안으로 바꿔 아래 승인함에 올립니다.</p>
     <form className="convert-form" onSubmit={ask}>
       <label>권한표 업무 종류<input type="text" value={category} onChange={event => setCategory(event.target.value)} placeholder="예: Approving expense" maxLength={200} disabled={busy} /></label>
       <button type="submit" disabled={busy}>{busy ? '변환 중입니다.' : '결정표로 변환'}</button>
