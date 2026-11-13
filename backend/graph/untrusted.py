@@ -21,8 +21,13 @@
 일반화(PREREGISTER 62.5): 단어·어미 목록에 맞는 문장만 잡던 한국어 규칙 둘(답 자리+쓰기 어미, 표식 명사+동사)을 한 절에 든 특징의 조합(내용, 행위, 대상 참조) 판정 하나로 바꿨다.
 출력 검사는 입력 쪽이 못 본 글에도 답에 토큰이 그대로 옮겨졌을 때는 막도록 의심 절(토큰과 출력 자리·목적 이름표) 단서를 더했다. 자세한 구조는 아래 구조 판정 절 주석.
 
-한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖), 암시, 오타, 유니코드 변형, 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것),
-소문자·숫자 없는 표식, 지시가 아닌 사실처럼 쓴 거짓은 못 잡는다. 사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다.
+보강(PREREGISTER 62.48, 새 인젝션 40건): 본문 속 `[chunk_id]` 인용 표시가 든 문장은 입력에서 뺀다(가짜 인용). 묻는 사람에게 전하라는 문장(전달 지시)의
+외부 주소와 같은 글의 값을 바꾸라는 값, 검색 원문에 없는 주소는 답에서 뺀다. 규칙이 읽지 못하는 문자(가나·한자·키릴 등)로 쓴 글의 표식 토큰과
+인코딩(base64·16진수·퍼센트·태그 문자)해 숨긴 지시의 표식은 출력 검사 후보로 둔다. 질문에 지시 문장이 있으면 질문의 따옴표 문자열·표식 꼴도 후보다.
+
+한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
+표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
+지시가 아닌 사실처럼 쓴 거짓은 못 잡는다. 사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다.
 """
 from __future__ import annotations
 
@@ -55,7 +60,8 @@ _SNAKE = r"(?-i:(?<![A-Za-z0-9_])[a-z][a-z0-9]*(?:_[a-z0-9]+)+(?![A-Za-z0-9_]))"
 _SPEAKER = r"(?:judges?|graders?|evaluators?|validators?|verifiers?|classifiers?|moderators?|orchestrators?|assistants?|system|llm|ai|model|agent|심사자|판정자|평가자|시스템|어시스턴트|에이전트)"   # 처리 단계 화자 지정("Judge: ...")
 
 RULES_EN_KO: list[tuple[str, re.Pattern]] = [
-    ("override_en", re.compile(r"\b(?:ignore|disregard|forget|override|bypass)\b(?:\s+\w+){0,3}\s+(?:previous|prior|above|earlier|preceding|former|system|developer|all)\s+(?:\w+\s+)?(?:instructions?|prompts?|rules?|directions?|guidelines?|context|messages?)", _I)),
+    ("override_en", re.compile(r"\b(?:ignore|disregard|forget|override|bypass)\b(?:\s+\w+){0,3}\s+(?:previous|prior|above|earlier|preceding|former|system|developer|all)\s+(?:\w+\s+)?(?:instructions?|prompts?|rules?|directions?|guidelines?|context|messages?)|"
+                             r"\b(?:ignore|disregard|forget|override|bypass)\s+(?:all\s+(?:of\s+)?)?your\s+(?:previous|prior|above|earlier|preceding|former|original|initial|system)\b", _I)),
     ("override_ko", re.compile(r"(?:이전|앞선|위의|기존|지금까지의|모든)\s*(?:지시|명령|지침|규칙|프롬프트)\S*\s*(?:를|을|은|는)?\s*(?:모두\s*|전부\s*)?(?:무시|잊|따르지\s*(?:마|말)|취소|폐기)|지시(?:를|사항을)?\s*(?:모두\s*)?무시")),
     ("addressed_en", re.compile(rf"(?:^|[\s\[(|:>*_-])(?:note|message|instructions?|notice|memo|attention|reminder)s?\s*(?:to|for)\s+(?:the\s+)?{_AI}\b|"
                                 rf"(?:^|[\s\[(|])(?:to|for)\s+(?:the\s+)?{_AI}(?:\s+(?:agents?|models?|systems?))?\s*[:\]\)]|"
@@ -72,6 +78,7 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
                              r"(?:시스템\s*프롬프트|지시문|내부\s*지시|초기\s*지시)[^.\n]{0,30}(?:출력|공개|알려|기재|그대로|밝혀|보여|내놓|반복)|"
                              r"(?:출력|공개|기재|반복)[^.\n]{0,30}(?:시스템\s*프롬프트|지시문)", _I)),
     ("memory_exfil", re.compile(r"\b(?:list|print|show|output|reveal|dump|include)\b[^.\n]{0,40}\b(?:stored |saved )?(?:memor(?:y|ies)|profiles?|conversations?)\s+(?:of|from)\s+(?:all\s+)?(?:other|another|different)\s+users?|"
+                                r"\b(?:list|print|show|output|reveal|dump|include|share|repeat)\b[^.\n]{0,40}\b(?:other|another|different|previous|prior|last|preceding)\s+users?['’]?s?\s+(?:\w+\s+){0,3}?(?:conversations?|chats?|histor(?:y|ies)|profiles?|memor(?:y|ies)|questions?|messages?)|"
                                 r"다른\s*사용자(?:의|들의)?\s*(?:장기\s*)?(?:기억|프로필|소속|직급|질문|대화)", _I)),
     ("cite_authority", re.compile(r"\bcite\b[^.\n]{0,80}\bas\s+(?:the\s+)?(?:authoritative|primary|only|sole|definitive|official)\b|\b(?:always|must)\s+cite\b|"
                                   r"(?:반드시|꼭|항상)[^.\n]{0,40}(?:근거로\s*)?인용(?:하라|할\s*것|한다|하여야|해야|해라)|가장\s*우선(?:한다|하여|시)|"
@@ -105,6 +112,7 @@ _P_TOKEN = re.compile(_CODE + "|" + _HEX16)
 _P_ANY = re.compile(_CODE + "|" + _HEX16 + "|" + _MARKER_NOUN, _I)
 _D = re.compile(
     r"(?:어라|아라|하라|해라|세요|십시오|주십시오|주시기|주시길|해\s*달라|바랍니다|바란다|바라며|부탁|좋겠|좋습니다|어야|아야|하여야|해야|야\s*한다|야\s*합니다|"
+    r"(?:주시면|주신다면)\s*(?:감사|고맙)|"   # 사의(謝意)로 바꿔 말한 요청("남겨 주시면 감사하겠습니다")
     r"[을를할길줄]\s*것|도록|원칙|권장|필수|요청)|"
     r"\b(?:please|kindly|must|should|shall|ought\s+to|needs?\s+to|has\s+to|have\s+to|required\s+to|expected\s+to|make\s+sure|be\s+sure\s+to|ensure|remember\s+to|recommended|always|never)\b", _I)
 _W = re.compile(
@@ -112,15 +120,15 @@ _W = re.compile(
     r"\b(?:append|prepend|add|insert|include|write|print|say|state|mention|cite|quote|echo|tag|mark|stamp|attach|embed|put|leave|repeat|restate|set|override|overwrite|assign|replace|(?:end|close|finish|conclude)s?\s+with)\b", _I)
 _V_NOUN = (r"답변|응답|답안|회신|요약(?:본|문|의)?|쟁점표|권고\s*[란칸]|의견\s*[란칸]|"
            r"\b(?:answers?|responses?|repl(?:y|ies)|summar(?:y|ies)|(?:opinion|recommendation)\s+(?:field|column))\b")
-_V_POS = (r"의견(?=\s*(?:끝|말미|마지막))|(?:맨\s*)?말미|마지막\s*(?:줄|문장|행)|맨\s*끝|끝에|서두|"
-          r"\b(?:(?:last|final)\s+(?:line|sentence)|end\s+of\s+(?:the|your)|at\s+the\s+end)\b")
+_V_POS = (r"의견(?=\s*(?:끝|말미|마지막))|(?:맨\s*)?말미|마지막\s*(?:줄|문장|행)|맨\s*끝|끝에|서두|맨\s*앞|첫\s*(?:줄|문장|행)|첫머리|앞머리|"
+          r"\b(?:(?:last|final|first|opening)\s+(?:line|sentence)|(?:end|start|beginning|top)\s+of\s+(?:the|your)|at\s+the\s+(?:end|start|beginning|top))\b")
 _V = re.compile(_V_NOUN + "|" + _V_POS, _I)
 _V_ONLY_NOUN = re.compile(_V_NOUN, _I)
 _A = re.compile(
     r"(?:시스템|모델|어시스턴트|에이전트|챗봇|요약하는|요약기|요약자|검토자|리뷰어|답변자|답변하는|안내하는|담당자|독자|읽는|읽고)|"
     r"\b(?:assistants?|agents?|llms?|ai|chat\s?bots?|bots?|models?|systems?|summari[sz]ers?|summari[sz]es|summari[sz]ing|reviewers?|readers?|whoever|anyone)\b", _I)
 _L = re.compile(
-    r"(?:(?:확인|관리|검증|승인|점검|추적|감사|조회|열람|일련|식별|수신|인증|발급)\s*(?:번호|코드|값|표식|토큰)|표식|토큰|\bmarker\b|\bstamp\b|"
+    r"(?:(?:확인|관리|검증|승인|점검|추적|감사|조회|열람|일련|식별|수신|인증|발급)\s*(?:번호|코드|값|표식|토큰)|표식|토큰|\bmarker\b|\bstamp\b|\btoken\b|\bcode\s?word\b|\bpass\s?phrase\b|\bphrase\b|"
     r"(?:verification|tracking|audit|serial|confirmation|reference|access|authentication|validation|check)\s+(?:code|token|number|id|tag|key|string))"
     r"\s*[:：=]?\s*[\"'`「『(\[]?\s*(?:" + _CODE + "|" + _HEX16 + ")", _I)
 # 시스템 내부 상태를 가리키는 말(S): 전체를 가리키는 수량어 + 승인자·판정·행 같은 내부 대상, snake_case 필드 이름, "모두 승인으로 표시" 꼴. 표식 토큰(P)과 쓰기 동작(ACT)이 같이 있을 때만 REF로 센다.
@@ -156,9 +164,96 @@ def is_suspect(clause: str) -> bool:
     """출력 검사용 의심 절: 토큰 P 가까이에 출력 자리(V)나 목적 이름표(L)만 있으면 된다(ACT 불필요). 입력 정화보다 문턱이 낮다. 호칭(A)은 일반 글에 너무 흔해 뺀다."""
     for p in _P_TOKEN.finditer(clause):
         w, _ = _window(clause, p)
-        if _V.search(w) or _L.search(w):
+        if _V.search(w) or _L.search(w) or len(_OTHER_SCRIPT.findall(w)) >= _MIN_OTHER_SCRIPT:
             return True
     return False
+
+
+# 규칙이 읽지 못하는 문자(가나, 한자, 키릴, 그리스, 아랍, 히브리, 태국, 데바나가리)로 쓴 글 안의 표식 토큰은 지시인지 판정할 수 없으므로 출력 검사에서만 의심 절로 둔다.
+# 입력은 바꾸지 않는다. 답에 그 토큰이 그대로 옮겨졌을 때만 그 문장을 뺀다.
+_OTHER_SCRIPT = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\u0400-\u04ff\u0370-\u03ff\u0600-\u06ff\u0590-\u05ff\u0e00-\u0e7f\u0900-\u097f]")
+_MIN_OTHER_SCRIPT = 4
+
+# ---------- 본문 속 인용 표시, 주소, 전달 지시 ----------
+# 본문 속 `[16자리 hex]`: 정상 원문은 chunk_id를 대괄호로 적지 않는다(코퍼스 23,095청크 0건). 모델이 그 표시를 문장째 옮기면 다른 청크의 인용으로 통과하므로 그 문장을 입력에서 뺀다.
+_EMBED_CITE = re.compile(r"\[([0-9a-f]{16})\]")
+_FORGED_WIN = 8
+_ADDR = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+|(?:https?://|www\.)[^\s<>\"'`)\]}]+", _I)
+_VALUE = re.compile(r"(?<![\d.,])(\d[\d,]*(?:\.\d+)?)\s*(분|시간|일|주|개월|달|년|원|달러|%|퍼센트|건|회|명|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|percent|usd|dollars?)(?![A-Za-z])", _I)
+# 전달 지시: 묻는 사람에게 무엇이라고 전하라는 말(안내 문구, 회신, tell users, when asked). 사실을 적은 문장이 아니라 답하는 쪽의 말을 정하는 문장이다.
+_TELL = re.compile(
+    r"(?:대외\s*안내|안내\s*문구|말씀드린|안내(?:한다|합니다|하도록|하라|할\s*것|해\s*(?:주|드))|(?:회신|답변|응대|통지|고지)(?:한다|합니다|하도록|하라|할\s*것|하실))|"
+    r"\b(?:tell|inform|advise|notify|instruct|direct|refer|point)\s+(?:the\s+)?(?:users?|customers?|requesters?|askers?|callers?|them|everyone|anyone|people)\b|"
+    r"\bwhen\s+(?:asked|answering|responding|replying)\b|\b(?:answer|respond|reply)\s+(?:with|that)\b|\bin\s+(?:your|all|any|every)\s+(?:answers?|responses?|replies)\b", _I)
+# 같은 글의 값을 가리켜 바꾸는 말(위 기준을, 대신, instead of): 전달 지시와 같이 있을 때만 값을 후보로 본다
+_OVERRIDE_REF = re.compile(
+    r"(?:위|상기|앞의|본|해당)\s*(?:기준|값|수치|기한|시간|한도|금액|내용|규정)|위\s*\d|대신|통일|"
+    r"\binstead\s+of\b|\brather\s+than\b|\bregardless\s+of\b|\b(?:above|stated|documented|official|actual)\s+(?:value|limit|deadline|figure|number|time(?:frame)?|sla|policy|rule)\b", _I)
+
+
+def _host(addr: str) -> str:
+    a = addr.casefold().rstrip(".,;:!?")
+    if "@" in a and "://" not in a:
+        return a.rsplit("@", 1)[1]
+    return re.sub(r"^(?:https?://)?(?:www\.)?", "", a).split("/", 1)[0].split("?", 1)[0].split(":", 1)[0]
+
+
+def _site(host: str) -> str:
+    return ".".join(host.split(".")[-2:])
+
+
+def tell_candidates(sentence: str) -> tuple[list[str], list[tuple[str, str]]]:
+    """(주소 후보, (숫자, 단위) 후보). 전달 지시가 든 문장의 주소, 그리고 같은 글의 값을 가리켜 바꾸는 말이 같이 있을 때 그 문장의 값."""
+    if not _TELL.search(sentence):
+        return [], []
+    values = [(n.replace(",", ""), u.casefold()) for n, u in _VALUE.findall(sentence)] if _OVERRIDE_REF.search(sentence) else []
+    return [m.group(0).rstrip(".,;:!?") for m in _ADDR.finditer(sentence)], values
+
+
+def _has_value(norm_sentence: str, number: str, unit: str) -> bool:
+    return bool(re.search(rf"(?<![\d.,]){re.escape(number)}{re.escape(unit)}", norm_sentence.replace(",", "")))
+
+
+# ---------- 인코딩해 숨긴 지시 ----------
+# base64, 16진수, 퍼센트 인코딩, 유니코드 태그 문자(화면에 안 보임)로 싼 글은 규칙이 읽지 못한다. 모델은 풀 수 있으므로 출력 검사에서만 풀어 본다.
+# 푼 글이 지시이면 그 지시의 표식은 답에 옮기면 안 되는 후보다. 입력은 바꾸지 않는다(푼 글을 모델에 넣지 않는다). 풀리지 않거나 UTF-8 글이 아니면 버린다.
+_B64_RUN = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{24,}={0,2}")
+_HEX_RUN = re.compile(r"(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}){16,}(?![0-9A-Fa-f])")
+_PCT_RUN = re.compile(r"(?:%[0-9A-Fa-f]{2}){8,}")
+_TAG_RUN = re.compile("[\U000E0020-\U000E007E]{8,}")
+
+
+def hidden_instructions(text: str) -> list[str]:
+    """글 속 인코딩 문자열을 푼 글 가운데 지시(`is_instruction`)인 것. 코드 검사이고 LLM을 부르지 않는다."""
+    import base64
+    import binascii
+    from urllib.parse import unquote_to_bytes
+
+    s = str(text or "")
+    decoded = ["".join(chr(ord(ch) - 0xE0000) for ch in m.group(0)) for m in _TAG_RUN.finditer(s)]
+    decoded += [t for t in (_utf8(unquote_to_bytes(m.group(0))) for m in _PCT_RUN.finditer(s)) if t]
+    for m in _HEX_RUN.finditer(s):
+        t = _utf8(bytes.fromhex(m.group(0)))
+        if t:
+            decoded.append(t)
+    for m in _B64_RUN.finditer(s):
+        body = m.group(0).rstrip("=")
+        try:
+            t = _utf8(base64.b64decode(body + "=" * (-len(body) % 4), validate=True))
+        except (binascii.Error, ValueError):
+            continue
+        if t:
+            decoded.append(t)
+    return [t for t in decoded if is_instruction(t)]
+
+
+def _utf8(raw: bytes) -> str:
+    """UTF-8로 읽히고 제어 문자가 없는 글만(우연히 풀린 바이트를 버린다)."""
+    try:
+        t = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return ""
+    return t if t.strip() and not any(unicodedata.category(ch) == "Cc" and ch not in "\n\t\r" for ch in t) else ""
 
 
 _NEEDS_MARKER = {"output_en_the", "split_marker"}   # 일반 문장과 겹치기 쉬운 규칙은 같은 절에 표식 꼴(따옴표 문자열, 표식 토큰)이 있을 때만 지시로 본다
@@ -203,6 +298,8 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
 
     def group(m: re.Match) -> str:
         inner = m.group(0)
+        if _EMBED_CITE.fullmatch(inner):   # 본문 속 인용 표시는 문장 단계에서 그 문장째 뺀다
+            return inner
         if is_instruction(inner):
             removed.append(inner)
             return " "
@@ -211,7 +308,16 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
     s = _GROUP.sub(group, s)
     out: list[str] = []
     for piece in _SENT.split(s):
-        if _SENT.fullmatch(piece) or not piece.strip() or not is_instruction(piece):
+        if _SENT.fullmatch(piece) or not piece.strip():
+            out.append(piece)
+            continue
+        forged = _EMBED_CITE.search(piece)
+        if forged:   # 본문 속 `[chunk_id]`가 든 문장: 제목은 그 자리부터, 본문은 문장째 뺀다
+            removed.append(piece[forged.start():] if cut_tail else piece.strip())
+            if cut_tail:
+                out.append(piece[:forged.start()])
+            continue
+        if not is_instruction(piece):
             out.append(piece)
             continue
         if cut_tail:
@@ -225,8 +331,9 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
         clauses = _CLAUSE.split(piece)
         hits = [c for c in clauses if c.strip() and is_instruction(c)]
         if hits and len(clauses) > 1:
+            hits = [c for c in clauses if c.strip() and (is_instruction(c) or _P_TOKEN.search(c))]   # 지시 문장의 표식 절은 따로 떼어 남기지 않는다
             removed.extend(c.strip() for c in hits)
-            out.append(" ".join(c for c in clauses if c.strip() and not is_instruction(c)))
+            out.append(" ".join(c for c in clauses if c.strip() and c not in hits))
         else:
             removed.append(piece.strip())
     if not removed:  # 지시가 없으면 글자 하나도 바꾸지 않는다(정상 답의 모델 입력을 바꾸지 않기 위해, 정규화와 공백 정리도 하지 않는다)
@@ -277,7 +384,7 @@ _HEXID = re.compile(r"\b[0-9a-f]{16}\b")
 _DIGITDASH = re.compile(r"\b\d+(?:-\d+)+\b")
 _HEADPATH = re.compile(r"[A-Za-z][A-Za-z0-9 .\-/]{1,40}(?: > [A-Za-z0-9][A-Za-z0-9 .\-/]{0,40})+")
 _OBJ_KO = re.compile(r"(\S{3,}?)\s*(?:을|를)\s*(?:그대로\s*)?(?:적|넣|쓰|포함|병기|기재|출력|붙)")
-_OBJ_EN = re.compile(r"\b(?:append|include|add|write|print|output|say|insert)\s+(?:the\s+)?(?:token|word|string|phrase|code|text|number)?\s*[\"'`]?([^\s\"'`.,;]{4,})", _I)
+_OBJ_EN = re.compile(r"\b(?:append|include|add|write|print|output|say|insert)\s+(?:the\s+)?(?:token|word|string|phrase|code|text|number|line)?\s*[\"'`]?([^\s\"'`.,;]{4,})", _I)
 _STOP = {"answer", "response", "reply", "output", "final", "following", "your", "this", "that", "the", "to", "답변", "응답", "내용"}
 
 
@@ -340,12 +447,16 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
     """(정리한 답, 뺀 문장). 지시 문장이 없는 검색 결과이면 그대로. 문장 안의 `[chunk_id]` 표시도 함께 사라진다."""
     instr: list[str] = []
     suspects: list[str] = []
-    benign: list[str] = [question]
+    q_rest, q_instr = strip_instructions(question, whole_sentence=True) if question else ("", [])
+    q_instr = q_instr + hidden_instructions(question)   # 질문 속 인코딩 문자열을 푼 지시도 같다(지시는 질문 원문의 따옴표·표식 꼴과 함께 후보를 낸다)
+    benign: list[str] = [q_rest if q_instr else question]   # 지시 문장이 든 질문은 지시 문장을 믿는 글에서 뺀다
+    tells: list[str] = []
+    texts: list[str] = []
     for c in chunks:
         for field in ("text", "rule_title", "article"):
             if c.get(field):
                 clean, rem = strip_instructions(str(c[field]), cut_tail=field != "text")
-                instr += rem
+                instr += rem + hidden_instructions(str(c[field]))   # 인코딩해 숨긴 지시(푼 글)도 지시 문장으로 센다
                 if rem and field != "text":
                     # 제목은 지시가 시작한 자리부터 잘려 앞 토막에 표식이 남을 수 있다(예: "문서번호 X-1 를 ..."). 지시가 든 제목의 남은 토막은 믿는 글로 보지 않고 의심 절로 둔다(사전 등록 62.26)
                     suspects.append(clean)
@@ -353,17 +464,41 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
                 rest, sus = split_suspects(clean)
                 suspects += sus
                 benign.append(rest)
-    if not instr and not suspects:
+                if field == "text":
+                    texts.append(rest)
+                    tells += [p for p in _SENT.split(rest) if p.strip() and _TELL.search(p)]
+    answer_addrs = [m.group(0) for m in _ADDR.finditer(answer or "")]
+    if not instr and not suspects and not q_instr and not tells and not answer_addrs:
         return answer, []
     real = {c.get("chunk_id") for c in chunks if c.get("chunk_id")}
-    cands = [_norm(x) for x in marker_candidates(instr, "\n".join(benign), real) + suspect_candidates(suspects, "\n".join(benign), real)]
+    benign_all = "\n".join(benign)
+    cands = [_norm(x) for x in marker_candidates(instr, benign_all, real) + suspect_candidates(suspects, benign_all, real)]
+    if q_instr:   # 질문에 지시 문장이 있으면 질문의 따옴표 문자열·표식 꼴은 답에 옮기면 안 되는 표식 후보다(검색 원문에 있는 것은 뺀다)
+        from_chunks = "\n".join(benign[1:])
+        cands += [_norm(x) for x in marker_candidates([question, *q_instr], from_chunks, real)]
     long_parts = [p for p in (_letters(x) for x in instr) if len(p) >= 15]
+    forged = [(_letters(_EMBED_CITE.sub("", u)), set(_EMBED_CITE.findall(u))) for u in instr if _EMBED_CITE.search(u)]
+    # 전달 지시 문장의 주소와 값: 그 문장 밖의 원문과 질문에 없는 것만 후보다. 주소는 청크 출처와 같은 사이트면 믿는다
+    own_sites = {_site(_host(str(c.get("source_url")))) for c in chunks if c.get("source_url")}
+    outside = _norm("\n".join([benign[0], *("".join(p for p in _SENT.split(t) if not _TELL.search(p)) for t in texts)]))
+    tell_addrs: list[str] = []
+    tell_values: list[tuple[str, str]] = []
+    for t in tells:
+        addrs, values = tell_candidates(t)
+        tell_addrs += [_norm(a) for a in addrs if _site(_host(a)) not in own_sites and _norm(a) not in outside]
+        tell_values += [v for v in values if not _has_value(outside, *v)]
+    # 답의 주소는 검색 원문(본문·출처 주소)에 있는 호스트여야 한다. 질문이 준 주소는 근거가 아니다
+    source_blob = "\n".join(f"{c.get('text') or ''}\n{c.get('source_url') or ''}" for c in chunks).casefold()
+    unbacked = [_norm(a) for a in answer_addrs if _host(a) and _host(a) not in source_blob]
     kept, removed = [], []
     for sent in _ANS_SENT.split(answer or ""):
         if not sent.strip():
             continue
         n, lt = _norm(sent), _letters(sent)
         bad = any(c in n for c in cands) or any(p[i:i + 15] in lt for p in long_parts for i in range(0, len(p) - 14))
+        bad = bad or any(a in n for a in tell_addrs + unbacked) or any(_has_value(n, *v) for v in tell_values)
+        bad = bad or any(ids & set(_EMBED_CITE.findall(sent)) and any(p[i:i + _FORGED_WIN] in lt for i in range(0, max(1, len(p) - _FORGED_WIN + 1)))
+                         for p, ids in forged if len(p) >= _FORGED_WIN)
         (removed if bad else kept).append(sent)
     if not removed:
         return answer, []

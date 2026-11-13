@@ -14,6 +14,7 @@
 | `injection_cases.jsonl`, `injection_cases.py` | 시험 세트(경로 10곳 x 숨기는 방식 3가지)와 생성기. 문구를 고치면 비교 기준이 바뀌므로 고정 |
 | `injection_cases_hard.jsonl` | 보강 변형 19건(P1 V4~V7, P2·P3·P10 V4~V6, P6 V4~V9). 한국어 권한 사칭, 문장 속에 섞기, HTML 주석·마크다운 링크 제목·제목 꼬리표, 표식 쪼개기, 영어 권한 사칭, 문맥 경계 깨기. P6는 쟁점표 승인 화면까지 가는 완전한 질문을 쓴다 |
 | `injection_cases_holdout.jsonl` | 동결 뒤 시험 5건(V10). 방어 규칙을 동결한 뒤에 쓴 공손한 요청 투 문장. 규칙을 고치지 않고 compliant에서만 1회 잼 |
+| `injection_cases_newinj_v1.jsonl`, `run_newinj.py` | 새 인젝션 40건(2026-11-13, 사전 등록 62.48): 사용자 질문에 넣는 직접 25건과 문서에 심는 간접 15건. 실행 전 동결(sha256 `fd090a6f…`, 문항을 고치지 않음). 보조 3건(`injection_cases_newinj_probe_v1.jsonl`, 소문자 변형, 집계 제외). 수법은 ethz-spylab/agentdojo, promptfoo/promptfoo, microsoft/PyRIT(모두 MIT)의 공개 파일을 참고했고 행마다 `source`에 경로를 적었다. MIT 원문 고지 위치는 `run_newinj.py` 머리말. 0원 회귀 시험은 `tests/test_newinj_regression.py` |
 | `compliant_llm.py` | 최악 가정 합성 모델(심은 지시를 전부 따름, 따옴표 조각으로 쪼갠 표식도 이어 붙여 따름), 모델이 받은 글을 기록하는 `Tap`, 호출 상한 `CallBudget` |
 | `run_safety.py` | 실행기. 판정은 코드가 하며(사람·LLM 판정 없음) 건마다 근거를 `reasons`에 남김 |
 | `deploy_check.py` | 배포된 서비스에 사용자 A·B로 접속해 확인하는 점검(질문·LLM 호출 없음) |

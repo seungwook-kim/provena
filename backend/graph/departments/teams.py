@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from backend.graph.departments.issue_table import MAX_ISSUES_PER_TEAM
+from backend.prompts.question import question_for_prompt
 from backend.services.skills import SKILLS_ROOT, load_skill, skills_enabled
 
 
@@ -49,7 +50,7 @@ SUPERVISOR_SYSTEM = (
 
 
 def supervisor_user(request: str, as_of: str | None) -> str:
-    return f"기준일: {as_of or '미지정'}\n요청: {request}"
+    return f"기준일: {as_of or '미지정'}\n요청: {question_for_prompt(request)}"   # 요청 속 가짜 자료 구획·시스템 프롬프트 요구를 뺀 글(없으면 그대로, 사전 등록 62.48)
 
 
 def team_system(team: Team, skill_body: str) -> str:
@@ -69,7 +70,7 @@ def team_system(team: Team, skill_body: str) -> str:
 
 
 def team_user(request: str, task: str, as_of: str | None, materials: str) -> str:
-    return f"기준일: {as_of or '미지정'}\n검토 요청: {request}\n이 팀이 볼 것: {task}\n\n{materials}"
+    return f"기준일: {as_of or '미지정'}\n검토 요청: {question_for_prompt(request)}\n이 팀이 볼 것: {task}\n\n{materials}"
 
 
 def search_text(team: Team, request: str) -> str:
