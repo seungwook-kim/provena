@@ -154,3 +154,66 @@ def test_band_gap_reported_not_raised():
     a = P.parse_authz(grid(rows))
     assert a["band_gaps"] == [{"category": "Approving expense", "after": ">$5K", "band": ">$50K"}]
     assert P.band_range(">$25K up to $50K") == (25e3, 50e3) and P.band_range("Up to $10K") == (0.0, 10e3)
+
+
+# ---- 2026-11-13 청크 결함 수정: 셀 안에 빈 줄이 든 HTML 표를 한 블록으로 ----
+BROKEN_TABLE = """Intro
+
+<table>
+ <tbody>
+  <tr>
+   <td> Label A </td>
+   <td>
+
+- [ ] First item
+- [Link text](https://example.com/x) second
+
+</td>
+  </tr>
+  <tr>
+   <td>Label B</td>
+   <td>Value 1174, B</td>
+  </tr>
+ </tbody>
+</table>
+
+After the table.
+"""
+
+
+def test_html_table_with_blank_lines_in_a_cell_is_one_block():
+    els = elements(BROKEN_TABLE)
+    assert [e["kind"] for e in els] == ["paragraph", "table_row", "table_row", "paragraph"]     # 목록 항목·html 조각이 따로 생기지 않는다
+    rows = [e for e in els if e["kind"] == "table_row"]
+    assert [r["cells"][0] for r in rows] == ["Label A", "Label B"]
+    assert "First item" in rows[0]["text"] and "Link text second" in rows[0]["text"]
+    assert "example.com" not in rows[0]["text"]                  # 칸 안 마크다운 링크는 글자만(표 밖 문단·목록과 같게)
+    assert "Value 1174, B" in rows[1]["text"]
+    raw_lines = BROKEN_TABLE.split("\n")
+    assert (rows[0]["line_start"], rows[0]["line_end"]) == (3, 19)
+    assert raw_lines[rows[0]["line_start"] - 1] == "<table>" and raw_lines[rows[0]["line_end"] - 1] == "</table>"
+    assert raw_lines[els[-1]["line_start"] - 1] == "After the table."         # 줄 번호 보존
+    assert all(P.found_in_source(e, raw_lines) for e in els)
+
+
+def test_join_html_tables_changes_only_blank_lines_inside_the_table():
+    out = P.join_html_tables(BROKEN_TABLE)
+    assert out.count("\n") == BROKEN_TABLE.count("\n")
+    a, b = BROKEN_TABLE.split("\n"), out.split("\n")
+    changed = [i for i in range(len(a)) if a[i] != b[i]]
+    assert changed and all(a[i].strip() == "" and b[i] == P.BLANK_IN_TABLE for i in changed)
+    assert all(2 < i < 19 for i in changed)                      # 표 밖 빈 줄(0~2번째, 마지막)은 그대로
+    no_blank = "<table>\n<tr><td>a</td></tr>\n</table>\n\ntext\n"
+    assert P.join_html_tables(no_blank) == no_blank
+
+
+def test_html_table_inside_code_fence_is_left_alone():
+    md = "```\n<table>\n<tr><td>\n\nx\n\n</td></tr>\n</table>\n```\n"
+    assert P.join_html_tables(md) == md
+    assert [e["kind"] for e in elements(md)] == ["code"]
+
+
+def test_nested_html_table_closes_at_the_matching_tag():
+    md = "<table>\n<tr><td>\n<table>\n<tr><td>in</td></tr>\n</table>\n\nmid\n</td></tr>\n</table>\n\nafter\n"
+    out = P.join_html_tables(md).split("\n")
+    assert out[5] == P.BLANK_IN_TABLE and out[-3] == "" and out[-2] == "after"      # 바깥 표 안의 빈 줄만, 표 뒤 빈 줄은 그대로

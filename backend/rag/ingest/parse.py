@@ -82,6 +82,44 @@ def preprocess(raw: str, counts: collections.Counter, unknown: set) -> str:
     return SHORTCODE.sub(replace, text)
 
 
+TABLE_TAG = re.compile(r"(?i)<(/?)table\b")
+MD_LINK = re.compile(r"\[([^\]]*)\]\([^)\s]*\)")     # HTML 칸 안의 마크다운 링크 `[글자](주소)` → 글자(표 밖 목록·문단은 render_inline이 같은 일을 한다)
+BLANK_IN_TABLE = "<!-- -->"      # 줄 수를 지키려고 빈 줄 자리에 남기는 HTML 주석(html_to_text·BeautifulSoup이 무시)
+
+
+def join_html_tables(text: str) -> str:
+    """셀 안에 빈 줄이 든 HTML 표(`<table>`~`</table>`)를 markdown-it가 한 블록으로 읽게 한다.
+    HTML 블록(type 6)은 빈 줄에서 끝나므로 빈 줄 때문에 표가 거기서 끊기고, 뒤 칸이 열 이름 없이 목록·문단 요소가 된다.
+    표 안의 빈 줄만 주석 한 줄로 바꾼다(줄 수·다른 글자는 그대로라 요소의 줄 번호가 원본과 같다).
+    코드 블록(펜스) 안의 표는 코드 글자라 건드리지 않는다. 안쪽 표가 있으면 짝이 맞는 `</table>`까지를 한 표로 본다."""
+    lines = text.split("\n")
+    spans, i, n = [], 0, len(lines)
+    while i < n:
+        if re.match(r" {0,3}<table\b", lines[i], re.I):
+            depth, j = 0, i
+            while j < n:
+                for m in TABLE_TAG.finditer(lines[j]):
+                    depth += -1 if m.group(1) else 1
+                if depth <= 0:
+                    break
+                j += 1
+            if j < n and any(not lines[k].strip() for k in range(i, j + 1)):
+                spans.append((i, j))
+            i = j + 1 if j < n else i + 1
+        else:
+            i += 1
+    if not spans:
+        return text
+    code = [t.map for t in MD.parse(text) if t.type in ("fence", "code_block") and t.map]
+    for a, b in spans:
+        if any(s <= a < e for s, e in code):
+            continue
+        for k in range(a, b + 1):
+            if not lines[k].strip():
+                lines[k] = BLANK_IN_TABLE
+    return "\n".join(lines)
+
+
 def html_to_text(html: str) -> str:
     """순서가 로직이다(rag1-07): 주석·script·style 내용째 → 줄바꿈 태그 → 나머지 태그 → 엔티티 → 공백."""
     s = re.sub(r"(?s)<!--.*?-->", " ", html)
@@ -187,7 +225,7 @@ def row_text(header: list[str], cells: list[str]) -> str:
 def html_tables(html: str) -> list[tuple[list[str], list[list[str]]]]:
     tables = []
     for table in BeautifulSoup(html, "lxml").find_all("table"):
-        rows = [[html_to_text(str(c)) for c in tr.find_all(["th", "td"])] for tr in table.find_all("tr")]
+        rows = [[MD_LINK.sub(r"\1", html_to_text(str(c))) for c in tr.find_all(["th", "td"])] for tr in table.find_all("tr")]
         rows = [r for r in rows if any(r)]
         if not rows:
             continue
@@ -202,7 +240,7 @@ def parse_page(page: dict, raw: str, counts: collections.Counter) -> list[dict]:
     text = preprocess(raw, counts, unknown)
     if text.count("\n") != raw.count("\n"):
         raise ParseError(f"전처리가 줄 수를 바꿈: {page['path']}")
-    tokens = MD.parse(text)
+    tokens = MD.parse(join_html_tables(text))
     elements, open_heads, parent = [], {}, None        # 제목 단계(1~4) → 글자. 위치가 아니라 단계로 둔다(## 로 시작하는 쪽이 대부분)
     review = f"unknown_shortcode:{','.join(sorted(unknown))}" if unknown else None
 

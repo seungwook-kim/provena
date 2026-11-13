@@ -1,0 +1,203 @@
+{
+ "tables": 10,
+ "in_code_fence(건드리지 않음)": 1,
+ "one_block_now": 9,
+ "not_one_block": [],
+ "items": [
+  {
+   "page": "handbook/business-technology/tech-stack-applications.md",
+   "line_start": 180,
+   "line_end": 192,
+   "inside_code_fence": true,
+   "old": {
+    "elements_inside_range": {},
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {},
+    "table_rows_covering_whole_table": 0
+   },
+   "now_one_block": null
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/application-lifecycle/workflow.md",
+   "line_start": 180,
+   "line_end": 254,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "table_row": 1,
+     "list_item": 10,
+     "html": 4
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 5
+    },
+    "table_rows_covering_whole_table": 5
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/design-documents/component_performance_testing/_index.md",
+   "line_start": 115,
+   "line_end": 166,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "paragraph": 2,
+     "list_item": 19,
+     "html": 2
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 2
+    },
+    "table_rows_covering_whole_table": 2
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/design-documents/component_performance_testing/_index.md",
+   "line_start": 399,
+   "line_end": 533,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "paragraph": 11,
+     "list_item": 5,
+     "html": 5
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 27
+    },
+    "table_rows_covering_whole_table": 27
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 84,
+   "line_end": 115,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "list_item": 4,
+     "html": 1
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 1
+    },
+    "table_rows_covering_whole_table": 1
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 131,
+   "line_end": 176,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "list_item": 13,
+     "html": 2
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 1
+    },
+    "table_rows_covering_whole_table": 1
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 215,
+   "line_end": 268,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "paragraph": 8
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 3
+    },
+    "table_rows_covering_whole_table": 3
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/managing-limits.md",
+   "line_start": 145,
+   "line_end": 183,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "paragraph": 3,
+     "list_item": 7
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 2
+    },
+    "table_rows_covering_whole_table": 2
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/security/corporate/team/_index.md",
+   "line_start": 9,
+   "line_end": 212,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "table_row": 11
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 11
+    },
+    "table_rows_covering_whole_table": 11
+   },
+   "now_one_block": true
+  },
+  {
+   "page": "handbook/security/security-assurance/_index.md",
+   "line_start": 28,
+   "line_end": 63,
+   "inside_code_fence": false,
+   "old": {
+    "elements_inside_range": {
+     "html": 1
+    },
+    "table_rows_covering_whole_table": 0
+   },
+   "new": {
+    "elements_inside_range": {
+     "table_row": 1
+    },
+    "table_rows_covering_whole_table": 1
+   },
+   "now_one_block": true
+  }
+ ]
+}

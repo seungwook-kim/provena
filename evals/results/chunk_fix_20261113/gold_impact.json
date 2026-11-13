@@ -1,0 +1,412 @@
+{
+ "summary": {
+  "v2 50": {
+   "relevant_questions": 25,
+   "gold_refs": 37,
+   "form:any(a | b)": 3,
+   "form:section(경로>제목)": 32,
+   "refs_touching_changed_chunk": 5,
+   "refs_whose_matched_text_changed": 5,
+   "questions_touching_changed_chunk": 4,
+   "form:line(#L)": 2
+  },
+  "검증 20": {
+   "relevant_questions": 10,
+   "gold_refs": 16,
+   "form:line(#L)": 10,
+   "form:any(a | b)": 4,
+   "refs_touching_changed_chunk": 3,
+   "refs_whose_matched_text_changed": 3,
+   "questions_touching_changed_chunk": 2,
+   "form:section(경로>제목)": 2
+  },
+  "금액 질문 5(운영 15건=5문항x3회)": {
+   "relevant_questions": 5,
+   "gold_refs": 5,
+   "form:section(경로>제목)": 5
+  },
+  "새 문항 5(인용)": {
+   "relevant_questions": 5,
+   "gold_refs": 5,
+   "form:chunk_id": 5,
+   "refs_touching_changed_chunk": 4,
+   "refs_whose_matched_text_changed": 4,
+   "questions_touching_changed_chunk": 4
+  },
+  "v1 30(동결)": {
+   "relevant_questions": 15,
+   "gold_refs": 19,
+   "form:any(a | b)": 2,
+   "form:section(경로>제목)": 16,
+   "refs_touching_changed_chunk": 2,
+   "refs_whose_matched_text_changed": 2,
+   "questions_touching_changed_chunk": 2,
+   "form:line(#L)": 1
+  },
+  "과다거절 탐침 10": {
+   "relevant_questions": 5,
+   "gold_refs": 5,
+   "form:section(경로>제목)": 5,
+   "gold_refs_matching_nothing_before": 3
+  }
+ },
+ "detail": [
+  {
+   "set": "v2 50",
+   "id": 9,
+   "ref": "security/product-security/vulnerability-management/sla.md > Vulnerability Management SLAs and Labels",
+   "form": "section(경로>제목)",
+   "old_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5"
+   ],
+   "new_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5"
+   ],
+   "matched_chunks_old": 3,
+   "matched_chunks_new": 3,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "1760f9bd2b094dd5"
+   ]
+  },
+  {
+   "set": "v2 50",
+   "id": 11,
+   "ref": "security/security-observations-risk-management.md > Procedure > Risk Rating > Priority Rating (Business Impact and Urgency) | security/product-security/vulnerability-management/sla.md > Vulnerability Management SLAs and Labels",
+   "form": "any(a | b)",
+   "old_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5",
+    "afbf8346bd662039",
+    "4de9926da327a146"
+   ],
+   "new_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5",
+    "afbf8346bd662039",
+    "4de9926da327a146"
+   ],
+   "matched_chunks_old": 5,
+   "matched_chunks_new": 5,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "1760f9bd2b094dd5",
+    "4de9926da327a146"
+   ]
+  },
+  {
+   "set": "v2 50",
+   "id": 35,
+   "ref": "engineering/infrastructure-platforms/developer-experience/ai/_index.md > Guidelines and Principles > AI-Assistance Level Labels",
+   "form": "section(경로>제목)",
+   "old_chunk_ids": [
+    "133f8fdfd459e861",
+    "5fff43a9dd7762b5",
+    "cb53c1982c77310e"
+   ],
+   "new_chunk_ids": [
+    "133f8fdfd459e861",
+    "5fff43a9dd7762b5",
+    "cb53c1982c77310e"
+   ],
+   "matched_chunks_old": 3,
+   "matched_chunks_new": 3,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "5fff43a9dd7762b5",
+    "cb53c1982c77310e"
+   ]
+  },
+  {
+   "set": "v2 50",
+   "id": 36,
+   "ref": "security/security-assurance/security-risk/third-party-risk-management.md > Frequently Asked Questions",
+   "form": "section(경로>제목)",
+   "old_chunk_ids": [
+    "eb716842d2574546",
+    "e92ff33755911829",
+    "71546862abfa5085",
+    "17997f24b5e563bd"
+   ],
+   "new_chunk_ids": [
+    "eb716842d2574546",
+    "e92ff33755911829",
+    "71546862abfa5085",
+    "17997f24b5e563bd"
+   ],
+   "matched_chunks_old": 4,
+   "matched_chunks_new": 4,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "e92ff33755911829",
+    "71546862abfa5085",
+    "17997f24b5e563bd"
+   ]
+  },
+  {
+   "set": "v2 50",
+   "id": 36,
+   "ref": "security/security-assurance/security-risk/third-party-risk-management.md > Third Party Minimum Security Standards > TPRM Approval Windows",
+   "form": "section(경로>제목)",
+   "old_chunk_ids": [
+    "46febe6f4a6ae0bc",
+    "931a9097b6def468",
+    "556f4a5aac4c4c31",
+    "258f74b290e56034",
+    "85970f95b1996c8d",
+    "bf31f2661c6cdfdf"
+   ],
+   "new_chunk_ids": [
+    "46febe6f4a6ae0bc",
+    "931a9097b6def468",
+    "556f4a5aac4c4c31",
+    "258f74b290e56034",
+    "85970f95b1996c8d",
+    "bf31f2661c6cdfdf"
+   ],
+   "matched_chunks_old": 6,
+   "matched_chunks_new": 6,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "931a9097b6def468"
+   ]
+  },
+  {
+   "set": "검증 20",
+   "id": 105,
+   "ref": "security/policies_and_standards/records-retention-deletion.md#L43",
+   "form": "line(#L)",
+   "old_chunk_ids": [
+    "6ae438193abc5b4f"
+   ],
+   "new_chunk_ids": [
+    "6ae438193abc5b4f"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "6ae438193abc5b4f"
+   ]
+  },
+  {
+   "set": "검증 20",
+   "id": 105,
+   "ref": "security/policies_and_standards/records-retention-deletion.md#L60",
+   "form": "line(#L)",
+   "old_chunk_ids": [
+    "3b259d9d77bd1d56"
+   ],
+   "new_chunk_ids": [
+    "3b259d9d77bd1d56"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "3b259d9d77bd1d56"
+   ]
+  },
+  {
+   "set": "검증 20",
+   "id": 106,
+   "ref": "support/training/onboarding_buddy.md#L29",
+   "form": "line(#L)",
+   "old_chunk_ids": [
+    "bb5eee21805e7c1b"
+   ],
+   "new_chunk_ids": [
+    "bb5eee21805e7c1b"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "bb5eee21805e7c1b"
+   ]
+  },
+  {
+   "set": "새 문항 5(인용)",
+   "id": 301,
+   "ref": "8346358e1a239c03",
+   "form": "chunk_id",
+   "old_chunk_ids": [
+    "8346358e1a239c03"
+   ],
+   "new_chunk_ids": [
+    "8346358e1a239c03"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "8346358e1a239c03"
+   ]
+  },
+  {
+   "set": "새 문항 5(인용)",
+   "id": 302,
+   "ref": "405d7236eab82379",
+   "form": "chunk_id",
+   "old_chunk_ids": [
+    "405d7236eab82379"
+   ],
+   "new_chunk_ids": [
+    "405d7236eab82379"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "405d7236eab82379"
+   ]
+  },
+  {
+   "set": "새 문항 5(인용)",
+   "id": 303,
+   "ref": "5ebbb861d33d404e",
+   "form": "chunk_id",
+   "old_chunk_ids": [
+    "5ebbb861d33d404e"
+   ],
+   "new_chunk_ids": [
+    "5ebbb861d33d404e"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "5ebbb861d33d404e"
+   ]
+  },
+  {
+   "set": "새 문항 5(인용)",
+   "id": 305,
+   "ref": "0038ce8d57073dcf",
+   "form": "chunk_id",
+   "old_chunk_ids": [
+    "0038ce8d57073dcf"
+   ],
+   "new_chunk_ids": [
+    "0038ce8d57073dcf"
+   ],
+   "matched_chunks_old": 1,
+   "matched_chunks_new": 1,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "0038ce8d57073dcf"
+   ]
+  },
+  {
+   "set": "v1 30(동결)",
+   "id": 9,
+   "ref": "security/product-security/vulnerability-management/sla.md > Vulnerability Management SLAs and Labels",
+   "form": "section(경로>제목)",
+   "old_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5"
+   ],
+   "new_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5"
+   ],
+   "matched_chunks_old": 3,
+   "matched_chunks_new": 3,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "1760f9bd2b094dd5"
+   ]
+  },
+  {
+   "set": "v1 30(동결)",
+   "id": 11,
+   "ref": "security/security-observations-risk-management.md > Procedure > Risk Rating > Priority Rating (Business Impact and Urgency) | security/product-security/vulnerability-management/sla.md > Vulnerability Management SLAs and Labels",
+   "form": "any(a | b)",
+   "old_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5",
+    "afbf8346bd662039",
+    "4de9926da327a146"
+   ],
+   "new_chunk_ids": [
+    "c3b5296636ea8c06",
+    "1760f9bd2b094dd5",
+    "d27e11d7c4c1bce5",
+    "afbf8346bd662039",
+    "4de9926da327a146"
+   ],
+   "matched_chunks_old": 5,
+   "matched_chunks_new": 5,
+   "touched_changed_chunk": true,
+   "body_changed": false,
+   "text_changed": true,
+   "ids_changed": false,
+   "broken": false,
+   "changed_chunk_ids_in_match": [
+    "1760f9bd2b094dd5",
+    "4de9926da327a146"
+   ]
+  }
+ ]
+}
