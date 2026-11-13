@@ -8,6 +8,9 @@ evals/results/retrieval_v1_round1_frozen/results.tar.gz binary
 # 동결 sha256은 CRLF 파일 기준이다. 어느 운영체제에서 받아도 같은 바이트가 되게 고정한다
 evals/dataset_v1.jsonl text eol=crlf
 evals/dataset_v2.jsonl text eol=crlf
+# 검증 문항·인용 새 문항 세트도 같다. EVAL_REPORT.md에 적은 sha256(c877c065…, 8823195a…)은 CRLF 바이트 기준이다
+evals/dataset_holdout_v1.jsonl text eol=crlf
+evals/dataset_cite_new_v1.jsonl text eol=crlf
 data/corpus/** -text
 
 # 새 동결 시험 세트(PREREGISTER 62.5)는 sha256을 사전 등록에 적었으므로 줄바꿈을 고정한다
