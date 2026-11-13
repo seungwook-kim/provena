@@ -1,5 +1,5 @@
 # #138 후속 — 기록 칸 채우기, 작업 내역 이름 정리, D0~D8 정리, 포트폴리오 보강, SDK 링크, 문서·코드 맞추기
-- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `b541e97a`(#145까지)를 합친 브랜치 `pr138-followup` + 갈래 `sdk-links`, `docs-align-1113`을 git merge로 묶음
+- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `ac9892fe`(#146까지)를 합친 브랜치 `pr138-followup` + 갈래 `sdk-links`, `docs-align-1113`을 git merge로 묶음
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 팀 문서 / [실측] 직접 돌린 결과 / [추정].
 - 운영 호출 없음(조장 11/13 배포·운영 측정 중 운영 시험 중지 요청). LLM·Voyage 호출 없음. 코드 동작은 바꾸지 않았다(문서·SDK 설명·생성 스크립트 후처리·`.gitattributes`만).
 
@@ -9,8 +9,8 @@
 | 기록 칸 `미정` | 박진형 행 38칸을 실제로 머지된 PR 번호로 채움(#132 26칸, #138 12칸). 남의 행은 건드리지 않음 | [실측] 행마다 `git blame`으로 그 줄을 넣은 커밋을 찾고, 그 커밋을 처음 담은 main의 머지 커밋(첫 부모 줄)에서 PR 번호를 읽음. 바뀐 낱말은 `미정` → `#번호` 38개뿐(`git diff --word-diff`) |
 | 작업 내역 이름 | `docs/pr-notes/PR-next.md` → `PR-138.md`. 머리말(PR 번호·머지 시각), 빠져 있던 프론트 버그 수정·화면 안내 절(2-0), 5절 숫자(vitest 369, pytest 3550)를 채움. 이 이름을 가리키던 `docs/docs.md`·`ai_tools_log.md` 두 곳도 고침 | 지침 "PR마다 `PR-<번호>.md`", 미정은 머지 직후 후속 커밋으로(팀원 기록 규칙). 프론트 숫자 출처는 그 작업의 검증 기록(11/12) |
 | D0~D8 정리 | `docs/deliverables/work-summary-박진형.md` 새 파일. 11/11 main `54f8e37`(#125 직후) 기준 그대로이고 그 뒤 PR은 넣지 않음(진형 결정 11/13). 결과 파일 이름 2개만 AI 도구 이름이 들어 있어 "결과 JSON 2개"로 바꿈 | 11/11 조장 지적(진형 작업 문서 없음) 뒤 만든 문서가 PR에 실리지 않았다 [실측: 모든 브랜치 이력에서 이 파일 0건] |
-| M-22 포트폴리오 | `portfolio-박진형.md` 숫자 표에 LangGraph 승인·재개 줄, 멀티에이전트 줄(정책 질문 단일 대 멀티, 합동 검토 팀 대 1인)을 "팀 결과"로 더함. "차이 없음"도 그대로 적음 | 체크포인트 D12 "포트폴리오 1장(LangGraph, 멀티에이전트, 평가, 관측의 수치 포함)". 전에는 `LangGraph`·`멀티` 0건이었다. 숫자 출처 `EVAL_REPORT.md:503`, `:514-515`, `:592` |
-| 포트폴리오 줄 번호 | main을 합친 뒤 `EVAL_REPORT.md` 줄이 밀려(#142~#145에서 +94 −61) 근거 줄 3곳을 새 줄로 고침: 배포 답변 행 `686, 687, 892, 704` → `686, 687, 874, 901~905, 709`(조장이 #143에서 00047 값으로 바꾼 행), 배포 실측 `804, 805` → `809, 810`, 관측 `822` → `827`. 기준 커밋 표기 `3225f107` → `b541e97a` | [실측] 표의 숫자 36개를 근거 줄에서 찾는 스크립트: 고치기 전 11개 불일치 → 고친 뒤 0 |
+| M-22 포트폴리오 | `portfolio-박진형.md` 숫자 표에 LangGraph 승인·재개 줄, 멀티에이전트 줄(정책 질문 단일 대 멀티, 합동 검토 팀 대 1인)을 "팀 결과"로 더함. "차이 없음"도 그대로 적음 | 체크포인트 D12 "포트폴리오 1장(LangGraph, 멀티에이전트, 평가, 관측의 수치 포함)". 전에는 `LangGraph`·`멀티` 0건이었다. 숫자 출처 `EVAL_REPORT.md:504`, `:515-516`, `:593`(main `ac9892fe` 기준) |
+| 포트폴리오 줄 번호 | main을 합칠 때마다 `EVAL_REPORT.md` 줄이 밀려(#142~#146) 표의 근거 줄 칸을 새 줄로 옮김. 조장이 #143에서 00047 값으로 바꾼 배포 답변 행도 그 값이 있는 줄(인용 정확도·인용률 표, 00047 회차 표)로 맞춤. 기준 커밋 표기 `3225f107` → `ac9892fe` | [실측] 옛 본문과 새 본문을 줄 단위로 맞춰 옮긴 뒤, 표의 숫자 36개와 문구 7개를 근거 줄에서 찾는 스크립트로 확인: 0 불일치 |
 | C-26 SDK README 링크 | `mock_erp/sdk/java/README.md`(142개)·`python/README.md`(89개)의 없는 파일로 가는 상대 링크를 글자만 남기고 풂. 새 `mock_erp/sdk/strip_dead_links.py`를 `generate.sh` 끝에서 불러 다시 생성해도 유지. `sdk.md`에 후처리 한 줄 | [코드] `generate.sh`가 `apiDocs=false,modelDocs=false`로 문서 페이지를 만들지 않는데(`sdk.md:21` "크기 절감") README 표는 그 페이지를 링크했다. [실측] 깨진 링크 231 → 0, 원래 맞던 링크(http 4, 앵커 2)는 그대로, 바뀐 줄은 링크 줄뿐(142·89줄), `.java`·`.py` SDK 소스 변경 0, `tests/test_sdk_matches_openapi.py` 3 passed |
 | K-03 PRD 라이브러리 표 | `docs/PRD.md` 9장 BM25 `bm25s` → `rank-bm25`(`BM25Okapi`), bcrypt `5.0.0` → `>=4.2,<5`, 저장 행 `langchain-postgres` → `pgvector`·`psycopg` 직접 SQL. 하단 주석 줄 번호 `search.py:607` → `:622` | [코드] `backend/rag/retrieve/search.py:622` `from rank_bm25 import BM25Okapi`, `backend/requirements.txt:8`·`:17-19`, `backend/`에 `bm25s`·`langchain_postgres` import 0건 |
 | O-07 SDD LangChain | `docs/SDD.md:50` "LangChain 채팅 모델" → 채팅 모델(`langchain-anthropic`·`langchain-openai`, `services/llm.py`)과 `langchain_core` 메시지·콜백·Runnable 타입에만 쓴다 | [코드] `langchain_openai`·`langchain_anthropic` import는 `llm.py`에만 있고 다른 곳은 `langchain_core`만 |
@@ -38,7 +38,7 @@ Q-24(키 없는 기동)·K-22(main pytest)·Q-21·K-16은 조장 #142 D10 증거
 | 대상 | 결과 |
 |---|---|
 | 전체 pytest | 3582 passed, 0 failed, 180 skipped, 2 deselected, 575초 [실측, 11/13, Docker `python:3.12`, 이 브랜치 `git archive` → CI와 같은 `pip install -r backend/requirements-dev.txt` → `python -m pytest -q`]. 바뀐 `.py`는 `mock_erp/sdk/strip_dead_links.py`(시험 대상 아님) 하나 |
-| 포트폴리오 인용 | 표의 숫자 36개가 모두 근거 줄에 있음(`EVAL_REPORT.md` main `b541e97a`) [실측] |
+| 포트폴리오 인용 | 표의 숫자 36개가 모두 근거 줄에 있음(`EVAL_REPORT.md` main `ac9892fe`) [실측] |
 | 갈래별 독립 검증 | SDK 링크·문서 맞추기 갈래마다 작업과 다른 검증자가 diff만 보고 다시 셈(깨진 링크 수, 인용 줄, 새 clone 해시) [실측] |
 | AI 표기 검사 | 커밋 메시지 0. 추가 줄에서 걸린 것은 코드 패키지 이름(`langchain-anthropic`·`langchain_anthropic`, AGENTS·PRD·SDD와 이 문서)과, 그 밖의 1건은 원래 있던 `docs/docs.md` 행(`.claude/skills/` 경로를 가리키는 #132 기록)의 PR 칸만 바꾼 것이라 새 표기 0(`ai_tools_log.md` 제외) |
 
