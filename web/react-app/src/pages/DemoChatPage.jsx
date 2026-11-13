@@ -41,6 +41,20 @@ function saveResumeId(id) {
   try { sessionStorage.setItem(RESUME_KEY, id) } catch { /* 저장소를 못 쓰면 돌아와서 목록에서 직접 연다 */ }
 }
 
+// 연 대화 id. 새로고침해도 새 대화 화면으로 가지 않고 그 대화를 다시 연다(경희님 화면 점검 2026-11-13, AC-12).
+export const OPEN_THREAD_KEY = 'provena-chat-open'
+
+function readOpenThreadId() {
+  try { return sessionStorage.getItem(OPEN_THREAD_KEY) } catch { return null }
+}
+
+function writeOpenThreadId(id) {
+  try {
+    if (id) sessionStorage.setItem(OPEN_THREAD_KEY, id)
+    else sessionStorage.removeItem(OPEN_THREAD_KEY)
+  } catch { /* 저장소를 못 쓰면 새로고침 뒤 목록에서 직접 연다 */ }
+}
+
 // 답은 그래프가 끝난 뒤 한 번에 오므로(backend/graph/stream.py) 단계 대신 지난 시간만 보여 준다
 function GeneratingProgress() {
   const [seconds, setSeconds] = useState(0)
@@ -153,6 +167,8 @@ export default function DemoChatPage({ api = false }) {
   const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
   const threadRequestRef = useRef(null)
   const [resumeId, setResumeId] = useState(null)
+  // 처음 그릴 때 한 번만 읽는다(아래 effect 가 selectedId=null 로 지우기 전에)
+  const [reopenId] = useState(() => (api ? readOpenThreadId() : null))
   const messagesRef = useRef(null)
   const stickToBottomRef = useRef(true)
   const composerRef = useRef(null)
@@ -214,7 +230,10 @@ export default function DemoChatPage({ api = false }) {
         stickToBottomRef.current = true
         setSelectedId(pending)
         setResumeId(pending)
+        return
       }
+      const reopen = reopenId ? items.find(item => item.id === reopenId) : null
+      if (reopen) selectThread(reopen)
     }).catch(() => {
       setThreads([])
     }).finally(() => setLoading(false))
@@ -223,6 +242,11 @@ export default function DemoChatPage({ api = false }) {
       if (api && cut.length) saveResumeId(cut[cut.length - 1])
     }
   }, [])
+
+  // 연 대화를 탭 안에 기억한다. 목록을 받기 전에는 쓰지 않는다(그사이 새로고침해도 기억이 지워지지 않게).
+  useEffect(() => {
+    if (api && !loading) writeOpenThreadId(selectedId)
+  }, [selectedId, loading])
 
   // 돌아온 대화를 서버에서 다시 받는다. 서버가 아직 만드는 중(status running)이면 끝날 때까지 몇 초마다 다시 받는다.
   useEffect(() => {

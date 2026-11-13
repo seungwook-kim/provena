@@ -39,19 +39,33 @@ export function mapApiMemoryResponse(value = {}, fallback = DEFAULT_SETTINGS) {
   }
 }
 
+// 소속 팀은 내 정보 `dept`에만 저장한다(docs/specs/memory.md 남은 점, PR #131 조장 확정). 그래서 기억 설정 화면은
+// 팀을 내 정보에서 읽어 보여 주고, 바꾸면 내 정보의 다른 칸은 그대로 둔 채 `dept`만 바꿔 PUT /me/profile 로 저장한다
+// (PUT 은 네 칸을 모두 받는다, backend/profile_api.py put_profile). 내 정보가 없거나 못 읽으면 팀은 화면 안에서만 쓴다.
+let editableProfile = null
+
 export const apiMemoryService = createMemoryService({
   getMemorySettings: async () => {
-    const { getMemory } = await import('./api')
-    return mapApiMemoryResponse(await getMemory())
+    const { getMemory, getProfileForEdit } = await import('./api')
+    const [memory, profile] = await Promise.all([getMemory(), Promise.resolve().then(() => getProfileForEdit()).catch(() => null)])
+    editableProfile = profile && typeof profile === 'object' ? profile : null
+    const settings = mapApiMemoryResponse(memory)
+    return typeof editableProfile?.dept === 'string' && editableProfile.dept ? { ...settings, team: editableProfile.dept } : settings
   },
   saveMemorySettings: async (_ownerId, settings) => {
-    const { patchMemory } = await import('./api')
+    const { patchMemory, saveProfile } = await import('./api')
     const response = await patchMemory({ rank: settings.role, service: settings.service })
-    return mapApiMemoryResponse(response, settings)
+    if (editableProfile && settings.team && settings.team !== editableProfile.dept) {
+      const { name, phone, address } = editableProfile
+      await saveProfile({ name, dept: settings.team, phone, address })
+      editableProfile = { ...editableProfile, dept: settings.team }
+    }
+    return { ...mapApiMemoryResponse(response, settings), team: settings.team }
   },
   resetMemorySettings: async () => {
     const { deleteMemory } = await import('./api')
     await deleteMemory()
-    return { ...DEFAULT_SETTINGS }
+    // 기억만 지운다. 소속 팀은 내 정보에 남아 있으므로 그대로 보여 준다.
+    return { ...DEFAULT_SETTINGS, team: editableProfile?.dept || '' }
   },
 })
