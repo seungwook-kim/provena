@@ -272,12 +272,19 @@ function ImpactPreviewPanel({ service }) {
     <p className="recall-admin-lede">개정안의 바뀐 섹션 목록이나 개정 전후 본문을 넣으면 무효가 될 답변과 알림 대상 수를 미리 계산합니다.</p>
     <form className="impact-preview-form" onSubmit={run}>
       <div className="recall-filter-row" role="group" aria-label="입력 형식">{[['changes', '바뀐 섹션 목록(JSON)'], ['pages', '개정 전후 본문(JSON)']].map(([key, label]) => <button type="button" key={key} className={mode === key ? 'selected' : ''} onClick={() => setMode(key)}>{label}</button>)}</div>
-      <label><textarea aria-label={mode === 'pages' ? '개정 전후 본문(JSON)' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'pages' ? '{"old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "pages": [{"path": "handbook/a.md", "old": "이전 본문", "new": "새 본문"}]}' : '[{"rule_seq": 12, "article": "조항 이름", "old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "change_type": "modified"}]'} /></label>
+      <label><textarea aria-label={mode === 'pages' ? '개정 전후 본문(JSON)' : '바뀐 섹션 목록(JSON)'} value={input} onChange={event => setInput(event.target.value)} rows={8} placeholder={mode === 'pages' ? '{"old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "pages": [{"path": "handbook/a.md", "old": "# 문서 제목\\n\\n## 1조\\n이전 본문", "new": "# 문서 제목\\n\\n## 1조\\n새 본문"}]}' : '[{"rule_seq": 12, "article": "조항 이름", "old_version_date": "2026-11-01", "new_version_date": "2026-11-10", "change_type": "modified"}]'} /></label>
       <div className="recall-admin-actions"><button type="submit" className="demo-dark-button" disabled={running}>{running ? '계산 중입니다.' : '미리보기 실행'}</button></div>
     </form>
     {error && <p role="alert" className="recall-action-error">{error}</p>}
+    {result && hasUnnamedSection(result) && <p className="recall-admin-lede" role="note">섹션 이름이 비어 있는 항목이 있습니다. 섹션 이름은 본문의 제목 줄('## 1조'처럼 #로 시작)에서 가져오므로, 개정 전후 본문(old·new)에 제목 줄을 넣어 주세요.</p>}
     {result && <div className="impact-preview-result"><small>MR 댓글용 요약</small><pre>{result.markdown || '요약 내용이 없습니다.'}</pre></div>}
   </section>
+}
+
+// 개정 전후 본문(pages) 입력에 제목 줄(#)이 없으면 서버가 섹션 이름을 비워 보낸다(backend/rag/ingest/diff.py article_of). 표의 '섹션' 칸이 비는 이유를 알려 준다.
+function hasUnnamedSection(result) {
+  const changes = result?.report?.changes
+  return Array.isArray(changes) && changes.some(change => typeof change?.article === 'string' && change.article.trim() === '')
 }
 
 function OperationsPanel({ service }) {

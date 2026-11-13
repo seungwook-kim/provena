@@ -172,6 +172,26 @@ describe('DemoChatPage chat errors (H-08)', () => {
     expect(bodies).toEqual(['다음 질문', '다음 질문'])
   })
 
+  // 새로 발견 7: 같은 오류에 '다시 시도'를 거듭 눌러도 오류 말풍선은 하나다
+  it('keeps one error bubble when retry is pressed repeatedly on the same error', async () => {
+    const message = '승인이 끝나야 다음 질문을 할 수 있습니다.'
+    const fetchMock = stubChat(() => json({ error: { code: 'approval_pending', message } }, 409))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText('앞 답')
+    fireEvent.change(screen.getByRole('textbox', { name: '질문' }), { target: { value: '다음 질문' } })
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    expect(await screen.findByText(message)).toBeTruthy()
+    for (let count = 2; count <= 3; count += 1) {
+      fireEvent.click(await screen.findByRole('button', { name: '다시 시도' }))
+      await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(count), { timeout: 5000 })
+      await screen.findByText(message)
+      await vi.waitFor(() => expect(screen.queryByText(/근거를 찾고 답을 확인하는 중입니다/)).toBeNull())
+    }
+    expect(screen.getAllByText(message)).toHaveLength(1)
+    expect(screen.getAllByText('다음 질문')).toHaveLength(1)
+  })
+
   it('shows the error for a first question in a new conversation too', async () => {
     stubChat(() => json({ error: { code: 'not_configured', message: '채팅이 설정되지 않았습니다.' } }, 503))
     render(<App />)
