@@ -47,9 +47,9 @@ flowchart LR
 |---|---|---|
 | `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜·웹훅·변경 감시 라우트는 `api/recalls.py`, `api/changes.py`) | FastAPI, OpenAPI 자동 문서 |
-| `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store), LangChain 채팅 모델. 결정표 변환·리콜 판정 로직은 직접 구현 |
+| `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store). LangChain은 채팅 모델(`langchain-anthropic`·`langchain-openai`, `backend/services/llm.py`)과 메시지·콜백·Runnable 타입(`langchain_core`)에만 쓴다. 결정표 변환·리콜 판정 로직은 직접 구현 |
 | `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | 임베딩은 Voyage API(`voyage-4`)를 직접 호출하고, pgvector는 psycopg SQL로 직접 조회한다(LangChain 임베딩·저장소·리트리버는 쓰지 않는다). 리랭커는 로컬 모델(11-0, 현재 미사용). 인용 검사는 직접 구현 |
-| `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다 |
+| `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다. 한계(F-10, 2026-11-13 소유자 결정: 지금 잇지 않고 알려진 한계로 둔다): `handbook.collect()`(`backend/rag/ingest/handbook.py:254`)와 `schedule.py`는 아직 `DocumentSource`를 거치지 않는다(`backend/rag/ingest/source.py:7`, 추상화 정의 `source.py:29`). `DocumentSource`를 쓰는 곳은 `source.py` 자신과 `tests/test_ingest_source.py`뿐이다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
 | `mock_erp/` | 업무시스템(구매·배포 승인)이 플랫폼을 부르는 시연 | 계획은 Java(Spring Boot) 목업은 크게, Python 예제는 작게. 현재(2026-11-11)는 Python 예제(`mock_erp/python_example/`)만 있고 Java 목업은 만들지 않았다(`mock_erp/mock_erp.md` "만든 것과 만들지 않은 것") |
@@ -172,6 +172,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지, 변경 감시를 멈췄으면 건너뜀 (가산: 자동화)
 │  │  │     snapshot_diff.py      # git 없는 변경 감지(F-07): 두 시점 문서 묶음을 섹션 단위로 비교해 같은 형식의 바뀐 섹션 목록을 만든다
+│  │  │     source.py             # 문서 출처 추상화 `DocumentSource`(F-10). 한계: `handbook.collect()`·`schedule.py`는 아직 거치지 않는다(source.py:7)
 │  │  └─ retrieve/  retrieve.md
 │  │        embed.py              # 임베딩(기본 voyage-4 API, 로컬 모델은 비교용)
 │  │        search.py             # 검색(기본 dense_en), 판·절 필터, 링크 확장, 금액 구간 조회

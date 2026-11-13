@@ -9,14 +9,16 @@
 - 파싱 결과 `data/parsed/document_ir.jsonl`(로컬 생성물, `.gitignore`가 `data/parsed/*`를 제외해 저장소에는 없고 `authz_cells.jsonl`만 커밋됨) 한 줄 = 요소 하나: `element_id, rule_seq, org, kind(heading·paragraph·list_item·table_row·quote·html·code), heading_path, parent_id, order, line_start, line_end(원본 줄, 1부터), text, links, review`. 표 행은 `table_id, row, header, cells` 추가. 청킹(B-3)은 이 형식을 읽는다
 - 입력: 핸드북 저장소(고정 커밋)
 - 출력: 원문 스냅샷, 청크, 바뀐 섹션 목록(`ChangedArticle`)
+- 알려진 한계(F-10): `source.py:29`의 `DocumentSource` 추상화는 `handbook.collect()`(`handbook.py:254`)와 `schedule.py`를 거치지 않는다(`source.py:7`). 2026-11-13 소유자 결정으로 지금 잇지 않는다. 쓰는 곳은 `source.py`와 `tests/test_ingest_source.py`뿐이다
 
 ## 작업 기록 (최신이 위)
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-38 나머지: 문제 기록 I-004·I-006을 결정됨으로(판정일 2026-10-30, decisions.md:70·71), `docs/specs/chunk.md` 요소 수를 85,389에서 85,388로(`data/corpus.tar.gz`를 풀어 `parse` 재실행: 1,561쪽 85,388개, `chunk` 재실행: 청크 23,095·서로 다른 본문 22,378이 `chunks_index.jsonl`·G3와 같음) 정정하고 manifest 칸 설명 추가(manifest에는 수집 고정 커밋 전체 sha가 없고 `version_id` 12자만 있음) | 미정 |
-| 2026-11-12 | 박진형 (jinyeong-731) | F-08: 증분 수집 `schedule.py --once` 로컬 DB 1회 실행(코드 변경 없음, 운영 DB 안 씀): 스냅샷 적재 뒤 129243bc → d92556d4, 성공, 추가 3·수정 149·서식만 152, 새 임베딩 436·재사용 6,946(Voyage 52,539토큰, 약 0.003달러), 63초. 결과는 `docs/specs/incremental.md` 결정 ① | 미정 |
-| 2026-11-11 | 박진형 (jinyeong-731) | F-10: `source.py`에 `DocumentSource` 추상화(SDD 3장). `HandbookGitSource`는 `handbook.py` 함수를 그대로 불러 감싸고, `DirectorySnapshotSource`는 폴더의 `.md`. `schedule.py`는 건드리지 않음. 시험 `tests/test_ingest_source.py`(구현체 출력 = handbook 출력) | 미정 |
+| 2026-11-13 | 박진형 (jinyeong-731) | F-10: `DocumentSource`가 `handbook.collect()`·`schedule.py`를 거치지 않는 것을 알려진 한계로 적었다(위 한계 항목, `docs/SDD.md` 3장). 코드 변경 없음. 근거: `source.py:7`·`:29`, `handbook.py:254`, `grep DocumentSource`로 쓰는 곳 `source.py`·`tests/test_ingest_source.py`뿐(실측) | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | 놓친 것 O-38 나머지: 문제 기록 I-004·I-006을 결정됨으로(판정일 2026-10-30, decisions.md:70·71), `docs/specs/chunk.md` 요소 수를 85,389에서 85,388로(`data/corpus.tar.gz`를 풀어 `parse` 재실행: 1,561쪽 85,388개, `chunk` 재실행: 청크 23,095·서로 다른 본문 22,378이 `chunks_index.jsonl`·G3와 같음) 정정하고 manifest 칸 설명 추가(manifest에는 수집 고정 커밋 전체 sha가 없고 `version_id` 12자만 있음) | #138 |
+| 2026-11-12 | 박진형 (jinyeong-731) | F-08: 증분 수집 `schedule.py --once` 로컬 DB 1회 실행(코드 변경 없음, 운영 DB 안 씀): 스냅샷 적재 뒤 129243bc → d92556d4, 성공, 추가 3·수정 149·서식만 152, 새 임베딩 436·재사용 6,946(Voyage 52,539토큰, 약 0.003달러), 63초. 결과는 `docs/specs/incremental.md` 결정 ① | #138 |
+| 2026-11-11 | 박진형 (jinyeong-731) | F-10: `source.py`에 `DocumentSource` 추상화(SDD 3장). `HandbookGitSource`는 `handbook.py` 함수를 그대로 불러 감싸고, `DirectorySnapshotSource`는 폴더의 `.md`. `schedule.py`는 건드리지 않음. 시험 `tests/test_ingest_source.py`(구현체 출력 = handbook 출력) | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | F-11 `--follow-renames` 켠 전체 실행 1회(GitLab 공개 저장소 내용 읽기만, 임베딩·LLM·DB 쓰기 없음, 출력은 저장소 밖 임시 폴더): 이름 바뀜 1,163건, 옮기기 전 판을 찾은 것 1,090건(93.7%), 처리 커밋 6,878건, 25분 11초, 리콜 시험 12건 모두 있음. `docs/specs/collect.md` 한계 문구를 "켠 전체 실행 미확인"에서 실측으로 고쳤다. 운영은 기본 꺼짐 유지 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 정리: R-07 빈 `ingest()` 제거, O-18 SDD 트리에 `compare.py` 반영, F-11 개정 이력 `--follow-renames` 옵션(기본 꺼짐, 시험 4개): 고른 폴더 안 이동은 `R<유사도>`·`old_path`, 폴더 밖에서 옮겨 온 파일(I-006)은 경로 제한 없이 짝을 찾아 잇고 `handbook_renames.jsonl` 에 이전 경로와 옮기기 전 판을 쓴다. 판 날짜·청크·검색에는 잇지 않았고 옵션을 켠 전체 실행은 못 돌려 봤다(한계는 `docs/specs/collect.md` How), F-17·F-08 재임베딩 단위와 정시 실행 실패 원인을 `docs/specs/incremental.md` 에 기록 | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 O-38 일부: 실행 순서에 `chunk`·`load --manifest`와 색인 위치 추가(11/2 정리 3b90241의 줄을 옮김). O-36: `docs/specs/eval-retrieval.md` 비교 명령의 `grid.json` → `evals/retrieval/grid_v1.json`, 청크 파일 두 경로 설명. O-38의 I-004·I-006·요소 수 문구는 남음 | #131 |

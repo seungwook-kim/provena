@@ -87,7 +87,7 @@ WHERE nsp.nspname = 'public'
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-11 | 박진형 (jinyeong-731) | 5번째 줄 소개 문장을 실제 SQL 번호와 "앱 시작 때 시드"로 고침(TEAM_GUIDE 5-0 `db/` 줄과 같은 말, O-23 검증 후속). `101_auth_users.sql`은 건드리지 않음(옛 번호대 주석이 남아 있음) | 미정 |
+| 2026-11-11 | 박진형 (jinyeong-731) | 5번째 줄 소개 문장을 실제 SQL 번호와 "앱 시작 때 시드"로 고침(TEAM_GUIDE 5-0 `db/` 줄과 같은 말, O-23 검증 후속). `101_auth_users.sql`은 건드리지 않음(옛 번호대 주석이 남아 있음) | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | S1 호환 시험 설명에 시험 기준, 배포 미확인 표기를 붙임(문구만, SQL 변경 없음) | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `107_email_signup_verification.sql`: 소문자 유니크 색인 `signup_requests_login_id_lower_unique`를 113의 대체 색인(`signup_requests_login_id_lower_open_unique`)이 없을 때만 만든다(`DO` 블록). 113 뒤에 107을 다시 돌리면(로컬 `ensure_schema()`는 시작할 때마다 돌린다) 옛 색인이 되살아나, 거절 행과 같은 이메일의 새 신청이 함께 있을 때 UniqueViolation으로 로컬 앱이 뜨지 않았다. 113 전 DB와 새 DB(107 → 113 순서)의 결과는 전과 같다. 시험 `tests/test_signup_edges.py`(거절 → 재가입 → `ensure_schema()` 재실행, 107·113·114 두 번 재적용 오류 0). 운영에는 적용하지 않았다(미적용) | #127 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속(hi-fix): 113·114 전 DB(운영 109까지)에서도 인증 코드가 돌게 했다(저장소가 `google_sub`·`user_identities` 유무 확인). 109까지만 적용한 스키마에서 시험(`tests/test_auth_schema_compat.py`)(시험 기준, 배포 미확인). L1 `113_signup_edges.sql`이 `signup_requests`의 이메일 `login_id`도 겹치지 않을 때 소문자로 바꾼다(겹치는 쌍은 그대로, 다시 돌려도 같음). `203_google_identities.sql` → `114_google_identities.sql` 이름 변경(인증 파트 100번대, 113 다음). 내용은 같다. | #127 |

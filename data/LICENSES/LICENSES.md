@@ -61,7 +61,7 @@ PDF별 판정
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
-| 2026-11-12 | 박진형 (jinyeong-731) | F-16: `static/pdfs/` PDF 7건 재배포 근거 확인. 핸드북 사용 안내의 CC BY-SA 4.0 문장은 PDF를 지목하지 않고 사이트 footer는 All Rights Reserved. PDF별 판정표 추가, 파일은 그대로 둠 | 미정 |
+| 2026-11-12 | 박진형 (jinyeong-731) | F-16: `static/pdfs/` PDF 7건 재배포 근거 확인. 핸드북 사용 안내의 CC BY-SA 4.0 문장은 PDF를 지목하지 않고 사이트 footer는 All Rights Reserved. PDF별 판정표 추가, 파일은 그대로 둠 | #138 |
 | 2026-11-05 | 김승욱(팀장, Claude Code) | `data/parsed/authz_cells.jsonl`을 커밋 대상으로 바꾸면서 2023 권한표의 출처와 라이선스 근거를 같은 커밋에서 확인해 기록 | #54 |
 | 2026-11-03 | 김승욱(팀장, Claude Code) | `static/pdfs/` PDF 7건의 라이선스 근거를 공개 페이지에서 찾았으나 PDF 자체의 라이선스는 찾지 못해 "미확인"으로 기록 | |
 

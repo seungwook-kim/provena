@@ -45,3 +45,6 @@ rm -rf "$HERE/java/gradle" "$HERE/java/gradlew" "$HERE/java/gradlew.bat" "$HERE/
   "$HERE/java/settings.gradle" "$HERE/java/gradle.properties" "$HERE/java/build.sbt" \
   "$HERE/java/.github" "$HERE/python/.github" "$HERE/python/.gitlab-ci.yml" \
   "$HERE/java/.travis.yml" "$HERE/python/.travis.yml" "$HERE/java/src/main/AndroidManifest.xml"
+
+# apiDocs·modelDocs=false 라 README 표가 가리키는 docs/*.md 가 없다 → 없는 파일로 가는 상대 링크는 글자만 남긴다.
+"${PYTHON:-python}" -X utf8 "$HERE/strip_dead_links.py" "$HERE/python/README.md" "$HERE/java/README.md"

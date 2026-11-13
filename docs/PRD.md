@@ -336,16 +336,16 @@ MCP·Skill은 이번 프로젝트에서 새로 만든 것만 가산으로 인정
 | ingest: 권한표 HTML | `lxml` (+ `beautifulsoup4`) | 6.1.3 BSD-3 / 4.15.0 MIT | CSS 그리드 div 표는 파서가 칸을 만들어 주지 않는다. 클래스와 순서로 직접 행·칸을 다시 만든다(F-04) |
 | ingest: 수집 | `git` 명령 (라이브러리 없음) | - | 고정 커밋 checkout과 `git log`만 쓴다 |
 | rag: 임베딩·리랭커 | `sentence-transformers` | 6.2.0, Apache-2.0 | bge-m3, bge-reranker-v2-m3, Qwen3-Reranker-0.6B(`CrossEncoder`, transformers 4.51 이상) 모두 불러진다(모델 카드). `FlagEmbedding`은 bge-m3의 sparse 출력이 필요할 때만 |
-| rag: BM25 | `bm25s` | 0.3.15, MIT | `rank-bm25`는 2022-02 이후 릴리스 없음. Postgres 전문검색(`ts_rank`)은 BM25가 아니라 비교 대상으로만 |
-| rag: 저장 | `langchain-postgres`(PGVector), `pgvector`, `psycopg` 3 | 0.0.19 MIT / 0.5.1 MIT / 3.3.6 LGPL-3.0 | langchain-postgres는 0.0.x라 판을 고정한다 |
+| rag: BM25 | `rank-bm25` (`BM25Okapi`) | `>=0.2`(`backend/requirements.txt:19`), Apache-2.0 | 코드가 이 라이브러리를 부른다(`backend/rag/retrieve/search.py:622`). 처음 후보 `bm25s` 0.3.15는 쓰지 않는다(`docs/decisions.md` 2026-11-11, K-03). `rank-bm25`는 2022-02 이후 릴리스가 없다. Postgres 전문검색(`ts_rank`)은 BM25가 아니라 비교 대상으로만. 기본 검색(`dense_en`)은 BM25를 쓰지 않는다(`EVAL_REPORT.md` 3-2절) |
+| rag: 저장 | `pgvector`, `psycopg` 3 (SQL 직접 조회) | `>=0.3` / `>=3.2`(`backend/requirements.txt:17-18`), MIT / LGPL-3.0 | `langchain-postgres`(PGVector)는 쓰지 않는다. `requirements.txt`에 없다 |
 | api | `fastapi`, `uvicorn`, `sse-starlette` | 0.162.0 MIT / 0.54.0 BSD-3 / 3.6.0 BSD-3 | - |
-| api: 로그인 | `bcrypt`, `pyjwt` | 5.0.0 Apache-2.0 / 2.15.1 MIT | `passlib`은 2020-10 이후 릴리스 없음 |
+| api: 로그인 | `bcrypt`, `pyjwt` | `>=4.2,<5`(`backend/requirements.txt:8`) Apache-2.0 / 2.15.1 MIT | `passlib`은 2020-10 이후 릴리스 없음 |
 | 관측 | `langfuse` v5 | 5.0.4, MIT | 핸들러는 `from langfuse.langchain import CallbackHandler` |
 | mcp | 서버 `fastmcp` 4.x, 클라이언트 `langchain[mcp]` (베타, langchain 1.4.0 이상) | 4.1.4 Apache-2.0 | `langchain[mcp]`가 `fastmcp>=4.0.11`에 의존해 서버와 판이 맞는다. `langchain-mcp-adapters`는 보관(archived)됐고 `mcp` 2.x와 안 맞는다 |
 | 평가 보조 | `ragas` 0.4.3 | Apache-2.0 | 0.4.3 이후 릴리스가 없고, 새로 깔면 `langchain_community` vertexai import로 깨진다(이슈 #2995 열림). import 전에 대체 모듈을 넣어 우회한다. 가이드 5지표를 대신하지 않으므로 깨지면 뺀다 |
 
-- 실제 사용(2026-11-11, `backend/requirements*.txt`와 코드 대조): 위 표는 D0 후보다. BM25는 `bm25s`가 아니라 `rank-bm25`(`backend/rag/retrieve/search.py:607`, `requirements.txt`), pgvector 저장은 `langchain-postgres`가 아니라 `pgvector`+`psycopg` 직접 사용(`requirements.txt`에 `langchain-postgres` 없음), `sentence-transformers`·`torch`는 기본 요구 사항이 아니라 로컬 모델 비교용 `backend/requirements-local-models.txt`, 기본 임베딩 `voyage-4`는 `httpx`로 REST 호출(`embed.py`), PDF 파서 Docling은 `backend/requirements-ingest-pdf.txt`, LLM 호출은 `langchain-anthropic`·`langchain-openai`(`backend/services/llm.py`)다.
-- 확인할 것: `beautifulsoup4`, `bm25s`, `langchain-postgres`는 PyPI에 Python 3.13 표시가 없다. D0에 3.13 가상환경에서 import와 테스트를 돌려 확인한다.
+- 실제 사용(2026-11-11, `backend/requirements*.txt`와 코드 대조): 위 표는 D0 후보다. BM25는 `bm25s`가 아니라 `rank-bm25`(`backend/rag/retrieve/search.py:622`, `requirements.txt:19`), pgvector 저장은 `langchain-postgres`가 아니라 `pgvector`+`psycopg` 직접 사용(`requirements.txt`에 `langchain-postgres` 없음), `sentence-transformers`·`torch`는 기본 요구 사항이 아니라 로컬 모델 비교용 `backend/requirements-local-models.txt`, 기본 임베딩 `voyage-4`는 `httpx`로 REST 호출(`embed.py`), PDF 파서 Docling은 `backend/requirements-ingest-pdf.txt`, LLM 호출은 `langchain-anthropic`·`langchain-openai`(`backend/services/llm.py`)다.
+- 확인할 것: `beautifulsoup4`는 PyPI에 Python 3.13 표시가 없다. D0에 3.13 가상환경에서 import와 테스트를 돌려 확인한다.
 - `sentence-transformers`로 모델을 불러올 때 실패하는 경우(e5 계열에서 관찰)에는 transformers 직접 호출로 우회한다. bge-m3가 실제로 불러지는지 D0에 먼저 확인한다.
 
 ## 10. 평가 계획
