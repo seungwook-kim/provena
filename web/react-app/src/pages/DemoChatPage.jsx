@@ -349,18 +349,21 @@ export default function DemoChatPage({ api = false }) {
     stickToBottomRef.current = true
     let result
     if (!selectedId) setDraftQuestion(message)
+    // 보내는 순간 입력칸(과 탭 임시 저장)을 비운다. 답을 기다리다 다른 화면에 갔다 오면 임시 저장된 질문이 입력칸에 다시 들어가 있었다(강경희 화면 점검 2026-11-13)
+    setInput('')
+    const restoreInput = () => setInput(current => current || message)   // 못 보냈으면 다시 보낼 수 있게 되돌린다
     try {
       result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
     } catch (error) {
       setSendError(error?.message || '질문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      restoreInput()
       return
     } finally {
       setDraftQuestion('')
     }
-    if (!result) return
+    if (!result) { restoreInput(); return }
     setSelectedId(result.threadId)
     setSelectedCitation(null)
-    setInput('')
   }
 
   async function stopAnswer() {

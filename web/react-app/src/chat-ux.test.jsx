@@ -83,6 +83,29 @@ describe('다른 메뉴에 갔다 와도 답 이어 받기', () => {
     expect(afterReturn).toBeGreaterThanOrEqual(2)
   })
 
+  it('답을 기다리다 다른 메뉴에 갔다 와도 보낸 질문이 입력칸에 다시 들어가 있지 않다', async () => {
+    stubFetch({ chat: endless })
+    await openThreadAndAsk('보낸 질문')
+    const box = screen.getByRole('textbox', { name: '질문' })
+    await waitFor(() => expect(box.value).toBe(''))   // 보내는 순간 비운다
+    await screen.findByText('근거를 찾고 답을 확인하는 중입니다.', { selector: '.demo-answer-progress' })
+    fireEvent.click(screen.getByRole('link', { name: '리콜 알림' }))
+    fireEvent.click(await screen.findByRole('link', { name: '채팅' }))
+    expect((await screen.findByRole('textbox', { name: '질문' })).value).toBe('')
+  })
+
+  it('새 대화 첫 질문을 못 보내면 그 질문을 입력칸에 되돌려 다시 보낼 수 있다', async () => {
+    stubFetch({ chat: () => json({ detail: '잠시 후 다시 시도해 주세요.' }, 503) })
+    render(<App />)
+    const box = await screen.findByRole('textbox', { name: '질문' })
+    fireEvent.change(box, { target: { value: '못 보낸 질문' } })
+    const send = screen.getByRole('button', { name: '보내기' })
+    await waitFor(() => expect(send.disabled).toBe(false))
+    fireEvent.click(send)
+    await screen.findByRole('alert')
+    await waitFor(() => expect(screen.getByRole('textbox', { name: '질문' }).value).toBe('못 보낸 질문'))
+  })
+
   it('답을 다 받은 뒤 다른 메뉴에 갔다 오면 아무 대화도 저절로 열지 않는다', async () => {
     stubFetch({ chat: () => new Response(sse([{ type: 'token', data: { text: '끝난 답' } }, { type: 'done', data: { kind: 'answer' } }]), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }) })
     await openThreadAndAsk()
