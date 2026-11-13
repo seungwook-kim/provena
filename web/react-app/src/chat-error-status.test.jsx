@@ -38,10 +38,10 @@ describe('채팅 422·403 오류 화면 (H-08)', () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
   it.each([
-    ['422 validation_error', () => json({ detail: '입력한 내용을 확인해 주세요.', error: { code: 'validation_error', message: '질문이 너무 깁니다. 줄여서 다시 보내 주세요.', request_id: 'r1' } }, 422), '질문이 너무 깁니다. 줄여서 다시 보내 주세요.'],
-    ['403 csrf_failed (새 토큰으로 다시 보내도 같은 오류)', () => json({ error: { code: 'csrf_failed', message: 'CSRF 검증에 실패했습니다.' } }, 403), 'CSRF 검증에 실패했습니다.'],
-    ['403 forbidden 본문 없음', () => new Response('<html>forbidden</html>', { status: 403, headers: { 'Content-Type': 'text/html' } }), '이 작업을 수행할 권한이 없습니다.'],
-  ])('%s 이면 서버 문구의 오류 말풍선을 보이고 생성 중 말풍선은 남기지 않는다', async (_name, respond, expected) => {
+    ['422 validation_error', () => json({ detail: '입력한 내용을 확인해 주세요.', error: { code: 'validation_error', message: '질문이 너무 깁니다. 줄여서 다시 보내 주세요.', request_id: 'r1' } }, 422), '질문이 너무 깁니다. 줄여서 다시 보내 주세요.', 1],
+    ['403 csrf_failed (새 토큰으로 다시 보내도 같은 오류)', () => json({ error: { code: 'csrf_failed', message: 'CSRF 검증에 실패했습니다.' } }, 403), 'CSRF 검증에 실패했습니다.', 2],
+    ['403 forbidden 본문 없음', () => new Response('<html>forbidden</html>', { status: 403, headers: { 'Content-Type': 'text/html' } }), '이 작업을 수행할 권한이 없습니다.', 1],
+  ])('%s 이면 서버 문구의 오류 말풍선을 보이고 생성 중 말풍선은 남기지 않는다', async (_name, respond, expected, chatCalls) => {
     const fetchMock = await askAndFail(respond)
 
     const alert = await screen.findByText(expected)
@@ -49,7 +49,8 @@ describe('채팅 422·403 오류 화면 (H-08)', () => {
     expect(screen.queryByText(new RegExp(GENERATING_TEXT))).toBeNull()
     expect(screen.getByText('다음 질문')).toBeTruthy()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
-    expect(fetchMock.mock.calls.some(([path]) => path === '/chat')).toBe(true)
+    // csrf_failed만 새 토큰으로 한 번 다시 보낸다(api.js 재전송 1회), 나머지는 한 번만 보낸다
+    expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(chatCalls)
   })
 
   it('다시 시도를 누르면 같은 질문을 다시 보내고, 이번에 성공하면 오류가 사라진다', async () => {
