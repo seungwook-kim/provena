@@ -14,6 +14,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | `auth.py` 회원가입 아이디 글자 제한 `SIGNUP_LOGIN_ID_RE`(소문자 변환 뒤 `[a-z0-9._@+-]`, 조장 11/13 재확인 #4): `<script>` 등은 422. 가입에만 적용, 기존 계정 로그인·구글 로그인은 그대로. 시험 `tests/test_signup_edges.py` | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 병합 후속: K-12 시험 `test_unknown_post_is_common_404_and_existing_route_method_is_405`의 `Allow` 기대값을 `GET, HEAD`로 고침. #131에 들어온 `HEAD /health`(`main.py` `health_head`)와 K-12의 `Allow` 머리글이 합쳐진 결과이고, 앱 코드는 바꾸지 않았다 | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `main.py` 없는 경로의 POST·PUT·PATCH·DELETE를 404 `not_found`로(경로는 맞고 메서드만 틀리면 405 유지, K-12). `api/changes.py`에 `POST /admin/sync`(관리자만, dry-run만 동작, dry_run=false는 501 `manual_sync_not_supported`, C-14), 405에 `Allow` 머리글. 시험 `test_api_changes`·`test_api_chat` | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | S1 시험 기준·H-27·H-29·H-33 설명에 시험 기준, 배포 미확인 표기를 붙임(문구만, 코드·측정 변경 없음) | #131 |
