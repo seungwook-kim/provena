@@ -164,6 +164,8 @@ export default function DemoChatPage({ api = false }) {
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)
   const [sendError, setSendError] = useState('')
+  // 새 대화 첫 질문은 서버가 대화 id를 줄 때까지 고를 대화가 없다 → 그동안 보낸 질문과 확인 중 말풍선을 화면에서 먼저 보여 준다
+  const [draftQuestion, setDraftQuestion] = useState('')
   const [threadLoad, setThreadLoad] = useState({ id: null, status: 'idle' })
   const threadRequestRef = useRef(null)
   const [resumeId, setResumeId] = useState(null)
@@ -175,8 +177,9 @@ export default function DemoChatPage({ api = false }) {
 
   const current = useMemo(() => {
     const thread = threads.find(item => item.id === selectedId)
+    if (!thread && !selectedId && draftQuestion) return { id: null, title: draftQuestion, messages: [{ role: 'user', text: draftQuestion }, { role: 'assistant', text: '', citations: [], state: 'generating', question: draftQuestion }] }
     return thread ? { ...thread, messages: (thread.messages ?? []).map(renumberByAppearance) } : null
-  }, [selectedId, threads])
+  }, [selectedId, threads, draftQuestion])
   const threadRecords = useMemo(() => threads.map(thread => ({ thread, activity: threadTimestamp(thread) })), [threads])
   const canSortByActivity = threadRecords.length > 0 && threadRecords.every(item => item.activity)
   const visibleThreads = useMemo(() => {
@@ -340,11 +343,14 @@ export default function DemoChatPage({ api = false }) {
     setSendError('')
     stickToBottomRef.current = true
     let result
+    if (!selectedId) setDraftQuestion(message)
     try {
       result = await serviceRef.current.sendMessage({ threadId: selectedId, message })
     } catch (error) {
       setSendError(error?.message || '질문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
+    } finally {
+      setDraftQuestion('')
     }
     if (!result) return
     setSelectedId(result.threadId)
