@@ -16,7 +16,7 @@
 | O-07 SDD LangChain | `docs/SDD.md:50` "LangChain 채팅 모델" → 채팅 모델(`langchain-anthropic`·`langchain-openai`, `services/llm.py`)과 `langchain_core` 메시지·콜백·Runnable 타입에만 쓴다 | [코드] `langchain_openai`·`langchain_anthropic` import는 `llm.py`에만 있고 다른 곳은 `langchain_core`만 |
 | M-14 AGENTS.md | 주장 19개를 코드와 대조, 틀린 2개 고침: `SEARCH_MODE` 위치 `search.py:82` → `:77`, "LLM 호출은 `llm.py`에서만"에 평가 스크립트 예외(`evals/latency/deploy_ragas.py:265`)와 임베딩 호출(`embed.py`)을 적음 | [코드] 대조표는 7절 |
 | F-10 DocumentSource 한계 | 연결하지 않고 한계로 기록(진형 결정 11/13): `docs/SDD.md:52` 모듈 표·디렉토리 트리, `backend/rag/ingest/ingest.md` "알려진 한계" | [코드] `source.py:7`, 쓰는 곳은 `source.py`와 `tests/test_ingest_source.py`뿐, `schedule.py` import(`:33-36`)에 없음 |
-| L-27 평가셋 줄바꿈 고정 | `.gitattributes`에 `evals/dataset_holdout_v1.jsonl`·`evals/dataset_cite_new_v1.jsonl` `text eol=crlf` 두 줄 | [실측] `core.autocrlf=false`로 새로 clone하면 두 파일 sha256이 문서 값(`c877c065…`, `8823195a…`, `EVAL_REPORT.md`)과 같다. 저장소 안 blob은 그대로(LF), `python evals/freeze.py --check` 통과 |
+| L-27 평가셋 줄바꿈 고정 | `.gitattributes`에 `evals/dataset_holdout_v1.jsonl`·`evals/dataset_cite_new_v1.jsonl` `text eol=crlf` 두 줄과 해시 출처 주석. 이 고정으로 틀린 말이 된 `EVAL_REPORT.md` 두 문장(1절 해시 설명 "지정이 없어 … 달라지며", 9장 재현 명령 주석)을 "2026-11-13부터 CRLF 고정"으로 고침 | [실측] `core.autocrlf=false`로 새로 clone하면 두 파일 sha256이 문서 값(`c877c065…`, `8823195a…`, `EVAL_REPORT.md`)과 같다. 저장소 안 blob은 그대로(LF), `python evals/freeze.py --check` 통과 |
 
 ## 2. 진형이 결정한 것
 | 결정 | 고른 것 | 왜 | 버린 대안 |
@@ -45,7 +45,8 @@ Q-24(키 없는 기동)·K-22(main pytest)·Q-21·K-16은 조장 #142 D10 증거
 - `docs/`(조장): `docs/docs.md` 기록 칸·행, `docs/pr-notes/`(이름 바꾸기, 이 문서), `docs/PRD.md` 9장 표, `docs/SDD.md:50·52`·트리.
 - `docs/deliverables/`(조장): `work-summary-박진형.md`(새 파일, 본인 정리), `portfolio-박진형.md`(본인 제출물), `ai_tools_log.md` 한 줄과 이름 바꾼 곳.
 - `mock_erp/`(조장): `mock_erp/sdk/`(SDK는 박진형이 만듦, SDD:661) README·`generate.sh`·새 스크립트·`sdk.md`, `mock_erp/mock_erp.md` 한 행.
-- 공동: `AGENTS.md` 2곳, `.gitattributes` 두 줄.
+- 공동: `AGENTS.md` 2곳, `.gitattributes` 두 줄과 주석.
+- 루트(조장): `EVAL_REPORT.md` 두 문장(검증 20건 줄바꿈 설명). 열린 #146이 고치는 줄(17·25·668~760·1001)과 겹치지 않음 [실측: `git diff origin/main...pr/146` 범위].
 - 기록 칸만 고친 폴더: `backend/`, `backend/graph/recall/`, `backend/memory/`, `db/`, `data/LICENSES/`, `web/` — 박진형 행의 PR 칸만.
 
 ## 6. 한계·남은 일
