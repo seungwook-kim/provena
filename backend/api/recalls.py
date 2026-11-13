@@ -356,12 +356,17 @@ def create_recall_router(*, store: AuthStore, secret: str | None = None, revocat
         items = payload if isinstance(payload, list) else [payload]
         if not items or len(items) > MAX_EVENTS or not all(isinstance(i, dict) for i in items):
             raise ApiError(400, "bad_request", f"본문은 바뀐 섹션 객체 하나 또는 1~{MAX_EVENTS}개의 목록이어야 합니다.")
-        try:
-            changes = [ChangedArticle(**RegulationUpdate.model_validate(i).model_dump()) for i in items]
-        except ValidationError as e:
-            if any(err.get("type") == "value_error" for err in e.errors()):   # 없는 날짜·전각 숫자 날짜는 공통 422 봉투(입력값은 담지 않는다)
-                raise RequestValidationError(e.errors(include_input=False, include_context=False)) from None
-            raise ApiError(400, "bad_request", "바뀐 섹션 형식이 올바르지 않습니다.") from None
+        changes, errs = [], []
+        for idx, item in enumerate(items):
+            try:
+                changes.append(ChangedArticle(**RegulationUpdate.model_validate(item).model_dump()))
+            except ValidationError as e:
+                prefix = ("body", idx) if isinstance(payload, list) else ("body",)
+                errs += [{**x, "loc": prefix + tuple(x["loc"])} for x in e.errors(include_input=False, include_context=False)]
+        if errs:
+            if all(x["type"] == "value_error" for x in errs):   # 오류가 전부 없는 날짜·전각 숫자 날짜일 때만 공통 422 봉투(입력값은 담지 않는다). 섞이면 400
+                raise RequestValidationError(errs)
+            raise ApiError(400, "bad_request", "바뀐 섹션 형식이 올바르지 않습니다.")
         from backend.rag.ingest.schedule import event_id
 
         background.add_task(_run_events, svc, changes)

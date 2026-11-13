@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 from api_test_support import Env
-from recall_test_support import changed, reader
+from recall_test_support import changed, reader, save_answer
 
 SERVICE_KEY = "test-service-key"
 CHANGE = changed().model_dump()
@@ -54,11 +54,36 @@ def test_impossible_or_non_ascii_date_is_422(env, kind, bad):
     assert bad not in r.text and bad not in str(r.json())
 
 
+OK_STATUS = {"flush": 200, "webhook": 202, "webhook_old": 202, "impact_top": 200, "impact_old": 200, "impact_change": 200,
+             "impact_change_old": 200}
+
+
 @pytest.mark.parametrize("kind", KINDS)
 def test_leap_day_is_accepted(env, kind):
-    assert _send(env, kind, "2024-02-29").status_code != 422
+    assert _send(env, kind, "2024-02-29").status_code == OK_STATUS[kind]
 
 
-def test_bad_day_does_not_store_digest(env):
-    _send(env, "flush", "2026-02-30")
-    assert env.app.state.recall_service.store.digests(None) == []
+def test_bad_day_does_not_store_digest(env, monkeypatch):
+    monkeypatch.setenv("RECALL_DIGEST", "daily")
+    svc = env.app.state.recall_service
+    save_answer(svc.answers, "a-alice", str(env.alice.user_id))
+    save_answer(svc.answers, "a-bob", str(env.bob.user_id))
+    svc.process(changed())
+    before = len(svc.store.digest_pending())
+    assert before > 0
+    r = _send(env, "flush", "2026-02-30")
+    assert r.status_code == 422, r.text
+    assert svc.store.digests(None) == []
+    assert len(svc.store.digest_pending()) == before
+
+
+def test_webhook_422_loc_shows_item_index(env):
+    r = env.client().post("/webhooks/regulation-updated", json=[CHANGE, {**CHANGE, "new_version_date": "2026-02-30"}], headers=HEADERS)
+    assert r.status_code == 422
+    assert r.json()["error"]["details"][0]["loc"] == ["body", "1", "new_version_date"]
+
+
+def test_webhook_mixed_errors_stay_400(env):
+    r = env.client().post("/webhooks/regulation-updated", json={**CHANGE, "new_version_date": "2026-02-30", "extra": 1}, headers=HEADERS)
+    assert r.status_code == 400, r.text
+    assert r.json()["error"]["code"] == "bad_request"
