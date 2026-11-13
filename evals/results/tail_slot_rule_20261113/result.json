@@ -1,0 +1,436 @@
+{
+ "provena-api-00044-49s": {
+  "context_rows": 105,
+  "fired_rows": 67,
+  "fired_questions": {
+   "v2": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    9,
+    10,
+    13,
+    31,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40
+   ],
+   "holdout": [
+    101,
+    104,
+    105,
+    106,
+    108,
+    109,
+    110
+   ]
+  },
+  "nonfired_rows": 38,
+  "stat": {
+   "missing_chunks": 0,
+   "rows": 67,
+   "rows_v2": 46,
+   "gold_total": 118,
+   "gold_in_context_all8plus": 110,
+   "gold_in_context_without_tail": 104,
+   "tail_is_gold": 9,
+   "tail_sole_gold_rows": 6,
+   "tail_cited_rows": 7,
+   "recorded_hit_mismatch": 0,
+   "rows_holdout": 21
+  },
+  "rows_with_tail_effect": [
+   {
+    "set": "v2",
+    "id": 2,
+    "run": 2,
+    "context_chunks": 8,
+    "gold": 2,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "3069923da5795b3f",
+    "tail_section": "References > Incident Manager Escalation",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "v2",
+    "id": 2,
+    "run": 3,
+    "context_chunks": 8,
+    "gold": 2,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "3069923da5795b3f",
+    "tail_section": "References > Incident Manager Escalation",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 106,
+    "run": 1,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "d4918e31a5b3c954",
+    "tail_section": "Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 1,
+    "context_chunks": 9,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 0,
+    "tail_chunk": "bc6af7e4fdfb5a63",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 106,
+    "run": 2,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "d4918e31a5b3c954",
+    "tail_section": "Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 2,
+    "context_chunks": 8,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "ca5a4662e0eab722",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": false
+   },
+   {
+    "set": "검증",
+    "id": 106,
+    "run": 3,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "d4918e31a5b3c954",
+    "tail_section": "Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 108,
+    "run": 3,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "95301b7ac46e267c",
+    "tail_section": "Questions & Answers > Other Notes",
+    "tail_is_gold": true,
+    "tail_cited": false
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 3,
+    "context_chunks": 9,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 0,
+    "tail_chunk": "bc6af7e4fdfb5a63",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": true
+   }
+  ],
+  "citation_rate": {
+   "v2": {
+    "relevant_rows": 75,
+    "gold_cited_rate": 0.9133,
+    "gold_cited_rate_without_tail_citation": 0.9067,
+    "changed_rows": [
+     {
+      "id": 2,
+      "run": 2,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     }
+    ]
+   },
+   "holdout": {
+    "relevant_rows": 30,
+    "gold_cited_rate": 0.8667,
+    "gold_cited_rate_without_tail_citation": 0.75,
+    "changed_rows": [
+     {
+      "id": 106,
+      "run": 1,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     },
+     {
+      "id": 106,
+      "run": 2,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     },
+     {
+      "id": 106,
+      "run": 3,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     },
+     {
+      "id": 109,
+      "run": 1,
+      "gold_cited": 1,
+      "gold_cited_without_tail": 0,
+      "gold": 1
+     },
+     {
+      "id": 109,
+      "run": 3,
+      "gold_cited": 1,
+      "gold_cited_without_tail": 0,
+      "gold": 1
+     }
+    ]
+   }
+  }
+ },
+ "provena-api-00047-wjn": {
+  "context_rows": 105,
+  "fired_rows": 67,
+  "fired_questions": {
+   "v2": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    9,
+    10,
+    13,
+    31,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40
+   ],
+   "holdout": [
+    101,
+    104,
+    105,
+    106,
+    108,
+    109,
+    110
+   ]
+  },
+  "nonfired_rows": 38,
+  "stat": {
+   "missing_chunks": 0,
+   "rows": 67,
+   "rows_v2": 46,
+   "gold_total": 118,
+   "gold_in_context_all8plus": 108,
+   "gold_in_context_without_tail": 105,
+   "tail_is_gold": 9,
+   "tail_sole_gold_rows": 3,
+   "tail_cited_rows": 5,
+   "recorded_hit_mismatch": 0,
+   "rows_holdout": 21
+  },
+  "rows_with_tail_effect": [
+   {
+    "set": "v2",
+    "id": 2,
+    "run": 1,
+    "context_chunks": 8,
+    "gold": 2,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "3069923da5795b3f",
+    "tail_section": "References > Incident Manager Escalation",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "v2",
+    "id": 5,
+    "run": 1,
+    "context_chunks": 9,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "be9b291af45f9d5b",
+    "tail_section": "CI Health incidents {#broken-master} > If you're assigned to an incident {#triage-broken-master} > 3. Fix it {#resolution-of-broken-master}",
+    "tail_is_gold": true,
+    "tail_cited": false
+   },
+   {
+    "set": "v2",
+    "id": 2,
+    "run": 2,
+    "context_chunks": 8,
+    "gold": 2,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "3069923da5795b3f",
+    "tail_section": "References > Incident Manager Escalation",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "v2",
+    "id": 2,
+    "run": 3,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "7cd641d28bcdfeb5",
+    "tail_section": "Detailed Team Responsibilities > Infrastructure Leadership Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 1,
+    "context_chunks": 8,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "ca5a4662e0eab722",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": false
+   },
+   {
+    "set": "검증",
+    "id": 106,
+    "run": 2,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "d4918e31a5b3c954",
+    "tail_section": "Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 2,
+    "context_chunks": 8,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "ca5a4662e0eab722",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": false
+   },
+   {
+    "set": "검증",
+    "id": 106,
+    "run": 3,
+    "context_chunks": 9,
+    "gold": 2,
+    "gold_in_context": 2,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "d4918e31a5b3c954",
+    "tail_section": "Responsibilities",
+    "tail_is_gold": true,
+    "tail_cited": true
+   },
+   {
+    "set": "검증",
+    "id": 109,
+    "run": 3,
+    "context_chunks": 8,
+    "gold": 1,
+    "gold_in_context": 1,
+    "gold_in_context_without_tail": 1,
+    "tail_chunk": "ca5a4662e0eab722",
+    "tail_section": "SQL Style Guide > Common Table Expressions (CTEs)",
+    "tail_is_gold": true,
+    "tail_cited": false
+   }
+  ],
+  "citation_rate": {
+   "v2": {
+    "relevant_rows": 75,
+    "gold_cited_rate": 0.9422,
+    "gold_cited_rate_without_tail_citation": 0.9289,
+    "changed_rows": [
+     {
+      "id": 2,
+      "run": 2,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     },
+     {
+      "id": 2,
+      "run": 3,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     }
+    ]
+   },
+   "holdout": {
+    "relevant_rows": 30,
+    "gold_cited_rate": 0.8333,
+    "gold_cited_rate_without_tail_citation": 0.8,
+    "changed_rows": [
+     {
+      "id": 106,
+      "run": 2,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     },
+     {
+      "id": 106,
+      "run": 3,
+      "gold_cited": 2,
+      "gold_cited_without_tail": 1,
+      "gold": 2
+     }
+    ]
+   }
+  }
+ }
+}

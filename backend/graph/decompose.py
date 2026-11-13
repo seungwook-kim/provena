@@ -149,13 +149,19 @@ GATE_TASK = "decompose_gate"
 SYSTEM_GATE = f"[[task:{GATE_TASK}]]\n{SYSTEM}"  # SP 예비 분해: 같은 프롬프트, 다른 표지(단계별 추론 수준을 따로 둘 수 있다. 기본은 전체 수준)
 
 
+def _for_prompt(question: str) -> str:
+    from backend.prompts.question import question_for_prompt   # 질문 속 가짜 자료 구획을 뺀 글(없으면 그대로)
+
+    return question_for_prompt(question)
+
+
 def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
     """SP(`GRAPH_SPECULATE_FIRST`)의 예비 분해. 한 번만 부른다. 나누면 True, 나누지 않으면 False, 형식 오류·호출 오류면 None(미리 돌리지 않는다).
     결과는 검색에 쓰지 않는다. 미리 판정을 시작할지 고르는 데만 쓴다."""
     if not question or not question.strip():
         return None
     try:
-        text = ask(SYSTEM_GATE, question)
+        text = ask(SYSTEM_GATE, _for_prompt(question))
     except Exception as e:  # noqa: BLE001  예비 분해가 실패하면 미리 돌리지 않을 뿐이다. 비용 상한은 그대로 올린다
         if type(e).__name__ == "CostCapExceeded":
             raise
@@ -172,7 +178,7 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
     source = "invalid"
     for _ in range(ATTEMPTS):
         try:
-            text = ask(SYSTEM_TAGGED, question)
+            text = ask(SYSTEM_TAGGED, _for_prompt(question))
         except Exception as e:  # noqa: BLE001  분해가 실패해도 검색은 원 질문 그대로 이어 간다. 비용 상한은 그대로 올린다
             if type(e).__name__ == "CostCapExceeded":
                 raise
