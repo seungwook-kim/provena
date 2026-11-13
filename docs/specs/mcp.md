@@ -53,7 +53,7 @@
 | EC-08 | `as_of`가 가장 이른 판보다 앞 | `not_found`(그날 판 없음). 가장 가까운 판으로 바꾸지 않는다 |
 | EC-09 | 토큰 없음·틀림·URL 쿼리로 보냄 | 401. 쿼리 토큰은 받지 않는다 |
 | EC-10 | `MCP_TOKEN` 빈 값 | `/mcp`를 붙이지 않는다(정적 파일 쪽으로 넘어가 404·405). 앱의 나머지는 그대로 뜬다 |
-| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 권한표 칸만 "비공개"로 바꾼다(`parse.private_cell`이 판정하고 `parse.table_rows`가 바꾼다). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 2-3절·9장). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
+| EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 표 칸 글자가 모두 비공개 주소 링크면 그 칸 번호만 기록하고 글자는 바꾸지 않는다(`parse.private_cell`이 판정하고 `parse.table_rows`가 `private_cells`에 기록). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 2-3절·9장). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
 | EC-12 | 검색이 번역 실패 등으로 내려감 | `status=ok` + `note`에 `fallback_reason` |
 | EC-13 | 쪽 통째 삭제(새 판 없음) | `changed_articles.new_version_date`가 빈 칸이다(`diff.py`). `since`와 비교할 날짜는 그 줄을 적은 날(`created_at`, UTC)로 본다. 안 그러면 사라진 쪽이 목록에 영영 안 나온다 |
 | EC-14 | 긴 요소 하나가 청크 둘 이상으로 쪼개진 섹션 | 조각 경계에 줄바꿈이 하나 더 들어간다(글자는 같고 공백만 다름). DB에 청크별 요소 id가 없어 쪼갠 경계인지 알 수 없다. 스냅샷 15,901섹션 중 438개, 나머지 15,463개는 파싱 결과와 글자까지 같다(515acc3d 이전 기준, 표 행 겹침을 400자까지 바꾼 뒤에는 다시 세지 않았다) |

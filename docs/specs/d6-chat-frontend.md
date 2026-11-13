@@ -106,7 +106,7 @@
 |---|---|---|
 | `GET /threads` | `thread_id`, `title`, `updated_at` → `id`, `title`, `lastActivityAt` | 확정(작성 당시 미확정): 최상위는 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(`backend/api/routes.py`의 `list_threads`, SDD 4-4). 목록에는 메시지가 없다 |
 | `GET /threads/{id}` | thread 상세를 UI 대화로 변환 | 확정: 최상위에 thread 필드와 `messages`(질문 체크포인트에서 되살린 대화 이력)를 평평하게 둔다(`backend/api/routes.py`의 `get_thread`) |
-| `POST /chat` | JSON 요청 및 text/event-stream 처리 | 확정: 요청 `{thread_id?, message, as_of?, org?}`, 이벤트 `AgentEvent`(`{type, thread_id, data}`), 승인 대기 중 새 질문은 409 `approval_pending`(`backend/api/routes.py`의 `chat`과 `chat_events`의 `approval_pending` 처리, SDD 6장) |
+| `POST /chat` | JSON 요청 및 text/event-stream 처리 | 확정: 요청 `{thread_id?, message, as_of?, org?}`, 이벤트 `AgentEvent`(`{type, thread_id, data}`), 승인 대기 중 새 질문은 409 `approval_pending`(`backend/api/routes.py`의 `chat`이 `pending_approval`을 검사, SDD 6장) |
 
 백엔드에서 확인되지 않은 내용을 새 스키마로 만들지 않는다. 위 표의 "확정" 값은 PR #60 머지 뒤 백엔드 코드에서 확인한 값이다.
 
