@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 김승욱 (Claude Code) | 체크포인트 ②③ 보강(LLM 호출 없음): `results/tail_slot_rule_20261113/`(끝 1자리 규칙의 0원 계산 `analyze_tail_slot.py`), `results/table_number_source_check_20261113/check.py`에 `--sets` 추가와 `results/table_number_source_check_20261113_all/`(v1·새 인용까지 넓힌 표·수치 청크 60개 대조, 청크 123개 낱말 대조 `word_check.py`, 읽은 표본 9개), `EVAL_REPORT.md` 1장·5-2절·5-4절·5-5절·11장, `PREREGISTER.md` 62.38·62.44·62.45 결과 칸 | #150 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 시험 `tests/test_exclusions_schema.py` 추가(L-04): `exclusions.json`이 JSON이고 `as_of`·`excluded` 키가 있으며, 항목마다 id가 `dataset_v1`·`dataset_v2`에 있고 사유가 비지 않았고 id 중복이 없는지 본다. 항목 0건이면 통과. 나쁜 입력 9가지를 임시 파일로 만들어 잡는지 확인. 평가셋·`exclusions.json`은 바꾸지 않음 | #135 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `uncited_answers.py` 추가(저장된 `rows.jsonl`만 읽어 인용 없는 답의 건수와 답 기준·전체 기준 분모를 계산, LLM·네트워크 없음. 하위 질문별 후보 목록은 저장돼 있지 않아 '하나 빼기'는 `merge_by_score` 시험으로 따로 봄). `retrieval/experiment_v1.py`의 bge int8 리랭커가 점수 저장 값을 쓰지 않게 고침(I-013, 서비스 경로는 그대로, 이미 낸 v1 값은 다시 재지 않음). 측정·호출 없음 | #135 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 26행 표기를 EVAL_REPORT 6장 실제 행 번호 27로 고침(문구만, 측정 없음) | #131 |

@@ -603,6 +603,8 @@ def build_graph(
         return params_from_obj(obj, cats)
 
     def classify(state: AgentState) -> dict:
+        if P.only_asks_internal(state["question"]):   # 시스템 프롬프트를 내놓으라는 말뿐인 질문(번역·요약·인코딩 포함)은 모델을 부르지 않고 범위 밖으로 끝낸다
+            return {"route": "out_of_domain"}
         picked: dict = {}   # 결정표 경로로 가기로 한 질문에서 분류 단계가 미리 뽑은 값. `decision_params`가 같은 값을 다시 뽑지 않고 쓴다
 
         def once() -> str:
