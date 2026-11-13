@@ -20,6 +20,7 @@
 - 체크포인트 ② 대응(실패 유형 표): 운영 Langfuse 추적에서 00047의 첫 검색 문맥을 읽고(읽기 전용, 비용 0원, 짝짓지 못한 행 0) 이전 판과 같은 규칙(`python -m evals.agent.failure_types`)으로 70문항 표를 다시 분류했다. 실패 6문항: 검색 실패 2(v2 38번, 검증 101번), 근거 선택 3(v2 39번, 검증 104번, 108번), 정답 밖 인용 1(검증 105번). 개선 후(00044)는 7문항(검색 2, 근거 선택 4, 정답 밖 1)이었다. v2 3번·6번이 빠졌고 검증 104번이 틀린 회차 2/3으로 들어왔다. 근거 파일은 `evals/results/failure_types_provena-api-00047-wjn/`, `EVAL_REPORT.md` 5-5절 표에 최신 열을 더했다.
 
 - G2 재확인(체크포인트 G2 주의): 현재 main `b541e97`을 새 폴더에 clone해 `.env` 없이 `docker compose up -d --build`(`/health` 200까지 106.7초, 청크 23,095개 적재)를 하고 README 질문 9개를 보냈다. 인용 답 6, 거절 3으로 질문 파일의 기대와 9/9 같았고 발췌형 대체 답 0개, 비용 0달러다. 이전 기록(`40eea1f`의 새 clone, 사전 등록 62.46 결과 칸)이 현재 main에서도 되풀이되었다(`evals/results/g2_keyless_answers_b541e97/`).
+- 검증 20건 동결(체크포인트 ② 대응, 결정 0113): `python evals/freeze.py dataset_holdout_v1.jsonl`로 `evals/FROZEN.json`에 넣었다(내용 불변, CRLF 기준 sha256 `c877c065…`와 LF 기준 `51c020fb…` 모두 기록, `.gitattributes`에 `eol=crlf`). 파일은 2026-11-09 뒤 바뀌지 않았다. GATES G5, SPEC, README 문장을 이 사실로 고쳤고 62.30이 109번의 실패를 보고 코드를 고쳤으므로 그 뒤 값이 낙관적일 수 있다는 단서는 남겼다. `freeze.py --check` 통과.
 
 막힌 것
 - Recall@5는 첫 검색 문맥(Langfuse 관측)을 읽지 않아 00047에서 계산하지 못했다(검색 실패 문항 수와 실패 유형 표는 위 11/13 체크포인트 ② 대응으로 만들었다).
