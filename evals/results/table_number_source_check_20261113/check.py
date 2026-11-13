@@ -14,6 +14,7 @@
 
 사용: python evals/results/table_number_source_check_20261113/check.py --fetch [--cache <폴더>]
 `--fetch`가 없으면 현재 원문 대조를 건너뛰고 스냅샷 대조만 한다.
+`--sets v1,v2,holdout,cite_new --out <폴더>`로 대상 평가셋을 넓힌다(기본은 v2,holdout이고 이 폴더의 결과와 같다).
 """
 from __future__ import annotations
 
@@ -35,7 +36,18 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from evals.retrieval.gold import GoldAny, parse_gold  # noqa: E402
 
-DATASETS = [("v2", ROOT / "evals" / "dataset_v2.jsonl"), ("검증", ROOT / "evals" / "dataset_holdout_v1.jsonl")]
+SET_FILES = {"v1": ("v1", ROOT / "evals" / "dataset_v1.jsonl", "v1 30건의 관련 15문항"),
+             "v2": ("v2", ROOT / "evals" / "dataset_v2.jsonl", "v2 50건의 관련 25문항"),
+             "holdout": ("검증", ROOT / "evals" / "dataset_holdout_v1.jsonl", "검증 20건의 관련 10문항"),
+             "cite_new": ("새 인용", ROOT / "evals" / "dataset_cite_new_v1.jsonl", "새 인용 5건의 관련 5문항")}
+DATASETS = [SET_FILES[k][:2] for k in ("v2", "holdout")]
+
+
+def scope_text(keys) -> str:
+    parts = [SET_FILES[k][2] for k in keys]
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + "과 " + parts[-1]
+
+
 KST = timezone(timedelta(hours=9))
 UA = "provena-source-check/1.0 (read-only GET)"
 
@@ -250,7 +262,7 @@ def fetch(url: str, cache: Path | None) -> tuple[int, bytes]:
     return status, body
 
 
-def write_report(out: Path, rows: list[dict], n_gold: int, snap_sha: str, fetched: bool) -> None:
+def write_report(out: Path, rows: list[dict], n_gold: int, snap_sha: str, fetched: bool, scope: str) -> None:
     n = len(rows)
     snap_ok = sum(r["snapshot"]["match"] for r in rows)
     cur = [r for r in rows if r["current"].get("checked")]
@@ -259,7 +271,7 @@ def write_report(out: Path, rows: list[dict], n_gold: int, snap_sha: str, fetche
     lines = [
         "# 정답 근거 청크의 표·수치 원문 대조 (2026-11-13)",
         "",
-        f"- 대상: v2 50건의 관련 25문항과 검증 20건의 관련 10문항의 정답 위치에 맞는 청크 {n_gold}개 중 수치 값이나 표가 든 {n}개(서로 다른 청크, 한 청크가 여러 문항의 정답이면 문항을 모두 적음).",
+        f"- 대상: {scope}의 정답 위치에 맞는 청크 {n_gold}개 중 수치 값이나 표가 든 {n}개(서로 다른 청크, 한 청크가 여러 문항의 정답이면 문항을 모두 적음).",
         f"- 스냅샷 `data/corpus.tar.gz`(sha256 `{snap_sha[:16]}…`)의 해당 페이지와 줄 범위(`line_start`~`line_end`)와 대조: {n}개 중 일치 {snap_ok}개, 불일치 {n - snap_ok}개.",
     ]
     if fetched:
@@ -291,8 +303,11 @@ def main(argv=None) -> int:
     ap.add_argument("--fetch", action="store_true", help="현재 공개 원문을 GET해 대조한다")
     ap.add_argument("--cache", type=Path, default=None)
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent)
+    ap.add_argument("--sets", default="v2,holdout", help="대상 평가셋(쉼표로 구분): v1, v2, holdout, cite_new")
     args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
+    keys = [k.strip() for k in args.sets.split(",") if k.strip()]
+    DATASETS[:] = [SET_FILES[k][:2] for k in keys]
 
     chunks = load_chunks()
     by_id = {c.chunk_id: c for c in chunks}
@@ -405,7 +420,7 @@ def main(argv=None) -> int:
         for r in out_rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     (out / "questions.json").write_text(json.dumps(questions, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-    write_report(out, out_rows, len(qs_by_chunk), snap_sha, args.fetch)
+    write_report(out, out_rows, len(qs_by_chunk), snap_sha, args.fetch, scope_text(keys))
     n = len(out_rows)
     snap_ok = sum(r["snapshot"]["match"] for r in out_rows)
     cur_checked = [r for r in out_rows if r["current"].get("checked")]

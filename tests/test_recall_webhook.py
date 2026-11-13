@@ -223,39 +223,59 @@ def rebinding_dns(monkeypatch):
     return calls
 
 
+class _Seen(list):
+    """실제 httpx 경로(Client.post)를 끝까지 태우는 가짜 전송. `.transport`를 WebhookSender에 넣고, 받은 요청이 목록에 쌓인다.
+    `.status`로 응답 코드를 바꾼다. 회귀(0df6576): httpx.post를 monkeypatch하면 최상위 post에 없는 인자를 못 잡는다."""
+
+    status = 200
+    location = None
+
+    def __init__(self):
+        super().__init__()
+        import httpx
+
+        def handler(request):
+            ext = {k: v for k, v in request.extensions.items() if k != "timeout"}
+            self.append({"url": str(request.url), "headers": dict(request.headers), "extensions": ext, "timeout": request.extensions.get("timeout")})
+            return httpx.Response(self.status, headers={"Location": self.location} if self.location else {})
+
+        self.transport = httpx.MockTransport(handler)
+
+
 @pytest.fixture
-def httpx_seen(monkeypatch):
-    import httpx
-
-    seen = []
-
-    def fake_post(url, **kw):
-        seen.append({"url": url, **kw})
-        return httpx.Response(200)
-
-    monkeypatch.setattr(httpx, "post", fake_post)
-    return seen
+def httpx_seen():
+    return _Seen()
 
 
-def _real_sender(st):
-    return WebhookSender(st, sleep=lambda s: None, max_tries=1, backoff=0.0, local_demo=False)
+def _real_sender(st, seen=None, max_tries=1):
+    return WebhookSender(st, sleep=lambda s: None, max_tries=max_tries, backoff=0.0, local_demo=False,
+                         transport=seen.transport if seen is not None else None)
 
 
 def test_request_goes_to_the_checked_ip_even_if_dns_changes(secret, rebinding_dns, httpx_seen):
     """J-12: 검사 뒤 DNS가 127.0.0.1로 바뀌어도 실제 요청은 검사한 공인 IP로 간다."""
-    rec = _real_sender(store_with(url="https://hooks.example.com:8443/recall?x=1")).send("rn-1", BODY)[0]
+    rec = _real_sender(store_with(url="https://hooks.example.com:8443/recall?x=1"), httpx_seen).send("rn-1", BODY)[0]
     assert rec["status"] == "success"
     assert httpx_seen[0]["url"] == "https://93.184.216.34:8443/recall?x=1"
-    assert len(rebinding_dns) == 1 and httpx_seen[0]["follow_redirects"] is False
+    assert len(rebinding_dns) == 1
+
+
+def test_redirect_is_not_followed_and_timeout_is_applied(secret, rebinding_dns, httpx_seen, monkeypatch):
+    """전송 설정이 Client로 옮겨져도 리다이렉트는 따라가지 않고(SSRF 우회 방지) 시간 제한은 요청에 실린다."""
+    monkeypatch.setenv("RECALL_WEBHOOK_TIMEOUT_S", "7")
+    httpx_seen.status, httpx_seen.location = 302, "http://127.0.0.1/admin"
+    rec = _real_sender(store_with(url="https://hooks.example.com/recall"), httpx_seen).send("rn-1", BODY)[0]
+    assert rec["status"] == "failed" and rec["last_error"] == "http_302" and len(httpx_seen) == 1
+    assert httpx_seen[0]["timeout"] == {"connect": 7.0, "read": 7.0, "write": 7.0, "pool": 7.0}
 
 
 def test_host_header_keeps_original_name_and_port(secret, rebinding_dns, httpx_seen):
-    _real_sender(store_with(url="https://hooks.example.com:8443/recall")).send("rn-1", BODY)
-    assert httpx_seen[0]["headers"]["Host"] == "hooks.example.com:8443"
+    _real_sender(store_with(url="https://hooks.example.com:8443/recall"), httpx_seen).send("rn-1", BODY)
+    assert httpx_seen[0]["headers"]["host"] == "hooks.example.com:8443"
 
 
 def test_https_sends_original_name_as_sni(secret, rebinding_dns, httpx_seen):
-    _real_sender(store_with(url="https://hooks.example.com/recall")).send("rn-1", BODY)
+    _real_sender(store_with(url="https://hooks.example.com/recall"), httpx_seen).send("rn-1", BODY)
     assert httpx_seen[0]["extensions"] == {"sni_hostname": "hooks.example.com"}
 
 
@@ -265,7 +285,7 @@ def test_ipv6_is_bracketed(secret, monkeypatch, httpx_seen):
     from backend.graph.recall import webhook as W
 
     monkeypatch.setattr(W, "_resolve", lambda host: [ipaddress.ip_address("2606:2800:220:1:248:1893:25c8:1946")])
-    _real_sender(store_with(url="https://hooks.example.com/recall")).send("rn-1", BODY)
+    _real_sender(store_with(url="https://hooks.example.com/recall"), httpx_seen).send("rn-1", BODY)
     assert httpx_seen[0]["url"] == "https://[2606:2800:220:1:248:1893:25c8:1946]/recall"
 
 
@@ -289,46 +309,27 @@ def test_pinned_request_is_really_sent_by_httpx_to_the_ip(secret, rebinding_dns)
 
 def test_retries_reuse_the_checked_ip_without_resolving_again(secret, rebinding_dns, monkeypatch):
     """J-12: 응답 실패로 다시 보낼 때도 이름을 다시 풀지 않는다. 세 번 모두 처음 검사한 IP로 간다."""
-    import httpx
-
-    seen = []
-
-    def fake_post(url, **kw):
-        seen.append(url)
-        return httpx.Response(503)
-
-    monkeypatch.setattr(httpx, "post", fake_post)
-    s = WebhookSender(store_with(url="https://hooks.example.com/recall"), sleep=lambda s: None, max_tries=3, backoff=0.0, local_demo=False)
-    rec = s.send("rn-1", BODY)[0]
+    httpx_seen = _Seen()
+    httpx_seen.status = 503
+    rec = _real_sender(store_with(url="https://hooks.example.com/recall"), httpx_seen, max_tries=3).send("rn-1", BODY)[0]
     assert rec["status"] == "failed" and rec["tries"] == 3
-    assert seen == ["https://93.184.216.34/recall"] * 3 and len(rebinding_dns) == 1
+    assert [r["url"] for r in httpx_seen] == ["https://93.184.216.34/recall"] * 3 and len(rebinding_dns) == 1
 
 
 def test_digest_is_pinned_to_the_checked_ip_too(secret, rebinding_dns, httpx_seen):
     """J-12: 하루 요약(kind="digest")도 같은 전송 함수라 검사한 IP로 간다."""
-    rec = _real_sender(store_with(url="https://hooks.example.com/recall")).send("digest-2026-11-11", BODY, kind="digest")[0]
+    rec = _real_sender(store_with(url="https://hooks.example.com/recall"), httpx_seen).send("digest-2026-11-11", BODY, kind="digest")[0]
     assert rec["status"] == "success" and rec["kind"] == "digest"
-    assert httpx_seen[0]["url"] == "https://93.184.216.34/recall" and httpx_seen[0]["headers"]["Host"] == "hooks.example.com"
+    assert httpx_seen[0]["url"] == "https://93.184.216.34/recall" and httpx_seen[0]["headers"]["host"] == "hooks.example.com"
     assert httpx_seen[0]["extensions"] == {"sni_hostname": "hooks.example.com"} and len(rebinding_dns) == 1
 
 
 def _send_through_httpx(monkeypatch, url):
-    """기본 전송 함수(`httpx.post`)를 가짜 transport가 달린 Client로 바꿔 끝까지 보낸다. 반환: (전송 기록, 받은 요청)."""
-    import httpx
-
-    got = {}
-
-    def handler(request):
-        got["url"], got["host"], got["sni"] = str(request.url), request.headers["host"], request.extensions.get("sni_hostname")
-        return httpx.Response(200)
-
-    def fake_post(url, **kw):
-        kw.pop("timeout"), kw.pop("follow_redirects")
-        with httpx.Client(transport=httpx.MockTransport(handler)) as c:
-            return c.post(url, **kw)
-
-    monkeypatch.setattr(httpx, "post", fake_post)
-    return _real_sender(store_with(url=url)).send("rn-1", BODY)[0], got
+    """기본 전송 함수를 가짜 transport가 달린 Client로 끝까지 태운다. 반환: (전송 기록, 받은 요청)."""
+    seen = _Seen()
+    rec = _real_sender(store_with(url=url), seen).send("rn-1", BODY)[0]
+    got = {"url": seen[0]["url"], "host": seen[0]["headers"]["host"], "sni": seen[0]["extensions"].get("sni_hostname")} if seen else {}
+    return rec, got
 
 
 def test_idn_host_goes_out_as_punycode_host_and_sni(secret, rebinding_dns, monkeypatch):
@@ -351,5 +352,5 @@ def test_trailing_dot_is_dropped_from_sni_and_kept_in_host(secret, rebinding_dns
 
 def test_host_that_cannot_be_ascii_is_recorded_as_blocked(secret, rebinding_dns, httpx_seen):
     """J-12: punycode로 바꿀 수 없는 이름은 보내지 않고 blocked_url로 남긴다(예외가 밖으로 새지 않는다)."""
-    rec = _real_sender(store_with(url="https://☃.example/recall")).send("rn-1", BODY)[0]
+    rec = _real_sender(store_with(url="https://☃.example/recall"), httpx_seen).send("rn-1", BODY)[0]
     assert rec["status"] == "failed" and rec["last_error"].startswith("blocked_url") and httpx_seen == []
