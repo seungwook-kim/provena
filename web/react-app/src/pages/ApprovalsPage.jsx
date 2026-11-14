@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DecisionConvertPanel from '../components/DecisionConvertPanel'
 import DemoLayout from '../components/DemoLayout'
 import { STALE_APPROVAL_ERROR_CODES, previewApprovalsService, reviewDepartments } from '../lib/approvals-service'
+import { NARROW_LAYOUT_QUERY } from './ChangeMonitoringPage'
 
 const label = { all: '전체', pending: '승인 대기', approved: '승인 완료', rejected: '반려' }
 const kindLabel = { decision: '결정표', issue: '쟁점표', team_failed: '팀 검토 실패', unknown: '승인 요청' }
@@ -28,6 +29,14 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
   const [items, setItems] = useState([])
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(null)
+  // 760px 이하는 목록 아래에 상세가 와서, 항목을 눌러도 화면이 그대로라 반응이 없는 것처럼 보였다(박진형 화면 점검 2026-11-14)
+  // → 항목을 누르면 상세로 내려간다. 넓은 화면은 옆에 보이므로 움직이지 않는다(변경 감시와 같은 방식).
+  const detailRef = useRef(null)
+  function chooseItem(id) {
+    setSelectedId(id)
+    const narrow = typeof window.matchMedia === 'function' && window.matchMedia(NARROW_LAYOUT_QUERY).matches
+    if (narrow) requestAnimationFrame(() => detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
+  }
   const [reasonDraft, setReasonDraft] = useState(EMPTY_DRAFT)
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -148,14 +157,14 @@ export default function ApprovalsPage({ service = previewApprovalsService }) {
         <h2>승인 요청</h2>
         {loading ? <p>승인 요청을 불러오는 중입니다.</p>
           : loadError ? <><p role="alert">{loadError}</p>{live && <button type="button" onClick={() => { setLoading(true); loadList() }}>다시 시도</button>}</>
-          : visible.length ? visible.map(item => <button key={item.id} className={item.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(item.id)}>
+          : visible.length ? visible.map(item => <button key={item.id} className={item.id === selected?.id ? 'selected' : ''} onClick={() => chooseItem(item.id)}>
             <strong>{item.title}</strong>
             <span>{kindLabel[item.kind]} · {item.at}</span>
             <small>{item.saveFailed ? '저장 재시도 필요' : label[item.status] ?? '보완 요청'}</small>
           </button>)
           : <p>{live ? '처리할 승인 요청이 없습니다. 새 요청이 올라오면 이곳에 표시됩니다.' : '처리할 승인 요청이 없습니다.'}</p>}
       </aside>
-      <article>
+      <article ref={detailRef}>
         {selected ? <>
           <div className="approval-detail-head">
             <div>
