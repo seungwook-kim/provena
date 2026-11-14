@@ -6,7 +6,10 @@
 # 비워 두면 로컬 데모 모드에서만 실행할 때마다 무작위로 만듭니다(backend/main.py). 배포(Cloud Run) 값은 저장소에 두지 않습니다.
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_ENABLE_LOCAL_DEMO: "true"   # 로컬 데모에서 `/demo/*` 정적 미리보기를 연다(H-25). 운영 빌드는 이 인자가 없어 닫힌다
     ports:
       - "${API_PORT:-8000}:8000"  # 8000번이 이미 쓰이고 있으면 .env에 API_PORT=8001처럼 적습니다
     # .env가 없어도 뜹니다 (키가 필요 없는 데모 모드). 뒤에 적은 파일이 앞 파일 값을 덮습니다
@@ -38,7 +41,10 @@ services:
     # data/index/가 없으면(새로 clone하면 연결한 폴더가 비어 있다) 커밋한 data/index.tar.gz를 풀어 meta.json sha256과 대조하고,
     # 압축 파일도 없으면 INDEX_URL·INDEX_SHA256으로 받고, 다 없으면 건너뛴다(색인 없이도 compose가 뜨게).
     # 같은 스냅샷이 이미 적재돼 있으면 몇 초 안에 끝난다
-    build: .
+    build:
+      context: .
+      args:
+        VITE_ENABLE_LOCAL_DEMO: "true"   # api와 같은 인자라 같은 빌드 캐시를 쓴다
     command: ["python", "-m", "backend.rag.retrieve.load_snapshot"]
     # 이미지 기본 사용자는 app(root 아님)이다. 연결한 ./data/index는 호스트 폴더라(Linux에서 없으면 Docker가 root 소유로 만든다)
     # app이 못 쓸 수 있으므로, 한 번 돌고 끝나는 적재 작업만 root로 돈다. api 서비스는 app으로 돈다

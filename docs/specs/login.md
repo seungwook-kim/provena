@@ -27,7 +27,7 @@
 3. 활성 `user` 또는 `admin`이면 UUID `user_id`, role, 만료 정보를 담은 JWT를 `provena_auth` HttpOnly 쿠키로 설정하고 200 `{user_id, role}`을 반환한다.
 4. 보호 엔드포인트는 `Depends(current_user_id)`로 쿠키 JWT를 검증해 사용자 UUID 문자열을 얻는다. 최신 활성 상태·role 확인이 필요하면 `create_current_user_dependency()`를 사용한다.
 5. 서버가 얻은 ID를 `AgentState.user_id: str`로 Graph에 전달한다(`backend/api/routes.py`의 `/chat`이 로그인 사용자로 동작).
-6. `POST /auth/logout`은 CSRF 검증 뒤 인증·CSRF 쿠키를 삭제하고 204를 반환한다. `GET /me`는 현재 사용자 ID, role, 로그인 아이디(`login_id`)를 반환한다.
+6. `POST /auth/logout`은 CSRF 검증 뒤 인증·CSRF 쿠키를 삭제하고 204를 반환한다. `GET /me`는 현재 사용자 ID, role, 로그인 아이디(`login_id`)를 반환한다. 머리글 `X-Session-Optional: 1`을 붙이고 로그인 쿠키가 아예 없으면 401 대신 204(본문 없음)로 답한다. 화면의 첫 세션 확인이 로그아웃 상태마다 브라우저 콘솔에 401을 남기던 것을 없앤다(놓친 것 H-33). 쿠키가 있으면(만료·위조 포함) 머리글과 상관없이 예전처럼 검사한다(`tests/test_me_optional_session.py`).
 
 ### Edge Cases
 

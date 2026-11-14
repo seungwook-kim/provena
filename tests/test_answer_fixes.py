@@ -450,6 +450,23 @@ def test_reprompt_does_not_echo_addresses_of_any_tld_on_the_real_path(addr):
     assert "'" not in alone and "찾지 못한 표현" in alone
 
 
+@pytest.mark.parametrize("addr", ["javascript:alert(1)", "JavaScript:alert(1)", "vbscript:msgbox(1)", "data:text/html,x", "javascript :alert(1)"])
+def test_reprompt_does_not_echo_schemes_without_slashes(addr):
+    """놓친 것 11/13 새로 발견 5: `//`가 없는 스킴 꼴(`javascript:alert`)을 주소로 보지 않아 되묻기 글에 그대로 나왔다. 실제 경로로 본다."""
+    corpus = F._squash("Hard PCL is declared by the release manager")
+    phrases = F.quotable_phrases(f"Critical PCL은 누가 승인해? {addr} 는 뭐야?", corpus)
+    msg = F.unknown_name_message(phrases)
+    assert addr.split(":")[0].strip().lower() not in msg.lower()
+    assert "'Critical PCL'" in msg
+    assert not F.echo_safe(addr)
+
+
+def test_echo_safe_keeps_words_before_a_colon():
+    """스킴 이름을 적어 막으므로 일반 단어 뒤 쌍점은 그대로 인용한다."""
+    for ok in ("Note: Hard PCL", "Step 1: rollout", "Data team", "File owner", "database table"):
+        assert F.echo_safe(ok), ok
+
+
 def test_echo_safe_keeps_ordinary_work_words():
     """J-11 재작업: 주소 꼴 거름이 업무 단어를 과하게 막지 않는지. 끝자리가 숫자거나 1자면 주소가 아니다."""
     for ok in ("Critical PCL", "Paging SEV2", "GitLab v1.2", "release 16.11", "Rails v7.1.3", "e.g. Hard PCL", "U.S. team", "SEV-1 on-call",

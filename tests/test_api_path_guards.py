@@ -32,10 +32,21 @@ def test_dot_dot_thread_id_is_not_a_thread(env):
 
 
 def test_head_threads_has_request_id_and_no_body(env):
-    """C-24: `/threads`는 GET 전용이라 FastAPI가 HEAD 경로를 만들지 않는다. 그래서 HEAD가 `backend/main.py` 끝의 `app.mount("/", StaticFiles)`로 떨어져 404가 난다(서버는 봉투를 만들지만 HEAD라 본문이 전송되지 않는다).
-    규격상 더 맞는 응답은 405(`Allow: GET`)이고 동결 뒤 개선 후보다. 지금은 상태 404·405 중 하나, 본문 없음, X-Request-ID 붙음만 확인한다."""
-    r = env.client(env.alice).head("/threads")
-    assert r.status_code in (404, 405) and r.content == b"" and r.headers.get("x-request-id")
+    """C-24: `/threads`는 GET 전용이라 FastAPI가 HEAD 경로를 만들지 않는다. 전에는 HEAD가 `backend/main.py` 끝의 `app.mount("/", StaticFiles)`로 떨어져 404가 났다.
+    지금은 `api/middleware.py`가 405와 `Allow`(GET을 받는 경로의 메서드)로 답한다. HEAD라 본문은 없다."""
+    for user in (env.alice, None):
+        r = env.client(user).head("/threads")   # 로그인 안 한 사람도 같은 405(경로가 HEAD를 받지 않는다는 사실만 알림)
+        assert r.status_code == 405 and r.content == b"" and r.headers.get("x-request-id"), r.status_code
+        assert "GET" in r.headers["allow"] and "HEAD" not in r.headers["allow"]
+    r = env.client(env.alice).head("/threads/t-unknown")
+    assert r.status_code == 405 and "GET" in r.headers["allow"]
+
+
+def test_head_keeps_routes_that_already_answer_head(env):
+    """C-24 수정이 HEAD를 받는 경로(`/health`)와 없는 경로를 바꾸지 않는지."""
+    c = env.client(env.alice)
+    assert c.head("/health").status_code == 200
+    assert c.head("/zz-no-such-api").status_code == 404
 
 
 def test_broken_approval_row_is_skipped_not_500():

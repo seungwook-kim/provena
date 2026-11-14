@@ -11,6 +11,8 @@
   `Referrer-Policy: strict-origin-when-cross-origin`. `Strict-Transport-Security`는 https 요청에만 붙인다
   (요청 scheme 또는 프록시가 붙인 `X-Forwarded-Proto`의 첫 값). 응답이 이미 같은 헤더를 정했으면 그 값을 둔다.
   화면(`/`)과 `/docs`를 깨뜨릴 수 있어 Content-Security-Policy는 붙이지 않는다.
+- GET 전용 API 경로(예: `/threads`)에 HEAD가 오면 405 `method_not_allowed`와 `Allow` 헤더로 답한다. 전에는 HEAD 경로가 없어
+  `backend/main.py` 끝의 정적 파일 마운트로 떨어져 404가 났다(놓친 것 C-24). HEAD 응답은 규격상 본문을 보내지 않는다.
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ import re
 import time
 import uuid
 
+from starlette.routing import Match, Mount
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 log = logging.getLogger("backend.request")
@@ -85,6 +88,13 @@ class RequestContextMiddleware:
             if "\x00" in scope.get("path", "") or b"%00" in scope.get("raw_path", b"").lower():
                 await _send_not_found(send_wrapper, rid)
                 return
+            allowed = _head_without_route(scope)
+            if allowed:
+                await send_wrapper({"type": "http.response.start", "status": 405,
+                                    "headers": [(b"allow", ", ".join(allowed).encode()), (b"content-type", b"application/json"),
+                                                (b"content-length", b"0")]})
+                await send_wrapper({"type": "http.response.body", "body": b""})
+                return
             await self.app(scope, receive, send_wrapper)
         except Exception:  # noqa: BLE001 - 예외 처리기 밖으로 나온 오류도 요청 ID가 붙은 500으로 마무리한다
             log.exception("처리되지 않은 오류 request_id=%s", rid)
@@ -100,6 +110,24 @@ class RequestContextMiddleware:
             log.info("request id=%s method=%s path=%s status=%s ms=%.1f",
                      rid, scope.get("method"), scope.get("path"), status, (time.perf_counter() - started) * 1000)
             _request_id.reset(token)
+
+
+_CATCH_ALL = "/{path:path}"   # backend/main.py의 화면·없는 경로 받이. 진짜 경로가 아니므로 판정에서 뺀다
+
+
+def _head_without_route(scope: Scope) -> list[str]:
+    """HEAD 요청인데 HEAD를 받는 경로는 없고 GET을 받는 API 경로가 있으면 그 경로가 받는 메서드 목록. 아니면 빈 목록(평소대로 처리)."""
+    app = scope.get("app")
+    if scope.get("method") != "HEAD" or app is None or not hasattr(app, "router"):
+        return []
+    routes = [r for r in app.router.routes if getattr(r, "path", None) != _CATCH_ALL and not isinstance(r, Mount)]
+
+    def full(method: str) -> bool:
+        return any(r.matches({**scope, "method": method})[0] == Match.FULL for r in routes)
+
+    if full("HEAD") or not full("GET"):
+        return []
+    return [m for m in ("GET", "POST", "PUT", "PATCH", "DELETE") if full(m)]
 
 
 async def _send_not_found(send, rid: str) -> None:
