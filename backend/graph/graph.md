@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | 기준일 기본값을 서버(UTC) 날짜에서 한국 날짜로(놓친 것 D-15, 조장 지시로 처리): `state.py`에 `today_kst()`(고정 +9시간) 한 곳을 두고 `build.py` 기본 기준일, `grounding.py` 기간 판정의 올해가 이것을 씀. 키 없는 데모 녹화 키는 `기준일:` 줄을 지우고 만들므로 그대로(`test_replay_request_key_ignores_the_default_date_in_prompts`). 시험 `tests/test_today_kst.py` | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `answer_fixes.py` `_ECHO_URL`: `//` 없는 스킴(`javascript:` `vbscript:` `data:` `file:` `blob:` `mailto:`)도 주소로 보아 되묻기 글에 되풀이하지 않음(놓친 것 11/13 새로 발견 5, 조장 지시로 처리). 시험 `tests/test_answer_fixes.py` | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-11: 되묻기 글이 질문의 URL·SQL 꼴·40자 넘는 영문 문장을 되풀이하지 않게 `answer_fixes.py`에 거름을 더했다. 주소 거름은 TLD 목록이 아니라 주소 꼴(스킴, 점으로 이은 이름 + 2자 이상 영문 끝자리, IPv4)로 본다. `config.yml` 같은 파일 이름도 함께 막히며 이때는 인용 없는 일반 문구로 되묻는다 | #131 |
 | 2026-11-12 | 김승욱 (Claude Code) | (1) 넓힌 첫 검색(나뉜 질문, 달러 금액 없음)의 답 근거를 앞 5자리 우선으로 고름(사전 등록 62.44): `build.py`의 `core_chunks`, 첫 후보는 앞 5자리만 보고 쓰고 둘째 후보는 전체 문맥으로 쓰며 `pick_two`가 판정 구절 위치로 고름(기록 `best2_log.rule=core_first`). (2) 분해가 뺀 앞 문장의 전제를 하위 질문 앞에 붙임(사전 등록 62.45): `decompose.py`의 `keep_premise`. 스위치는 없고 시험 `tests/test_widened_first_search.py`를 더했다 | 이번 PR |
@@ -39,4 +40,5 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| G-002 | 2026-11-15 | 김승욱 | 기준일을 주지 않으면 서버(UTC) 날짜가 기본값이라 한국 00:00~09:00에는 전날이 기준일로 나옴(놓친 것 D-15, `build.py:519`·`departments/review.py:155`·`departments/single_review.py:125` 당시 `date.today()`) | 답 끝의 기준일 표시와 검색의 판 필터가 하루 전 날짜로 돎 | 박진형 | 해결 | 2026-11-15 | `tests/test_today_kst.py::test_today_kst_is_the_korean_calendar_date`(2026-11-14 16:30 UTC → 2026-11-15)·`test_question_graph_default_as_of_is_korean_today`·`test_team_review_default_as_of_is_korean_today`·`test_single_review_default_as_of_is_korean_today`·`test_period_rule_uses_the_korean_year`. 고친 줄을 하나씩 되돌리면 해당 시험이 실패 |
 | G-001 | 2026-11-15 | 김승욱 | 되묻기 거름이 `javascript:alert(1)`처럼 `//`가 없는 스킴을 주소로 보지 않아 되묻기 문장에 그대로 인용(놓친 것 11/13 새로 발견 5, `answer_fixes.py:603` 당시) | 화면에는 글자로만 나오지만 주소를 되풀이하지 않는다는 J-11 규칙 위반 | 박진형 | 해결 | 2026-11-15 | `tests/test_answer_fixes.py::test_reprompt_does_not_echo_schemes_without_slashes`(실제 경로 5건)·`test_echo_safe_keeps_words_before_a_colon`(`Note:` 등 유지) |

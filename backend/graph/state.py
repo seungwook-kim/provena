@@ -6,7 +6,21 @@ State에 둘 것과 Store에 둘 것을 구분하세요.
 
 청크는 dict(`Chunk.model_dump()`)로 담는다. 체크포인트 직렬화 문제를 피하려는 선택이다.
 """
+from datetime import date, datetime, timedelta, timezone
 from typing import TypedDict
+
+# 사용자에게 보이는 "오늘"(기준일 기본값 등)은 한국 날짜로 센다. 서버 시계는 UTC라 `date.today()`를 쓰면 한국 00:00~09:00에 전날이 나온다(놓친 것 D-15).
+# 한국은 서머타임이 없어 고정 +9시간으로 둔다(`zoneinfo`는 시간대 자료(tzdata)가 없는 환경(Windows 등)에서 실패한다. docs/decisions.md 2026-11-15)
+KST = timezone(timedelta(hours=9), "KST")
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def today_kst() -> date:
+    """한국 시간으로 오늘 날짜. 사용자에게 보이는 기본 날짜(기준일, 최근 N일 창, 보고서 만든 날)는 이 함수 한 곳에서 얻는다."""
+    return _utcnow().astimezone(KST).date()
 
 
 class AgentState(TypedDict, total=False):
@@ -14,7 +28,7 @@ class AgentState(TypedDict, total=False):
     question: str
     user_id: str  # 로그인한 사용자 id. thread와 Store namespace가 여기서 갈린다
     thread_id: str
-    as_of: str | None  # 기준일 YYYY-MM-DD. 없으면 오늘로 채운다
+    as_of: str | None  # 기준일 YYYY-MM-DD. 없으면 한국 날짜의 오늘(`today_kst`)로 채운다
     as_of_given: bool  # 입력에 기준일이 있었는지. 있으면 질문에서 뽑은 시점으로 덮지 않는다
     org: str | None  # 사용자가 지정한 절(핸드북 섹션)
     # --- 대화 중 값 ---

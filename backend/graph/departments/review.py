@@ -26,7 +26,6 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
-from datetime import date
 from typing import Annotated, Any, TypedDict
 
 from langchain_core.runnables import RunnableConfig
@@ -34,6 +33,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from backend.graph import untrusted as U
+from backend.graph.state import today_kst
 from backend.graph.departments import issue_table as IT
 from backend.graph.departments import teams as T
 from backend.graph.decision.repo import TEAM_FAILED_KIND
@@ -152,7 +152,7 @@ def build_review_graph(
     def supervisor(state: ReviewState) -> dict:
         request = (state.get("question") or "").strip()
         base: dict = {
-            "as_of": state.get("as_of") or date.today().isoformat(), "kind": "", "answer": "", "clarify_question": None,
+            "as_of": state.get("as_of") or today_kst().isoformat(), "kind": "", "answer": "", "clarify_question": None,
             "review_status": "", "saved_table_id": None, "team_results": {}, "tasks": {},
         }
         if not request:

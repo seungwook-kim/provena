@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | 조장 11/15 목록 D-15·H-34 문서(조장 지시로 처리): `specs/question-graph.md` AC-11에 기본 기준일은 한국 날짜, `specs/d6-chat-frontend.md` done 표와 AC-06에 거절 사유별 안내, `decisions.md` 2행, `deliverables/ai_tools_log.md` 1행, `pr-notes/PR-next.md` 1-2절. `api/openapi.json`은 다시 만들어도 바뀌지 않음(대화 이력은 형식을 선언하지 않은 응답) | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `specs/106-signup-approval.md` Edge Cases에 '가입 화면은 이메일 칸만 둔다(설계)' 판정 추가(놓친 것 11/13 새로 발견 8), `specs/login.md` `/me` 머리글 `X-Session-Optional`(H-33), `api/openapi.json` 다시 만듦(`/me` 204 한 줄), README 화면 둘러보기에 compose `/demo/*` 열림(H-25), `decisions.md`에 결정 3개(가입 화면 이메일만, HEAD 405, `/me` 첫 확인 머리글) | 미정 |
 | 2026-11-14 | 박진형 (jinyeong-731) | #157 후속 정리: `pr-notes/PR-next.md`를 `PR-157.md`로 바꾸고 박진형 기록 칸 `미정` 20칸을 `#157`로 채움(9개 폴더 md), `deliverables/portfolio-박진형.md` '내가 내린 판단'의 `EVAL_REPORT.md` 줄 번호 5곳 정정(98→104, 96~97→102~103, 402·406→408·412, 163~166→169~172, 202→208, 기준 커밋 `fde5ad2d`, #158 뒤 491줄 이후 참조 +4), `deliverables/ai_tools_log.md` 표 밖에 끼어 있던 강경희 11/10 행을 표 안 11/10 자리로 옮기고 박진형 '가장 크게 틀렸던 사례'는 1개만 남겨 나머지 6개를 '그 밖에 틀렸던 사례 (참고)' 절로 옮김(글 내용은 바꾸지 않음) | 미정 |
 | 2026-11-14 | 박진형 (jinyeong-731) | 파싱 요소 수를 515acc3d 뒤 다시 센 값 85,332로(`EVAL_REPORT.md` 1장 표, `specs/chunk.md` 상황, `GATES.md` G3 칸, 재실행 `python -m backend.rag.ingest.parse`), `EVAL_REPORT.md` 9장 재현 안내에 색인을 다시 만들기 전에는 `data/index/chunks.jsonl`만 쓰라는 줄, 포트폴리오 맡은 축의 Langfuse를 "담당(구현은 김승욱·강경희)"으로(`TEAM_GUIDE.md` 5장과 맞춤) | #157 |

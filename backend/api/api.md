@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | `routes.py` `_messages`: 대화 이력의 거절 답에 `/chat` done과 같은 사유 코드 `refuse_reason`을 실음(놓친 것 H-34, 화면이 새로고침 뒤에도 사유에 맞는 안내만 붙이게. 답에는 이 칸이 없음). `changes.py`: `since`를 주지 않을 때의 "최근 30일" 시작일을 한국 날짜 기준으로(D-15). 둘 다 조장 지시로 처리. 시험 `tests/test_api_thread_messages.py`, `tests/test_today_kst.py` | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `middleware.py`: GET 전용 API 경로(`/threads` 등)에 HEAD가 오면 405와 `Allow`로 답함(놓친 것 C-24, 조장 지시로 처리). 전에는 HEAD 경로가 없어 `main.py` 끝 정적 마운트로 떨어져 404. 시험 `tests/test_api_path_guards.py` | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `recalls.py` 날짜 칸 점검(조장 11/13 재확인 #3 같은 유형): `digest/flush`의 `day`, `impact-preview`의 `old_version_date`·`new_version_date`(changes·pages 둘 다), `POST /webhooks/regulation-updated`의 날짜 칸에 `2026-02-30`·`2025-02-29`·전각 숫자를 보내면 모두 200(웹훅은 202)으로 받고 결과가 조용히 틀렸음 → 이제 422 `validation_error`(`ChatRequest._real_date`와 같은 규칙, 입력값은 응답에 담지 않음). 이유: `notice.py`가 날짜를 문자열로 비교해 전각 숫자면 지난 답변이 전부 영향받음으로 잡히고, `digest/flush`는 없는 날짜가 `recall_digests.day`에 되돌릴 수 없게 저장되고 알림이 보냄 처리되며, 웹훅은 섹션을 못 읽어 사용자에게 가짜 "본문을 찾지 못했습니다" 검토 알림이 나감 | #157 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `routes.py` `ChatRequest.as_of`에 실제 날짜 검사 추가(조장 11/13 재확인 #3): `2026-02-30`·`2026-13-45`처럼 형식만 맞는 날짜는 SSE error가 아니라 공통 422 `validation_error`. 원인은 검색기 `rag/retrieve/search.py` `check_query`의 `date.fromisoformat` ValueError. 시험 `tests/test_api_chat.py` | #157 |
