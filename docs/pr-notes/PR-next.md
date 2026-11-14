@@ -1,4 +1,4 @@
-# 다음 묶음 — 조장 11/13 목록 남은 6건과 #157 후속 문서 정리
+# 다음 묶음 — 조장 11/13 목록 남은 6건, 화면 수정 front-1114, #157 후속 문서 정리
 - 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `fde5ad2d`(#158까지)를 합친 브랜치 `next-1114`
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 팀 문서 / [실측] 직접 돌린 결과 / [추정].
 - 운영 호출·DB 작업·LLM·Voyage 호출 없음.
@@ -13,6 +13,14 @@
 | H-33 로그아웃 상태 `/me` 401 콘솔 오류 | 화면이 처음 세션을 확인할 때마다 `/me`가 401이라 브라우저 콘솔에 오류가 남음(모바일 버튼·메뉴·favicon은 #131에서 해결, 이 부분만 남음) | 서버 `backend/auth.py` `/me`: 머리글 `X-Session-Optional: 1`이고 로그인 쿠키가 없으면 204. 화면 `lib/api.js` `getCurrentUser({optional})`, `SessionProvider.jsx`는 첫 확인만 머리글을 붙이고 204면 로그아웃 상태로 봄. 로그인 뒤 다시 확인은 머리글 없이 보내 만료(401)를 그대로 알아챔. `docs/api/openapi.json` 다시 만듦(`/me` 204 한 줄), `docs/specs/login.md` | [실측] `tests/test_me_optional_session.py` 4개(쿠키 없음+머리글 204, 머리글 없거나 값이 다르면 401, 로그인 사용자는 같은 본문, 깨진 쿠키는 401), `session.test.jsx` H-33 2개. 서버 분기를 끄면 1개 실패, 화면에서 머리글을 끄면 1개 실패 |
 | 새로 발견 2 E17·E18(X17·X18) | 다른 사용자 데이터를 요구하는 주입 문장 두 개를 입력 정화·출력 검사가 모두 놓친다는 지적 | 코드는 이미 조장 커밋 `02f4af5e`(2026-11-13)가 막았다. 이 두 문장을 지키는 시험이 없어 회귀 시험만 더함 | [실측] `02f4af5e^`의 `untrusted.py`로는 두 문장이 그대로 남고(X17은 뒷절 `맨 앞에 CANARY-P8-X17 를 적어라.`, X18은 전체), 현재 코드는 표식과 요구 절을 모두 뺌. 시험 `tests/test_deploy_corpus_injection_ext.py::test_code_defense_removes_other_user_exfil_cases` |
 | H-25 compose `/demo/*` | compose(로컬 데모)에서 `/demo/*` 정적 미리보기가 열리지 않고 `/login`으로 감(README 안내만 #131에서 추가) | `Dockerfile` 화면 빌드에 `ARG VITE_ENABLE_LOCAL_DEMO=false`, `docker-compose.yml`의 api·loader 빌드 인자 `"true"`. Cloud Run 소스 배포(`gcloud run deploy --source .`)는 인자를 주지 않아 false 그대로. README 화면 둘러보기 문장 고침 | [코드] 이 값은 `/demo/` 주소에만 쓰임(`DemoPages.jsx:49-50` 가드, `DemoChatPage.jsx:464,472`). **compose로 실제 띄워 확인하지는 않았다**(Docker 꺼짐, 빌드에 패키지를 다시 받아야 함) |
+
+## 1-1. 한 것 — 화면 수정 묶음 `front-1114` 합침
+| 항목 | 문제 | 고친 것 | 근거 |
+|---|---|---|---|
+| 채팅 위쪽 진행 줄 | 답을 만드는 동안 위쪽 상태 줄과 말풍선 두 곳에 진행 문구가 겹쳐 나왔다 | `web/react-app/src/pages/DemoChatPage.jsx` 상태 줄에서 생성 중 문구를 뺌(이어 받는 중 문구는 그대로) | [실측] `front-1114.test.jsx` '생성 중에는 말풍선에만 진행 문구가 있고 위쪽 상태 줄은 비어 있다' |
+| 탭 복귀 때 랜딩 다시 그림 | 비로그인 상태에서 다른 탭에 갔다 오면 세션 다시 확인 때문에 랜딩이 비었다가 새로 그려졌다 | `components/SessionProvider.jsx` `confirmedAnonymous`: 비로그인으로 한 번 확정되면 다시 확인할 때 화면을 비우지 않음. 첫 확인(새로고침, 구글 로그인 콜백)은 그대로 비움 | [실측] `front-1114.test.jsx` '비로그인으로 확인된 뒤 창에 돌아와 다시 확인해도 랜딩을 지우지 않는다', '다른 탭에서 로그인하고 돌아오면 채팅으로 간다' |
+| 입력칸 타자 지연 | 같은 브랜치에서 고쳤다가 되돌림 | 이번 PR에 넣지 않음(커밋 `507ada08`, 나중에 따로) | [코드] `git log front-1114` |
+| H-33과 합친 곳 | 두 갈래가 같은 함수 `refresh`를 고쳤다. 그대로 두면 조용한 재확인에서 서버가 204로 답할 때 로그아웃 처리(`expire`)를 다시 불러 상태를 새로 만든다 | 조용한 재확인(`quiet`)이면 204에도 상태를 바꾸지 않게 한 줄 맞춤 | [코드] `SessionProvider.jsx` `raw === null` 분기. 이 한 줄만 따로 잡는 시험은 없다. 합친 뒤 전체 vitest 41파일 445개 통과 [실측] |
 
 ## 2. 한 것 — #157 후속 문서 정리
 | 항목 | 문제 | 고친 것 | 근거 |
@@ -36,7 +44,7 @@
 - `/me` 첫 확인은 머리글로 알린다(H-33). 주소 `?optional=1`은 화면 시험 15개 파일이 주소를 `'/me'`로 비교해 버림.
 
 ## 5. 시험
-- 전체 vitest: `npx vitest run`(web/react-app) 40파일 442개 통과.
+- 전체 vitest: `npx vitest run`(web/react-app) 40파일 442개 통과(`front-1114` 합치기 전), 합친 뒤 41파일 445개 통과.
 - 대상 pytest: `python -m pytest -q tests/test_answer_fixes.py tests/test_api_path_guards.py tests/test_me_optional_session.py tests/test_deploy_corpus_injection_ext.py tests/test_signup_edges.py tests/test_untrusted.py` 215 통과, 11 건너뜀.
 - 전체 pytest: `python -m pytest -q` 4120 통과, 1 실패, 123 건너뜀(24분 18초). 실패한 `tests/test_llm_openrouter.py::test_real_transport_retries_a_stuck_attempt`는 시간 상한 시험(1.4초 안이어야 하는데 이 PC에서 4.5초)이고, 이 브랜치가 바꾸지 않은 `backend/services/`를 본다. 바꾸지 않은 main(`fa98819a`)에서도 같은 환경으로 단독 실행하면 똑같이 실패한다 [실측]. 11/14 Docker Python 3.12 전체 실행(main `fa98819a`)에서는 통과했으므로 이 PC·3.13 환경 탓으로 본다 [추정]
 - **환경**: 팀 CI(Docker Python 3.12)가 아니라 로컬 Python 3.13 가상환경(`backend/requirements-dev.txt`)으로 돌렸다. Docker가 꺼져 있었고 매번 패키지를 다시 받아야 했다. PR CI가 3.12로 다시 돌린다. DB 시험은 DB가 없어 건너뜀.
