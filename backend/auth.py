@@ -935,7 +935,7 @@ def create_auth_router(
                     signup = get_signup(login_id)
                 except Exception as exc:
                     if not _is_missing_signup_table_error(exc):
-                        raise HTTPException(status_code=503, detail="authentication storage unavailable") from None
+                        raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
         password_hash = (user.password_hash if user is not None else (signup[1] if signup else None)) or DUMMY_PASSWORD_HASH
         password_valid = verify_password(payload.password, password_hash)
         get_status = getattr(store, "get_signup_status", None)
@@ -944,7 +944,7 @@ def create_auth_router(
                 approval_status = get_status(user.user_id)
             except Exception as exc:
                 if not _is_missing_signup_table_error(exc):
-                    raise HTTPException(status_code=503, detail="authentication storage unavailable") from None
+                    raise HTTPException(status_code=503, detail="인증 저장소를 사용할 수 없습니다.") from None
                 approval_status = None
             if approval_status == "pending":
                 raise HTTPException(status_code=403, detail=SIGNUP_PENDING_MESSAGE)
@@ -991,11 +991,11 @@ def create_auth_router(
         get_verification = getattr(store, "get_signup_verification", None)
         save_verification = getattr(store, "save_verification", None)
         if not callable(get_verification) or not callable(save_verification):
-            raise HTTPException(status_code=503, detail="email verification storage is unavailable")
+            raise HTTPException(status_code=503, detail="이메일 인증 저장소를 사용할 수 없습니다.")
         now = datetime.now(timezone.utc)
         row = get_verification(login_id)
         if row is None:
-            raise HTTPException(status_code=404, detail="signup request not found")
+            raise HTTPException(status_code=404, detail="가입 신청을 찾을 수 없습니다.")
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRES_MINUTES)
         code = f"{secrets.randbelow(1_000_000):06d}"
@@ -1021,7 +1021,7 @@ def create_auth_router(
                 log.warning("verification email delivery failed: %s", type(exc).__name__)
                 raise HTTPException(status_code=503, detail="이메일 발송에 실패했습니다.") from None
             if result == "unavailable":
-                raise HTTPException(status_code=404, detail="signup request not found")
+                raise HTTPException(status_code=404, detail="가입 신청을 찾을 수 없습니다.")
             if result == "limited":
                 raise HTTPException(status_code=429, detail="인증번호 발송 제한을 초과했습니다.")
             return expires_at, now + timedelta(seconds=EMAIL_VERIFICATION_RESEND_SECONDS)
@@ -1068,7 +1068,7 @@ def create_auth_router(
             raise HTTPException(status_code=422, detail="비밀번호는 8자 이상 72바이트 이하이어야 합니다.") from None
         create_pending = getattr(store, "create_pending_user", None)
         if not callable(create_pending):
-            raise HTTPException(status_code=503, detail="signup approval storage is unavailable")
+            raise HTTPException(status_code=503, detail="가입 승인 저장소를 사용할 수 없습니다.")
         try:
             if email_required:
                 create_pending(login_id, password_hash, email_verification_required=True)
@@ -1112,7 +1112,7 @@ def create_auth_router(
             raise HTTPException(status_code=422, detail="이메일 또는 인증번호 형식을 확인해 주세요.")
         verify = getattr(store, "verify_signup_code", None)
         if not callable(verify):
-            raise HTTPException(status_code=503, detail="email verification storage is unavailable")
+            raise HTTPException(status_code=503, detail="이메일 인증 저장소를 사용할 수 없습니다.")
         result = verify(login_id, _verification_hash(login_id, payload.code), datetime.now(timezone.utc), EMAIL_VERIFICATION_MAX_ATTEMPTS)
         if result in {"verified", "already_verified"}:
             return {"status": "verified"}
