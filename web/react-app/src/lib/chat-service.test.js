@@ -45,6 +45,17 @@ describe('createApiChatAdapter event handling', () => {
     const answer = snapshots.at(-1)[0].messages.at(-1)
     expect(answer.state).toBe('no-evidence')
     expect(answer.text).toBe('근거 없음')
+    expect('refuseReason' in answer).toBe(false)   // 사유 코드를 주지 않으면 지어내지 않는다
+  })
+
+  it('keeps the refusal reason code from the done event (H-34)', async () => {
+    const { snapshots, service } = setup([
+      { type: 'token', thread_id: 't1', data: { text: '핸드북과 관련 없는 질문이라 답하지 않습니다.' } },
+      { type: 'done', thread_id: 't1', data: { kind: 'refuse', code: 'no_results', refuse_stage: 'out_of_domain', refuse_reason: 'out_of_domain' } },
+    ])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer).toMatchObject({ state: 'no-evidence', refuseReason: 'out_of_domain', text: '핸드북과 관련 없는 질문이라 답하지 않습니다.' })
   })
 
   it('keeps done attributions separate from citations', async () => {
@@ -135,6 +146,16 @@ describe('thread detail after reload', () => {
     expect(mapThreadRecord({ thread_id: 't1', last: { kind: 'answer', answer: '마지막 답' } }).messages).toEqual([{ role: 'assistant', kind: 'answer', answer: '마지막 답', text: '마지막 답', state: 'done', citations: [] }])
     expect(mapThreadRecord({ thread_id: 't1', last: { kind: 'refuse', answer: '근거 없음' } }).messages[0].state).toBe('no-evidence')
     expect(mapThreadRecord({ thread_id: 't1', status: 'pending_approval', last: { kind: 'answer', answer: '대기' } }).messages[0].state).toBe('approval')
+  })
+
+  it('maps refuse_reason on history messages to refuseReason (H-34)', () => {
+    const thread = mapThreadRecord({ thread_id: 't1', messages: [
+      { role: 'user', text: '질문' },
+      { role: 'assistant', text: '거절', state: 'no-evidence', kind: 'refuse', refuse_reason: 'out_of_period' },
+      { role: 'assistant', text: '답', state: 'done', kind: 'answer' },
+    ] })
+    expect(thread.messages[1].refuseReason).toBe('out_of_period')
+    expect('refuseReason' in thread.messages[2]).toBe(false)
   })
 
   it('fetches GET /threads/{id} when the listed thread has no messages and updates the list', async () => {

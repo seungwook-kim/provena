@@ -188,6 +188,11 @@ def _messages(graph: Any, internal: str) -> list[dict]:
                               for c in cites if isinstance(c, dict)],
                 "timestamp": last.created_at,
             })
+            if kind == "refuse":
+                # 거절 사유 코드(`/chat` done의 `refuse_reason`과 같은 규칙, `step_cost.refuse_meta`). 화면이 새로고침 뒤에도 사유에 맞는 안내만 붙이게 한다(H-34). 거절이 아니면 이 칸은 없다
+                from backend.graph.build import REFUSE_REASON_BY_MESSAGE
+
+                out[-1]["refuse_reason"] = step_cost.refuse_meta("", kind, values, REFUSE_REASON_BY_MESSAGE)["refuse_reason"]
         return out
     except Exception as exc:  # noqa: BLE001 - 이력을 못 읽어도 상세 조회는 이어 간다(이력만 빈다)
         log.warning("대화 이력을 읽지 못함: %s", type(exc).__name__)

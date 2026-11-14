@@ -43,7 +43,7 @@ from backend.graph.decompose import decompose_enabled, decompose_question, drop_
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
 from backend.graph.service_profile import SharedChatModel
-from backend.graph.state import AgentState
+from backend.graph.state import AgentState, today_kst
 from backend.memory.profile import get_profile
 from backend.prompts import question as P
 from backend.graph import untrusted as U
@@ -516,7 +516,7 @@ def build_graph(
             **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             **({"started_at": time.monotonic()} if answer_budget else {}),
             "profile": get_profile(store, user_id) if user_id and not replay_demo() else {},
-            "as_of": state.get("as_of") or date.today().isoformat(),
+            "as_of": state.get("as_of") or today_kst().isoformat(),  # 서버(UTC) 날짜가 아니라 한국 날짜(D-15)
             "as_of_given": bool(state.get("as_of")),
             "kind": "",
             "answer": "",

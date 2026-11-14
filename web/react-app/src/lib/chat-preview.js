@@ -56,7 +56,7 @@ const PREVIEW_THREADS = [
 
 function answerFor(question) {
   const item = PREVIEW_KB.find(entry => entry.question === question) ?? PREVIEW_KB.find(entry => entry.match.test(question))
-  return item ? { text: item.answer, citations: clone(item.citations), state: 'done' } : { text: NO_EVIDENCE, citations: [], state: 'no-evidence' }
+  return item ? { text: item.answer, citations: clone(item.citations), state: 'done' } : { text: NO_EVIDENCE, citations: [], state: 'no-evidence', refuseReason: 'no_evidence' }
 }
 
 /**

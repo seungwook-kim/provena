@@ -50,7 +50,9 @@ export function renumberByAppearance(message) {
 function mapMessage(message, fallbackState = 'done') {
   if (message.role === 'user') return { ...message, text: message.text ?? '' }
   const citations = (Array.isArray(message.citations) ? message.citations : []).filter(citation => citation && typeof citation === 'object').map(normalizeCitation)
-  return { ...message, role: 'assistant', text: message.text ?? message.answer ?? '', state: message.state ?? fallbackState, citations }
+  // refuse_reason: 거절 사유 코드(서버 대화 이력). 화면은 이 값으로 '다시 물어봐 주세요' 안내를 붙일지 정한다(H-34)
+  const refuseReason = message.refuseReason ?? message.refuse_reason
+  return { ...message, role: 'assistant', text: message.text ?? message.answer ?? '', state: message.state ?? fallbackState, citations, ...(refuseReason ? { refuseReason } : {}) }
 }
 
 export function mapThreadRecord(record = {}) {
@@ -172,6 +174,7 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
             if (event.data?.code === 'no_results') {
               draft.state = 'no-evidence'
               draft.text = event.data?.message ?? draft.text
+              if (event.data?.refuse_reason) draft.refuseReason = event.data.refuse_reason   // 거절 사유 코드(no_evidence, out_of_domain 등). 안내 문구를 붙일지 정한다(H-34)
             }
           }
           finished = draft.state !== 'generating'

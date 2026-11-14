@@ -153,6 +153,14 @@ function formatDateDivider(value) {
 
 // 검색 결과가 없거나 근거가 모자라 답하지 않을 때 사용자가 할 일(체크포인트 D11). 서버 문구가 이미 '다시'를 말하면(검색 일시 오류) 덧붙이지 않는다
 const NO_EVIDENCE_HINT = '질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.'
+// 거절 사유(`/chat` done의 `refuse_reason`, 대화 이력의 `refuse_reason`)가 "근거를 못 찾음"일 때만 위 안내를 붙인다(놓친 것 H-34).
+// 핸드북 밖 질문(out_of_domain), 수집 기간 밖(out_of_period), 없는 대상(nonexistent_entity), 지시문 섞임(leak), 검색·키·색인 문제는 질문을 고쳐 써도 답이 나오지 않으므로 붙이지 않는다.
+// 사유를 모르면(옛 서버, 목록의 `last`만 있는 대화) 붙이지 않는다
+const HINT_REFUSE_REASONS = new Set(['no_evidence', 'unsupported', 'citation_check'])
+
+export function showsNoEvidenceHint(message) {
+  return message?.state === 'no-evidence' && HINT_REFUSE_REASONS.has(message.refuseReason) && !String(message.text ?? '').includes('다시')
+}
 
 function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
   return <>{messages.map((message, index) => {
@@ -168,7 +176,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
         {message.state === 'generating' && <GeneratingProgress />}
         {message.text && <p>{message.text}</p>}
-        {message.state === 'no-evidence' && !String(message.text ?? '').includes('다시') && <p className="demo-answer-hint">{NO_EVIDENCE_HINT}</p>}
+        {showsNoEvidenceHint(message) && <p className="demo-answer-hint">{NO_EVIDENCE_HINT}</p>}
         {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} messageIndex={index} onSelect={onSelectCitation} />}
         <AttributionNotice attribution={message.attribution} />
         {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}

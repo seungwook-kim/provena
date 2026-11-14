@@ -786,12 +786,12 @@ def _search_with_as_of():
 
 def test_rewrite_as_of_is_ignored_when_the_question_has_no_period():
     """15번 경로: 질문에 시점이 없는데 재작성이 낸 기준일(측정일 등)은 쓰지 않고 오늘로 둔다."""
-    from datetime import date
+    from backend.graph.state import today_kst
 
     fn, seen = _search_with_as_of()
     llm = normal_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of="2025-03-04"))
     out = run(graph(fn, llm=llm), as_of=None)
-    assert seen == [date.today().isoformat()] and out["as_of"] == date.today().isoformat()
+    assert seen == [today_kst().isoformat()] and out["as_of"] == today_kst().isoformat()
 
 
 def test_rewrite_as_of_is_used_when_the_question_has_a_period():
