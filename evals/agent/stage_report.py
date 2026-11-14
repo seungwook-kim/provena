@@ -11,7 +11,7 @@
 표에 없는 `step`이 나오면 멈춘다(조용히 빼지 않는다).
 
 비용: 호출에 공급자가 알려 준 비용(`llm_trace[].reported_cost_usd`, 캐시 할인 반영)이 있으면 그 값, 없으면 토큰 x 팀 단가표(`backend/services/cost.py` `cost_usd`,
-`llm_prices.json`)로 낸 추정값이다(강의 rag 3주 11강: 실측 우선, 정가표는 검산용). 11/5 결과에는 보고값 칸이 없어 모두 추정값이고 결제액이 아니다.
+`llm_prices.json`, 호출 기록에 프롬프트 캐시 칸이 있으면 같은 캐시 배수)로 낸 추정값이다(강의 rag 3주 11강: 실측 우선, 정가표는 검산용). 11/5 결과에는 보고값 칸이 없어 모두 추정값이고 결제액이 아니다.
 Voyage 임베딩 비용은 행에 기록이 없어 넣지 않는다.
 p50과 p95는 `run_eval._p95`와 같은 최근순위(nearest-rank) 방식이다: 정렬 뒤 ceil(q x n)번째 값.
 
@@ -81,7 +81,8 @@ def row_stages(row: dict, prices: dict) -> dict:
             raise SystemExit(f"단계 표에 없는 LLM step: {c['step']} (문항 {row['id']})")
         i, o = int(c.get("input_tokens") or 0), int(c.get("output_tokens") or 0)
         rep = c.get("reported_cost_usd")   # 공급자가 알려 준 비용이 있으면 그 값(캐시 할인 반영), 없으면 단가표 추정
-        cost[stage] += rep if rep is not None else cost_usd(c.get("model"), i, o, prices)
+        cache = (int(c.get("cache_read_tokens") or 0), int(c.get("cache_creation_tokens") or 0), 0)   # 프롬프트 캐시(`LLM_PROMPT_CACHE`) 읽기·쓰기(5분 보관). 칸이 없던 행은 0이라 값이 그대로다
+        cost[stage] += rep if rep is not None else cost_usd(c.get("model"), i, o, prices, cache=cache)
         src["reported" if rep is not None else "price_table"] += 1
         tok["input"] += i
         tok["output"] += o

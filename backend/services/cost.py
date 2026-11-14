@@ -2,11 +2,12 @@
 
 `CostTracker`는 LangChain 콜백이다. 그래프 실행의 `config["callbacks"]`에 한 번 넣으면 그래프 안의 모든 LLM 호출(서브그래프 포함)에 따라간다.
 - 호출이 끝날 때마다 모델이 돌려준 사용량(`usage_metadata`, 없으면 `llm_output["token_usage"]`)을 합산한다.
+  Claude 모델의 프롬프트 캐시 토큰(`input_token_details`의 읽기·쓰기)은 입력 단가의 배수(`CACHE_*_RATE`)로 센다(`cost_usd`). 캐시 칸이 없거나 0이면 입력 전체를 입력 단가로 센다.
 - 합계가 상한 이상이면 다음 LLM 호출이 시작되기 전에 `CostCapExceeded`를 던져 그 실행의 이후 호출을 막는다.
   이미 보낸 호출은 되돌릴 수 없으므로 상한을 넘기는 마지막 한 번은 나갈 수 있다.
 - 모델이 `response_metadata["total_cost_usd"]`로 비용을 직접 알려 주면(claude_cli: CLI가 보고한 API 환산 비용, 캐시 단가 반영) 단가표 대신 그 값을 합산한다.
 - 가짜 모델(데모 모드)은 사용량을 안 돌려주므로 비용은 0이다.
-- 단계별 합(`by_step()`): 같은 호출을 `llm_trace.step_of`가 정한 단계 이름(노드/표지)으로 나눠 호출 수·토큰·비용·걸린 시간을 쌓는다. 항상 켜져 있고 내용은 저장하지 않는다(`step_cost.py`).
+- 단계별 합(`by_step()`): 같은 호출을 `llm_trace.step_of`가 정한 단계 이름(노드/표지)으로 나눠 호출 수·토큰(캐시 읽기·쓰기 토큰 포함)·비용·걸린 시간을 쌓는다. 항상 켜져 있고 내용은 저장하지 않는다(`step_cost.py`).
 
 환경변수:
 - `LLM_COST_CAP_USD`: 질문 한 건의 비용 상한(달러). 없거나 비면 기본 `DEFAULT_COST_CAP_USD`. `0`, `off`, `none`이면 상한 없음.
@@ -82,9 +83,48 @@ def price_for(model: str | None, prices: dict) -> tuple[float, float]:
     return float(row.get("input", 0.0)), float(row.get("output", 0.0))
 
 
-def cost_usd(model: str | None, input_tokens: int, output_tokens: int, prices: dict | None = None) -> float:
+def cost_usd(model: str | None, input_tokens: int, output_tokens: int, prices: dict | None = None,
+             cache: tuple[int, int, int] = (0, 0, 0)) -> float:
+    """호출 한 번의 비용(달러). `input_tokens`는 캐시 읽기·쓰기 토큰을 포함한 입력 전체(langchain `usage_metadata.input_tokens`)다.
+    `cache`는 (캐시 읽기, 5분 보관 쓰기, 1시간 보관 쓰기) 토큰 수(`cache_tokens`)이고, Claude 모델이면 그 몫을 입력 단가의 배수(`CACHE_*_RATE`)로 센다.
+    Claude가 아닌 모델(OpenRouter의 다른 공급자)은 캐시 단가 규칙이 달라 지금처럼 입력 전체를 입력 단가로 센다."""
     p_in, p_out = price_for(model, prices if prices is not None else load_prices())
-    return (input_tokens * p_in + output_tokens * p_out) / 1_000_000
+    read, write_5m, write_1h = (max(int(x or 0), 0) for x in cache)
+    if not (read or write_5m or write_1h) or not normalize_model_id(model).startswith("claude"):
+        return (input_tokens * p_in + output_tokens * p_out) / 1_000_000
+    plain = max(input_tokens - read - write_5m - write_1h, 0)
+    weighted = plain + read * CACHE_READ_RATE + write_5m * CACHE_WRITE_5M_RATE + write_1h * CACHE_WRITE_1H_RATE
+    return (weighted * p_in + output_tokens * p_out) / 1_000_000
+
+
+# Anthropic 프롬프트 캐시 단가(입력 단가의 배수). 출처: Claude API 문서 Prompt caching의 가격 절(2026-11-15 확인).
+# 5분 보관 쓰기 1.25배, 1시간 보관 쓰기 2배, 읽기 0.1배(Haiku 5.5 포함 대부분 모델. 읽기 배수가 다른 모델은 문서 각주에 있고 이 서비스는 쓰지 않는다)
+CACHE_WRITE_5M_RATE = 1.25
+CACHE_WRITE_1H_RATE = 2.0
+CACHE_READ_RATE = 0.1
+
+
+def cache_tokens(usage: Any) -> tuple[int, int, int]:
+    """langchain `usage_metadata`의 `input_token_details`에서 (캐시 읽기, 5분 보관 쓰기, 1시간 보관 쓰기) 토큰 수.
+    langchain-anthropic은 보관 시간별 값(`ephemeral_5m_input_tokens`, `ephemeral_1h_input_tokens`)이 있으면 `cache_creation`을 0으로 두므로,
+    보관 시간별 값이 모두 0일 때만 `cache_creation`을 5분 보관 쓰기로 본다. 칸이 없으면 (0, 0, 0)."""
+    details = (usage or {}).get("input_token_details") if isinstance(usage, dict) else None
+    if not isinstance(details, dict):
+        return 0, 0, 0
+
+    def num(key: str) -> int:
+        v = details.get(key)
+        return max(int(v), 0) if isinstance(v, (int, float)) else 0
+
+    read, w5, w1 = num("cache_read"), num("ephemeral_5m_input_tokens"), num("ephemeral_1h_input_tokens")
+    if not (w5 or w1):
+        w5 = num("cache_creation")
+    return read, w5, w1
+
+
+def usage_cost(model: str | None, usage: dict, prices: dict | None = None) -> float:
+    """`usage_metadata` 하나의 비용(달러). 캐시 읽기·쓰기 토큰을 `cost_usd`의 규칙으로 센다."""
+    return cost_usd(model, int(usage.get("input_tokens") or 0), int(usage.get("output_tokens") or 0), prices, cache_tokens(usage))
 
 
 def cost_cap_from_env() -> float | None:
@@ -102,9 +142,10 @@ def cost_cap_from_env() -> float | None:
     return v if v > 0 else None
 
 
-def _usage_of(response: Any) -> list[tuple[str | None, int, int, float | None]]:
-    """LLMResult에서 (모델 이름, 입력 토큰, 출력 토큰, 보고된 비용)을 호출 단위로 뽑는다. 보고된 비용은 모델이 직접 알려 준 값(`response_metadata["total_cost_usd"]`, claude_cli)이고 없으면 None."""
-    out: list[tuple[str | None, int, int, float | None]] = []
+def _usage_of(response: Any) -> list[tuple[str | None, int, int, float | None, tuple[int, int, int]]]:
+    """LLMResult에서 (모델 이름, 입력 토큰, 출력 토큰, 보고된 비용, 캐시 토큰)을 호출 단위로 뽑는다. 보고된 비용은 모델이 직접 알려 준 값(`response_metadata["total_cost_usd"]`, claude_cli)이고 없으면 None.
+    캐시 토큰은 (읽기, 5분 보관 쓰기, 1시간 보관 쓰기)이고(`cache_tokens`), 사용량에 캐시 칸이 없으면 (0, 0, 0)이다."""
+    out: list[tuple[str | None, int, int, float | None, tuple[int, int, int]]] = []
     for gens in getattr(response, "generations", None) or []:
         for g in gens:
             msg = getattr(g, "message", None)
@@ -113,7 +154,8 @@ def _usage_of(response: Any) -> list[tuple[str | None, int, int, float | None]]:
                 meta = getattr(msg, "response_metadata", None) or {}
                 name = meta.get("model_name") or meta.get("model")
                 reported = meta.get("total_cost_usd")
-                out.append((name, int(um.get("input_tokens") or 0), int(um.get("output_tokens") or 0), float(reported) if isinstance(reported, (int, float)) else None))
+                out.append((name, int(um.get("input_tokens") or 0), int(um.get("output_tokens") or 0), float(reported) if isinstance(reported, (int, float)) else None,
+                            cache_tokens(um)))
     if out:
         return out
     llm_output = getattr(response, "llm_output", None) or {}
@@ -121,7 +163,7 @@ def _usage_of(response: Any) -> list[tuple[str | None, int, int, float | None]]:
     i = tu.get("prompt_tokens", tu.get("input_tokens", 0)) or 0
     o = tu.get("completion_tokens", tu.get("output_tokens", 0)) or 0
     if i or o:
-        out.append((llm_output.get("model_name") or llm_output.get("model"), int(i), int(o), None))
+        out.append((llm_output.get("model_name") or llm_output.get("model"), int(i), int(o), None, (0, 0, 0)))
     return out
 
 
@@ -136,6 +178,8 @@ class CostTracker(BaseCallbackHandler):
         self.default_model = default_model
         self.input_tokens = 0
         self.output_tokens = 0
+        self.cache_read_tokens = 0       # 입력 토큰 중 프롬프트 캐시에서 읽은 몫(`LLM_PROMPT_CACHE`). 끄면 0
+        self.cache_creation_tokens = 0   # 입력 토큰 중 프롬프트 캐시에 쓴 몫
         self.cost_usd = 0.0
         self.calls = 0
         self._steps: dict[str, dict] = {}   # 단계(`llm_trace.step_of`)별 합. 항상 켜 둔다: 호출마다 dict 갱신 몇 번뿐이고 내용은 저장하지 않는다
@@ -168,18 +212,24 @@ class CostTracker(BaseCallbackHandler):
             step, t0 = self._open.pop(run_id, ("unknown", None))
             seconds = time.perf_counter() - t0 if t0 is not None else 0.0
             row = None
-            for model, i_tok, o_tok, reported in _usage_of(response):
-                call_cost = reported if reported is not None else cost_usd(model or self.default_model, i_tok, o_tok, self.prices)
+            for model, i_tok, o_tok, reported, cache in _usage_of(response):
+                call_cost = reported if reported is not None else cost_usd(model or self.default_model, i_tok, o_tok, self.prices, cache)
+                read, written = cache[0], cache[1] + cache[2]
                 self.calls += 1
                 self.input_tokens += i_tok
                 self.output_tokens += o_tok
+                self.cache_read_tokens += read
+                self.cache_creation_tokens += written
                 self.cost_usd += call_cost
                 if row is None:
-                    row = self._steps.setdefault(step, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0})
+                    row = self._steps.setdefault(step, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0,
+                                                        "cache_read_tokens": 0, "cache_creation_tokens": 0})
                     row["llm_s"] += seconds   # 호출 한 번의 걸린 시간(여러 호출이 겹치면 합이 실제 대기보다 길 수 있다)
                 row["calls"] += 1
                 row["input_tokens"] += i_tok
                 row["output_tokens"] += o_tok
+                row["cache_read_tokens"] += read     # 입력 토큰 중 캐시에서 읽은 몫(`input_tokens`에 들어 있다). 캐시를 끄면 0이다
+                row["cache_creation_tokens"] += written   # 입력 토큰 중 캐시에 새로 쓴 몫(보관 시간 합)
                 row["cost_usd"] += call_cost
 
     def on_llm_error(self, error: BaseException, *, run_id: UUID, **kwargs: Any) -> None:
@@ -187,7 +237,8 @@ class CostTracker(BaseCallbackHandler):
             self._open.pop(run_id, None)
 
     def by_step(self) -> dict[str, dict]:
-        """단계 이름 -> {calls, input_tokens, output_tokens, cost_usd, llm_s}. 단계 합 = `summary()`의 합계(같은 호출을 같은 자리에서 센다)."""
+        """단계 이름 -> {calls, input_tokens, output_tokens, cost_usd, llm_s, cache_read_tokens, cache_creation_tokens}. 단계 합 = `summary()`의 합계(같은 호출을 같은 자리에서 센다).
+        캐시 두 칸은 `input_tokens`를 나눈 값(그 안에 들어 있다)이고 캐시를 끄면 0이다."""
         with self._lock:
             return {k: {**v, "cost_usd": round(v["cost_usd"], 8), "llm_s": round(v["llm_s"], 3)} for k, v in self._steps.items()}
 
