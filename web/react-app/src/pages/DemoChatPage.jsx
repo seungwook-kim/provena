@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { loadDraft, saveDraft } from '../lib/draft'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import DemoLayout from '../components/DemoLayout'
@@ -151,7 +151,8 @@ function formatDateDivider(value) {
   return date ? `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일` : ''
 }
 
-function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
+// 입력칸에 한 글자 칠 때마다 화면 전체가 다시 그려지므로, 말풍선과 대화 목록은 받은 값이 같으면 다시 그리지 않는다(진형 11/14 타자 지연)
+const MessageList = memo(function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
   return <>{messages.map((message, index) => {
     const timestamp = messageTimestamp(message)
     const currentDate = dateKey(timestamp)
@@ -171,7 +172,11 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
       </article>}
     </Fragment>
   })}</>
-}
+})
+
+const ThreadList = memo(function ThreadList({ threads, selectedId, processing, onSelect }) {
+  return threads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => onSelect(thread)}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })
+})
 
 export default function DemoChatPage({ api = false }) {
   const location = useLocation()
@@ -429,6 +434,12 @@ export default function DemoChatPage({ api = false }) {
     ask(input)
   }
 
+  // 말풍선·대화 목록에 넘기는 함수는 렌더마다 새로 만들지 않는다(memo가 매 글자 다시 그리지 않게). 부를 때는 지금 렌더의 함수를 쓴다
+  const latestRef = useRef({ ask, selectThread })
+  latestRef.current = { ask, selectThread }
+  const retryQuestion = useCallback(question => latestRef.current.ask(question, true), [])
+  const selectThreadStable = useCallback(thread => latestRef.current.selectThread(thread), [])
+
   return <DemoLayout active="chat"><div className="demo-chat-page"><div className="demo-chat-grid">
     <aside className="demo-thread-sidebar" aria-label="대화 목록">
       <button type="button" className="button button-dark" onClick={newConversation} disabled={processing}>+ 새 대화</button>
@@ -436,12 +447,12 @@ export default function DemoChatPage({ api = false }) {
       <p className="demo-thread-list-heading"><span>대화 목록</span>{canSortByActivity && <small>최근 활동순</small>}</p>
       {loading && <div className="demo-thread-state">대화를 불러오는 중입니다.</div>}
       {!loading && visibleThreads.length === 0 && <div className="demo-thread-state">{threads.length ? '검색 결과가 없습니다.' : <>아직 대화가 없습니다.<br />새 대화를 시작해 보세요.</>}</div>}
-      {visibleThreads.map(thread => { const activity = threadTimestamp(thread); return <button type="button" key={thread.id} className={`demo-thread ${thread.id === selectedId ? 'selected' : ''}`} disabled={processing} title={thread.title} aria-label={thread.title} onClick={() => selectThread(thread)}><span className="demo-thread-title">{thread.title}</span>{activity && <time dateTime={activity.toISOString()}>{formatActivity(activity)}</time>}</button> })}
+      <ThreadList threads={visibleThreads} selectedId={selectedId} processing={processing} onSelect={selectThreadStable} />
     </aside>
     <main className="demo-chat-main">
-      <div className="demo-chat-status">{processing && <span className="demo-generating">{PROGRESS_TEXT}.</span>}{!processing && resuming && <span className="demo-generating" role="status">{RESUME_TEXT}.</span>}</div>
+      <div className="demo-chat-status">{/* 답을 만드는 중에는 말풍선(GeneratingProgress)이 진행을 보이므로 위쪽 줄은 비운다(진형 11/14) */}{!processing && resuming && <span className="demo-generating" role="status">{RESUME_TEXT}.</span>}</div>
       <div className="demo-messages" ref={messagesRef} onScroll={handleMessagesScroll}>
-        {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={question => ask(question, true)} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
+        {loading || threadLoading ? <div className="demo-empty"><h1>대화를 불러오는 중입니다.</h1></div> : current ? <div className="demo-message-stack">{threadError && <div className="demo-answer-error" role="alert"><span>대화를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</span></div>}<MessageList messages={current.messages} selectedCitation={selectedCitation} onSelectCitation={setSelectedCitation} onRetry={retryQuestion} /></div> : <div className="demo-empty"><h1>정책에 대해 물어보세요.</h1><p>정책 문서를 근거로 답변을 제공합니다.</p><div className="demo-suggestions">{(api ? DEMO_SUGGESTIONS : PREVIEW_SUGGESTIONS).map(question => <button type="button" key={question} disabled={processing} onClick={() => ask(question)}>{question}</button>)}</div></div>}
       </div>
       {sendError && <div className="demo-answer-error" role="alert"><span>{sendError}</span></div>}
       <form className="demo-composer" onSubmit={event => { event.preventDefault(); ask(input) }}><div><textarea ref={composerRef} value={input} onChange={event => { setInput(event.target.value); if (sendError === EMPTY_INPUT_NOTICE) setSendError('') }} onKeyDown={handleComposerKeyDown} rows="1" maxLength={MAX_MESSAGE_LENGTH} disabled={composerDisabled} placeholder="질문을 입력하세요" aria-label="질문" /><button type="submit" className="button button-dark" disabled={composerDisabled || !input.trim()}>보내기</button>{processing && <button type="button" className="demo-stop-button" onClick={stopAnswer}>답변 중지</button>}</div><p><span className="demo-composer-keyboard-hint">Enter 전송 · Shift + Enter 줄바꿈</span><span>근거 문서의 섹션과 문서 버전을 함께 확인할 수 있습니다.</span></p></form>
