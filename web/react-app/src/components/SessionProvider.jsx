@@ -33,12 +33,14 @@ export function SessionProvider({ children }) {
   const sequence = useRef(0)
   const mutating = useRef(false)
   const confirmedUser = useRef(null) // The user currently shown as authenticated, or null.
+  const confirmedAnonymous = useRef(false) // 비로그인으로 한 번 확정됨. 그 뒤 다시 확인할 때는 랜딩을 비우지 않는다(진형 11/14: 다른 탭 갔다 오면 랜딩이 새로 그려짐)
 
   const accept = useCallback(user => {
     invalidateAuthRequests()
     selectMemoryOwner(user.user_id)
     clearDrafts(user.user_id) // 다른 계정이 쓰던 질문은 새 계정에게 보이지 않게 지운다(H-29).
     confirmedUser.current = user
+    confirmedAnonymous.current = false
     setSession({ status: 'authenticated', user, error: '', expired: false })
   }, [])
 
@@ -48,6 +50,7 @@ export function SessionProvider({ children }) {
     sequence.current += 1
     clearSessionMemory()
     confirmedUser.current = null
+    confirmedAnonymous.current = true
     setSession({ status: 'anonymous', user: null, error: '', expired: byServer && wasSignedIn })
   }, [])
 
@@ -57,19 +60,28 @@ export function SessionProvider({ children }) {
     // With a confirmed user this is a background re-check (focus, navigation, profile save):
     // keep the page mounted and only change state when the server says something different.
     const background = confirmedUser.current !== null
+    // 비로그인으로 확정된 뒤의 재확인도 화면을 그대로 둔다. 401이면 바꿀 것이 없고, 로그인돼 있으면 그때 바꾼다.
+    // 첫 확인(새로고침, 구글 로그인 콜백 같은 전체 페이지 로드)은 지금처럼 확인이 끝날 때까지 비운다.
+    const quiet = !background && confirmedAnonymous.current
     const acceptChanged = user => { if (!sameUser(confirmedUser.current, user)) accept(user) }
     if (isMockSessionEnabled()) {
       acceptChanged(MOCK_USER)
       return
     }
-    if (!background) setSession({ status: 'checking', user: null, error: '' })
+    if (!background && !quiet) setSession({ status: 'checking', user: null, error: '' })
     try {
-      const user = validateUser(await getCurrentUser())
+      // 첫 확인(로그인한 사용자 없음)은 쿠키가 없으면 204로 받는다(H-33). 이미 로그인한 뒤의 다시 확인은 만료를 알아야 하므로 401 그대로
+      const raw = await getCurrentUser({ optional: !background })
+      if (raw === null) {
+        if (request === sequence.current && !quiet) expire(false)   // 비로그인으로 확정된 뒤의 조용한 재확인이면 바꿀 것이 없다(front-1114와 합침)
+        return
+      }
+      const user = validateUser(raw)
       if (request === sequence.current) acceptChanged(user)
     } catch (error) {
       if (request !== sequence.current) return
-      if (error.status === 401) expire(true)
-      else if (!background) setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
+      if (error.status === 401) { if (!quiet) expire(true) }
+      else if (!background && !quiet) setSession({ status: 'error', user: null, error: '세션을 확인하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.' })
       // A failed background check (offline, 5xx, bad payload) keeps the confirmed session; the next focus retries.
     }
   }, [accept, expire])

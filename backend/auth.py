@@ -1254,8 +1254,15 @@ def create_auth_router(
         return response
 
     # profile_completed: 내 정보(요청 1번) 첫 로그인 막기용. 콜백을 안 넘기면 /me 응답은 예전과 같다(None은 빼고 보냄).
-    @router.get("/me", response_model=MeResponse, response_model_exclude_none=True)
-    def me(response: Response, user: AuthUser = Depends(current_user)) -> MeResponse:
+    # 머리글 `X-Session-Optional: 1`: 로그인 쿠키가 아예 없으면 401 대신 204(본문 없음). 화면의 첫 세션 확인이 로그아웃 상태마다
+    # 브라우저 콘솔에 401 오류를 남기던 것(놓친 것 H-33). 쿠키가 있으면(만료·폐기 포함) 예전과 같이 검사해 401을 돌려준다.
+    # 머리글이 없으면 예전과 똑같다(SDK·다른 클라이언트 영향 없음).
+    @router.get("/me", response_model=MeResponse, response_model_exclude_none=True,
+                responses={204: {"description": "머리글 X-Session-Optional: 1이고 로그인 쿠키가 없음"}})
+    def me(request: Request, response: Response) -> MeResponse | Response:
+        if request.headers.get("x-session-optional") == "1" and not request.cookies.get(AUTH_COOKIE_NAME):
+            return Response(status_code=204, headers={"Cache-Control": "no-store"})
+        user = current_user(request)
         response.headers["Cache-Control"] = "no-store"
         completed = None
         if profile_completed is not None:

@@ -132,7 +132,18 @@ export async function logout() {
   return response
 }
 
-export function getCurrentUser() { return apiJson('/me') }
+// optional: 로그인 쿠키가 없으면 서버가 401 대신 204로 답한다(H-33, 로그아웃 상태 첫 확인이 콘솔에 401을 남기지 않게). 그때 null.
+// 주소는 그대로 `/me`이고 머리글 `X-Session-Optional: 1`로 알린다(쿠키가 있으면 서버는 예전처럼 검사해 401·200을 준다)
+export async function getCurrentUser({ optional = false } = {}) {
+  if (!optional) return apiJson('/me')
+  const response = await apiRequest('/me', { headers: { 'X-Session-Optional': '1' } })
+  if (response.status === 204) return null
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new ApiError('서버 응답 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.', response.status, 'invalid_response')
+  }
+  return response.json()
+}
 
 function readCsrfToken() {
   return document.cookie.split('; ').find(cookie => cookie.startsWith('provena_csrf='))?.split('=')[1]

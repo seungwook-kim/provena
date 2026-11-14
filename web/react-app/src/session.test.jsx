@@ -129,6 +129,28 @@ describe('React authentication and session isolation', () => {
     expect(calls.some(call => call.path === '/me')).toBe(false)
   })
 
+  it('asks /me as optional on the first check and treats 204 as signed out (H-33)', async () => {
+    server.meHook = () => {
+      const last = calls.filter(call => call.path === '/me').at(-1)
+      return last.options?.headers?.['X-Session-Optional'] === '1' ? new Response(null, { status: 204 }) : json({ detail: '인증이 필요합니다.' }, 401)
+    }
+    render(<App />)
+    await waitFor(() => expect(window.location.pathname).toBe('/login'))
+    const first = calls.find(call => call.path === '/me')
+    expect(first.options.headers['X-Session-Optional']).toBe('1')
+    expect(screen.queryByText(/세션이 만료/)).toBeNull()
+  })
+
+  it('checks a signed-in session again without the optional header so expiry is still noticed (H-33)', async () => {
+    server.user = A
+    render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    const before = calls.filter(call => call.path === '/me').length
+    act(() => { window.dispatchEvent(new Event('focus')) })
+    await waitFor(() => expect(calls.filter(call => call.path === '/me').length).toBe(before + 1))
+    expect(calls.filter(call => call.path === '/me').at(-1).options?.headers?.['X-Session-Optional']).toBeUndefined()
+  })
+
   it('opens the development demo chat without authentication', async () => {
     window.history.replaceState({}, '', '/demo/chat')
     render(<App />)
