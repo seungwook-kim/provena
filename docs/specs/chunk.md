@@ -27,6 +27,7 @@
 6. 임베딩할 글자 = `페이지 제목 > 제목 경로` 머리말 + 겹침 + 본문
 7. 권한표는 `업무 × 금액 구간` 한 행 = 청크(각주 본문 포함), 이사회 표는 항목마다 청크(열 제목 행 제외). 표 밖 글(`authz_ir.jsonl`)은 쪽과 같은 방식(구조·고정 길이 설정 그대로)으로 자르고 빠짐없음 검사도 같이 한다
 8. `python -m backend.rag.ingest.load --manifest` 로 `data/manifest.jsonl`
+9. `python -m backend.rag.ingest.hash_report`(0원, 읽기만) 로 청크 해시 기록 `evals/results/chunk_hashes_<날짜>/chunk_hash_report.{json,md}`를 만든다. 청크별 sha256 목록은 `data/chunks_index.jsonl`(줄마다 `chunk_id`, `chunk_sha256` = 본문 UTF-8의 sha256, 줄바꿈과 무관)이고, 목록 파일 자체의 해시는 raw·LF 기준·CRLF 기준을 모두 적는다(저장소 안은 LF, `.gitattributes`가 `eol=lf`로 고정). 운영 DB 행 수는 아래 "청크 해시와 DB 행 수 기록"
 
 **Edge Cases**
 
@@ -48,6 +49,7 @@
 - `chunk_id` = sha256(`rule_seq:seq:본문`) 앞 16자(같은 본문이 다른 쪽, 같은 쪽 다른 자리에 있어도 겹치지 않게). 겹침·크기 설정이 달라도 본문과 순서가 같으면 id가 같으니 한 인덱스·DB 테이블에는 설정 하나만 적재한다. G3는 `body_sha256`(머리말·겹침 제외)으로 센다
 - 출력: `data/chunks/chunks.jsonl`(본문 포함, 커밋 안 함), `data/chunks_index.jsonl`(번호·위치·지문, 커밋), `data/chunks/chunk_report.json`, `data/manifest.jsonl`(커밋)
 - manifest 한 줄 = 문서 하나(현재 1,565줄 = 핸드북 1,564쪽 + 2023 권한표 1). 칸은 `doc_id, org, title, source_url, version_id, collected_at, chunks, chars_original, chars_kept, truncated`와 건너뛴 쪽의 `skipped`(`backend/rag/ingest/load.py` `build_manifest`)다. `version_id`는 그 쪽 판 커밋의 앞 12자이고, 수집 고정 커밋 전체 sha(`129243bcffcf…`)는 manifest가 아니라 스냅샷 안 `collect_manifest.json`과 `data/data.md`에 있다
+- 알려진 한계(판 날짜): `data/chunks/chunks.jsonl`과 서비스 색인 `data/index/chunks.jsonl`의 `version_date`가 23,095줄 중 1,005줄(68개 판)에서 하루 다르다(같은 `chunk_id`의 다른 칸은 같다). 원인은 확인하지 못했고, 판 날짜를 UTC로 세도록 고친 커밋 d259169(`backend/rag/ingest/handbook.py`) 전의 방식(`%cs`)으로 수집한 결과로 색인을 만들었을 가능성이 있다(추정). 기준일을 주지 않는 검색은 영향이 없고, 기준일 2026-10-27에서는 판 1개(`rule_seq` 4106741603, 청크 19개)가 색인에서 빠진다. 평가셋 동결 뒤 색인을 다시 만들어 맞춘다. 수치와 범위는 `EVAL_REPORT.md` 3-3 한계에 적었다
 - 비교용 고정 길이: `--mode fixed --size 800 --overlap 100`(쪽 본문을 이어 붙여 글자 수로)
 
 ## AC (Given-When-Then)
@@ -101,3 +103,28 @@
 - GIVEN: 청크 파일과 `pages.jsonl`
 - WHEN: `load --manifest`
 - THEN: 문서별 청크 수 합이 청크 수와 같고, 옮겨진 쪽은 `redirect`, 본문 없는 쪽은 `no_body` 로 표시한다
+
+## 청크 해시와 DB 행 수 기록 (체크포인트 D10, 2026-11-13)
+
+제출 항목: "청크별 sha256 목록이나 DB 행 수 조회와 열람 방법, 해시는 CRLF·LF까지". 이 저장소는 두 가지를 모두 둔다. 숫자는 재청킹·재임베딩과 운영 DB 반영이 끝난 뒤의 값으로 채우며, 아래 `미정` 칸은 조회 전에 임의로 적지 않는다.
+
+**1. 청크별 sha256 목록(저장소 안).** `data/chunks_index.jsonl`이 그 목록이다(줄마다 `chunk_id`, `chunk_sha256`). 열람은 파일을 열거나 `python -c "import json;r=[json.loads(l) for l in open('data/chunks_index.jsonl',encoding='utf-8') if l.strip()];print(len(r),len({x['chunk_sha256'] for x in r}))"`. 다시 만들고 해시를 기록하는 명령은 한 줄이다: `python -m backend.rag.ingest.hash_report`. 청크 해시(`chunk_sha256`)는 본문 글자의 sha256이라 줄바꿈과 무관하고, 목록 파일 자체의 해시는 줄바꿈에 따라 달라지므로 LF 기준이 저장소 값이다.
+
+| 항목 | 값 |
+|---|---|
+| `chunks_index.jsonl` 줄 수 / 서로 다른 `chunk_sha256` | 23,095 / 22,378 (`chunk_id`는 23,095개 모두 다르고 `data/index/chunks.jsonl`의 `chunk_id` 집합과 같다. 본문이 같은 청크가 있어 해시 수가 더 적다) |
+| `chunks_index.jsonl` sha256 (LF 기준, 저장소 값) | `02911da7e429a77911bc0494cbe899a568c606bdfd20aa9fc6a13f475df628fa` |
+| `chunks_index.jsonl` sha256 (CRLF 기준) | `5346c625cf4de3a1cb5ce4bfb2c7463d7690aa60d2d8190919b6a780bf3781ee` |
+| `manifest.jsonl` sha256 (LF 기준, 저장소 값) / (CRLF 기준) | `4faafdecca3064902665c8d1329fa71dac00b8752e97d95242eb77a64d95865b` / `50344dfefc88f1f9f50c518d715bc118b499056c30be31cd68f2fa32d25775fe` |
+
+위 해시는 2026-11-14에 파일 바이트에서 직접 계산했다(CRLF 값은 LF 파일의 줄바꿈을 CRLF로 바꾼 바이트의 해시).
+
+**2. 운영 DB 행 수 조회와 열람 방법.** 읽기 전용(`SELECT`만) 조회다. 청크 표는 `chunks`, 판은 `versions`(`valid_to IS NULL`이 현재 판), 색인 상태는 `index_meta`다. 스냅샷 판은 `data/manifest.jsonl`에 있는 (`doc_id`, `version_id`)이고 그 밖의 판은 증분 수집이 넣은 판이다. 조회 스크립트(저장소 밖 묶음 `db_rowcount_report.py`)는 `DATABASE_URL`을 환경 변수에만 두고 전체, 스냅샷 대 증분, 현재 판 대 닫힌 판, `index_meta`를 한 번에 출력한다. 같은 합계는 DB 콘솔에서 `SELECT count(*) FROM chunks;`와 `SELECT status, generation, n_chunks FROM index_meta WHERE id = 1;`로도 볼 수 있다.
+
+| 구분 | 현재 판 행 수 | 닫힌 판 행 수 | 합 |
+|---|---|---|---|
+| 스냅샷 판 | 16,113 (판 1,228개) | 6,982 (판 284개) | 23,095 |
+| 증분 수집이 넣은 판 | 7,076 (판 286개) | 0 | 7,076 |
+| 전체(`chunks` 표) | 23,189 | 6,982 | 30,171 |
+
+`index_meta`(`status`, `generation`, `n_chunks`) 값: `ready`, 4, 23,095 (임베더 `voyage-4`, 1,024차원, 적재 2026-11-13 17:10 KST). 조회 시각: 2026-11-14 14:22 KST. 같은 조회에서 임베딩이 빈 행은 0, `versions`와 이어지지 않는 행은 0(30,171행 모두 이어짐), 같은 (`rule_seq`, `version_seq`) 중복 묶음은 0이었다. 스냅샷 판 행 합 23,095는 `data/index/chunks.jsonl` 청크 수와 같다.

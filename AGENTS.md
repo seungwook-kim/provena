@@ -24,7 +24,7 @@ Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + 
 
 ## 이 저장소에서 에이전트가 지킬 것
 
-1. **동결한 평가셋은 수정하지 않습니다.** `evals/FROZEN.json`에 해시가 기록된 파일(v1, v2)은 정답을 바꾸거나 건을 지우지 않습니다. 결과가 안 나와도 정답을 고치는 것은 측정이 아니라 맞추기입니다.
+1. **동결한 평가셋은 수정하지 않습니다.** `evals/FROZEN.json`에 해시가 기록된 파일(v1, v2, 검증 20건 `dataset_holdout_v1.jsonl`)은 정답을 바꾸거나 건을 지우지 않습니다. 결과가 안 나와도 정답을 고치는 것은 측정이 아니라 맞추기입니다.
 2. **LLM 호출은 `backend/services/llm.py`에서만** 합니다. 다른 곳에서 `openai` 등을 직접 import하지 않습니다(`backend/` 안은 `llm.py`뿐이다. 예외: 평가 스크립트 `evals/latency/deploy_ragas.py:265`는 `langchain_anthropic`을 직접 import한다. 임베딩은 LLM이 아니라 `backend/rag/retrieve/embed.py`가 Voyage REST를 부른다).
 3. **실험은 사전 등록 후 한 번에 하나만** 바꿉니다. `evals/PREREGISTER.md`에 기대를 먼저 적고 바꿉니다.
 4. **비밀값을 코드, 문서, 로그, 테스트 데이터에 적지 않습니다.** 키는 `.env`에만 둡니다.

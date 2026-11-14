@@ -57,7 +57,7 @@ ATTRIBUTION = {
     "notice": "GitLab 핸드북 기반 데모이며 GitLab Inc.와 제휴·보증 관계가 없습니다.",
 }
 MSG_INTERNAL = "답을 만드는 중 오류가 났습니다. 잠시 후 다시 시도해 주세요."
-MSG_LIMIT = "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다."
+MSG_LIMIT = "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요."
 MSG_PENDING = "승인 대기 중인 대화입니다. 관리자 승인이 끝난 뒤 이어 가세요."
 MSG_INDEX_NOT_READY = "검색 색인이 아직 준비되지 않아 답할 수 없습니다."
 COST_CAP_ERROR = "CostCapExceeded"

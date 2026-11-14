@@ -120,6 +120,9 @@ def test_cost_cap_is_limit_exceeded(monkeypatch):
     with Env(monkeypatch, search=capped) as env:
         _, ev = ask(env.client(env.alice), Q, "t1", as_of=AS_OF)
         assert [n for n, _ in ev] == ["error"] and ev[0][1]["data"]["code"] == "limit_exceeded"
+        msg = ev[0][1]["data"]["message"]
+        assert "비용 상한" in msg and "다시 물어봐 주세요" in msg        # 사용자가 할 일(질문을 줄이거나 나눈다)까지 적는다(체크포인트 D11)
+        assert "CostCapExceeded" not in msg and "$" not in msg          # 예외 원문과 금액은 화면에 내지 않는다
 
 
 def test_threads_list_and_detail(monkeypatch):

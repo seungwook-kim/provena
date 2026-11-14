@@ -1,0 +1,215 @@
+{
+  "embedder": "voyage-4",
+  "current_snapshot": 1228,
+  "current_incremental": 286,
+  "closed_incremental": 0,
+  "ord_anomaly": 0,
+  "targets": 286,
+  "skipped": 11,
+  "skipped_by_kind": {
+    "version_mismatch": 11
+  },
+  "versions_unchanged": 200,
+  "versions_to_replace": 75,
+  "pages_to_replace": 75,
+  "rows": {
+    "unchanged": 6442,
+    "changed": 256,
+    "new": 1,
+    "removed": 1
+  },
+  "rows_to_write": 2833,
+  "rows_new_in_replaced": 1,
+  "embeddings_needed": 17,
+  "vectors_reused": 2816,
+  "estimate": {
+    "texts": 17,
+    "chars": 14340,
+    "est_tokens": 5736,
+    "usd_per_mtok": 0.06,
+    "est_cost_usd": 0.000344
+  },
+  "dry_run": true,
+  "skipped_list": [
+    {
+      "rule_seq": 568252302,
+      "version_id": "b876d1750efc",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/workflows/2fa-removal.md: 그 커밋에서 마지막 수정은 1b440d50bce8, DB 판은 b876d1750efc"
+    },
+    {
+      "rule_seq": 775027110,
+      "version_id": "87c0971f1899",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/security/policies_and_standards/gitlab_projects_baseline_requirements.md: 그 커밋에서 마지막 수정은 8586740b5ab8, DB 판은 87c0971f1899"
+    },
+    {
+      "rule_seq": 860200805,
+      "version_id": "698c378a5a3a",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/managers/manager-responsibilities.md: 그 커밋에서 마지막 수정은 722e8767640c, DB 판은 698c378a5a3a"
+    },
+    {
+      "rule_seq": 1055982167,
+      "version_id": "3a9a13368020",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/support-engineer-responsibilities.md: 그 커밋에서 마지막 수정은 0e2507a6b043, DB 판은 3a9a13368020"
+    },
+    {
+      "rule_seq": 1412995586,
+      "version_id": "d94ae923b976",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/engineering/error-budgets/_index.md: 그 커밋에서 마지막 수정은 4976ee0d0e6a, DB 판은 d94ae923b976"
+    },
+    {
+      "rule_seq": 1872427631,
+      "version_id": "9b5041c478c0",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/support-time-off.md: 그 커밋에서 마지막 수정은 1174104e7328, DB 판은 9b5041c478c0"
+    },
+    {
+      "rule_seq": 1940236410,
+      "version_id": "00605fe223e5",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/workflows/dedicated_logs.md: 그 커밋에서 마지막 수정은 1947a845ed04, DB 판은 00605fe223e5"
+    },
+    {
+      "rule_seq": 2384551172,
+      "version_id": "20082a2b6d3c",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/support-pods/_index.md: 그 커밋에서 마지막 수정은 864a90642371, DB 판은 20082a2b6d3c"
+    },
+    {
+      "rule_seq": 2986091606,
+      "version_id": "766971ccc5e9",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/license-and-renewals/workflows/saas/associate_subscription_and_namespace.md: 그 커밋에서 마지막 수정은 a8967699e5dc, DB 판은 766971ccc5e9"
+    },
+    {
+      "rule_seq": 3170437715,
+      "version_id": "3a9a13368020",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/_index.md: 그 커밋에서 마지막 수정은 0e2507a6b043, DB 판은 3a9a13368020"
+    },
+    {
+      "rule_seq": 3613468920,
+      "version_id": "b876d1750efc",
+      "kind": "version_mismatch",
+      "detail": "content/handbook/support/workflows/ip-blocks.md: 그 커밋에서 마지막 수정은 f656f0243566, DB 판은 b876d1750efc"
+    }
+  ],
+  "dirty_versions": [
+    {
+      "rule_seq": 77945296,
+      "version_id": "678fcab6aa5b",
+      "path": "content/handbook/enterprise-data/ai/context-layer/setup.md",
+      "unchanged": 21,
+      "changed": 2,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 217056718,
+      "version_id": "2666725a9bd0",
+      "path": "content/handbook/engineering/infrastructure-platforms/projects.md",
+      "unchanged": 21,
+      "changed": 5,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 218199219,
+      "version_id": "2666725a9bd0",
+      "path": "content/handbook/engineering/infrastructure-platforms/gitlab-delivery/delivery/_index.md",
+      "unchanged": 58,
+      "changed": 1,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 234186130,
+      "version_id": "06d6738bb65d",
+      "path": "content/handbook/business-technology/enterprise-applications/pmo/pmo-governance.md",
+      "unchanged": 34,
+      "changed": 2,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 269743914,
+      "version_id": "2a7af73fc3b0",
+      "path": "content/handbook/support/data-analysis.md",
+      "unchanged": 8,
+      "changed": 1,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 412039261,
+      "version_id": "06d6738bb65d",
+      "path": "content/handbook/enterprise-data/marketing-analytics/marketing-analytics-data/_index.md",
+      "unchanged": 29,
+      "changed": 9,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 635220661,
+      "version_id": "2666725a9bd0",
+      "path": "content/handbook/engineering/data-engineering/analytics/optimize.md",
+      "unchanged": 41,
+      "changed": 4,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 766476598,
+      "version_id": "2666725a9bd0",
+      "path": "content/handbook/security/security-operations/sirt/security-incident-communication-plan.md",
+      "unchanged": 43,
+      "changed": 8,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 810924390,
+      "version_id": "2666725a9bd0",
+      "path": "content/handbook/engineering/infrastructure-platforms/gitlab-delivery/distribution/_index.md",
+      "unchanged": 43,
+      "changed": 2,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 837300421,
+      "version_id": "06d6738bb65d",
+      "path": "content/handbook/enterprise-data/platform/snowflake/_index.md",
+      "unchanged": 22,
+      "changed": 1,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 911208804,
+      "version_id": "06d6738bb65d",
+      "path": "content/handbook/business-technology/enterprise-applications/entapps-crm/finsys-access-requests.md",
+      "unchanged": 6,
+      "changed": 2,
+      "new": 0,
+      "removed": 0
+    },
+    {
+      "rule_seq": 917920005,
+      "version_id": "06d6738bb65d",
+      "path": "content/handbook/security/identity/infrastructure/_index.md",
+      "unchanged": 15,
+      "changed": 5,
+      "new": 0,
+      "removed": 0
+    }
+  ],
+  "replaced": 0,
+  "failed": [],
+  "stale": [],
+  "generation_bumped": false
+}

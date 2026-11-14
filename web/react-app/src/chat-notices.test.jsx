@@ -84,3 +84,37 @@ describe('승인 대기 안내 (⑥)', () => {
     expect(screen.queryByText('승인 대기 중')).toBeNull()
   })
 })
+
+// 체크포인트 D11: 실패 경로(비용 상한, 검색 결과 없음, 응답 끊김)마다 사용자가 할 일이 화면에 보여야 한다. 문장은 코드 상수를 가져오지 않고 그대로 적는다
+describe('실패 경로 안내 (D11)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+  const stream = events => () => new Response(sse(events), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+
+  it('비용 상한 오류는 서버 문구와 다시 시도 버튼을 보인다', async () => {
+    const MSG = '이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.'
+    await askInThread(stream([{ type: 'error', data: { code: 'limit_exceeded', message: MSG } }]))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(MSG)
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+
+  it('검색 결과가 없어 답하지 않으면 근거 부족 표시와 다음 행동을 보인다', async () => {
+    await askInThread(stream([{ type: 'done', data: { kind: 'refuse', code: 'no_results', message: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.' } }]))
+    expect(await screen.findByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.')).toBeTruthy()
+    expect(screen.getByText('근거 부족')).toBeTruthy()
+    expect(screen.getByText('질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.')).toBeTruthy()
+  })
+
+  it('검색 일시 오류 거절은 서버 문구가 이미 다시 시도를 말하므로 같은 안내를 겹치지 않는다', async () => {
+    await askInThread(stream([{ type: 'done', data: { kind: 'refuse', code: 'no_results', message: '검색을 지금 쓸 수 없어 답하지 않습니다. 잠시 뒤에 다시 시도해 주세요.' } }]))
+    expect(await screen.findByText('검색을 지금 쓸 수 없어 답하지 않습니다. 잠시 뒤에 다시 시도해 주세요.')).toBeTruthy()
+    expect(screen.queryByText('질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.')).toBeNull()
+  })
+
+  it('응답이 끝나기 전에 연결이 끊기면(시간 초과 포함) 안내와 다시 시도 버튼을 보인다', async () => {
+    await askInThread(stream([{ type: 'token', data: { text: '답 일부' } }]))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('응답이 끝나기 전에 연결이 끊겼습니다. 다시 시도해 주세요.')
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+})
