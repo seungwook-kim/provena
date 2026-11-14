@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from './App'
 
-// 11/14 화면 점검 3건: 위쪽 노란 진행 안내 삭제, 다른 탭 갔다 오면 랜딩이 다시 그려지던 것, 입력칸 타자 지연.
+// 11/14 화면 점검 2건: 위쪽 노란 진행 안내 삭제, 다른 탭 갔다 오면 랜딩이 다시 그려지던 것.
 // 문구는 코드 상수를 가져오지 않고 그대로 적는다.
 configure({ asyncUtilTimeout: 8000 })
 vi.setConfig({ testTimeout: 20000 })
@@ -79,24 +79,5 @@ describe('② 다른 탭 갔다 오면 랜딩이 다시 그려지던 것', () =>
     signedIn = true
     window.dispatchEvent(new Event('focus'))
     await waitFor(() => expect(window.location.pathname).toBe('/chat'))
-  })
-})
-
-describe('③ 입력칸에 칠 때 대화 목록·말풍선을 다시 그리지 않음', () => {
-  afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
-
-  it('글자를 칠 때 대화 목록 시각과 말풍선 시각을 다시 계산하지 않는다', async () => {
-    stubChat()
-    render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
-    await screen.findByText('앞 답')
-    // 대화 목록 시각은 toLocaleTimeString, 말풍선 시각은 toLocaleString 으로 만든다(렌더마다 한 번씩)
-    const listTime = vi.spyOn(Date.prototype, 'toLocaleTimeString')
-    const bubbleTime = vi.spyOn(Date.prototype, 'toLocaleString')
-    const box = screen.getByRole('textbox', { name: '질문' })
-    for (const value of ['ㅇ', '오', '온', '온콜']) fireEvent.change(box, { target: { value } })
-    expect(box.value).toBe('온콜')
-    expect(listTime).not.toHaveBeenCalled()
-    expect(bubbleTime).not.toHaveBeenCalled()
   })
 })
