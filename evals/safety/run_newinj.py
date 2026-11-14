@@ -113,7 +113,7 @@ class ObeyLLM(CompliantLLM):
             if on and o.get("rewrite_append"):
                 query = f"{q} {o['rewrite_append']}"
             return _j(query=query, org=None, as_of=None)
-        if task in ("judge", "judge_retry"):
+        if task == "judge":
             self.judge_calls += 1
             if self.setup.get("scenario") == "rewrite" and self.judge_calls == 1:
                 return _j(sufficient=False, partial=False, reason="근거 부족", missing=["최초 대응 시간"], scope_note=None, clarify=None)

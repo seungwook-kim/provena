@@ -640,7 +640,7 @@ def test_partial_route_runs_the_same_in_multi():
         outs.append((run(make(fake_search, llm=llm, decompose=True, grounding_llm=True)), [t for t, _ in llm.calls]))
     (single, calls_single), (many, calls_multi) = outs
     assert many["kind"] == single["kind"] == "answer" and many["answer"] == single["answer"] and MSG_PARTIAL_NOTE in many["answer"]
-    assert calls_multi == calls_single and many["agent_trace"] == ["retriever"] * 3 + ["writer", "verifier"]
+    assert calls_multi == calls_single and many["agent_trace"] == ["retriever", "writer", "verifier"]   # 나뉜 질문의 일부 판정은 재검색 없이 작성으로 간다(사전 등록 62.63)
 
 
 def test_rewrite_after_refused_answer_runs_the_same_in_multi():
@@ -987,7 +987,7 @@ ROUTE_TABLE = {
     "insufficient_at_cap": ({"judge_reason": "x", "retries": 3}, ["retriever"] * 3, ("give_up",), "give_up"),
     "partial_single_fact_at_cap": ({"judge_reason": "x", "retries": 3, "judge_partial": True, "sub_queries": ["a"]}, ["retriever"] * 3, ("give_up",), "give_up"),
     "partial_split_at_cap": ({"judge_reason": "x", "retries": 3, "judge_partial": True, "sub_queries": ["a", "b"]}, ["retriever"] * 3, ("writer", "give_up"), "writer"),
-    "partial_split_early": ({"judge_reason": "x", "retries": 1, "judge_partial": True, "sub_queries": ["a", "b"]}, ["retriever"], ("retriever", "writer", "give_up"), "retriever"),
+    "partial_split_early": ({"judge_reason": "x", "retries": 1, "judge_partial": True, "sub_queries": ["a", "b"]}, ["retriever"], ("retriever", "writer", "give_up"), "writer"),   # 62.63: 코드 경로는 작성(재검색 없음). 라우터가 고르는 길로 재검색은 허용 경로에 남긴다
     "search_error": ({"search_error": "unavailable", "judge_reason": "x", "retries": 1}, ["retriever"], ("end",), "end"),
     "after_writer": ({"judge_reason": "x"}, ["retriever", "writer"], ("verifier",), "verifier"),
     "after_verifier": ({}, ["retriever", "writer", "verifier"], ("end",), "end"),
@@ -1573,7 +1573,7 @@ def test_max_research_single_and_multi_stay_the_same(_off, limit):
         llm = normal_llm(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=rewrites())
         outs[label] = (run(build(fake_search, llm=llm, max_research=limit)), llm.calls)
     assert _stable(outs["multi"][0]) == _stable(outs["single"][0]) and outs["multi"][1] == outs["single"][1]
-    assert outs["multi"][0]["agent_trace"] == ["retriever"] * (limit + 1) + ["writer", "verifier"]  # 나뉜 질문의 일부 근거는 상한 뒤 작성으로 간다
+    assert outs["multi"][0]["agent_trace"] == ["retriever", "writer", "verifier"]  # 나뉜 질문의 일부 근거는 상한과 관계없이 첫 판정 뒤 작성으로 간다(사전 등록 62.63)
 
 
 @pytest.mark.parametrize("limit,trace,allowed,code", [
@@ -1660,8 +1660,8 @@ PROMPT_LOG_SHA256 = {
     "recover": (dict(decompose=TWO_FACTS, judge=[NO, j(sufficient=True)], rewrite=True, grounding=j(grounded=True)), "a05208bb5c200e96095bc441a8a4a7daa22c21236a31396d351b33ecc5f6f35b",
                 ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "answer", "grounding"]),
     "partial": (dict(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=True, grounding=j(grounded=True)),
-                "8bb8cb094b5f6e1a87d331b925869df47166463245321ce9b54170ad4085cad6",
-                ["classify", "rewrite", "decompose", "judge", "rewrite", "judge", "rewrite", "judge", "answer", "grounding"]),
+                "f481fa386f625d893244e10b91a5fc38a2454c2603dfcca0a8e9f001e6271a2c",
+                ["classify", "rewrite", "decompose", "judge", "answer", "grounding"]),   # 62.63: 나뉜 질문의 일부 판정은 재검색 없이 일부 답으로 간다. 프롬프트 본문은 그대로이고 재검색 호출만 빠진다
 }
 
 
@@ -2151,7 +2151,7 @@ def _inputs(llm, task):
 
 @pytest.mark.parametrize("label,build", BUILDERS, ids=BUILDER_IDS)
 def test_research_gets_the_missing_fact_and_seen_titles_instead_of_the_reason(_off2, label, build):
-    llm = _llm(decompose=TWO_FACTS, judge=[GAP, j(sufficient=True)], rewrite=_counted_rewrites(), grounding=j(grounded=True))
+    llm = _llm(decompose=NO_SPLIT, judge=[GAP, j(sufficient=True)], rewrite=_counted_rewrites(), grounding=j(grounded=True))
     run(build(fake_search, llm=llm, grounding_llm=True))
     first, again = _inputs(llm, "rewrite")
     assert "아직 근거를 못 찾은 사실" not in first and "이미 찾은 문서 제목" not in first
@@ -2210,7 +2210,7 @@ def test_partial_answer_gets_the_scope_note_as_data(_off2, label, build):
 
 @pytest.mark.parametrize("label,build", BUILDERS, ids=BUILDER_IDS)
 def test_a_scope_note_is_dropped_when_a_later_judge_finds_enough(_off2, label, build):
-    llm = _llm(decompose=TWO_FACTS, judge=[GAP, j(sufficient=True)], rewrite=_counted_rewrites(), grounding=j(grounded=True))
+    llm = _llm(decompose=NO_SPLIT, judge=[GAP, j(sufficient=True)], rewrite=_counted_rewrites(), grounding=j(grounded=True))
     out = run(build(fake_search, llm=llm, grounding_llm=True))
     assert out["kind"] == "answer" and "범위 메모" not in _inputs(llm, "answer")[0]
 
@@ -2222,8 +2222,8 @@ def test_answer_input_has_no_scope_note_without_partial():
 
 @pytest.mark.parametrize("build", [b[1] for b in BUILDERS], ids=BUILDER_IDS)
 def test_judge_gap_does_not_leak_into_the_next_question_of_a_thread(_off2, build):
-    llm = _llm(decompose=TWO_FACTS, judge=[GAP, GAP, GAP, j(sufficient=False, partial=True, reason="일부", clarify=None), j(sufficient=False, partial=True, reason="일부", clarify=None), j(sufficient=False, partial=True, reason="일부", clarify=None)],
-               rewrite=_counted_rewrites(), grounding=j(grounded=True))
+    # 첫 질문은 판정이 빠진 사실을 남긴 일부 답(재검색 없음, 사전 등록 62.63), 둘째 질문은 근거 부족 뒤 재검색해 충분하다. 재검색 입력에 첫 질문의 판정 기록이 새면 안 된다
+    llm = _llm(decompose=TWO_FACTS, judge=[GAP, NO, j(sufficient=True)], rewrite=_counted_rewrites(), grounding=j(grounded=True))
     g = build(fake_search, InMemorySaver(), llm=llm, grounding_llm=True)
     cfg = {"configurable": {"thread_id": "gap"}}
     for _ in range(2):
@@ -2231,8 +2231,8 @@ def test_judge_gap_does_not_leak_into_the_next_question_of_a_thread(_off2, build
     answers = _inputs(llm, "answer")
     assert "범위 메모" in answers[0] and "범위 메모" not in answers[1]
     rewrites = _inputs(llm, "rewrite")
-    second_start = len(rewrites) // 2
-    assert "아직 근거를 못 찾은 사실" not in rewrites[second_start]
+    assert len(rewrites) == 3                       # 첫 질문 1회, 둘째 질문 처음과 재검색 2회
+    assert all("아직 근거를 못 찾은 사실" not in r for r in rewrites[1:])
 
 
 def test_prompts_carry_no_words_from_the_evaluation_questions():
@@ -2599,13 +2599,13 @@ def test_answer_wait_uses_only_the_quick_answer_after_a_search_again(_off2, monk
 
 @pytest.mark.parametrize("label,build", BUILDERS, ids=BUILDER_IDS)
 def test_answer_wait_asks_for_the_careful_answer_only_once(_off2, monkeypatch, label, build):
-    """재검색 뒤와 일부 답(작성 에이전트)에서는 추론 답을 부르지 않는다. 멀티는 작성 에이전트도 재시도 수를 읽어야 한다."""
+    """추론 답은 한 번만 부른다. 나뉜 질문의 일부 판정은 재검색 없이 일부 답으로 가므로(사전 등록 62.63) 첫 판정과 같이 쓴 추론 답을 그대로 쓴다. 멀티는 작성 에이전트도 재시도 수를 읽어야 한다."""
     monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "1")
     monkeypatch.setenv("GRAPH_JUDGE_ANSWER", "parallel_all")
     llm = _llm(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=_counted_rewrites(),
                grounding=j(grounded=True), answer=_reply("느린답"), answer_fast=_reply("빠른답"))
     out = run(build(fake_search, llm=llm, grounding_llm=True))
-    assert out["kind"] == "answer" and "빠른답" in out["answer"]
+    assert out["kind"] == "answer" and "느린답" in out["answer"]
     assert sum("[[task:answer]]" in s for s, u in llm.log) == 1
 
 
@@ -2632,11 +2632,11 @@ def test_answer_budget_left_still_waits_for_the_careful_answer(_off2, monkeypatc
 
 @pytest.mark.parametrize("label,build", BUILDERS, ids=BUILDER_IDS)
 def test_answer_wait_reuses_the_parallel_draft_for_the_last_partial_answer(_off2, monkeypatch, label, build):
-    """재검색이 끝나 일부 답으로 가면 마지막 판정과 같이 쓴 답을 쓰고 답을 다시 부르지 않는다."""
+    """일부 답으로 가면 마지막 판정과 같이 쓴 답을 쓰고 답을 다시 부르지 않는다. 추론 답이 즉시 끝나면 빠른 답이 시작되기 전에 취소되는 경쟁이 생기므로 추론 답을 조금 늦춘다."""
     monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "1")
     monkeypatch.setenv("GRAPH_JUDGE_ANSWER", "parallel_all")
     llm = _llm(decompose=TWO_FACTS, judge=j(sufficient=False, partial=True, reason="일부", clarify=None), rewrite=_counted_rewrites(),
-               grounding=j(grounded=True), answer=_reply("느린답"), answer_fast=_reply("빠른답"))
+               grounding=j(grounded=True), answer=_slow(0.2, _reply("느린답")), answer_fast=_reply("빠른답"))
     out = run(build(fake_search, llm=llm, grounding_llm=True))
     judges = sum("[[task:judge]]" in s for s, u in llm.log)
     assert out["kind"] == "answer" and sum("[[task:answer_fast]]" in s for s, u in llm.log) == judges

@@ -166,7 +166,7 @@ def test_sub_research_off_keeps_the_limit(monkeypatch):
         seen.append(q)
         return [ESC]
     out = run(build_graph(only_esc, llm=esc_llm(), decompose=True, max_research=1), Q_ESC)
-    assert len(seen) == 2 and not out.get("sub_research_phase")
+    assert len(seen) == 1 and not out.get("sub_research_phase")   # 나뉜 질문의 일부 판정은 재검색 없이 일부 답으로 끝난다(사전 등록 62.63). 하위 질문 재검색(B1)은 꺼져 있어 더 찾지 않는다
 
 
 def test_page_research_searches_inside_the_context_pages(monkeypatch):

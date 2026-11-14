@@ -117,7 +117,7 @@ def test_requery_skip_seen_takes_only_new_chunks(monkeypatch, multi):
             return []
         asked.append(k)
         return [ESC, IMOC, EXTRA][:k]  # ESC는 이미 문맥에 있다
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)],
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)],   # 나뉜 질문의 일부 판정은 재검색하지 않는다(사전 등록 62.63)
             answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))
     out = run(graph(multi, lambda q: [ESC], m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
     assert asked == [6]  # 새 청크 5개 + 문맥 1개만큼 더 받는다
@@ -136,12 +136,12 @@ def test_requery_skip_seen_caps_new_chunks_and_off_keeps_k(monkeypatch):
             return []
         asked.append(k)
         return [ESC, *many][:k]
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)], answer=lambda u: cite(ESC))
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)], answer=lambda u: cite(ESC))   # 62.63: 나뉘지 않은 질문
     out = run(build_graph(lambda q: [ESC], llm=m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
     assert asked == [5] and len(out["chunks"]) == 5  # 꺼짐: k=5 그대로, 문맥에 있던 ESC도 다시 받는다
     monkeypatch.setenv("GRAPH_REQUERY_SKIP_SEEN", "1")
     asked.clear()
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)], answer=lambda u: cite(ESC))
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, j(sufficient=True, reason="", clarify=None)], answer=lambda u: cite(ESC))
     out = run(build_graph(lambda q: [ESC], llm=m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
     assert len(out["chunks"]) == 1 + REQUERY_NEW
 
@@ -159,9 +159,9 @@ def test_requery_skip_seen_stops_section_reads_after_a_page_requery(monkeypatch,
         return {"text": "x", "version_id": ESC.version_id}
     second = j(checks=[], sufficient=False, partial=True, reason="일부", missing=["리더십"], scope_note=None, clarify=None, query="IMOC",
                next_tool="get_section", chunk_id=IMOC.chunk_id)
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, second, j(sufficient=True, reason="", clarify=None)],
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, second, j(sufficient=True, reason="", clarify=None)],   # 62.63: 나뉘지 않은 질문
             answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))
-    out = run(build_graph(lambda q: [ESC], llm=m, decompose=True, max_research=1, use_skills=True, page_search=lambda *a: [IMOC], section_reader=reader), Q_ESC)
+    out = run(build_graph(lambda q: [ESC], llm=m, decompose=True, max_research=2, use_skills=True, page_search=lambda *a: [IMOC], section_reader=reader), Q_ESC)   # 나뉘지 않은 질문은 셋째 판정까지 재검색 상한 2가 필요하다
     assert out["kind"] == "answer"
     assert (reads == []) is on and (out["search_stats"].get("section_reads", 0) == 0) is on
 

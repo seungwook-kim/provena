@@ -1109,7 +1109,7 @@ def test_compound_question_with_partial_evidence_answers_that_part_and_says_the_
     fn, calls = counting_search()
     llm = normal_llm(decompose=TWO_FACTS, judge=PARTIAL, rewrite=_rewrites(), grounding=j(grounded=True))
     out = run(graph(fn, llm=llm, decompose=True, grounding_llm=True, answer_store=InMemoryAnswerStore()))
-    assert len(calls) == 3 and llm.count("judge") == 3  # 나머지 근거를 찾으러 재검색은 다 한다
+    assert len(calls) == 1 and llm.count("judge") == 1  # 나뉜 질문의 일부 판정은 재검색하지 않고 일부 답으로 간다(사전 등록 62.63)
     assert out["kind"] == "answer" and out["citations"] and out["answer_id"] and out["answer"].count(MSG_PARTIAL_NOTE) == 1
     assert out["grounding"]["partial_route"] is True
     assert "자료가 직접 답하는 사실만 답하고" in next(u for t, u in llm.calls if t == "answer")
@@ -1125,7 +1125,7 @@ def test_partial_answer_must_still_pass_the_grounding_judge():
 def test_research_that_finds_the_rest_gives_a_full_answer_without_the_note():
     from backend.graph.build import MSG_PARTIAL_NOTE
 
-    llm = normal_llm(decompose=TWO_FACTS, judge=[PARTIAL, j(sufficient=True)], rewrite=_rewrites(), grounding=j(grounded=True))
+    llm = normal_llm(decompose=TWO_FACTS, judge=[NOT_PARTIAL, j(sufficient=True)], rewrite=_rewrites(), grounding=j(grounded=True))   # 일부가 아닌 부족 판정은 지금도 재검색한다
     out = run(graph(llm=llm, decompose=True, grounding_llm=True))
     assert out["kind"] == "answer" and MSG_PARTIAL_NOTE not in out["answer"] and out["judge_partial"] is False
     assert "자료가 직접 답하는 사실만 답하고" not in next(u for t, u in llm.calls if t == "answer")

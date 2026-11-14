@@ -121,8 +121,7 @@ SERVICE_ENV: dict[str, str] = {
 # 측정 실행기(`evals/agent/exp_multi_v2.py`)에서는 같은 이름의 인자로 켠다. 꺼진 상태는 지금과 같다(tests/test_speed_p95_code.py).
 CANDIDATE_ENV: dict[str, str] = {
     # 사전 등록 62.40: 답·인용·거절이 그대로인 속도 셋(ANSWER_STORE_REUSE_CONN, GRAPH_REVISE_AHEAD, LLM_DEADLINE_BY_TASK)은 서비스 값(SERVICE_ENV)으로 옮겼다.
-    # 추론 끔은 정확률 확인이 필요해 후보로 남기고 기본 꺼짐으로 둔다
-    "GRAPH_JUDGE_RETRY_FAST": "1",            # 62.40: 나뉜 질문의 재검색 뒤 판정만 추론 끔. 측정은 기본 꺼짐으로 한다(정확률 하락이면 뺀다)
+    # 지금 후보 스위치는 없다(재검색 뒤 판정만 추론을 끄던 `GRAPH_JUDGE_RETRY_FAST`는 코드째 제거했다)
 }
 
 

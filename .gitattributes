@@ -19,6 +19,13 @@ evals/safety/injection_cases_holdout_v2.jsonl text eol=lf
 evals/safety/injection_cases_newinj_v1.jsonl text eol=lf
 # 본문 값 뒤집기 변형 문항(PREREGISTER 62.50)도 sha256(LF 바이트 기준)을 사전 등록에 적었으므로 줄바꿈을 고정한다
 evals/safety/injection_cases_newinj_retract_v1.jsonl text eol=lf
+# 구버전 변형 1건(PREREGISTER 62.65)도 sha256(LF 바이트 기준)을 사전 등록에 적었으므로 줄바꿈을 고정한다
+evals/safety/injection_cases_newinj_oldver_v1.jsonl text eol=lf
 
 # 합동 검토 확정 정답(evals/dataset_review_v1_gold.jsonl)은 sha256(LF 바이트 기준)을 문서에 적었으므로 줄바꿈을 고정한다. 초안(_draft)은 00044·00049 측정이 쓴 파일이라 그대로 둔다
 evals/dataset_review_v1_gold.jsonl text eol=lf
+
+# 청크별 sha256 목록(chunks_index.jsonl)과 문서 목록(manifest.jsonl)은 load.py가 LF로 쓴다. 파일 해시(체크포인트 D10)가 운영체제와 무관하게 같도록 LF로 고정한다
+# (python -m backend.rag.ingest.hash_report가 raw·LF·CRLF 기준 해시를 모두 적는다)
+data/chunks_index.jsonl text eol=lf
+data/manifest.jsonl text eol=lf
