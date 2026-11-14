@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | D-14 이어 묻기(팀장 결정 ①, 조장 지시로 처리): `specs/question-graph.md`에 '이어 묻기' 절(설계, 한계, AC-14~21), `specs/d6-chat-frontend.md`에 `done.understood_question` 처리와 AC-14, `SDD.md` 6장 `done` 행과 설명, `decisions.md` 1행, `deliverables/ai_tools_log.md` 1행, `pr-notes/PR-next.md` 'D-14' 절 | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | 놓친 것 K-23 기록: `decisions.md` 1행(로컬 데모 키 파일과 '다시 입력' 방식, 버린 대안 4개), `specs/privacy-hardening.md` Edge Cases EC-06·EC-07과 AC-04·AC-05, `pr-notes/PR-next.md` K-23 절(운영에서는 어떻게 되는지 답 포함), `deliverables/ai_tools_log.md` 1행. 루트 `MYINFO_SPEC.md` 9장에 K-23 소절 | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | 조장 11/15 목록 D-15·H-34 문서(조장 지시로 처리): `specs/question-graph.md` AC-11에 기본 기준일은 한국 날짜, `specs/d6-chat-frontend.md` done 표와 AC-06에 거절 사유별 안내, `decisions.md` 2행, `deliverables/ai_tools_log.md` 1행, `pr-notes/PR-next.md` 1-2절. `api/openapi.json`은 다시 만들어도 바뀌지 않음(대화 이력은 형식을 선언하지 않은 응답) | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `specs/106-signup-approval.md` Edge Cases에 '가입 화면은 이메일 칸만 둔다(설계)' 판정 추가(놓친 것 11/13 새로 발견 8), `specs/login.md` `/me` 머리글 `X-Session-Optional`(H-33), `api/openapi.json` 다시 만듦(`/me` 204 한 줄), README 화면 둘러보기에 compose `/demo/*` 열림(H-25), `decisions.md`에 결정 3개(가입 화면 이메일만, HEAD 405, `/me` 첫 확인 머리글) | 미정 |

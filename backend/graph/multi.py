@@ -358,6 +358,8 @@ def build_multi_graph(
         if not log:  # 첫 방문: 기억 불러오기와 질의 분석(단일의 load_memory, classify)
             apply({"agent_trace": [], "handoffs": []})  # 에이전트를 한 번도 부르지 않고 끝나도 기록 칸은 있다
             apply(parts.node("load_memory").invoke(dict(view)))
+            if parts.route("load_memory", view) == "followup":  # 이어 묻기(D-14): 단일과 같은 분기, 같은 노드. 같은 대화에 앞 질문이 있을 때만 지난다
+                apply(parts.node("followup").invoke(dict(view)))
             apply(parts.node("classify").invoke(dict(view)))
         trace = view.get("agent_trace") or []
         last = trace[-1] if trace else None

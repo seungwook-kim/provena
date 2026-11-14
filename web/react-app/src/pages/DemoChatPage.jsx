@@ -174,6 +174,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
       {message.role === 'user' ? <div className="demo-user-message" title={messageTime} tabIndex={messageTime ? 0 : undefined}>{message.text}</div> : <article className={`demo-answer ${message.state}`} title={messageTime} tabIndex={messageTime ? 0 : undefined}>
         {message.state === 'approval' && <p>{APPROVAL_WAITING_TEXT}</p>}
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
+        {message.understoodQuestion && <p className="demo-answer-understood" role="note">이렇게 이해했습니다: {message.understoodQuestion}</p>}
         {message.state === 'generating' && <GeneratingProgress />}
         {message.text && <p>{message.text}</p>}
         {showsNoEvidenceHint(message) && <p className="demo-answer-hint">{NO_EVIDENCE_HINT}</p>}
