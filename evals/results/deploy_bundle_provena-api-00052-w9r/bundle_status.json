@@ -1,0 +1,55 @@
+﻿{
+    "spent_usd":  1.9951,
+    "revision":  "provena-api-00052-w9r",
+    "stages":  [
+                   {
+                       "stage":  "preflight",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0092,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00052-w9r"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  1.1992,
+                       "detail":  "evals/results/deploy_latency_provena-api-00052-w9r"
+                   },
+                   {
+                       "stage":  "holdout",
+                       "state":  "done",
+                       "cost_usd":  0.4054,
+                       "detail":  "evals/results/deploy_latency_holdout_provena-api-00052-w9r"
+                   },
+                   {
+                       "stage":  "cite",
+                       "state":  "done",
+                       "cost_usd":  0.2313,
+                       "detail":  "evals/results/deploy_latency_cite_new_provena-api-00052-w9r"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "range",
+                       "state":  "done",
+                       "cost_usd":  0.15,
+                       "detail":  "evals/results/range_retrieval_62_7/answers_deploy_provena-api-00052-w9r"
+                   },
+                   {
+                       "stage":  "ragas",
+                       "state":  "failed",
+                       "cost_usd":  0,
+                       "detail":  "exit 1"
+                   }
+               ],
+    "commit":  "8122c86"
+}

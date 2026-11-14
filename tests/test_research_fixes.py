@@ -71,9 +71,13 @@ def test_refuse_on_none_off_keeps_the_research(multi):
 def test_refuse_on_none_leaves_partial_and_sufficient(monkeypatch, multi):
     monkeypatch.setenv("GRAPH_REFUSE_ON_NONE", "1")
     fn, seen = recorder([ESC])
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
+    out = run(graph(multi, fn, m, decompose=True, max_research=1), Q_ESC)
+    assert out["kind"] == "answer" and not out.get("judge_none") and len(seen) == 2  # 나뉘지 않은 질문의 부분 판정은 재검색한다(나뉜 질문은 재검색 없이 일부 답: 사전 등록 62.63)
+    fn, seen = recorder([ESC])
     m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
     out = run(graph(multi, fn, m, decompose=True, max_research=1), Q_ESC)
-    assert out["kind"] == "answer" and not out.get("judge_none") and len(seen) == 2  # 부분 판정은 재검색한다
+    assert out["kind"] == "answer" and not out.get("judge_none") and len(seen) == 1 and sum(1 for t, _ in m.calls if t == "judge") == 1
     fn, seen = recorder([REVIEW])
     out = run(graph(multi, fn, llm(answer=cite(REVIEW)), max_research=1), Q_REVIEW)
     assert out["kind"] == "answer" and len(seen) == 1
@@ -96,7 +100,7 @@ def test_same_page_replaces_the_partial_research(monkeypatch, multi):
     monkeypatch.setenv("GRAPH_RESEARCH_SAME_PAGE", "1")
     fn, seen = recorder([ESC])
     page_search, pages = page_recorder([IMOC])
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, OK], answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, OK], answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))   # 나뉜 질문의 부분 판정은 재검색하지 않는다(62.63)
     out = run(graph(multi, fn, m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
     assert len(seen) == 1  # 전체 재검색은 하지 않는다
     assert pages == [("EOC escalation", [ESC.rule_seq])]  # 판정이 낸 재검색어로 문맥 페이지 안에서 찾는다
@@ -118,7 +122,7 @@ def test_same_page_keeps_the_research_after_a_none_judgment(monkeypatch, multi):
 def test_same_page_needs_a_page_search(monkeypatch):
     monkeypatch.setenv("GRAPH_RESEARCH_SAME_PAGE", "1")
     fn, seen = recorder([ESC])
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
     run(build_graph(fn, llm=m, decompose=True, max_research=1), Q_ESC)
     assert len(seen) == 2
 
@@ -126,6 +130,6 @@ def test_same_page_needs_a_page_search(monkeypatch):
 def test_same_page_off_keeps_the_global_research():
     fn, seen = recorder([ESC])
     page_search, pages = page_recorder([IMOC])
-    m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
+    m = llm(decompose=j(split=False, sub_questions=[]), judge=[PARTIAL, OK], answer=lambda u: cite(ESC))
     run(build_graph(fn, llm=m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
     assert len(seen) == 2 and pages == []

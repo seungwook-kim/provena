@@ -29,9 +29,13 @@
 그 문장은 입력에서 빼고, 그 문장이 새로 내세운 값(다른 원문과 질문에 없는 것)이 든 답 문장과 그 주장을 옮긴 답 문장은 출력 검사가 뺀다.
 섹션 제목이 변경 이력인 청크와 오기·정정 주장이 없는 변경 기록("15분에서 45분으로 변경")은 대상이 아니다. 자세한 조건은 아래 "본문의 값을 뒤집는 문장" 절 주석.
 
+보강(PREREGISTER 62.65, 값을 거두는 말): 위 주장 어휘에 "구버전·폐기된 기준·더 이상 유효하지 않다·deprecated·superseded·outdated"처럼 앞 값을 거두었다고 말하는 낱말을 더했다.
+이 방어는 어휘 목록이다. 주장하는 말, 본문 값을 가리키는 것, 새 숫자+단위 값이 한 문장에 함께 있어야 걸리므로 목록에 없는 말투는 입력과 출력 모두에서 놓친다.
+출력 검사도 같은 목록을 쓰므로 목록이 놓친 말은 출력에서도 막지 못한다.
+
 한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
-지시가 아닌 사실처럼 쓴 거짓 가운데 오기·정정 주장 없이 값만 다르게 적은 것, 변경 기록처럼 쓴 것, 숫자와 단위가 아닌 값(낱말, 한글 수사)을 뒤집는 것은 못 잡는다.
+지시가 아닌 사실처럼 쓴 거짓 가운데 오기·정정 주장 없이 값만 다르게 적은 것, 옛 값을 적은 변경 기록처럼 쓴 것("종전 15분에서 45분으로 변경"), 숫자와 단위가 아닌 값(낱말, 한글 수사)을 뒤집는 것은 못 잡는다.
 사람에게 한 지시도 구조가 같으면(답 자리, 쓰기 동작, 대문자 코드) 지시로 보아 뺄 수 있다. 본문에 적힌 진짜 정정 문장도 같은 꼴이면 빠진다(그때 답은 정정 전 값이 된다).
 """
 from __future__ import annotations
@@ -263,7 +267,8 @@ def _utf8(raw: bytes) -> str:
 
 # ---------- 본문의 값을 뒤집는 문장(거짓 정정, PREREGISTER 62.50) ----------
 # 지시가 아니라 사실처럼 쓴 문장이라 지시 판정으로는 잡히지 않는다. 한 문장에 아래 셋이 모두 있을 때만 "값을 뒤집는 문장"으로 본다.
-#   주장: 오기·오타·잘못·typo·in error 같은 틀렸다는 말(강한 말)이나 정정·실제로는·actually 같은 말(약한 말)
+#   주장: 오기·오타·잘못·typo·in error 같은 틀렸다는 말이나 구버전·폐기된 기준·deprecated·superseded 같이 앞 값을 거두었다는 말(강한 말),
+#        정정·실제로는·actually 같은 말이나 폐기·무효·대체되·no longer valid·replaced by 같은 낱말(약한 말, 62.65)
 #   가리킴: 그 말 가까이(`_FLIP_WIN`자)에 본문의 값을 가리키는 것. (가) 문장 밖 본문에 이미 있는 값을 다시 적고 바로 뒤(`_FLIP_AFTER`자)에 강한 말이 온 것,
 #          (나) "위 15분", "the 15 minutes above"처럼 가리키는 말이 붙은 값, (다) "위 기준", "the limit above"처럼 값을 가리키는 이름.
 #          문장 머리의 정정 이름표("정정:", "Correction (날짜):", "Erratum:")는 가리킴 없이도 주장으로 본다(대신 문장 밖에 같은 종류의 다른 값이 있어야 한다)
@@ -275,13 +280,26 @@ _FLIP_ADJ = 8
 _FLIP_AFTER = 25
 _COND_BEFORE = re.compile(r"\b(?:if|when(?:ever)?|whether|unless|in\s+case|should\s+you)\b|만약|만일", _I)   # 틀렸다는 말 앞에 오는 조건 말
 _COND_AFTER = re.compile(r"경우|[가-힣]면(?![가-힣])|(?:을|를|할|될|된|난|한)\s*때(?![가-힣])")                  # 틀렸다는 말 뒤에 붙는 조건 꼴("잘못 입력하면", "오류가 난 경우")
+_FLIP_KO_VALUE = r"(?:기준|값|수치|기한|한도|금액|규정|조항|내용|표기|버전)"   # 폐기·무효 같은 말이 붙는 값 이름
+_FLIP_KO_RETRACT = r"(?:폐기|폐지|철회|무효화?|실효|대체)"                    # 값을 거두었다는 말(PREREGISTER 62.65)
 _FLIP_STRONG = re.compile(
     r"오기|오타|오식|오류|잘못|틀린|틀렸|착오|"
     r"\b(?:typos?|typographical|misprint(?:s|ed)?|errat(?:um|a)|corrigend(?:um|a)|mistakes?|mistaken(?:ly)?|in\s+error|erroneous(?:ly)?|incorrect(?:ly)?|wrong(?:ly)?|misstated?|"
-    r"should\s+(?:read|say|have\s+(?:read|said)))\b", _I)
+    r"should\s+(?:read|say|have\s+(?:read|said)))\b|"
+    # 62.65: 값을 거두었다는 말. 한국어는 "구버전", "폐기된 기준", "기준은 폐기되었다"처럼 값 이름과 붙은 꼴만 강한 말이다(낱말 하나는 아래 약한 말)
+    r"구\s*버전|옛\s*버전|(?:이전|예전|지난)\s*버전|"
+    rf"{_FLIP_KO_RETRACT}(?:된|되었던|됐던)\s*{_FLIP_KO_VALUE}|"
+    rf"{_FLIP_KO_VALUE}(?:은|는|이|가|도)?\s*(?:이미\s*|현재\s*|더\s*이상\s*)?(?:{_FLIP_KO_RETRACT}(?:되|됐|됨|이다|입니다|이며|이고)|유효하지\s*(?:않|아니)|효력(?:이|을)?\s*(?:없|잃|상실))|"
+    r"\b(?:deprecated|superseded|obsolete|outdated|out[-\s]of[-\s]date|rescinded|retracted|overridden)\b", _I)
 _FLIP_WEAK = re.compile(
     r"정정|바로잡|실제(?:로는?|\s*(?:기준|값|시행|적용|한도|기한|금액))|"
-    r"\b(?:corrections?|corrected|correcting|actually|in\s+(?:fact|reality|practice)|the\s+(?:real|actual|true|correct)\s+\w+)\b", _I)
+    r"\b(?:corrections?|corrected|correcting|actually|in\s+(?:fact|reality|practice)|the\s+(?:real|actual|true|correct)\s+\w+)\b|"
+    # 62.65: 낱말 하나로도 약한 말이다(가리킴과 새 값이 한 문장에 함께 있어야 걸린다)
+    r"폐기|폐지|철회|무효|실효|대체(?:되|됐|된)|유효하지\s*(?:않|아니)|효력(?:이|을)?\s*(?:없|잃|상실)|"
+    # 62.65 결과를 본 뒤 추가: 문장 머리의 "최신 기준은 45분이다", 옛 값 없이 "2025-07-03부로 45분으로 변경되었다"(아래 _FLIP_HEAD, _FLIP_CHANGED)
+    r"(?:최신|현행)\s*(?:기준|값|수치|기한|한도|금액)(?:은|는|이|가)(?![가-힣])|"
+    r"(?:부로|부터|자로)\s*(?:(?!에서)[^.\n]){0,40}?(?:으로|로)\s*(?:변경|조정|개정|수정)(?:되었|됐|됨|된다|했|하였)|"
+    r"\bno\s+longer\s+(?:valid|applicable|appl(?:y|ies)|accurate|current|correct|in\s+(?:effect|force))\b|\b(?:null\s+and\s+)?void\b|\breplaced\s+by\b", _I)
 _DEICTIC = re.compile(
     r"(?<![가-힣])위(?:의|에|에서)?(?![가-힣])|상기|(?<![가-힣])앞(?:의|서|에서)(?![가-힣])|본문|전술한|"
     r"\b(?:above|earlier|previous(?:ly)?|preceding|aforementioned|foregoing|stated|listed|mentioned|quoted|the\s+body|"
@@ -294,7 +312,13 @@ _VALUE_REF = re.compile(
     rf"\b{_VALUE_NOUN}\s+(?:\w+\s+){{0,2}}?(?:above|earlier|previously)\b", _I)
 _FLIP_LABEL = re.compile(
     r"\s*(?:[※*•>#\-–—\[(（【]\s*)*(?:정정|정오표|바로잡습니다|corrections?|errat(?:um|a)|corrigend(?:um|a))(?:\s*(?:사항|공지|안내|notice|note))?"
-    r"\s*(?:[(（\[][^)\]）\n]{0,30}[)）\]])?\s*[:：\]】)]", _I)
+    r"\s*(?:[(（\[][^)\]）\n]{0,30}[)）\]])?\s*[:：\]】)]|"
+    # 62.65 결과를 본 뒤 추가: 값을 거두었다는 이름표("Superseded: ...", "Deprecated: ...", "구버전: ...")
+    r"\s*(?:[※*•>#\-–—\[(（【]\s*)*(?:superseded|obsolete|deprecated|outdated|rescinded|retracted|구\s*버전|폐기됨?)\s*[:：\]】)]", _I)
+# 62.65 결과를 본 뒤 추가: 문장 머리의 "최신 기준은", "현행 한도는"(앞 값을 가리키는 말이 없어도 새 값을 내세우는 이름)
+_FLIP_HEAD = re.compile(r"\s*(?:[※*•>#\-–—\[(（【]\s*)*(?:최신|현행)\s*(?:기준|값|수치|기한|한도|금액)(?:은|는|이|가)(?![가-힣])")
+# 62.65 결과를 본 뒤 추가: 옛 값을 적지 않고 "(날짜)부로 45분으로 변경되었다"고만 한 문장. "종전 15분에서 45분으로 변경했다"처럼 "에서"로 옛 값을 적은 변경 기록은 아니다
+_FLIP_CHANGED = re.compile(r"(?:부로|부터|자로)\s*(?:(?!에서)[^.\n]){0,40}?(?:으로|로)\s*(?:변경|조정|개정|수정)(?:되었|됐|됨|된다|했|하였)")
 _CHANGE_HISTORY = re.compile(
     r"(?:변경|개정|수정|제정|제\s*·?\s*개정)\s*(?:이력|내역|기록|연혁)|연혁|부칙|"
     r"\b(?:change\s?logs?|(?:revision|version|change|document|edit)\s+history|release\s+notes?|what['’]?s\s+(?:new|changed))\b", _I)
@@ -395,7 +419,7 @@ def _flip_claim(s: str, outside: set[tuple[str, str]]) -> tuple[str, list[tuple[
         return "old", old
     if any(_near(r.span(), m, _FLIP_WIN) for r in _VALUE_REF.finditer(s) for m in strong + weak):
         return "ref", []
-    return ("label", []) if _FLIP_LABEL.match(s) else ("", [])
+    return ("label", []) if _FLIP_LABEL.match(s) or _FLIP_HEAD.match(s) or _FLIP_CHANGED.search(s) else ("", [])
 
 
 def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:

@@ -1,0 +1,15 @@
+{
+ "total_chunks": 23095,
+ "selected": 4318,
+ "mismatch": 80,
+ "numbers_mismatch": 0,
+ "rows_mismatch": 0,
+ "structure_problems": 85,
+ "overlap_chunks": 7107,
+ "table_row_mid": 0,
+ "first_cell_missing": 0,
+ "cells_lost_whole_ge1": 0,
+ "overlap_tail": 7022,
+ "overlap_label_plus_tail": 85,
+ "overlap_other": 0
+}
