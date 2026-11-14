@@ -124,12 +124,26 @@ def test_failed_batch_is_recorded_as_error_and_retried_on_resume(world, tmp_path
     def boom(part):
         raise RuntimeError("x")
 
-    assert dr.run_scoring(samples, out, boom, lambda: (0.0, None), max_cost=1.0, log=lambda m: None) == 0
+    assert dr.run_scoring(samples, out, boom, lambda: (0.0, None), max_cost=1.0, log=lambda m: None) == 4   # 유효한 값이 한 칸도 없으면 정상 종료(0)가 아니다
     rows, done = dr.load_done(out / "ragas_rows.jsonl")
     assert len(rows) == 3 and all(r["error"] for r in rows) and done == set()
     calls: list = []
     dr.run_scoring(samples, out, fake_evaluator(calls), lambda: (0.0, None), max_cost=1.0, log=lambda m: None)
     assert sum(len(c) for c in calls) == 3
+
+
+def test_all_nan_scores_exit_nonzero_with_message_but_partial_values_pass(world, tmp_path):
+    samples, _ = build(world)
+    msgs: list[str] = []
+    none_all = lambda part: [{m: None for m in dr.NAMES} for _ in part]   # noqa: E731 - RAGAS가 NaN만 돌려준 경우
+    out = tmp_path / "nan"
+    out.mkdir()
+    assert dr.run_scoring(samples, out, none_all, lambda: (0.0, None), max_cost=1.0, log=msgs.append) == 4
+    assert any("유효한 지표 값이 없다" in m for m in msgs)
+    some = lambda part: [{**{m: None for m in dr.NAMES}, "faithfulness": 0.9} for _ in part]   # noqa: E731
+    out2 = tmp_path / "some"
+    out2.mkdir()
+    assert dr.run_scoring(samples, out2, some, lambda: (0.0, None), max_cost=1.0, log=lambda m: None) == 0
 
 
 def run_main(w, *extra, out="out"):

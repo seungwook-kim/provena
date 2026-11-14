@@ -152,7 +152,7 @@ def _call_cost(model: Any, usage: dict, meta: dict) -> float | None:
     from backend.services import cost
     if _prices is None:
         _prices = cost.load_prices()
-    return round(cost.cost_usd(model, int(i or 0), int(o or 0), _prices), 8)
+    return round(cost.usage_cost(model, usage, _prices), 8)   # 프롬프트 캐시 읽기·쓰기 토큰은 `CostTracker`와 같은 배수로 센다
 
 
 def _json_ok(text: Any) -> bool | None:
@@ -237,6 +237,10 @@ class LlmTraceHandler(BaseCallbackHandler):
                        cli_duration_ms=meta.get("duration_ms"), cli_duration_api_ms=meta.get("duration_api_ms"),
                        cli_wall_s=meta.get("wall_s"), cli_queue_s=meta.get("cli_queue_s"))
             row["cost_usd"] = _call_cost(row["model"], usage, meta)
+            from backend.services.cost import cache_tokens
+            read, w5, w1 = cache_tokens(usage)
+            if read or w5 or w1:   # 프롬프트 캐시(`LLM_PROMPT_CACHE`)가 읽거나 쓴 입력 토큰. 캐시가 없으면 칸을 만들지 않는다(기록 모양 그대로)
+                row.update(cache_read_tokens=read, cache_creation_tokens=w5 + w1)
             content = getattr(msg, "content", None)
             if isinstance(content, list):  # Anthropic API 블록 목록: 생각 블록 수(생각을 껐는지 확인용)
                 row["thinking_blocks"] = sum(1 for b in content if isinstance(b, dict) and b.get("type") in ("thinking", "redacted_thinking"))

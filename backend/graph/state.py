@@ -47,6 +47,7 @@ class AgentState(TypedDict, total=False):
     judge_quote_ids: list[str]  # BO2(`GRAPH_ANSWER_BEST2=1`): 마지막 판정의 구절이 든 문맥 청크
     judge_quotes: list[list[str]]  # BO2: 마지막 판정의 사실별로 그 구절이 든 문맥 청크 id 목록(구절 글은 싣지 않는다). 측정 기록용이고 답 경로는 읽지 않는다
     best2_log: dict  # BO2: 두 답 후보의 인용, S 안/밖 수, 고른 쪽과 이유
+    judge_votes: list[dict]  # 판정 다수결(`GRAPH_JUDGE_VOTE=1`)마다 표 구성(표별 충분·일부, 확정 방식, 일찍 확정했는지). 기록용이고 답 경로는 읽지 않는다(사전 등록 62.67)
     early_answer: dict  # `GRAPH_JUDGE_ANSWER`를 켰을 때 판정과 같이 받은 답(`write_answer`가 낼 칸들). 충분 판정일 때만 있다
     judged_chunks: int  # `GRAPH_STOP_STALLED_SEARCH`를 켰을 때 마지막 판정이 본 근거 수
     search_stalled: bool  # `GRAPH_STOP_STALLED_SEARCH`를 켰을 때 재검색이 근거를 더하지 못했는지
