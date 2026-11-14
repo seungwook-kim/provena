@@ -7,6 +7,9 @@
 - 422 응답에는 입력값을 되풀이하지 않는다: 팀 표준 `ApiError`로 `{"error": {"code": "validation_error", "message": ..., "details": {"fields": {칸: 이유}}}}`.
   (`HTTPException`의 dict detail은 운영 오류 처리기가 `reason`이 없으면 message·칸별 이유를 버린다. `backend/api/errors.py`)
 - 본문은 로그에 남기지 않는다. 저장소·암호화 실패는 이유를 숨기고 503으로 답한다.
+- 예외 하나(놓친 것 K-23): 로컬 데모가 스스로 만든 키(`cipher.local_generated`)로 돌 때만, 저장된 줄을 풀 수 없으면 503 대신
+  404 `profile_reentry_required`("다시 입력해 주세요")로 답한다. 화면은 빈 칸을 열고 PUT으로 덮어쓴다. `PROFILE_ENC_KEYS`를 준
+  실행(운영 포함)은 그대로 503이다. 저장소 오류도 그대로 503이다.
 """
 from __future__ import annotations
 
@@ -26,7 +29,7 @@ from starlette.responses import Response
 
 from backend.api.errors import ApiError
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, require_csrf
-from backend.services.profile_crypto import ProfileCipher
+from backend.services.profile_crypto import ProfileCipher, ProfileCryptoError
 from backend.services.profile_store import FIELDS, EncryptedProfile, ProfileStore
 
 log = logging.getLogger(__name__)
@@ -34,6 +37,8 @@ log = logging.getLogger(__name__)
 INVALID_MESSAGE = "입력한 내용을 확인해 주세요."
 UNAVAILABLE_MESSAGE = "내 정보 저장소를 사용할 수 없습니다."
 NOT_FOUND_MESSAGE = "내 정보가 아직 없습니다."
+REENTRY_CODE = "profile_reentry_required"
+REENTRY_MESSAGE = "저장된 내 정보를 열 수 없습니다. 로컬 데모의 암호화 키가 바뀌었습니다. 다시 입력해 저장해 주세요."
 MAX_BODY_BYTES = 8192   # 네 칸 최대 길이를 다 채워도 1KB 안팎. 큰 본문은 읽기 전에 거절한다
 
 _MOBILE = re.compile(r"01[016789][0-9]{7,8}")
@@ -184,7 +189,12 @@ def create_profile_router(
         user_id = str(user.user_id)
         try:
             loaded = await run_in_threadpool(load_plain, user_id)
-        except Exception as exc:   # 저장소·키·암호문 오류. 값·이유는 응답과 로그에 쓰지 않는다
+        except ProfileCryptoError as exc:   # 줄은 있는데 지금 키로 풀 수 없다
+            log.warning("내 정보 읽기 실패: %s", type(exc).__name__)
+            if getattr(cipher, "local_generated", False):   # 로컬 데모가 만든 키일 때만: 막지 않고 다시 입력하게 한다(K-23)
+                raise ApiError(404, REENTRY_CODE, REENTRY_MESSAGE, headers={"Cache-Control": "no-store"}) from None
+            raise HTTPException(status_code=503, detail=UNAVAILABLE_MESSAGE, headers={"Cache-Control": "no-store"}) from None
+        except Exception as exc:   # 저장소 오류 등. 값·이유는 응답과 로그에 쓰지 않는다
             log.warning("내 정보 읽기 실패: %s", type(exc).__name__)
             raise HTTPException(status_code=503, detail=UNAVAILABLE_MESSAGE, headers={"Cache-Control": "no-store"}) from None
         if loaded is None:

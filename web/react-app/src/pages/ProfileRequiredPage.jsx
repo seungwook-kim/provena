@@ -10,6 +10,7 @@ const PHONE_PATTERN = /^010\d{8}$/
 const TEAM_OPTIONS = ['보안', '인프라·SRE', 'IT 운영', '재무', '개발']
 const ROLE_OPTIONS = ['개발자', 'SRE', '관리자', '정책 담당자']
 const SERVICE_MAX_LENGTH = 100   // backend/api/routes.py MemoryPatch
+const REENTRY_FALLBACK = '저장된 내 정보를 열 수 없습니다. 다시 입력해 저장해 주세요.'
 const MEMORY_FAILED = '기본 정보(이름·소속 팀·전화번호·주소)는 저장했지만 AI 기억(업무 역할·담당 서비스)은 저장하지 못했습니다. 다시 저장해 주세요.'
 
 // AI 기억(GET /me/memory)의 rank·service 를 화면의 업무 역할·담당 서비스로 옮긴다.
@@ -90,14 +91,20 @@ function ProfileEditPage() {
 
   useEffect(() => {
     let active = true
-    Promise.all([getProfileForEdit(), getMemory().then(memoryToForm, () => null)])
+    // 404는 "읽을 내 정보가 없다"이다. 빈 칸을 열어 다시 입력·저장하게 한다. 로컬 데모에서 암호화 키가 바뀌어 저장된 줄을
+    // 못 푸는 경우 서버가 404 profile_reentry_required 와 안내문을 준다(놓친 것 K-23, backend/profile_api.py). 503 등은 그대로 오류다.
+    const emptyOn404 = loadError => (loadError?.status === 404
+      ? { reentry: loadError.code === 'profile_reentry_required' ? (loadError.message || REENTRY_FALLBACK) : '' }
+      : Promise.reject(loadError))
+    Promise.all([getProfileForEdit().catch(emptyOn404), getMemory().then(memoryToForm, () => null)])
       .then(([profile, memory]) => {
         if (!active) return
         const nextForm = { team: profile.dept || '', role: memory?.role || '', service: memory?.service || '', name: profile.name || '', phone: formatPhone(profile.phone), address: profile.address || '' }
         setForm(nextForm)
         setInitialForm(nextForm)
         setMemoryBase(memory)
-        if (!memory) setError('AI 기억(업무 역할·담당 서비스)을 불러오지 못해 이 두 칸은 저장되지 않습니다. 새로고침 후 다시 시도해 주세요.')
+        const notes = [profile.reentry, !memory && 'AI 기억(업무 역할·담당 서비스)을 불러오지 못해 이 두 칸은 저장되지 않습니다. 새로고침 후 다시 시도해 주세요.'].filter(Boolean)
+        if (notes.length > 0) setError(notes.join(' '))
       })
       .catch(loadError => { if (active) setError(loadError.message || '회원정보를 불러오지 못했습니다.') })
       .finally(() => { if (active) setLoading(false) })
