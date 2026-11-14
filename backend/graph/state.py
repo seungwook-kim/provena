@@ -6,7 +6,32 @@ State에 둘 것과 Store에 둘 것을 구분하세요.
 
 청크는 dict(`Chunk.model_dump()`)로 담는다. 체크포인트 직렬화 문제를 피하려는 선택이다.
 """
-from typing import TypedDict
+from typing import Annotated, TypedDict
+
+MAX_PREV_QUESTIONS = 2  # 이어 묻기(D-14)에 쓰는 같은 대화의 앞 질문 수(직전 질문과 그 앞 질문)
+
+
+def keep_recent_questions(old: list[str] | None, new: list[str] | None) -> list[str]:
+    """`asked` 칸의 합치기 규칙. 입력으로 온 질문을 뒤에 붙이고 최근 것만(지금 질문 + 앞 질문 `MAX_PREV_QUESTIONS`개) 남긴다.
+    바로 앞과 같은 글(다시 시도)은 다시 붙이지 않는다. 문자열이 아니거나 빈 값은 버린다."""
+    out = [q for q in (old if isinstance(old, (list, tuple)) else ()) if isinstance(q, str)]
+    for q in new if isinstance(new, (list, tuple)) else ():
+        if isinstance(q, str) and q.strip() and (not out or out[-1] != q):
+            out.append(q)
+    return out[-(MAX_PREV_QUESTIONS + 1):]
+
+
+def previous_questions(state: dict | None) -> list[str]:
+    """이어 묻기에 넘길 같은 대화의 앞 질문(오래된 것이 앞, 최대 `MAX_PREV_QUESTIONS`개). `asked`의 마지막은 지금 질문이라 뺀다.
+    직전 질문을 이어 묻기로 다시 썼으면(`user_question`이 그 질문) 다시 쓴 쪽(`understood_question`)을 준다: 혼자서도 뜻이 통해 이어 묻기가 여러 번 이어져도 대상이 남는다.
+    `asked`가 없거나 질문이 하나뿐이면(새 대화, 평가 실행기) 빈 목록이다."""
+    state = state or {}
+    asked = [q for q in (state.get("asked") or ()) if isinstance(q, str) and q.strip()]
+    prev = asked[:-1][-MAX_PREV_QUESTIONS:]
+    understood = state.get("understood_question")
+    if prev and isinstance(understood, str) and understood.strip() and state.get("user_question") == prev[-1]:
+        prev[-1] = understood
+    return prev
 
 
 class AgentState(TypedDict, total=False):
@@ -17,6 +42,9 @@ class AgentState(TypedDict, total=False):
     as_of: str | None  # 기준일 YYYY-MM-DD. 없으면 오늘로 채운다
     as_of_given: bool  # 입력에 기준일이 있었는지. 있으면 질문에서 뽑은 시점으로 덮지 않는다
     org: str | None  # 사용자가 지정한 절(핸드북 섹션)
+    asked: Annotated[list[str], keep_recent_questions]  # 이어 묻기(D-14): 이 대화에서 `/chat`이 받은 질문(친 글, 최근 3개). `/chat`만 질문마다 `[질문]`을 넘기고 체크포인트에 쌓인다. 넘기지 않는 실행(평가 실행기)에는 없다
+    user_question: str | None  # 이어 묻기로 `question`을 다시 쓴 질문에서 사용자가 친 글. `followup` 노드가 지날 때마다 다시 쓴다(다시 쓰지 않았으면 None)
+    understood_question: str | None  # 이어 묻기로 다시 쓴 질문(그 질문의 `question`과 같다). 다시 쓰지 않았으면 None. 화면의 "이렇게 이해했습니다"와 다음 질문의 앞 질문에 쓴다
     # --- 대화 중 값 ---
     profile: dict
     route: str  # rule | decision | review | out_of_domain

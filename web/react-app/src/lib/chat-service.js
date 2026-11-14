@@ -50,7 +50,9 @@ export function renumberByAppearance(message) {
 function mapMessage(message, fallbackState = 'done') {
   if (message.role === 'user') return { ...message, text: message.text ?? '' }
   const citations = (Array.isArray(message.citations) ? message.citations : []).filter(citation => citation && typeof citation === 'object').map(normalizeCitation)
-  return { ...message, role: 'assistant', text: message.text ?? message.answer ?? '', state: message.state ?? fallbackState, citations }
+  // 이어 묻기(D-14): 다시 연 대화에서도 서버가 준 다시 쓴 질문(understood_question)을 같은 안내로 보인다
+  const understood = typeof message.understood_question === 'string' && message.understood_question ? { understoodQuestion: message.understood_question } : {}
+  return { ...message, role: 'assistant', text: message.text ?? message.answer ?? '', state: message.state ?? fallbackState, citations, ...understood }
 }
 
 export function mapThreadRecord(record = {}) {
@@ -169,6 +171,8 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
           if (event.type === 'error') draft.errorCode = event.data?.code
           if (event.type === 'done') {
             if (event.data?.attribution) draft.attribution = event.data.attribution
+            // 이어 묻기(D-14): 서버가 질문을 완전한 질문으로 다시 썼을 때만 온다 → 답 위에 "이렇게 이해했습니다"로 보인다
+            if (typeof event.data?.understood_question === 'string' && event.data.understood_question) draft.understoodQuestion = event.data.understood_question
             if (event.data?.code === 'no_results') {
               draft.state = 'no-evidence'
               draft.text = event.data?.message ?? draft.text

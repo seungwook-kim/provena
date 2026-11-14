@@ -48,3 +48,45 @@
 - `EVAL_REPORT.md:143` MRR 0.733(결과 파일은 0.722), `:199` int8 Recall 0.758(로컬 30조합 기준 0.750) — 이번 묶음에 넣지 않았다.
 - SDK(`mock_erp/sdk/`)는 다시 만들지 않았다. `/me` 메서드 이름이 그대로라 `test_sdk_matches_openapi`는 영향이 없다.
 - compose로 `/demo/*`가 실제로 열리는지는 띄워 보지 않았다(1절 H-25).
+
+### D-14 이어 묻기(팀장 결정 ①)
+- 작업자: 박진형 (jinyeong-731). 팀장이 ①(앞 질문을 함께 넘겨 완전한 질문으로 다시 쓰고 "이렇게 이해했습니다"를 보임)을 골랐고 조장 지시로 처리했다. 버린 대안 ② 되묻기, ③ 동결 전 안 함은 `docs/decisions.md` 2026-11-15 행.
+- **다른 사람 폴더를 고쳤다(TEAM_GUIDE 4장 1번 예외, 조장 지시)**: `backend/graph/`·`backend/prompts/`·`backend/api/`·`docs/`(김승욱), `web/`(강경희, 11/11부터 박진형이 맡음). `backend/schemas/`는 바꾸지 않았다.
+- 실제 LLM·Voyage 호출, DB, 운영 호출 없음. 시험은 가짜 모델과 메모리 체크포인터다.
+
+**설계 요약** (정본은 `docs/specs/question-graph.md` '이어 묻기' 절)
+1. 앞 질문이 오는 곳: `/chat`이 질문마다 그래프 입력에 `asked: [질문]`을 더한다. 상태 칸 `asked`의 합치기 규칙이 같은 thread(`<user_id>:<thread_id>`)의 체크포인트에 최근 3개(지금 + 앞 2개)를 쌓는다. 그래프가 실행을 시작할 때 같이 열리므로 `/chat`은 체크포인트를 더 읽지 않는다.
+2. 다시 쓰기: 앞 질문이 있을 때만 `load_memory` 다음에 `followup` 노드를 지난다. LLM 1회(`[[task:rewrite_followup]]`, `backend/services/llm.py`로 받은 같은 모델), 출력 `{"followup": bool, "question": "..."}`. 직전 질문을 다시 썼으면 다시 쓴 쪽을 앞 질문으로 넘긴다.
+3. 실패 처리: 이어 묻기가 아님, JSON 아님, 빈 값, 4000자 초과, 호출 예외, 코드 검사(내부 표식·프롬프트 문장, 프롬프트 요구, 가짜 자료 구분자, 지시 문장)에 걸림 → 원 질문 그대로 답한다. 비용 상한 예외만 올린다. 형식이 깨져도 다시 묻지 않는다.
+4. 안전: 앞 질문은 프롬프트에 넣기 전에 지시 문장·구분자·프롬프트 요구를 빼고 한 줄 500자로 자른다. 프롬프트 요구뿐인 지금 질문은 다시 쓰지 않아 `classify`가 친 글로 범위 밖 처리한다. 그 밖의 검사(범위 밖 분류, 시점 표현, 되묻기, 기간 검사)는 다시 쓴 질문으로 돈다.
+5. 화면: 다시 썼을 때만 `done.understood_question`. 화면은 답 위에 "이렇게 이해했습니다: …". 대화 이력의 질문 글과 대화 제목은 친 글 그대로, 다시 쓴 질문은 그 답 항목의 `understood_question`.
+6. 끄기: `CHAT_FOLLOWUP=0`(기본 켬). `.env.example`에는 넣지 않았다(서비스 값 묶음을 시험이 대조하는 파일이라 건드리지 않음).
+
+| 항목 | 문제 | 고친 것 | 근거 |
+|---|---|---|---|
+| 앞 질문 전달 | 그래프 입력이 지금 질문 하나뿐이라 "고객은요?"가 새 질문으로 처리됨 | `backend/api/routes.py` `chat_events`가 `asked: [질문]`을 더함, `backend/graph/state.py` `asked` 칸(합치기 규칙 `keep_recent_questions`)과 `previous_questions` | [코드] `backend/api/routes.py:272-273`, `backend/graph/state.py:11-34,45` / [실측] `test_chat_passes_only_same_user_same_thread_questions`(앨리스 t1·t2, 밥 t1을 섞어 보내도 그 사용자의 그 대화 질문만, 최대 2개) |
+| 다시 쓰기 노드 | 이어 묻는 질문을 완전한 질문으로 바꾸는 단계가 없음 | `backend/graph/build.py` `followup` 노드와 `load_memory`의 조건 분기, `backend/prompts/question.py` `FOLLOWUP_SYSTEM`·`followup_prev`·`followup_user`·`followup_question` | [코드] `backend/graph/build.py:546-564,1762-1764`, `backend/prompts/question.py:107-118,517-560` / [실측] `test_followup_question_is_rewritten_and_used_downstream`(분류·재작성·판정·답 입력이 다시 쓴 질문), `test_followup_question_reaches_first_search_when_decompose_is_on`(첫 검색 질의) |
+| 첫 질문은 그대로 | 새 단계가 첫 질문과 평가 경로를 바꾸면 안 됨 | 앞 질문이 없으면 노드를 지나지 않음(호출 0, 노드 순서 `load_memory -> classify` 그대로) | [실측] `test_first_question_makes_no_followup_call_and_skips_the_node`, `test_chat_first_question_of_a_named_thread_makes_no_call`. 기존 시험 파일 31개 1,517개가 고치지 않고 통과 |
+| DB 왕복 | 처음 설계(질문 전에 `get_state`로 앞 질문 읽기)는 사전 등록 62.16에서 없앤 체크포인트 읽기를 되살려 기존 시험 4개가 실패 | 상태 칸에 쌓는 방식으로 바꿔 `/chat`의 `get_state` 호출 수가 그대로 | [실측] 첫 설계에서 `tests/test_chat_final_from_stream_paths.py` 4개 실패 → 바꾼 뒤 통과, `test_chat_new_thread_reads_no_history`(`get_state` 0회) |
+| 실패해도 답함 | 다시 쓰기 실패가 요청을 막으면 안 됨 | 모든 실패는 원 질문으로 진행, 비용 상한만 올림 | [실측] `test_bad_followup_reply_falls_back_to_the_original_question` 11가지, `test_cost_cap_is_not_swallowed` |
+| 앞 질문 속 지시 | 앞 질문이 다시 쓰기 프롬프트에 지시로 들어가거나, 다시 쓴 질문(뒤 단계에서 사용자 질문으로 취급)에 옮겨질 수 있음 | 입력 정화(`followup_prev`)와 응답 검사(`followup_question`) | [실측] `test_instructions_in_previous_questions_never_reach_the_prompt` 3가지, `test_previous_questions_are_one_line_cut_and_cannot_fake_delimiters`, `test_rewritten_question_with_instruction_or_marker_is_dropped` 5가지, `test_prompt_request_is_not_rewritten` |
+| 화면 전달 | 다시 쓴 질문을 사용자가 볼 길이 없음 | `backend/graph/stream.py` `done.understood_question`(이번 실행이 다시 썼을 때만), `routes.py` `_messages`(질문 글은 친 글, 답 항목에 `understood_question`), 화면 `lib/chat-service.js`·`pages/DemoChatPage.jsx`·`styles.css` | [코드] `backend/graph/stream.py:64-65`, `backend/api/routes.py:182-185,201` / [실측] `test_chat_done_has_understood_question_only_when_rewritten`, `test_thread_messages_keep_typed_text_and_carry_understood_question`, `test_next_question_does_not_inherit_understood_question`, `web/react-app/src/followup-understood.test.jsx` 4개 |
+| 멀티 그래프 | Supervisor가 `load_memory`·`classify`를 직접 불러 새 분기를 타지 않음 | `backend/graph/multi.py` 첫 방문에서 같은 분기와 노드를 부름. 하위 에이전트 `reads`는 그대로(`question`만 읽는다) | [코드] `backend/graph/multi.py:361-362` / [실측] `test_multi_graph_rewrites_followup_like_single`(단일과 호출 순서·결과 같음), `test_stream_done_has_understood_question_only_when_rewritten[multi]` |
+| 단계 이름·비용 | 새 호출이 단계별 비용과 Langfuse에 잡혀야 함 | 따로 등록할 목록이 없다: 단계 이름은 노드와 표지에서 자동으로 `followup/rewrite_followup` | [코드] `backend/services/llm_trace.py:130-133` / [실측] `test_step_name_follows_node_and_task` / [추정] Langfuse 화면에서 실제로 그 이름으로 보이는지는 띄워 보지 않았다 |
+
+**평가·녹화 재생 영향**
+- 평가 실행기(`evals/agent/run_eval.py:63-68`, `exp_review_v1.py:316`, `exp_joint_review.py:169,195`, `evals/ci_current_eval.py:206-208`)는 문항마다 새 thread로 `graph.invoke`를 직접 부르고 `asked`를 넘기지 않는다 → `followup` 노드를 지나지 않고 호출·입력·답이 그대로다. 달라지는 것은 상태에 빈 목록 `asked: []` 칸이 하나 더 생기는 것뿐이다 [코드]. 배포 응답 시간 측정(`evals/latency/deploy_latency.py`)은 `thread_id` 없이 문항마다 새 대화라 앞 질문이 없다 [코드: 같은 파일 12행 설명]. **평가셋 재측정은 하지 않았다**(유료 호출).
+- 키 없는 데모: 녹화한 질문은 대화의 첫 질문이라 새 호출이 없고 요청 키가 그대로다. 같은 대화의 둘째 질문부터는 녹화에 없는 `rewrite_followup` 호출이라 재생 모델이 고정 문장을 돌려주고(JSON 아님) 원 질문 그대로 간다 [실측: `test_replay_model_keeps_the_original_question`, `tests/test_demo_replay.py`·`test_demo_replay_fresh.py`·`test_demo_record_roundtrip.py` 통과]. 다시 녹화하지 않았다.
+- `docs/api/openapi.json`: 요청 모양과 응답 모델이 그대로라 바뀌지 않는다(`python docs/api/export_openapi.py` 뒤 diff 없음) [실측].
+
+**확인하지 못한 것**
+- 실제 모델이 이어 묻는 질문을 얼마나 정확히 가려내고 다시 쓰는지(가짜 모델로만 시험). 프롬프트 문구는 한 번도 실제 모델에 넣어 보지 않았다.
+- 둘째 질문부터 늘어나는 LLM 호출 1회의 응답 시간·비용.
+- 브라우저에서 실제 서버와 이은 화면(vitest의 가짜 fetch로만 확인).
+- 이 기능 전에 만든 대화는 `asked`가 비어 있어 배포 뒤 첫 질문은 앞 질문 없이 처리된다(그다음 질문부터 이어진다) [코드].
+
+**시험** (로컬 Python 3.13 가상환경, 키·DB 없음)
+- 새 시험: `python -m pytest -q tests/test_followup_question.py` 45개 통과. `npx vitest run src/followup-understood.test.jsx` 4개 통과.
+- 대상 pytest 32개 파일(새 파일 포함: 질문 그래프, 멀티, 채팅 API, 대화 이력, 스트림 최종값, 녹화 재생, 정화·안전, MCP 기록, 결정표·합동 검토, 속도 스위치, 평가 실행기): 1,562 통과, 2 건너뜀, 2 제외. 전체 pytest는 돌리지 않았다(합친 뒤 돌린다).
+- 전체 vitest: `npx vitest run` 41개 파일 446개 통과.
+- 변이 16개(앞 질문 전달, 다시 쓴 질문 쓰기, `done` 칸, 앞 질문 정화, 응답 검사 2, 예외 처리, 첫 질문 분기, 멀티, 최근 2개 상한, 다시 쓴 앞 질문, 대화 이력 글, 끄는 스위치, 화면 표시, 화면 값 받기, 다시 연 대화): 모두 새 시험이 실패로 잡았고, 끝난 뒤 원본 바이트 대조와 변이 표식 0건을 확인했다.

@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | D-14 이어 묻기(팀장 결정 ①, 조장 지시로 처리): 같은 대화에 앞 질문이 쌓여 있을 때만 지나는 `followup` 노드를 `load_memory`와 `classify` 사이에 더했다(`build.py`, 조건 분기). 지금 질문이 앞 질문에 기대는 질문이면 LLM 1회(`[[task:rewrite_followup]]`)로 완전한 질문으로 다시 써 `question`을 바꾸고 `user_question`(친 글)·`understood_question`을 남긴다. 이어 묻기가 아니거나 응답이 깨지거나 호출이 실패하거나 코드 검사(내부 표식, 프롬프트 요구, 가짜 자료 구분자, 지시 문장)에 걸리면 원 질문 그대로다. 앞 질문이 없는 실행(새 대화, `asked`를 넘기지 않는 평가 실행기)은 노드 순서와 호출이 그대로다(상태에 빈 `asked: []` 칸만 더 생긴다). `state.py`에 칸 3개(`asked`는 최근 3개만 쌓는 합치기 규칙 `keep_recent_questions`, `user_question`, `understood_question`)와 `previous_questions`, `stream.py`가 이번 실행이 다시 썼을 때만 `done.understood_question`을 낸다, `multi.py` Supervisor가 같은 분기와 노드를 부른다. 설계와 AC는 `docs/specs/question-graph.md` '이어 묻기' 절. 실제 모델로 다시 쓰기 품질은 재지 않았다 | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `answer_fixes.py` `_ECHO_URL`: `//` 없는 스킴(`javascript:` `vbscript:` `data:` `file:` `blob:` `mailto:`)도 주소로 보아 되묻기 글에 되풀이하지 않음(놓친 것 11/13 새로 발견 5, 조장 지시로 처리). 시험 `tests/test_answer_fixes.py` | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-11: 되묻기 글이 질문의 URL·SQL 꼴·40자 넘는 영문 문장을 되풀이하지 않게 `answer_fixes.py`에 거름을 더했다. 주소 거름은 TLD 목록이 아니라 주소 꼴(스킴, 점으로 이은 이름 + 2자 이상 영문 끝자리, IPv4)로 본다. `config.yml` 같은 파일 이름도 함께 막히며 이때는 인용 없는 일반 문구로 되묻는다 | #131 |
 | 2026-11-12 | 김승욱 (Claude Code) | (1) 넓힌 첫 검색(나뉜 질문, 달러 금액 없음)의 답 근거를 앞 5자리 우선으로 고름(사전 등록 62.44): `build.py`의 `core_chunks`, 첫 후보는 앞 5자리만 보고 쓰고 둘째 후보는 전체 문맥으로 쓰며 `pick_two`가 판정 구절 위치로 고름(기록 `best2_log.rule=core_first`). (2) 분해가 뺀 앞 문장의 전제를 하위 질문 앞에 붙임(사전 등록 62.45): `decompose.py`의 `keep_premise`. 스위치는 없고 시험 `tests/test_widened_first_search.py`를 더했다 | 이번 PR |
@@ -39,4 +40,5 @@
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| G-003 | 2026-11-15 | 김승욱 | 같은 대화에서 주어 없이 이어 묻는 질문("고객은요?")이 새 질문으로 처리됨(D-14). 그래프 입력이 지금 질문 하나뿐이었다(`backend/api/routes.py` `graph_input`) | 이어 묻는 질문의 검색어에 대상이 빠져 엉뚱한 근거를 찾거나 거절 | 박진형 | 해결 | 2026-11-15 | `tests/test_followup_question.py::test_followup_question_is_rewritten_and_used_downstream`, `::test_chat_passes_only_same_user_same_thread_questions`, `::test_chat_done_has_understood_question_only_when_rewritten`, `::test_first_question_makes_no_followup_call_and_skips_the_node`, `::test_bad_followup_reply_falls_back_to_the_original_question`(가짜 모델). 실제 모델의 다시 쓰기 품질은 재지 않았다 |
 | G-001 | 2026-11-15 | 김승욱 | 되묻기 거름이 `javascript:alert(1)`처럼 `//`가 없는 스킴을 주소로 보지 않아 되묻기 문장에 그대로 인용(놓친 것 11/13 새로 발견 5, `answer_fixes.py:603` 당시) | 화면에는 글자로만 나오지만 주소를 되풀이하지 않는다는 J-11 규칙 위반 | 박진형 | 해결 | 2026-11-15 | `tests/test_answer_fixes.py::test_reprompt_does_not_echo_schemes_without_slashes`(실제 경로 5건)·`test_echo_safe_keeps_words_before_a_colon`(`Note:` 등 유지) |

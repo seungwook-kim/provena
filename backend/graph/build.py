@@ -43,7 +43,7 @@ from backend.graph.decompose import decompose_enabled, decompose_question, drop_
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
 from backend.graph.service_profile import SharedChatModel
-from backend.graph.state import AgentState
+from backend.graph.state import MAX_PREV_QUESTIONS, AgentState, previous_questions
 from backend.memory.profile import get_profile
 from backend.prompts import question as P
 from backend.graph import untrusted as U
@@ -542,6 +542,26 @@ def build_graph(
             "search_cache": {},
             "search_stats": {"calls": 0, "cache_hits": 0},
         }
+
+    def followup(state: AgentState) -> dict:
+        """이어 묻기(D-14, `docs/specs/question-graph.md`): 같은 대화의 앞 질문(`asked`, `state.previous_questions`)이 있을 때만 지나는 노드. 지금 질문이 앞 질문에 기대는 질문이면
+        혼자서도 뜻이 통하는 질문으로 다시 써 `question`을 바꾼다(LLM 1회, 다시 묻지 않는다). 그 밖의 모든 경우(이어 묻기가 아님, 형식 오류, 호출 실패, 코드 검사에 걸림)는
+        질문을 그대로 둔다. 비용 상한 예외만 올린다. 프롬프트 요구뿐인 질문은 다시 쓰지 않아 `classify`가 사용자가 친 글로 범위 밖 처리한다."""
+        keep = {"user_question": None, "understood_question": None}
+        original = state["question"]
+        prev = P.followup_prev(previous_questions(state), MAX_PREV_QUESTIONS)   # 앞 질문의 다시 쓴 기록은 아래에서 덮기 전에 읽는다
+        if not prev or not isinstance(original, str) or P.only_asks_internal(original):
+            return keep
+        try:
+            rewritten = P.followup_question(parse_json_obj(ask(P.FOLLOWUP_SYSTEM, P.followup_user(prev, original))), original)
+        except CostCapExceeded:
+            raise
+        except Exception as e:  # noqa: BLE001  다시 쓰기 실패가 답을 막지 않는다
+            log.warning("이어 묻기 다시 쓰기 실패: %s", type(e).__name__)
+            return keep
+        if rewritten is None:
+            return keep
+        return {"question": rewritten, "user_question": original, "understood_question": rewritten}
 
     def split_first_search() -> bool:
         return decompose_enabled() if decompose is None else decompose
@@ -1725,6 +1745,7 @@ def build_graph(
     g = StateGraph(AgentState)
     for name, fn in (
         ("load_memory", load_memory),
+        ("followup", followup),
         ("classify", classify),
         ("out_of_domain", out_of_domain),
         ("rewrite", rewrite_node),
@@ -1738,7 +1759,9 @@ def build_graph(
     ):
         g.add_node(name, fn)
     g.add_edge(START, "load_memory")
-    g.add_edge("load_memory", "classify")
+    # 이어 묻기(D-14): 같은 대화에 앞 질문이 쌓여 있을 때만 `followup`을 지난다. 없는 질문(새 대화, `asked`를 넘기지 않는 평가 실행기)은 지금처럼 바로 `classify`다
+    g.add_conditional_edges("load_memory", lambda s: "followup" if previous_questions(s) else "classify", {"followup": "followup", "classify": "classify"})
+    g.add_edge("followup", "classify")
     # 결정표와 합동 검토를 연결하면 이 표의 목적지만 바꾼다
     if decision_repo is not None:   # 결정표 저장소가 있을 때만 결정표 경로를 따로 연다. 없으면 지금처럼 정책 질문으로 처리한다
         g.add_node("decision_params", decision_params)
