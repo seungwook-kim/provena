@@ -1,5 +1,5 @@
 # 조장 11/13 재점검 후속 — 박진형 몫 낮음 5건, 실패 분석 검색 파트, 데이터·Spec 문서, #148 리뷰 반영
-- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `fb7c1ff0`(#155까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`, `l1-dates-1113`, `l2-front-tests-1113`, 3차 점검 갈래 `r3-f1-1113`(승인함·등록·링크), `r3-f2-1113`(채팅), `r3-mcp-1113`(MCP 입력·증분 재시도 시험), `r3-docs-1113`(문서 참조)을 git merge로 묶음
+- 작업자: 박진형 (jinyeong-731) / PR: 미정 / 기준: origin/main `bb39832b`(#156까지)를 합친 묶음 브랜치. 갈래 `pr138-followup`, `fa-search-1113`, `data-docs-1113`, `fix-front-1113`, `fix-backend-1113`, `l1-dates-1113`, `l2-front-tests-1113`, 3차 점검 갈래 `r3-f1-1113`(승인함·등록·링크), `r3-f2-1113`(채팅), `r3-mcp-1113`(MCP 입력·증분 재시도 시험), `r3-docs-1113`(문서 참조)을 git merge로 묶음
 - 근거 종류 표기: [코드] `파일:줄` / [문서] 팀 문서 / [실측] 직접 돌린 결과 / [추정].
 - 운영 호출 없음. LLM·Voyage 호출 없음. 조장 "놓친 것 목록 (2026-11-13)" 6절 새로 발견 중 박진형 몫(#3·#4·#6·#7·#8)과 H-33, 2차 재검토로 찾은 리콜 날짜 칸·빈 섹션 표시·H-08 화면 시험을 다룸.
 
@@ -49,9 +49,10 @@
 | 대상 | 결과 |
 |---|---|
 | 전체 pytest | 3918 passed, 0 failed, 191 skipped, 2 deselected, 805초 [실측, 11/13, main `fb7c1ff0`(#155까지)와 3차 점검 갈래를 합친 최종 묶음 `94cf232c`, DB 주소 없이(DB 시험은 건너뜀), Docker `python:3.12`, 묶음 브랜치 `git archive` → `pip install -r backend/requirements-dev.txt` → `python -m pytest -q`] |
-| 전체 vitest | 38 파일 427 passed, 2회 연속 [실측, 11/13, 3차 점검 갈래를 모두 합친 최종 묶음 `94cf232c`, `npx vitest run`] |
+| 전체 vitest | 40 파일 436 passed, 2회 연속 [실측, 11/14, #156을 합친 최종 묶음 `b2c25b7e`, `npx vitest run`] |
 | 변이 시험 | 고친 줄을 되돌리면 새 시험이 실패: 다시 시도 3개(화면 1개 포함), 미리보기 모드 1개, 영향 안내 2개, `as_of` 1개(전각 숫자 입력값 노출로 실패), 가입 거절 7개 [실측] |
 | 갈래별 독립 검증 | 작업과 다른 검증자가 diff만 보고 확인. 프론트 지적 2건(미리보기 모드 다시 시도, 섹션 목록 입력 안내 문구), 백엔드 지적 1건(전각·아랍 숫자 날짜의 오류 문구에 입력값이 담김)을 고침. 2차: 리콜 날짜 칸을 "문제 없음"으로 둔 판단이 틀렸다는 지적(조용히 틀린 결과 3경로)으로 고침, 버그를 못 잡던 시험 2개(대기 알림 0건인 묶음 시험, 보안 토큰 재전송 횟수) 보강, 섞인 오류 400 유지 |
+| #156과 겹친 것 | #156(화면 버그 5건)이 같은 채팅 코드를 고쳐 `DemoChatPage.jsx` 두 곳이 겹쳤다. ① 첫 질문 중지: 두 쪽 모두 질문을 입력칸에 되돌리는 수정 → #156 분기(`restoreInput()`)를 쓰고 이 묶음의 목록 대기(`await listThreads`)만 더함. ② 입력칸 잠금: #156은 화면 요소를 직접 잠그던 옛 effect를 남겼고 이 묶음(M2)은 그 effect를 지우고 버튼 속성(`disabled={composerDisabled}`)으로 잠금 → effect는 지우고 #156의 새로고침 감지(`mountedRef`)는 살림. `ApprovalsPage.jsx`(#156 모바일 스크롤과 M1 확인창)는 자동으로 합쳐짐. `web.md`·`ai_tools_log.md`는 두 쪽 줄을 모두 남김 | [실측] 합친 뒤 vitest 436 passed ×2. 첫 질문 중지 분기의 `restoreInput()`을 지우면 #156 시험(`chat-ux.test.jsx`)과 이 묶음 시험(`DemoChatPage.test.jsx`)이 둘 다 실패 |
 | 흔들린 시험 | 중간 실행 한 번에서 `tests/test_d7_fixes.py::test_speculation_is_dropped_when_the_split_splits[False]`(그래프 쪽, 이 PR이 건드리지 않은 시험) 1건 실패. 같은 판을 단독으로 3회, main도 3회 돌려 모두 통과, 최종 전체 실행에서도 통과 → 부하에 따라 흔들리는 시험으로 봄 [실측] |
 | AI 표기 검사 | 커밋 메시지 0, 추가 줄은 `ai_tools_log.md` 한 행 말고 0 |
 
