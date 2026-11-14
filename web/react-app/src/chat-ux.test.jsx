@@ -106,6 +106,100 @@ describe('다른 메뉴에 갔다 와도 답 이어 받기', () => {
     await waitFor(() => expect(screen.getByRole('textbox', { name: '질문' }).value).toBe('못 보낸 질문'))
   })
 
+  describe('새 대화 첫 질문 도중 떠났다 오기(대화 id가 아직 없음)', () => {
+    const asked = '새 대화   첫 질문'   // 서버 제목은 공백을 한 칸으로 줄인다(backend/api/threads.py thread_title)
+    const created = { thread_id: 't9', title: '새 대화 첫 질문', status: 'running', updated_at: new Date().toISOString() }
+    let away
+    let threadCalls
+
+    function stubFirst(chat = endless) {
+      away = false
+      threadCalls = 0
+      window.history.replaceState({}, '', '/chat')
+      document.cookie = 'provena-csrf=test-token'
+      document.cookie = 'provena_csrf=test-token'
+      vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
+        if (path === '/me') return json(user)
+        if (path === '/threads') return json(away ? [created, listed] : [listed])
+        if (path === '/threads/t9') {
+          threadCalls += 1
+          if (threadCalls === 1) return json({ ...created, messages: [{ role: 'user', text: '새 대화 첫 질문' }] })
+          return json({ ...created, status: 'idle', messages: [{ role: 'user', text: '새 대화 첫 질문' }, { role: 'assistant', text: '첫 질문의 답', state: 'done' }] })
+        }
+        if (path === '/threads/t1') return json({ ...listed, messages: earlier })
+        if (path === '/auth/csrf') return new Response(null, { status: 204 })
+        if (path === '/chat') return chat(options)
+        return json({ detail: 'not found' }, 404)
+      }))
+    }
+
+    async function askFirst() {
+      const box = await screen.findByRole('textbox', { name: '질문' })
+      await screen.findByRole('button', { name: '연차 질문' })
+      fireEvent.change(box, { target: { value: asked } })
+      const send = screen.getByRole('button', { name: '보내기' })
+      await waitFor(() => expect(send.disabled).toBe(false))
+      fireEvent.click(send)
+      await screen.findByText('근거를 찾고 답을 확인하는 중입니다.', { selector: '.demo-answer-progress' })
+    }
+
+    it('다른 메뉴에 갔다 오면 서버 목록에서 그 질문의 대화를 찾아 열고 끝난 답을 보여 준다', async () => {
+      stubFirst()
+      render(<App />)
+      await askFirst()
+      away = true
+      fireEvent.click(screen.getByRole('link', { name: '리콜 알림' }))
+      fireEvent.click(await screen.findByRole('link', { name: '채팅' }))
+      expect(await screen.findByText('첫 질문의 답')).toBeTruthy()
+      expect(threadCalls).toBeGreaterThanOrEqual(2)
+    })
+
+    it('새로고침해도 그 질문의 대화를 찾아 연다(브라우저가 요청을 먼저 끊어도 표시가 남는다)', async () => {
+      // 새로고침하면 브라우저가 떠나기 직전에 읽던 스트림을 끊는다 → 그 순서를 그대로 흉내 낸다
+      let stream
+      stubFirst(() => new Response(new ReadableStream({ start(controller) { stream = controller } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+      render(<App />)
+      await askFirst()
+      away = true
+      window.dispatchEvent(new Event('beforeunload'))
+      stream.error(new DOMException('새로고침', 'AbortError'))
+      await new Promise(resolve => setTimeout(resolve, 100))
+      cleanup()
+      render(<App />)
+      expect(await screen.findByText('첫 질문의 답')).toBeTruthy()
+    })
+
+    it('같은 제목이라도 질문을 보내기 전에 바뀐 옛 대화는 열지 않는다', async () => {
+      stubFirst()
+      render(<App />)
+      await askFirst()
+      created.updated_at = '2026-01-01T00:00:00Z'
+      created.status = 'idle'
+      away = true
+      try {
+        cleanup()
+        render(<App />)
+        await screen.findByRole('button', { name: '연차 질문' })
+        await new Promise(resolve => setTimeout(resolve, 300))
+        expect(screen.queryByText('첫 질문의 답')).toBeNull()
+        expect(threadCalls).toBe(0)
+      } finally {
+        created.updated_at = new Date().toISOString()
+        created.status = 'running'
+      }
+    })
+
+    it('첫 질문을 \'답변 중지\'하면 질문을 입력칸에 되돌려 둔다', async () => {
+      // 실제 브라우저는 중지(abort)하면 읽던 스트림이 AbortError로 끝난다
+      const abortable = options => new Response(new ReadableStream({ start(controller) { options.signal?.addEventListener('abort', () => controller.error(new DOMException('중지', 'AbortError'))) } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      stubFirst(abortable)
+      render(<App />)
+      await askFirst()
+      fireEvent.click(screen.getByRole('button', { name: '답변 중지' }))
+      await waitFor(() => expect(screen.getByRole('textbox', { name: '질문' }).value).toBe(asked.trim()))
+    })
+  })
+
   it('답을 다 받은 뒤 다른 메뉴에 갔다 오면 아무 대화도 저절로 열지 않는다', async () => {
     stubFetch({ chat: () => new Response(sse([{ type: 'token', data: { text: '끝난 답' } }, { type: 'done', data: { kind: 'answer' } }]), { status: 200, headers: { 'Content-Type': 'text/event-stream' } }) })
     await openThreadAndAsk()
