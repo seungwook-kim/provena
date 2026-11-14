@@ -37,6 +37,9 @@ NOT_FOUND = "사용자를 찾을 수 없습니다."
 OWNER_TARGET = "최고 관리자는 바꿀 수 없습니다."
 INACTIVE_TARGET = "비활성 계정입니다."
 UNAVAILABLE = "인증 저장소를 사용할 수 없습니다."
+INVALID_SIGNUP_ACTION = "가입 신청 처리 방식이 올바르지 않습니다."
+SIGNUP_UNVERIFIED = "이메일 인증을 마치지 않은 가입 신청입니다."
+RESET_UNAVAILABLE = "이 가입 신청은 인증번호를 초기화할 수 없습니다."
 NO_STORE = {"Cache-Control": "no-store"}
 
 
@@ -239,7 +242,7 @@ def create_admin_router(
         require_csrf(request)
         login_id = login_id.strip().lower() if "@" in login_id else login_id.strip()
         if action not in {"approve", "reject"}:
-            raise HTTPException(status_code=422, detail="invalid signup action", headers=NO_STORE)
+            raise HTTPException(status_code=422, detail=INVALID_SIGNUP_ACTION, headers=NO_STORE)
         response.headers["Cache-Control"] = "no-store"
         try:
             result = store.review_signup_request(login_id, action, owner.user_id)
@@ -248,7 +251,7 @@ def create_admin_router(
         if result == "missing":
             raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
         if result == "unverified":
-            raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
+            raise HTTPException(status_code=409, detail=SIGNUP_UNVERIFIED, headers=NO_STORE)
         return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
 
     @router.post(
@@ -272,7 +275,7 @@ def create_admin_router(
         if result == "missing":
             raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
         if result == "unavailable":
-            raise HTTPException(status_code=409, detail="verification reset is unavailable", headers=NO_STORE)
+            raise HTTPException(status_code=409, detail=RESET_UNAVAILABLE, headers=NO_STORE)
         return {"request_id": request_id, "reset": True}
 
     @router.post(
@@ -286,7 +289,7 @@ def create_admin_router(
                                     owner: AuthUser = Depends(owner_guard)) -> dict[str, Any]:
         require_csrf(request)
         if action not in {"approve", "reject"}:
-            raise HTTPException(status_code=422, detail="invalid signup action", headers=NO_STORE)
+            raise HTTPException(status_code=422, detail=INVALID_SIGNUP_ACTION, headers=NO_STORE)
         review = getattr(store, "review_signup_request_by_id", None)
         if not callable(review):
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE)
@@ -298,7 +301,7 @@ def create_admin_router(
         if result == "missing":
             raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
         if result == "unverified":
-            raise HTTPException(status_code=409, detail="email verification is required", headers=NO_STORE)
+            raise HTTPException(status_code=409, detail=SIGNUP_UNVERIFIED, headers=NO_STORE)
         return {"request_id": request_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
 
     return router

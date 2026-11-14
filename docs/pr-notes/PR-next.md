@@ -48,3 +48,21 @@
 - `EVAL_REPORT.md:143` MRR 0.733(결과 파일은 0.722), `:199` int8 Recall 0.758(로컬 30조합 기준 0.750) — 이번 묶음에 넣지 않았다.
 - SDK(`mock_erp/sdk/`)는 다시 만들지 않았다. `/me` 메서드 이름이 그대로라 `test_sdk_matches_openapi`는 영향이 없다.
 - compose로 `/demo/*`가 실제로 열리는지는 띄워 보지 않았다(1절 H-25).
+
+### C-26 영어 오류 문구
+| 항목 | 문제 | 고친 것 | 근거 |
+|---|---|---|---|
+| 로그인 저장소 오류 | `POST /auth/login` 503 문구가 `authentication storage unavailable`(2곳) | `인증 저장소를 사용할 수 없습니다.`(같은 함수의 기존 문구와 같게) | [코드] `backend/auth.py:938`, `:947`, 기존 문구 `:929` |
+| 이메일 인증 저장소 | 가입·인증 503 문구가 `email verification storage is unavailable`(2곳) | `이메일 인증 저장소를 사용할 수 없습니다.` | [코드] `backend/auth.py:994`, `:1115` |
+| 가입 신청 없음 | 404 문구가 `signup request not found`(2곳) | `가입 신청을 찾을 수 없습니다.` | [코드] `backend/auth.py:998`, `:1024` |
+| 가입 승인 저장소 | `POST /auth/signup` 503 문구가 `signup approval storage is unavailable` | `가입 승인 저장소를 사용할 수 없습니다.` | [코드] `backend/auth.py:1071` |
+| 가입 처리 방식 | 승인·거절이 아닌 값의 422 문구가 `invalid signup action`(2곳) | `가입 신청 처리 방식이 올바르지 않습니다.`(상수 `INVALID_SIGNUP_ACTION`) | [코드] `backend/admin_api.py:40`, `:245`, `:292` |
+| 이메일 미인증 승인 | 409 문구가 `email verification is required`(2곳) | `이메일 인증을 마치지 않은 가입 신청입니다.`(상수 `SIGNUP_UNVERIFIED`) | [코드] `backend/admin_api.py:41`, `:254`, `:304` |
+| 인증번호 초기화 불가 | 409 문구가 `verification reset is unavailable` | `이 가입 신청은 인증번호를 초기화할 수 없습니다.`(상수 `RESET_UNAVAILABLE`) | [코드] `backend/admin_api.py:42`, `:278` |
+| 쓰는 곳 확인 | 옛 영어 문구에 기대는 시험·화면·문서가 있는지 | 없음. 화면·시험·Spec·`openapi.json`은 고치지 않았다(명세의 영어 `description`은 문구가 아니라 그대로) | [실측] `grep -rnE "authentication storage unavailable|signup request not found|invalid signup action|email verification is required|verification reset is unavailable|storage is unavailable" tests web/react-app/src docs` 0건 |
+| 회귀 시험 | 영어 문구가 다시 들어와도 잡는 시험이 없었다 | `tests/test_auth_messages_korean.py` 13개: `auth.py`·`admin_api.py`·`profile_api.py`의 모든 `HTTPException` 문구에 한글이 있는지 훑고, 옛 영어 오류 길 12개의 실제 응답을 본다 | [실측] 13 통과. 문구 3개를 영어로 되돌리면 각각 2·2·3개 실패, 원본 복구 뒤 옛 문구 grep 0건 |
+
+- 상태 코드, 오류 코드, 머리글(`Cache-Control: no-store`)은 바꾸지 않았다. `backend/auth.py`는 강경희 파일이고 조장 지시로 고쳤다(**경희님께 따로 알림 필요**).
+- 새 시험: `python -m pytest -q -p no:cacheprovider tests/test_auth_messages_korean.py` 13 통과.
+- 인증·가입·관리 대상 시험: `python -m pytest -q -p no:cacheprovider tests/test_*auth*.py tests/test_*signup*.py tests/test_admin*.py tests/test_google*.py tests/test_api_errors.py tests/test_me_optional_session.py tests/test_profile_api.py`와 `/auth/login`·`/auth/signup`·`/admin/signup-requests`·`openapi`를 쓰는 시험 파일까지 34파일 605 통과, 38 건너뜀(로컬 Python 3.13, DB 없음). 전체 pytest는 돌리지 않았다.
+- 넣지 않은 것: `backend/main.py:450`의 405 `Method Not Allowed`(C-24에서 정한 문구), `web/react-app/src/lib/api.js:173`, `:181`의 화면 쪽 `CSRF token unavailable`, `backend/services/auth_store.py`의 내부 `ValueError("invalid signup action")`(응답으로 나가지 않음).

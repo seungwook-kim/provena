@@ -14,6 +14,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | `auth.py`·`admin_api.py` 영어 오류 문구 12곳(7종)을 한국어로 바꿈(놓친 것 C-26, 조장 지시로 처리). `auth.py` 7곳: 인증 저장소 2, 이메일 인증 저장소 2, 가입 신청 없음 2, 가입 승인 저장소 1. `admin_api.py` 5곳은 상수 3개(`INVALID_SIGNUP_ACTION`, `SIGNUP_UNVERIFIED`, `RESET_UNAVAILABLE`)로 묶음. 상태 코드·오류 코드·머리글은 그대로. 시험 `tests/test_auth_messages_korean.py` 13개 | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `auth.py` `GET /me`: 머리글 `X-Session-Optional: 1`이고 로그인 쿠키가 없으면 401 대신 204(놓친 것 H-33, 조장 지시로 처리). 머리글이 없거나 쿠키가 있으면 예전과 같음. 시험 `tests/test_me_optional_session.py` 4개 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `auth.py` 회원가입 아이디 글자 제한 `SIGNUP_LOGIN_ID_RE`(소문자 변환 뒤 `[a-z0-9._@+-]`, 조장 11/13 재확인 #4): `<script>` 등은 422. 가입에만 적용, 기존 계정 로그인·구글 로그인은 그대로. 시험 `tests/test_signup_edges.py` | #157 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 병합 후속: K-12 시험 `test_unknown_post_is_common_404_and_existing_route_method_is_405`의 `Allow` 기대값을 `GET, HEAD`로 고침. #131에 들어온 `HEAD /health`(`main.py` `health_head`)와 K-12의 `Allow` 머리글이 합쳐진 결과이고, 앱 코드는 바꾸지 않았다 | #132 |
@@ -52,6 +53,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
 |---|---|---|---|---|---|---|---|---|
+| B-003 | 2026-11-15 | 김승욱 | 로그인·가입·가입 관리 API의 일부 오류 문구가 영어(`authentication storage unavailable`, `signup request not found`, `invalid signup action` 등 12곳, 놓친 것 C-26) | 화면이 서버 문구를 그대로 보이는 곳에서 사용자·관리자에게 영어 문장이 보임 | 박진형 | 해결 | 2026-11-15 | `tests/test_auth_messages_korean.py`: `test_every_http_error_detail_in_source_is_korean`(세 파일의 모든 `HTTPException` 문구에 한글), `test_login_storage_failure_while_reading_signup_is_korean`, `test_signup_without_approval_storage_is_korean`, `test_email_signup_request_not_found_is_korean`, `test_admin_invalid_signup_action_is_korean`, `test_admin_approving_unverified_email_signup_is_korean`, `test_admin_verification_reset_unavailable_is_korean` 등 13개 통과. 문구 3개를 영어로 되돌리면 각각 2·2·3개가 실패 |
 | B-002 | 2026-11-15 | 김승욱 | 로그아웃 상태에서 화면의 첫 세션 확인 `/me`가 401이라 브라우저 콘솔에 오류가 남음(놓친 것 H-33 남은 부분) | 평가자가 콘솔을 열면 오류로 보임 | 박진형 | 해결 | 2026-11-15 | `tests/test_me_optional_session.py`(쿠키 없음+머리글 204, 머리글 없으면 401, 로그인 사용자는 같은 본문, 깨진 쿠키는 401), 화면 `session.test.jsx` H-33 시험 2개 |
 | B-001 | 2026-11-13 | 김승욱 | 가입 아이디에 글자 제한이 없어 `<script>alert(1)</script>` 같은 아이디가 201로 접수됨(놓친 것 11/13 새로 발견 4, `auth.py`) | 관리자 가입 승인 목록에 그대로 저장(화면은 글자로 표시) | 박진형 | 해결 | 2026-11-13 | `tests/test_signup_edges.py`의 `test_signup_rejects_login_ids_with_unsafe_characters`·`test_existing_account_with_unusual_id_still_logs_in`(가입만 제한, 기존 계정 로그인은 그대로) |
 | J-05 | 2026-11-01 | 강경희 | 로그아웃은 쿠키만 삭제하여 이전에 발급된 동일 JWT를 다시 넣으면 실제 Supabase 저장소의 `/me`가 200을 반환함 | 탈취·복사된 JWT의 로그아웃 후 재사용 가능 | 강경희 / 김승욱(공유 저장소·main·DB 연결) | 열림 | | 실제 DB 읽기 전용 재현: 로그인 200 → `/me` 200 → 로그아웃 204 → 쿠키 없음 401 → 동일 JWT 복원 후 200. `jti`·차단 코드와 모의/SQLite 테스트는 구현했으나 PostgreSQL 공유 폐기 저장소 구현·운영 연결 및 동일 JWT 401 검증 전에는 해결로 판정하지 않음 |
