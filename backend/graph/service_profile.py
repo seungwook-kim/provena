@@ -114,6 +114,9 @@ SERVICE_ENV: dict[str, str] = {
     # 사전 등록 62.53(62.15 재도입, 입력이 같은 변경): 원 질문 재작성과 첫 검색을 질문 접수와 동시에 시작한다. 예비 분해가 "안 나눔"이고 분류가 정책 경로일 때만 그 결과를 쓰고 아니면 버린다
     # (GRAPH_SPECULATE_FIRST가 켜져 있어야 한다). 측정 실행기 인자 --speculate-early-search는 있으나 측정 묶음 인자(MEASURED_ARGS)에는 넣지 않았다(서비스 경로만)
     "GRAPH_SPECULATE_EARLY_SEARCH": "1",   # 62.53
+    # 사전 등록 62.67: anthropic 요청의 분류·판정·답 작성·근거 확인 시스템 프롬프트에 프롬프트 캐시 표시를 붙인다(`backend/services/llm.py`). 메시지와 답 경로는 그대로다.
+    # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "LLM_PROMPT_CACHE": "1",               # 62.67
 }
 
 
