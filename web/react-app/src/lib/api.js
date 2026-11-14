@@ -249,20 +249,6 @@ export async function putChangeMonitoring(status) {
   return apiJson('/changes/monitoring', { method: 'PUT', headers: await csrfHeaders(), body: JSON.stringify({ status }) })
 }
 
-export async function submitApproval(approvalId, approve, comment = '') {
-  await apiRequest(`/approvals/${approvalId}`, {
-    method: 'POST',
-    body: JSON.stringify({ approval_id: approvalId, approve, comment }),
-  })
-}
-
-export async function sendChatMessage(threadId, message) {
-  return apiRequest('/chat', {
-    method: 'POST',
-    body: JSON.stringify({ thread_id: threadId, message }),
-  })
-}
-
 export async function streamChatMessage(threadId, message, { signal, onEvent } = {}) {
   const payload = { message }
   if (threadId !== null) payload.thread_id = threadId

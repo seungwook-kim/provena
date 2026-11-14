@@ -279,6 +279,35 @@ describe('createApiChatAdapter HTTP errors (H-08)', () => {
     await service.sendMessage({ threadId: 't1', message: '질문' })
     expect(snapshots.at(-1)[0].messages.at(-1).question).toBe('질문')
   })
+
+  // 새로 발견 7: 같은 오류에 '다시 시도'를 거듭 눌러도 실패한 턴은 한 쌍(질문+오류 말풍선)만 남는다
+  it('replaces the failed turn on retry instead of stacking another error bubble', async () => {
+    const fail = { type: 'error', thread_id: 't1', data: { code: 'limit_exceeded', message: 'x' } }
+    const { snapshots, service } = setup([fail])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(2)
+    for (let i = 0; i < 3; i += 1) {
+      streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent(fail) })
+      await service.sendMessage({ threadId: 't1', message: '질문', retry: true })
+    }
+    const messages = snapshots.at(-1)[0].messages
+    expect(messages).toHaveLength(2)
+    expect(messages.map(message => message.role)).toEqual(['user', 'assistant'])
+    expect(messages[1].state).toBe('error')
+  })
+
+  it('keeps earlier turns and a fresh send still appends a new turn', async () => {
+    const { snapshots, service } = setup([{ type: 'done', thread_id: 't1', data: {} }])
+    await service.sendMessage({ threadId: 't1', message: '앞 질문' })
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '다음 질문' })
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '다음 질문', retry: true })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(4)
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => { onEvent({ type: 'error', thread_id: 't1', data: { message: 'x' } }) })
+    await service.sendMessage({ threadId: 't1', message: '새 질문' })
+    expect(snapshots.at(-1)[0].messages).toHaveLength(6)
+  })
 })
 
 // H-15: 승인이 끝난 대화는 다시 열 때 서버 상태를 받아와야 한다
@@ -295,6 +324,85 @@ describe('thread with a finished approval (H-15)', () => {
     const again = await adapter.getThread('t1')
 
     expect(again.messages.at(-1)).toMatchObject({ state: 'done', text: '승인된 답' })
+  })
+})
+
+// M4: 중지한 답은 서버가 끝까지 만들어 저장하므로 다시 열 때 서버본으로 바꾼다
+describe('thread with a stopped answer (M4)', () => {
+  it('refetches a thread whose local copy ends with a stopped answer', async () => {
+    const { getThreads, getThread } = await import('./api')
+    getThreads.mockResolvedValueOnce([{ thread_id: 't1', title: '중지 질문', updated_at: '2026-11-09T01:00:00Z' }])
+    getThread.mockReset()
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '중지 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '앞부분', state: 'stopped' }] })
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '중지 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '서버가 끝낸 답', state: 'done' }] })
+    const adapter = createApiChatAdapter()
+    await adapter.listThreads()
+    expect((await adapter.getThread('t1')).messages.at(-1).state).toBe('stopped')
+
+    const again = await adapter.getThread('t1')
+
+    expect(getThread).toHaveBeenCalledTimes(2)
+    expect(again.messages.at(-1)).toMatchObject({ state: 'done', text: '서버가 끝낸 답' })
+  })
+})
+
+describe('stopped answer while the server is still generating (M4)', () => {
+  const stoppedThread = { thread_id: 't1', title: '중지 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '앞부분', state: 'stopped' }] }
+  async function setupStopped() {
+    const { getThreads, getThread } = await import('./api')
+    getThreads.mockResolvedValueOnce([{ thread_id: 't1', title: '중지 질문', updated_at: '2026-11-09T01:00:00Z' }])
+    getThread.mockReset()
+    getThread.mockResolvedValueOnce(stoppedThread)
+    const adapter = createApiChatAdapter()
+    await adapter.listThreads()
+    await adapter.getThread('t1')
+    return { adapter, getThread }
+  }
+
+  it('keeps the local stopped copy while the server returns only the question, then refetches', async () => {
+    const { adapter, getThread } = await setupStopped()
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '중지 질문', messages: [{ role: 'user', text: '질문' }] })
+    getThread.mockResolvedValueOnce({ thread_id: 't1', title: '중지 질문', messages: [{ role: 'user', text: '질문' }, { role: 'assistant', text: '서버가 끝낸 답', state: 'done' }] })
+
+    const running = await adapter.getThread('t1')
+    expect(running.messages.at(-1)).toMatchObject({ state: 'stopped', text: '앞부분' })
+
+    const finished = await adapter.getThread('t1')
+    expect(getThread).toHaveBeenCalledTimes(3)
+    expect(finished.messages.at(-1)).toMatchObject({ state: 'done', text: '서버가 끝낸 답' })
+  })
+
+  it('returns the local copy when the refetch fails', async () => {
+    const { adapter, getThread } = await setupStopped()
+    getThread.mockRejectedValueOnce(new Error('network'))
+
+    const again = await adapter.getThread('t1')
+
+    expect(again.messages.at(-1)).toMatchObject({ state: 'stopped', text: '앞부분' })
+  })
+})
+
+describe('thread list refresh during a new stream (M3)', () => {
+  it('does not replace the thread that is streaming right now', async () => {
+    const { getThreads } = await import('./api')
+    let release
+    streamChatMessage.mockImplementationOnce(async (_threadId, _message, { onEvent }) => {
+      onEvent({ type: 'token', thread_id: 't9', data: { text: '앞' } })
+      await new Promise(resolve => { release = resolve })
+      onEvent({ type: 'done', thread_id: 't9', data: {} })
+    })
+    getThreads.mockResolvedValueOnce([{ thread_id: 't9', title: '재전송', updated_at: '2026-11-09T01:00:00Z' }])
+    const adapter = createApiChatAdapter()
+    const sending = adapter.sendMessage({ threadId: null, message: '재전송' })
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+
+    const listed = await adapter.listThreads()
+    release()
+    await sending
+    const thread = await adapter.getThread('t9')
+
+    expect(listed.find(item => item.id === 't9').messages.at(-1)).toMatchObject({ role: 'assistant', text: '앞' })
+    expect(thread.messages.at(-1)).toMatchObject({ state: 'done', text: '앞' })
   })
 })
 

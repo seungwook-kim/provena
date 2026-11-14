@@ -166,7 +166,8 @@ def test_executor_errors_map_to_states(repo, args, status):
 
 @pytest.mark.parametrize("args", [{"task_type": ""}, {"task_type": "   "}, {"task_type": "x" * 201},
                                   {"task_type": EXPENSE, "table_id": ""}, {"task_type": EXPENSE, "band": " "},
-                                  {"task_type": EXPENSE, "band": "b" * 201}])
+                                  {"task_type": EXPENSE, "band": "b" * 201},
+                                  {"task_type": EXPENSE, "table_id": "dt_a\x00"}])
 def test_bad_input_is_invalid_without_touching_the_store(args):
     spy = Spy()
     r = run(spy, **args)

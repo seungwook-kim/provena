@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from extras.mcp_skill.mcp_server.server import READ_ONLY, Invalid, ToolResponse, _failure, _resp, _run
+from extras.mcp_skill.mcp_server.server import READ_ONLY, Invalid, ToolResponse, _check_text, _failure, _resp, _run
 
 MAX_ANSWER_ID = 64
 SOURCE = "answers"
@@ -22,6 +22,7 @@ SOURCE = "answers"
 def _check(answer_id: Any) -> None:
     if not isinstance(answer_id, str) or not answer_id.strip() or len(answer_id) > MAX_ANSWER_ID:
         raise Invalid(f"answer_id는 1~{MAX_ANSWER_ID}자")
+    _check_text(answer_id, "answer_id")     # SQL로 간다. NUL이면 psycopg DataError → error로 새므로 미리 invalid
 
 
 def register(mcp, store_fn: Callable[[], Any] | None = None) -> None:

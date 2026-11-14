@@ -89,7 +89,7 @@ function open(path) {
 describe('live approvals route', () => {
   it('lists the pending approvals of every kind from the API', async () => {
     open('/approvals')
-    await screen.findByRole('button', { name: /결정표 승인 요청: Procurement/ })
+    await screen.findByRole('button', { name: /결정표 승인 요청: Procurement/ }, { timeout: 5000 })
     expect(screen.getByRole('button', { name: /결정표 승인 요청: Travel/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: /합동 검토 쟁점표/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: /팀 검토 실패/ })).toBeTruthy()

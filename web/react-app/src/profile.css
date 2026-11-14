@@ -44,6 +44,8 @@
 .profile-form-wizard { margin-top: 28px; }
 .profile-form-edit { margin-top: 24px; }
 .profile-storage-notice { margin: -4px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--paper, #f7f5f0); color: var(--muted, #6b665c); font-size: 12px; line-height: 1.55; }
+/* 선택 단계 안내는 버튼 묶음 바로 밑에 온다. 위의 -4px(설명 밑에 붙이는 값)를 그대로 쓰면 버튼에 겹친다(강경희·박진형 화면 점검 2026-11-13) */
+.profile-choice-grid + .profile-storage-notice { margin-top: 12px; }
 .profile-summary { display: grid; grid-template-columns: 130px 1fr; gap: 0; margin: 28px 0 0; border-top: 1px solid var(--line, #e4dfd4); }
 .profile-summary dt, .profile-summary dd { margin: 0; padding: 13px 0; border-bottom: 1px solid var(--line, #e4dfd4); font-size: 13px; line-height: 1.5; }
 .profile-summary dt { color: var(--muted, #6b665c); }

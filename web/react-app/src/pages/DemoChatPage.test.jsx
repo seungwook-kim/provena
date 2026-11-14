@@ -172,6 +172,26 @@ describe('DemoChatPage chat errors (H-08)', () => {
     expect(bodies).toEqual(['다음 질문', '다음 질문'])
   })
 
+  // 새로 발견 7: 같은 오류에 '다시 시도'를 거듭 눌러도 오류 말풍선은 하나다
+  it('keeps one error bubble when retry is pressed repeatedly on the same error', async () => {
+    const message = '승인이 끝나야 다음 질문을 할 수 있습니다.'
+    const fetchMock = stubChat(() => json({ error: { code: 'approval_pending', message } }, 409))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    await screen.findByText('앞 답')
+    fireEvent.change(screen.getByRole('textbox', { name: '질문' }), { target: { value: '다음 질문' } })
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    expect(await screen.findByText(message)).toBeTruthy()
+    for (let count = 2; count <= 3; count += 1) {
+      fireEvent.click(await screen.findByRole('button', { name: '다시 시도' }))
+      await vi.waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/chat')).toHaveLength(count), { timeout: 5000 })
+      await screen.findByText(message)
+      await vi.waitFor(() => expect(screen.queryByText(/근거를 찾고 답을 확인하는 중입니다/)).toBeNull())
+    }
+    expect(screen.getAllByText(message)).toHaveLength(1)
+    expect(screen.getAllByText('다음 질문')).toHaveLength(1)
+  })
+
   it('shows the error for a first question in a new conversation too', async () => {
     stubChat(() => json({ error: { code: 'not_configured', message: '채팅이 설정되지 않았습니다.' } }, 503))
     render(<App />)
@@ -287,5 +307,58 @@ describe('DemoChatPage empty input notice', () => {
     expect(sent).toEqual([])
     fireEvent.change(box, { target: { value: '연차' } })
     await waitFor(() => expect(screen.queryByText('질문을 입력해 주세요.')).toBeNull())
+  })
+})
+// M2: 승인 대기 대화를 새로고침 뒤 다시 열면 입력칸과 보내기가 잠겨 있어야 한다
+describe('DemoChatPage approval-pending thread after refresh (M2)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); sessionStorage.clear() })
+
+  it('locks the textarea and send button once the approval notice shows', async () => {
+    window.history.replaceState({}, '', '/chat')
+    sessionStorage.setItem('provena-chat-open', 't1')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([listed])
+      if (path === '/threads/t1') return json({ ...listed, messages: [{ role: 'user', text: '승인 질문' }, { role: 'assistant', text: '', state: 'approval' }] })
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    expect(await screen.findByText('승인 질문')).toBeTruthy()
+    const box = screen.getByRole('textbox', { name: '질문' })
+    await waitFor(() => expect(box.disabled).toBe(true))
+    fireEvent.change(box, { target: { value: '다음 질문' } })
+    expect(box.disabled).toBe(true)
+    expect(screen.getByRole('button', { name: '보내기' }).disabled).toBe(true)
+  })
+})
+
+// M3: 새 대화의 첫 질문을 중지하면 질문이 입력칸에서 사라지지 않는다
+describe('DemoChatPage stopping the first question of a new conversation (M3)', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+  it('keeps the question in the textbox and refetches the thread list', async () => {
+    window.history.replaceState({}, '', '/chat')
+    document.cookie = 'provena_csrf=test-token'
+    let listCalls = 0
+    vi.stubGlobal('fetch', vi.fn(async (path, options = {}) => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') { listCalls += 1; return json([]) }
+      if (path === '/auth/csrf') return new Response(null, { status: 204 })
+      if (path === '/chat') return new Response(new ReadableStream({ start(controller) { options.signal?.addEventListener('abort', () => controller.error(new DOMException('', 'AbortError'))) } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      return json({ items: [], threads: [] })
+    }))
+    render(<App />)
+    const box = await screen.findByRole('textbox', { name: '질문' })
+    await waitFor(() => expect(box.disabled).toBe(false))
+    fireEvent.change(box, { target: { value: '중지할 질문' } })
+    const send = screen.getByRole('button', { name: '보내기' })
+    await waitFor(() => expect(send.disabled).toBe(false))
+    fireEvent.click(send)
+    const stop = await screen.findByRole('button', { name: '답변 중지' })
+    const before = listCalls
+    fireEvent.click(stop)
+    await waitFor(() => expect(screen.queryByRole('button', { name: '답변 중지' })).toBeNull())
+    await waitFor(() => expect(listCalls).toBeGreaterThan(before))
+    expect(screen.getByRole('textbox', { name: '질문' }).value).toBe('중지할 질문')
   })
 })

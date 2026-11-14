@@ -75,6 +75,7 @@ POST /webhooks/regulation-updated
 응답 성공 (202 Accepted): {"accepted": int, "event_ids": [string]}. 리콜 판정은 응답 뒤 백그라운드로 돈다
 응답 실패:
 400 요청 형식 오류 (깨진 JSON, 모르는 칸, 날짜·변경 종류 형식 오류, 빈 목록, 100건 초과)
+422 validation_error: 형식은 맞지만 없는 날짜(2026-02-30)·전각 숫자 날짜. 입력값은 응답에 담지 않는다(2026-11-13). 날짜 오류가 다른 형식 오류와 섞여 있으면 422가 아니라 400 `bad_request`다(`regulation_updated`가 오류가 전부 날짜 오류일 때만 422로 낸다).
 401 서비스 키 없음/틀림
 500 내부 서버 오류
 ```
@@ -87,13 +88,13 @@ POST /recalls/{id}/feedback    {useful, reason} → {notice_id, useful, counts} 
 POST /recalls/{id}/review      {action: release | dismiss}, 검토함에 없으면 409    관리자, CSRF
 GET  /recalls/feedback-stats   유형별 의견 집계                                  관리자
 GET  /recalls/digests          하루 요약 목록 (본인, 관리자는 전체)                 로그인
-POST /recalls/digest/flush     하루 요약 보내기 (?day=)                          관리자, CSRF
+POST /recalls/digest/flush     하루 요약 보내기 (?day=, 없는 날짜·전각 숫자 날짜는 422)   관리자, CSRF
 POST /recalls/process-pending  쌓인 변경 한 번 처리                              관리자, CSRF
 POST, GET /webhook-subscriptions  업무시스템 웹훅 주소 등록(201, 주소·secret_ref 검사, 틀리면 400)·조회   관리자
 GET  /webhook-deliveries       전송 기록 (시도별 상태 코드·오류 종류)              관리자
 GET  /maintenance-candidates   연결 정책 후보 목록 (?status=)                    관리자
 POST /maintenance-candidates/{id}  {status: needed | not_needed}, 없으면 404     관리자, CSRF
-POST /impact-preview           바뀐 섹션(changes) 또는 두 판(pages)의 영향 미리보기. 저장·알림·웹훅 없음   관리자, CSRF
+POST /impact-preview           바뀐 섹션(changes) 또는 두 판(pages)의 영향 미리보기. 저장·알림·웹훅 없음. 없는 날짜·전각 숫자 날짜는 422   관리자, CSRF
 GET  /changes                  변경 감시 목록 {items, last_run, more, monitoring} (?since=&limit=&offset=)   로그인
 GET  /changes/{event_id}       한 건과 개정 전후 본문                              로그인
 GET, PUT /changes/monitoring   변경 감시 켜기·멈추기 {status: active | paused}      조회 로그인, 변경 관리자·CSRF
