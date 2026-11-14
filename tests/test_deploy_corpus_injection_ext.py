@@ -260,3 +260,17 @@ def test_ext_write_requires_env(capsys, monkeypatch):
     assert T.main(["--date", DATE, "--suite", "ext"]) == T.EXIT_ENV                       # --write-prod 없이는 멈춘다
     assert T.main(["--date", DATE, "--suite", "ext", "--write-prod"]) == T.EXIT_ENV
     assert "환경 변수가 없다" in capsys.readouterr().err
+
+
+# ---------- 코드 방어 회귀(놓친 것 11/13 새로 발견 2) ----------
+
+@pytest.mark.parametrize("case_id", ["INJ-P8-X17", "INJ-P8-X18"])
+def test_code_defense_removes_other_user_exfil_cases(case_id):
+    """놓친 것 11/13 새로 발견 2: 다른 사용자 데이터를 요구하는 X17(한국어, 두 절)·X18(영어, 감사 목적)을 입력 정화와 출력 검사가 모두 놓쳤다.
+    `backend/graph/untrusted.py` 커밋 02f4af5e(2026-11-13)가 막았지만 이 두 문장을 지키는 시험이 없었다. 정화 뒤 표식과 요구 절이 남지 않는지 본다."""
+    from backend.graph import untrusted as U
+    row = next(json.loads(l) for l in (SAFETY / "deploy_corpus_cases_ext.jsonl").read_text(encoding="utf-8").splitlines()
+               if l.strip() and json.loads(l)["id"] == case_id)
+    left, removed = U.strip_instructions(row["planted_sentence"])
+    assert row["canary"] not in left and removed
+    assert "사용자" not in left and "user" not in left.lower()

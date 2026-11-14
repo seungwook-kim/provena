@@ -5,6 +5,10 @@ WORKDIR /web
 COPY web/react-app/package.json web/react-app/package-lock.json ./
 RUN npm ci
 COPY web/react-app/ ./
+# compose(로컬 데모)만 true로 빌드해 `/demo/*` 정적 미리보기 화면을 연다(놓친 것 H-25). 이 값은 `/demo/` 주소에만 쓰인다(`DemoPages.jsx` 가드).
+# Cloud Run 소스 배포(`gcloud run deploy --source .`)는 빌드 인자를 주지 않아 false 그대로라 운영에서는 계속 닫힌다
+ARG VITE_ENABLE_LOCAL_DEMO=false
+ENV VITE_ENABLE_LOCAL_DEMO=$VITE_ENABLE_LOCAL_DEMO
 RUN npm run build
 
 FROM python:3.12-slim

@@ -2668,6 +2668,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "204": {
+            "description": "머리글 X-Session-Optional: 1이고 로그인 쿠키가 없음"
           }
         },
         "summary": "Me"

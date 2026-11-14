@@ -64,7 +64,13 @@ export function SessionProvider({ children }) {
     }
     if (!background) setSession({ status: 'checking', user: null, error: '' })
     try {
-      const user = validateUser(await getCurrentUser())
+      // 첫 확인(로그인한 사용자 없음)은 쿠키가 없으면 204로 받는다(H-33). 이미 로그인한 뒤의 다시 확인은 만료를 알아야 하므로 401 그대로
+      const raw = await getCurrentUser({ optional: !background })
+      if (raw === null) {
+        if (request === sequence.current) expire(false)
+        return
+      }
+      const user = validateUser(raw)
       if (request === sequence.current) acceptChanged(user)
     } catch (error) {
       if (request !== sequence.current) return
