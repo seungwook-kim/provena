@@ -15,6 +15,8 @@
    운영 측정에는 환각 위험 지표가 없어 그 지표는 이 비교에서 뺀다.
 5. `--current <결과 파일>`을 주면(CI는 줌) `evals/ci_current_eval.py`가 현재 코드로 돌린 0원(키 없는 데모 재생, 오프라인) 평가 결과를 기준 파일의 `current` 항목과 견준다.
    커밋된 옛 측정 파일은 코드가 바뀌어도 그대로라 현재 코드의 회귀를 못 잡으므로, 이 항목이 그 구멍을 맡는다. 파일을 주지 않으면 이 비교를 하지 않는다.
+   평가셋 v2 50건 녹화(`data/demo_replay/v2_recorded.json`)가 있으면 결과 파일에 `v2` 요약이 들어 있고, 기준 파일 `current.v2_metrics`와 같은 방식(인용 답·거절은 낮아지면, 녹화에 없는 요청·대체 답은 많아지면 실패)으로 견준다.
+   녹화가 없으면 데모 질문 9개만 견준다.
 6. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
 
 통과선: 인용 정확도 0.85 이상, 정답 근거 인용률 0.85 이상, 비관련 질문 거절 0.90 이상, 전체 p95 10초 이하.
@@ -212,6 +214,41 @@ def evaluate_current(result: dict, baseline: dict) -> tuple[list[dict], list[str
             value, ref = s[key], base[key]
             bad = value < ref if key in ("answers_ok", "refusals_ok") else value > ref
             verdict = "기준보다 " + ("낮음" if key in ("answers_ok", "refusals_ok") else "많음") if bad else "통과"
+            if bad:
+                failures.append(f"{arm} {text} {value} vs 기준 {ref}" + (f" (녹화가 오래된 질문: {len(s.get('stale_questions', []))}개)" if key == "missed_calls" else ""))
+            rows.append({"arm": arm, "label": text, "value": value, "baseline": ref, "gate": "-", "verdict": verdict})
+    v2_rows, v2_failures = evaluate_current_v2(result, baseline)
+    return rows + v2_rows, failures + v2_failures
+
+
+V2_LABELS = {"relevant_answered": "50건: 관련 질문 중 인용 답", "irrelevant_refused": "50건: 비관련 질문 중 거절", "missed_calls": "50건: 녹화에 없는 요청", "fake_answers": "50건: 발췌형 대체 답"}
+
+
+def evaluate_current_v2(result: dict, baseline: dict) -> tuple[list[dict], list[str]]:
+    """평가셋 v2 50건을 현재 코드로 재생한 결과(`paths.<경로>.v2`)를 기준 파일의 `current.v2_metrics`와 견준다. 녹화(`data/demo_replay/v2_recorded.json`)가 없으면 둘 다 없어 건너뛴다.
+    결과에만 있고 기준이 없으면(녹화를 올렸는데 기준을 안 올림), 기준에만 있고 결과에 없으면(녹화 manifest가 사라지거나 평가셋과 어긋남) 실패한다."""
+    rows, failures = [], []
+    base = baseline["current"].get("v2_metrics")
+    commit = result.get("meta", {}).get("commit") or "?"
+    problem = result.get("meta", {}).get("v2_problem")
+    if problem:
+        failures.append(f"현재 코드 50건 평가: {problem}")
+    for label, body in (result.get("paths") or {}).items():
+        arm, s = f"현재 코드 {commit} {label}", body.get("v2")
+        if s is None:
+            if base is not None and not problem:
+                failures.append(f"{arm} 50건 평가 결과가 없다(기준 파일에는 current.v2_metrics가 있다): data/demo_replay/v2_recorded.json 확인")
+            continue
+        if base is None:
+            failures.append(f"{arm} 기준 파일에 current.v2_metrics가 없다(50건 녹화를 올렸으면 기준도 같은 PR에서 올려야 한다)")
+            continue
+        if s.get("n_questions") != base.get("n_questions"):
+            failures.append(f"{arm} 50건 평가 질문 수 {s.get('n_questions')} != 기준 {base.get('n_questions')}")
+        for key, text in V2_LABELS.items():
+            value, ref = s[key], base[key]
+            low_bad = key in ("relevant_answered", "irrelevant_refused")
+            bad = value < ref if low_bad else value > ref
+            verdict = "기준보다 " + ("낮음" if low_bad else "많음") if bad else "통과"
             if bad:
                 failures.append(f"{arm} {text} {value} vs 기준 {ref}" + (f" (녹화가 오래된 질문: {len(s.get('stale_questions', []))}개)" if key == "missed_calls" else ""))
             rows.append({"arm": arm, "label": text, "value": value, "baseline": ref, "gate": "-", "verdict": verdict})

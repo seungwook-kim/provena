@@ -221,7 +221,7 @@ def _graph(multi, fn, m, **kw):
     return build_multi_graph(fn, llm=m, **kw) if multi else build_graph(fn, llm=m, **kw)
 
 
-def _sp(monkeypatch, multi, *, early, gate, split, route="rule", gate_delay=0.0, search_fn=None):
+def _sp(monkeypatch, multi, *, early, gate, split, route="rule", gate_delay=0.0, search_fn=None, classify_delay=0.0):
     monkeypatch.setenv("GRAPH_SPECULATE_FIRST", "1")
     if early:
         monkeypatch.setenv("GRAPH_SPECULATE_EARLY_SEARCH", "1")
@@ -240,8 +240,12 @@ def _sp(monkeypatch, multi, *, early, gate, split, route="rule", gate_delay=0.0,
         times["gate_end"] = time.monotonic()
         return j(split=gate, sub_questions=SUBS if gate else [])
 
+    def classify_answer(_u):
+        time.sleep(classify_delay)   # 일찍 돌린 검색이 분류보다 먼저 끝나 있게 한다(62.64 시험)
+        return j(route=route)
+
     m = llm(decompose=j(split=split, sub_questions=SUBS if split else []), decompose_gate=gate_answer, judge=j(sufficient=True, reason="", clarify=None),
-            classify=j(route=route), answer=lambda u: cite(ESC))
+            classify=classify_answer, answer=lambda u: cite(ESC))
     out = run_graph(_graph(multi, fn, m, decompose=True, parallel_intake=True, skip_first_rewrite=True), Q_ESC)
     return out, m, searched, times
 
@@ -327,6 +331,56 @@ def test_early_search_embed_unavailable_ends_like_the_sequential_path(monkeypatc
     out, m, *_ = _sp(monkeypatch, False, early=True, gate=False, split=False, search_fn=down)
     assert out["kind"] == base["kind"] == "refuse" and out["search_error"] == base["search_error"] == "unavailable"
     assert out["answer"] == base["answer"] and m.count("judge") == m0.count("judge") == 0
+
+
+# ---- 사전 등록 62.64: 버린 일찍 돌린 검색의 결과를 같은 인자의 첫 검색이 다시 쓴다 ----
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_result_is_reused_when_the_gate_splits_but_the_split_does_not(monkeypatch, multi):
+    base, m0, s0, _ = _sp(monkeypatch, multi, early=False, gate=True, split=False)
+    out, m, s, _ = _sp(monkeypatch, multi, early=True, gate=True, split=False, classify_delay=0.3)
+    assert len(s0) == 1 and len(s) == 1                          # 일찍 돌린 원 질문 검색과 첫 검색의 인자가 같아 검색기는 한 번만 불린다
+    assert s == s0 and out["search_stats"]["cache_hits"] == 1 and base["search_stats"]["cache_hits"] == 0
+    assert out["search_stats"].get("speculated") == "dropped"    # 미리 돌린 판정은 쓰지 않았다는 기록은 그대로다
+    assert out["chunks"] == base["chunks"] and out["search_query"] == base["search_query"]   # 문맥도 같다
+    assert m.count("judge") == m0.count("judge") == 1
+    _same_answer(out, base)
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_early_search_result_is_not_reused_for_a_split_question(monkeypatch, multi):
+    base, m0, s0, _ = _sp(monkeypatch, multi, early=False, gate=True, split=True)
+    out, m, s, _ = _sp(monkeypatch, multi, early=True, gate=True, split=True, classify_delay=0.3)
+    assert len(s0) == 1 and s0[0][1] == tuple(SUBS)
+    assert len(s) == 2 and s[0][1] == () and s[1] == s0[0]      # 하위 질문이 있으면 열쇠가 달라 지금처럼 새로 찾는다
+    assert out["search_stats"]["cache_hits"] == 0 and out["chunks"] == base["chunks"] and out["sub_queries"] == SUBS
+    _same_answer(out, base)
+
+
+def test_early_search_error_is_not_reused(monkeypatch):
+    calls: list = []
+
+    def flaky(q):
+        calls.append(q)
+        if len(calls) == 1:
+            raise ValueError("일찍 돌린 검색 오류")
+        return [ESC, IMOC]
+
+    base, *_ = _sp(monkeypatch, False, early=False, gate=True, split=False)
+    out, m, s, _ = _sp(monkeypatch, False, early=True, gate=True, split=False, search_fn=flaky, classify_delay=0.3)
+    assert len(s) == 2 and out["search_stats"]["cache_hits"] == 0           # 오류가 난 일찍 돌린 검색은 다시 쓰지 않고 새로 찾는다
+    _same_answer(out, base)
+
+
+def test_early_search_empty_result_is_not_reused(monkeypatch):
+    out, m, s, _ = _sp(monkeypatch, False, early=True, gate=True, split=False, search_fn=lambda q: [], classify_delay=0.3)
+    assert len(s) >= 2 and s[0] == s[1]   # 결과가 빈 검색은 다시 쓰지 않는다: 첫 검색이 같은 인자로 새로 찾아 이유(키 없음 등)를 직접 알아본다(뒤의 검색은 빈 결과 뒤 재검색)
+
+
+def test_early_search_reuse_takes_only_search_keys(monkeypatch):
+    out, *_ = _sp(monkeypatch, False, early=True, gate=True, split=False, classify_delay=0.3)
+    keys = list(out["search_cache"])
+    assert [k for k in keys if k.startswith("[")] and "__intake__" not in keys      # 미리 받은 응답 자리는 섞지 않는다
+    assert all(k.startswith("[") or k in ("__spec__",) for k in keys)
 
 
 def test_early_search_off_without_speculate_first_changes_nothing(monkeypatch):

@@ -69,6 +69,49 @@ def test_ci_demo_replay_step_has_a_database_and_fails_when_skipped():
     assert "skipped" in step["run"] and "exit 1" in step["run"]
 
 
+EVAL_CMD = re.compile(r"python evals/ci_current_eval\.py\s+--out\s+(\S+)")
+COMPARE_CMD = re.compile(r"python evals/ci_compare\.py\s+--current\s+(\S+)")
+
+
+def current_eval_link_problems(runs: list[str]) -> list[str]:
+    """ci.yml의 run 명령 목록에서 `ci_current_eval.py --out <파일>` 다음에 `ci_compare.py --current <같은 파일>`이 이어지는지 본다. 어긋난 곳을 문장으로 돌려준다(비면 연결이 맞다)."""
+    evals = [(i, m.group(1)) for i, r in enumerate(runs) for m in [EVAL_CMD.search(r)] if m]
+    compares = [(i, m.group(1)) for i, r in enumerate(runs) for m in [COMPARE_CMD.search(r)] if m]
+    problems: list[str] = []
+    if len(evals) != 1:
+        problems.append(f"`python evals/ci_current_eval.py --out <파일>` 단계가 {len(evals)}개다(1개여야 한다)")
+    if len(compares) != 1:
+        problems.append(f"`python evals/ci_compare.py --current <파일>` 단계가 {len(compares)}개다(1개여야 한다)")
+    if len(evals) == 1 and len(compares) == 1:
+        if evals[0][0] >= compares[0][0]:
+            problems.append("비교 단계가 현재 코드 평가 단계보다 앞에 있다(평가 결과가 나오기 전에 비교한다)")
+        if evals[0][1] != compares[0][1]:
+            problems.append(f"평가가 쓰는 파일({evals[0][1]})과 비교가 읽는 파일({compares[0][1]})이 다르다")
+    return problems
+
+
+def test_ci_current_eval_step_is_followed_by_the_comparison_reading_the_same_result_file():
+    # evals/ci_current_eval.py와 ci.yml의 연결 시험: 한쪽이 지워지거나 이름이 바뀌거나 파일 이름이 어긋나면 현재 코드 평가가 조용히 빠진다.
+    runs = [s.get("run", "") for s in steps(load("ci.yml"))]
+    assert current_eval_link_problems(runs) == []
+    for path in ("evals/ci_current_eval.py", "evals/ci_compare.py", "evals/ci_baseline.json"):
+        assert (ROOT / path).is_file(), path
+    assert (ROOT / "data" / "demo_replay" / "questions.txt").is_file()   # 이 평가가 재생하는 질문 목록
+
+
+def test_ci_current_eval_link_check_fails_when_a_step_is_removed_renamed_or_mismatched():
+    good = ["python -m pytest -q", "python evals/ci_current_eval.py --out ci_current_result.json", "python evals/ci_compare.py --current ci_current_result.json"]
+    assert current_eval_link_problems(good) == []
+    assert current_eval_link_problems([good[0], good[2]])                                                    # 평가 단계 삭제
+    assert current_eval_link_problems(good[:2])                                                              # 비교 단계 삭제
+    assert current_eval_link_problems([good[0], good[1].replace("ci_current_eval.py", "ci_now_eval.py"), good[2]])   # 평가 파일 이름 변경
+    assert current_eval_link_problems([good[0], good[1], good[2].replace("ci_compare.py", "ci_cmp.py")])             # 비교 파일 이름 변경
+    assert current_eval_link_problems([good[0], good[1], good[2].replace("--current", "--result")])                  # 비교 인자 이름 변경
+    assert current_eval_link_problems([good[0], good[1], good[2].replace("ci_current_result.json", "other.json")])   # 결과 파일 이름 불일치
+    assert current_eval_link_problems([good[0], good[2], good[1]])                                                   # 순서 뒤바뀜
+    assert current_eval_link_problems([good[0], good[1], good[1], good[2]])                                          # 평가 단계 중복
+
+
 def test_ci_installs_from_an_existing_requirements_file_and_python_version_is_pinned():
     wf = load("ci.yml")
     req = re.findall(r"pip install -r (\S+)", run_text(wf))

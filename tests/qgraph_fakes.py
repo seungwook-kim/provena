@@ -19,7 +19,7 @@ class ScriptedLLM:
         system, user = messages[0].content, messages[-1].content
         task = re.search(r"\[\[task:(\w+)\]\]", system).group(1)
         self.calls.append((task, user))
-        key = "judge" if task == "judge_retry" and "judge_retry" not in self.handlers else task  # 재검색 뒤 판정(단계 표지 judge_retry)은 판정과 같은 응답 차례를 쓴다
+        key = task
         h = self.handlers.get(key, "")
         if callable(h):
             out = h(user)

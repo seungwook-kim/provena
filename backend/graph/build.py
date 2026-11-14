@@ -370,7 +370,6 @@ def build_graph(
     grounding_system = P.GROUNDING_SYSTEM_BRIEF if brief else P.GROUNDING_SYSTEM
     structured = P.structured_stages()
     judge_quote = AF.judge_quote_enabled()  # 인용 먼저 판정(`GRAPH_JUDGE_QUOTE`, 기본 꺼짐): 사실마다 원문 구절을 먼저 복사하고 결론은 코드가 그 목록에서 정한다
-    judge_retry_fast = AF.judge_retry_fast_enabled()  # JRF(`GRAPH_JUDGE_RETRY_FAST`, 기본 꺼짐): 나뉜 질문이고 앞 판정이 일부일 때, 재검색 뒤 판정만 추론을 끈다(단계 표지 judge_retry)
     revise_ahead_on = AF.revise_ahead_enabled()  # RA(`GRAPH_REVISE_AHEAD`, 기본 꺼짐, SG 필요): 답 다시 쓰기와 동시에 문장 빼기 뒤 재확인을 미리 부른다
     judge_vote = AF.judge_vote_enabled()  # 판정 다수결(`GRAPH_JUDGE_VOTE`, 기본 꺼짐): 판정과 근거 확인을 병렬 3번 부르고 2표가 같으면 확정한다
     if judge_quote:
@@ -742,6 +741,7 @@ def build_graph(
             pool_early = ThreadPoolExecutor(max_workers=1, thread_name_prefix="speculate_early")
             early = pool_early.submit(contextvars.copy_context().run, early_chain)
             pool_early.shutdown(wait=False)
+        box["early"] = early   # 62.64: 일찍 돌린 검색이 버려진 뒤에도 같은 인자의 첫 검색이 그 결과를 다시 쓸 수 있게 Future를 둔다
         box["future"] = pool.submit(contextvars.copy_context().run, chain)
         pool.shutdown(wait=False)
         return box
@@ -795,16 +795,33 @@ def build_graph(
         got = spec_take(state, "rewrite")
         return got if got is not None else rewrite(state)
 
+    def early_search_memo(box: dict | None) -> dict:
+        """62.64: 일찍 돌린 첫 검색(원 질문, `SE`)이 오류 없이 끝나 있으면 그 검색 기억 중 검색 열쇠(JSON 목록) 항목만 돌려준다. 끝나지 않았거나 오류이면 빈 dict다.
+        결과가 빈 검색은 빼서 `no_key` 같은 빈 결과의 이유를 첫 검색이 직접 알아보게 둔다. `__intake__`, `__spec__` 자리는 섞지 않는다."""
+        fut = (box or {}).get("early")
+        if fut is None or not fut.done():
+            return {}
+        try:
+            res = fut.result().get("search") or {}
+        except Exception:  # noqa: BLE001 - 일찍 돌린 검색의 오류는 첫 검색이 직접 돌 때 같은 방식으로 다시 난다
+            return {}
+        if res.get("search_error") or res.get("kind"):
+            return {}
+        return {k: v for k, v in (res.get("search_cache") or {}).items() if isinstance(k, str) and k.startswith("[") and v}
+
     def search_node(state: AgentState) -> dict:
         got = spec_take(state, "search")
         if got is not None:
             with spec_lock:
                 spec_boxes.pop((state.get("search_cache") or {}).get(SPEC_KEY), None)
             return {**got, "search_stats": {**(got.get("search_stats") or {}), "speculated": "used"}}
-        out = search(state)
         token = (state.get("search_cache") or {}).get(SPEC_KEY)
         with spec_lock:
             box = spec_boxes.pop(token, None) if token else None
+        reuse = early_search_memo(box) if box is not None and not state.get("retries", 0) else {}
+        if reuse:  # 62.64: 열쇠(질문, 절, 기준일, k, 하위 질문)가 같으면 `memo_search`가 일찍 돌린 결과를 돌려준다. 다르면(나뉜 질문) 지금처럼 새로 찾는다
+            state = {**state, "search_cache": {**reuse, **(state.get("search_cache") or {})}}
+        out = search(state)
         if box is not None and not state.get("retries", 0):  # 미리 돌리기를 쓰지 않은 까닭(분석용): 돌렸다가 버림 | 예비 분해가 나눔·실패해 돌리지 않음
             out = {**out, "search_stats": {**(out.get("search_stats") or state.get("search_stats") or {}), "speculated": "dropped" if box.get("ran") else "not_run"}}
         if out.get("search_error"):
@@ -1028,8 +1045,6 @@ def build_graph(
         guide = skill("chat-tool-guide")  # 켜져 있을 때만 판정이 다음 도구를 고른다. 호출 수는 그대로다
         terms = skill("search-terms") if requery_terms else ""  # `GRAPH_REQUERY_TERMS=1`일 때만 재검색어 용어표를 붙인다(기본 꺼짐)
         guided = P.with_skills(judge_system, [("도구 고르기 Skill", guide), ("용어 Skill", terms)])
-        if judge_retry_fast and state.get("retries", 0) and state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2:
-            guided = P.judge_retry(guided)  # JRF: 나뉜 질문의 재검색 뒤 판정은 단계 표지만 바꿔 추론을 끈다. 본문과 입력은 그대로
         if widened:
             guided = P.judge_widened(guided)  # 넓힌 자리가 있는 판정에만 구절을 앞자리에서 먼저 찾게 하는 문장을 더한다
         names = [*(["chat-tool-guide"] if guide else []), *(["search-terms"] if terms else [])]
@@ -1074,7 +1089,8 @@ def build_graph(
         missing = obj.get("missing") if isinstance(obj.get("missing"), list) else []
         scope = obj.get("scope_note")
         requeried = skip_seen and (state.get("search_stats") or {}).get("page_requeries")  # SS: 페이지 재검색으로 새 청크를 받은 뒤에는 섹션 읽기를 더 하지 않는다
-        section = pick_section(obj, chunks) if guide and not (section_extra and state.get("section_reads", 0)) and not requeried else None
+        split_partial = obj.get("partial") is True and len(state.get("sub_queries") or []) >= 2   # 62.63: 나뉜 질문의 일부 판정은 섹션 읽기도 재검색도 없이 일부 답으로 간다(`after_judge`)
+        section = pick_section(obj, chunks) if guide and not (section_extra and state.get("section_reads", 0)) and not requeried and not split_partial else None
         out = {
             **({"early_answer": early} if early and answer_wait else {}),
             "judge_reason": str(obj.get("reason") or "근거 부족"),
@@ -1119,12 +1135,14 @@ def build_graph(
             return "give_up"
         if state.get("sub_research_phase") == "due":  # B1, B4: 빠진 하위 질문 한 번 더(그때만 재검색 상한 +1)
             return "rewrite"
+        if state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2:  # 62.63: 나뉜 질문(사실 둘 이상)의 일부 판정은 재검색하지 않고 같이 쓴 답을 일부 답으로 낸다
+            return "write_answer"
         # 근거 목록이 차면 `merge_chunks`가 새 청크를 받지 못해 재검색이 아무것도 바꾸지 못한다
         stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state)))  # 섹션 읽기는 목록을 늘리지 않는다
         if state.get("retries", 0) <= research_limit + (state.get("section_reads", 0) if section_extra else 0) and not stalled:
             return "rewrite"
-        # 재검색이 끝나도 일부 근거만 있으면 그 부분을 답한다. 나뉜 질문(사실 둘 이상)일 때만이다. 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 된다
-        return "write_answer" if state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2 else "give_up"
+        # 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 되므로 재검색이 끝나면 거절한다(나뉜 질문의 일부 판정은 위에서 일부 답으로 갔다)
+        return "give_up"
 
     def give_up(state: AgentState) -> dict:
         ask_back = state.get("clarify_question")
@@ -1616,6 +1634,15 @@ def build_graph(
                 info["pointer_only"] = True
             elif verdict["state"] == "grounded" and verdict.get("off_topic") and not reason:
                 final = without_off_topic(state, cited, verdict["off_topic"], info, partial) or final
+        if not reason and partial and "citations" not in final:  # 62.66: 일부 답에서 단 인용이 모두 판정 구절 청크 밖인 문장을 뺀다(근거 확인이 끝난 뒤라 그 입력은 그대로다)
+            got = AF.drop_unjudged_cites(draft, cited, state.get("judge_quote_ids"))
+            if got:
+                new_draft, kept, gone, n = got
+                if G.check_rules(state["question"], kept, state.get("chunks", [])).ok:
+                    final = {"answer": finish_answer(f"{new_draft} {MSG_PARTIAL_NOTE}", kept, as_of), "citations": kept, "trimmed_citations": [*(state.get("trimmed_citations") or []), *gone]}
+                    info["partial_filter"] = {"result": "dropped", "sentences": n, "chunks": gone}
+                else:
+                    info["partial_filter"] = {"result": "rules_failed"}
         if reason:
             info.update(reason=reason, detail=detail, draft_answer=draft)  # 판정 사유와 초안은 기록에만 둔다. 청크 id 같은 내부 값을 사용자에게 보이지 않는다
             return {

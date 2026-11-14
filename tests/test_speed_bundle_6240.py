@@ -5,7 +5,6 @@
 - ③ 근거 확인 실패 연쇄 병렬화(`GRAPH_REVISE_AHEAD`)
 - ④ 판정 단계 호출 상한(`LLM_DEADLINE_BY_TASK`)
 - ⑤ 답이 나간 뒤 버려지는 근거 확인 호출 막기
-- ⑥ 재검색 뒤 판정 추론 끔(`GRAPH_JUDGE_RETRY_FAST`, 기본 꺼짐)
 각 스위치는 꺼진 상태가 지금과 같다는 시험을 함께 둔다.
 """
 from __future__ import annotations
@@ -19,8 +18,6 @@ from types import SimpleNamespace
 import pytest
 from fake_search import fake_search
 from qgraph_fakes import ScriptedLLM, first_chunk_id, j, normal_llm
-from test_answer_fixes_graph import ESC, IMOC, PARTIAL, Q_ESC, SUBS, cite
-from test_answer_fixes_graph import llm as base_llm
 from test_answer_fixes_graph import run as run_q
 from test_question_graph import Q, _by_article, _sentences_answer, run
 
@@ -29,14 +26,13 @@ from backend.graph import answer_store as AS
 from backend.graph import service_profile as SP
 from backend.graph.answer_store import InMemoryAnswerStore, PgAnswerStore
 from backend.graph.build import build_graph
-from backend.prompts import question as P
 from backend.services import llm as L
 
 import backend.rag.retrieve.search  # noqa: E402,F401
 
 search_mod = sys.modules["backend.rag.retrieve.search"]
 
-SWITCHES = ("GRAPH_JUDGE_RETRY_FAST", "GRAPH_REVISE_AHEAD", "GRAPH_SPECULATE_GROUND", "GRAPH_SPECULATE_FIRST", "GRAPH_JUDGE_ANSWER", "GRAPH_ANSWER_WAIT_S",
+SWITCHES = ("GRAPH_REVISE_AHEAD", "GRAPH_SPECULATE_GROUND", "GRAPH_SPECULATE_FIRST", "GRAPH_JUDGE_ANSWER", "GRAPH_ANSWER_WAIT_S",
             "GRAPH_ANSWER_BUDGET_S", "ANSWER_STORE_REUSE_CONN", "LLM_DEADLINE_BY_TASK", "GRAPH_STOP_STALLED_SEARCH", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH",
             "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_REQUERY_TERMS")
 
@@ -450,7 +446,7 @@ def test_deadline_by_task_gives_only_that_task_the_longer_limit():
 
     t = L.DeadlineTransport(SlowTransport(0.3), 0.1, by_task={"judge": 0.6})
     assert t.handle_request(_post("judge")).status_code == 200          # 판정은 0.6초까지 기다린다
-    for other in ("answer", "grounding", "judge_retry", None):
+    for other in ("answer", "grounding", None):
         with pytest.raises(httpx.ReadTimeout):
             t.handle_request(_post(other))                            # 다른 단계와 표지 없는 요청은 기본 상한(0.1초)
 
@@ -547,110 +543,18 @@ def test_careful_answer_that_arrives_in_time_keeps_its_early_grounding_call(monk
     assert out["grounding"].get("ground_ahead") is True           # 쓰인 답의 확인은 지금처럼 미리 불렀고 그 결과를 썼다
 
 
-# ============================ ⑥ 재검색 뒤 판정 추론 끔 ============================
-
-class SysLLM(ScriptedLLM):
-    """시스템 프롬프트 전문을 적는다."""
-
-    def __init__(self, handlers):
-        super().__init__(handlers)
-        self.systems: list[str] = []
-
-    def invoke(self, messages, *a, **k):
-        self.systems.append(messages[0].content)
-        return super().invoke(messages, *a, **k)
-
-    def judges(self):
-        return [(t, s) for (t, _), s in zip(self.calls, self.systems) if t.startswith("judge")]
-
-
-NONE_JUDGE = j(checks=[], sufficient=False, partial=False, reason="없음", missing=["사실"], scope_note=None, clarify=None, query="EOC escalation")
-OK_JUDGE = j(sufficient=True, reason="", clarify=None)
-
-
-def _escalation(judges, *, split=True, **graph_kw):
-    chunks = {"esc": [ESC]}
-
-    def fn(q):
-        return [ESC, IMOC] if q.query != Q_ESC and not q.sub_queries else [ESC]
-
-    handlers = {**base_llm().handlers, "decompose": j(split=split, sub_questions=SUBS if split else []), "judge": judges,
-                "answer": lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u])}
-    llm = SysLLM(handlers)
-    g = build_graph(fn, llm=llm, decompose=True, max_research=1, **graph_kw)
-    return run_q(g, Q_ESC), llm
-
-
-def test_judge_retry_fast_off_keeps_every_judge_on_the_judge_marker():
-    out, llm = _escalation([PARTIAL, OK_JUDGE])
-    assert [t for t, _ in llm.judges()] == ["judge", "judge"] and out["kind"] == "answer"
-
-
-def test_judge_retry_fast_on_changes_only_the_marker_of_the_judge_after_a_search_again(monkeypatch):
-    off_out, off = _escalation([PARTIAL, OK_JUDGE])
-    monkeypatch.setenv("GRAPH_JUDGE_RETRY_FAST", "1")
-    out, llm = _escalation([PARTIAL, OK_JUDGE])
-    judges = llm.judges()
-    assert [t for t, _ in judges] == ["judge", "judge_retry"]                # 첫 판정은 그대로, 재검색 뒤 판정만
-    assert judges[0][1].splitlines()[0] == "[[task:judge]]" and judges[1][1].splitlines()[0] == "[[task:judge_retry]]"
-    assert judges[1][1].replace("[[task:judge_retry]]", "[[task:judge]]", 1) == judges[0][1]      # 그 밖의 프롬프트 본문은 글자까지 같다
-    assert [s for _, s in off.judges()] == [judges[0][1], judges[0][1]]       # 꺼짐의 두 판정 프롬프트와 켠 첫 판정이 같다
-    assert (out["kind"], out["answer"], [c["chunk_id"] for c in out["citations"]]) == (off_out["kind"], off_out["answer"], [c["chunk_id"] for c in off_out["citations"]])
-
-
-def test_judge_retry_fast_keeps_the_marker_for_a_single_fact_question(monkeypatch):
-    monkeypatch.setenv("GRAPH_JUDGE_RETRY_FAST", "1")
-    _, llm = _escalation([PARTIAL, OK_JUDGE], split=False)
-    assert [t for t, _ in llm.judges()] == ["judge", "judge"]
-
-
-def test_judge_retry_fast_keeps_the_marker_when_the_first_judge_was_not_a_partial(monkeypatch):
-    monkeypatch.setenv("GRAPH_JUDGE_RETRY_FAST", "1")
-    _, llm = _escalation([NONE_JUDGE, OK_JUDGE])
-    assert [t for t, _ in llm.judges()] == ["judge", "judge"]
-
-
-def test_judge_retry_fast_runs_to_the_end_with_the_speculative_judge_and_parallel_answer(monkeypatch):
-    monkeypatch.setenv("GRAPH_JUDGE_RETRY_FAST", "1")
-    monkeypatch.setenv("GRAPH_JUDGE_ANSWER", "parallel_all")
-    monkeypatch.setenv("GRAPH_SPECULATE_FIRST", "1")
-    out, llm = _escalation([PARTIAL, OK_JUDGE])
-    assert out["kind"] == "answer"
-    tasks = [t for t, _ in llm.judges()]
-    assert tasks[0] == "judge" and "judge_retry" in tasks                     # 미리 돌리는 판정(재검색 0회)은 바뀌지 않는다
-
-
-def test_judge_retry_marker_helper_and_effort_levels():
-    from backend.services.claude_cli_model import effort_for
-
-    retry = P.judge_retry(P.JUDGE_SYSTEM)
-    assert retry.splitlines()[0] == "[[task:judge_retry]]" and retry.replace("[[task:judge_retry]]", "[[task:judge]]", 1) == P.JUDGE_SYSTEM
-    assert effort_for(P.JUDGE_SYSTEM, "none", {"judge": "low"}) == "low"
-    assert effort_for(retry, "none", {"judge": "low"}) == "none"             # 단계별 목록에 없는 단계는 기본 수준(끔)
-    with pytest.raises(ValueError):
-        P.judge_retry("표지 없는 프롬프트")
-    assert P.INTERNAL_MARKERS[0] == "[[task:" and P.leaks_internal if hasattr(P, "leaks_internal") else True
-
-
-def test_judge_retry_step_name_shows_in_the_cost_by_step():
-    from backend.services import llm_trace
-
-    step, node, task = llm_trace.step_of([[SimpleNamespace(content=P.judge_retry(P.JUDGE_SYSTEM), type="system")]], {"langgraph_node": "judge"})
-    assert (step, task) == ("judge/judge_retry", "judge_retry")
-
-
 # ============================ 서비스 설정과 문서 ============================
 
-def test_three_switches_are_service_defaults_and_retry_fast_stays_a_candidate():
+def test_three_switches_are_service_defaults_and_no_candidate_switch_is_left():
     from pathlib import Path
 
     on = {"ANSWER_STORE_REUSE_CONN": "1", "GRAPH_REVISE_AHEAD": "1", "LLM_DEADLINE_BY_TASK": "judge=12"}   # 사용자 결정 11/11 14 A: 서비스 값으로 올림
     assert {k: SP.SERVICE_ENV.get(k) for k in on} == on and not set(on) & set(SP.CANDIDATE_ENV)
-    assert "GRAPH_JUDGE_RETRY_FAST" in SP.CANDIDATE_ENV and "GRAPH_JUDGE_RETRY_FAST" not in SP.SERVICE_ENV
+    assert SP.CANDIDATE_ENV == {} and "GRAPH_JUDGE_RETRY_FAST" not in SP.SERVICE_ENV   # 추론 끔은 코드째 제거했다
     env: dict = {}
     SP.apply_service_profile(env)
-    assert {k: env.get(k) for k in on} == on and "GRAPH_JUDGE_RETRY_FAST" not in env   # 서비스 설정을 채우면 셋은 켜지고 추론 끔은 켜지지 않는다
+    assert {k: env.get(k) for k in on} == on and "GRAPH_JUDGE_RETRY_FAST" not in env   # 서비스 설정을 채우면 셋은 켜진다
     text = (Path(__file__).resolve().parents[1] / ".env.example").read_text(encoding="utf-8")
-    assert any(line.startswith("#") and "GRAPH_JUDGE_RETRY_FAST=" in line for line in text.splitlines())
+    assert "GRAPH_JUDGE_RETRY_FAST" not in text
     for name, value in on.items():
         assert f"{name}={value}" in text.splitlines()

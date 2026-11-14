@@ -160,7 +160,7 @@ def test_judge_after_a_research_round_is_not_marked(multi):
     m = llm(decompose=j(split=True, sub_questions=SUBS), judge=[nothing, quoting(WIDE[0])], answer=answering)
     judge_systems = systems(m, "judge")
     out = run(graph(multi, fn, m, decompose=True, max_research=1), Q_ESC)
-    judged = [u for t, u in m.calls if t in ("judge", "judge_retry")]
+    judged = [u for t, u in m.calls if t == "judge"]
     assert len(judged) == 2 and "[보충]" in judged[0] and "[보충]" not in judged[1]
     assert P.JUDGE_WIDENED_SENTENCE in judge_systems[0] and P.JUDGE_WIDENED_SENTENCE not in judge_systems[1]
     assert out["kind"] == "answer"

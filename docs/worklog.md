@@ -120,7 +120,7 @@
 - 팀 검색을 팀마다 하위 검색어 2개, 팀당 10개로 바꿨다(`teams.py` `search_subs`, `review.py` `SEARCH_K=10`). 단일 기준선 코드는 `exp_review_v1`에서 `backend/graph/departments/single_review.py`로 옮기고 `same`(팀과 같은 검색)과 `undivided`(나누지 않은 한 번 검색, k=40)를 두었다.
 - 평가 전용 `POST /admin/eval/review`(`backend/api/eval_review.py`)를 더했다. `EVAL_REVIEW_SINGLE=1`이 아니면 404, 관리자와 CSRF 필수, 하루 호출 상한, WARNING 로그 한 줄, Langfuse 추적, 저장 없음. 팀 경로는 이 엔드포인트로 부르지 않는다.
 - 운영 공정 비교 도구 `evals/agent/review_deploy.py`(팀 `/chat` 대 단일 same, undivided, 10문항 3회, 누락률과 비용 배수)를 만들기만 했다. 시험은 가짜 서버(`tests/test_review_deploy.py`)이고 운영에는 부르지 않았다.
-- 속도 스위치 3개(`ANSWER_STORE_REUSE_CONN`, `GRAPH_REVISE_AHEAD`, `LLM_DEADLINE_BY_TASK=judge=12`)를 서비스 값으로 올렸다(`service_profile.py`). `GRAPH_JUDGE_RETRY_FAST`는 후보로 남긴다.
+- 속도 스위치 3개(`ANSWER_STORE_REUSE_CONN`, `GRAPH_REVISE_AHEAD`, `LLM_DEADLINE_BY_TASK=judge=12`)를 서비스 값으로 올렸다(`service_profile.py`). `GRAPH_JUDGE_RETRY_FAST`는 후보로 남겼다가 2026-11-14에 코드째 제거했다(결정 0112).
 - `CHAT_FINAL_FROM_STREAM`의 결정표 경로와 재개 경로 시험을 더했다(`tests/test_chat_final_from_stream_paths.py`).
 - 사전 등록 62.41 행과 순서표 줄을 더했다(결과 칸은 비어 있음).
 

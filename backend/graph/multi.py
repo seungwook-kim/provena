@@ -96,7 +96,7 @@ WRITER = AgentSpec(
 VERIFIER = AgentSpec(
     "verifier",
     ("verify", "ground", "save"),
-    reads=frozenset({"question", "answer", "period_covered", "raw_citations", "chunks", "as_of", "skills_used", "user_id", "thread_id", "judge_partial", "dropped_citations", "route"}),
+    reads=frozenset({"question", "answer", "period_covered", "raw_citations", "chunks", "as_of", "skills_used", "user_id", "thread_id", "judge_partial", "dropped_citations", "route", "judge_quote_ids"}),
     writes=frozenset({"kind", "answer", "citations", "dropped_citations", "trimmed_citations", "refuse_reason", "grounding", "skills_used", "answer_id"}),
 )
 AGENTS = {a.name: a for a in (RETRIEVER, WRITER, VERIFIER)}

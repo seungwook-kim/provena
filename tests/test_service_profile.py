@@ -66,10 +66,10 @@ SEARCH_HEDGE_6214 = {"SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
 EARLY_SEARCH_6253 = {"GRAPH_SPECULATE_EARLY_SEARCH": "1"}
 
 
-def test_62_40_speed_values_are_service_defaults_and_retry_fast_is_not():
+def test_62_40_speed_values_are_service_defaults():
     assert {k: SP.SERVICE_ENV.get(k) for k in SPEED_6240} == SPEED_6240
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_GROUND"] == "1"          # GRAPH_REVISE_AHEAD가 쓰는 앞선 근거 확인
-    assert "GRAPH_JUDGE_RETRY_FAST" not in SP.SERVICE_ENV and "GRAPH_JUDGE_RETRY_FAST" in SP.CANDIDATE_ENV   # 추론 끔은 기본 꺼짐
+    assert "GRAPH_JUDGE_RETRY_FAST" not in SP.SERVICE_ENV and "GRAPH_JUDGE_RETRY_FAST" not in SP.CANDIDATE_ENV   # 추론 끔은 코드째 제거했다
     assert "EVAL_REVIEW_SINGLE" not in SP.SERVICE_ENV and "EVAL_REVIEW_SINGLE" not in SP.CANDIDATE_ENV      # 평가용 단일 모드는 배포 때 따로 켠다
     assert not set(SPEED_6240) & set(SP.CANDIDATE_ENV)
     assert {k: SP.SERVICE_ENV.get(k) for k in GRAPH_OUTSIDE_6216} == GRAPH_OUTSIDE_6216 and not set(GRAPH_OUTSIDE_6216) & set(SP.CANDIDATE_ENV)   # 사용자 결정 11/11 19: 후보에서 서비스 값으로

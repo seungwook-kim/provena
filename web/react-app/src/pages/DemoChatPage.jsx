@@ -151,6 +151,9 @@ function formatDateDivider(value) {
   return date ? `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일` : ''
 }
 
+// 검색 결과가 없거나 근거가 모자라 답하지 않을 때 사용자가 할 일(체크포인트 D11). 서버 문구가 이미 '다시'를 말하면(검색 일시 오류) 덧붙이지 않는다
+const NO_EVIDENCE_HINT = '질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.'
+
 function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
   return <>{messages.map((message, index) => {
     const timestamp = messageTimestamp(message)
@@ -165,6 +168,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
         <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
         {message.state === 'generating' && <GeneratingProgress />}
         {message.text && <p>{message.text}</p>}
+        {message.state === 'no-evidence' && !String(message.text ?? '').includes('다시') && <p className="demo-answer-hint">{NO_EVIDENCE_HINT}</p>}
         {message.citations?.length > 0 && <CitationButtons citations={message.citations} selectedCitation={selectedCitation} messageIndex={index} onSelect={onSelectCitation} />}
         <AttributionNotice attribution={message.attribution} />
         {(message.state === 'error' || message.state === 'stopped') && <div className="demo-answer-error" role="alert"><span>{message.error}</span>{message.state === 'error' && <button type="button" onClick={() => onRetry(message.question)}>다시 시도</button>}</div>}

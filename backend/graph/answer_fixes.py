@@ -36,6 +36,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from backend.graph import grounding as G
 from backend.graph.untrusted import drop_suspect_tokens, strip_instructions
 
 
@@ -153,6 +154,38 @@ def drop_scoped_cites(body: str, cited: list[dict], question: str, note: str, co
     if dropped and note not in new_body:
         new_body = f"{new_body} {note}"
     return new_body, [cited[i - 1] for i in keep], [cited[i - 1]["chunk_id"] for i in sorted(bad)]
+
+
+def drop_unjudged_cites(draft: str, cited: list[dict], quote_ids: list[str] | None) -> tuple[str, list[dict], list[str], int] | None:
+    """사전 등록 62.66: 일부 판정으로 끝난 답(`draft`, 표시 `[chunk_id]`)에서 단 인용이 모두 판정 구절 청크(`quote_ids`) 밖인 문장을 뺀다.
+    판정이 근거가 없다고 한 사실을 다른 청크로 써 넣은 문장을 거르는 규칙이다. 표시가 없는 문장과 판정 구절 청크가 하나라도 섞인 문장은 그대로 둔다.
+    돌려주는 것: (남은 답, 남은 인용, 빠진 인용의 chunk_id, 뺀 문장 수). 판정 구절 청크를 모르거나(빈 목록), 뺄 문장이 없거나,
+    빼고 나면 판정 구절 청크를 인용한 문장이 하나도 남지 않으면 None(답을 그대로 둔다. 빈 답이나 근거 없는 답을 내지 않는다)."""
+    judged = {x for x in quote_ids or [] if x}
+    if not judged or not (draft or "").strip():
+        return None
+    lines_out: list[str] = []
+    dropped = 0
+    has_judged = False
+    for line in draft.split("\n"):
+        sentences = G.split_sentences(line)
+        keep: list[str] = []
+        for s in sentences:
+            marks = set(_MARK.findall(s))
+            if marks and not marks & judged:
+                dropped += 1
+                continue
+            has_judged = has_judged or bool(marks & judged)
+            keep.append(s)
+        if len(keep) == len(sentences):
+            lines_out.append(line)  # 뺄 것이 없는 줄은 글자 그대로 둔다
+        elif keep:
+            lines_out.append(" ".join(keep))
+    if not dropped or not has_judged:
+        return None
+    new_draft = "\n".join(lines_out).strip()
+    left = set(_MARK.findall(new_draft))
+    return new_draft, [c for c in cited if c["chunk_id"] in left], [c["chunk_id"] for c in cited if c["chunk_id"] not in left], dropped
 
 
 def grounding_quote_enabled() -> bool:
@@ -676,12 +709,6 @@ def judge_vote_enabled() -> bool:
 
 def judge_quote_enabled() -> bool:
     return _flag("GRAPH_JUDGE_QUOTE")
-
-
-def judge_retry_fast_enabled() -> bool:
-    """JRF `GRAPH_JUDGE_RETRY_FAST=1`(기본 꺼짐): 나뉜 질문(하위 질문 2개 이상)이고 앞 판정이 일부(partial)였을 때, 재검색 뒤 판정만 단계 표지를 `judge_retry`로 바꿔 추론을 끈다.
-    프롬프트 본문과 입력은 그대로이고 첫 판정과 미리 돌리는 판정(재검색 0회)은 바뀌지 않는다."""
-    return _flag("GRAPH_JUDGE_RETRY_FAST")
 
 
 def revise_ahead_enabled() -> bool:
