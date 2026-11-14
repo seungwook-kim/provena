@@ -57,6 +57,8 @@
 
 ### Edge Cases
 
+Google 신규 가입은 승인 전 `signup_requests`의 `pending` 신청이고, 승인 뒤 `users`의 `user` 계정과 `user_identities` 연결이 생긴다. 거절된 Google 신청은 새 신청으로 자동 대체하지 않는다. 기존 Google 계정 연결은 기존 `role`과 `is_active`를 유지하며, 운영에서는 114 적용 여부를 별도로 확인해야 한다.
+
 | 상황 | 처리 |
 |---|---|
 | 로그인 안 함·쿠키 만료·변조 | 401 (기존 `get_current_user`, `backend/auth.py:584-589`) |

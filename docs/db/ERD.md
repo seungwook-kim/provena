@@ -160,6 +160,8 @@ erDiagram
     }
 ```
 
+`db/114_google_identities.sql`의 제약조건 보충: `user_identities`의 기본 키는 `(provider, subject)` 복합 키이고 `provider`는 Google만 허용한다. `(provider, user_id)`도 유일하며, `signup_requests.google_sub`는 NULL이 아닌 값만 부분 유일하다. 114 적용 후 `users.password_hash`와 `signup_requests.password_hash`는 NULL을 허용하고, 후자는 비밀번호 해시 또는 Google subject 중 하나가 있어야 한다. 운영 Supabase에서 확인한 113·114 관련 인덱스·표·컬럼 상태와 운영의 전체 실행 이력·provider CHECK 정의는 구분한다.
+
 `token_revocations`는 다른 표와 외래 키가 없다. `jti`는 로그인 토큰(JWT) 식별자다.
 
 ### 3-2. 승인

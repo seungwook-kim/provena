@@ -208,6 +208,8 @@
 
 #### 4-1-2a. `user_identities`
 
+제약조건 보충: 기본 키는 `(provider, subject)` 복합 키이고 `provider`는 `google`만 허용한다. `(provider, user_id)`는 유일하며 로그인은 이 표의 `(provider, subject)`로 계정을 찾고 `email`은 참고값이다. 운영 DB 적용 여부는 SQL 파일의 존재와 별도로 확인한다.
+
 - 목적: 구글 계정(`sub`)과 `users` 행의 연결. 구글이 인증한 이메일이 기존 계정 로그인 아이디와 정확히 같을 때 한 줄을 더하고, 구글 가입 신청을 승인할 때도 한 줄을 더한다. 로그인할 때는 `(provider, subject)`로만 계정을 찾고 `email`은 참고용이다.
 - 만든 파일: `db/114_google_identities.sql`(표, RLS, 권한 회수).
 - 쓰는 코드: `backend/services/auth_store.py` — `get_or_create_google_user`, `_google_resolve`, `review_signup_request`(구글 신청 승인).
