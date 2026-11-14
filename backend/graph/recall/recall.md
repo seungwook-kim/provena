@@ -65,6 +65,7 @@ python -m backend.graph.recall.process_pending [--limit 50] [--force]
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-13 | 박진형 (jinyeong-731) | `impact.py` `render_markdown`: 섹션 이름(article)이 비었거나 공백뿐이면 표에 `(제목 없는 구간)`으로 보임(표시만 바꿈, 빈 article은 `find_by_article`의 짝짓기 키라 리포트 JSON 값은 그대로). 시험 `tests/test_impact_empty_section.py` | 미정 |
 | 2026-11-11 | 박진형 (jinyeong-731) | `impact.py`에 `post_mr_comment`(영향 미리보기 요약을 GitLab MR 댓글로 게시, `GITLAB_API_URL`(https만)·`GITLAB_TOKEN`이 없으면 건너뜀)와 `--post-mr` 옵션 추가(I-08). 시험 `tests/test_recall_impact_comment.py`(네트워크 호출 없음) | #132 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 리뷰 후속 J-12(DNS 재바인딩): 웹훅을 보낼 때 주소 검사에서 나온 공인 IP 하나로 직접 연결한다(`check_target_url`이 IP를 돌려주고 `pin_request`가 host를 IP로 바꿈, `Host` 헤더·TLS SNI는 원래 이름, 리다이렉트 따라가지 않음). 단건·하루 요약 둘 다 같은 전송 함수라 한 곳에서 처리. 시험 `tests/test_recall_webhook.py` | #131 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 놓친 것 J-12(웹훅 주소를 실제로 풀어 나온 IP가 내부·루프백·링크로컬이면 등록·전송 때 막음, 정수·16진수 표기 포함), J-13(웹훅 본문에서 user_id·question·answer_excerpt·thread_id·acked 제거) | #131 |
@@ -76,4 +77,5 @@ python -m backend.graph.recall.process_pending [--limit 50] [--force]
 ## 문제 기록 (최신이 위)
 
 | 번호 | 발견일 | 발견자 | 문제 | 영향 | 담당 | 상태 | 판정일 | 판정 근거 |
-|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|
+| A-001 | 2026-11-13 | 김승욱 | 영향 미리보기 결과 표의 '섹션' 칸이 빈 값으로 나옴(놓친 것 11/13 새로 발견 6, `impact.py` `render_markdown`) | 어느 구간이 바뀌었는지 표에서 알 수 없음 | 박진형 | 해결 | 2026-11-13 | `tests/test_impact_empty_section.py` 4개(표에는 `(제목 없는 구간)`, 보고서 JSON의 article은 빈 값 그대로) |

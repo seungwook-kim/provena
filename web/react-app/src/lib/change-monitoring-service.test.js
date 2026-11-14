@@ -47,6 +47,14 @@ describe('change mapping', () => {
     expect(mapChangeType('MODIFIED')).toBe('MODIFIED')
   })
 
+  it('keeps only http(s) source links', () => {
+    expect(mapChange(change({ source_url: 'javascript:alert(1)' })).sourceUrl).toBeNull()
+    expect(mapChange(change({ source_url: 'data:text/html,x' })).sourceUrl).toBeNull()
+    expect(mapChange(change({ source_url: '/relative/only' })).sourceUrl).toBeNull()
+    expect(mapChange(change({ source_url: 'http://example.com/a' })).sourceUrl).toBe('http://example.com/a')
+    expect(mapChange(change()).sourceUrl).toBe('https://handbook.gitlab.com/handbook/finance/procurement/')
+  })
+
   it('maps a change event to the record shape used by the change screen', () => {
     const record = mapChange(change())
     expect(record).toMatchObject({

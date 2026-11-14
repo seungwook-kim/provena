@@ -8,6 +8,7 @@ import {
   submitDepartmentReview as submitPreviewDepartmentReview,
 } from './approvals-preview'
 import { formatDateTime } from './recall-service'
+import { safeHttpUrl } from './safe-url'
 
 // Stable boundary for the approvals API. Pages receive a service built from either
 // the preview adapter or the API adapter and keep this interface.
@@ -44,7 +45,6 @@ const list = value => Array.isArray(value) ? value : []
 const text = value => typeof value === 'string' ? value : ''
 const textOrNull = value => typeof value === 'string' && value.trim() ? value : null
 const count = value => Number.isFinite(value) ? value : 0
-const httpUrl = value => typeof value === 'string' && /^https?:\/\//i.test(value) ? value : null
 const roles = value => list(value).filter(role => typeof role === 'string')
 
 const APPROVAL_ERROR_MESSAGES = {
@@ -125,7 +125,7 @@ function mapIssueTable(table) {
       confidence: ['high', 'medium', 'low'].includes(row?.confidence) ? row.confidence : null,
       sectionPath: text(row?.section_path),
       versionDate: textOrNull(row?.version_date),
-      sourceUrl: httpUrl(row?.source_url),
+      sourceUrl: safeHttpUrl(row?.source_url),
       conflict: row?.conflict === true,
     })),
     unreviewed: list(table.unreviewed).map(item => ({ team: text(item?.team), teamLabel: textOrNull(item?.team_label) ?? text(item?.team), reason: text(item?.reason) })),

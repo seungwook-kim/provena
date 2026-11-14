@@ -12,7 +12,7 @@
 
 ## Goal
 
-- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 색인 대상은 고정 커밋 `static/pdfs/` 아래 PDF 7건이다(`data/pdf/pdf_manifest.json`). 글자가 같은 `customer_dpa_05_01_26.pdf`와 `customer_dpa_5_1_26.pdf`는 하나만 둔다.
+- **해결 목표**: 원문을 요소 단위 중간 표현(`document_ir.jsonl`)과 권한표 칸 목록(`authz_cells.jsonl`)으로 바꾸고, 무엇을 지웠고 무엇을 못 했는지 기록한다. (2026-11-13: 11/03 PDF 파싱 추가 때 이 줄이 PDF 목표로 덮였던 것을 되돌림. PDF 목표는 아래 "PDF 파싱" Spec)
 - **성공 기준**: 처음 보는 단축코드 0종(있으면 그 쪽은 검토 대기) / 요소 원문 되찾기 실패 0 / 권한표 363칸 역할 주석 불일치 0 / 금액 구간 끊김은 실패가 아니라 목록으로 보고
 - **Out of Scope**: 청킹·청크 수(B-3), include 26곳 끌어오기(데이터카드에 기록), 결정표 만들기(F-04), 이모지를 그림 글자로 바꾸기
 
@@ -40,8 +40,8 @@
 
 ## How
 
-- 라이브러리: `markdown-it-py`(4.2.0), `beautifulsoup4`(4.15.0). 비교 근거: 표본 20쪽 파서 비교(제목 F1 0.996, 표 19/20, 코드 20/20)
-- 단축코드 분류: 감싸기(alert·details·panel·note·tableau: 표시만 지우고 안 글자 유지, details·panel 제목 글자는 남김) / 이름(member-by-name·member-by-gitlab·member-and-role-by-gitlab·label: 인자 글자로) / 링크(ref: 경로로) / 데이터(나머지 36종: 사이트가 다른 데이터로 채움, 지우고 개수 기록)
+- 라이브러리: `markdown-it-py`(4.2.0), `beautifulsoup4`(4.15.0), `lxml`(6.1 이상, BeautifulSoup의 HTML 엔진. 깨진 HTML 표에서 기본 엔진 `html.parser`보다 행을 덜 뭉친다). 비교 근거: 표본 20쪽 파서 비교(제목 F1 0.996, 표 19/20, 코드 20/20)
+- 단축코드 분류: 감싸기(alert·details·panel·note·tableau: 표시만 지우고 안 글자 유지, details·panel 제목 글자는 남김) / 이름(member-by-name·member-by-gitlab·member-and-role-by-gitlab·label: 인자 글자로) / 링크(ref: 경로로) / 데이터(나머지 34종: 사이트가 다른 데이터로 채움, 지우고 개수 기록)
 - HTML → 글자 순서(rag1-07): script·style 내용째 제거 → 줄바꿈 태그를 줄바꿈으로 → 나머지 태그를 공백으로 → 엔티티 복원 → 공백 정리
 - 출력 `data/parsed/`(원문에서 다시 만들므로 커밋하지 않는다. 결정표 변환이 실행 중에 읽는 `authz_cells.jsonl`만 커밋한다): `document_ir.jsonl`, `authz_cells.jsonl`, `authz_board.jsonl`, `authz_notes.jsonl`, `authz_ir.jsonl`, `parse_report.json`
 - 요소 필드: `element_id, rule_seq, org, kind, heading_path, parent_id, order, line_start, line_end, text, links, review` (+ 표 행: `table_id, row, header`)
@@ -86,7 +86,7 @@
 
 ## Goal
 
-- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 색인 대상은 치트시트 1건이다.
+- **해결 목표**: 글자 층이 있는 PDF를 Docling(OCR 끔)으로 파싱해 기존 요소 형식(`element_id ... review`)으로 바꾸고(`data/parsed/pdf_ir.jsonl`), 같은 청킹 규칙(800자, 120자 겹침)으로 서비스 색인 전용 청크(`data/chunks/pdf_chunks.jsonl`)를 만든다. 문서 형식별 코드는 없고 원본 목록(`SOURCES`)에 파일을 추가하면 된다. 현재 파싱 대상은 고정 커밋 `static/pdfs/` 아래 PDF 7건이며(`data/pdf/pdf_manifest.json`) 검색 색인에는 아직 넣지 않았다(`data/data.md` PDF 절 "알려진 한계").
 - **성공 기준**: 빠진 요소 0 / Chunk 계약 통과 / 기존 `chunks.jsonl`과 평가 파일 해시 변동 0
 - **Out of Scope**: OCR·스캔 PDF, 평가 색인에 PDF 넣기, 임베딩과 DB 적재(모델 확정 뒤)
 

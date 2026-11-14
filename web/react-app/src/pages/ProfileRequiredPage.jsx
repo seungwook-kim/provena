@@ -191,6 +191,7 @@ function ProfileOnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [memoryFailed, setMemoryFailed] = useState(false)
 
   const isOnboarding = user?.profile_completed === false
   const steps = useMemo(() => [
@@ -223,6 +224,20 @@ function ProfileOnboardingPage() {
     setForm(currentForm => ({ ...currentForm, [field]: nextValue }))
     setFieldErrors(({ [field]: _cleared, ...rest }) => rest)
     setError('')
+    setMemoryFailed(false)
+  }
+
+  async function continueLater() {
+    if (saving) return
+    setSaving(true)
+    try {
+      await refresh()
+      navigate('/chat', { replace: true })
+    } catch (refreshError) {
+      setError(refreshError?.message || '세션을 새로 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function next() {
@@ -240,6 +255,7 @@ function ProfileOnboardingPage() {
     if (!canContinue || saving) return
     setSaving(true)
     setError('')
+    setMemoryFailed(false)
     setFieldErrors({})
     let profileSaved = false
     try {
@@ -254,6 +270,7 @@ function ProfileOnboardingPage() {
       if (profileSaved) {
         // 내 정보는 저장됐다. 다시 눌러도 같은 값을 덮어쓸 뿐이다.
         setError(MEMORY_FAILED)
+        setMemoryFailed(true)
       } else if (saveError instanceof ApiError && saveError.status === 422) {
         // 오류 칸이 있는 단계로 돌려보내 그 칸 아래에 이유를 보여 준다 (소속 팀 = 0단계, 이름·전화·주소 = 3단계).
         const errors = toFormFieldErrors(saveError.fields)
@@ -283,6 +300,7 @@ function ProfileOnboardingPage() {
         {step === 3 && <div className="profile-form profile-form-wizard"><p className="profile-storage-notice profile-privacy-notice">{PRIVACY_NOTICE}</p><label><span>이름 <em aria-hidden="true">*</em></span><input required value={form.name} onChange={event => update('name', event.target.value)} autoComplete="name" {...fieldProps(fieldErrors, 'name')} /></label><FieldError id="profile-error-name" message={fieldErrors.name} /><label><span>전화번호 <em aria-hidden="true">*</em></span><input required value={form.phone} onChange={event => update('phone', event.target.value)} inputMode="tel" autoComplete="tel" placeholder="예시) 010-1234-5678" {...fieldProps(fieldErrors, 'phone')} /></label><FieldError id="profile-error-phone" message={fieldErrors.phone} /><label><span>근무지 주소 <em aria-hidden="true">*</em> <small>(5~100자)</small></span><textarea required className="profile-address-field" value={form.address} onChange={event => update('address', event.target.value)} autoComplete="street-address" {...fieldProps(fieldErrors, 'address')} /></label><FieldError id="profile-error-address" message={fieldErrors.address} /></div>}
         {step === 4 && <dl className="profile-summary"><dt>소속 팀</dt><dd>{form.team}</dd><dt>업무 역할</dt><dd>{form.role || '설정하지 않음'}</dd><dt>담당 서비스</dt><dd>{form.service.trim() || '설정하지 않음'}</dd><dt>이름</dt><dd>{form.name}</dd><dt>전화번호</dt><dd>{form.phone}</dd><dt>근무지 주소</dt><dd>{form.address}</dd></dl>}
         {error && <p className="form-error" role="alert">{error}</p>}
+        {memoryFailed && <button type="button" className="profile-confirm-cancel" disabled={saving} onClick={continueLater}>나중에 입력하고 계속</button>}
         <div className={`profile-wizard-actions${step === 0 ? ' first-step' : ''}`}>{step > 0 && <button type="button" className="profile-confirm-cancel" disabled={saving} onClick={() => setStep(currentStep => currentStep - 1)}>이전</button>}{step < steps.length - 1 ? <button type="button" className="button button-dark" disabled={!canContinue || saving} onClick={next}>다음</button> : <button type="button" className="button button-dark" disabled={saving} onClick={submit}>{saving ? '저장 중입니다.' : '등록 완료'}</button>}</div>
       </>}
     </section>

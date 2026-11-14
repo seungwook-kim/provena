@@ -10,7 +10,7 @@
 |---|---|
 | 산업과 문서 종류 | IT·플랫폼. 실제 IT 회사인 GitLab의 공개 핸드북(CC BY-SA 4.0)에서 개발·운영 조직의 정책과 런북 절을 골랐다. Markdown 문서이고 권한표가 포함된다. 커밋 `129243bc`로 고정. 코퍼스는 영어이고 평가셋 질문은 한국어다 |
 | 서로 다른 문서 수 / 서로 다른 청크 수 | 문서 1,565건(청크가 있는 문서 1,512건, 53건은 본문이 없어 청크가 없다) / 청크 23,095개, 그중 서로 다른 청크 22,378개(본문 sha256 기준). 53건은 청킹 결과 청크가 하나도 나오지 않은 쪽 50건(`data/manifest.jsonl`의 `skipped`가 `no_body`)과 다른 쪽으로 넘기는 쪽 3건(`skipped`가 `redirect`)이다. 이 53건의 원문 길이는 모두 1,117자 이하다 |
-| 문서 파싱 방식 (PDF, 표, 스캔 중) | 표. 핸드북 Markdown(`markdown-it-py`, 표 켬) + Hugo 단축코드 정리 + HTML 표·2023 권한표 CSS grid(`beautifulsoup4` + `lxml`). 1,561쪽 → 요소 85,388개(원본 줄 되찾기 실패 0), 권한표 363칸(역할 주석 대조 불일치 0). 재현: `python -m backend.rag.ingest.parse` |
+| 문서 파싱 방식 (PDF, 표, 스캔 중) | 표. 핸드북 Markdown(`markdown-it-py`, 표 켬) + Hugo 단축코드 정리 + HTML 표·2023 권한표 CSS grid(`beautifulsoup4` + `lxml`). 1,561쪽 → 요소 85,332개(원본 줄 되찾기 실패 0, 2026-11-14 515acc3d의 HTML 표 합치기 뒤 다시 센 값, 그 전 85,388), 권한표 363칸(역할 주석 대조 불일치 0). 재현: `python -m backend.rag.ingest.parse` |
 | 청킹 방식과 크기, 겹침 | 제목 경로 단위, 최대 800자, 겹침 120자. 500자와 1200자 비교는 [임베딩 측정 기록](docs/embedding_measurement.md) 2장 |
 | 임베딩 모델과 선택 근거 | `voyage-4`(1024차원, 문서와 질문 모두 Voyage API), 영어 문장 벡터. 2026-11-03 팀 확정. 기준선은 `bge-m3`이다. 비교 값과 이유는 3-2절과 [임베딩 측정 기록](docs/embedding_measurement.md) 10장, 11장에 있다. 후보를 좁힌 과정은 [decisions.md](docs/decisions.md)에 있다 |
 | 벡터DB와 선택 이유, 한계 | Supabase pgvector, 가이드 권고를 따름. `voyage-4` 23,095청크를 적재했다. 한계: 무료 등급 Nano에서 전수 비교 벡터 질의가 SPEC 검색 p95 3초를 넘는다 |
@@ -1097,7 +1097,7 @@ b는 a와 다르지 않았다(회차 p95 평균 +0.028초, 검색 hedge 발동 0
 평가자가 샘플 몇 문항을 다시 돌려 숫자가 맞는지 봅니다.
 
 ```bash
-# 아래 `--chunks data/chunks/chunks.jsonl`은 저장소에 커밋하지 않은 파일이다(.gitignore). `python -m backend.rag.ingest.chunk`로 만들거나, 새로 받은 저장소에서는 `data/index.tar.gz`를 풀어 나온 같은 형식의 `data/index/chunks.jsonl`을 `--chunks`에 넘긴다
+# 아래 `--chunks data/chunks/chunks.jsonl`은 저장소에 커밋하지 않은 파일이다(.gitignore). 새로 받은 저장소에서는 `data/index.tar.gz`를 풀어 나온 `data/index/chunks.jsonl`을 `--chunks`에 넘긴다. 515acc3d(청크 762개 변경) 뒤로는 `python -m backend.rag.ingest.chunk`로 만든 파일이 색인과 달라 `experiment_v1.py`가 "청크가 바뀌었다"로 멈추므로, 색인을 다시 만들기 전까지는 `data/index/chunks.jsonl`만 쓴다
 # 베이스라인(3장 표 0번). 아래 prepare로 만든 캐시를 쓴다. 결과 evals/results/baseline_v1/
 python -m evals.retrieval.compare --dataset evals/dataset_v1.jsonl --factory evals.retrieval.experiment_v1:make_search --grid evals/retrieval/grid_baseline_v1.json --chunks data/chunks/chunks.jsonl --out evals/results/baseline_v1
 # 검색 1차 비교(3-0) 원시 결과 보기: 조합별 JSON 418개를 같은 폴더에 푼다(푼 파일은 커밋하지 않는다)

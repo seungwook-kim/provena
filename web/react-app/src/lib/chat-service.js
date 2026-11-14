@@ -5,7 +5,7 @@ export function createChatService(adapter) {
     listThreads: () => adapter.listThreads(),
     getThread: (threadId, options) => adapter.getThread(threadId, options),
     createConversation: () => adapter.createConversation(),
-    sendMessage: ({ threadId, message }) => adapter.sendMessage({ threadId, message }),
+    sendMessage: ({ threadId, message, retry }) => adapter.sendMessage({ threadId, message, retry }),
     stopMessage: threadId => adapter.stopMessage(threadId),
     searchThreads: query => adapter.searchThreads(query),
     dispose: () => adapter.dispose?.() ?? [],
@@ -100,25 +100,42 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
     draft.citations = citations
   }
   return {
-    async listThreads() { const { getThreads } = await import('./api'); threads = mapThreadResponse(await getThreads()); notify(); return structuredClone(threads) },
+    async listThreads() {
+      const { getThreads } = await import('./api')
+      const fetched = mapThreadResponse(await getThreads())
+      // 지금 스트리밍 중인 대화는 로컬 사본이 더 최신이다(중지 뒤 남은 질문을 바로 다시 보낸 경우) → 목록으로 덮어쓰지 않는다
+      const live = threads.filter(thread => [...controllers.values()].some(request => request.activeThreadId === thread.id))
+      threads = [...live, ...fetched.filter(item => !live.some(thread => thread.id === item.id))]
+      notify()
+      return structuredClone(threads)
+    },
     // Server copy unless the local one is fresher: streaming now, or already holding a user turn (fetched or sent this session).
     // fresh: 화면을 떠난 사이 서버가 이어서 만든 답을 받을 때 로컬 사본을 건너뛴다
     async getThread(id, { fresh = false } = {}) {
       const streaming = () => [...controllers.values()].some(request => request.activeThreadId === id)
       const local = fresh ? null : threads.find(thread => thread.id === id)
-      // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있어 서버에서 다시 받는다(H-15)
-      const waiting = local?.messages?.some(message => message.role === 'assistant' && message.state === 'approval')
+      // 승인을 기다리던 대화는 그동안 승인함에서 끝났을 수 있고, 중지한 답은 서버가 끝까지 만들어 저장하므로 서버에서 다시 받는다(H-15, M4)
+      const waiting = local?.messages?.some(message => message.role === 'assistant' && (message.state === 'approval' || message.state === 'stopped'))
       if (local && (streaming() || (local.messages?.some(message => message.role === 'user') && !waiting))) return structuredClone(local)
       const { getThread } = await import('./api')
-      const thread = mapThreadRecord(await getThread(id))
+      const kept = threads.find(item => item.id === id)
+      let thread
+      try { thread = mapThreadRecord(await getThread(id)) } catch (error) {
+        // 다시 받지 못해도 로컬 사본이 있으면 오류 화면 대신 그것을 보인다(M4)
+        if (kept?.messages?.length) return structuredClone(kept)
+        throw error
+      }
       const latest = threads.find(item => item.id === id)
       if (latest && streaming()) return structuredClone(latest)
+      // 서버가 아직 답을 만드는 중이면 질문만 오므로, 중지한 답이 든 로컬 사본을 덮어쓰지 않는다 → 다음에 열 때 다시 받는다(M4)
+      const running = thread.status === 'running' || thread.messages?.at(-1)?.role === 'user'
+      if (latest && running && latest.messages?.some(message => message.role === 'assistant' && message.state === 'stopped')) return structuredClone(latest)
       threads = latest ? threads.map(item => item.id === id ? { ...item, ...thread } : item) : [thread, ...threads]
       notify()
       return structuredClone(thread)
     },
     async createConversation() { return { id: null, title: '', messages: [] } },
-    async sendMessage({ threadId, message }) {
+    async sendMessage({ threadId, message, retry = false }) {
       const { streamChatMessage } = await import('./api')
       const controller = new AbortController(); const streamId = threadId ?? `pending-${Date.now()}`
       const request = { controller, activeThreadId: threadId, cancelled: false }
@@ -127,7 +144,13 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
       // question: 오류 말풍선의 '다시 시도'가 다시 보낼 질문(H-08)
       const answer = { role: 'assistant', text: '', citations: [], state: 'generating', question: message, timestamp: new Date().toISOString() }
       const existing = threads.find(thread => thread.id === threadId)
-      if (existing) upsert(threadId, { messages: [...(existing.messages ?? []), userMessage, answer] })
+      if (existing) {
+        // '다시 시도'는 실패한 한 턴(질문+오류 말풍선)을 새 턴으로 바꾼다. 같은 오류에 여러 번 눌러도 말풍선은 한 쌍이다.
+        let kept = existing.messages ?? []
+        const failed = kept.at(-1)
+        if (retry && failed?.role === 'assistant' && failed.state === 'error' && failed.question === message && kept.at(-2)?.role === 'user') kept = kept.slice(0, -2)
+        upsert(threadId, { messages: [...kept, userMessage, answer] })
+      }
       let finished = false
       try {
         await streamChatMessage(threadId, message, { signal: controller.signal, onEvent: event => {

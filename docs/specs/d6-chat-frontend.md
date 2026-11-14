@@ -104,9 +104,9 @@
 
 | 호출 | 확인된 프론트 기준 | 아직 확정하지 않은 항목 |
 |---|---|---|
-| `GET /threads` | `thread_id`, `title`, `updated_at` → `id`, `title`, `lastActivityAt` | 확정(작성 당시 미확정): 최상위는 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(`backend/api/routes.py:347`, SDD 4-4). 목록에는 메시지가 없다 |
-| `GET /threads/{id}` | thread 상세를 UI 대화로 변환 | 확정: 최상위에 thread 필드와 `messages`(질문 체크포인트에서 되살린 대화 이력)를 평평하게 둔다(`backend/api/routes.py:357`) |
-| `POST /chat` | JSON 요청 및 text/event-stream 처리 | 확정: 요청 `{thread_id?, message, as_of?, org?}`, 이벤트 `AgentEvent`(`{type, thread_id, data}`), 승인 대기 중 새 질문은 409 `approval_pending`(`backend/api/routes.py:322-329`, SDD 6장) |
+| `GET /threads` | `thread_id`, `title`, `updated_at` → `id`, `title`, `lastActivityAt` | 확정(작성 당시 미확정): 최상위는 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(`backend/api/routes.py`의 `list_threads`, SDD 4-4). 목록에는 메시지가 없다 |
+| `GET /threads/{id}` | thread 상세를 UI 대화로 변환 | 확정: 최상위에 thread 필드와 `messages`(질문 체크포인트에서 되살린 대화 이력)를 평평하게 둔다(`backend/api/routes.py`의 `get_thread`) |
+| `POST /chat` | JSON 요청 및 text/event-stream 처리 | 확정: 요청 `{thread_id?, message, as_of?, org?}`, 이벤트 `AgentEvent`(`{type, thread_id, data}`), 승인 대기 중 새 질문은 409 `approval_pending`(`backend/api/routes.py`의 `chat`이 `pending_approval`을 검사, SDD 6장) |
 
 백엔드에서 확인되지 않은 내용을 새 스키마로 만들지 않는다. 위 표의 "확정" 값은 PR #60 머지 뒤 백엔드 코드에서 확인한 값이다.
 
@@ -118,10 +118,10 @@
 | 파일 | `web/react-app/src/pages/DemoChatPage.jsx` | 대화 화면, 승인 대기 표시 |
 | 파일 | `web/react-app/vite.config.js` | 개발 서버가 `/auth`, `/me` 등을 백엔드로 넘기는 프록시 |
 | 빌드 변수 | `VITE_API_BASE_URL` | API 기본 주소. 비우면 같은 origin(`src/lib/api.js:1`, `web/react-app/README.md`) |
-| 빌드 변수 | `VITE_API_PROXY_TARGET` | 개발 서버 프록시 대상. 비우면 Docker 안에서는 `http://host.docker.internal:8000`, 아니면 `http://127.0.0.1:8000`(`vite.config.js:10-11`) |
-| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx:11`, `App.jsx:75`) |
-| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx:271, 279`) |
-| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py:95, 124`) |
+| 빌드 변수 | `VITE_API_PROXY_TARGET` | 개발 서버 프록시 대상. 비우면 Docker 안에서는 `http://host.docker.internal:8000`, 아니면 `http://127.0.0.1:8000`(`vite.config.js`의 `proxyTarget`) |
+| 빌드 변수 | `VITE_ENABLE_MOCK_SESSION` | `'true'`면 로그인 없이 시험용 세션을 쓴다(`SessionProvider.jsx`의 `isMockSessionEnabled`, `App.jsx`의 `/` 경로) |
+| 빌드 변수 | `VITE_ENABLE_LOCAL_DEMO` | `'true'`면 개발 모드가 아니어도 `/demo/` 경로의 미리보기를 허용한다(`DemoChatPage.jsx`의 `DemoOnlyChat`·`DemoAdminBlocked`) |
+| 서버 환경변수 | `LLM_MODEL`, `CHAT_FINAL_FROM_STREAM` | `/chat` 응답의 모델 이름과 최종 답 처리 방식(`backend/api/routes.py`의 `model_name`·`final_from_stream_enabled`) |
 
 ### 검증 계획
 

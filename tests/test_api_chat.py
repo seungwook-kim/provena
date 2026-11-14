@@ -159,6 +159,19 @@ def test_chat_validation_errors_use_the_common_error_shape(monkeypatch):
         assert "hunter2-secret" not in r.text                 # 입력값은 되돌리지 않는다
 
 
+def test_chat_rejects_impossible_as_of_with_422_not_sse_error(monkeypatch):
+    """형식(YYYY-MM-DD)만 맞고 없는 날짜는 SSE error가 아니라 공통 422 봉투다(검색기 date.fromisoformat ValueError가 스트림으로 새던 문제)."""
+    with Env(monkeypatch) as env:
+        c = env.client(env.alice)
+        for bad in ("2026-02-30", "2026-13-45", "2025-02-29", "0000-00-00", "２０２６-０１-０１", "٢٠٢٦-٠١-٠١"):
+            r = c.post("/chat", json={"message": Q, "as_of": bad})
+            err = r.json()["error"]
+            assert r.status_code == 422 and err["code"] == "validation_error" and r.headers["content-type"].startswith("application/json"), bad
+            assert any(d["loc"][-1] == "as_of" for d in err["details"]) and bad not in r.text and bad not in str(r.json())
+        r, ev = ask(c, Q, "t1", as_of="2024-02-29")   # 윤일은 통과
+        assert r.status_code == 200
+
+
 def test_chat_rejects_a_message_of_only_whitespace(monkeypatch):
     """앞뒤 공백을 지운 뒤 비는 질문(스페이스, 탭, 줄바꿈, 전각 공백만)은 422이고, 글자가 있으면 앞뒤 공백이 있어도 받는다."""
     with Env(monkeypatch) as env:

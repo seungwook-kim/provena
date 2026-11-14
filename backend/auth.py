@@ -65,6 +65,8 @@ EMAIL_VERIFICATION_MAX_ATTEMPTS = 5
 EMAIL_VERIFICATION_RESEND_SECONDS = 60
 EMAIL_VERIFICATION_MAX_SENDS = 5
 EMAIL_RE = re.compile(r"^[^@\s]{1,254}@[^@\s]{1,254}\.[^@\s]{1,63}$")
+# 가입 아이디에 허용하는 글자(소문자로 바꾼 뒤). 데모 아이디(demo-user)와 이메일은 모두 들어가고 `<script>` 같은 값은 막는다. 가입에만 적용한다.
+SIGNUP_LOGIN_ID_RE = re.compile(r"^[a-z0-9._@+-]+$")
 # Pre-generated bcrypt hash used only to keep the missing-ID path comparable.
 # The plaintext used to create it is intentionally not stored.
 DUMMY_PASSWORD_HASH = "$2b$12$ZYMeUhjatrYhfQ9q1eu/1O7J2e6cMOK79Dh5mAMj3ra4MwL67h1oO"
@@ -1054,7 +1056,7 @@ def create_auth_router(
         require_csrf(request)
         _check_signup_ip_rate_limit(request)
         login_id = _normalise_signup_login(payload.login_id)
-        if (not login_id or len(login_id) > 64 or any(char.isspace() for char in login_id)
+        if (not login_id or len(login_id) > 64 or not SIGNUP_LOGIN_ID_RE.fullmatch(login_id)
                 or payload.password != payload.password_confirmation):
             raise HTTPException(status_code=422, detail="회원가입 입력값을 확인해 주세요.")
         email_required = bool(EMAIL_RE.fullmatch(login_id))

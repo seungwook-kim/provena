@@ -208,8 +208,15 @@ def _excerpt(text: str | None, n: int = EXCERPT) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+EMPTY_SECTION = "(제목 없는 구간)"  # 화면 표시용 이름. 빈 article은 find_by_article의 짝짓기 키라 데이터는 그대로 두고 표에서만 바꾼다
+
+
 def _cell(s: str) -> str:
     return s.replace("|", "\\|").replace("\n", " ")
+
+
+def _section(article: str) -> str:
+    return _cell(article if article.strip() else EMPTY_SECTION)
 
 
 def render_markdown(report: ImpactReport, *, max_rows: int = 15) -> str:
@@ -222,11 +229,11 @@ def render_markdown(report: ImpactReport, *, max_rows: int = 15) -> str:
              f"- 달라질 결정표 칸 **{s.decision_cells}개** (표 {s.decision_tables}개, 칸 단위로 가리지 못한 칸 {s.decision_cells_unverified}개)",
              f"- 알림 받을 사람 **{s.recipients}명**", "",
              "| 섹션 | 변경 | 인용한 답 | 무효 후보 | 결정표 칸 |", "|---|---|---|---|---|"]
-    lines += [f"| {_cell(c.article)} | {c.change_type} | {c.answers_affected} | {c.answers_invalidated} | {c.decision_cells} |" for c in report.changes[:max_rows]]
+    lines += [f"| {_section(c.article)} | {c.change_type} | {c.answers_affected} | {c.answers_invalidated} | {c.decision_cells} |" for c in report.changes[:max_rows]]
     bad = [a for a in report.answers if a.verdict != "unchanged"]
     if bad:
         lines += ["", "| 질문 | 섹션 | 판정 | 설명 |", "|---|---|---|---|"]
-        lines += [f"| {_cell(a.question_excerpt)} | {_cell(a.article)} | {ko[a.verdict]} | {_cell(_excerpt(a.verdict_note, 120))} |" for a in bad[:max_rows]]
+        lines += [f"| {_cell(a.question_excerpt)} | {_section(a.article)} | {ko[a.verdict]} | {_cell(_excerpt(a.verdict_note, 120))} |" for a in bad[:max_rows]]
     lines += [""] + [f"> {n}" for n in report.notes] + ["", ATTRIBUTION]
     return "\n".join(lines)
 

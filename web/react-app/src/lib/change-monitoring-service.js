@@ -1,4 +1,5 @@
 import * as apiClient from './api'
+import { safeHttpUrl } from './safe-url'
 import {
   filterPreviewChanges,
   getPreviewChange,
@@ -86,7 +87,7 @@ export function mapChange(change = {}) {
     newPolicy: textOrNull(change?.new_text),
     ...(type === 'MODIFIED' ? changedMark(textOrNull(change?.old_text), textOrNull(change?.new_text)) : { changedText: null, changedAt: null }),
     impactedAnswerCount: impacted,
-    sourceUrl: textOrNull(change?.source_url),
+    sourceUrl: safeHttpUrl(change?.source_url),
     recallTo: impacted && impacted > 0 ? buildRecallLink({ ruleSeq, article }) : null,
     ruleSeq,
     article,

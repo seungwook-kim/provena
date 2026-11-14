@@ -85,7 +85,7 @@ export function createPreviewChatAdapter({ onThreadsChange, onProcessingChange }
     async listThreads() { return clone(threads) },
     async getThread(id) { return clone(threads.find(thread => thread.id === id) ?? null) },
     async createConversation() { return null },
-    async sendMessage({ threadId, message }) {
+    async sendMessage({ threadId, message, retry = false }) {
       const question = message.trim()
       if (!question || processingId) return null
 
@@ -93,8 +93,12 @@ export function createPreviewChatAdapter({ onThreadsChange, onProcessingChange }
       const existing = threads.find(thread => thread.id === id)
       const timestamp = new Date().toISOString()
       const pending = { role: 'assistant', text: '', citations: [], state: 'generating', question, timestamp }
+      // '다시 시도'는 실패한 한 턴(질문+오류 말풍선)을 새 턴으로 바꾼다(chat-service.js와 같은 규칙).
+      let kept = existing?.messages ?? []
+      const failed = kept.at(-1)
+      if (retry && failed?.role === 'assistant' && failed.state === 'error' && failed.question === question && kept.at(-2)?.role === 'user') kept = kept.slice(0, -2)
       const nextThread = existing
-        ? { ...existing, lastActivityAt: timestamp, messages: [...existing.messages, { role: 'user', text: question, timestamp }, pending] }
+        ? { ...existing, lastActivityAt: timestamp, messages: [...kept, { role: 'user', text: question, timestamp }, pending] }
         : { id, title: question.slice(0, 28), lastActivityAt: timestamp, messages: [{ role: 'user', text: question, timestamp }, pending] }
 
       threads = existing ? threads.map(thread => thread.id === id ? nextThread : thread) : [nextThread, ...threads]

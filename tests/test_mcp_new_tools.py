@@ -70,7 +70,7 @@ def test_store_returning_none_is_not_ready():
     assert r["status"] == "not_ready" and r["retryable"] is False
 
 
-@pytest.mark.parametrize("answer_id", ["", " ", "x" * 65])
+@pytest.mark.parametrize("answer_id", ["", " ", "x" * 65, "ans\x00"])
 def test_bad_input_is_invalid(answer_id):
     r = call(srv.build_server(search_fn=lambda q: [], answer_store_fn=saved_store), TOOL, {"answer_id": answer_id})
     assert r["status"] == "invalid" and r["retryable"] is False

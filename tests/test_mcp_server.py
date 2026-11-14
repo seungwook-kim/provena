@@ -230,6 +230,28 @@ def test_get_section_bad_input(args):
     assert call(make(), "get_section", args)["status"] == "invalid"
 
 
+@pytest.mark.parametrize("bad", ["A\x00B", "\x00", "A\x1fB", "A\x01", "A\ud800B"])
+def test_get_section_control_char_article_is_invalid_and_not_read(monkeypatch, bad):
+    """B13: NUL 등 제어문자가 든 article은 DB(psycopg DataError → error)까지 가지 않고 invalid(Spec EC-03)."""
+    from backend.rag.retrieve import section
+    called = []
+    monkeypatch.setattr(section, "get_section", lambda *a, **k: called.append(a))
+    r = call(make(), "get_section", {"rule_seq": 7, "article": bad})
+    assert r["status"] == "invalid" and r["retryable"] is False and called == []
+
+
+def test_get_section_tab_newline_article_is_allowed():
+    r = call(make(store=section_rows(["x"])), "get_section", {"rule_seq": 7, "article": "A\tB\nC\rD"})
+    assert r["status"] == "not_found"        # 검사는 통과해 저장소까지 갔고 그 섹션이 없을 뿐
+
+
+def test_search_control_char_query_is_invalid_and_not_searched():
+    fs = FakeSearch()
+    assert call(make(search=fs), "search_handbook", {"query": "a\x00b"})["status"] == "invalid"
+    assert call(make(search=fs), "search_handbook", {"query": "ok", "sub_queries": ["a", "b\x00"]})["status"] == "invalid"
+    assert fs.calls == []
+
+
 # ---------- list_changed_sections ----------
 
 ART = ChangedArticle(rule_seq=7, article="A", old_version_date="2026-09-01", new_version_date="2026-10-30",

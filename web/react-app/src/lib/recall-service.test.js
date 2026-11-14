@@ -88,6 +88,14 @@ describe('recall notice mapping', () => {
     expect(record).toMatchObject({ id: '7', title: '바뀐 정책 섹션', document: '', oldPolicy: null, newPolicy: null, sourceUrl: null, severity: null, confidence: null, detectedAt: '' })
   })
 
+  it('keeps only http(s) source links', () => {
+    expect(mapNotice(notice({ source_url: 'javascript:alert(1)' })).sourceUrl).toBeNull()
+    expect(mapNotice(notice({ source_url: 'data:text/html,x' })).sourceUrl).toBeNull()
+    expect(mapNotice(notice({ source_url: 'not a url' })).sourceUrl).toBeNull()
+    expect(mapNotice(notice({ source_url: 'http://example.com/a' })).sourceUrl).toBe('http://example.com/a')
+    expect(mapNotice(notice()).sourceUrl).toBe('https://handbook.gitlab.com/handbook/finance/procurement/')
+  })
+
   it('maps user and admin list responses', () => {
     const user = mapRecallsResponse({ items: [notice()], unread: 5 })
     expect(user).toMatchObject({ unread: 5, reviewQueue: [], candidates: null, isAdminView: false })
