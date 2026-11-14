@@ -153,6 +153,16 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 
 알려진 점(시안): 데모 경로의 AI 기억은 계정 구분 없이 한 칸(`MemorySettingsPage.jsx`의 `user?.user_id || 'anonymous'`)을 쓴다. 이번에 고치지 않았다.
 
+### 로컬 데모 키 파일과 다시 입력 (놓친 것 K-23, 2026-11-15)
+정할 것 8번의 '실행마다 무작위'는 api를 재시작하면 저장된 내 정보를 풀지 못해 `/myinfo`가 503이 됐다. 아래로 바꿨다(`docs/decisions.md` 2026-11-15).
+
+| 상황 | 동작 |
+|---|---|
+| 로컬 데모, `PROFILE_ENC_KEYS` 없음 | 키를 한 번 만들어 키 파일에 두고 다음 실행에 다시 읽는다. 자리: `PROFILE_KEY_FILE`, 비우면 실행 사용자 홈 `~/.provena/local_demo_profile.key`(컨테이너는 `/home/app/.provena/`). 저장소 밖이라 커밋되지 않는다 |
+| 키 파일을 못 씀 | 이번 실행만 쓰는 키로 돈다(경고 로그) |
+| 키 파일이 사라짐·깨짐(컨테이너를 새로 만든 경우 포함) | 새 키를 만든다. 옛 줄은 `GET /me/profile`이 404 `profile_reentry_required`로 알리고, 화면이 빈 칸을 열어 다시 입력·저장하게 한다 |
+| `PROFILE_ENC_KEYS`를 준 실행(운영 포함) | 키 파일을 읽지도 쓰지도 않는다. 키가 없으면 시작하지 않고, 풀 수 없으면 503 그대로 |
+
 ## 시나리오
 1. `lee.sre`로 처음 로그인 → 바로 **내 정보를 입력해 주세요** 화면. 위 메뉴는 없고 "내 정보를 저장하면 메뉴가 열립니다"와 로그아웃만 보인다. 순서 표시: 1 내 정보(필수) → 2 AI 기억 설정 → 3 채팅.
 2. 주소창에 `/demo/chat`·`/demo/approvals`·`/demo/admin/users`를 쳐도 내 정보 화면으로 돌아온다.

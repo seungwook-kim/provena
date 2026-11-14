@@ -48,3 +48,32 @@
 - `EVAL_REPORT.md:143` MRR 0.733(결과 파일은 0.722), `:199` int8 Recall 0.758(로컬 30조합 기준 0.750) — 이번 묶음에 넣지 않았다.
 - SDK(`mock_erp/sdk/`)는 다시 만들지 않았다. `/me` 메서드 이름이 그대로라 `test_sdk_matches_openapi`는 영향이 없다.
 - compose로 `/demo/*`가 실제로 열리는지는 띄워 보지 않았다(1절 H-25).
+
+### K-23 로컬 데모 재시작 뒤 내 정보 503
+- 작업자: 박진형 (jinyeong-731). 조장 11/15 목록 K-23(조장 지시로 처리). 운영 호출·DB·compose 실행 없음.
+
+| 항목 | 문제 | 고친 것 | 근거 |
+|---|---|---|---|
+| 키 유지 | 로컬 데모에서 `PROFILE_ENC_KEYS`가 없으면 실행마다 새 키를 만들어, api를 재시작하면 DB에 남은 내 정보를 풀지 못하고 `/myinfo`가 503 | 한 번 만든 키를 키 파일에 두고 다시 읽는다. 자리는 `PROFILE_KEY_FILE`, 비우면 실행 사용자 홈 `~/.provena/local_demo_profile.key`(컨테이너는 `/home/app`, 저장소 밖). 로컬 데모가 아니면 키 파일을 읽지도 쓰지도 않는다 | [코드] `backend/services/profile_crypto.py:26, 62, 86, 130`, `backend/main.py:413`(고치지 않음). [실측] `test_local_demo_key_is_persisted_and_reused_after_restart`, `test_production_mode_never_reads_or_writes_a_key_file`, `test_main_app_local_demo_restart_keeps_key_and_production_writes_no_file` |
+| 다시 입력 | 키가 바뀐 뒤 화면에는 "내 정보 저장소를 사용할 수 없습니다."만 보이고 칸이 비어 저장 버튼이 잠겨 있었다. 필수 칸을 채우면 버튼은 풀렸지만 그 안내가 없었고 AI 기억 칸은 잠겨 있었다 | 로컬 데모가 만든 키일 때만 서버가 404 `profile_reentry_required`와 안내문을 주고, 수정 화면이 빈 칸을 열어 다시 입력·저장하게 한다. `PUT`은 그대로다 | [코드] `backend/profile_api.py:192-196`, `web/react-app/src/pages/ProfileRequiredPage.jsx:96-107`. [실측] `test_local_demo_lost_key_asks_to_reenter_and_save_works`, `profile-reentry.test.jsx` 2개 |
+| 운영 그대로 | 운영의 키 설정 오류가 '다시 입력'으로 바뀌면 되살릴 수 있는 정보를 덮어쓰게 된다 | `PROFILE_ENC_KEYS`로 받은 키는 `local_generated=False`라 503 그대로. 저장소 오류도 503 그대로 | [코드] `backend/services/profile_crypto.py:129`, `backend/profile_api.py:196, 199`. [실측] `test_configured_key_mismatch_stays_503_even_in_local_demo`, `test_local_demo_store_failure_is_still_503`, `test_configured_key_ignores_key_file_and_is_not_local_generated` |
+
+**"운영에서도 같은가"에 대한 답(코드 기준, 운영 설정은 조회하지 않음)**
+- 같지 않다. 운영은 무작위 키를 만드는 가지에 들어가지 않는다. 그 가지는 `is_local_demo()`(`PROVENA_ENV=local`이고 `PROVENA_DEV_MODE=1`, `backend/services/demo_seed.py:32-34`)일 때만 열린다(`backend/main.py:413`, `backend/services/profile_crypto.py:130`). [코드]
+- `PROFILE_ENC_KEYS`가 있음: 그 키를 읽는다(`profile_crypto.py:127-129`). 값이 환경 변수라 재시작해도 같아 재시작만으로는 503이 되지 않는다. [코드]
+- 없거나 형식이 틀림: `ProfileCryptoError`로 앱이 시작하지 않는다(`profile_crypto.py:132`, 형식 오류는 `parse_keys`). 503 화면이 아니라 새 리비전이 뜨지 못한다. [코드] `tests/test_profile_api.py:268` `test_main_app_refuses_start_without_key_outside_local`. 이때 Cloud Run이 이전 리비전을 계속 쓰는지는 확인하지 않았다. [추정]
+- 키 교체: 새 번호를 더하고 옛 번호를 남기면 옛 줄은 줄의 `key_version` 키로 풀리고 새로 쓰는 줄은 가장 큰 번호로 잠근다(`profile_crypto.py:121, 140`, `test_old_key_version_still_decrypts_after_rotation`). 옛 번호를 빼거나 같은 번호의 값을 바꾸면 그 줄은 `GET /me/profile`이 503이다(`profile_crypto.py:142, 148`, `backend/profile_api.py:196`). 로컬 데모와 같은 증상은 운영에서 이 경우에만 난다. [코드]
+- 그 상태에서도 `/me`의 `profile_completed`는 줄이 있는지만 봐서 true이고(`backend/main.py:405`), `PUT /me/profile`은 지금 키로 잠가 덮어쓴다(`backend/profile_api.py:177`). 이번에 바꾸지 않았다. [코드]
+- 배포 서비스에 `PROFILE_ENC_KEYS`가 실제로 연결돼 있는지는 README가 미확인이라고 적고 있다(`README.md:218`). [문서]
+
+**하지 않은 것(조장 판단 필요)**
+- `docker-compose.yml`·`Dockerfile`·`.env.example`·`backend/main.py`·`README.md`는 고치지 않았다(TEAM_GUIDE 5장 주인·공용 파일 규칙). 그래서 컨테이너를 새로 만드는 경우(`docker compose down` 뒤 `up`, 이미지 다시 빌드)는 키 파일이 사라지고 '다시 입력' 안내로 넘어간다. 그 경우까지 키를 남기려면 `Dockerfile`에 `app` 소유 `/home/app/.provena` 폴더를 만들고 compose `api`에 이름 있는 볼륨을 그 자리에 붙이면 된다.
+- 낡은 문장 3곳이 남는다: `.env.example:243`과 `backend/main.py:10-11`의 "실행마다 무작위 키(재시작하면 내 정보를 다시 입력)", `README.md` 환경 변수 표에 `PROFILE_KEY_FILE` 없음.
+- compose를 실제로 띄워 재시작해 보지 않았다. `/home/app`에 `app`이 쓸 수 있다는 것은 `Dockerfile:19`(`--create-home --home-dir /home/app`)와 `:63`(`USER app`)에서 읽은 것이다. [코드]
+
+**시험**
+- `python -m pytest -q -p no:cacheprovider tests/test_profile_crypto.py tests/test_profile_api.py`: 84 통과(새 시험 11개 포함).
+- 관련 9파일(`test_admin_api`, `test_decision_wiring`, `test_page_navigation`, `test_profile_store_pg`, `test_service_profile`, `test_deploy_hardening`, `test_startup_warmup`, `test_docs_switch`, `test_api_errors`): 146 통과, 5 건너뜀. 전체 pytest는 돌리지 않았다.
+- `npx vitest run`(web/react-app): 444 통과(새 시험 2개 포함).
+- 변이 8개(서버 6, 화면 2)를 하나씩 넣어 모두 새 시험이 실패했고, 끝난 뒤 원본으로 되돌렸다(변이 표시 0건, `git status` 확인). 환경은 로컬 Python 3.13 가상환경이다.
+- `tests/test_profile_api.py::test_main_app_refuses_start_without_key_outside_local`은 이 시험만 따로 돌리면 실패한다(`backend.main`을 처음 불러올 때 모듈이 앱을 만들다 같은 오류가 먼저 난다). 이번 변경 전부터 그랬고 고치지 않았다. 파일 전체로 돌리면 통과한다.

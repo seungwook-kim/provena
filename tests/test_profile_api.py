@@ -378,3 +378,94 @@ def test_profile_422_body_matches_the_openapi_schema(env):
     arr = {"detail": "m", "error": {"code": "validation_error", "message": "m", "request_id": "r",
                                     "details": [{"loc": ["body"], "msg": "m", "type": "t"}]}}
     jsonschema.validate(arr, spec)
+
+
+# ---- 로컬 데모: 키가 바뀐 뒤 다시 입력 (놓친 것 K-23) --------------------------------
+def _app_with(cipher, auth_store, profiles, secret):
+    app = FastAPI()
+    install_error_handlers(app)
+    app.state.token_revocation_store = revocations_for(auth_store)
+    app.include_router(create_test_auth_router(store=auth_store, secret=secret, cookie_secure=False, profile_completed=profiles.exists))
+    app.include_router(create_profile_router(auth_store=auth_store, profile_store=profiles, cipher=cipher, secret=secret))
+    return app
+
+
+def _lost_key_setup(new_cipher):
+    """A가 옛 키로 저장한 뒤, 서버가 다른 키(new_cipher)로 다시 뜬 상태를 만든다. 같은 저장소를 두 앱이 쓴다."""
+    password = secrets.token_urlsafe(18)
+    user = AuthUser(uuid4(), "A", hash_password(password), "user")
+    auth_store, profiles, secret = Users([user]), MemoryProfileStore(), secrets.token_urlsafe(48)
+
+    def login(cipher):
+        c = TestClient(_app_with(cipher, auth_store, profiles, secret))
+        assert c.post("/auth/login", json={"login_id": "A", "password": password}, headers=csrf(c)).status_code == 200
+        return c
+
+    assert put(login(ProfileCipher({1: os.urandom(32)})), GOOD).status_code == 200
+    return login(new_cipher), profiles
+
+
+@pytest.fixture
+def local_demo(monkeypatch):
+    monkeypatch.setenv("PROVENA_ENV", "local")
+    monkeypatch.setenv("PROVENA_DEV_MODE", "1")
+
+
+def test_local_demo_lost_key_asks_to_reenter_and_save_works(local_demo):
+    c, _ = _lost_key_setup(ProfileCipher({1: os.urandom(32)}, local_generated=True))
+    for url in ("/me/profile", "/me/profile?view=edit"):
+        r = c.get(url)
+        assert r.status_code == 404 and r.json()["error"]["code"] == "profile_reentry_required"
+        assert "다시 입력" in r.json()["error"]["message"] and r.headers["cache-control"] == "no-store"
+        for value in GOOD.values():
+            assert value not in r.text
+    assert put(c, OTHER).status_code == 200            # 다시 입력해 저장하면
+    r = c.get("/me/profile?view=edit")                 # 새 키로 읽힌다
+    assert r.status_code == 200 and r.json()["name"] == OTHER["name"] and r.json()["phone"] == OTHER["phone"]
+
+
+def test_configured_key_mismatch_stays_503_even_in_local_demo(local_demo):
+    """PROFILE_ENC_KEYS 로 받은 키(운영과 같은 경로)는 풀 수 없어도 다시 입력 안내를 내지 않는다(503 그대로)."""
+    configured = ProfileCipher.from_env({KEY_ENV: "1:" + base64.b64encode(os.urandom(32)).decode()}, allow_ephemeral=True)
+    c, _ = _lost_key_setup(configured)
+    r = c.get("/me/profile")
+    assert r.status_code == 503 and "profile_reentry_required" not in r.text
+
+
+def test_local_demo_store_failure_is_still_503(local_demo):
+    c, profiles = _lost_key_setup(ProfileCipher({1: os.urandom(32)}, local_generated=True))
+    profiles.fail = True
+    r = c.get("/me/profile")
+    assert r.status_code == 503 and "profile_reentry_required" not in r.text
+
+
+def test_main_app_local_demo_restart_keeps_key_and_production_writes_no_file(monkeypatch, tmp_path):
+    """backend/main.py 배선: 로컬 데모는 두 번 떠도(재시작) 같은 키 파일을 쓰고, 그 밖의 모드는 파일을 만들지 않고 시작을 막는다."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    import backend.main as main   # 모듈이 불릴 때 앱을 한 번 만든다. DB 없이 불러 둔다
+    from backend.services.profile_crypto import KEY_FILE_ENV, ProfileCryptoError
+
+    key_file = tmp_path / "keys" / "local_demo_profile.key"
+    monkeypatch.setenv(KEY_FILE_ENV, str(key_file))
+    monkeypatch.delenv(KEY_ENV, raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:1/x")
+    monkeypatch.setenv("AUTH_SECRET", secrets.token_urlsafe(48))
+    for key in ("PROVENA_ENV", "PROVENA_DEV_MODE"):
+        monkeypatch.delenv(key, raising=False)
+    with pytest.raises(ProfileCryptoError):
+        main.create_app()
+    assert not key_file.exists() and not key_file.parent.exists()
+
+    monkeypatch.setenv("PROVENA_ENV", "local")
+    monkeypatch.setenv("PROVENA_DEV_MODE", "1")
+    monkeypatch.setattr(main, "bootstrap_local_auth", lambda *a, **k: None)   # DB 없이 돈다
+    seen = []
+    real = main.create_profile_router
+    monkeypatch.setattr(main, "create_profile_router", lambda **kw: (seen.append(kw["cipher"]), real(**kw))[1])
+    main.create_app()
+    first_text = key_file.read_text(encoding="ascii")
+    main.create_app()   # 재시작
+    assert key_file.read_text(encoding="ascii") == first_text and len(seen) == 2
+    assert all(c.local_generated for c in seen)
+    blob = seen[0].encrypt("u", "name", "김민수")
+    assert seen[1].decrypt("u", "name", blob, 1) == "김민수"

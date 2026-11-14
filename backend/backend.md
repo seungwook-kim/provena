@@ -14,6 +14,7 @@ API 진입점(`main.py`), 로그인(`auth.py`), 그래프 조립(`graph/build.py
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | 놓친 것 K-23(조장 지시로 처리, `profile_api.py`는 박진형이 만든 파일): `GET /me/profile`이 저장된 줄을 지금 키로 풀 수 없을 때, 로컬 데모가 스스로 만든 키(`cipher.local_generated`)로 도는 경우에만 503 대신 404 `profile_reentry_required`("다시 입력해 저장해 주세요")로 답한다. `PROFILE_ENC_KEYS`를 준 실행(운영 포함)과 저장소 오류는 그대로 503. `PUT /me/profile`은 바꾸지 않았다(전부터 지금 키로 잠가 덮어쓴다). 시험 `tests/test_profile_api.py` 4개 추가, 변이 2개(안내를 안 냄, 받은 키에도 안내) 모두 실패로 잡힘. 문제 기록은 `backend/services/services.md` S-001 | 미정 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `auth.py` `GET /me`: 머리글 `X-Session-Optional: 1`이고 로그인 쿠키가 없으면 401 대신 204(놓친 것 H-33, 조장 지시로 처리). 머리글이 없거나 쿠키가 있으면 예전과 같음. 시험 `tests/test_me_optional_session.py` 4개 | 미정 |
 | 2026-11-13 | 박진형 (jinyeong-731) | `auth.py` 회원가입 아이디 글자 제한 `SIGNUP_LOGIN_ID_RE`(소문자 변환 뒤 `[a-z0-9._@+-]`, 조장 11/13 재확인 #4): `<script>` 등은 422. 가입에만 적용, 기존 계정 로그인·구글 로그인은 그대로. 시험 `tests/test_signup_edges.py` | #157 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 병합 후속: K-12 시험 `test_unknown_post_is_common_404_and_existing_route_method_is_405`의 `Allow` 기대값을 `GET, HEAD`로 고침. #131에 들어온 `HEAD /health`(`main.py` `health_head`)와 K-12의 `Allow` 머리글이 합쳐진 결과이고, 앱 코드는 바꾸지 않았다 | #132 |
