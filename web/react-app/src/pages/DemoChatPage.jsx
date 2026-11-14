@@ -55,6 +55,37 @@ function writeOpenThreadId(id) {
   } catch { /* 저장소를 못 쓰면 새로고침 뒤 목록에서 직접 연다 */ }
 }
 
+// 새 대화 첫 질문은 서버가 답을 다 만든 뒤에야 대화 id를 보낸다(backend/graph/stream.py). 그 전에 다른 메뉴로 가거나 새로고침하면
+// 돌아와서 열 대화가 없어 빈 첫 화면이 됐다(박진형 화면 점검 2026-11-14) → 보낸 질문과 시각을 탭 안에 두고,
+// 돌아오면 서버 목록에서 그 질문으로 만든 대화를 찾아 위의 '이어 받기'로 연다.
+export const FIRST_QUESTION_KEY = 'provena-chat-first'
+
+function saveFirstQuestion(question) {
+  try { sessionStorage.setItem(FIRST_QUESTION_KEY, JSON.stringify({ question, at: Date.now() })) } catch { /* 저장소를 못 쓰면 목록에서 직접 연다 */ }
+}
+
+function clearFirstQuestion() {
+  try { sessionStorage.removeItem(FIRST_QUESTION_KEY) } catch { /* 지울 것도 없다 */ }
+}
+
+function takeFirstQuestion() {
+  try {
+    const raw = sessionStorage.getItem(FIRST_QUESTION_KEY)
+    sessionStorage.removeItem(FIRST_QUESTION_KEY)
+    const saved = raw ? JSON.parse(raw) : null
+    return typeof saved?.question === 'string' && Date.now() - saved.at < RESUME_LIMIT_MS ? saved : null
+  } catch { return null }
+}
+
+// 서버는 질문의 공백을 한 칸으로 줄인 앞부분을 대화 제목으로 쓴다(backend/api/threads.py thread_title).
+// 목록은 최근 대화가 앞이라 처음 맞는 것이 방금 보낸 질문의 대화다. 같은 질문의 옛 대화를 잘못 열지 않게 보낸 시각 뒤에 바뀐 것만 본다.
+function findFirstQuestionThread(items, saved) {
+  const asked = saved.question.split(/\s+/).filter(Boolean).join(' ')
+  const since = saved.at - 60000   // 서버·브라우저 시계 차이 여유
+  return items.find(item => item.title && asked.startsWith(item.title)
+    && (item.status === 'running' || !item.lastActivityAt || Date.parse(item.lastActivityAt) >= since))
+}
+
 // 답은 그래프가 끝난 뒤 한 번에 오므로(backend/graph/stream.py) 단계 대신 지난 시간만 보여 준다
 function GeneratingProgress() {
   const [seconds, setSeconds] = useState(0)
@@ -146,6 +177,7 @@ export default function DemoChatPage({ api = false }) {
   const location = useLocation()
   const serviceRef = useRef(null)
   const citationPanelRef = useRef(null)
+  const mountedRef = useRef(true)
   const [threads, setThreads] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('')
@@ -218,6 +250,13 @@ export default function DemoChatPage({ api = false }) {
   }, [activeCitationId])
 
   useEffect(() => {
+    mountedRef.current = true
+    // 새로고침·탭 닫기: 브라우저가 진행 중 요청을 먼저 끊어 ask()의 마무리가 화면이 살아 있는 줄 알고 첫 질문 표시를 지웠다 → 떠나는 순간 표시한다
+    const leaving = () => { mountedRef.current = false }
+    window.addEventListener('beforeunload', leaving)
+    window.addEventListener('pagehide', leaving)
+    const back = () => { mountedRef.current = true }   // 뒤로 가기 캐시에서 그대로 돌아온 경우
+    window.addEventListener('pageshow', back)
     const adapter = api ? createApiChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId }) : createPreviewChatAdapter({ onThreadsChange: setThreads, onProcessingChange: setProcessingId })
     const service = createChatService(adapter)
     serviceRef.current = service
@@ -230,12 +269,24 @@ export default function DemoChatPage({ api = false }) {
         setResumeId(pending)
         return
       }
+      const first = api ? takeFirstQuestion() : null
+      const firstThread = first ? findFirstQuestionThread(items, first) : null
+      if (firstThread) {
+        stickToBottomRef.current = true
+        setSelectedId(firstThread.id)
+        setResumeId(firstThread.id)
+        return
+      }
       const reopen = reopenId ? items.find(item => item.id === reopenId) : null
       if (reopen) selectThread(reopen)
     }).catch(() => {
       setThreads([])
     }).finally(() => setLoading(false))
     return () => {
+      mountedRef.current = false   // 화면을 떠나 끊긴 첫 질문은 표시를 지우지 않는다(돌아와서 찾는다)
+      window.removeEventListener('beforeunload', leaving)
+      window.removeEventListener('pagehide', leaving)
+      window.removeEventListener('pageshow', back)
       const cut = service.dispose()
       if (api && cut.length) saveResumeId(cut[cut.length - 1])
     }
@@ -343,23 +394,29 @@ export default function DemoChatPage({ api = false }) {
     stickToBottomRef.current = true
     let result
     if (!selectedId) setDraftQuestion(message)
+    if (!selectedId && api) saveFirstQuestion(message)
+    // 보내는 순간 입력칸(과 탭 임시 저장)을 비운다. 답을 기다리다 다른 화면에 갔다 오면 임시 저장된 질문이 입력칸에 다시 들어가 있었다(강경희 화면 점검 2026-11-13)
+    setInput('')
+    const restoreInput = () => setInput(current => current || message)   // 못 보냈으면 다시 보낼 수 있게 되돌린다
     try {
       result = await serviceRef.current.sendMessage({ threadId: selectedId, message, retry })
     } catch (error) {
       setSendError(error?.message || '질문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      restoreInput()
       return
     } finally {
       setDraftQuestion('')
+      if (mountedRef.current) clearFirstQuestion()
     }
-    if (!result) return
-    // 새 대화의 첫 질문을 중지하면 대화 id가 없다 → 질문을 입력칸에 남기고, 서버가 만든 대화가 목록에 나타나게 다시 받는다(M3)
+    if (!result) { restoreInput(); return }
+    // 새 대화 첫 질문을 '답변 중지'하면 대화 id가 없다 → 빈 첫 화면에 질문까지 사라지지 않게 입력칸에 되돌리고, 서버가 만든 대화가 목록에 보이게 다시 받는다
     if (result.threadId == null) {
+      restoreInput()
       await serviceRef.current?.listThreads().catch(() => {})
       return
     }
     setSelectedId(result.threadId)
     setSelectedCitation(null)
-    setInput('')
   }
 
   async function stopAnswer() {
