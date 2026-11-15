@@ -78,7 +78,7 @@ flowchart LR
 - **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 변환·승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. `explain_decision`은 이미 사람이 승인한 표의 규칙을 계산해 돌려줄 뿐 표를 만들거나 승인하지 않는다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
 - 비공개(`internal.gitlab.com`)로만 연결된 칸·링크는 도구가 근거로 내보내지 않고 "비공개 문서"로 표시한다(9장).
 - 클라이언트는 `langchain[mcp]`(베타)를 쓴다. 서버는 `fastmcp` 4.x로 맞춘다. 옛 `langchain-mcp-adapters`는 보관(archived)되어 쓰지 않는다. 베타가 문제를 일으키면 공식 MCP Python SDK나 FastMCP 클라이언트를 직접 부른다.
-- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 현재 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음).
+- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 당시 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음, `evals/results/mcp_prod_20261116/`). 현재 운영 판 `provena-api-00075-5zk`(커밋 `eb7516ca`)의 배포 확인에서도 `/mcp/`를 토큰 없이 부르면 401이었고 `MCP_TOKEN`이 설정되어 있었다.
 - 접근은 토큰 헤더로 제한한다. 토큰은 로컬은 `.env`, 운영은 Secret Manager 비밀값으로 둔다. MCP 도구 호출도 Langfuse 트레이스에 단계로 남긴다.
 - 서버를 띄우는 곳(FastAPI 앱에 붙일지, 따로 띄울지)은 11장에서 정한다.
 
@@ -302,7 +302,7 @@ flowchart TD
 
 **결정표 변환 (F-04, 관리자 흐름):** 권한표 행 선택 → LLM이 결정표를 처음 작성 → 원문과 셀 대조표 생성 → 사람 승인(interrupt) → 승인되면 `decision_tables`에 저장하고 실행 가능 상태가 된다. 계약 `DecisionRule`(업무 종류 × 금액 구간 → 승인자, 협조 부서)과 권한표 모양이 같다. 권한표는 "업무 승인(Functional)"과 "재무 승인(Financial)"이 따로 있어, 재무 승인자를 `DecisionRule`에 별도 칸으로 둘지 `cooperating_depts`에 담을지 11장에서 정한다. 변환 정확도는 셀 단위로 측정해 공개한다.
 
-**리콜 (F-02, 별도 그래프):** `ChangedArticle` 수신 → 그 섹션을 인용한 과거 답 찾기(코드, `citations` 테이블) → 개정 전후 섹션으로 결론이 바뀌었는지 판정(LLM) → 바뀐 답만 `RecallNotice` 생성. 링크로 연결된 다른 정책은 참조 그래프로 찾아 관리자에게 "함께 볼 정책" 후보로 만든다. 판정은 답마다 따로 부르고(사용자 사이 내용이 섞이지 않는다), 판정 설명은 저장 전에 검사한다. 설명이 판정 지시문(20자 이상 겹침)이나 `CANARY-` 같은 표지를 담거나 다른 사용자의 id·질문을 담으면 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다. 확신도가 `RECALL_MIN_CONFIDENCE`(기본 0.5)보다 낮은 알림은 관리자 검토함으로 가고 사용자에게 보이지 않는다. 판정이 "결론 그대로"라 해도 코드 규칙이 금액·승인자·기한·권한 변경이나 섹션 신설·삭제라고 보면 알림을 버리지 않고 같은 검토함에 둔다(`judge_disagrees_with_rule`).
+**리콜 (F-02, 별도 그래프):** `ChangedArticle` 수신 → 그 섹션을 인용한 과거 답 찾기(코드, `citations` 테이블) → 개정 전후 섹션으로 결론이 바뀌었는지 판정(LLM) → 바뀐 답만 `RecallNotice` 생성. 링크로 연결된 다른 정책은 참조 그래프로 찾아 관리자에게 "함께 볼 정책" 후보로 만든다. 판정은 답마다 따로 부르고(사용자 사이 내용이 섞이지 않는다), 판정 설명은 저장 전에 검사한다. 설명이 판정 지시문(20자 이상 겹침)이나 `CANARY-` 같은 표지를 담거나 다른 사용자의 id·질문을 담으면 "[판정 실패, 확인 필요]"로 시작하는 고정 문장으로 바꾸고 실패 목록에 남긴다. 확신도가 `RECALL_MIN_CONFIDENCE`(기본 0.5)보다 낮은 알림은 관리자 검토함으로 가고 사용자에게 보이지 않는다. 판정이 "결론 그대로"라 해도 코드 규칙이 금액·승인자·기한·권한 변경이나 섹션 신설·삭제라고 보면 알림을 버리지 않고 같은 검토함에 둔다(`judge_disagrees_with_rule`). 운영 확인(2026-11-16, 운영 판 `provena-api-00075-5zk`, `evals/results/recall_webhook_20261116_0807/`): 코드 규칙(`severity.py`의 `analyze_change`)이 변경을 찾는 섹션(후보 60개 중 6개)의 개정 1건을 웹훅으로 넣어 202, 처리 `done`이었고, 판정은 결론 그대로였으나 코드 규칙이 권한 변경으로 보아 1건이 관리자 검토함으로 갔다(`judge_disagrees_with_rule`). 답을 받은 계정에 바로 보인 알림은 0건이고, 등록된 웹훅 구독이 없어 전송은 0건이다. 운영 경로는 검토함 분기로 확인했고 직접 알림 분기는 단위 시험으로만 확인했다. 같은 날 첫 실행(`provena-api-00068-drb`, `evals/results/recall_webhook_20261116/`)은 시험 도구가 문구만 바뀐 섹션을 골라 설계대로 알림과 검토함 건이 생기지 않았다.
 
 동작 기본값(판정 응답이 깨질 때, 기준일이 신판보다 늦을 때, 쟁점이 0건일 때, 결정표를 지정하지 않을 때, 절·기준일이 없을 때)은 11장 11-2에 모았다.
 
@@ -394,7 +394,7 @@ flowchart TD
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
 
-**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장).
+**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장). 운영 확인(2026-11-16): 운영 판 `provena-api-00068-drb`의 트래픽 0% 판(`LLM_DEADLINE_S=0.01`, `LLM_MAX_RETRIES=0`)에서 시간 초과가 `timeout`이 아니라 `internal_error`로 나왔다(`evals/results/failure_paths_20261116/`). `langchain_anthropic`이 SDK 예외를 `AnthropicTimeoutError`, `AnthropicRateLimitError`로 감싸 던지는데 이 이름이 `backend/api/routes.py`의 `TIMEOUT_ERRORS`, `PROVIDER_LIMIT_ERRORS`에 없었기 때문이다. 두 이름을 더하고 시험(`tests/test_api_chat.py`의 `test_langchain_anthropic_wrapped_errors_keep_their_code`)을 추가한 커밋 `eb7516ca`를 운영 판 `provena-api-00075-5zk`로 배포했고, 이 판에서 `limit_exceeded`, `no_results`, `timeout`이 기대한 코드와 문구로 나왔다. `provider_limit`는 운영에서 안전하게 만들 수 없어 코드와 단위 시험으로만 확인했다(`evals/results/failure_paths_after_fix_20261116/`).
 
 **재시도.** 응답에 `Retry-After` 헤더는 없다. 코드의 안내 문구가 재시도를 말하는 경우는 아래와 같다.
 
@@ -579,7 +579,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `token` | `text`. 답이 비면 나오지 않는다 | 없음 |
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
-| `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `provider_limit`: LLM 제공자의 요청 한도(429)·잔액 부족, `timeout`: LLM 호출 시간 초과, `internal_error`: 그 밖의 모든 예외. 분류는 `backend/api/routes.py`의 `chat_error`), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
+| `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `provider_limit`: LLM 제공자의 요청 한도(429)·잔액 부족, `timeout`: LLM 호출 시간 초과, `internal_error`: 그 밖의 모든 예외. 분류는 `backend/api/routes.py`의 `chat_error`이고, `langchain_anthropic`이 감싼 `AnthropicTimeoutError`, `AnthropicRateLimitError`도 SDK 원래 예외와 같은 `timeout`, `provider_limit`로 나간다), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
 | `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`). 이어 묻는 질문을 완전한 질문으로 다시 썼을 때만 `understood_question`(다시 쓴 질문) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
