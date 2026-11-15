@@ -53,7 +53,7 @@ from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
 from backend.schemas.chunk import DEFAULT_K
-from backend.services.demo_replay import ReplayChatModel, env_flag
+from backend.services.demo_replay import ReplayChatModel, env_flag, in_lane
 from backend.services.llm import CostCapExceeded, get_chat_model, is_demo_mode
 from backend.services.skills import load_skill, skills_enabled
 
@@ -589,6 +589,11 @@ def build_graph(
 
         return pool.submit(contextvars.copy_context().run, call)
 
+    def as_candidate(n: int, fn: Callable[[], Any]) -> Callable[[], Any]:
+        """답 두 번 쓰기의 n번째 후보(0 = 첫 후보)를 쓰는 함수. 키 없는 데모(녹화 재생)에서만 후보 자리를 붙이고(`demo_replay.in_lane`), 실제 모델이면 `fn` 그대로다.
+        두 후보가 같은 요청을 동시에 보내면 재생이 어느 후보에 어느 녹화 응답을 줄지가 스레드 경쟁으로 정해져, 동점일 때 고르는 첫 후보의 답이 실행마다 달랐다(K-24)."""
+        return in_lane(n, fn) if replay_demo() else fn
+
     def start_split(state: AgentState) -> tuple[Any, ThreadPoolExecutor, float]:
         """분해 상한을 켰을 때 분해를 따로 된 일꾼에서 시작한다. 상한을 넘긴 분해를 기다리지 않고 나가려고 접수 일꾼과 나눈다."""
         own = ThreadPoolExecutor(max_workers=1, thread_name_prefix="decompose")
@@ -1079,8 +1084,8 @@ def build_graph(
             pool = ThreadPoolExecutor(max_workers=2 if best2 else 1, thread_name_prefix="draft")  # 기본은 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
             try:
                 ahead = ground_partials(state)  # 사전 등록 62.49: 이 판정이 충분·일부 어느 쪽으로 끝나도 같이 쓴 답의 근거 판정이 미리 돌아 있게 한다
-                writing = in_background(pool, "write_answer", lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead))
-                writing2 = in_background(pool, "write_answer", lambda: timed_reply(state, partials=ahead)) if best2 else None  # BO2: 같은 입력으로 하나 더
+                writing = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead)))
+                writing2 = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state, partials=ahead))) if best2 else None  # BO2: 같은 입력으로 하나 더
                 obj = ask_judge(guided, judge_input)
                 if (obj or {}).get("sufficient") is True or (answer_wait and last_partial(state, obj or {})):
                     # 충분이면 같이 쓴 답을 쓴다(부족이면 순차라면 부르지 않았을 호출이라 결과와 오류를 모두 버린다).
@@ -1382,8 +1387,8 @@ def build_graph(
         try:
             core_ids = [c["chunk_id"] for c in core_chunks(state)]
             widened = judge_quote and len(core_ids) < len(state.get("chunks", []))
-            one = in_background(pool, "write_answer", lambda: timed_reply(state, core=widened))
-            two = in_background(pool, "write_answer", lambda: timed_reply(state))
+            one = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=widened)))
+            two = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state)))
             return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []), core_ids if widened else None)
         finally:
             pool.shutdown(wait=True)
