@@ -307,7 +307,7 @@ def none_vote_wait_s() -> float | None:
     """`GRAPH_NONE_VOTE_WAIT_S`(초, 기본 빈 값, 서비스 설정 1.0): 판정 다수결에서 먼저 온 두 표가 모두 "근거 없음"(충분도 일부도 아님)이면
     셋째 표를 이 초만큼만 더 기다리고, 그 안에 오지 않으면 두 표로 확정한다(`build.voted`, 기록 `how="none_capped"`). 두 표가 같은 결론이라 바로 거절된다.
     빈 값이면 None이고 지금처럼 셋째 표를 끝까지 기다린다. 숫자가 아니거나 음수면 ValueError다.
-    근거(정답을 보지 않은 실행 기록, 운영 00056~00057): 첫 두 표가 모두 근거 없음인 143행 중 셋째 표가 달랐던 것은 비관련 질문 1행(재검색 뒤 거절)이고 관련 질문은 0행이었다."""
+    근거(실행 기록, 운영 00056~00057): 첫 두 표가 모두 근거 없음인 143행 중 셋째 표가 달랐던 것은 비관련 질문 1행(재검색 뒤 거절)이고 관련 질문은 0행이었다."""
     raw = (os.environ.get("GRAPH_NONE_VOTE_WAIT_S") or "").strip()
     if not raw:
         return None
@@ -323,8 +323,16 @@ def none_vote_wait_s() -> float | None:
 def spec_stop_ground_enabled() -> bool:
     """`GRAPH_SPEC_STOP_GROUND=1`(기본 꺼짐, 서비스 설정에서 켬): 미리 돌리기(`GRAPH_SPECULATE_FIRST`)를 분해 결과가 달라 버리기로 했으면,
     그 미리 돌리기가 쓴 답 후보의 근거 확인을 미리 부르지 않는다(`build.draft_reply`, 기록 `verdict="skipped_spec_dropped"`). 본 경로의 답은 그대로다.
-    근거(정답을 보지 않은 실행 기록): 버린 미리 돌리기에서도 근거 확인을 미리 불러 호출이 늘었다(같은 묶음에서 38회 대 22회)."""
+    근거(실행 기록): 버린 미리 돌리기에서도 근거 확인을 미리 불러 호출이 늘었다(같은 묶음에서 38회 대 22회)."""
     return _flag("GRAPH_SPEC_STOP_GROUND")
+
+
+def split_full_k_enabled() -> bool:
+    """`GRAPH_SPLIT_FULL_K=1`(기본 꺼짐, 서비스 설정에서 켬, 사전 등록 62.73): 분해가 하위 질문을 2개 이상 낸 첫 검색만 `k`를 `SEARCH_K`(5) 대신
+    이미 있는 근거 목록 상한 `MAX_CHUNKS`(10)로 요청한다(`build.search`). 새 숫자는 없다. 재검색, 하위 질문 재검색, 나뉘지 않은 첫 검색, 미리 돌린 원 질문 검색은 5 그대로다.
+    근거(실행 기록): 첫 검색 5개에서는 하위 질문 하나에 1~3자리만 돌아간다(번갈아 합치기). 운영 00058에서 나뉜 질문의 첫 판정 "충분"이
+    00056보다 v2 42→36행, 검증 21→17행으로 줄고 일부 답이 v2 3→6행, 검증 0→4행으로 늘었다. 00056에서는 판정 구절 청크의 6~7%가 문맥 6번째 뒤 자리에 있었다."""
+    return _flag("GRAPH_SPLIT_FULL_K")
 
 
 def judge_quote_enabled() -> bool:

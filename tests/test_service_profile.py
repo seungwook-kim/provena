@@ -70,6 +70,8 @@ PROMPT_CACHE_6267 = {"LLM_PROMPT_CACHE": "1"}
 ADOPT_GROUNDED_6268 = {"GRAPH_ADOPT_GROUNDED_CANDIDATE": "1"}
 # 사전 등록 62.72: 둘째 '없음' 표 뒤 셋째 표 대기 상한, 버린 추측 실행의 근거 확인 멈춤(서비스 경로만, 측정 실행기 인자에는 없다. 코드 기본은 꺼짐)
 BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
+# 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(서비스 경로만, 측정 실행기 인자에는 없다. 코드 기본은 꺼짐)
+BLIND_6273 = {"GRAPH_SPLIT_FULL_K": "1"}
 # 사전 등록 62.72로 코드째 제거한 스위치(설계에 평가 정답을 봤다). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
 REMOVED_6272 = ("GRAPH_CITE_EXPAND", "GRAPH_CITE_PHRASE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PICK", "GRAPH_CITE_CONSENSUS", "GRAPH_CITE_ADD_GUARD",
                 "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK", "GRAPH_INTRO_FILL",
@@ -107,9 +109,10 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *BLIND_6272)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *BLIND_6272, *BLIND_6273)}
     assert have == want
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
+    assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6273} == BLIND_6273 and not set(BLIND_6273) & set(SP.CANDIDATE_ENV)   # 62.73: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"                 # 일찍 시작하는 검색은 예비 분해(SP)가 켜져 있어야 쓰인다

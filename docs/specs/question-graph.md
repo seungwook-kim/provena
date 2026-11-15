@@ -174,7 +174,7 @@
 | 프롬프트와 응답 읽기 | `evals/retrieval/exp_decompose_v1.py`와 같은 본문(`decompose.SYSTEM`)과 같은 JSON 읽기 규칙. 시험이 두 코드의 본문 일치를 확인한다 |
 | 측정 코드와 다른 점 | ① 프롬프트 맨 앞에 노드 표지(`[[task:decompose]]`)를 붙인다. ② 응답이 깨지면 1회만 다시 묻는다(최대 2번, 측정은 최대 3번). ③ 하위 질문이 1000자를 넘으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙). ④ 하위 질문 맨 앞의 `GitLab`을 뗀다. `GitLab.com`처럼 이어진 말은 그대로 둔다. ⑤ 원 질문이 두 문장 이상이고 마지막 문장 앞의 문장(전제)이 물음이 아닌데 그 내용어가 어느 하위 질문에도 없으면, 모든 하위 질문 앞에 전제 문장을 붙인다(`keep_premise`, 사전 등록 62.45). 앞 문장이 물음이면 붙이지 않는다 |
 | 넘기는 값 | 하위 질문 2~3개이면 `sub_queries`로 넘긴다. 1개이거나 규칙을 어기면 넘기지 않는다(`None`). 4개 이상이면 앞 3개만 쓴다 |
-| k | `DEFAULT_K`(5) 상수(`SEARCH_K`). 나뉜 질문도 첫 검색과 재검색 모두 5이고 근거 목록 상한은 10이다(`MAX_CHUNKS`). 나뉜 질문 첫 검색 넓힘(`SPLIT_K`=8, 근거 상한 +3, 사전 등록 62.38)과 달러 금액 질문 구분(62.43)은 사전 등록 62.72로 코드째 제거했다(설계에 평가 정답을 봤으므로) |
+| k | `DEFAULT_K`(5) 상수(`SEARCH_K`). 나뉜 질문도 첫 검색과 재검색 모두 5이고 근거 목록 상한은 10이다(`MAX_CHUNKS`). 나뉜 질문 첫 검색 넓힘(`SPLIT_K`=8, 근거 상한 +3, 사전 등록 62.38)과 달러 금액 질문 구분(62.43)은 사전 등록 62.72로 코드째 정리했다(일반 규칙만 남기려고). 사전 등록 62.73의 `GRAPH_SPLIT_FULL_K`(코드 기본 꺼짐, 서비스 설정 켬)를 켜면 하위 질문이 있는 첫 검색만 근거 목록 상한(`MAX_CHUNKS`=10)까지 요청한다(아래 62.73 절) |
 | 첫 검색 | 원 질문(한국어, 맨 앞의 `GitLab`은 뗀다)과 `sub_queries`. 영어 번역은 검색 서비스가 한다. 나뉜 질문은 하위 질문 결과를 번갈아 합친다. 끝 1자리를 원 질문 결과로 채우던 규칙은 62.72로 제거했다(제거 전 0원 계산은 `evals/results/tail_slot_rule_20261113/report.md`) |
 | 답 근거와 답 후보 | 판정 입력에는 자리 표시가 없다. 답 후보 둘(`GRAPH_ANSWER_BEST2`)은 모두 문맥 전체로 쓰고, 판정 구절이 든 청크를 더 많이 인용한 후보, 같으면 그 밖 인용이 적은 후보를 쓴다(사전 등록 61.45, 기록 `rule="s_in,s_out"`). 넓힌 자리의 `[보충]` 표시와 앞 5자리 답 후보(62.44), 같은 문서 이웃 절 예외(61.47) 등은 사전 등록 62.72로 제거했다 |
 | 첫 검색 뒤 | 첫 검색 결과를 그대로 문맥으로 쓴다. 도입부 채우기(61.5, 62.51), 같은 페이지 보충(62.55), 제목 경로 청크 추가와 검색어 덧붙임(62.69), 앞자리 인용끼리 비교(62.59)는 사전 등록 62.72로 제거했다 |
@@ -190,7 +190,7 @@
 **질문 분해 연결 (AC-12)**
 - GIVEN: 분해를 켠 그래프와 가짜 모델, 가짜 검색기
 - WHEN: 두 가지 사실을 묻는 한국어 질문을 넣는다
-- THEN: 첫 검색은 원 질문과 하위 질문 2개, k=8(나뉘지 않은 질문과 달러 금액이 든 질문은 k=5)로 호출되고, 재검색은 재작성한 검색어로 `sub_queries` 없이 호출된다. 분해가 깨졌을 때 첫 검색은 `sub_queries` 없이 호출되며 답은 정상으로 끝난다
+- THEN: 첫 검색은 원 질문과 하위 질문 2개, k=5(사전 등록 62.73의 `GRAPH_SPLIT_FULL_K`를 켜면 k=10, 서비스 설정은 켬)로 호출되고, 재검색은 재작성한 검색어로 `sub_queries` 없이 호출된다. 분해가 깨졌을 때 첫 검색은 `sub_queries` 없이 호출되며 답은 정상으로 끝난다
 
 **검색 불가 처리 (AC-13)**
 - GIVEN: 검색기가 `EmbedUnavailable`을 던지거나 `fallback_reason=no_key`로 빈 결과를 돌려준다
@@ -293,3 +293,24 @@
 - GIVEN 미리 돌리기와 미리 부르는 근거 확인이 켜져 있다. WHEN 분해가 질문을 나눠 미리 돌리기를 버린다. THEN `GRAPH_SPEC_STOP_GROUND`를 켜면 근거 확인 호출이 끈 때보다 1건 적고 답은 같다(`test_dropped_speculation_does_not_ground_ahead`). 미리 돌리기를 쓰는 실행은 호출 수가 같다(`test_used_speculation_still_grounds_ahead`).
 - GIVEN 옛 스위치 이름(`GRAPH_SCOPE_NOTE_REFUSE`, `GRAPH_POINTER_REFUSE`)을 켠다. THEN 충분 판정과 받쳐진 답은 그대로 답으로 간다(`tests/test_d7_fixes.py::test_scope_note_never_turns_a_sufficient_judgement_into_a_refusal`, `test_pointer_quote_does_not_refuse_a_grounded_answer`). 구절이 겹친 머리에만 있어도 인용은 그대로다(`tests/test_trace_fixes_1113.py::test_graph_keeps_the_citation_when_the_quote_is_only_in_the_copied_head`). 본문에 표시한 인용 6개가 모두 남는다(`tests/test_question_graph.py::test_no_citation_cap_keeps_every_body_mark_in_body_order`).
 - GIVEN 요청 집계 안이다. THEN `path_meta`에 `timing`과 `vote_s`가 있고(`test_path_meta_has_node_timing_and_vote_seconds_inside_a_request`), 기록이 실패해도 답과 인용이 같다(`test_recording_failures_do_not_change_the_answer`).
+
+## 사전 등록 62.73: 나뉜 질문의 첫 검색을 근거 목록 상한까지 (2026-11-16)
+
+### Why
+- 구조: 첫 검색은 k=5이고 나뉜 질문은 하위 질문 목록을 번갈아 합친다(`search.roundrobin`). 하위 질문이 2개면 사실마다 2~3자리, 3개면 1~2자리다. 나뉘지 않은 질문은 한 사실에 5자리를 쓴다. 나뉜 질문의 일부 판정은 재검색 없이 일부 답으로 가므로(62.63) 빠진 사실을 다시 찾을 기회가 없다.
+- 실행 신호(운영 실행 기록 00056과 00058의 판정 표, 판정 구절 청크 위치, 답 종류, 단계 시간): 00058에서 나뉜 질문의 첫 판정 "충분"이 00056보다 v2 42→36행, 검증 21→17행으로 줄었고, 나뉜 질문의 일부 답은 v2 3→6행, 검증 0→4행으로 늘었다. 00056에서는 판정 구절이 든 청크의 6~7%(v2 8/136개, 검증 4/56개)가 문맥 6번째 뒤 자리에 있었다. 00056에는 지금 없는 다른 장치도 있었으므로 이 차이 전부가 검색 깊이 때문이라고는 하지 않는다.
+
+### What
+- 스위치 `GRAPH_SPLIT_FULL_K`(코드 기본 꺼짐, `answer_fixes.split_full_k_enabled`, 서비스 설정 `SERVICE_ENV`에서 `1`): 분해가 하위 질문을 2개 이상 낸 첫 검색만 `k`를 `SEARCH_K`(5) 대신 근거 목록 상한 `MAX_CHUNKS`(10)로 요청한다(`build.search`). 새 숫자와 새 상한은 없다.
+- 그대로인 것: 나뉘지 않은 질문과 분해 실패의 첫 검색, 재검색, 하위 질문 재검색(`sub_search`), 미리 돌린 원 질문 검색(`GRAPH_SPECULATE_FIRST`, `GRAPH_SPECULATE_EARLY_SEARCH`)은 k=5다. 미리 돌리기는 분해가 나누지 않을 때만 쓰이므로 결과를 쓰는 경로의 입력이 그대로다. 검색 기억 열쇠에 k가 들어 있어 k=5 결과와 k=10 결과가 섞이지 않는다. 검색 코드, 번갈아 합치기, 링크 청크 규칙, 판정·답·인용 규칙은 그대로다. MCP 검색(`SEARCH_VIA_MCP=1`)은 k를 그대로 넘기고 서버 상한(20) 안이다.
+- 근거 목록은 기존 상한(`MAX_CHUNKS`=10) 안이다. 재검색 결과를 합쳐도 `merge_chunks`가 10에서 자르므로 판정과 답 입력은 10개를 넘지 않는다.
+- 알고 넣는 부작용: 문맥이 10개로 차면 `GRAPH_STOP_STALLED_SEARCH`의 "목록이 찼음" 조건이 참이 되어, 나뉜 질문에서 일부도 충분도 아닌 판정은 재검색 없이 거절로 간다. 문맥이 두 배라 판정 입력 토큰과 판정 시간이 늘고(실행 기록 추정 판정 1회 +0.2~0.3초), 관련이 적은 청크를 인용할 여지도 는다.
+- 62.72로 제거한 나뉜 질문 첫 검색 넓힘과 방향이 같다. 다른 점: 자리 수는 새로 고르지 않고 이미 있는 근거 목록 상한을 쓰고, 끝자리 규칙·근거 상한 늘림·앞자리 우선·표시는 넣지 않는다.
+- 끄는 법: 운영 환경 변수 `GRAPH_SPLIT_FULL_K=off`.
+
+### AC (시험 `tests/test_blind_6273.py`)
+- GIVEN 스위치를 켠다. WHEN 분해가 하위 질문 2개를 낸다. THEN 첫 검색이 k=10, `sub_queries` 2개로 호출되고 재검색은 k=5, `sub_queries` 없이 호출된다. 근거 목록은 10개다(`test_on_split_first_search_asks_for_the_evidence_cap_and_research_stays_at_k5`, 단일·멀티 그래프).
+- GIVEN 스위치를 켜고 검색기가 12개를 가지고 있다. THEN 상태의 `chunks`와 판정 입력은 10개다(`test_on_split_chunks_and_judge_input_stay_within_the_cap`).
+- GIVEN 스위치를 끈다. THEN 나뉜 질문의 첫 검색도 k=5로 지금과 같다(`test_off_split_first_search_is_unchanged`).
+- GIVEN 스위치를 켠다. WHEN 분해가 나누지 않거나 응답 형식이 깨진다. THEN 첫 검색은 k=5이고 답과 문맥이 끈 때와 같다(`test_on_unsplit_or_failed_decomposition_keeps_k5`).
+- GIVEN 미리 돌리기와 일찍 시작하는 검색이 켜져 있다. THEN 미리 돌린 원 질문 검색은 k=5이고 나뉜 질문의 본 검색만 k=10이다(`test_speculated_original_question_search_keeps_k5_and_split_main_search_asks_for_the_cap`). 나뉘지 않은 질문은 켬과 끔의 검색 호출과 답이 같다(`test_speculation_used_for_unsplit_question_is_unchanged`).
