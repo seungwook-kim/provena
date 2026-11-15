@@ -1,0 +1,122 @@
+{
+  "revision": "provena-api-00075-5zk",
+  "commit": "eb7516ca",
+  "started_kst": "2026-11-16T08:07:41+09:00",
+  "dry_run": false,
+  "user_b": "b78e0364",
+  "webhook_subscriptions": {
+    "status": 200,
+    "active": 0,
+    "secret_configured": 0
+  },
+  "candidates_found": {
+    "R": 0,
+    "S": 60
+  },
+  "eligible": {
+    "material": 6,
+    "existing_b_only": 0,
+    "seedable": 6
+  },
+  "seed_attempts": [
+    {
+      "candidate": {
+        "source": "S",
+        "commit": "5f1484ae",
+        "rule_seq": 2545176027,
+        "article": "Overview",
+        "old_version_date": "2026-10-23",
+        "new_version_date": "2026-11-11",
+        "change_type": "modified",
+        "event_key": "dd5f5e976ccba423",
+        "affected_total": 0,
+        "affected_b": 0,
+        "affected_others": 0,
+        "changed_articles_status": "pending",
+        "kinds": [
+          "approver"
+        ]
+      },
+      "question": "핸드북 'Validity Check Development Process' 문서의 'Overview' 부분에서 누가 승인하는지을 구체적으로 알려 주세요.",
+      "as_of": "2026-10-23",
+      "status": "done",
+      "kind": "refuse",
+      "answer_id": null,
+      "cites_section": false,
+      "cost_usd": 0.00813318
+    },
+    {
+      "candidate": {
+        "source": "S",
+        "commit": "5f1484ae",
+        "rule_seq": 2545176027,
+        "article": "2. Write the definition",
+        "old_version_date": "2026-10-23",
+        "new_version_date": "2026-11-11",
+        "change_type": "modified",
+        "event_key": "27a9d01348c00f4c",
+        "affected_total": 0,
+        "affected_b": 0,
+        "affected_others": 0,
+        "changed_articles_status": "pending",
+        "kinds": [
+          "permission"
+        ]
+      },
+      "question": "핸드북 'Validity Check Development Process' 문서의 '2. Write the definition' 부분에서 할 수 있는 것과 할 수 없는 것을 구체적으로 알려 주세요.",
+      "as_of": "2026-10-23",
+      "status": "done",
+      "kind": "answer",
+      "answer_id": "b4a963705a7f40afab6beec77fabebde",
+      "cites_section": true,
+      "cost_usd": 0.01002542
+    }
+  ],
+  "picked": {
+    "source": "S",
+    "commit": "5f1484ae",
+    "rule_seq": 2545176027,
+    "article": "2. Write the definition",
+    "old_version_date": "2026-10-23",
+    "new_version_date": "2026-11-11",
+    "change_type": "modified",
+    "event_key": "27a9d01348c00f4c",
+    "affected_total": 1,
+    "affected_b": 1,
+    "affected_others": 0,
+    "changed_articles_status": "pending",
+    "kinds": [
+      "permission"
+    ],
+    "path": "seed"
+  },
+  "judge_cost_estimate_usd": 0.01,
+  "webhook": {
+    "status": 202,
+    "accepted": 1,
+    "event_ids": [
+      "27a9d01348c00f4c"
+    ],
+    "event_id_matches": true
+  },
+  "event": {
+    "status": "done",
+    "notices": 1,
+    "review": 1,
+    "judge_failures": 1,
+    "candidates": 2,
+    "error_kind": null
+  },
+  "b_notices": [],
+  "b_unread": 0,
+  "admin": {
+    "status": 200,
+    "review_queue": 1,
+    "judge_failures": 1
+  },
+  "deliveries": [],
+  "passed": true,
+  "result": "B에게 보이는 정정 알림 0건, 관리자 검토함 1건",
+  "chat_cost_usd": 0.018159,
+  "finished_kst": "2026-11-16T08:09:55+09:00"
+}

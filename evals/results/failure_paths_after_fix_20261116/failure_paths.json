@@ -1,0 +1,204 @@
+{
+  "serving_revision": "provena-api-00075-5zk",
+  "commit": "eb7516ca",
+  "made_at": "2026-11-16T06:20:11+09:00",
+  "expected_messages": {
+    "MSG_LIMIT": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.",
+    "MSG_TIMEOUT": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.",
+    "MSG_PROVIDER_LIMIT": "LLM 제공자의 요청 한도에 닿았거나 사용 잔액이 부족해 답을 만들지 못했습니다. 1~2분 뒤 다시 시도해 주세요. 같은 안내가 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.",
+    "MSG_REFUSE": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
+  },
+  "web_fallback_equals_server_message": {
+    "limit_exceeded": true,
+    "provider_limit": true,
+    "timeout": true
+  },
+  "rows": [
+    {
+      "path": "cost_cap",
+      "where": "0% 판 LLM_COST_CAP_USD=0.0001",
+      "expected_code": "limit_exceeded",
+      "status": "통과",
+      "got_code": "limit_exceeded",
+      "message_matches": true,
+      "response_status": "error",
+      "refuse_reason": null,
+      "revision": "provena-api-00088-zor",
+      "cost_usd": 0.0
+    },
+    {
+      "path": "zero_results",
+      "where": "운영 판, org=no-such-org-1116",
+      "expected_code": "no_results",
+      "status": "통과",
+      "got_code": "no_results",
+      "message_matches": true,
+      "response_status": "done",
+      "refuse_reason": "no_evidence",
+      "revision": "provena-api-00075-5zk",
+      "cost_usd": 0.00056167
+    },
+    {
+      "path": "timeout",
+      "where": "0% 판 LLM_DEADLINE_S=0.01, LLM_MAX_RETRIES=0",
+      "expected_code": "timeout",
+      "status": "통과",
+      "got_code": "timeout",
+      "message_matches": true,
+      "response_status": "error",
+      "refuse_reason": null,
+      "revision": "provena-api-00090-jaf",
+      "cost_usd": 0.0
+    },
+    {
+      "path": "provider_limit",
+      "where": "운영 재현 안 함(요청 한도·잔액 부족은 안전하게 만들 수 없음, 시험용 스위치 없음)",
+      "expected_code": "provider_limit",
+      "status": "코드·단위 시험으로만 확인",
+      "evidence": [
+        "backend/api/routes.py:97-108 chat_error",
+        "backend/api/routes.py:76-84 MSG_PROVIDER_LIMIT·PROVIDER_LIMIT_*",
+        "tests/test_api_chat.py:142-157 test_provider_limit_and_timeout_get_their_own_code_and_next_action"
+      ]
+    }
+  ],
+  "probes": {
+    "cost_cap": {
+      "path": "cost_cap",
+      "where": "0% 판 LLM_COST_CAP_USD=0.0001",
+      "base_kind": "tag",
+      "tag": "failcap",
+      "revision": "provena-api-00088-zor",
+      "question_id": "1",
+      "org": null,
+      "as_of_sent": "2026-10-27",
+      "at": "2026-11-16T06:14:15+09:00",
+      "expected": {
+        "event": "error",
+        "code": "limit_exceeded",
+        "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요."
+      },
+      "got": {
+        "code": "limit_exceeded",
+        "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.",
+        "message_matches": true
+      },
+      "passed": true,
+      "response": {
+        "http_status": 200,
+        "status": "error",
+        "total_s": 4.472,
+        "events": [
+          "error"
+        ],
+        "error": {
+          "code": "limit_exceeded",
+          "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.",
+          "request_id": "ba5455ad70f84a398b0977cbd2788def"
+        },
+        "done": null,
+        "answer_chars": 0,
+        "citation_count": 0,
+        "token_text": ""
+      },
+      "cost_usd": 0.0
+    },
+    "zero_results": {
+      "path": "zero_results",
+      "where": "운영 판, org=no-such-org-1116",
+      "base_kind": "prod",
+      "tag": null,
+      "revision": "provena-api-00075-5zk",
+      "question_id": "1",
+      "org": "no-such-org-1116",
+      "as_of_sent": "2026-10-27",
+      "at": "2026-11-16T06:13:23+09:00",
+      "expected": {
+        "event": "done",
+        "code": "no_results",
+        "message": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
+      },
+      "got": {
+        "code": "no_results",
+        "message": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.",
+        "message_matches": true
+      },
+      "passed": true,
+      "response": {
+        "http_status": 200,
+        "status": "done",
+        "total_s": 4.545,
+        "events": [
+          "token",
+          "token",
+          "token",
+          "token",
+          "token",
+          "token",
+          "token",
+          "token",
+          "token",
+          "done"
+        ],
+        "error": null,
+        "done": {
+          "kind": "refuse",
+          "code": "no_results",
+          "as_of": "2026-10-27",
+          "answer_id": null,
+          "refuse_reason": "no_evidence",
+          "refuse_stage": "give_up",
+          "understood_question": null,
+          "cost_usd": 0.00056167,
+          "cost_by_step_total_usd": 0.00056167
+        },
+        "answer_chars": 36,
+        "citation_count": 0,
+        "token_text": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
+      },
+      "cost_usd": 0.00056167
+    },
+    "timeout": {
+      "path": "timeout",
+      "where": "0% 판 LLM_DEADLINE_S=0.01, LLM_MAX_RETRIES=0",
+      "base_kind": "tag",
+      "tag": "failtime",
+      "revision": "provena-api-00090-jaf",
+      "question_id": "1",
+      "org": null,
+      "as_of_sent": "2026-10-27",
+      "at": "2026-11-16T06:20:08+09:00",
+      "expected": {
+        "event": "error",
+        "code": "timeout",
+        "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요."
+      },
+      "got": {
+        "code": "timeout",
+        "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.",
+        "message_matches": true
+      },
+      "passed": true,
+      "response": {
+        "http_status": 200,
+        "status": "error",
+        "total_s": 0.729,
+        "events": [
+          "error"
+        ],
+        "error": {
+          "code": "timeout",
+          "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.",
+          "request_id": "a6ebacde433444afaa7b8d547e5e4243"
+        },
+        "done": null,
+        "answer_chars": 0,
+        "citation_count": 0,
+        "token_text": ""
+      },
+      "cost_usd": 0.0
+    }
+  },
+  "cost_usd_total": 0.000562,
+  "note": "0% 판은 태그 주소로만 열리고 운영 트래픽은 그대로다. 판정 단계(judge)는 LLM_DEADLINE_BY_TASK=judge=12라 시간 상한 0.01초를 받지 않는다."
+}

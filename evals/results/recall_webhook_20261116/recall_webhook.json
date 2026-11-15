@@ -1,0 +1,89 @@
+{
+  "revision": "provena-api-00068-drb",
+  "commit": "5a8c6527",
+  "started_kst": "2026-11-16T06:02:36+09:00",
+  "dry_run": false,
+  "user_b": "b78e0364",
+  "webhook_subscriptions": {
+    "status": 200,
+    "active": 0,
+    "secret_configured": 0
+  },
+  "candidates_found": {
+    "R": 0,
+    "S": 61
+  },
+  "eligible": {
+    "existing_b_only": 0,
+    "seedable": 61
+  },
+  "seed_attempts": [
+    {
+      "candidate": {
+        "source": "S",
+        "commit": "60974bbd",
+        "rule_seq": 155467125,
+        "article": "How we work",
+        "old_version_date": "2026-11-04",
+        "new_version_date": "2026-11-13",
+        "change_type": "modified",
+        "event_key": "535a9668eb5cfbe4",
+        "affected_total": 0,
+        "affected_b": 0,
+        "affected_others": 0,
+        "changed_articles_status": "pending"
+      },
+      "question": "핸드북 'IT Compliance' 문서의 'How we work' 부분에는 무엇이 정해져 있나요?",
+      "as_of": "2026-11-04",
+      "status": "done",
+      "kind": "answer",
+      "answer_id": "1013d4b14dfa4c019451ed70fafebb91",
+      "cites_section": true,
+      "cost_usd": 0.00849838
+    }
+  ],
+  "picked": {
+    "source": "S",
+    "commit": "60974bbd",
+    "rule_seq": 155467125,
+    "article": "How we work",
+    "old_version_date": "2026-11-04",
+    "new_version_date": "2026-11-13",
+    "change_type": "modified",
+    "event_key": "535a9668eb5cfbe4",
+    "affected_total": 1,
+    "affected_b": 1,
+    "affected_others": 0,
+    "changed_articles_status": "pending",
+    "path": "seed"
+  },
+  "judge_cost_estimate_usd": 0.01,
+  "webhook": {
+    "status": 202,
+    "accepted": 1,
+    "event_ids": [
+      "535a9668eb5cfbe4"
+    ],
+    "event_id_matches": true
+  },
+  "event": {
+    "status": "done",
+    "notices": 0,
+    "review": 0,
+    "judge_failures": 0,
+    "candidates": 0,
+    "error_kind": null
+  },
+  "b_notices": [],
+  "b_unread": 0,
+  "admin": {
+    "status": 200,
+    "review_queue": 0,
+    "judge_failures": 0
+  },
+  "deliveries": [],
+  "passed": false,
+  "result": "B에게 보이는 정정 알림 0건, 관리자 검토함 0건",
+  "chat_cost_usd": 0.008498,
+  "finished_kst": "2026-11-16T06:03:47+09:00"
+}

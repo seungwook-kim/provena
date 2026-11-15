@@ -1,0 +1,40 @@
+{
+  "path": "cost_cap",
+  "where": "0% 판 LLM_COST_CAP_USD=0.0001",
+  "base_kind": "tag",
+  "tag": "failcap",
+  "revision": "provena-api-00088-zor",
+  "question_id": "1",
+  "org": null,
+  "as_of_sent": "2026-10-27",
+  "at": "2026-11-16T06:14:15+09:00",
+  "expected": {
+    "event": "error",
+    "code": "limit_exceeded",
+    "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요."
+  },
+  "got": {
+    "code": "limit_exceeded",
+    "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.",
+    "message_matches": true
+  },
+  "passed": true,
+  "response": {
+    "http_status": 200,
+    "status": "error",
+    "total_s": 4.472,
+    "events": [
+      "error"
+    ],
+    "error": {
+      "code": "limit_exceeded",
+      "message": "이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.",
+      "request_id": "ba5455ad70f84a398b0977cbd2788def"
+    },
+    "done": null,
+    "answer_chars": 0,
+    "citation_count": 0,
+    "token_text": ""
+  },
+  "cost_usd": 0.0
+}
