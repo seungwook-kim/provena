@@ -1765,7 +1765,8 @@ def build_graph(
         g.add_node(name, fn)
     g.add_edge(START, "load_memory")
     # 이어 묻기(D-14): 같은 대화에 앞 질문이 쌓여 있을 때만 `followup`을 지난다. 없는 질문(새 대화, `asked`를 넘기지 않는 평가 실행기)은 지금처럼 바로 `classify`다
-    g.add_conditional_edges("load_memory", lambda s: "followup" if previous_questions(s) else "classify", {"followup": "followup", "classify": "classify"})
+    # `followup_off`(스위치 끔)이면 체크포인트에 앞 질문이 쌓여 있어도 지나지 않는다(놓친 것 D-14 후속: 끈 뒤에도 쌓인 대화에서 다시 쓰기가 돌던 것)
+    g.add_conditional_edges("load_memory", lambda s: "followup" if previous_questions(s) and not s.get("followup_off") else "classify", {"followup": "followup", "classify": "classify"})
     g.add_edge("followup", "classify")
     # 결정표와 합동 검토를 연결하면 이 표의 목적지만 바꾼다
     if decision_repo is not None:   # 결정표 저장소가 있을 때만 결정표 경로를 따로 연다. 없으면 지금처럼 정책 질문으로 처리한다

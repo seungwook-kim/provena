@@ -388,4 +388,24 @@ def test_switch_off_passes_no_history(monkeypatch):
         _, ev = ask(c, FOLLOW, "t1", as_of=AS_OF)
         assert llm.count(TASK) == 0 and "understood_question" not in _done(ev)
         assert asked(llm, "classify")[-1] == P.classify_user(FOLLOW, {})
-        assert env.app.state.question_graph.get_state({"configurable": {"thread_id": f"{env.alice.user_id}:t1"}}).values["asked"] == []
+        # 꺼져 있어도 질문 기록은 쌓는다(다시 켰을 때 꺼진 동안의 질문이 빠지지 않게). 다시 쓰기만 건너뛴다
+        assert env.app.state.question_graph.get_state({"configurable": {"thread_id": f"{env.alice.user_id}:t1"}}).values["asked"] == [Q1, FOLLOW]
+
+
+def test_switch_off_mid_conversation_stops_rewriting_even_with_history(monkeypatch):
+    """검토 지적(D-14 후속): 켠 채 질문 2개를 쌓은 대화에서 스위치를 끄면 셋째 질문은 다시 쓰지 않아야 한다.
+    예전에는 끄면 기록만 안 쌓여, 체크포인트의 마지막 기록(둘째 질문)을 지금 질문으로 보고 첫 질문을 앞 질문으로 넣어 다시 쓰기를 불렀다."""
+    llm = followup_llm([j(followup=True, question=FULL)])
+    with Env(monkeypatch, llm=llm) as env:
+        c = env.client(env.alice)
+        ask(c, Q1, "t1", as_of=AS_OF)
+        ask(c, FOLLOW, "t1", as_of=AS_OF)
+        assert llm.count(TASK) == 1
+        monkeypatch.setenv("CHAT_FOLLOWUP", "0")
+        _, ev = ask(c, "셋째 질문입니다", "t1", as_of=AS_OF)
+        assert llm.count(TASK) == 1 and "understood_question" not in _done(ev)
+        assert asked(llm, "classify")[-1] == P.classify_user("셋째 질문입니다", {})
+        monkeypatch.setenv("CHAT_FOLLOWUP", "1")   # 다시 켜면 꺼진 동안의 질문까지 앞 질문으로 본다
+        ask(c, "넷째 질문입니다", "t1", as_of=AS_OF)
+        assert llm.count(TASK) == 2
+        assert "셋째 질문입니다" in asked(llm, TASK)[-1]

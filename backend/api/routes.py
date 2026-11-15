@@ -274,8 +274,11 @@ def create_api_router(
         internal = internal_thread(user_id, thread_id)
         cfg = run_config("question", user_id=user_id, thread_id=internal, configurable={"thread_id": internal})
         graph_input = {"question": req.message, "user_id": user_id, "thread_id": internal, "as_of": req.as_of, "org": req.org}
-        if followup_enabled():   # 이어 묻기(D-14): 이 대화의 질문 기록에 지금 질문을 더한다. 앞 질문은 같은 thread의 체크포인트에 쌓여 있다(따로 읽지 않는다)
-            graph_input["asked"] = [req.message]
+        # 이어 묻기(D-14): 이 대화의 질문 기록에 지금 질문을 더한다. 앞 질문은 같은 thread의 체크포인트에 쌓여 있다(따로 읽지 않는다).
+        # 스위치가 꺼져 있어도 기록은 쌓고 `followup_off`로 다시 쓰기만 건너뛴다: 기록을 멈추면 이미 쌓인 대화에서 마지막 기록을 지금 질문으로 잘못 보고
+        # 이어 묻기가 계속 돌았고, 다시 켰을 때는 꺼진 동안의 질문이 빠진 기록을 썼다. 질문마다 넘겨 체크포인트에 남은 앞 값이 쓰이지 않게 한다.
+        graph_input["asked"] = [req.message]
+        graph_input["followup_off"] = not followup_enabled()
         started = time.perf_counter()
         meter, meter_token = step_cost.begin()   # 요청 단위 집계(단계별 비용, Voyage 토큰). 숫자만 모으고 항상 켜 둔다
         text: list[str] = []

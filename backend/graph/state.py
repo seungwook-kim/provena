@@ -57,6 +57,7 @@ class AgentState(TypedDict, total=False):
     as_of_given: bool  # 입력에 기준일이 있었는지. 있으면 질문에서 뽑은 시점으로 덮지 않는다
     org: str | None  # 사용자가 지정한 절(핸드북 섹션)
     asked: Annotated[list[str], keep_recent_questions]  # 이어 묻기(D-14): 이 대화에서 `/chat`이 받은 질문(친 글, 최근 3개). `/chat`만 질문마다 `[질문]`을 넘기고 체크포인트에 쌓인다. 넘기지 않는 실행(평가 실행기)에는 없다
+    followup_off: bool  # 이어 묻기 끔(`/chat`이 `CHAT_FOLLOWUP=0`일 때 질문마다 True로 넘긴다). True면 앞 질문이 있어도 `followup`을 지나지 않는다
     user_question: str | None  # 이어 묻기로 `question`을 다시 쓴 질문에서 사용자가 친 글. `followup` 노드가 지날 때마다 다시 쓴다(다시 쓰지 않았으면 None)
     understood_question: str | None  # 이어 묻기로 다시 쓴 질문(그 질문의 `question`과 같다). 다시 쓰지 않았으면 None. 화면의 "이렇게 이해했습니다"와 다음 질문의 앞 질문에 쓴다
     # --- 대화 중 값 ---
