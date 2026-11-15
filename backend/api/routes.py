@@ -77,13 +77,14 @@ MSG_PROVIDER_LIMIT = ("LLM 제공자의 요청 한도에 닿았거나 사용 잔
                       "같은 안내가 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.")
 MSG_TIMEOUT = "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요."
 # anthropic·openai(OpenRouter 포함) SDK의 429 예외. OpenAI의 사용량 초과(`insufficient_quota`)도 이 예외로 온다
-PROVIDER_LIMIT_ERRORS = frozenset({"RateLimitError"})
+# langchain_anthropic은 SDK 예외를 같은 뜻의 자기 예외(`AnthropicRateLimitError`, `AnthropicTimeoutError`)로 바꿔 던지므로 그 이름도 넣는다(운영 확인 2026-11-16)
+PROVIDER_LIMIT_ERRORS = frozenset({"RateLimitError", "AnthropicRateLimitError"})
 # SDK 상태 오류의 문구는 "Error code: 429 - {...}" 꼴이다. 402는 OpenRouter의 잔액 부족이다
 _PROVIDER_LIMIT_STATUS = re.compile(r"\bError code: (?:429|402)\b")
 # Anthropic 잔액 부족(400 "Your credit balance is too low"), OpenRouter 402 "Insufficient credits", OpenAI 사용량 초과 등의 문구 조각(소문자)
 PROVIDER_LIMIT_TEXT = ("credit balance", "insufficient credits", "insufficient_quota", "exceeded your current quota", "billing")
 # SDK 재시도 뒤의 시간 초과(`APITimeoutError`), Anthropic 504(`DeadlineExceededError`), httpx 전송 상한(`DeadlineTransport`의 `ReadTimeout`) 등
-TIMEOUT_ERRORS = frozenset({"APITimeoutError", "DeadlineExceededError", "TimeoutError", "TimeoutException", "ReadTimeout",
+TIMEOUT_ERRORS = frozenset({"APITimeoutError", "AnthropicTimeoutError", "DeadlineExceededError", "TimeoutError", "TimeoutException", "ReadTimeout",
                             "ConnectTimeout", "WriteTimeout", "PoolTimeout", "TimeoutExpired"})
 # Claude CLI 모델(`backend/services/claude_cli_model.py`)은 시간 초과를 `ClaudeCliError("claude CLI 시간 초과 ...")`로 바꿔 낸다
 CLI_TIMEOUT = ("ClaudeCliError", "claude CLI 시간 초과")

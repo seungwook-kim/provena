@@ -1,0 +1,40 @@
+{
+  "path": "timeout",
+  "where": "0% 판 LLM_DEADLINE_S=0.01, LLM_MAX_RETRIES=0",
+  "base_kind": "tag",
+  "tag": "failtime",
+  "revision": "provena-api-00083-gum",
+  "question_id": "1",
+  "org": null,
+  "as_of_sent": "2026-10-27",
+  "at": "2026-11-16T05:38:58+09:00",
+  "expected": {
+    "event": "error",
+    "code": "timeout",
+    "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요."
+  },
+  "got": {
+    "code": "internal_error",
+    "message": "답을 만드는 중 오류가 났습니다. 잠시 후 다시 시도해 주세요.",
+    "message_matches": false
+  },
+  "passed": false,
+  "response": {
+    "http_status": 200,
+    "status": "error",
+    "total_s": 0.584,
+    "events": [
+      "error"
+    ],
+    "error": {
+      "code": "internal_error",
+      "message": "답을 만드는 중 오류가 났습니다. 잠시 후 다시 시도해 주세요.",
+      "request_id": "220102a7a97c46769a0d1b82d479a132"
+    },
+    "done": null,
+    "answer_chars": 0,
+    "citation_count": 0,
+    "token_text": ""
+  },
+  "cost_usd": 0.0
+}
