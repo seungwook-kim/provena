@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | `pr-notes/PR-160.md`에 K-22 재녹화 절(7절)을 더함 | #160 |
 | 2026-11-15 | 박진형 (jinyeong-731) | `pr-notes/PR-160.md`에 K-24 수정 절(6절)을 더하고 1절 K-24 행을 '6절에서 고침'으로 고침 | #160 |
 | 2026-11-15 | 박진형 (jinyeong-731) | 묶음 정리: #159에 올린 작업 내역 `pr-notes/PR-next.md`를 `PR-159.md`로 바꾸고 그 묶음 박진형 기록 칸 `미정` 7칸을 `#159`로 채움. 조장 11/15 목록 갈래 4개(`next-1114`, `next-1115-c26`, `next-1115-k23`, `next-1115-d14`)를 합친 작업 내역 `pr-notes/PR-160.md`를 새로 쓰고 이 묶음 기록 칸 16칸을 `#160`으로 채움 | #160 |
 | 2026-11-15 | 박진형 (jinyeong-731) | D-14 이어 묻기(팀장 결정 ①, 조장 지시로 처리): `specs/question-graph.md`에 '이어 묻기' 절(설계, 한계, AC-14~21), `specs/d6-chat-frontend.md`에 `done.understood_question` 처리와 AC-14, `SDD.md` 6장 `done` 행과 설명, `decisions.md` 1행, `deliverables/ai_tools_log.md` 1행, `pr-notes/PR-160.md` 'D-14' 절 | #160 |

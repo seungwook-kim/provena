@@ -58,6 +58,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | 놓친 것 K-22: 키 없는 데모 녹화 `data/demo_replay/recorded.jsonl`을 다시 녹화(K-24 수정 커밋 `9f91b3b0` 위). 방법은 `backend/services/demo_record.py` 머리말 그대로: 임시 docker Postgres(`pgvector/pgvector:pg16`, `db/*.sql` 적용) → `python -m backend.rag.retrieve.load_snapshot`(청크 23,095개, 번역 0개) → 기존 녹화를 저장소 밖에 두고 `python -m backend.services.demo_record --questions data/demo_replay/questions.txt --max-total-usd 0.5`(모델 `claude-haiku-5-5`, 질문 벡터 `voyage-4`, `.env.example`을 바탕 환경으로). 9개 질문 모두 성공, 녹화 228줄, LLM 비용 0.223달러(머리말 추정 0.05~0.12달러보다 큼). 운영 DB는 쓰지 않음(번역 장부가 차 있어 재생과 키가 어긋난다). 임시 컨테이너는 지움 | #160 |
 | 2026-11-13 | 박진형 (jinyeong-731) | 팀장 커밋 515acc3d(표 행 겹침 상한 400자, 결정 0115)가 `data/manifest.jsonl`·`data/chunks_index.jsonl`을 바꾼 것을 기록. `data/index.tar.gz`의 `chunks.jsonl`(옛 색인)과 지금 `chunks_index.jsonl`을 chunk_id로 대조(Python `tarfile`)하면 23,095개 중 37개가 달라졌다(옛 쪽에만 37, 새 쪽에만 37). 청크 수와 서로 다른 본문 수는 그대로다. 겹침만 바뀌어 id가 그대로인 청크는 이 대조에 안 잡히며(커밋 메시지는 바뀐 청크 762개 = id 유지 725 + 새 id 37이라 적었다, 725는 여기서 재지 않았다) `index.tar.gz`는 그 커밋에서 바뀌지 않았다. 코드·데이터 변경 없음, 문서만 | #157 |
 | 2026-11-13 | 박진형 (jinyeong-731) | S-08: PDF 절에 알려진 한계 기록(PDF 7건이 검색 색인에 없음, 실측 4곳 0건, 이유는 라이선스 근거 부족·적재 미룸). 제목과 "현재 색인 대상" 문구를 "현재 파싱 대상"으로 정정. 코드·데이터 변경 없음 | #157 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) `data/demo_replay/questions.txt`(녹화한 데모 질문 9개) 추가, `recorded.jsonl`을 최종 판정·분류·인용 수정 뒤로 다시 녹화(커밋 3c9a1ad, a03ac9f) | #119 |
