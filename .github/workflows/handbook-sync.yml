@@ -1,5 +1,6 @@
 # 증분 수집 정시 실행 (가산 자동화, docs/specs/incremental.md). 강사 템플릿(rag 3주차 fixtures/nb_agent11_workflow.json) 방식.
 # 정시 실행(schedule)은 기본 브랜치(main)에 있는 이 파일만 돈다. 멈출 때는 Actions 화면의 "Disable workflow".
+# 2026-11-16 현재 이 workflow는 비활성이다. Actions 무료 한도 소진으로 자동 실행이 멈춰 같은 명령을 팀장 PC 작업 스케줄러로 매일 02:14 KST에 실행한다(docs/specs/incremental.md).
 # 필요한 값: secrets.DATABASE_URL(운영 DB, 직접 연결 또는 session mode), secrets.VOYAGE_API_KEY(새 글이 있을 때 Voyage로 임베딩),
 #           secrets.SYNC_ALERT_WEBHOOK(디스코드, 없으면 알림 꺼짐을 로그에), vars.EMBED_MODEL(색인 장부와 같은 모델. 비우면 코드 기본값 voyage-4)
 name: handbook-sync

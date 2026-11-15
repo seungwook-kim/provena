@@ -52,7 +52,7 @@
 | 환경변수 | `SEARCH_WARMUP` | 시작 때 검색 준비를 기다릴지(`backend/main.py:143`). 운영 기본은 기다림, compose는 `background` |
 | 환경변수 | `PROVENA_OWNER_LOGIN_ID` | 최고 관리자 로그인 아이디(`backend/main.py:338`, `docs/specs/admin-roles.md`) |
 | 환경변수 | `PROVENA_DOCS_PUBLIC` | `0`이면 `/docs`·`/redoc`·`/openapi.json`을 끈다. 비우면 공개(`backend/main.py:372`) |
-| 환경변수 | `MCP_TOKEN` | 있어야 HTTP MCP를 붙인다(`backend/main.py:253`, `docs/specs/mcp.md`) |
+| 비밀값(Secret Manager) | `MCP_TOKEN` | 있어야 HTTP MCP를 붙인다(`backend/main.py:253`, `docs/specs/mcp.md`). 운영에 연결됨(2026-11-16) |
 | 환경변수 | `TRUSTED_PROXY_HOPS` | 프록시 뒤 실제 접속 IP. 기본 0, Cloud Run은 1(`backend/auth.py:705`, `Dockerfile` 주석) |
 | 환경변수 | `INDEX_URL`, `INDEX_SHA256` | 색인 압축이 저장소에 없을 때만 내려받는 주소와 해시(`backend/rag/retrieve/load_snapshot.py:204`) |
 | 환경변수 | `SERVICE_API_KEY` | 규정 변경 웹훅 수신 서비스 키. 비면 항상 401(`backend/api/recalls.py:42`) |

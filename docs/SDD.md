@@ -78,8 +78,8 @@ flowchart LR
 - **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 변환·승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. `explain_decision`은 이미 사람이 승인한 표의 규칙을 계산해 돌려줄 뿐 표를 만들거나 승인하지 않는다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
 - 비공개(`internal.gitlab.com`)로만 연결된 칸·링크는 도구가 근거로 내보내지 않고 "비공개 문서"로 표시한다(9장).
 - 클라이언트는 `langchain[mcp]`(베타)를 쓴다. 서버는 `fastmcp` 4.x로 맞춘다. 옛 `langchain-mcp-adapters`는 보관(archived)되어 쓰지 않는다. 베타가 문제를 일으키면 공식 MCP Python SDK나 FastMCP 클라이언트를 직접 부른다.
-- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다.
-- 접근은 토큰 헤더로 제한한다. 토큰은 `.env`에만 둔다. MCP 도구 호출도 Langfuse 트레이스에 단계로 남긴다.
+- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 현재 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음).
+- 접근은 토큰 헤더로 제한한다. 토큰은 로컬은 `.env`, 운영은 Secret Manager 비밀값으로 둔다. MCP 도구 호출도 Langfuse 트레이스에 단계로 남긴다.
 - 서버를 띄우는 곳(FastAPI 앱에 붙일지, 따로 띄울지)은 11장에서 정한다.
 
 **런타임 Skill (`skills/`, 에이전트가 읽는다)**
@@ -243,35 +243,54 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ```mermaid
 flowchart TD
   S([시작]) --> M[기억 불러오기: 팀·역할]
-  M --> R{질문 종류}
+  M -->|같은 대화에 앞 질문 있음| F[이어 묻기 followup: 앞 질문에 기대는 질문을 다시 씀]
+  M -->|앞 질문 없음| R{질문 종류 classify}
+  F --> R
+  R -->|도메인 밖| O[out_of_domain: 검색 없이 거절]
   R -->|정책 질문| Q[질의 재작성: 영어 검색어 포함]
   Q --> SR[검색]
+  SR -->|검색 오류| E([끝])
   SR --> G{근거 충분?}
-  G -->|부족, 2회 이하| Q
-  G -->|부족, 한도 초과| X[되묻기 또는 거절]
+  G -->|부족, 재검색 한도 안| Q
+  G -->|부족, 한도 초과| X[give_up: 되묻기 또는 거절]
   G -->|충분| A[인용과 함께 한국어 답 작성]
   A --> V[인용 검사: 섹션·판이 코퍼스에 있는지, 코드]
-  V --> L[답변·인용 저장]
-  R -->|승인권자 등 결정표 질문| D[승인된 결정표 실행, 코드]
-  D --> A
+  V -->|답| GR[ground: 근거 판정]
+  V -->|거절| E
+  GR -->|답| L[답변·인용 저장]
+  GR -->|거절| E
+  R -->|승인권자 등 결정표 질문| DP[결정표 인자 뽑기]
+  DP --> D[승인된 결정표 실행, 코드]
+  D --> DA[결정표 답 작성, 코드]
   R -->|합동 검토 요청| SUP[Supervisor]
   SUP --> D1[보안] & D2[인프라·SRE] & D3[IT 운영] & D4[재무]
   D1 & D2 & D3 & D4 --> IT[쟁점표 합치기]
   IT --> H1(사람 승인: interrupt)
-  H1 --> L
-  L --> E([끝])
+  H1 --> E
+  O --> E
+  X --> E
+  DA --> E
+  L --> E
 ```
+
+배선은 `backend/graph/build.py`의 `build_graph` "배선" 부분(2124~2167행)이다. 결정표 경로(`decision_params` → `decision_run` → `decision_answer`)는 결정표 저장소가 있을 때만 열리고 `decision_answer`에서 바로 끝난다(답 작성·인용 검사·저장을 지나지 않는다). 합동 검토(`review`)는 하위 그래프로 붙고 끝나면 바로 끝으로 간다(쟁점표 저장은 하위 그래프 안에서 한다). 결정표 저장소나 합동 검토 그래프가 없으면 해당 질문은 정책 질문 경로(`rewrite`)로 간다.
 
 | 노드 | LLM 사용 | 설명 |
 |---|---|---|
-| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:84-87`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
-| 질문 종류 | 있음 | 정책 질문 / 결정표 질문 / 합동 검토 |
+| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:141-145`의 `MemoryPatch`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
+| 이어 묻기(`followup`) | 있음 | 같은 대화에 앞 질문이 쌓여 있을 때만 지난다. 지금 질문이 앞 질문에 기대면 혼자서도 뜻이 통하는 질문으로 다시 쓴다(LLM 1회). 그 밖에는 질문을 그대로 둔다. 스위치 `CHAT_FOLLOWUP`(기본 켬)을 끄면 지나지 않는다 |
+| 질문 종류 | 있음 | 정책 질문 / 결정표 질문 / 합동 검토 / 도메인 밖 |
+| 도메인 밖 거절(`out_of_domain`) | 없음 | 분명히 핸드북과 무관한 질문을 재작성과 검색 없이 거절한다 |
 | 질의 재작성 | 있음 | 핸드북 용어(영어)로 바꾸고 절·시점 조건을 뽑는다. `glossary` Skill을 쓴다 |
 | 검색 | 없음 | `search_handbook` 호출 (MCP 또는 직접 호출, `SEARCH_VIA_MCP`) |
-| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:61`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:54`, `.env.example:63`) |
+| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:64`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:56`, `.env.example:65`) |
+| 되묻기 또는 거절(`give_up`) | 없음 | 근거 충분 판정이 재검색 한도 초과 등으로 답을 쓰지 않기로 했을 때(`after_judge`) 판정이 낸 되묻기 문장(유출·출력 검사 통과, 숫자 없음)을 내거나 거절한다 |
 | 답 작성 | 있음 | `citation-rules` Skill을 쓴다. 결정표 질문이면 `delegation` Skill도 쓴다 |
-| 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. `grounding-check` Skill을 기준으로 삼는다 |
+| 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. 답(`answer`)이면 근거 판정으로, 거절이면 끝으로 간다 |
+| 근거 판정(`ground`) | 있음 | 답의 값이 인용 청크에 있는지 판정한다. `grounding-check` Skill 본문을 쓰며, Skill을 끄면(`USE_SKILLS=0`) 본문이 비어 이 LLM 호출을 건너뛴다. 답이면 저장으로, 거절이면 끝으로 간다 |
+| 결정표 인자 뽑기 | 있음 | 업무 종류와 금액을 뽑는다(LLM 1회). 질문 종류 판정이 이미 뽑았으면 그 값을 쓴다 |
 | 결정표 실행 | 없음 | 관리자가 승인한 결정표만 실행한다 |
+| 결정표 답 작성 | 없음 | 실행 결과를 코드로 한국어 답과 인용 1개로 쓰고 그래프를 끝낸다. 실행하지 않았으면 이유를 알린다 |
 | Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다 |
 | 사람 승인 | 없음 | interrupt로 멈추고 `resume()`으로 이어 간다 |
 
@@ -294,6 +313,8 @@ flowchart TD
 | GET | `/auth/csrf` | 누구나 | CSRF 쿠키 발급(204). 로그인·가입·쓰기 요청의 `X-CSRF-Token` 값으로 쓴다 |
 | POST | `/auth/login` | 누구나, CSRF | 로그인 (방식은 11장). 대기·거절 가입 신청 계정은 로그인되지 않는다 |
 | POST | `/auth/signup` | 누구나, CSRF | 가입 신청 `{login_id, password, password_confirmation}` → 201. `users` 행은 만들지 않고 `signup_requests`에 `pending`으로 저장한다. 오류 409(이미 있는 아이디)·422·503 (`docs/specs/106-signup-approval.md`) |
+| POST | `/auth/signup/verify` | 누구나, CSRF | 이메일 가입 신청의 인증번호 확인 `{login_id, code}`(이메일과 6자리 숫자) → `{status: "verified"}`(이미 확인된 신청도 같음). 오류 400(번호 틀림)·410(만료)·422(형식)·429(시도 횟수 초과)·503(저장소 없음). 확인해도 로그인되지 않고 최고 관리자 승인을 기다린다 (`backend/auth.py`의 `verify_signup`) |
+| POST | `/auth/signup/resend` | 누구나, CSRF | 인증번호 다시 보내기 `{login_id}`. 대기 중이고 아직 확인하지 않은 이메일 가입 신청에만 보내고 `{status: "sent", verification_expires_at, verification_resend_available_at}`, 그 밖(신청 없음, 이미 끝남, 보내기 제한)은 구별하지 않고 `{status: "unavailable"}`. 오류 422·503(저장소·메일 공급자 없음, 전송 실패) (`backend/auth.py`의 `resend_signup`) |
 | GET | `/auth/google/start`, `/auth/google/callback` | 누구나 | Google 로그인(PKCE). 운영 동작 미확인. 코드상 Google 설정이나 114가 없으면 `/login?oauth_error=google_unavailable`로 이동한다(`docs/specs/login.md`) |
 | POST | `/auth/logout` | 로그인 | |
 | GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, login_id, profile_completed, is_owner}`(`login_id`는 화면 계정 메뉴 표시용). `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
@@ -302,13 +323,16 @@ flowchart TD
 | GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank`, `service` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
+| GET | `/approvals/{approval_id}` | 관리자 | 승인 건 하나의 상태와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`). 끝난 건도 읽는다. 팀 실패 알림 건이면 처리 결과(`resolution`)를 더한다 (`backend/graph/decision/routes.py`의 `get_approval`) |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
 | POST | `/admin/eval/review` | 관리자, CSRF, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 | **평가 전용**(결정 0104, 사전 등록 62.41). 같은 합동 검토 요청을 에이전트 하나가 검토하는 기준선을 운영에서 재는 통로. `{message, as_of?, search: "same" \| "undivided"}` → JSON 한 번 `{status, search, issue_rows, unreviewed, clarify_question, retrieved, llm_calls, usage, latency_ms, revision, request_id}`. 꺼져 있으면 권한 검사보다 먼저 404 `not_found`, 하루 호출 상한(`EVAL_REVIEW_SINGLE_MAX_PER_DAY`, 기본 200)을 넘으면 429 `rate_limited`, 요청당 비용 상한을 넘으면 429 `limit_exceeded`. 쟁점표·승인함·대화 목록에 아무것도 쓰지 않는다. 서비스 경로는 이 코드를 부르지 않는다 |
 | GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
-| GET | `/admin/signup-requests` | 최고 관리자 | 가입 신청 목록 `{"requests": [{login_id, requested_at, status}]}`. `password_hash`는 내지 않는다 |
-| POST | `/admin/signup-requests/{login_id}/{action}` | 최고 관리자, CSRF | `action`은 `approve`·`reject`. 승인하면 `users` 행을 만든다. `{login_id, status, changed}`(이미 처리된 신청은 `changed: false`). 오류 401·403·404·422·503 (`docs/specs/106-signup-approval.md`, `admin-roles.md`) |
+| GET | `/admin/signup-requests` | 최고 관리자 | 가입 신청 목록 `{"requests": [{request_id, login_id, requested_at, status, email_verified}]}`. `password_hash`는 내지 않는다 |
+| POST | `/admin/signup-requests/{login_id}/{action}` | 최고 관리자, CSRF | `action`은 `approve`·`reject`. 승인하면 `users` 행을 만든다. `{login_id, status, changed}`(이미 처리된 신청은 `changed: false`). 오류 401·403·404·409(이메일 인증 전)·422·503 (`docs/specs/106-signup-approval.md`, `admin-roles.md`) |
+| POST | `/admin/signup-requests/by-id/{request_id}/{action}` | 최고 관리자, CSRF | 위와 같은 승인·거절을 신청 번호(`request_id`, 정수)로 한다. `{request_id, status, changed}`. 오류 404(신청 없음)·409(이메일 인증 전)·422(`action`이 `approve`·`reject`가 아님)·503 (`backend/admin_api.py`의 `review_signup_request_by_id`) |
+| POST | `/admin/signup-requests/by-id/{request_id}/reset-verification` | 최고 관리자, CSRF | 아직 인증하지 않은 대기 이메일 가입 신청의 인증번호를 지우고 시도·발송 횟수를 초기화해 새 번호를 받을 수 있게 한다. `{request_id, reset: true}`. 오류 404(신청 없음)·409(초기화할 수 없는 신청)·503 (`backend/admin_api.py`의 `reset_signup_verification`) |
 | GET | `/recalls` | 로그인 | `{items, unread}`. 일반 사용자는 자기 알림 중 볼 수 있는 섹션의 것만, 관리자는 전체와 `review_queue`(관리자 검토함), `candidates`(함께 볼 정책 후보), `judge_failures`(판정이 깨진 알림)를 더 받는다 |
 | GET | `/recalls/{id}` | 로그인 | 알림 한 건. 남의 알림과 검토함·폐기된 알림은 404 `not_found`(관리자는 모두 봄) |
 | POST | `/recalls/{id}/ack` | 로그인, CSRF | 확인 표시. 본인만(남의 알림은 404). 갱신된 알림을 돌려준다 |
@@ -316,7 +340,7 @@ flowchart TD
 | GET | `/recalls/feedback-stats`, `/recalls/digests` | 로그인(통계는 관리자) | 의견 집계(유형별 정밀도), 하루 요약 목록(본인 것, 관리자는 전체) |
 | POST | `/recalls/digest/flush`, `/recalls/process-pending` | 관리자, CSRF | 하루 요약 보내기, 쌓인 변경 처리(스위치와 무관하게 한 번 실행) |
 | GET | `/changes`, `/changes/{event_id}` | 로그인 | 변경 감시 목록 `{items, last_run, more, monitoring}`(`since` 기본 30일 전, `limit`, `offset`)과 한 건(개정 전후 본문 포함). 영향받은 답 수를 붙인다 |
-| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 수동 실행은 두지 않고 정시 수집 workflow `handbook-sync` 사용, 2026-11-12 조장 리뷰(#132)에서 확정) |
+| POST | `/admin/sync` | 관리자·CSRF | 증분 수집 수동 실행. 기본 `dry_run=true`는 계획(slot·감시 상태)만 돌려주고, `dry_run=false`는 501 `manual_sync_not_supported`(실제 수동 실행은 두지 않는다, 2026-11-12 조장 리뷰(#132)에서 확정). 정시 수집은 팀장 PC 작업 스케줄러가 매일 02:14 KST에 실행하고 workflow `handbook-sync`는 비활성이다(`docs/specs/incremental.md`, 11-0절) |
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |
@@ -365,7 +389,7 @@ flowchart TD
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
 | 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
 | 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
-| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집은 두지 않음, 정시 수집 workflow 사용, 2026-11-12 조장 리뷰(#132)에서 확정, `backend/api/changes.py:171`) |
+| 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집은 두지 않음, 2026-11-12 조장 리뷰(#132)에서 확정, `backend/api/changes.py:172`. 정시 수집은 팀장 PC 작업 스케줄러 매일 02:14 KST, workflow 비활성) |
 | 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
@@ -405,7 +429,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 
 ## 5. 데이터 모델
 
-테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장). 아래 표는 요약이고, 현재 DB(앱 표 25개 + LangGraph 표 6개 = 31개, 2026-11-10 `db/109` 재정렬 뒤)의 관계도는 [ERD](./db/ERD.md), 표와 칸의 정의는 [TABLE_SPEC](./db/TABLE_SPEC.md), 코드의 SQL과 색인 대조는 [QUERY_INDEX](./db/QUERY_INDEX.md), 마이그레이션 순서와 운영 적용 절차는 `db/db.md`에 있다.
+테이블 이름과 칸 이름은 계약(`backend/schemas/`) 필드와 같게 둔다. 뜻은 핸드북 코퍼스에 맞춘다(6장). 아래 표는 요약이고, 현재 DB(앱 표 26개 + LangGraph 표 6개 = 32개, 2026-11-10 `db/109` 재정렬 뒤 `db/114`의 `user_identities` 추가)의 관계도는 [ERD](./db/ERD.md), 표와 칸의 정의는 [TABLE_SPEC](./db/TABLE_SPEC.md), 코드의 SQL과 색인 대조는 [QUERY_INDEX](./db/QUERY_INDEX.md), 마이그레이션 순서와 운영 적용 절차는 `db/db.md`에 있다.
 
 | 테이블 | 주요 칸 | 쓰는 곳 |
 |---|---|---|
@@ -417,7 +441,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | `answers` | answer_id, user_id, thread_id, question, answer, as_of, created_at, grounding(json, 밖으로 낼 수 있는 인용 검사 결과), skills_used(json) | graph |
 | `citations` | answer_id, chunk_id, version_id | graph, recall |
 | `decision_tables` | table_id, rule_seq, version_id, cells(json), status(draft, approved, rejected), approved_by | graph, api |
-| `approvals` | approval_id, kind(decision_table, issue_table, team_review_failed), thread_id, status, decided_by, comment(반려 사유), decided_at | graph, api |
+| `approvals` | approval_id, kind(decision_table, issue_table, team_review_failed), thread_id, status, decided_by, comment(반려 사유), decided_at, 재개 기록 resume_count·duplicate_ignored_count·last_resumed_at·last_resume_result(`db/112`) | graph, api |
 | `recall_events` | event_key(= 수집이 정한 event_id), changed(json), status(running, done, failed), 건수. 같은 개정은 한 번만 처리한다 | recall |
 | `recall_notices` | notice_id, event_key, answer_id, user_id, changed(json), conclusion_changed, explanation, confidence, severity(high, low), review_status(검토함), digest_status, judge_failed, acked, feedback_useful·feedback_reason·feedback_by·feedback_at(사용자 의견: 같은 섹션·변경 유형에 "필요 없음"이 쌓이면 다음 알림 심각도를 낮춘다). UNIQUE (answer_id, event_key) | graph, api |
 | `recall_digests` | digest_id, user_id, day, count, notice_ids, payload. 하루 요약(`RECALL_DIGEST=daily`) | recall |
@@ -428,6 +452,7 @@ SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 
 | `threads` | (user_id, thread_id), title, status(idle, running, pending_approval), last(json), created_at, updated_at. 사용자별 대화 목록 | api |
 | `issue_tables` | table_id, approval_id, thread_id, user_id, request, as_of, issue_rows(json), unreviewed(json), approved_by, approved_at. 사람 승인을 받은 합동 검토 쟁점표(F-03) | graph |
 | `signup_requests` | request_id, user_id, login_id, password_hash, status(pending, approved, rejected), requested_at, reviewed_at, reviewed_by. 가입 요청과 관리자 승인(결정 0082) | api |
+| `user_identities` | (provider, subject), user_id, email, created_at. Google 로그인 계정 연결(provider는 `google`, 한 계정에 구글 계정 하나, `db/114`) | api |
 | `user_profiles` | user_id, 이름·소속·전화·주소의 암호문(AES-256-GCM), key_version, updated_at | api |
 | `admin_role_log` | log_id, at, by_user_id, target_user_id, action. 관리자 등록·해제 기록(쓰기 전용) | api |
 | `token_revocations` | jti, expires_at, revoked_at. 로그아웃한 토큰 | api |
@@ -637,9 +662,9 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 결정표 변환 정확도 | `evals/agent/` | 셀 단위, 2023 권한표 정답과 대조 |
 | 답변 리콜 | `evals/agent/` | 핸드북 실제 개정 커밋 전후 판 쌍으로 재현율·정밀도 (PRD 13-2) |
 | 연결 정책 후보, 링크 추출 | `evals/agent/` | 후보 정밀도, 링크 그래프 간선 정확도 |
-| GraphRAG (가산) | `evals/retrieval/` | 벡터 검색이 지는 질문 유형에서 그래프 검색 개선 전후 (가이드 p.20) |
-| Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다 |
-| MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용) |
+| GraphRAG (가산) | `evals/retrieval/`, 비교셋 `evals/graphrag_v1/questions.jsonl`(12건), 사전 등록 62.76 | 벡터 검색이 지는 질문 유형에서 그래프 검색 개선 전후 (가이드 p.20). 운영 비교: 링크 확장(`SEARCH_LINK_N`) 켬·끔을 같은 커밋의 트래픽 0% 태그 판에서 비교(결정 0123), 비교셋 12건 링크 확장 켬(최종 판 `provena-api-00065-q84`, 비교셋 12건 1회) 인용 정확도 0.569, 정답 근거 인용률 0.388, 답 12/12, p95 12.869초, 0.098달러 대 끔(0% 판 `provena-api-00078-keb`, 1회) 0.528(정답 근거 인용률 0.413, 답 12/12, p95 12.454초, 0.110달러). v2 50건은 켬 0.953(최종 판 3회 평균, 정답 근거 인용률 0.942, 과잉 거절 0.000, p95 8.758초) 대 끔 0.896(1회, 정답 근거 인용률 0.853, 과잉 거절 0.040, p95 10.067초). 결과 `evals/results/deploy_latency_graphrag_off_provena-api-00078-keb/`, `evals/results/deploy_latency_graphoff_v2_provena-api-00078-keb/`, `evals/results/deploy_latency_graphrag_on_provena-api-00065-q84/` |
+| Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다. 운영 비교(사전 등록 62.75, 0% 태그 판 `USE_SKILLS=0`, 결정 0123): Skill 켬(최종 판 `provena-api-00065-q84` 3회 평균) v2 인용 정확도 0.953·회당 0.244달러, 검증 20건 0.911·회당 0.095달러 대 Skill 끔(0% 판 `provena-api-00076-zok` 1회) v2 0.940(정답 근거 인용률 0.933, p95 9.045초, 0.142달러), 검증 20건 0.883(p95 7.062초, 0.049달러), 결과 `evals/results/deploy_latency_skilloff_provena-api-00076-zok/`, `evals/results/deploy_latency_holdout_skilloff_provena-api-00076-zok/`. 11/9 로컬 비교(0.982 대 0.960)는 공급자가 달라 참고값이다 |
+| MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용). 운영 증거(2026-11-16): `/mcp/`는 토큰 없이 401, `MCP_TOKEN`은 Secret Manager 비밀값으로 연결, 최종 측정 판 `provena-api-00065-q84`의 컨테이너 안 접근 로그에 `POST /mcp/ 200` 1,170줄(검색 노드의 MCP 호출), 0% 판 v2 50건 1회 p95 8.368초·실패 0(`evals/results/deploy_latency_mcp_provena-api-00061-wuq/`, `evals/results/mcp_prod_20261116/`). 최종 판 `provena-api-00065-q84`의 Langfuse 트레이스에 MCP 도구 `search_handbook` 관측이 보인다(2026-11-16, `EVAL_REPORT.md` 7장 그림 5, 6) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
 | 재현 | `EVAL_REPORT.md` 9장, SPEC 3장 | 지표마다 실행 명령을 적었다. 모든 지표를 한 번에 재는 `evals/run_all.py`는 만들지 않았다 |
 
@@ -647,7 +672,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 
 D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으면 추천안으로 정한다. 계약은 정하면 동결하고, 이후 바꾸려면 PR 하나로 3명 승인을 받는다. 11-1~11-4의 표는 D0 시점의 안건과 추천을 그대로 둔 기록이고, 2026-11-10 현재 저장소에서 확인되는 결과는 아래 표에 따로 적는다.
 
-### 11-0. 2026-11-11 현재 확인되는 결과
+### 11-0. 2026-11-16 현재 확인되는 결과
 
 | 항목 | 현재 결과 | 근거 |
 |---|---|---|
@@ -660,9 +685,10 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 리콜·결정표·합동 검토 판정 규칙(11-2의 4-1, 4-2, 4-3, 4-4) | 모두 추천대로 코드에 있다. 판정 응답이 깨지면 설명 맨 앞 "[판정 실패, 확인 필요]"(4-1), 기준일이나 인용한 판 날짜가 새 판 날짜 이후면 영향 없음(4-2), 네 팀 모두 쟁점도 검토 못 한 팀도 없을 때만 "쟁점 없음"으로 끝(4-3), 표를 지정하지 않으면 승인된 표가 정확히 1개일 때만 실행(4-4) | `backend/graph/recall/notice.py:25`, `:76`, `backend/graph/departments/issue_table.py:150`, `backend/graph/departments/review.py:57`, `backend/graph/decision/execute.py:40-45` |
 | Skill 폴더 이름 | `skills/security`, `skills/infra`, `skills/itops`, `skills/finance` | `skills/` |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres 사용자 표 + bcrypt + JWT 쿠키) | `backend/auth.py`, `db/101_auth_users.sql` |
-| MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트 | `backend/main.py` |
+| MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트. 운영 반영 2026-11-16(`MCP_TOKEN` 비밀값, 토큰 없이 401) | `backend/main.py`, `evals/results/mcp_prod_20261116/` |
+| 증분 수집 정시 실행 | 팀장 PC 작업 스케줄러, 매일 02:14 KST, 운영 첫 실행 2026-11-16 성공(`sync_runs` run_id=2), 동결 뒤에도 계속 | `docs/specs/incremental.md`, `evals/results/sync_prod_20261116/` |
 | F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
-| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 4장도 김승욱이 `docs/images/langfuse/`에 올렸다(커밋 이력). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 6장도 김승욱이 `docs/images/langfuse/`에 올렸다(앞 4장은 커밋 이력, 최종 판 `provena-api-00065-q84` 캡처 2장은 2026-11-16 추가). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
 | SDK 생성 도구 | openapi-generator 7.26.0 (진형 선택 2026-11-11: Java·Python을 한 도구로 만듦). 산출물 `mock_erp/sdk/`, 재생성 `bash mock_erp/sdk/generate.sh`. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
 
 

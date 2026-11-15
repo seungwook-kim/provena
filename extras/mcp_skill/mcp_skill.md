@@ -13,6 +13,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-16 | 김승욱 (Claude Code) | 운영 반영: `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열고 검색 노드가 MCP로 검색한다. 0% 판 `provena-api-00061-wuq`에서 v2 50건 1회(인용 정확도 0.900, p95 8.368초, 실패 0)로 확인한 뒤 트래픽 100%. 토큰 없이 401, 컨테이너 접근 로그 `POST /mcp/ 200` 89줄. 클라이언트별 호출 수 제한은 구현하지 않았다(Bearer 토큰과 최대 인스턴스 1개). 코드 변경 없음 | (문서 PR) |
 | 2026-11-13 | 박진형 (jinyeong-731) | B13 수정: `get_section`의 `article`, `search_handbook`의 `query`·`sub_queries`에 제어문자(탭·줄바꿈·캐리지리턴 제외, NUL 포함)가 들면 `invalid`로 거절하고 저장소·검색기는 부르지 않음(`_check_text`). 고치기 전 실측: pgvector pg16 컨테이너에 표 3개를 만들고 `article="A\x00B"`로 `get_section`을 부르면 psycopg `DataError`가 `status=error`(서버 내부 오류)로 나옴(Spec EC-03은 invalid). 시험 `tests/test_mcp_server.py` 3개 추가, 변이 3/3. 서버 주석의 SDD·PRD 줄 번호 인용을 장 이름으로, 스냅샷 개수에 "515acc3d 이전 기준" 표시 | #157 |
 | 2026-11-10 | 박진형 (jinyeong-731) | 클라이언트 `section_via_mcp`(11/6 추가, 그래프 `mcp_retriever.make_mcp_section_reader`가 씀)에 시험이 없어 `tests/test_mcp_client.py`에 6개 추가(같은 프로세스 서버, 네트워크·DB 없음): 섹션 dict, 없는 섹션·판은 None, 저장소 연결 실패는 `McpUnavailable`(재시도 가능), 원문 지문 불일치는 `McpSearchError`(error, 재시도 불가), 닫힌 포트·이벤트 루프 안 호출. Spec `mcp.md` 클라이언트 절 "섹션이 없으면 None, 실패 구분은 `search_via_mcp`와 같다"를 확인. 변이 3/3. 동작 변경 없음 | #131 |
 | 2026-11-09 | 김승욱 (Claude Code) | 개요의 "도구 3개"를 현재 도구 6개로 고침(`docs/specs/mcp.md`, `backend/requirements.txt` 주석도 같이). 동작 변경 없음 | 미정 |

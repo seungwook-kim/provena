@@ -2,8 +2,8 @@
 
 이 문서는 DB 재정렬(결정 0090) 뒤의 `public` 스키마 구조를 그림으로 보인다. 기준은 `db/*.sql`의 현재 내용이다. 칼럼 하나하나의 설명, 만든 파일, 쓰는 코드, 색인은 [TABLE_SPEC.md](TABLE_SPEC.md)에 있다.
 
-- 앱 표 25개와 LangGraph 라이브러리 표 6개, 모두 31개다. 재정렬 전에는 34개(앱 표 28 + LangGraph 6)였다.
-- `db/109_realign.sql`(1단계)을 적용한 DB에는 옛 표 3개(`answer_grounding`, `recall_feedback`, `issue_table_rejections`)가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql` 뒤에는 `_old_20261110`이 붙은 이름으로 `db/manual/109_purge_old.sql`을 실행하기 전까지 남는다. 이 표들은 그림에 넣지 않았다. 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42, 이때 `public` 표 34개), 옛 표 삭제(2026-11-11)를 적용했고 삭제 뒤 `public` 표는 이 문서와 같은 31개다(적용 기록은 TABLE_SPEC.md 2-3).
+- 앱 표 26개(재정렬 뒤 25개에 `db/114_google_identities.sql`의 `user_identities`를 더함)와 LangGraph 라이브러리 표 6개, 모두 32개다. 재정렬 전에는 34개(앱 표 28 + LangGraph 6)였다.
+- `db/109_realign.sql`(1단계)을 적용한 DB에는 옛 표 3개(`answer_grounding`, `recall_feedback`, `issue_table_rejections`)가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql` 뒤에는 `_old_20261110`이 붙은 이름으로 `db/manual/109_purge_old.sql`을 실행하기 전까지 남는다. 이 표들은 그림에 넣지 않았다. 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42, 이때 `public` 표 34개), 옛 표 삭제(2026-11-11)를 적용했고 삭제 직후 `public` 표는 31개(앱 25 + LangGraph 6, `user_identities` 제외)였다(적용 기록은 TABLE_SPEC.md 2-3).
 
 ## 1. 읽는 법
 
@@ -166,7 +166,7 @@ erDiagram
 
 ### 3-2. 승인
 
-파일: `db/102_decision_approvals.sql`, `110_issue_tables.sql`. 이 영역의 세 표 사이에는 외래 키가 없다. 관계는 4장의 L1부터 L3이다.
+파일: `db/102_decision_approvals.sql`, `110_issue_tables.sql`, `112_approval_resume_log.sql`(`approvals`의 재개 기록 칸 4개). 이 영역의 세 표 사이에는 외래 키가 없다. 관계는 4장의 L1부터 L3이다.
 
 ```mermaid
 erDiagram
@@ -190,6 +190,10 @@ erDiagram
         text comment "반려 사유 포함, 기본값 빈 문자열"
         timestamptz decided_at
         text target_id "승인 대상 id"
+        integer resume_count "기본값 0, 112가 더함"
+        integer duplicate_ignored_count "기본값 0, 112가 더함"
+        timestamptz last_resumed_at "재개한 적 없으면 NULL, 112가 더함"
+        text last_resume_result "resumed, resume_failed, rejected_value, duplicate_ignored"
     }
     issue_tables {
         uuid table_id PK "기본값 gen_random_uuid()"

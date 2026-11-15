@@ -1,0 +1,10 @@
+{
+  "task_name": "provena-handbook-sync",
+  "trigger": "매일 02:14 KST(시작 2026-11-16T02:14:00+09:00, 1일 간격)",
+  "action": "powershell.exe -File <사용자 폴더>\\provena_sync\\sync_task.ps1 -Trigger schedule (실패 시 메일 알림, 주소·비밀값은 기록하지 않음)",
+  "last_run": "2026-11-16 02:14:00 KST",
+  "last_result": 0,
+  "next_run": "2026-11-17 02:14:00 KST",
+  "sync_runs": "sync_runs.json (run_id=2 trigger=schedule status=succeeded)",
+  "checked_at": "2026-11-16T04:39:05+09:00"
+}

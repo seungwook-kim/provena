@@ -125,9 +125,9 @@
 1. ~~담당 나눔~~ 정함(11/3): 서버 = 박진형, 그래프 쪽 클라이언트·Skill·점수 비교 = 김승욱
 2. ~~순서~~ 정함(11/3): 함수와 서버를 한 PR로 같이 낸다(11/6 가산 판단을 기다리지 않음)
 3. `Section`을 계약 밖 모델로 둘지 (위 How 1)
-4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다
-5. 배포 호출 제한(#45 리뷰): 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용. 넣기 전까지 배포에서는 `MCP_TOKEN`을 비워 `/mcp`를 열지 않는다(EC-10)
-6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다
+4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다. 2026-11-16 운영 반영 뒤에는 컨테이너 접근 로그로만 MCP 호출을 확인했고, 운영 Langfuse에서 MCP 도구 호출이 단계로 보이는지는 확인하지 않았다
+5. 배포 호출 제한(#45 리뷰): **정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
+6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다. 확정: `/mcp`는 로그인 쿠키·CSRF 대상이 아니고 Bearer 토큰만 본다(`backend/main.py`의 `api_prefixes`에 `mcp`)
 
 7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
 8. `get_agent_trace` 조회 범위(2026-11-05): 토큰 하나만 있으면 아무 thread_id나 조회할 수 있다. 칸을 화이트리스트로 줄여 대화 내용·사람 정보는 나가지 않지만, 그 대화가 있었다는 사실·진행 상태·시각은 드러난다. 사람 로그인과 thread를 묶는 `/chat` 연결 때 MCP 쪽도 사용자 범위를 둘지 정한다(지금 MCP 토큰은 기계 키 하나라 누가 묻는지 모른다)
@@ -145,6 +145,7 @@
 - 상태 → 결과: `ok` = Chunk 목록, `not_found` = 빈 목록, `unavailable`·연결 실패·시간 초과 = `McpUnavailable`(재시도 가능, `ConnectionError` 하위), `invalid`·`error`·`not_ready` = `McpSearchError`(재시도 불가).
 - 주소·토큰: `MCP_URL`(기본 `http://127.0.0.1:8000/mcp/`), `MCP_TOKEN`(Bearer). 문자열 주소는 http(s)만 받는다 — fastmcp는 문자열을 파일 경로로 먼저 읽어 `.py`면 실행하기 때문이다(langchain.mcp도 같은 이유로 막는다). 토큰이 비면 `ValueError`.
 - 클라이언트 쪽 호출 시간 제한 35초(서버 도구 30초보다 길게 — 서버가 먼저 `unavailable`로 답하게).
+- 운영 확인(2026-11-16): 같은 커밋(`0e4738ac`)의 트래픽 0% 판 `provena-api-00061-wuq`(태그 mcp)에 `MCP_TOKEN`을 연결하고 v2 50건 1회를 재서 인용 정확도 0.900, p95 8.368초, 실패 0(`evals/results/deploy_latency_mcp_provena-api-00061-wuq/`)으로 같은 커밋의 00059-pzr 3회 값(인용 정확도 0.880~0.917, 회차별 p95 8.514~8.843초) 범위 안임을 본 뒤 트래픽 100%로 올렸다. 최종 측정 판 `provena-api-00065-q84`의 컨테이너 안 접근 로그에 `POST /mcp/ 200` 1,170줄이 있다(검색 노드의 MCP 호출, `evals/results/mcp_prod_20261116/`). 최종 운영 배포판 `provena-api-00065-q84`와 같은 이미지의 현재 운영 판 `provena-api-00068-drb`도 `/mcp/`를 토큰 없이 부르면 401이고 `MCP_TOKEN`이 설정되어 있다.
 
 ## 도구 4·5 — `explain_decision`, `get_agent_trace` (2026-11-05 추가, 조장 요청)
 
@@ -228,6 +229,7 @@
 - GIVEN: `MCP_TOKEN=abc`인 앱 / `MCP_TOKEN` 빈 앱
 - WHEN: 헤더 없이, 틀린 토큰으로, URL 쿼리(`?token=abc`)로 `/mcp`를 부른다 / 빈 앱의 `/mcp`를 부른다
 - THEN: 세 경우 모두 401 / MCP 응답이 아니다(정적 파일 쪽으로 넘어가 404·405)
+- 운영 확인(2026-11-16): 최종 운영 배포판 `provena-api-00065-q84`에서 토큰 없이 `/mcp/` 호출 401(`evals/results/mcp_prod_20261116/`)
 
 **AC-09 · 비공개 주소를 내보내지 않는다**
 - GIVEN: 적재된 DB

@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-16 | 김승욱 (팀장 수정, Claude Code) | 문서 현행화: `PREREGISTER.md` 62.63~62.76 결과 칸과 행 커밋 표, 62.72 관련 문구 정리, `README.md`·`agent/agent.md`·`retrieval/retrieval.md` 문구. 결과 폴더 00055~00064(00057은 쓰지 않는 측정 표시 유지), MCP 0% 판(`deploy_latency_mcp_provena-api-00061-wuq`), I03 실제 모델 재시험(`safety_newinj_real_20261116`)을 함께 올린다 | (문서 PR) |
 | 2026-11-16 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `PREREGISTER.md`에 62.73(나뉜 질문의 첫 검색을 근거 목록 상한까지 요청, `GRAPH_SPLIT_FULL_K`) 행과 행 커밋 표 한 줄을 측정 전에 더했다. 기대는 방향만(나뉜 질문 첫 판정 "충분" 비율 상승, 일부 답 감소, p95 8초대 유지)이고 되돌림 기준은 p95 3회 평균 9.0초 이상 또는 검증셋 인용 정확도가 00058보다 낮을 때다 | (커밋 전) |
 | 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `PREREGISTER.md`에 62.69(용어표와 제목 경로 되살림), 62.70(코드가 더하는 인용의 보정), 62.71(이어 묻기 노드 D-14의 사후 기록)과 행 커밋 표 세 줄을 더했다 | (커밋 전) |
 | 2026-11-13 | 김승욱 (Claude Code) | 합동 검토 정답 쟁점 37개를 박진형, 강경희가 확인(동의 30, 수정 7, 삭제 0, 추가 0)해 확정 정답 파일 `dataset_review_v1_gold.jsonl`(sha256 `9b235976eff5a29b4b89bba9f6eb7ab857e2e6e795be8bf553df885be8ab6b7e`, LF, `.gitattributes` eol=lf)을 새로 만들었다. 초안 `dataset_review_v1_gold_draft.jsonl`은 00044·00049 재현용으로 그대로 둔다(결정 0117). 확정 정답 0원 재계산은 `agent/review_gold_confirmed_recalc.py`, 결과 `results/review_gold_confirmed_recalc_20261113/`로 값이 같음을 확인했고 재측정은 하지 않는다(사전 등록 62.61) | |

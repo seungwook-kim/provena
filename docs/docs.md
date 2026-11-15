@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-16 | 김승욱 (팀장 수정, Claude Code) | 문서 현행화: 최종 운영 배포판 `provena-api-00065-q84` 기준으로 `GATES.md`, `SPEC.md`, `SDD.md`(MCP·GraphRAG·Skill 운영 증거, 11-0 표), `PRD.md`, `ARCHITECTURE.md`(서비스 그래프 도식, 템플릿 문장 정리), `decisions.md`(0121~0124), `worklog.md`(PR #151~#168), `specs/mcp.md`(호출 제한 정리, 운영 확인), `specs/deploy.md`, `specs/incremental.md`(작업 스케줄러 정시 실행, 첫 성공 run_id=2), `specs/question-graph.md`·`specs/search.md` 문구, 제출물 3종(`failure_analysis.md`, `ai_tools_log.md`), `alternatives/` 제2 확인 칸, `TOPIC.md` 근거 줄. 최종 3회 묶음 값은 표시해 둔 칸에 결과가 나온 뒤 채운다 | (문서 PR) |
 | 2026-11-16 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `specs/question-graph.md`에 사전 등록 62.73 절(나뉜 질문의 첫 검색을 근거 목록 상한까지 요청하는 `GRAPH_SPLIT_FULL_K`, Why·What·AC)을 더하고, 질문 분해 연결 표의 "k" 행과 AC-12 문장(이전의 k=8 표기)을 현재 코드에 맞췄다 | (커밋 전) |
 | 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `decisions.md`에 결정 0119(결정 0101 일부 되돌림), `SDD.md` 103행과 `specs/search.md`의 제목 경로 검색 설명, `specs/question-graph.md` 이어 묻기 절(앞 질문 기록, 끄는 법, 한계 수치, 놓친 것 N-1·N-6)을 현재 코드에 맞췄다 | (커밋 전) |
 | 2026-11-15 | 박진형 (jinyeong-731) | `pr-notes/PR-162.md` 8절에 D-14 켬·끔 비교, 3절·9절에 K-23 compose 볼륨 추가 반영 | #162 |

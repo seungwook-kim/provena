@@ -1,0 +1,103 @@
+﻿{
+    "spent_usd":  1.794,
+    "revision":  "provena-api-00065-q84",
+    "stages":  [
+                   {
+                       "stage":  "preflight",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0124,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.7325,
+                       "detail":  "evals/results/deploy_latency_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "holdout",
+                       "state":  "done",
+                       "cost_usd":  0.2853,
+                       "detail":  "evals/results/deploy_latency_holdout_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "cite",
+                       "state":  "done",
+                       "cost_usd":  0.1238,
+                       "detail":  "evals/results/deploy_latency_cite_new_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "range",
+                       "state":  "done",
+                       "cost_usd":  0.15,
+                       "detail":  "evals/results/range_retrieval_62_7/answers_deploy_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "ragas",
+                       "state":  "done",
+                       "cost_usd":  0.2108,
+                       "detail":  "evals/results/ragas_deploy_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "colleague",
+                       "state":  "done",
+                       "cost_usd":  0.0292,
+                       "detail":  "evals/results/deploy_latency_colleague10_provena-api-00065-q84"
+                   },
+                   {
+                       "stage":  "i03",
+                       "state":  "done",
+                       "cost_usd":  0.1,
+                       "detail":  "evals/results/safety_newinj_real_20261116"
+                   },
+                   {
+                       "stage":  "safety:deploy_check",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "safety:mix_check",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "safety:approval_check",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "safety:restart_resume",
+                       "state":  "skipped",
+                       "cost_usd":  0,
+                       "detail":  "상태 파일 없음"
+                   },
+                   {
+                       "stage":  "safety",
+                       "state":  "done",
+                       "cost_usd":  0.15,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "recalc",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "5a8c6527"
+}

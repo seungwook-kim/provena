@@ -8,7 +8,7 @@ Provena(프로베나): IT 조직의 정책·런북(GitLab 공개 핸드북, CC B
 
 ## 기술 스택
 
-Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + pgvector(운영은 Supabase, 데모는 compose의 로컬 pgvector 컨테이너), 임베딩은 `voyage-4` API(1024차원)로 질문을 영어로 옮긴 뒤 영어 문장 벡터로 검색하고, 질문 분해·링크 확장·금액 구간 조회를 더했습니다. BM25 하이브리드와 리랭커(bge 등)는 기본형보다 나아지지 않아 쓰지 않습니다(`EVAL_REPORT.md` 3-2절, `SEARCH_MODE`를 비우면 `dense_en`(`backend/rag/retrieve/search.py`의 `SearchConfig.from_env()`), 비교용 로컬 모델은 서비스 이미지에 넣지 않음). LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(기본값과 선택지는 `docs/specs/llm.md`)로 고르고 기본 모델은 `LLM_MODEL` 기본값(`backend/services/llm.py:67`, Haiku 5.5)입니다. 관측은 Langfuse, MCP는 FastMCP입니다. 후보 버전과 실제 사용 버전은 docs/PRD.md 9장.
+Python 3.12(Dockerfile·CI 기준), FastAPI, LangGraph·LangChain, PostgreSQL + pgvector(운영은 Supabase, 데모는 compose의 로컬 pgvector 컨테이너), 임베딩은 `voyage-4` API(1024차원)로 질문을 영어로 옮긴 뒤 영어 문장 벡터로 검색하고, 질문 분해·링크 확장·금액 구간 조회를 더했습니다. BM25 하이브리드와 리랭커(bge 등)는 기본형보다 나아지지 않아 쓰지 않습니다(`EVAL_REPORT.md` 3-2절, `SEARCH_MODE`를 비우면 `dense_en`(`backend/rag/retrieve/search.py`의 `SearchConfig.from_env()`), 비교용 로컬 모델은 서비스 이미지에 넣지 않음). LLM은 `backend/services/llm.py`의 `LLM_PROVIDER`(기본값과 선택지는 `docs/specs/llm.md`)로 고르고 기본 모델은 `LLM_MODEL` 기본값(`backend/services/llm.py:67`, Haiku 5.5)입니다. 관측은 Langfuse, MCP는 FastMCP이고 운영 `/mcp/`에 연결했습니다(`MCP_TOKEN`은 Secret Manager 비밀값, 2026-11-16). 증분 수집은 매일 02:14 KST에 정시 실행합니다(`docs/specs/incremental.md`). 후보 버전과 실제 사용 버전은 docs/PRD.md 9장.
 
 필수 구성은 Python, FastAPI, LangGraph(멀티에이전트 최소형), RAG, Docker, Langfuse입니다. 실제 폴더 구조와 폴더 역할·주인은 `docs/TEAM_GUIDE.md` 5장(5-0 디렉토리 구조)과 `docs/SDD.md` 3장을 따릅니다(`docs/SCAFFOLD.md`는 강사 템플릿 원문이라 파일 이름이 다릅니다).
 

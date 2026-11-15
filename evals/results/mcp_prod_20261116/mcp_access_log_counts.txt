@@ -1,0 +1,4 @@
+provena-api-00061-wuq POST /mcp/ 200 lines=198
+provena-api-00065-q84 POST /mcp/ 200 lines=1170 (최종 측정 판, 묶음 측정 기간)
+provena-api-00068-drb POST /mcp/ 200 lines=0 (확인 시점까지 질문 없음)
+방법: gcloud logging read, resource.labels.revision_name, textPayload에 'POST /mcp/'와 '200' 포함, 2026-11-16 확인

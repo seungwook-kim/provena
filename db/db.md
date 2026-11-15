@@ -2,7 +2,7 @@
 
 ## 이 폴더가 하는 일
 
-pgvector 확장 생성(`01_init.sql`)과 앱 표 25개 생성(2026-11-10 `docs/db/ERD.md`·`TABLE_SPEC.md` 기준, `109_realign.sql`로 표 3개를 합치는 재정렬 포함). 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드한다(`101_auth_users.sql:4`, `backend/services/demo_seed.py`). SQL 파일 번호대는 파트마다 100번대씩 나눈다.
+pgvector 확장 생성(`01_init.sql`)과 앱 표 26개 생성(`docs/db/ERD.md`·`TABLE_SPEC.md` 기준, `109_realign.sql`로 표 3개를 합치는 재정렬과 `114_google_identities.sql`의 `user_identities` 포함). 데모 계정 2개는 SQL이 아니라 앱 시작 때 시드한다(`101_auth_users.sql:4`, `backend/services/demo_seed.py`). SQL 파일 번호대는 파트마다 100번대씩 나눈다.
 
 - 주인: 김승욱
 - 입력: 없음
