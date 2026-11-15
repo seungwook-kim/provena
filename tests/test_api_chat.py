@@ -125,6 +125,66 @@ def test_cost_cap_is_limit_exceeded(monkeypatch):
         assert "CostCapExceeded" not in msg and "$" not in msg          # 예외 원문과 금액은 화면에 내지 않는다
 
 
+def _sdk_errors() -> dict[str, list[Exception]]:
+    """실제로 쓰는 SDK(anthropic, openai: OpenRouter 포함, httpx, Claude CLI)가 내는 예외. 문구에는 비밀처럼 보이는 값을 넣어 응답에 새지 않는지 본다."""
+    import anthropic
+    import httpx
+    import openai
+
+    from backend.services.claude_cli_model import ClaudeCliError
+
+    req = httpx.Request("POST", "https://llm.example/v1/messages")
+
+    def resp(status: int) -> httpx.Response:
+        return httpx.Response(status, request=req)
+
+    return {
+        "provider_limit": [
+            anthropic.RateLimitError(f"Error code: 429 - rate_limit_error {SECRET_TEXT}", response=resp(429), body=None),
+            openai.RateLimitError(f"Error code: 429 - insufficient_quota {SECRET_TEXT}", response=resp(429), body=None),
+            openai.APIStatusError(f"Error code: 402 - Insufficient credits {SECRET_TEXT}", response=resp(402), body=None),
+            anthropic.BadRequestError(f"Error code: 400 - Your credit balance is too low {SECRET_TEXT}", response=resp(400), body=None),
+        ],
+        "timeout": [
+            anthropic.APITimeoutError(request=req),
+            openai.APITimeoutError(request=req),
+            httpx.ReadTimeout(f"attempt over 30s {SECRET_TEXT}", request=req),
+            ClaudeCliError(f"claude CLI 시간 초과 (60초) {SECRET_TEXT}"),
+        ],
+    }
+
+
+def test_provider_limit_and_timeout_get_their_own_code_and_next_action(monkeypatch):
+    """체크포인트 D11: 제공자 한도·잔액 부족과 시간 초과는 `internal_error`가 아니라 각자의 code와, 사용자가 할 일을 적은 안내 문구로 끝난다."""
+    for code, errors in _sdk_errors().items():
+        for exc in errors:
+            def broken(_q, exc=exc):
+                raise exc
+
+            with Env(monkeypatch, search=broken) as env:
+                c = env.client(env.alice)
+                r, ev = ask(c, Q, "t1", as_of=AS_OF)
+                assert [n for n, _ in ev] == ["error"], type(exc).__name__
+                data = ev[0][1]["data"]
+                assert data["code"] == code and data["request_id"] == r.headers["x-request-id"], (type(exc).__name__, data["code"])
+                assert "다시" in data["message"]                                   # 다음 행동(다시 시도·다시 물어보기)을 적는다
+                assert "secret-password" not in r.text and type(exc).__name__ not in r.text and "Error code" not in r.text
+                (item,) = c.get("/threads").json()["threads"]
+                assert item["status"] == "idle"
+
+
+def test_chat_error_messages_name_the_next_action():
+    from backend.api.routes import MSG_PROVIDER_LIMIT, MSG_TIMEOUT, chat_error
+
+    assert "다시 시도" in MSG_PROVIDER_LIMIT and "관리자" in MSG_PROVIDER_LIMIT and "잔액" in MSG_PROVIDER_LIMIT
+    assert "짧게" in MSG_TIMEOUT and "다시 물어봐" in MSG_TIMEOUT
+    # 비용 상한과 일반 오류는 그대로다. Claude CLI의 시간 초과가 아닌 오류, 관계없는 RuntimeError도 internal_error다
+    assert chat_error({"code": "CostCapExceeded", "message": "x"})[0] == "limit_exceeded"
+    assert chat_error({"code": "ClaudeCliError", "message": "claude CLI 오류 (exit 1): x"})[0] == "internal_error"
+    assert chat_error({"code": "RuntimeError", "message": "색인 장부와 지금 설정이 다르다"})[0] == "internal_error"
+    assert chat_error({"code": "InternalServerError", "message": "Error code: 500 - x"})[0] == "internal_error"
+
+
 def test_threads_list_and_detail(monkeypatch):
     with Env(monkeypatch) as env:
         c = env.client(env.alice)

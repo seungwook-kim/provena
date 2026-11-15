@@ -12,6 +12,13 @@ export function createChatService(adapter) {
   }
 }
 
+// SSE `error`의 code별 기본 안내(체크포인트 D11). 서버가 안내 문구(data.message)를 주면 그 문구를 쓰고, 빠졌을 때만 쓴다(backend/api/routes.py의 MSG_*와 같은 뜻).
+export const CHAT_ERROR_FALLBACK = {
+  limit_exceeded: '이번 질문의 LLM 비용 상한에 닿아 답을 멈췄습니다. 질문을 더 짧고 구체적으로 줄이거나 여러 개로 나누어 다시 물어봐 주세요.',
+  provider_limit: 'LLM 제공자의 요청 한도에 닿았거나 사용 잔액이 부족해 답을 만들지 못했습니다. 1~2분 뒤 다시 시도해 주세요. 같은 안내가 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.',
+  timeout: '답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.',
+}
+
 // Server citations (SSE `citation` and GET /threads/{id}) use rule_title/article/version_date; the panel reads title/path/version.
 // 원문 보기 링크는 https 주소일 때만 근거의 source_url을 쓴다(그 밖은 핸드북 첫 화면, #71 리뷰).
 export const DEFAULT_SOURCE_URL = 'https://handbook.gitlab.com/handbook/'
@@ -168,7 +175,7 @@ export function createApiChatAdapter({ onThreadsChange, onProcessingChange } = {
           if (event.type === 'citation') addCitations(draft, event.data)
           if (event.type === 'no_results') { draft.state = 'no-evidence'; draft.text = event.data?.message ?? draft.text }
           if (event.type === 'approval_request') draft.state = 'approval'
-          if (event.type === 'error') { draft.state = 'error'; draft.error = event.data?.message ?? '채팅 처리 중 오류가 발생했습니다.' }
+          if (event.type === 'error') { draft.state = 'error'; draft.error = event.data?.message || CHAT_ERROR_FALLBACK[event.data?.code] || '채팅 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }
           if (event.type === 'done') draft.state = 'done'
           if (event.type === 'error') draft.errorCode = event.data?.code
           if (event.type === 'done') {

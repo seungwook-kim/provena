@@ -11,7 +11,8 @@
 - 이벤트 data 키는 `backend/graph/stream.py`(SDD 6장 표)의 키에 이 계층에서 아래 키를 더한다. `backend/schemas/`는 바꾸지 않는다.
   - citation: `text`(인용 청크 본문, 화면 인용 패널용)
   - approval_request: `code = "approval_pending"`. 이 thread의 새 질문은 승인이 끝날 때까지 409 `approval_pending`이다.
-  - error: `code`(`limit_exceeded` 또는 `internal_error`), 안내 `message`, `request_id`. 예외 원문은 로그에만 남긴다.
+  - error: `code`(`limit_exceeded` 비용 상한, `provider_limit` 제공자 요청 한도·잔액 부족, `timeout` 시간 초과, 그 밖은 `internal_error`), 안내 `message`, `request_id`.
+    예외 원문은 로그에만 남긴다(분류 규칙은 `chat_error`).
   - done: `kind`(answer | clarify | refuse), `as_of`, `usage`(토큰·비용), 거절이면 `code = "no_results"`, 답이면 `attribution`(출처 표시).
     측정용 칸(숫자와 코드만, 항상 켬, 기존 칸은 그대로): `cost_by_step`(단계별 calls·input_tokens·output_tokens·cost_usd·llm_s, 그래프 단계는 프롬프트 캐시 cache_read_tokens·cache_creation_tokens도), `cost_by_step_total_usd`(질문 번역 LLM 포함 합. `usage.cost_usd`는 번역을 뺀 그래프 합),
     `embed_tokens`·`embed_calls`·`embed_cost_usd`(Voyage `usage.total_tokens` 합과 환산 비용, 호출이 없으면 0), 거절·되묻기면 `refuse_stage`(그 결과를 쓴 그래프 노드)·`refuse_reason`(사유 코드).
@@ -27,6 +28,7 @@ import asyncio
 import contextvars
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -69,11 +71,41 @@ COST_CAP_ERROR = "CostCapExceeded"
 # 이 경우만 오류가 아니라 거절(done, `no_results`)로 끝낸다. 장부 불일치 등 다른 예외는 그대로 `internal_error`다.
 INDEX_NOT_READY_ERROR = "RuntimeError"
 INDEX_NOT_READY_TEXT = "색인이 준비되지 않았다"
+# 체크포인트 D11: 제공자 한도와 시간 초과는 사용자가 할 일이 달라 `internal_error`와 나눈다. 판단 재료는 `stream_events`가 넘기는 예외 종류 이름과 문구뿐이며,
+# 문구는 판단에만 쓰고 응답에는 싣지 않는다.
+MSG_PROVIDER_LIMIT = ("LLM 제공자의 요청 한도에 닿았거나 사용 잔액이 부족해 답을 만들지 못했습니다. 1~2분 뒤 다시 시도해 주세요. "
+                      "같은 안내가 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.")
+MSG_TIMEOUT = "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요."
+# anthropic·openai(OpenRouter 포함) SDK의 429 예외. OpenAI의 사용량 초과(`insufficient_quota`)도 이 예외로 온다
+PROVIDER_LIMIT_ERRORS = frozenset({"RateLimitError"})
+# SDK 상태 오류의 문구는 "Error code: 429 - {...}" 꼴이다. 402는 OpenRouter의 잔액 부족이다
+_PROVIDER_LIMIT_STATUS = re.compile(r"\bError code: (?:429|402)\b")
+# Anthropic 잔액 부족(400 "Your credit balance is too low"), OpenRouter 402 "Insufficient credits", OpenAI 사용량 초과 등의 문구 조각(소문자)
+PROVIDER_LIMIT_TEXT = ("credit balance", "insufficient credits", "insufficient_quota", "exceeded your current quota", "billing")
+# SDK 재시도 뒤의 시간 초과(`APITimeoutError`), Anthropic 504(`DeadlineExceededError`), httpx 전송 상한(`DeadlineTransport`의 `ReadTimeout`) 등
+TIMEOUT_ERRORS = frozenset({"APITimeoutError", "DeadlineExceededError", "TimeoutError", "TimeoutException", "ReadTimeout",
+                            "ConnectTimeout", "WriteTimeout", "PoolTimeout", "TimeoutExpired"})
+# Claude CLI 모델(`backend/services/claude_cli_model.py`)은 시간 초과를 `ClaudeCliError("claude CLI 시간 초과 ...")`로 바꿔 낸다
+CLI_TIMEOUT = ("ClaudeCliError", "claude CLI 시간 초과")
 
 
 def index_not_ready(data: dict) -> bool:
     """`stream_events`의 error 이벤트 data가 검색 색인 미준비인가."""
     return data.get("code") == INDEX_NOT_READY_ERROR and str(data.get("message") or "").startswith(INDEX_NOT_READY_TEXT)
+
+
+def chat_error(data: dict) -> tuple[str, str]:
+    """`stream_events`의 error 이벤트 data(`code`=예외 종류 이름, `message`=예외 문구)를 화면에 보낼 (code, 안내 문구)로 바꾼다.
+    비용 상한 `limit_exceeded`, 제공자 한도·잔액 `provider_limit`, 시간 초과 `timeout`, 그 밖은 `internal_error`."""
+    name, text = str(data.get("code") or ""), str(data.get("message") or "")
+    if name == COST_CAP_ERROR:
+        return "limit_exceeded", MSG_LIMIT
+    if name in TIMEOUT_ERRORS or (name == CLI_TIMEOUT[0] and text.startswith(CLI_TIMEOUT[1])):
+        return "timeout", MSG_TIMEOUT
+    lowered = text.lower()
+    if name in PROVIDER_LIMIT_ERRORS or _PROVIDER_LIMIT_STATUS.search(text) or any(t in lowered for t in PROVIDER_LIMIT_TEXT):
+        return "provider_limit", MSG_PROVIDER_LIMIT
+    return "internal_error", MSG_INTERNAL
 
 
 class ChatRequest(BaseModel):
@@ -333,9 +365,8 @@ def create_api_router(
                     close()
                 elif ev.type == "error":
                     log.error("chat 오류 request_id=%s %s: %s", request_id, data.get("code"), data.get("message"))
-                    limit = data.get("code") == COST_CAP_ERROR
-                    data = {"code": "limit_exceeded" if limit else "internal_error", "message": MSG_LIMIT if limit else MSG_INTERNAL,
-                            "request_id": request_id}
+                    code, message = chat_error(data)
+                    data = {"code": code, "message": message, "request_id": request_id}
                     status = "idle"
                     threads.thread_touch(user_id, thread_id, status=status)
                     close()
