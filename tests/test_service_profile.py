@@ -64,6 +64,8 @@ GRAPH_OUTSIDE_6216 = {"CHAT_FINAL_FROM_STREAM": "1", "ANSWER_SAVE_ONE_CONN": "1"
 SEARCH_HEDGE_6214 = {"SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
 # 사전 등록 62.53(62.15 재도입): 원 질문 첫 검색을 질문 접수와 동시에 시작. 측정 묶음 인자(MEASURED_ARGS)에는 넣지 않았다(서비스 경로만, 실행기에는 --speculate-early-search가 있다)
 EARLY_SEARCH_6253 = {"GRAPH_SPECULATE_EARLY_SEARCH": "1"}
+# 사전 등록 62.67: 프롬프트 캐시(서비스 경로만, 측정 실행기 인자에는 없다)
+PROMPT_CACHE_6267 = {"LLM_PROMPT_CACHE": "1"}
 
 
 def test_62_40_speed_values_are_service_defaults():
@@ -93,8 +95,9 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267)}
     assert have == want
+    assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"                 # 일찍 시작하는 검색은 예비 분해(SP)가 켜져 있어야 쓰인다
     assert "GRAPH_CITE_HEAD_OWNER" not in SP.SERVICE_ENV                  # 62.52는 스위치 없이 기본 동작이다

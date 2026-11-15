@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 # 실제 청구는 무료 한도가 먼저 차감되므로 `embed_cost_usd`는 한도 없이 환산한 값이다.
 DEFAULT_EMBED_USD_PER_MTOK = 0.06
 DEFAULT_PRICES_FILE = Path(__file__).with_name("llm_prices.json")
+CACHE_KEYS = ("cache_read_tokens", "cache_creation_tokens")   # 단계 행의 프롬프트 캐시 칸(`cost.CostTracker.by_step`). 입력 토큰을 나눈 값이다
 
 
 @functools.lru_cache(maxsize=8)
@@ -59,7 +60,11 @@ class StepMeter:
             for name, row in by_step.items():
                 cur = self.steps.setdefault(name, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0})
                 for k in cur:
-                    cur[k] += row.get(k) or 0
+                    if k not in CACHE_KEYS:   # 캐시 칸은 아래에서 한 번만 더한다(같은 단계를 두 번 합칠 때 두 번 더하지 않게)
+                        cur[k] += row.get(k) or 0
+                for k in CACHE_KEYS:   # 프롬프트 캐시 칸(`CostTracker.by_step`)은 들어온 행에 있을 때만 더한다
+                    if k in row:
+                        cur[k] = cur.get(k, 0) + (row.get(k) or 0)
 
     def add_embed(self, tokens: int) -> None:
         with self._lock:
@@ -73,7 +78,11 @@ class StepMeter:
             for name, row in self.steps.items():
                 cur = merged.setdefault(name, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_s": 0.0})
                 for k in cur:
-                    cur[k] += row.get(k) or 0
+                    if k not in CACHE_KEYS:
+                        cur[k] += row.get(k) or 0
+                for k in CACHE_KEYS:
+                    if k in row:
+                        cur[k] = cur.get(k, 0) + (row.get(k) or 0)
             tokens, calls = self.embed_tokens, self.embed_calls
         for row in merged.values():
             row["cost_usd"], row["llm_s"] = round(row["cost_usd"], 8), round(row["llm_s"], 3)
@@ -156,7 +165,9 @@ def refuse_meta(stage: str, kind: str | None, state: dict, messages: dict[str, s
 # 답 경로 기록(측정용). 검색·판정·답 고르기에서 코드가 정한 값만 싣는다: 하위 질문, 문맥 청크 id, 판정 구절이 든 청크 id(구절 글은 싣지 않는다), 답 후보의 인용과 고른 쪽, 인용 후처리 기록.
 # 답 본문·초안·판정 이유 문장·판정 구절 글은 싣지 않는다. 상태를 읽기만 하므로 답 경로는 그대로다.
 PATH_TEXT_WIDTH = 200
-_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead")
+# candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(core | full), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
+_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead",
+                        "partial_filter", "candidates")
 
 
 def path_meta(state: dict) -> dict:
@@ -180,5 +191,6 @@ def path_meta(state: dict) -> dict:
         "best2": {k: best2.get(k) for k in ("quote_ids", "cands", "pick", "why", "rule")} if best2 else None,
         "trimmed_citations": list(state.get("trimmed_citations") or []),
         "grounding": {k: grounding[k] for k in _PATH_GROUNDING_KEYS if k in grounding},
+        "judge_votes": [v for v in state.get("judge_votes") or [] if isinstance(v, dict)],   # 판정마다 표 구성(표별 충분·일부, 확정 방식, 일찍 확정했는지). 사전 등록 62.67
     }
     return {"path": path}

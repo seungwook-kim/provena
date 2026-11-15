@@ -13,7 +13,7 @@
   - approval_request: `code = "approval_pending"`. 이 thread의 새 질문은 승인이 끝날 때까지 409 `approval_pending`이다.
   - error: `code`(`limit_exceeded` 또는 `internal_error`), 안내 `message`, `request_id`. 예외 원문은 로그에만 남긴다.
   - done: `kind`(answer | clarify | refuse), `as_of`, `usage`(토큰·비용), 거절이면 `code = "no_results"`, 답이면 `attribution`(출처 표시).
-    측정용 칸(숫자와 코드만, 항상 켬, 기존 칸은 그대로): `cost_by_step`(단계별 calls·input_tokens·output_tokens·cost_usd·llm_s), `cost_by_step_total_usd`(질문 번역 LLM 포함 합. `usage.cost_usd`는 번역을 뺀 그래프 합),
+    측정용 칸(숫자와 코드만, 항상 켬, 기존 칸은 그대로): `cost_by_step`(단계별 calls·input_tokens·output_tokens·cost_usd·llm_s, 그래프 단계는 프롬프트 캐시 cache_read_tokens·cache_creation_tokens도), `cost_by_step_total_usd`(질문 번역 LLM 포함 합. `usage.cost_usd`는 번역을 뺀 그래프 합),
     `embed_tokens`·`embed_calls`·`embed_cost_usd`(Voyage `usage.total_tokens` 합과 환산 비용, 호출이 없으면 0), 거절·되묻기면 `refuse_stage`(그 결과를 쓴 그래프 노드)·`refuse_reason`(사유 코드).
   - 검색 색인이 적재되지 않았으면(`index_not_ready`) error 대신 안내 문구 token과 거절 done(`code = "no_results"`)으로 끝낸다. 원인은 로그에만 남긴다.
 - 이어 묻기(D-14, `docs/specs/question-graph.md`): 질문마다 그래프 입력에 `asked: [질문]`을 더한다. 그래프 상태의 `asked` 칸이 같은 thread(`<user_id>:<thread_id>`)의 체크포인트에 최근 질문을 쌓아,

@@ -74,9 +74,12 @@ ROUTES = ("rule", "decision", "review", "out_of_domain")
 # 남아 있을 때만 쓴다: 체크포인터 없는 실행의 결과에 없던 칸이 생기지 않는다
 LEFTOVER_FIELDS = {"search_query": "", "search_org": None, "decision_query": {}, "decision_result": {}, "decision_error": {}, "review_status": "", "issue_table": {},
                    "early_answer": {}, "judged_chunks": 0, "search_stalled": False, "judge_missing": [], "judge_query": "", "judge_scope": "", "section_reads": 0,
-                   "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False, "intro_chunk_ids": [], "judge_quotes": []}
+                   "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False, "intro_chunk_ids": [], "judge_quotes": [],
+                   "judge_votes": []}
 MAX_MISSING = 4  # 판정이 적은 빠진 사실을 재작성에 넘기는 개수의 상한
 REQUERY_NEW = 5  # SS: 페이지 재검색이 더하는 새 청크 수(문맥에 있는 청크는 세지 않는다). 61.10: 3이면 2번 7cd641이 4번째로 빠진 행이 있다
+GROUND_AHEAD_WORKERS = 64  # 근거 확인 미리 부르기(`GRAPH_SPECULATE_GROUND`) 일꾼 수. 그래프 하나(서버 프로세스)의 모든 요청이 같이 쓴다. 요청 하나가 후보 여럿을 부르므로 동시 요청이 몰리면 줄을 선다(사전 등록 62.67: 16에서 늘림)
+GROUND_AHEAD_MAX_RUNS = 256  # 미리 부른 판정을 동시에 등록해 두는 상한(모든 요청 합). 넘으면 미리 부르지 않고 쓸 때 부른다(사전 등록 62.67: 64에서 늘림)
 JUDGE_ANSWER_MODES = ("parallel", "parallel_all", "joint")  # `GRAPH_JUDGE_ANSWER`: 근거 충분 판정과 답 작성을 동시에 부르거나(parallel) 한 호출로 합친다(joint)
 LICENSE_NOTE = "출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)"
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -256,6 +259,64 @@ def select_citations(valid: list[dict], answer: str, limit: int = MAX_CITATIONS)
     return kept, trimmed, re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
+VOTE_LOG_KEY = "_vote_log"  # 판정 다수결이 합친 표에 잠깐 붙이는 표 구성 기록. `judge`가 꺼내고 판정 결과에는 남기지 않는다
+
+
+def vote_log(got: list[dict], settled: bool, errors: int) -> dict:
+    """판정 다수결 한 번의 표 구성(기록용). 표는 도착 순서이고 실패한 표는 `failed`다. 사실 문장, 구절 글, 이유 문장은 싣지 않는다.
+    `how`: 셋째 표 전에 같은 결론 2표로 확정했으면 `two_agree`, 표를 다 받았으면 `majority`(2표 이상 같음) 또는 `split`(모두 다름).
+    `early`: 부른 표를 다 받기 전에 확정했는지."""
+    votes = [{"sufficient": g.get("sufficient") is True, "partial": g.get("partial") is True} if g else {"failed": True} for g in got]
+    keys = [(v.get("sufficient"), v.get("partial")) for v in votes if not v.get("failed")]
+    top = max((keys.count(k) for k in keys), default=0)
+    early = settled and len(got) < AF.VOTES
+    return {"votes": votes, "errors": errors, "early": early,
+            "how": "two_agree" if early else ("majority" if top >= 2 else "split")}
+
+
+def candidate_rows(entries: list[dict]) -> list[dict]:
+    """기록만(사전 등록 62.67): 근거 확인 호출 기록을 `grounding.candidates` 행으로 바꾼다. 미리 부른 판정은 끝났으면 그 결론,
+    아니면 `pending`(기다리지 않는다), 취소됐으면 `cancelled`, 예외로 끝났으면 `error`다. 행 하나를 읽지 못하면 그 행은 `unknown`으로 둔다."""
+    out: list[dict] = []
+    for e in entries:
+        verdict = e.get("verdict")
+        fut = e.get("future")
+        if verdict is None and fut is not None:
+            try:
+                if fut.cancelled():
+                    verdict = "cancelled"
+                elif not fut.done():
+                    verdict = "pending"
+                elif fut.exception() is not None:
+                    verdict = "error"
+                else:
+                    verdict = str((fut.result() or {}).get("state") or "")
+            except Exception:   # 기록만이라 판정 결과를 읽지 못해도 요청을 멈추지 않는다
+                verdict = "unknown"
+        out.append({k: v for k, v in {**e, "verdict": verdict}.items() if k not in ("future", "key")})
+    return out
+
+
+QUOTE_ROWS_MAX = 8   # `AF.quote_rows`가 남기는 사실 수 상한(그 함수의 `limit` 기본값). 목록이 여기에 닿으면 뒤 사실이 잘렸을 수 있다
+
+
+def redraft_needs_note(judge_partial: bool, model_partial: bool, judge_quotes: Any, cited_ids: list[str]) -> bool:
+    """다시 쓴 답 끝에 일부 답 안내(`MSG_PARTIAL_NOTE`)를 붙일지(사전 등록 62.67).
+    판정이 일부(`judge_partial`)였으면 붙인다. 아니면 다시 쓰는 모델이 일부라고 했을 때만 붙이되, 판정의 사실별 구절 청크 목록(`judge_quotes`)이 있고
+    모든 사실의 구절 청크가 다시 쓴 답의 인용과 하나 이상 겹치면 묻는 사실이 모두 근거와 함께 답에 있는 것이라 붙이지 않는다.
+    구절 청크가 없는 사실(빈 목록)이 있으면 그 사실은 답에 근거가 없는 것으로 보고 붙인다. 사실별 목록이 없거나 비면 모델 값을 따른다(지금과 같다).
+    사실별 목록은 앞 `QUOTE_ROWS_MAX`개까지만 남으므로, 목록이 그 수에 닿아 판정의 사실이 다 있는지 알 수 없으면 모델 값을 따른다(붙인다)."""
+    if judge_partial:
+        return True
+    if not model_partial:
+        return False
+    rows = [r for r in judge_quotes if isinstance(r, (list, tuple))] if isinstance(judge_quotes, (list, tuple)) else []
+    if not rows or len(rows) >= QUOTE_ROWS_MAX:
+        return True
+    cited = set(cited_ids or ())
+    return not all(cited & {str(i) for i in r} for r in rows)
+
+
 def clarify_has_number(text: str) -> bool:
     """되묻기 문장에 수치가 있는지. 시점을 묻는 연도, 날짜, 월 표기와 이름 안의 숫자(2FA, S1)는 세지 않는다(수치를 말하는 되묻기를 거르는 규칙)."""
     return bool(re.search(r"\d", _NAME_WITH_DIGIT.sub("", _WHEN.sub("", text or ""))))
@@ -414,8 +475,9 @@ def build_graph(
     speculate_ground = AF.speculate_ground_enabled()  # SG: 답 후보가 나오는 대로 근거 판정을 미리 부르고, 같은 입력의 판정이 필요할 때 그 결과를 쓴다
     ground_runs: dict[str, tuple[float, Any]] = {}  # SG: 판정 입력의 해시 -> (시작 시각, 미리 돌린 판정 Future). 쓰면 꺼낸다
     ground_twins: dict[str, tuple[str, ...]] = {}  # SG: 같은 답 후보를 일부 답 여부만 달리해 미리 부른 판정의 열쇠들(사전 등록 62.49). 하나를 쓰면 나머지를 지운다
+    ground_notes: dict[str, tuple[float, list[dict]]] = {}  # 기록만(62.67): 실행 표지(`run_tag`) -> (처음 적은 시각, 근거 확인 호출 기록). `ground`가 꺼내 `grounding.candidates`로 옮긴다
     ground_lock = threading.Lock()
-    ground_pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="ground_ahead") if speculate_ground else None
+    ground_pool = ThreadPoolExecutor(max_workers=GROUND_AHEAD_WORKERS, thread_name_prefix="ground_ahead") if speculate_ground else None
     if AF.cite_pick_enabled():  # CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서를 답 프롬프트에 더한다(추론 답, 빠른 답, 다시 쓰는 답)
         answer_base, answer_system = P._add_rule(answer_base, AF.CITE_PICK_RULE), P._add_rule(answer_system, AF.CITE_PICK_RULE)
     if cite_multi:  # `GRAPH_CITE_MULTI=1`: 같은 사실을 다른 페이지가 말하면 3개까지 표시한다
@@ -462,6 +524,7 @@ def build_graph(
         pool = ThreadPoolExecutor(max_workers=AF.VOTES, thread_name_prefix=f"vote_{task}")
         got: list[dict] = []
         errors: list[BaseException] = []
+        settled = False
         try:
             for fut in as_completed([in_background(pool, node, call) for _ in range(AF.VOTES)]):
                 try:
@@ -472,12 +535,19 @@ def build_graph(
                     errors.append(e)
                     got.append({})
                 if AF.votes_settled(task, [g for g in got if g]):
+                    settled = True
                     break
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
         if not any(got) and errors:
             raise errors[0]
-        return AF.merge_votes(task, got) or None
+        merged = AF.merge_votes(task, got) or None
+        if merged is not None and task == "judge":   # 기록만(사전 등록 62.67): 표 구성. `judge`가 꺼내 `judge_votes`에 쌓고 답 경로는 읽지 않는다
+            try:
+                merged[VOTE_LOG_KEY] = vote_log(got, settled, len(errors))
+            except Exception:   # 기록을 만들지 못해도 판정은 그대로 낸다
+                log.debug("판정 표 구성 기록 실패", exc_info=True)
+        return merged
 
     def ask_judge(system: str, user: str) -> dict | None:
         def once() -> dict | None:
@@ -512,6 +582,11 @@ def build_graph(
     # ---- 노드 ----
     def load_memory(state: AgentState) -> dict:
         user_id = state.get("user_id") or ""
+        try:
+            with ground_lock:   # 기록만: 같은 대화의 같은 질문을 다시 묻는 실행이 앞 실행의 근거 확인 기록(근거 확인까지 가지 않고 끝난 실행의 것)을 이어받지 않게 지운다
+                ground_notes.pop(run_tag(state), None)
+        except Exception:
+            log.debug("근거 확인 호출 기록 지우기 실패", exc_info=True)
         return {
             **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             **({"started_at": time.monotonic()} if answer_budget else {}),
@@ -1096,6 +1171,12 @@ def build_graph(
         else:
             obj = ask_judge(guided, judge_input)
         obj = obj or {}
+        votes_seen = obj.pop(VOTE_LOG_KEY, None)
+        if isinstance(votes_seen, dict):  # 기록만(사전 등록 62.67): 판정마다 표 구성을 쌓는다. 답 경로는 이 칸을 읽지 않는다
+            try:
+                used = {**used, "judge_votes": [*(state.get("judge_votes") or []), {"retries": state.get("retries", 0), **votes_seen}]}
+            except Exception:   # 기록을 쌓지 못해도 판정은 그대로 진행한다
+                log.debug("판정 표 구성 기록 실패", exc_info=True)
         if best2:  # BO2: 판정 구절이 든 청크(나중에 따로 쓰는 답이 고를 때 쓴다)
             used = {**used, "judge_quote_ids": AF.quote_chunk_ids(obj, chunks), "judge_quotes": AF.quote_rows(obj, chunks)}  # judge_quotes는 측정 기록용(답 경로는 읽지 않는다)
         if facts_log:  # FL: 판정 기록만 쌓는다(결론과 다음 단계는 그대로)
@@ -1223,8 +1304,12 @@ def build_graph(
             if again is not None:
                 obj, raw = again, raw2
         out = draft_fields(obj, raw, used)
+        kind = "reasoning" if careful else ("fast" if answer_wait else "answer")   # 기록용 후보 종류: 추론 답, 빠른 답(추론 답과 같이 보낼 때), 한 가지 답
+        scope = "core" if core else "full"
         if abandoned is None or not abandoned.is_set():  # 추론 답이 대기 시간을 넘겨 빠른 답으로 넘어갔으면 이 답의 근거 판정은 쓰이지 않으므로 미리 부르지 않는다
-            ground_ahead(state, out, partials)
+            ground_ahead(state, out, partials, kind=kind, scope=scope)
+        elif speculate_ground:
+            note_ground(state, {"kind": kind, "scope": scope, "verdict": "skipped", "used": False, "ahead": False})   # 기록만: 늦게 온 추론 답이라 미리 부르지 않았다
         return out
 
     def verdict_key(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool) -> str:
@@ -1232,8 +1317,55 @@ def build_graph(
         raw = json.dumps([question, draft, cited, as_of, body, chunks, partial], ensure_ascii=False, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-    def verdict_for(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool = False) -> dict:
-        """근거 판정 LLM 한 번. SG가 같은 입력으로 미리 돌려 둔 판정이 있으면 그 결과를 쓰고(`ahead` 표시), 없으면 `llm_verdict`를 부른다."""
+    def run_tag(state: AgentState | dict) -> str:
+        """기록만: 근거 확인 호출 기록을 다른 요청과 가르는 표지(대화 id와 질문의 해시). 상태에 칸을 더하지 않아 그래프 상태는 그대로다."""
+        s = state or {}
+        raw = f"{s.get('thread_id') or ''}\x00{s.get('question') or ''}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def note_ground(state: AgentState | dict, entry: dict, *, locked: bool = False) -> None:
+        """기록만(사전 등록 62.67): 이 실행(`run_tag`)의 근거 확인 호출 한 건을 남긴다. `ground`가 끝날 때 `grounding.candidates`로 옮긴다.
+        2분이 지난 실행의 기록(근거 확인까지 가지 않고 끝난 실행)은 지운다. `locked`면 부른 쪽이 이미 `ground_lock`을 잡았다."""
+        def add() -> None:
+            tag = run_tag(state)
+            now = time.monotonic()
+            for old in [t for t, (at, _) in ground_notes.items() if now - at > 120.0]:
+                ground_notes.pop(old, None)
+            _, rows = ground_notes.setdefault(tag, (now, []))
+            rows.append(entry)
+
+        try:   # 기록만이라 실패해도 답 경로를 멈추지 않는다
+            if locked:
+                add()
+            else:
+                with ground_lock:
+                    add()
+        except Exception:
+            log.debug("근거 확인 호출 기록 실패", exc_info=True)
+
+    def mark_used(state: AgentState | dict, key: str) -> None:
+        """기록만: 미리 부른 판정(`key`)을 이 실행이 썼다고 적는다. `ground_lock`을 잡은 채로 부른다. 실패해도 답 경로를 멈추지 않는다."""
+        try:
+            for e in (ground_notes.get(run_tag(state)) or (0.0, []))[1]:
+                if e.get("key") == key:
+                    e["used"] = True
+        except Exception:
+            log.debug("근거 확인 호출 기록 실패", exc_info=True)
+
+    def ground_candidates(state: AgentState | dict) -> list[dict]:
+        """이 실행의 근거 확인 기록을 꺼낸다(기록에서 지운다, 행은 `candidate_rows`). 기록을 읽지 못하면 빈 목록이다(요청은 그대로 끝난다)."""
+        try:
+            with ground_lock:
+                _, rows = ground_notes.pop(run_tag(state), (0.0, []))
+            return candidate_rows(rows)
+        except Exception:
+            log.debug("근거 확인 호출 기록 읽기 실패", exc_info=True)
+            return []
+
+    def verdict_for(question: str, draft: str, cited: list[dict], as_of: str | None, body: str, chunks: list[dict], partial: bool = False,
+                    *, state: AgentState | dict | None = None, kind: str = "chosen", check: str = "") -> dict:
+        """근거 판정 LLM 한 번. SG가 같은 입력으로 미리 돌려 둔 판정이 있으면 그 결과를 쓰고(`ahead` 표시), 없으면 `llm_verdict`를 부른다.
+        `state`를 주면 쓴 판정을 그 실행의 기록에 남긴다(`kind`, `check`는 미리 부른 판정이 없을 때의 기록 이름). 답 경로는 기록을 읽지 않는다."""
         if speculate_ground:
             key = verdict_key(question, draft, cited, as_of, body, chunks, partial)
             with ground_lock:
@@ -1242,12 +1374,17 @@ def build_graph(
                 others = [ground_runs.pop(k, None) for k in twins]
                 for k in twins:
                     ground_twins.pop(k, None)
+                if run is not None and state is not None:
+                    mark_used(state, key)
             for other in others:  # 같은 답의 다른 일부 답 값으로 미리 부른 판정은 이제 쓰이지 않는다. 시작 전이면 취소한다(이미 간 호출은 결과를 버린다)
                 if other is not None:
                     other[1].cancel()
             if run is not None:
                 return {**run[1].result(), "ahead": True}
-        return llm_verdict(question, draft, cited, as_of, body, chunks, partial=partial)
+        got = llm_verdict(question, draft, cited, as_of, body, chunks, partial=partial)
+        if state is not None:
+            note_ground(state, {"kind": kind, **({"check": check} if check else {}), "partial": bool(partial), "verdict": got.get("state"), "used": True, "ahead": False})
+        return got
 
     def ground_partials(state: AgentState) -> tuple[bool, ...] | None:
         """SG(사전 등록 62.49): 판정과 같이 쓰는 답의 근거 판정을 미리 부를 때, 이 판정이 끝난 뒤 `ground_once`가 볼 수 있는 일부 답 여부(`judge_partial`) 값들.
@@ -1260,17 +1397,20 @@ def build_graph(
             values.append(True)
         return tuple(dict.fromkeys(values))
 
-    def ground_ahead(state: AgentState, cand: dict, partials: tuple[bool, ...] | None = None) -> None:
+    def ground_ahead(state: AgentState, cand: dict, partials: tuple[bool, ...] | None = None, *, kind: str = "answer", scope: str = "full") -> None:
         """SG: 답 후보(`cand`)가 나오는 대로 `verify`와 같은 검사를 거친 뒤 `ground_once`가 부를 근거 판정을 같은 입력으로 미리 부른다.
         나중에 뽑힌 답이 이 후보와 같으면 `verdict_for`가 그 결과를 받는다. 뽑히지 않은 후보의 판정은 쓰이지 않고 버려진다(비용만). 실패하면 아무 일도 없다(그때는 지금처럼 부른다).
-        `partials`(판정과 같이 쓰는 답에만 준다, `ground_partials`)가 있으면 그 값마다 미리 부른다. 없으면 지금 상태의 값 하나다."""
+        `partials`(판정과 같이 쓰는 답에만 준다, `ground_partials`)가 있으면 그 값마다 미리 부른다. 없으면 지금 상태의 값 하나다.
+        `kind`, `scope`는 기록용 후보 이름이다(사전 등록 62.67, `note_ground`). 미리 부르는 입력과 순서는 바꾸지 않는다."""
         if not speculate_ground or ground_pool is None or not cand.get("raw_citations") or not cand.get("answer"):
             return
+        label = {"kind": kind, "scope": scope}
 
         def start() -> None:
             try:
                 v = verify({**state, **cand})
                 if v.get("kind") != "answer":
+                    note_ground(state, {**label, "verdict": "verify_failed", "used": False, "ahead": False})
                     return
                 body = skill("grounding-check")
                 if not body:
@@ -1279,7 +1419,10 @@ def build_graph(
                     body = f"{body}\n\n[승인 권한표 Skill]\n{skill('delegation')}"
                 cited, draft, chunks = v.get("citations", []), v.get("answer", ""), state.get("chunks", [])
                 llm_on = grounding_llm if grounding_llm is not None else not is_demo_mode()
-                if not llm_on or not G.check_rules(state["question"], cited, chunks).ok:
+                if not llm_on:
+                    return
+                if not G.check_rules(state["question"], cited, chunks).ok:
+                    note_ground(state, {**label, "verdict": "rules_failed", "used": False, "ahead": False})
                     return
                 wanted = [p for p in dict.fromkeys(partials if partials is not None else (bool(state.get("judge_partial")),))
                           if not (skip_ground and not p and G.values_backed(draft, cited))]
@@ -1291,9 +1434,14 @@ def build_graph(
                         ground_twins.pop(old, None)
                     added: list[str] = []
                     for partial, key in keys.items():
-                        if key in ground_runs or len(ground_runs) >= 64:
+                        if key in ground_runs:   # 같은 입력(다른 후보가 같은 답을 냈다)은 이미 부른 판정을 같이 쓴다
+                            note_ground(state, {**label, "partial": partial, "key": key, "future": ground_runs[key][1], "used": False, "ahead": True, "shared": True}, locked=True)
+                            continue
+                        if len(ground_runs) >= GROUND_AHEAD_MAX_RUNS:
+                            note_ground(state, {**label, "partial": partial, "verdict": "over_cap", "used": False, "ahead": False}, locked=True)
                             continue
                         ground_runs[key] = (now, in_background(ground_pool, "ground", lambda partial=partial: llm_verdict(state["question"], draft, cited, state.get("as_of"), body, chunks, partial=partial)))
+                        note_ground(state, {**label, "partial": partial, "key": key, "future": ground_runs[key][1], "used": False, "ahead": True}, locked=True)
                         added.append(key)
                     if len(added) >= 2:
                         for key in added:
@@ -1476,7 +1624,7 @@ def build_graph(
         if not again.ok:
             rec["result"] = f"rules:{again.reason}"
             return None
-        second = verdict_for(question, cleaned, valid, as_of, body, chunks)  # RA가 미리 불렀으면 그 결과(같은 입력), 아니면 지금처럼 부른다
+        second = verdict_for(question, cleaned, valid, as_of, body, chunks, state=state, kind="extra", check="revise")  # RA가 미리 불렀으면 그 결과(같은 입력), 아니면 지금처럼 부른다
         info["rejudge"] = second["state"]
         if second["state"] != "grounded":  # 더 빼지 않는다. 결론이 없어도 거절 쪽으로 둔다
             rec["result"] = f"rejudge_{second['state']}"
@@ -1506,9 +1654,10 @@ def build_graph(
             key = verdict_key(question, cleaned, valid, as_of, body, chunks, False)
             now = time.monotonic()
             with ground_lock:
-                if key in ground_runs or len(ground_runs) >= 64:
+                if key in ground_runs or len(ground_runs) >= GROUND_AHEAD_MAX_RUNS:
                     return None
                 ground_runs[key] = (now, in_background(ground_pool, "ground", lambda: llm_verdict(question, cleaned, valid, as_of, body, chunks)))
+                note_ground(state, {"kind": "extra", "check": "revise", "partial": False, "key": key, "future": ground_runs[key][1], "used": False, "ahead": True}, locked=True)
             return key
         except Exception as e:  # noqa: BLE001 - 미리 하는 일이 실패해도 답 경로는 그대로 간다
             log.debug("문장 빼기 재확인 미리 부르기 실패: %s", type(e).__name__)
@@ -1552,6 +1701,7 @@ def build_graph(
             # UR: 판정 사유를 받고도 다시 쓰는 답이 처음 답을 그대로 냈다(두 호출의 의견이 갈림). 처음 답을 같은 입력으로 한 번 더 판정하고 받쳐지면 그대로 낸다
             cited, partial = state.get("citations", []), bool(state.get("judge_partial"))
             second = llm_verdict(question, state.get("answer", ""), cited, as_of, body, chunks, partial=partial)
+            note_ground(state, {"kind": "extra", "check": "unchanged", "partial": partial, "verdict": second["state"], "used": True, "ahead": False})
             rec["rejudge"] = second["state"]
             if second["state"] == "grounded" and not (pointer_refuse and AF.pointer_only(second.get("quotes"))):  # PT 기준은 그대로 적용한다
                 info.update(rejudged_unchanged=True)
@@ -1581,11 +1731,15 @@ def build_graph(
             rec["result"] = f"rules:{again.reason}"
             return None
         second = llm_verdict(question, cleaned, kept, as_of, body, chunks)
+        note_ground(state, {"kind": "extra", "check": "redraft", "partial": False, "verdict": second["state"], "used": True, "ahead": False})
         rec["result"] = f"rejudge_{second['state']}"
         if second["state"] != "grounded":
             return None
         info.update(redrafted=True, draft_answer=state.get("answer", ""))
-        text = f"{cleaned} {MSG_PARTIAL_NOTE}" if obj.get("partial") is True or state.get("judge_partial") else cleaned
+        noted = redraft_needs_note(bool(state.get("judge_partial")), obj.get("partial") is True, state.get("judge_quotes"), [c["chunk_id"] for c in kept])
+        if obj.get("partial") is True and not noted:
+            rec["partial_note"] = "dropped_facts_cited"   # 기록만: 다시 쓰는 모델은 일부라고 했지만 판정의 사실마다 구절 청크를 다시 쓴 답이 인용했다
+        text = f"{cleaned} {MSG_PARTIAL_NOTE}" if noted else cleaned
         return {"kind": "answer", "answer": finish_answer(text, kept, as_of), "citations": kept, "trimmed_citations": [c["chunk_id"] for c in trimmed], "grounding": info, "skills_used": used}
 
     def without_off_topic(state: AgentState, cited: list[dict], claims: list[str], info: dict, partial: bool) -> dict | None:
@@ -1629,7 +1783,7 @@ def build_graph(
         if v.ok and llm_on and skip_ground and not partial and G.values_backed(draft, cited):  # 값이 모두 인용 청크에 있다. 코드 규칙과 인용 검사는 이미 지났다
             info["llm"] = "skipped(values_backed)"
         elif v.ok and llm_on:
-            verdict = verdict_for(state["question"], draft, cited, as_of, body, state.get("chunks", []), partial=partial)
+            verdict = verdict_for(state["question"], draft, cited, as_of, body, state.get("chunks", []), partial=partial, state=state, kind="chosen")
             if verdict.get("ahead"):
                 info["ground_ahead"] = True
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
@@ -1682,6 +1836,17 @@ def build_graph(
         return {**final, "grounding": info, "skills_used": used}
 
     def ground(state: AgentState) -> dict:
+        """근거 판정(`ground_checked`)에 이 실행의 근거 확인 호출 기록(`grounding.candidates`, 사전 등록 62.67)을 붙인다. 기록만이고 답·인용·거절은 그대로다."""
+        out = ground_checked(state)
+        try:   # 기록만: 기록을 모으거나 붙이다 실패해도 판정 결과를 그대로 낸다
+            rows = ground_candidates(state)
+            if rows and isinstance(out.get("grounding"), dict):
+                out = {**out, "grounding": {**out["grounding"], "candidates": rows}}
+        except Exception:
+            log.debug("근거 확인 호출 기록 붙이기 실패", exc_info=True)
+        return out
+
+    def ground_checked(state: AgentState) -> dict:
         """근거 판정(`ground_once`). `GRAPH_CITE_EXPAND=1`이면 판정이 끝난 답에 같은 값을 말하는 다른 청크의 인용을 코드가 더한다(LLM 호출 없음, 판정 입력은 그대로)."""
         out = ground_once(state)
         claim_quotes: list[str] = []

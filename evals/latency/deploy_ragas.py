@@ -215,7 +215,7 @@ def load_done(rows_path: Path) -> tuple[list[dict], set[tuple[int, int]]]:
 
 def run_scoring(samples: list[dict], out: Path, evaluate_batch: Callable[[list[dict]], list[dict]], spent: Callable[[], tuple[float, str | None]],
                 *, max_cost: float, batch: int = BATCH, log: Callable[[str], None] = print) -> int:
-    """남은 행을 `batch`개씩 채점해 `ragas_rows.jsonl`에 이어 쓴다. 0 완료, 3 비용 상한, 4 판정 호출 한도·권한 오류.
+    """남은 행을 `batch`개씩 채점해 `ragas_rows.jsonl`에 이어 쓴다. 0 완료, 3 비용 상한, 4 판정 호출 한도·권한 오류 또는 유효한 지표 값이 한 칸도 없음.
     `evaluate_batch(part)`는 part와 같은 길이의 {지표: 값 또는 None} 목록을 돌려주고, 예외를 내면 그 배치는 `error`로 적는다."""
     rows_path = out / "ragas_rows.jsonl"
     _, done = load_done(rows_path)
@@ -246,13 +246,21 @@ def run_scoring(samples: list[dict], out: Path, evaluate_batch: Callable[[list[d
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
         log(f"  {i + len(part)}/{len(todo)} {time.time() - t0:.0f}초 누적 채점 비용 {spent()[0]:.4f}달러")
     cost, bad = spent()
-    return 4 if bad else 0
+    if bad:
+        return 4
+    # 채점 호출이 모두 실패하면(예: 400) RAGAS는 예외 없이 NaN만 돌려준다. 유효한 지표 값이 한 칸도 없는데 정상 종료(0)로 표시하면 단계가 완료로 오인되므로 4로 끝낸다.
+    rows, _ = load_done(rows_path)
+    last = {(r["run"], r["id"]): r for r in rows}
+    if last and not any(r.get(m) is not None for r in last.values() for m in NAMES):
+        log(f"오류: 채점한 {len(last)}행 모두에 유효한 지표 값이 없다(판정 호출이 전부 실패한 것으로 본다). 로그의 첫 오류와 판정 모델 요청 형식(temperature 등)을 확인해라. 종료 코드 4")
+        return 4
+    return 0
 
 
 # ---------------------------------------------------------------- 실제 RAGAS 호출(ragas 0.4.3, langchain-anthropic이 있는 환경에서만)
 
 def make_evaluator(cost_path: Path):
-    """(evaluate_batch, spent, state) 세 값. 61.51 `ragas_d6151.py`와 같은 설정이다: claude-haiku-5-5는 temperature를 받지 않아 요청에서 뺀다(400),
+    """(evaluate_batch, spent, state) 세 값. 61.51 `ragas_d6151.py`와 같은 설정이다: claude-haiku-5-5는 temperature를 받지 않아 요청에서 뺀다(400; RAGAS가 넣는 값이 최상위 키가 아니라 `extra_body`로 실리는 경우도 함께 뺀다),
     생각 토큰 때문에 max_tokens 8192, RAGAS 병렬 8. 채점 호출의 토큰은 단가표(`llm_prices.json`)로 환산해 `cost.json`에 이어 센다(캐시 할인 없이)."""
     import threading
     import urllib.request
@@ -282,7 +290,16 @@ def make_evaluator(cost_path: Path):
     class NoTempAnthropic(ChatAnthropic):
         def _get_request_payload(self, input_, *, stop=None, **kwargs):
             payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-            payload.pop("temperature", None)
+            # RAGAS(`LangchainLLMWrapper`)는 temperature=0.01을 넣는다. ragas 0.4.3, langchain-anthropic 1.7.7, anthropic 2.8.0 조합에서는 이 값이
+            # 최상위 키가 아니라 `extra_body`에 실려 SDK가 본문에 합치므로(400 "temperature: Extra inputs are not permitted"), 두 자리에서 모두 뺀다.
+            for key in ("temperature", "top_k", "top_p"):
+                payload.pop(key, None)
+            extra = payload.get("extra_body")
+            if isinstance(extra, dict):
+                for key in ("temperature", "top_k", "top_p"):
+                    extra.pop(key, None)
+                if not extra:
+                    payload.pop("extra_body", None)
             return payload
 
     class Spend(BaseCallbackHandler):
@@ -321,7 +338,7 @@ def make_evaluator(cost_path: Path):
         def embed_query(self, text):
             return self._call([text], "query")[0]
 
-    llm = LangchainLLMWrapper(NoTempAnthropic(model=JUDGE, api_key=api_key, max_tokens=8192, max_retries=3, timeout=180, callbacks=[Spend()]), bypass_n=True)
+    llm = LangchainLLMWrapper(NoTempAnthropic(model=JUDGE, api_key=api_key, max_tokens=8192, max_retries=3, timeout=180, callbacks=[Spend()]), bypass_temperature=True, bypass_n=True)
     emb = LangchainEmbeddingsWrapper(Voyage())
 
     def evaluate_batch(part: list[dict]) -> list[dict]:

@@ -15,6 +15,8 @@
 - `LLM_FALLBACK_MODEL`: 기본 모델이 (재시도 뒤에도) 실패하면 같은 제공자·같은 키로 이 모델을 한 번 더 부른다. 비용 상한 초과(`CostCapExceeded`)와 설정 오류(ValueError)는 폴백하지 않는다. 비우면 폴백 없음.
 - `LLM_REASONING`: openrouter 요청에 `reasoning.effort`를 붙인다(none, minimal, low, medium, high). 비우면 보내지 않는다. 다른 제공자에는 쓰지 않는다.
 - `LLM_EFFORT`, `LLM_EFFORT_BY_TASK`: anthropic 요청의 `effort`(none, low, medium, high, xhigh, max, none은 생각 끔 `thinking: disabled`). 기본 수준과 단계별 덮기(`answer=medium,grounding=medium`)이며 단계는 시스템 프롬프트의 `[[task:...]]`로 읽는다. 둘 다 비우면 보내지 않는다(API 기본). 다른 제공자에는 쓰지 않는다.
+- `LLM_PROMPT_CACHE`: 1이면 anthropic 요청 중 분류·근거 충분 판정·답 작성·근거 확인(`PROMPT_CACHE_TASKS`)의 시스템 프롬프트 블록에 `cache_control`(5분)을 붙인다(`cache_system_prefix`).
+  기본 꺼짐(서비스 설정에서 켬). 그래프가 넘기는 메시지는 그대로라 재생 키와 응답 캐시 키는 바뀌지 않는다. 캐시 토큰 비용은 `cost.py`가 읽기 0.1배, 쓰기 1.25배로 센다. 다른 제공자에는 쓰지 않는다.
 - `LLM_DEADLINE_S`·`LLM_HEDGE_S`: 시도별 응답 상한과 같은 요청 하나 더(openrouter와 anthropic, `DeadlineTransport`). anthropic은 SDK가 httpx2라 같은 동작의 httpx2 전송을 쓴다.
 - `LLM_DEADLINE_BY_TASK`: `단계=초` 쉼표 목록(예: `judge=12`). 그 단계만 시도별 상한을 `LLM_DEADLINE_S` 대신 이 초로 둔다(재시도마다 늘리는 규칙과 hedge는 그대로). 비면 모든 단계가 기본 상한이다.
 - `LLM_DEADLINE_SKIP_TASKS`: 쉼표 목록(끝 `*`는 접두어). 시스템 프롬프트의 `[[task:...]]`가 맞는 요청은 위 상한과 hedge 없이 그대로 보낸다. 비면 모든 요청에 건다.
@@ -188,6 +190,18 @@ def _client_options() -> dict[str, Any]:
     return out
 
 
+# `DeadlineTransport`의 HTTP 일꾼 수와 그 아래 연결 한도(사전 등록 62.67). 모든 LLM 호출이 함께 쓰고, 미리 부르는 근거 확인(`build.GROUND_AHEAD_WORKERS` 64)과
+# hedge(같은 요청 하나 더)가 겹치면 한 호출이 일꾼 둘을 쓴다. 일꾼이 모자라면 요청이 줄을 서는 동안 상한·hedge 시계가 흘러 불필요한 hedge·시간 초과·재시도가 난다.
+# httpx·httpx2 기본 연결 한도(100)가 일꾼 수보다 작으면 거기서 다시 줄을 서므로 연결 한도도 같은 값으로 올린다.
+LLM_HTTP_WORKERS = 160
+LLM_HTTP_KEEPALIVE = 64
+
+
+def _http_limits(mod: Any) -> Any:
+    """`mod`(httpx 또는 httpx2)의 연결 한도. 일꾼 수(`LLM_HTTP_WORKERS`)보다 작지 않게 둔다."""
+    return mod.Limits(max_connections=LLM_HTTP_WORKERS, max_keepalive_connections=LLM_HTTP_KEEPALIVE)
+
+
 class DeadlineTransport(httpx.BaseTransport):
     """시도 한 번의 응답 전체를 받는 데 걸리는 시간의 상한. SDK의 `timeout`은 바이트 사이 간격이라 공급자가 빈 문자를 흘리는 동안에는 끊지 못한다.
     넘으면 `httpx.ReadTimeout`을 내고 SDK가 재시도한다. 재시도마다 상한을 늘려(상한 x (재시도 번호 + 1)) 원래 오래 걸리는 긴 답이 모든 시도에서 잘리지 않게 한다.
@@ -200,7 +214,7 @@ class DeadlineTransport(httpx.BaseTransport):
         self.inner, self.seconds, self.hedge = inner, seconds, hedge
         self.by_task = dict(by_task or {})  # `LLM_DEADLINE_BY_TASK`: 이 단계는 기본 상한(`LLM_DEADLINE_S`) 대신 이 상한을 쓴다(hedge는 그대로). 없으면 모든 단계가 기본 상한  # hedge(`LLM_HEDGE_S`): 이 시간 안에 답이 없으면 같은 요청을 하나 더 보내 먼저 온 답을 쓴다
         self.skip_tasks = tuple(skip_tasks)  # `LLM_DEADLINE_SKIP_TASKS`: 이 단계는 상한과 hedge 없이 그대로 보낸다(답이 긴 결정표 초안, 합동 검토)
-        self.pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix="llm-http")
+        self.pool = ThreadPoolExecutor(max_workers=LLM_HTTP_WORKERS, thread_name_prefix="llm-http")
 
     @staticmethod
     def _task_of(request: httpx.Request) -> str | None:
@@ -379,7 +393,7 @@ def _openrouter_client() -> dict[str, Any]:
     if llm_trace.detail_on():
         opts["event_hooks"] = llm_trace.http_hooks()
     if seconds is not None:
-        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(), seconds, hedge, deadline_skip_tasks(), deadline_by_task())
+        opts["transport"] = DeadlineTransport(httpx.HTTPTransport(limits=_http_limits(httpx)), seconds, hedge, deadline_skip_tasks(), deadline_by_task())
     if efforts:
         opts["transport"] = TaskReasoningTransport(opts.get("transport") or httpx.HTTPTransport(), efforts)
     return {"http_client": httpx.Client(**opts)}
@@ -475,15 +489,46 @@ def _deadline_transport_httpx2(seconds: float, hedge: float, skip_tasks: tuple[s
             timeout_exc = httpx2.ReadTimeout
 
         _deadline2_cls = DeadlineTransport2
-    return _deadline2_cls(httpx2.HTTPTransport(), seconds, hedge, skip_tasks, by_task)
+    return _deadline2_cls(httpx2.HTTPTransport(limits=_http_limits(httpx2)), seconds, hedge, skip_tasks, by_task)
 
 
 _tuned_anthropic_cls: Any = None
 
 
+PROMPT_CACHE_TASKS = ("classify", "judge", "answer", "answer_fast", "grounding")  # 시스템 프롬프트가 Haiku 5.5 최소 캐시 길이(512토큰)를 넘는 질문 그래프 단계. 분해(decompose, decompose_gate)는 약 450토큰이라 뺀다
+CACHE_CONTROL = {"type": "ephemeral"}  # 5분 보관(기본). 1시간 보관은 쓰기 단가가 2배라 쓰지 않는다
+
+
+def prompt_cache_enabled() -> bool:
+    """`LLM_PROMPT_CACHE`(기본 꺼짐, 서비스 설정에서 켬). anthropic 공급자에만 쓴다."""
+    return env_flag("LLM_PROMPT_CACHE")
+
+
+def cache_system_prefix(system: Any, tasks: tuple[str, ...] = PROMPT_CACHE_TASKS) -> Any:
+    """요청 본문의 `system`(글 또는 블록 목록)이 `tasks` 단계(`[[task:...]]` 표지)이면 마지막 글 블록에 `cache_control`을 붙인 블록 목록을 돌려준다.
+    시스템 프롬프트는 질문·검색 자료를 담지 않는 고정 글이라 이 블록까지가 요청 사이에 같은 접두부다(사용자 메시지에는 붙이지 않는다).
+    다른 단계, 이미 캐시 표시가 있는 블록, 글 블록이 없는 목록은 그대로 돌려준다. 그래프가 넘긴 메시지는 바꾸지 않는다(재생 키·응답 캐시 키는 메시지에서 만든다)."""
+    found = _TASK_MARK.search(system if isinstance(system, str) else json.dumps(system, ensure_ascii=False, default=str))
+    if not found or found.group(1) not in tasks:
+        return system
+    if isinstance(system, str):
+        return [{"type": "text", "text": system, "cache_control": dict(CACHE_CONTROL)}]
+    if not isinstance(system, list):
+        return system
+    blocks = [dict(b) if isinstance(b, dict) else b for b in system]
+    if any(isinstance(b, dict) and "cache_control" in b for b in blocks):
+        return system
+    for b in reversed(blocks):
+        if isinstance(b, dict) and b.get("type") == "text":
+            b["cache_control"] = dict(CACHE_CONTROL)
+            return blocks
+    return system
+
+
 def _tuned_anthropic() -> Any:
-    """ChatAnthropic에 두 가지를 더한다. (1) 시스템 프롬프트 앞의 `[[task:...]]` 표지로 요청마다 `effort`를 고른다(claude_cli의 `effort_for`와 같은 규칙,
-    none이면 생각 끔). (2) `http_client_override`가 있으면 그 HTTP 클라이언트로 부른다(`_anthropic_http_client`)."""
+    """ChatAnthropic에 세 가지를 더한다. (1) 시스템 프롬프트 앞의 `[[task:...]]` 표지로 요청마다 `effort`를 고른다(claude_cli의 `effort_for`와 같은 규칙,
+    none이면 생각 끔). (2) `http_client_override`가 있으면 그 HTTP 클라이언트로 부른다(`_anthropic_http_client`).
+    (3) `prompt_cache`가 참이면 정해진 단계의 시스템 프롬프트 블록에 캐시 표시를 붙인다(`cache_system_prefix`)."""
     global _tuned_anthropic_cls
     if _tuned_anthropic_cls is None:
         from functools import cached_property
@@ -498,6 +543,7 @@ def _tuned_anthropic() -> Any:
         class TaskEffortAnthropic(ChatAnthropic):
             effort_default: str | None = None
             effort_by_task: dict[str, str] = {}
+            prompt_cache: bool = False   # `LLM_PROMPT_CACHE`: 정해진 단계의 시스템 프롬프트 블록에 캐시 표시를 붙인다(`cache_system_prefix`)
             http_client_override: Any = Field(default=None, exclude=True)
 
             @cached_property
@@ -516,6 +562,8 @@ def _tuned_anthropic() -> Any:
                 payload = super()._get_request_payload(input_, stop=stop, **kwargs)
                 if effort == "none":
                     payload["thinking"] = {"type": "disabled"}
+                if self.prompt_cache and payload.get("system"):
+                    payload["system"] = cache_system_prefix(payload["system"])
                 return payload
 
         _tuned_anthropic_cls = TaskEffortAnthropic
@@ -550,9 +598,10 @@ def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel
 
         default, by_task = anthropic_efforts()
         http_client = _anthropic_http_client()
-        if default or by_task or http_client is not None:  # 단계별 추론 수준(`LLM_EFFORT*`)이나 시간 스위치(`LLM_DEADLINE_S`·`LLM_HEDGE_S`)를 쓸 때만
+        cache = prompt_cache_enabled()
+        if default or by_task or http_client is not None or cache:  # 단계별 추론 수준(`LLM_EFFORT*`), 시간 스위치(`LLM_DEADLINE_S`·`LLM_HEDGE_S`), 프롬프트 캐시(`LLM_PROMPT_CACHE`)를 쓸 때만
             return _tuned_anthropic()(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, effort_default=default, effort_by_task=by_task,
-                                      http_client_override=http_client, **opts)
+                                      http_client_override=http_client, prompt_cache=cache, **opts)
         return ChatAnthropic(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, **opts)
     if provider == "openai":
         if not model:

@@ -42,7 +42,7 @@ DATASET = REPO / "evals" / "dataset_v2.jsonl"
 DEFAULT_OUT = REPO / "evals" / "results" / "deploy_latency_v2"
 ENV_REQUIRED = ("DEPLOY_LATENCY_BASE_URL", "DEPLOY_LATENCY_LOGIN", "DEPLOY_LATENCY_PASSWORD")
 RETRY_STATUS = {502, 503, 504}
-# `/chat` done 이벤트의 측정용 칸(backend/api/routes.py): 단계별 비용(cost_by_step: 단계 -> calls·input_tokens·output_tokens·cost_usd·llm_s), 질문 번역을 더한 합,
+# `/chat` done 이벤트의 측정용 칸(backend/api/routes.py): 단계별 비용(cost_by_step: 단계 -> calls·input_tokens·output_tokens·cost_usd·llm_s, 그래프 단계는 cache_read_tokens·cache_creation_tokens도), 질문 번역을 더한 합,
 # Voyage 토큰·호출 수·환산 비용, 거절·되묻기를 낸 노드와 사유 코드. rows.jsonl에 기존 칸과 함께 그대로 저장한다.
 STEP_FIELDS = ("cost_by_step", "cost_by_step_total_usd", "embed_tokens", "embed_calls", "embed_cost_usd", "refuse_stage", "refuse_reason",
                "path")   # path: 답 경로 기록(하위 질문, 문맥 청크 id, 판정 구절과 그 청크, 답 후보의 인용과 고른 쪽). 서버 `step_cost.path_meta`. 옛 서버나 검색하지 않은 실행이면 None
