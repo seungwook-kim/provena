@@ -46,6 +46,7 @@ import json
 import re
 import os
 import time
+import uuid
 from collections import OrderedDict
 from threading import Lock
 from typing import Any
@@ -613,6 +614,9 @@ def run_config(
     meta: dict[str, Any] = {"run_mode": mode, "graph": graph_name}
     if thread_id:
         meta["thread_id"] = str(thread_id)
+    if mode == "demo":
+        # 녹화 재생이 같은 요청의 응답 변형을 이 실행 안에서 0번부터 차례로 내게 하는 실행 표지(K-24, `demo_replay.ReplayStore.pick_ranked`)
+        meta["replay_run"] = uuid.uuid4().hex
     # Evaluation traces are explicitly opted into; ordinary requests remain
     # fail-closed unless content capture is enabled by the operator.
     evaluation_mode = bool(metadata and metadata.get("eval"))

@@ -36,6 +36,7 @@ import os
 import re
 import threading
 import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPLAY_DIR = ROOT / "data" / "demo_replay"
 RECORD_FILE = "recorded.jsonl"
 GENERIC_ROLE = "generic"
+MAX_RUNS = 256  # 변형 차례를 기억하는 실행 수(오래된 실행부터 잊는다. 한 실행은 몇 초 안에 끝난다)
+REPLAY_RUN_KEY = "replay_run"  # `run_config`가 데모 모드에서 metadata에 붙이는 실행 표지 이름(K-24)
 STAGGER_S = 0.05  # 재생에서 같은 키의 n번째 변형을 n*STAGGER_S초 늦춰 낸다(녹화 때의 완료 순서를 재현)
 DEFAULT_FAKE_TEXT = "(가짜 모델 응답) 합성 시험용 답변입니다. 실제 핸드북 근거가 아닙니다."
 _TRUE = ("1", "true", "yes", "on")
@@ -105,6 +108,7 @@ class ReplayStore:
         self._rows: dict[str, dict] = {}
         self._variants: dict[str, list[dict]] = {}
         self._turn: dict[str, int] = {}
+        self._run_turns: OrderedDict[str, dict[str, int]] = OrderedDict()  # 실행 표지 -> 그 실행의 키별 차례(최근 MAX_RUNS개만)
 
     def _files(self) -> list[Path]:
         return sorted(self.directory.glob("*.jsonl")) if self.directory.is_dir() else []
@@ -141,15 +145,25 @@ class ReplayStore:
         """그 키의 녹화 줄. 응답 변형이 여럿이면 부를 때마다 차례로 돌려가며 낸다(재생이 녹화 때처럼 여러 답을 섞어 쓰게)."""
         return self.pick_ranked(key)[0]
 
-    def pick_ranked(self, key: str) -> tuple[dict | None, int]:
-        """`pick`과 같되 그 줄이 같은 키 변형 중 몇 번째(0부터, 녹화 파일 순서)인지도 돌려준다. 변형이 하나 이하면 0."""
+    def pick_ranked(self, key: str, run: str | None = None) -> tuple[dict | None, int]:
+        """`pick`과 같되 그 줄이 같은 키 변형 중 몇 번째(0부터, 녹화 파일 순서)인지도 돌려준다. 변형이 하나 이하면 0.
+
+        `run`(그래프 한 번 실행의 표지, `run_config`가 데모 모드에서 metadata `replay_run`으로 붙인다)을 주면 차례를 그 실행 안에서만 0부터 센다(K-24).
+        녹화는 질문마다 한 번 돈 것이라, 실행마다 0번 변형부터 내야 녹화 때와 같은 답이 된다. 차례를 프로세스 전체로 세면 같은 질문을 다시 물었을 때
+        다른 변형부터 시작해 근거 확인 다수결이 바뀌고 답 글이 달라졌다. `run`이 없으면 예전처럼 프로세스 전체로 센다."""
         with self._lock:
             self._refresh()
             rows = self._variants.get(key)
             if not rows:
                 return None, 0
-            n = self._turn.get(key, 0)
-            self._turn[key] = n + 1
+            turns = self._turn
+            if run is not None:
+                turns = self._run_turns.pop(run, None) or {}
+                self._run_turns[run] = turns  # 가장 최근에 쓴 실행을 끝으로 옮긴다
+                while len(self._run_turns) > MAX_RUNS:
+                    self._run_turns.popitem(last=False)
+            n = turns.get(key, 0)
+            turns[key] = n + 1
             rank = n % len(rows)
             return rows[rank], (rank if len(rows) > 1 else 0)
 
@@ -296,7 +310,8 @@ class ReplayChatModel(FakeListChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         store = self.store if self.store is not None else get_store()
-        row, rank = store.pick_ranked(request_key(messages))
+        run = (getattr(run_manager, "metadata", None) or {}).get(REPLAY_RUN_KEY) if run_manager is not None else None
+        row, rank = store.pick_ranked(request_key(messages), run=str(run) if run else None)
         if rank:
             # 같은 요청을 동시에 여러 번 보내는 단계(판정 다수결, 근거 판정, 답 두 번 쓰기)는 녹화 파일의 순서가 그 호출들이 끝난 순서다.
             # 재생은 즉시 돌아와 스레드 경쟁으로 끝나는 순서가 뒤섞이므로, 몇 번째 변형인지에 비례해 늦춰 녹화 때와 같은 순서로 끝나게 한다(0원).
