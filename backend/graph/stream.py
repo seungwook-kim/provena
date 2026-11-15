@@ -61,6 +61,8 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
         for c in final.get("citations", []):
             yield AgentEvent(type="citation", thread_id=thread_id, data={k: c.get(k) for k in CITATION_KEYS})
     data: dict = {"answer_id": final.get("answer_id")}
+    if final.get("understood_question"):   # 이어 묻기(D-14): 이번 실행의 `followup` 노드가 질문을 다시 썼을 때만 있다(`final`은 이번 실행의 갱신뿐이라 앞 질문의 값이 섞이지 않는다)
+        data["understood_question"] = final["understood_question"]
     if refuse_node and final.get("kind") in ("refuse", "clarify"):
         from backend.graph.build import REFUSE_REASON_BY_MESSAGE
         data.update(refuse_meta(refuse_node, final.get("kind"), final, REFUSE_REASON_BY_MESSAGE))   # 거절·되묻기를 낸 노드와 사유 코드(측정 도구가 읽는다)

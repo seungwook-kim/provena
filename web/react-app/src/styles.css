@@ -581,3 +581,5 @@
 .demo-composer textarea{max-height:208px;overflow-y:auto}
 /* 기억 설정 첫 단계는 '이전'을 숨기므로 혼자 남은 '다음'을 오른쪽에 둔다 */
 .onboarding-demo .demo-form-actions>:only-child{margin-left:auto}
+/* 이어 묻기(D-14): 서버가 다시 쓴 질문 안내. 답 본문보다 작고 흐리게 */
+.demo-chat-page .demo-answer .demo-answer-understood{margin:4px 0 8px;color:var(--muted);font-size:12px;line-height:1.6;white-space:normal}

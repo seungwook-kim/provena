@@ -17,12 +17,12 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
-from datetime import date
 
 from backend.graph.departments import issue_table as IT
 from backend.graph.departments import review as R
 from backend.graph.departments import teams as T
 from backend.graph.parsing import parse_json_obj
+from backend.graph.state import today_kst
 from backend.prompts import question as P
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import SearchQuery
@@ -122,7 +122,7 @@ def run_single(request: str, as_of: str | None, *, retriever, llm, config: dict 
     if search not in SEARCH_MODES:
         raise ValueError(f"search는 {SEARCH_MODES} 중 하나다: {search!r}")
     request = (request or "").strip()
-    as_of = as_of or date.today().isoformat()
+    as_of = as_of or today_kst().isoformat()
     if not request:
         msg = "검토할 업무 요청이 비어 있습니다."
         return {"status": "clarify", "issue_rows": [], "unreviewed": [], "clarify_question": msg, "interrupt_kind": None, "saved": None, "team_status": {}, "retrieved": {}}

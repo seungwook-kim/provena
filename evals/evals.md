@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `PREREGISTER.md`에 62.69(용어표와 제목 경로 되살림), 62.70(코드가 더하는 인용의 보정), 62.71(이어 묻기 노드 D-14의 사후 기록)과 행 커밋 표 세 줄을 더했다 | (커밋 전) |
 | 2026-11-13 | 김승욱 (Claude Code) | 합동 검토 정답 쟁점 37개를 박진형, 강경희가 확인(동의 30, 수정 7, 삭제 0, 추가 0)해 확정 정답 파일 `dataset_review_v1_gold.jsonl`(sha256 `9b235976eff5a29b4b89bba9f6eb7ab857e2e6e795be8bf553df885be8ab6b7e`, LF, `.gitattributes` eol=lf)을 새로 만들었다. 초안 `dataset_review_v1_gold_draft.jsonl`은 00044·00049 재현용으로 그대로 둔다(결정 0117). 확정 정답 0원 재계산은 `agent/review_gold_confirmed_recalc.py`, 결과 `results/review_gold_confirmed_recalc_20261113/`로 값이 같음을 확인했고 재측정은 하지 않는다(사전 등록 62.61) | |
 | 2026-11-13 | 김승욱 (Claude Code) | 체크포인트 ②③ 보강(LLM 호출 없음): `results/tail_slot_rule_20261113/`(끝 1자리 규칙의 0원 계산 `analyze_tail_slot.py`), `results/table_number_source_check_20261113/check.py`에 `--sets` 추가와 `results/table_number_source_check_20261113_all/`(v1·새 인용까지 넓힌 표·수치 청크 60개 대조, 청크 123개 낱말 대조 `word_check.py`, 읽은 표본 9개), `EVAL_REPORT.md` 1장·5-2절·5-4절·5-5절·11장, `PREREGISTER.md` 62.38·62.44·62.45 결과 칸 | #150 |
 | 2026-11-11 | 박진형 (jinyeong-731) | 시험 `tests/test_exclusions_schema.py` 추가(L-04): `exclusions.json`이 JSON이고 `as_of`·`excluded` 키가 있으며, 항목마다 id가 `dataset_v1`·`dataset_v2`에 있고 사유가 비지 않았고 id 중복이 없는지 본다. 항목 0건이면 통과. 나쁜 입력 9가지를 임시 파일로 만들어 잡는지 확인. 평가셋·`exclusions.json`은 바꾸지 않음 | #135 |

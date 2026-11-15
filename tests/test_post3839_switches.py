@@ -78,10 +78,10 @@ def test_switches_off_keep_the_m44_prompts():
 
 def test_switches_off_in_the_runner_are_empty_values():
     p = argparse.ArgumentParser()
-    for flag in ("--keep-product-name", "--requery-terms", "--query-branches",
+    for flag in ("--keep-product-name", "--requery-terms", "--query-terms", "--query-branches",
                  "--cite-expand", "--cite-multi", "--team-last", "--keep-cites", "--sub-research", "--page-research", "--requery-vocab", "--unknown-name",
-                 "--refuse-on-none", "--research-same-page", "--cite-phrase", "--grounding-quote", "--drop-scoped-cites", "--intro-fill",
-                 "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--prompts-head",
+                 "--refuse-on-none", "--research-same-page", "--cite-phrase", "--heading-terms", "--grounding-quote", "--drop-scoped-cites", "--heading-mark", "--intro-fill",
+                 "--heading-heads", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--prompts-head",
                  "--judge-vote", "--judge-quote", "--sub-merge", "--facts-log", "--answer-best2", "--best2-samedoc", "--speculate-ground", "--speculate-early-search"):
         p.add_argument(flag, action="store_true")
     ns = p.parse_args([])

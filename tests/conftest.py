@@ -17,3 +17,9 @@ def _webhook_dns_offline(monkeypatch):
 
     real = webhook._resolve
     monkeypatch.setattr(webhook, "_resolve", lambda host: [ipaddress.ip_address("93.184.216.34")] if host.endswith("example.com") else real(host))
+
+
+@pytest.fixture(autouse=True)
+def _local_demo_profile_key_in_tmp(monkeypatch, tmp_path):
+    """로컬 데모 모드로 앱을 만드는 시험이 개발자 홈(~/.provena)에 키 파일을 남기지 않게, 키 파일 자리를 시험용 임시 폴더로 돌린다(K-23)."""
+    monkeypatch.setenv("PROFILE_KEY_FILE", str(tmp_path / "profile-key" / "local_demo_profile.key"))

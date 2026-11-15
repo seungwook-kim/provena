@@ -21,6 +21,7 @@ from backend.api.errors import ApiError
 from backend.api.recalls import no_store, spa_page
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, create_require_admin_dependency, require_csrf
 from backend.graph.answer_store import count_by_articles
+from backend.graph.state import today_kst
 from backend.rag.retrieve.section import check_date
 
 DEFAULT_DAYS = 30
@@ -128,7 +129,7 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
         no_store(response)
         current_user(request)
         st = _store(request)
-        since = since or (datetime.now(timezone.utc).date() - timedelta(days=DEFAULT_DAYS)).isoformat()
+        since = since or (today_kst() - timedelta(days=DEFAULT_DAYS)).isoformat()  # "최근 30일"의 오늘은 한국 날짜(D-15)
         try:
             check_date(since, "since")
         except ValueError:

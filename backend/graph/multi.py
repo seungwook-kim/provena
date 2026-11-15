@@ -319,6 +319,7 @@ def build_multi_graph(
     ground_skip_backed: bool | None = None,
     json_only: bool | None = None,
     page_search=None,
+    heading_search=None,
     intro_search=None,
     prev_chunk=None,
 ):
@@ -337,7 +338,7 @@ def build_multi_graph(
     single = build_graph(retriever, None, llm=llm, answer_store=answer_store, store=store, use_skills=use_skills,
                          grounding_llm=grounding_llm, decompose=decompose, section_reader=section_reader, decision_repo=decision_repo, review_graph=review_graph,
                          parallel_intake=parallel_intake, brief_output=brief_output, max_research=research_limit, judge_answer=judge_answer,
-                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, intro_search=intro_search, prev_chunk=prev_chunk)
+                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, heading_search=heading_search, intro_search=intro_search, prev_chunk=prev_chunk)
     parts = SingleParts(single)
     agents = build_agents(parts)
     specs = {name: {**AGENTS, **CONNECTED_AGENTS}[name] for name in agents}
@@ -358,6 +359,8 @@ def build_multi_graph(
         if not log:  # 첫 방문: 기억 불러오기와 질의 분석(단일의 load_memory, classify)
             apply({"agent_trace": [], "handoffs": []})  # 에이전트를 한 번도 부르지 않고 끝나도 기록 칸은 있다
             apply(parts.node("load_memory").invoke(dict(view)))
+            if parts.route("load_memory", view) == "followup":  # 이어 묻기(D-14): 단일과 같은 분기, 같은 노드. 같은 대화에 앞 질문이 있을 때만 지난다
+                apply(parts.node("followup").invoke(dict(view)))
             apply(parts.node("classify").invoke(dict(view)))
         trace = view.get("agent_trace") or []
         last = trace[-1] if trace else None

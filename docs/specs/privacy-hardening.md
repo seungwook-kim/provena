@@ -32,6 +32,8 @@
 | EC-03 | 타인 ID를 본문에 포함 | 본문 ID를 무시하고 JWT 사용자만 사용 |
 | EC-04 | 관리자 타인 프로필 요청 | 타인 프로필 경로 자체가 없어 접근 차단 |
 | EC-05 | 기존 평문 의심 데이터 | 자동 덮어쓰기·삭제 없이 백업 후 별도 수동 전환 절차 필요 |
+| EC-06 | 로컬 데모(`PROVENA_ENV=local`·`PROVENA_DEV_MODE=1`)에서 키 미설정 (K-23) | 키를 한 번 만들어 키 파일(`PROFILE_KEY_FILE`, 비우면 `~/.provena/local_demo_profile.key`)에 두고 재시작 때 다시 읽음. 로컬 데모가 아니면 키 파일을 읽지도 쓰지도 않음(EC-01 그대로) |
+| EC-07 | 로컬 데모가 만든 키로 옛 줄을 풀 수 없음(키 파일이 사라짐) (K-23) | `GET /me/profile`이 404 `profile_reentry_required`. 화면이 빈 칸을 열고 `PUT`으로 덮어씀. `PROFILE_ENC_KEYS`를 준 실행은 EC-02 그대로 503 |
 
 ## How
 
@@ -61,3 +63,15 @@
 - GIVEN: 관리자 또는 최고 관리자 인증
 - WHEN: 다른 사용자의 프로필을 요청함
 - THEN: 프로필 원문·마스킹 값 모두 반환하지 않는다.
+
+**AC-04 · 로컬 데모 재시작 뒤 같은 키 (K-23)**
+
+- GIVEN: 로컬 데모 모드, `PROFILE_ENC_KEYS` 없음, 내 정보를 한 번 저장함
+- WHEN: 서버를 다시 띄워 프로필 암호기를 새로 만듦
+- THEN: 같은 키 파일을 읽어 저장된 값을 푼다. 로컬 데모가 아니면 키 파일을 만들지 않고 `ProfileCryptoError`를 낸다(`tests/test_profile_crypto.py`).
+
+**AC-05 · 풀 수 없는 줄은 다시 입력 (K-23)**
+
+- GIVEN: 로컬 데모가 만든 키로 도는 서버, 다른 키로 잠근 줄이 남아 있음
+- WHEN: `GET /me/profile`
+- THEN: 404 `profile_reentry_required`이고 값은 담지 않는다. `PUT /me/profile` 뒤에는 200으로 읽힌다. `PROFILE_ENC_KEYS`로 받은 키면 503이다(`tests/test_profile_api.py`).

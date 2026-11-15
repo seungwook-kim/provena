@@ -168,6 +168,11 @@ def valid_mask(meta: RowMeta, org: str | None, as_of: str | None) -> np.ndarray:
     return m
 
 
+def heading_text(row: dict) -> str:
+    """청크의 제목 경로: 페이지 제목 > 절 제목(article). 제목 경로 검색(`heading_top`)이 보는 문자열이다."""
+    return f"{row.get('rule_title') or row.get('title') or ''} > {row.get('article') or ''}"
+
+
 class MemoryStore:
     """numpy 저장소: 테스트와 DB 대조(V2)용. 필터·동점 규칙은 PgStore와 같다."""
 
@@ -220,6 +225,16 @@ class MemoryStore:
         s = self.vectors[pos] @ np.asarray(qvec, dtype=np.float32)
         order = sorted(range(len(pos)), key=lambda j: (-s[j], self._rm.keys[pos[j]][0]))[:n]
         return [(self._rm.keys[pos[j]], float(s[j])) for j in order]
+
+    def heading_top(self, phrase, org, as_of, n):
+        """제목 경로('페이지 제목 > 절 제목')에 phrase(소문자 비교)가 그대로 든 청크(필터 안) n개. 순서는 ord(없으면 행 순서), chunk_id(PgStore와 같다)."""
+        p = (phrase or "").strip().lower()
+        if not p or n <= 0:
+            return []
+        m = valid_mask(self._rm, org, as_of)
+        pos = [i for i in np.flatnonzero(m) if p in heading_text(self.rows[i]).lower()]
+        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))  # 스냅샷 행에는 ord가 없고 파일 순서가 곧 ord다(load_snapshot)
+        return [self._rm.keys[i] for i in pos[:n]]
 
     def band_headings(self, rule_seqs, org, as_of):
         """금액 구간 조회(`Searcher._range_expand`) 후보: 그 페이지들의 청크 중(필터 안) 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord 순."""
@@ -377,6 +392,16 @@ ORDER BY dist, chunk_id"""
                                "seqs": [int(s) for s in rule_seqs], "org": org, "as_of": as_of,
                                "ex_i": [k[0] for k in exclude], "ex_v": [k[1] for k in exclude], "n": n})
         return [((r[0], r[1]), float(r[2])) for r in rows]
+
+    def heading_top(self, phrase, org, as_of, n):
+        """제목 경로(페이지 제목 > 절 제목)에 phrase(소문자 비교)가 그대로 든 청크 n개, 같은 필터(_FILTER), ord·chunk_id 순(MemoryStore와 같다)."""
+        p = (phrase or "").strip().lower()
+        if not p or n <= 0:
+            return []
+        sql = f"""SELECT c.chunk_id, c.version_id {_JOIN}
+WHERE strpos(lower(d.title || ' > ' || coalesce(c.article, '')), %(p)s) > 0 AND {_FILTER}
+ORDER BY c.ord, c.chunk_id LIMIT %(n)s"""
+        return [(r[0], r[1]) for r in self._all(sql, {"p": p, "org": org, "as_of": as_of, "n": n})]
 
     def band_headings(self, rule_seqs, org, as_of):
         """금액 구간 조회 후보: 그 페이지들의 청크 중 같은 필터(_FILTER)를 지나고 제목 경로에 '$'가 든 것의 (키, 제목 경로), ord·chunk_id 순(MemoryStore와 같다)."""
@@ -998,6 +1023,15 @@ class Searcher:
                 picks.append(best)
         rows = self.store.fetch(picks) if picks else {}
         return [to_chunk(rows[k]) for k in picks if k in rows]
+
+    def search_headings(self, phrase: str, org: str | None = None, as_of: str | None = None, n: int = 1) -> list[Chunk]:
+        """제목 경로 검색(그래프 `GRAPH_HEADING_TERMS=1`, 기본 꺼짐) 전용. 제목 경로(페이지 제목 > 절 제목)에 phrase가 그대로 든 청크를 ord 순으로 n개.
+        벡터와 번역을 쓰지 않는다(임베딩·LLM 호출 없음). 기본 검색(`search`)은 바꾸지 않는다. 저장소가 이 질의를 모르면 빈 목록이다."""
+        self._refresh()
+        top = getattr(self.store, "heading_top", None)
+        keys = top(phrase, org, as_of, n) if top else []
+        rows = self.store.fetch(keys) if keys else {}
+        return [to_chunk(rows[key]) for key in keys if key in rows]
 
 
 _TRACE_LOCK = threading.Lock()

@@ -99,10 +99,92 @@ describe('실패 경로 안내 (D11)', () => {
   })
 
   it('검색 결과가 없어 답하지 않으면 근거 부족 표시와 다음 행동을 보인다', async () => {
-    await askInThread(stream([{ type: 'done', data: { kind: 'refuse', code: 'no_results', message: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.' } }]))
+    await askInThread(stream([{ type: 'done', data: { kind: 'refuse', code: 'no_results', refuse_stage: 'give_up', refuse_reason: 'no_evidence', message: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.' } }]))
     expect(await screen.findByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.')).toBeTruthy()
     expect(screen.getByText('근거 부족')).toBeTruthy()
     expect(screen.getByText('질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.')).toBeTruthy()
+  })
+
+  // 놓친 것 H-34: 안내는 거절 사유가 "근거를 못 찾음"일 때만 붙는다. 서버는 token으로 문장을, done으로 사유 코드(refuse_reason)를 보낸다(backend/graph/stream.py)
+  const HINT = '질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요.'
+  const refusal = (text, reason) => stream([{ type: 'token', data: { text } }, { type: 'done', data: { kind: 'refuse', code: 'no_results', refuse_stage: 'x', ...(reason ? { refuse_reason: reason } : {}) } }])
+
+  it.each([
+    ['unsupported', '검색된 근거가 답의 주장을 받쳐 주지 못해 답하지 않습니다.'],
+    ['citation_check', '답에 쓸 근거 인용을 확인하지 못해 답하지 않습니다.'],
+  ])('근거가 모자란 거절(%s)에는 다시 물어보라는 안내를 붙인다', async (reason, text) => {
+    await askInThread(refusal(text, reason))
+    expect(await screen.findByText(text)).toBeTruthy()
+    expect(screen.getByText(HINT)).toBeTruthy()
+  })
+
+  it.each([
+    ['out_of_domain', '핸드북과 관련 없는 질문이라 답하지 않습니다.'],
+    ['out_of_period', '질문이 묻는 기간이나 시점의 판이 수집된 핸드북에 없어 답하지 않습니다.'],
+    ['nonexistent_entity', '질문이 묻는 대상이 검색된 핸드북 근거에 없어 답하지 않습니다.'],
+    ['leak', '답에 내부 지시문이 섞여 있어 답하지 않습니다.'],
+    ['no_key', '검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다.'],
+    ['index_not_ready', '검색 색인이 아직 준비되지 않아 답할 수 없습니다.'],
+    [null, '사유 코드를 주지 않는 옛 서버의 거절 문장입니다.'],
+  ])('질문을 고쳐 써도 소용없는 거절(%s)에는 안내를 붙이지 않는다', async (reason, text) => {
+    await askInThread(refusal(text, reason))
+    expect(await screen.findByText(text)).toBeTruthy()
+    expect(screen.getByText(reason === 'out_of_domain' ? '범위 밖 질문' : reason === 'no_key' ? '안내' : '근거 부족')).toBeTruthy()
+    expect(screen.queryByText(HINT)).toBeNull()
+  })
+
+  // 놓친 것 N-5: 거절 머리표는 사유에 맞춘다(범위 밖 질문, 키 없음 안내, 그 밖은 근거 부족)
+  it.each([
+    ['out_of_domain', '핸드북과 관련 없는 질문이라 답하지 않습니다.', '범위 밖 질문'],
+    ['no_key', '검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다.', '안내'],
+    ['no_evidence', '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.', '근거 부족'],
+  ])('거절 사유(%s)에 맞는 머리표를 보인다', async (reason, text, label) => {
+    await askInThread(refusal(text, reason))
+    const bubble = (await screen.findByText(text)).closest('article')
+    expect(bubble.querySelector('small').textContent).toBe(label)
+  })
+
+  it('새로고침 뒤 대화 이력의 거절도 사유에 맞는 머리표를 보인다', async () => {
+    window.history.replaceState({}, '', '/chat')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([listed])
+      if (path === '/threads/t1') return json({ ...listed, messages: [
+        { role: 'user', text: '오늘 점심 메뉴 추천해줘' },
+        { role: 'assistant', text: '핸드북과 관련 없는 질문이라 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'out_of_domain' },
+        { role: 'user', text: '없는 정책을 물음' },
+        { role: 'assistant', text: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'no_evidence' },
+      ] })
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    const refused = (await screen.findByText('핸드북과 관련 없는 질문이라 답하지 않습니다.')).closest('article')
+    const lacking = screen.getByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.').closest('article')
+    expect(refused.querySelector('small').textContent).toBe('범위 밖 질문')
+    expect(lacking.querySelector('small').textContent).toBe('근거 부족')
+  })
+
+  it('새로고침 뒤 대화 이력에서도 사유에 맞게 붙인다(이력의 refuse_reason)', async () => {
+    window.history.replaceState({}, '', '/chat')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([listed])
+      if (path === '/threads/t1') return json({ ...listed, messages: [
+        { role: 'user', text: '오늘 점심 메뉴 추천해줘' },
+        { role: 'assistant', text: '핸드북과 관련 없는 질문이라 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'out_of_domain' },
+        { role: 'user', text: '없는 정책을 물음' },
+        { role: 'assistant', text: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'no_evidence' },
+      ] })
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    const refused = (await screen.findByText('핸드북과 관련 없는 질문이라 답하지 않습니다.')).closest('article')
+    const lacking = screen.getByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.').closest('article')
+    expect(refused.textContent).not.toContain(HINT)
+    expect(lacking.textContent).toContain(HINT)
+    expect(screen.getAllByText(HINT)).toHaveLength(1)
   })
 
   it('검색 일시 오류 거절은 서버 문구가 이미 다시 시도를 말하므로 같은 안내를 겹치지 않는다', async () => {

@@ -16,6 +16,8 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
+from backend.graph.state import today_kst
+
 NO_EVIDENCE = "no_evidence"
 OUT_OF_PERIOD = "out_of_period"
 NONEXISTENT_ENTITY = "nonexistent_entity"
@@ -99,7 +101,7 @@ def check_rules(
         ev_years = [int(str(c.get("version_date") or "0000")[:4]) for c in cited if c.get("version_date")]
         fetched = [int(str(c.get("fetched_at") or "0000")[:4]) for c in pool if c.get("fetched_at")]
         first = min(ev_years) if ev_years else None
-        last = max([(today or date.today()).year, *fetched])
+        last = max([(today or today_kst()).year, *fetched])
         checks["question_years"] = years
         checks["evidence_first_year"] = first
         blob_years = _evidence_blob(pool)

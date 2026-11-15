@@ -403,12 +403,12 @@ OFF = {"parallel_intake": False, "brief_output": False, "max_research": 2, "judg
 
 MODEL_OFF = {"LLM_REASONING": "", "LLM_PROVIDER_SORT": "", "LLM_DEADLINE_S": "", "LLM_MAX_RETRIES": "", "LLM_TRACE_DETAIL": "", "LLM_JSON_REMINDER": "", "LLM_REASONING_BY_TASK": "", "GRAPH_SECTION_KEEPS_RESEARCH": "", "LLM_HEDGE_S": "", "GRAPH_ANSWER_WAIT_S": "", "GRAPH_ANSWER_BUDGET_S": "", "LLM_STRUCTURED": "", "GRAPH_JUDGE_QUERY": "", "EMBED_KEEPALIVE": "", "SEARCH_PARALLEL_SUBS": "",
              "GRAPH_KEEP_PRODUCT_NAME": "", "GRAPH_REQUERY_TERMS": "", 
-             "GRAPH_QUERY_BRANCHES": "",
+             "GRAPH_QUERY_TERMS": "", "GRAPH_QUERY_BRANCHES": "",
              "GRAPH_CITE_EXPAND": "", "GRAPH_CITE_MULTI": "", "GRAPH_TEAM_LAST": "", "GRAPH_KEEP_CITES": "", "GRAPH_SUB_RESEARCH": "", "GRAPH_PAGE_RESEARCH": "",
              "GRAPH_REQUERY_VOCAB": "", "GRAPH_UNKNOWN_NAME": "", "GRAPH_DECOMPOSE_CAP_S": "", "GRAPH_REFUSE_ON_NONE": "", "GRAPH_RESEARCH_SAME_PAGE": "",
-             "GRAPH_CITE_PHRASE": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
-             "GRAPH_INTRO_FILL": "", 
-             "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
+             "GRAPH_CITE_PHRASE": "", "GRAPH_HEADING_TERMS": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
+             "GRAPH_HEADING_MARK": "", "GRAPH_INTRO_FILL": "", 
+             "GRAPH_HEADING_HEADS": "", "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
              "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
             "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": "", "GRAPH_SPECULATE_EARLY_SEARCH": ""}
 
@@ -435,6 +435,8 @@ def test_switches_can_be_chosen_on_the_command_line():
     assert M.chosen_model_switches(_parse(["--grounding-quote"])) == {**MODEL_OFF, "GRAPH_GROUNDING_QUOTE": "1"}
     assert M.chosen_model_switches(_parse(["--drop-scoped-cites"])) == {**MODEL_OFF, "GRAPH_DROP_SCOPED_CITES": "1"}
     assert M.chosen_model_switches(_parse(["--intro-fill"])) == {**MODEL_OFF, "GRAPH_INTRO_FILL": "1"}
+    assert M.chosen_model_switches(_parse(["--heading-terms", "--heading-mark", "--heading-heads", "--query-terms"])) == {
+        **MODEL_OFF, "GRAPH_HEADING_TERMS": "1", "GRAPH_HEADING_MARK": "1", "GRAPH_HEADING_HEADS": "1", "GRAPH_QUERY_TERMS": "1"}
     assert M.chosen_model_switches(_parse(["--scope-note-refuse", "--cite-pick"])) == {
         **MODEL_OFF, "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
     assert M.chosen_model_switches(_parse(["--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first"])) == {

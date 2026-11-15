@@ -323,7 +323,7 @@ def test_graph_keeps_the_citation_when_the_previous_chunk_read_fails_or_is_missi
 def test_the_service_searches_offer_the_previous_chunk_reader():
     from backend.graph import service_profile as SP
 
-    assert set(SP.service_searches()) == {"page_search", "intro_search", "prev_chunk"}
+    assert set(SP.service_searches()) == {"page_search", "heading_search", "intro_search", "prev_chunk"}  # heading_search: 사전 등록 62.69
 
 
 def test_searcher_prev_chunk_reads_the_chunk_just_before_in_the_same_page_version():

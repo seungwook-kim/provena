@@ -100,7 +100,7 @@ flowchart LR
 | `chat-tool-guide` | 조건부 | 에이전트가 MCP 도구를 고르는 규칙 | 검색 노드가 도구를 고정 호출하지 않고 LLM이 도구를 고르게 할 때 쓴다 | |
 | `mail-templates` | 조건부 | 리콜 알림·업무시스템 웹훅 문구 | 리콜 알림·웹훅을 만들 때 쓴다 | |
 | `retrieval-slots` | 조건부 | 검색 결과 관련도 판정 기준 | 검색 평가를 사람 판정 외에 자동 판정으로도 할 때 쓴다 | |
-| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 결정 0101로 지운 검색어 용어표(`TERM_ROWS`)와는 별개로 남은 Skill이다 | |
+| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 첫 검색어에 붙는 검색어 용어표(`backend/graph/query_plan.py` `TERM_ROWS`, 결정 0101로 뺐다가 결정 0119로 되살림, `GRAPH_QUERY_TERMS`)와는 별개인 Skill이다 | |
 
 - `delegation`을 따로 둔 이유: 승인권자 질문(예: 외부 SaaS 3만 달러, 정확히 2.5만·5만 달러)은 금액 구간 경계 해석에서 갈린다. Skill이 있을 때와 없을 때 차이가 가장 잘 드러난다.
 - 근거 섹션은 PRD 5장 대표 질문과 개정 커밋에서 골랐다. 정답 섹션은 D1에 원문으로 확정한다. Skill을 쓸 때 원문 섹션을 다시 확인하고 페이지 id(`rule_seq`)와 제목 경로를 적는다. 구간 끝값 처리와 금액 수치는 원문 표기를 그대로 따른다.
@@ -553,7 +553,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
 | `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
-| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
+| `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`). 이어 묻는 질문을 완전한 질문으로 다시 썼을 때만 `understood_question`(다시 쓴 질문) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.
 
@@ -563,6 +563,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | (없음) | 답, 되묻기. 답이면 `attribution`이 붙고 되묻기에는 더 붙는 키가 없다 | `answer`, `clarify` |
 
 - `done.attribution`은 고정 값이다: `source`(`GitLab Handbook`), `license`(`CC BY-SA 4.0`), `license_url`, `modified`(`true`), `notice`(GitLab Inc.와 제휴·보증 관계가 없다는 문구).
+- `done.understood_question`(D-14, 2026-11-15): 같은 대화의 앞 질문이 있고 지금 질문이 이어 묻는 질문이라 그래프가 질문을 다시 썼을 때만 있다. 화면은 답 위에 "이렇게 이해했습니다: …"로 보인다. 새 대화의 첫 질문과 다시 쓰지 않은 질문에는 이 키가 없다. 앞 질문은 그 사용자의 그 대화 체크포인트 상태에 쌓인 것을 쓴다(요청 본문은 그대로이고 `/chat`이 체크포인트를 더 읽지 않는다). `GET /threads/{thread_id}`의 `messages`에서는 질문 글이 사용자가 친 글이고 다시 쓴 질문은 그 답 항목의 `understood_question`이다. 규칙은 `docs/specs/question-graph.md` '이어 묻기' 절.
 - `kind`, `as_of`는 그래프의 최종 상태에서 읽는다. 최종 상태를 읽지 못하면 두 값이 `null`일 수 있다.
 - `done`의 측정용 칸(숫자와 코드뿐이고 질문·프롬프트·답 내용은 담지 않는다. 끄는 스위치 없이 항상 켜져 있고, 기존 칸의 이름과 모양은 그대로다. 구현은 `backend/services/step_cost.py`):
   - `cost_by_step`: 단계 이름 -> `{calls, input_tokens, output_tokens, cost_usd, llm_s}`. 그래프 단계 행에는 `cache_read_tokens`, `cache_creation_tokens`(입력 토큰 중 프롬프트 캐시에서 읽은 몫과 새로 쓴 몫, `input_tokens` 안에 들어 있다. 캐시를 끄면 0)도 있고, `cost_usd`는 캐시 읽기를 입력 단가의 0.1배, 5분 보관 쓰기를 1.25배로 센 값이다. 단계 이름은 그래프 노드와 호출 표지를 `/`로 이은 것(`classify/classify`, `rewrite/rewrite`, `search/decompose`, `judge/judge`, `write_answer/answer`, `ground/grounding` 등)이고 질문 번역 LLM은 `translate_keywords`, `translate_sentence`다. `llm_s`는 그 단계 LLM 호출 시간의 합이라 호출이 겹치면 실제 대기보다 길 수 있다.

@@ -16,6 +16,9 @@
     측정용 칸(숫자와 코드만, 항상 켬, 기존 칸은 그대로): `cost_by_step`(단계별 calls·input_tokens·output_tokens·cost_usd·llm_s, 그래프 단계는 프롬프트 캐시 cache_read_tokens·cache_creation_tokens도), `cost_by_step_total_usd`(질문 번역 LLM 포함 합. `usage.cost_usd`는 번역을 뺀 그래프 합),
     `embed_tokens`·`embed_calls`·`embed_cost_usd`(Voyage `usage.total_tokens` 합과 환산 비용, 호출이 없으면 0), 거절·되묻기면 `refuse_stage`(그 결과를 쓴 그래프 노드)·`refuse_reason`(사유 코드).
   - 검색 색인이 적재되지 않았으면(`index_not_ready`) error 대신 안내 문구 token과 거절 done(`code = "no_results"`)으로 끝낸다. 원인은 로그에만 남긴다.
+- 이어 묻기(D-14, `docs/specs/question-graph.md`): 질문마다 그래프 입력에 `asked: [질문]`을 더한다. 그래프 상태의 `asked` 칸이 같은 thread(`<user_id>:<thread_id>`)의 체크포인트에 최근 질문을 쌓아,
+  둘째 질문부터 그래프가 앞 질문을 본다(체크포인트를 따로 읽지 않는다). 그래프가 질문을 다시 썼을 때만 `done.understood_question`이 온다(`backend/graph/stream.py`).
+  대화 이력(`messages`)의 질문 글은 사용자가 친 글이고, 다시 쓴 질문은 그 답 항목의 `understood_question`으로 준다. `CHAT_FOLLOWUP=0`이면 `asked`를 넘기지 않는다(기본 켬).
 - 기억 값과 질문 내용은 로그에 쓰지 않는다. 대화 내용, 검색 결과, 답은 Store에 넣지 않는다(State와 Store의 경계, `backend/memory/profile.py`).
 """
 from __future__ import annotations
@@ -147,6 +150,11 @@ def final_from_stream_enabled() -> bool:
     return (os.environ.get("CHAT_FINAL_FROM_STREAM") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def followup_enabled() -> bool:
+    """이어 묻기(D-14) 스위치 `CHAT_FOLLOWUP`. 기본 켬이고 0, false, no, off이면 끈다(그래프에 `asked`를 넘기지 않아 앞 질문이 쌓이지도 쓰이지도 않는다)."""
+    return (os.environ.get("CHAT_FOLLOWUP") or "").strip().lower() not in {"0", "false", "no", "off"}
+
+
 def _messages(graph: Any, internal: str) -> list[dict]:
     """체크포인트 이력에서 대화 이력(질문·답·근거)을 오래된 순으로 되살린다. 화면이 새로고침 뒤 대화를 다시 그릴 때 쓴다.
 
@@ -171,7 +179,10 @@ def _messages(graph: Any, internal: str) -> list[dict]:
                 continue
             last = steps[-1]
             values = last.values or {}
-            out.append({"role": "user", "text": values.get("question") or "", "timestamp": first.created_at})
+            # 이어 묻기(D-14)로 다시 쓴 질문이면 `question`이 다시 쓴 질문(`understood_question`)과 같다. 화면에는 사용자가 친 글을 보인다.
+            # 두 칸은 다음 질문까지 상태에 남으므로(다음 질문의 앞 질문으로 쓴다) `question`과 같을 때만 이 질문의 값이다
+            understood = values.get("understood_question") if values.get("understood_question") and values.get("understood_question") == values.get("question") else None
+            out.append({"role": "user", "text": (values.get("user_question") if understood else None) or values.get("question") or "", "timestamp": first.created_at})
             waiting = bool(last.next) and any(t.interrupts for t in last.tasks)
             if last.next and not waiting:
                 continue
@@ -187,7 +198,13 @@ def _messages(graph: Any, internal: str) -> list[dict]:
                 "citations": [{"id": c.get("chunk_id"), **{k: c.get(k) for k in CITATION_KEYS}, "text": c.get("text")}
                               for c in cites if isinstance(c, dict)],
                 "timestamp": last.created_at,
+                **({"understood_question": understood} if understood and not waiting else {}),
             })
+            if kind == "refuse":
+                # 거절 사유 코드(`/chat` done의 `refuse_reason`과 같은 규칙, `step_cost.refuse_meta`). 화면이 새로고침 뒤에도 사유에 맞는 안내만 붙이게 한다(H-34). 거절이 아니면 이 칸은 없다
+                from backend.graph.build import REFUSE_REASON_BY_MESSAGE
+
+                out[-1]["refuse_reason"] = step_cost.refuse_meta("", kind, values, REFUSE_REASON_BY_MESSAGE)["refuse_reason"]
         return out
     except Exception as exc:  # noqa: BLE001 - 이력을 못 읽어도 상세 조회는 이어 간다(이력만 빈다)
         log.warning("대화 이력을 읽지 못함: %s", type(exc).__name__)
@@ -257,6 +274,11 @@ def create_api_router(
         internal = internal_thread(user_id, thread_id)
         cfg = run_config("question", user_id=user_id, thread_id=internal, configurable={"thread_id": internal})
         graph_input = {"question": req.message, "user_id": user_id, "thread_id": internal, "as_of": req.as_of, "org": req.org}
+        # 이어 묻기(D-14): 이 대화의 질문 기록에 지금 질문을 더한다. 앞 질문은 같은 thread의 체크포인트에 쌓여 있다(따로 읽지 않는다).
+        # 스위치가 꺼져 있어도 기록은 쌓고 `followup_off`로 다시 쓰기만 건너뛴다: 기록을 멈추면 이미 쌓인 대화에서 마지막 기록을 지금 질문으로 잘못 보고
+        # 이어 묻기가 계속 돌았고, 다시 켰을 때는 꺼진 동안의 질문이 빠진 기록을 썼다. 질문마다 넘겨 체크포인트에 남은 앞 값이 쓰이지 않게 한다.
+        graph_input["asked"] = [req.message]
+        graph_input["followup_off"] = not followup_enabled()
         started = time.perf_counter()
         meter, meter_token = step_cost.begin()   # 요청 단위 집계(단계별 비용, Voyage 토큰). 숫자만 모으고 항상 켜 둔다
         text: list[str] = []
