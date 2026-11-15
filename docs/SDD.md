@@ -100,7 +100,7 @@ flowchart LR
 | `chat-tool-guide` | 조건부 | 에이전트가 MCP 도구를 고르는 규칙 | 검색 노드가 도구를 고정 호출하지 않고 LLM이 도구를 고르게 할 때 쓴다 | |
 | `mail-templates` | 조건부 | 리콜 알림·업무시스템 웹훅 문구 | 리콜 알림·웹훅을 만들 때 쓴다 | |
 | `retrieval-slots` | 조건부 | 검색 결과 관련도 판정 기준 | 검색 평가를 사람 판정 외에 자동 판정으로도 할 때 쓴다 | |
-| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 결정 0101로 지운 검색어 용어표(`TERM_ROWS`)와는 별개로 남은 Skill이다 | |
+| `search-terms` | 조건부(기본 꺼짐) | 근거 판정이 재검색어를 쓸 때 | 일상 표현을 핸드북 영어 용어로 바꾼다. 코드 스위치 `GRAPH_REQUERY_TERMS=1`일 때만 붙는다(`backend/graph/build.py:346,909`, `backend/services/skills.py:14`). 첫 검색어에 붙는 검색어 용어표(`backend/graph/query_plan.py` `TERM_ROWS`, 결정 0101로 뺐다가 결정 0119로 되살림, `GRAPH_QUERY_TERMS`)와는 별개인 Skill이다 | |
 
 - `delegation`을 따로 둔 이유: 승인권자 질문(예: 외부 SaaS 3만 달러, 정확히 2.5만·5만 달러)은 금액 구간 경계 해석에서 갈린다. Skill이 있을 때와 없을 때 차이가 가장 잘 드러난다.
 - 근거 섹션은 PRD 5장 대표 질문과 개정 커밋에서 골랐다. 정답 섹션은 D1에 원문으로 확정한다. Skill을 쓸 때 원문 섹션을 다시 확인하고 페이지 id(`rule_seq`)와 제목 경로를 적는다. 구간 끝값 처리와 금액 수치는 원문 표기를 그대로 따른다.

@@ -185,3 +185,39 @@ def test_admin_verification_reset_unavailable_is_korean(monkeypatch):
     _app, owner = build(monkeypatch, store)
     request_id = owner.get("/admin/signup-requests").json()["requests"][0]["request_id"]
     assert_korean_error(post(owner, f"/admin/signup-requests/by-id/{request_id}/reset-verification"), 409)
+
+
+# ---------- 저장소가 멈췄을 때 인증번호 확인·재발송은 503(팀장 수정, 놓친 것 N-3) ----------
+class VerifyStoreDown(MemoryAuthStore):
+    def verify_signup_code(self, *args, **kwargs):
+        raise RuntimeError("test store down")
+
+
+class VerificationReadDown(MemoryAuthStore):
+    def get_signup_verification(self, login_id):
+        raise RuntimeError("test store down")
+
+
+def test_verify_code_storage_failure_is_503_and_korean(monkeypatch):
+    app, _owner = build(monkeypatch, VerifyStoreDown())
+    response = post(TestClient(app, raise_server_exceptions=False), "/auth/signup/verify", {"login_id": EMAIL, "code": "123456"})
+    assert_korean_error(response, 503)
+    assert response.json()["detail"] == "이메일 인증 저장소를 사용할 수 없습니다."
+
+
+def test_resend_storage_failure_is_503_and_korean(monkeypatch):
+    app, _owner = build(monkeypatch, VerificationReadDown())
+    response = post(TestClient(app, raise_server_exceptions=False), "/auth/signup/resend", {"login_id": EMAIL})
+    assert_korean_error(response, 503)
+    assert response.json()["detail"] == "이메일 인증 저장소를 사용할 수 없습니다."
+
+
+def test_missing_signup_request_says_signup_request_not_user(monkeypatch):
+    """가입 신청 경로 세 곳의 없는 신청 404는 "가입 신청을 찾을 수 없습니다."이다(팀장 수정, 놓친 것 N-6). 사용자 계정 경로는 그대로다."""
+    _app, owner = build(monkeypatch, MemoryAuthStore())
+    for path in ("/admin/signup-requests/nobody@example.com/approve", "/admin/signup-requests/by-id/999999/approve",
+                 "/admin/signup-requests/by-id/999999/reset-verification"):
+        response = post(owner, path)
+        assert response.status_code == 404 and response.json()["detail"] == "가입 신청을 찾을 수 없습니다.", (path, response.text)
+    response = post(owner, "/admin/users/no-such-id/promote")
+    assert response.status_code == 404 and response.json()["detail"] == "사용자를 찾을 수 없습니다."

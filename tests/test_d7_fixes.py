@@ -1,4 +1,4 @@
-"""남은 문항 수정안 시험(기본 꺼짐). SN `GRAPH_SCOPE_NOTE_REFUSE`, CP `GRAPH_CITE_PICK`, R3를 첫 검색에만 붙이기.
+"""남은 문항 수정안 시험(기본 꺼짐). HT `GRAPH_HEADING_HEADS`, SN `GRAPH_SCOPE_NOTE_REFUSE`, CP `GRAPH_CITE_PICK`, R3를 첫 검색에만 붙이기.
 가짜 모델과 가짜 검색기만 쓴다."""
 from __future__ import annotations
 
@@ -6,14 +6,16 @@ import pytest
 from qgraph_fakes import j
 
 from backend.graph import answer_fixes as F
-from backend.graph.build import build_graph
+from backend.graph import query_plan as QP
+from backend.graph.build import HEADS_SCAN, build_graph
 from backend.graph.multi import build_multi_graph
 from test_answer_fixes_graph import ESC, IMOC, PARTIAL, Q_ESC, Q_REVIEW, REVIEW, SUBS, cite, llm, mk, run
+from test_remaining_fixes import Q38, VENDOR, _heading_llm
 
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in ("GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_CITE_PICK", "GRAPH_INTRO_FILL", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_CITE_CONSENSUS",
+    for name in ("GRAPH_HEADING_HEADS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_MARK", "GRAPH_QUERY_TERMS", "GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_CITE_PICK", "GRAPH_INTRO_FILL", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_CITE_CONSENSUS",
                  "GRAPH_POINTER_REFUSE", "GRAPH_SPECULATE_FIRST", "GRAPH_PARALLEL_INTAKE", "GRAPH_SKIP_FIRST_REWRITE", "GRAPH_SECTION_KEEPS_RESEARCH", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PHRASE",
                  "GRAPH_QUERY_BRANCHES", "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_REFUSE_ON_NONE", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S",
                  "GRAPH_CITE_EXPAND", "GRAPH_CITE_MULTI", "GRAPH_TEAM_LAST", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_STOP_STALLED_SEARCH",
@@ -25,6 +27,70 @@ def _clean(monkeypatch):
 
 def graph(multi, fn, m, **kw):
     return build_multi_graph(fn, llm=m, **kw) if multi else build_graph(fn, llm=m, **kw)
+
+
+# ---------- HT(사전 등록 62.69) ----------
+NEW_REQ = mk("Click +New Request on the top menu.", title="Zip End Users Guide", seq=71010, article="Zip - Getting Started > How to initiate a new request?")
+TPRM_A = mk("A TPRM assessment is triggered for new vendors.", title="Third Party Risk Management", seq=71030, article="What Triggers a TPRM Assessment?")
+TPRM_B = mk("The table defines TPRM procedures by data class.", title="Third Party Risk Management", seq=71030, article="Vendor Selection > TPRM Assessment Requirements")
+
+
+def test_heading_heads_follow_the_matching_rows():
+    assert QP.heading_heads([Q38]) == ["new request", "tprm assessment"]
+    assert QP.heading_heads(["외부 SaaS 벤더 보안 평가(TPRM)는 얼마 동안 유효해?"]) == ["tprm assessment"]
+    assert QP.heading_heads(["코드 리뷰 첫 응답은 며칠 안에 해야 해?"]) == [] and QP.heading_heads([]) == []
+    assert all(r.heads for r in QP.TERM_ROWS)
+
+
+def _heads_fake(seen):
+    table = {"new vendor": [VENDOR], "new request": [NEW_REQ], "tprm assessment": [TPRM_A, TPRM_B]}
+
+    def fn(phrase, org, as_of, n):
+        seen.append((phrase, n))
+        return table.get(phrase, [])[:n]
+    return fn
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_heading_heads_add_the_head_chunks_and_skip_the_context(monkeypatch, multi):
+    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS"):
+        monkeypatch.setenv(name, "1")
+    seen: list = []
+    out = graph(multi, lambda q: [REVIEW, TPRM_A], _heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
+        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
+    assert sorted(p for p, _ in seen) == sorted(["purchase request", "new vendor", "third party risk management assessment", "new request", "tprm assessment"])
+    assert all(n == HEADS_SCAN for _, n in seen)
+    ids = [c["chunk_id"] for c in out["chunks"]]
+    assert ids[:2] == [REVIEW.chunk_id, TPRM_A.chunk_id]
+    assert ids[2:5] == [VENDOR.chunk_id, NEW_REQ.chunk_id, TPRM_B.chunk_id]  # 구 순서대로. TPRM_A는 이미 문맥에 있어 다음 청크를 쓴다
+    assert ids.count(TPRM_A.chunk_id) == 1
+    assert out["search_stats"]["heading_added"] == [VENDOR.chunk_id, NEW_REQ.chunk_id, TPRM_B.chunk_id]
+
+
+def test_heading_heads_skip_a_chunk_an_earlier_phrase_took(monkeypatch):
+    """앞 구가 고른 청크는 뒤 구에서 건너뛰고 그 구의 다음 청크를 쓴다(동시에 불러도 처리는 구 순서)."""
+    for name in ("GRAPH_HEADING_TERMS", "GRAPH_QUERY_TERMS", "GRAPH_HEADING_HEADS"):
+        monkeypatch.setenv(name, "1")
+    table = {"new vendor": [VENDOR], "new request": [VENDOR, NEW_REQ]}
+    out = build_graph(lambda q: [REVIEW], llm=_heading_llm(), decompose=True, heading_search=lambda p, o, a, n: table.get(p, [])[:n]).invoke(
+        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
+    assert [c["chunk_id"] for c in out["chunks"]][1:] == [VENDOR.chunk_id, NEW_REQ.chunk_id]
+
+
+def test_heading_heads_off_keeps_h(monkeypatch):
+    monkeypatch.setenv("GRAPH_HEADING_TERMS", "1")
+    monkeypatch.setenv("GRAPH_QUERY_TERMS", "1")
+    seen: list = []
+    out = build_graph(lambda q: [REVIEW, TPRM_A], llm=_heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
+        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
+    assert sorted(p for p, _ in seen) == sorted(["purchase request", "new vendor", "third party risk management assessment"]) and all(n == 1 for _, n in seen)
+    assert NEW_REQ.chunk_id not in [c["chunk_id"] for c in out["chunks"]]
+    monkeypatch.delenv("GRAPH_HEADING_TERMS")
+    monkeypatch.setenv("GRAPH_HEADING_HEADS", "1")
+    seen.clear()
+    build_graph(lambda q: [REVIEW], llm=_heading_llm(), decompose=True, heading_search=_heads_fake(seen)).invoke(
+        {"question": Q38, "user_id": "u1", "thread_id": "t1", "as_of": "2025-06-01"})
+    assert seen == []  # H가 꺼져 있으면 HT도 없다
 
 
 # ---------- SN ----------

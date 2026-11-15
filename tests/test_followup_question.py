@@ -13,7 +13,7 @@ from qgraph_fakes import ScriptedLLM, j, normal_llm
 
 from backend.graph.build import build_graph
 from backend.graph.multi import build_multi_graph
-from backend.graph.state import MAX_PREV_QUESTIONS, keep_recent_questions, previous_questions
+from backend.graph.state import MAX_PREV_QUESTIONS, MAX_UNDERSTOOD, keep_recent_questions, previous_questions, remember_understood
 from backend.graph.stream import stream_events
 from backend.prompts import question as P
 from backend.services import demo_replay as dr
@@ -230,6 +230,63 @@ def test_previous_questions_drop_the_current_one_and_prefer_the_understood_quest
     assert previous_questions({**rewritten, "understood_question": None}) == [Q1, FOLLOW]
 
 
+
+# ---------- 이어 묻기 사이에 다른 질문이 낀 대화(팀장 수정, 놓친 것 N-1) ----------
+SAAS = "외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인자와 재무 승인자는 누구인가요?"
+SAAS_5 = "5만 달러면요?"
+SAAS_5_FULL = "외부 SaaS 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?"
+LUNCH = "오늘 점심 메뉴 추천해줘"
+SAAS_10 = "10만 달러는요?"
+
+
+def _talk(g, thread, *turns):
+    """같은 대화에 (질문, 추가 입력) 차례로 보내고 done 이벤트 목록을 돌려준다."""
+    base = {"user_id": "u1", "thread_id": thread, "as_of": AS_OF}
+    return [list(stream_events(g, {**base, "question": q, "asked": [q], **extra}, thread_id=thread))[-1] for q, extra in turns]
+
+
+@pytest.mark.parametrize("build", [build_graph, build_multi_graph], ids=["single", "multi"])
+def test_rewritten_question_stays_after_an_unrelated_question(build):
+    """넷째 질문의 앞 질문에는 둘째 질문의 다시 쓴 글이 들어간다(그 사이 셋째 질문은 이어 묻기가 아니었다)."""
+    llm = followup_llm([j(followup=True, question=SAAS_5_FULL), j(followup=False, question=None), j(followup=False, question=None)])
+    g = build(fake_search, InMemorySaver(), llm=llm, decompose=False)
+    _talk(g, "n1", (SAAS, {}), (SAAS_5, {}), (LUNCH, {}), (SAAS_10, {}))
+    assert asked(llm, TASK) == [P.followup_user([SAAS], SAAS_5), P.followup_user([SAAS, SAAS_5_FULL], LUNCH), P.followup_user([SAAS_5_FULL, LUNCH], SAAS_10)]
+    state = g.get_state({"configurable": {"thread_id": "n1"}}).values
+    assert state["understood_by_asked"] == {SAAS_5: SAAS_5_FULL}   # 다시 쓰지 않은 질문은 표를 건드리지 않는다
+
+
+def test_rewritten_question_stays_across_a_question_asked_with_the_switch_off():
+    """끈 상태(`followup_off`)로 받은 질문 뒤 다시 켠 이어 묻기도 앞서 다시 쓴 글을 앞 질문으로 본다."""
+    llm = followup_llm([j(followup=True, question=SAAS_5_FULL), j(followup=False, question=None)])
+    g = build_graph(fake_search, InMemorySaver(), llm=llm, decompose=False)
+    _talk(g, "n2", (SAAS, {}), (SAAS_5, {}), (LUNCH, {"followup_off": True}), (SAAS_10, {"followup_off": False}))
+    assert llm.count(TASK) == 2   # 끈 질문은 다시 쓰기를 부르지 않는다
+    assert asked(llm, TASK)[-1] == P.followup_user([SAAS_5_FULL, LUNCH], SAAS_10)
+
+
+@pytest.mark.parametrize("reply", ["10만 달러면요?", "그럼 10만 달러는요?", "10만 달러는?"])
+def test_reply_that_only_changes_particles_is_dropped(reply):
+    llm = followup_llm(j(followup=True, question=reply))
+    g = build_graph(fake_search, InMemorySaver(), llm=llm, decompose=False)
+    *_, done = _talk(g, "n3", (SAAS, {}), (SAAS_10, {}))
+    assert done.type == "done" and "understood_question" not in done.data
+    state = g.get_state({"configurable": {"thread_id": "n3"}}).values
+    assert state["question"] == SAAS_10 and not state.get("understood_by_asked")
+    assert asked(llm, "classify")[-1] == P.classify_user(SAAS_10, {})
+    assert P.followup_question({"followup": True, "question": "외부 SaaS 계약 금액이 10만 달러라면 승인자는 누구인가요?"}, SAAS_10) == "외부 SaaS 계약 금액이 10만 달러라면 승인자는 누구인가요?"   # 채운 말이 있으면 쓴다
+
+
+def test_understood_table_keeps_the_last_three_lines():
+    table: dict = {}
+    for i in range(5):
+        table = remember_understood(table, f"질문{i}", f"다시 쓴 질문{i}")
+    assert list(table) == ["질문2", "질문3", "질문4"] and MAX_UNDERSTOOD == 3
+    table = remember_understood(table, "질문2", "새로 쓴 질문2")   # 같은 친 글은 새 줄로 바꿔 맨 뒤로
+    assert list(table.items()) == [("질문3", "다시 쓴 질문3"), ("질문4", "다시 쓴 질문4"), ("질문2", "새로 쓴 질문2")]
+    assert remember_understood("깨진 값", "가", "나") == {"가": "나"} and remember_understood({1: "x", "a": None, "b": "c"}, "가", "나") == {"b": "c", "가": "나"}
+    assert previous_questions({"asked": ["질문3", "질문2", "지금"], "understood_by_asked": table}) == ["다시 쓴 질문3", "새로 쓴 질문2"]
+
 # ---------- 스트림 ----------
 @pytest.mark.parametrize("build", [build_graph, build_multi_graph], ids=["single", "multi"])
 def test_stream_done_has_understood_question_only_when_rewritten(build):
@@ -409,3 +466,32 @@ def test_switch_off_mid_conversation_stops_rewriting_even_with_history(monkeypat
         ask(c, "넷째 질문입니다", "t1", as_of=AS_OF)
         assert llm.count(TASK) == 2
         assert "셋째 질문입니다" in asked(llm, TASK)[-1]
+
+
+# ---------- 리뷰 보완: 새로 들어온 글자로 재기, 다시 쓰지 않은 같은 글의 옛 기록 ----------
+@pytest.mark.parametrize("original, rewritten", [
+    ("그건 누가 승인해?", "CUD 계약은 누가 승인해?"),
+    ("그 경우 승인자는 누구인가요?", "CUD 계약의 승인자는 누구인가요?"),
+    ("거기서는 며칠 안에 해야 해?", "GitLab에서는 며칠 안에 해야 해?"),
+    ("그럼 S2는 며칠 안에 고쳐야 해?", "S2 취약점은 며칠 안에 고쳐야 해?"),
+])
+def test_rewrite_that_replaces_a_pointer_word_is_kept(original, rewritten):
+    """지시어를 대상으로 바꾼 다시 쓰기는 길이가 거의 같아도 새로 들어온 글자가 있어 쓴다."""
+    assert P.followup_new_letters(original, rewritten) >= P.FOLLOWUP_MIN_GAIN
+    assert P.followup_question({"followup": True, "question": rewritten}, original) == rewritten
+
+
+@pytest.mark.parametrize("original, rewritten", [("10만 달러는요?", "10만 달러면요?"), ("10만 달러는요?", "그럼 10만 달러는요?"), ("10만 달러는요?", "10만 달러는?")])
+def test_rewrite_that_only_changes_particles_has_too_few_new_letters(original, rewritten):
+    assert P.followup_new_letters(original, rewritten) < P.FOLLOWUP_MIN_GAIN
+    assert P.followup_question({"followup": True, "question": rewritten}, original) is None
+
+
+def test_same_text_not_rewritten_the_second_time_drops_the_old_line():
+    """같은 글을 두 번 쳤는데 둘째는 다시 쓰지 않았으면, 다음 질문은 그 글을 옛 다시 쓴 글이 아니라 친 글로 본다."""
+    llm = followup_llm([j(followup=True, question=SAAS_5_FULL), j(followup=False, question=None), j(followup=False, question=None),
+                        j(followup=False, question=None)])
+    g = build_graph(fake_search, InMemorySaver(), llm=llm, decompose=False)
+    _talk(g, "n4", (SAAS, {}), (SAAS_5, {}), (LUNCH, {}), (SAAS_5, {}), (SAAS_10, {}))
+    assert asked(llm, TASK)[-1] == P.followup_user([LUNCH, SAAS_5], SAAS_10)   # 둘째 SAAS_5는 친 글 그대로
+    assert g.get_state({"configurable": {"thread_id": "n4"}}).values["understood_by_asked"] == {}

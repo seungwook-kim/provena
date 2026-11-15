@@ -216,7 +216,7 @@
 | 항목 | 규칙 |
 |---|---|
 | 앞 질문이 오는 곳 | `/chat`이 질문마다 그래프 입력에 `asked: [질문]`을 더한다(`backend/api/routes.py`). 상태의 `asked` 칸에는 합치기 규칙(`backend/graph/state.py`의 `keep_recent_questions`)이 있어, 같은 thread의 체크포인트에 최근 질문 3개(지금 질문과 앞 질문 2개)가 쌓인다. 그래프가 실행을 시작하며 체크포인트를 열 때 같이 오므로 `/chat`은 앞 질문을 찾으려고 체크포인트를 따로 읽지 않는다(사전 등록 62.16의 왕복 줄이기 그대로). 체크포인트 thread 이름은 `<user_id>:<thread_id>`라 같은 사용자의 같은 대화 질문만 쌓인다 |
-| 넘기는 양 | 직전 질문과 그 앞 질문까지 최대 2개(`state.MAX_PREV_QUESTIONS`, `state.previous_questions`). 직전 질문을 다시 썼으면 다시 쓴 쪽을 넘긴다(혼자서 뜻이 통해 이어 묻기가 여러 번 이어져도 대상이 남는다). 프롬프트에는 질문마다 앞 500자만 넣는다(`prompts.question.PREV_QUESTION_CHARS`). 앞 답은 넘기지 않는다: 답에는 검색 원문에서 온 글이 섞여 인젝션 표면과 토큰이 늘고, 빠진 주어·대상은 질문에 있다 |
+| 넘기는 양 | 직전 질문과 그 앞 질문까지 최대 2개(`state.MAX_PREV_QUESTIONS`, `state.previous_questions`). 앞 질문마다 이어 묻기로 다시 쓴 기록(`understood_by_asked`, 친 글 -> 다시 쓴 글, 최근 3줄, `state.remember_understood`)이 있으면 다시 쓴 쪽을 넘긴다(혼자서 뜻이 통해, 이어 묻기 사이에 다른 질문이 끼어도 대상이 남는다). 다시 쓰지 않은 질문은 같은 글의 옛 줄을 지운다(`state.forget_understood`). 다시 쓴 질문에 새로 들어온 글자·숫자(공백·문장부호 제외, 원 질문과 맞대어 넣기·바꾸기 쪽, `prompts.question.followup_new_letters`)가 4개 미만이면(조사·접속사만 바뀐 응답) 쓰지 않는다(`FOLLOWUP_MIN_GAIN`). 프롬프트에는 질문마다 앞 500자만 넣는다(`prompts.question.PREV_QUESTION_CHARS`). 앞 답은 넘기지 않는다: 답에는 검색 원문에서 온 글이 섞여 인젝션 표면과 토큰이 늘고, 빠진 주어·대상은 질문에 있다 |
 | `asked`에 쌓이는 것 | `/chat`이 그래프에 넘긴 질문(사용자가 친 글). 바로 앞과 같은 글(다시 시도)은 다시 쌓지 않는다. 승인 대기 중이라 409로 막힌 질문은 그래프에 가지 않아 쌓이지 않는다. `asked`를 넘기지 않는 실행(평가 실행기, 그래프 직접 호출)의 상태에는 빈 목록 `asked: []`만 생긴다 |
 | 노드 | `followup`(`load_memory` 다음, `classify` 앞). 앞 질문이 있을 때만 지난다(`load_memory`의 조건 분기가 `previous_questions`를 본다). 없으면 지금처럼 `load_memory -> classify`다 |
 | LLM 호출 | 1회, `backend/services/llm.py`로 받은 같은 모델. 프롬프트 `backend/prompts/question.py`의 `FOLLOWUP_SYSTEM`(표지 `[[task:rewrite_followup]]`), 입력 `followup_user`. 출력 JSON `{"followup": true 또는 false, "question": "..."}`. 형식이 깨져도 다시 묻지 않는다(앞 단계라 지연을 늘리지 않는다) |
@@ -230,12 +230,12 @@
 | 멀티 그래프 | Supervisor가 첫 방문에서 `load_memory` 다음에 같은 분기와 같은 노드를 부른다(`backend/graph/multi.py`). 하위 에이전트는 이미 `question`을 읽으므로 `reads`는 그대로다 |
 | 키 없는 데모(녹화 재생) | 녹화한 질문은 대화의 첫 질문이라 이 호출이 없다. 같은 대화의 둘째 질문부터는 녹화에 없는 호출이라 재생 모델이 고정 문장을 돌려주고(JSON 아님) 원 질문으로 그대로 간다 |
 | 비용·단계 이름 | 단계 이름은 노드와 표지에서 자동으로 `followup/rewrite_followup`이 된다(`llm_trace.step_of`). `done.cost_by_step`과 Langfuse에 그 이름으로 잡힌다. 추론 수준은 기본값(단계별 목록에 넣지 않았다) |
-| 끄는 법 | 환경 변수 `CHAT_FOLLOWUP=0`(기본 켬). 끄면 `/chat`이 `asked`를 넘기지 않아 앞 질문이 쌓이지도 쓰이지도 않는다 |
+| 끄는 법 | 환경 변수 `CHAT_FOLLOWUP=0`(기본 켬). 꺼도 `/chat`은 `asked`를 넘겨 질문 기록을 쌓고(다시 켰을 때 꺼진 동안의 질문이 빠지지 않게), 질문마다 `followup_off`를 넘긴다. 그래프는 `followup_off`면 `followup`을 지나지 않는다(`backend/api/routes.py`, `backend/graph/build.py`) |
 
 **한계**
-- 대화의 둘째 질문부터 LLM 호출 1회가 늘어난다(이어 묻기가 아닌 질문도). 응답 시간과 비용은 재지 않았다. DB 왕복은 늘지 않는다.
+- 대화의 둘째 질문부터 LLM 호출 1회가 늘어난다(이어 묻기가 아닌 질문도). 실제 모델 켬·끔 비교에서 같은 대화의 이어 묻기가 아닌 둘째 질문은 켬이 약 2초 느렸다(7.1·7.8초 대 5.7·5.4초, `docs/pr-notes/PR-162.md` 8절, 로컬 값). 비용은 따로 재지 않았다. DB 왕복은 늘지 않는다.
 - 이 기능을 넣기 전에 만든 대화는 `asked`가 비어 있어, 넣은 뒤 첫 질문은 앞 질문 없이 처리되고 그다음 질문부터 이어진다.
-- 다시 쓴 질문의 정확도는 실제 모델로 재지 않았다(가짜 모델 시험만 했다).
+- 다시 쓴 질문의 정확도는 실제 모델 켬·끔 비교 한 번(이어 묻는 질문 5개 x 2회)으로만 보았다: 맞는 답이 켬 10회 중 10회, 끔 10회 중 2회(`docs/pr-notes/PR-162.md` 8절). 운영에서는 재지 않았다.
 - 지시 문장 검사는 규칙 목록이라 목록에 없는 말투는 놓친다(`backend/graph/untrusted.py` 한계와 같다). 앞 질문은 같은 사용자가 같은 대화에서 친 글이다.
 
 **AC (시험 `tests/test_followup_question.py`)**

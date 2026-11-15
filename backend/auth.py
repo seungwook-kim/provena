@@ -1113,7 +1113,10 @@ def create_auth_router(
         verify = getattr(store, "verify_signup_code", None)
         if not callable(verify):
             raise HTTPException(status_code=503, detail="이메일 인증 저장소를 사용할 수 없습니다.")
-        result = verify(login_id, _verification_hash(login_id, payload.code), datetime.now(timezone.utc), EMAIL_VERIFICATION_MAX_ATTEMPTS)
+        try:
+            result = verify(login_id, _verification_hash(login_id, payload.code), datetime.now(timezone.utc), EMAIL_VERIFICATION_MAX_ATTEMPTS)
+        except Exception:   # 저장소 오류(DB 멈춤 등)는 500이 아니라 경로 명세대로 503
+            raise HTTPException(status_code=503, detail="이메일 인증 저장소를 사용할 수 없습니다.") from None
         if result in {"verified", "already_verified"}:
             return {"status": "verified"}
         if result == "expired":
@@ -1133,7 +1136,10 @@ def create_auth_router(
         login_id = _normalise_signup_login(payload.login_id)
         if not EMAIL_RE.fullmatch(login_id):
             raise HTTPException(status_code=422, detail="이메일 형식을 확인해 주세요.")
-        row = getattr(store, "get_signup_verification", lambda _login_id: None)(login_id)
+        try:
+            row = getattr(store, "get_signup_verification", lambda _login_id: None)(login_id)
+        except Exception:   # 저장소 오류(DB 멈춤 등)는 500이 아니라 경로 명세대로 503
+            raise HTTPException(status_code=503, detail="이메일 인증 저장소를 사용할 수 없습니다.") from None
         if (not row or row.get("status") != "pending"
                 or not row.get("email_verification_required")
                 or row.get("email_verified_at") is not None):
