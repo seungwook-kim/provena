@@ -22,6 +22,103 @@ C = "c" * 16
 D = "d" * 16
 
 
+# ---------- A1 ----------
+def test_value_keys_normalize_words_and_units():
+    assert ("7", "day") in F.value_keys("must be fixed within seven days")
+    assert ("2", "day") in F.value_keys("review within 2 business days")
+    assert ("30", "%") in F.value_keys("about 30 percent")
+
+
+def test_expand_adds_same_value_chunk_from_another_page():
+    cited = [ch(A, "Merge requests should receive a review response within 2 business days for team members.")]
+    ctx = [cited[0], ch(B, "The review response SLO for merge requests is 2 business days for team members.", title="Code Review"),
+           ch(C, "Incidents are paged within 15 minutes.")]
+    ans, out = F.expand_citations(f"리뷰는 2영업일 안에 한다 [{A}].", cited, ctx)
+    assert [c["chunk_id"] for c in out] == [A, B]
+    assert f"[{A}][{B}]" in ans
+
+
+def test_expand_needs_a_shared_value_and_overlap():
+    cited = [ch(A, "Merge requests should receive a review response within 2 business days.")]
+    no_value = ch(B, "Merge requests should receive a review response quickly from reviewers.")
+    other_value = ch(C, "Merge requests should receive a review response within 5 business days.")
+    low_overlap = ch(D, "Laptops are shipped in 2 days from the vendor warehouse after the order.")
+    ans, out = F.expand_citations(f"x [{A}]", cited, [cited[0], no_value, other_value, low_overlap])
+    assert out == cited and ans == f"x [{A}]"
+
+
+def test_expand_respects_the_cap_and_max_add():
+    body = "Merge requests should receive a review response within 2 business days for team members."
+    cited = [ch(A, body)]
+    ctx = [ch(x * 16, body) for x in "bcdef"]
+    _, out = F.expand_citations(f"x [{A}]", cited, ctx)
+    assert len(out) == 1 + F.MAX_ADD
+    _, out = F.expand_citations("x", [ch(x * 16, body) for x in "1234"], ctx, cap=4)
+    assert len(out) == 4  # 이미 상한이면 더하지 않는다
+
+
+def test_expand_compares_the_lines_that_carry_the_value_not_the_whole_chunk():
+    """표의 열 이름이 되풀이되어 청크 전체 단어는 많이 겹쳐도, 같은 값(1 year)이 다른 대상의 줄에 있으면 더하지 않는다."""
+    row = "Record: {} | Retention Requirement: {} | Disposal Requirement: Secure Deletion"
+    cited = [ch(A, "\n".join([row.format("Access request records", "2 years"), row.format("Production audit logs", "1 year"),
+                              row.format("System access reviews", "3 months")]))]
+    other_rows = ch(B, "\n".join([row.format("Job roles and responsibilities", "1 year"), row.format("Personnel files", "5 years"),
+                                  row.format("Meeting notes", "6 months")]))
+    other_page = ch(C, "Backups of customer databases are kept for 1 year minimum.\nBackups of other databases are kept 90 days.", title="Logging")
+    same_fact = ch(D, "Production audit logs are retained for 1 year.", title="Audit")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], other_rows, other_page, same_fact])
+    assert [c["chunk_id"] for c in out] == [A, D]
+
+
+def test_expand_ignores_the_head_copied_from_the_cited_chunk():
+    """앞 청크 끝을 복사한 머리(청킹 겹침)에만 같은 줄이 있는 다음 청크는 더하지 않는다. 자기 본문에 있으면 더한다."""
+    tail = "Record: Firewall configuration artifacts | Retention Requirement: 1 year"
+    cited = [{**ch(A, "Record: Production audit logs | Retention Requirement: 1 year\n" + tail), "rule_seq": 1}]
+    nxt = {**ch(B, tail[8:] + "\nRecord: Risk assessment report | Retention Requirement: 2 years"), "rule_seq": 1}
+    other_page = {**nxt, "chunk_id": C, "rule_seq": 2, "text": "Other\n" + tail}
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], nxt, other_page])
+    assert [c["chunk_id"] for c in out] == [A, C]
+
+
+def test_expand_skips_a_short_matching_line_inside_a_long_chunk_of_another_page():
+    """값과 단위 단어만 같은 다른 팀 절의 긴 청크는, 값이 든 줄 하나의 겹침이 넘어도 청크 전체 겹침이 모자라 더하지 않는다(운영 v2 8번)."""
+    cited = [ch(A, "The review-response SLO for merge requests authored by team members is 2 business days. "
+                   "Reviewers should notify the author within 36 hours if they cannot review.")]
+    long_other = ch(B, "\n".join([
+        "The usual code-review turnaround is two business days.",
+        "The release manager schedules the production window for every release candidate.",
+        "Approval from the platform owner is required before the release branch is merged.",
+        "Hotfix releases follow the emergency procedure and need a post-release summary.",
+        "Rollback plans are attached to the deployment ticket by the release engineer.",
+        "Deployment freezes are announced by the operations group at the start of a quarter.",
+    ]), title="Release", head="Release & Deploy > Merge Requests")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], long_other])
+    assert out == cited
+    assert F.pick_extra(cited, [cited[0], long_other]) == []
+
+
+def test_expand_skips_a_table_line_with_the_same_value_but_another_subject_in_a_long_chunk():
+    """표 줄에서 값(30 days)만 같고 대상이 다른 줄이 든 다른 페이지 청크는 더하지 않는다. 같은 대상의 짧은 청크는 그대로 더한다."""
+    cited = [ch(A, "Vulnerability SLO: critical findings are remediated within 30 days of the case investigation start.")]
+    other_table = ch(B, "\n".join([
+        "Phase: Pre-Release | Activity: Security review of the design | Target: before code freeze",
+        "Phase: Release | Activity: Sign off by the release manager | Target: release day",
+        "Phase: Post-Release | Activity: Monitoring review | Target: 30 days from release",
+        "Phase: Retirement | Activity: Archive artifacts and notify customers | Target: end of life",
+    ]), title="Secure Development", head="Secure Development > Release Phases")
+    same_fact = ch(C, "Critical findings are remediated within 30 days of the case investigation start for every product.", title="PSIRT")
+    _, out = F.expand_citations(f"x [{A}]", cited, [cited[0], other_table, same_fact])
+    assert [c["chunk_id"] for c in out] == [A, C]
+
+
+def test_expand_numbered_continues_the_numbers():
+    body = "Merge requests should receive a review response within 2 business days for team members."
+    cited = [ch(A, "Incidents are paged within 15 minutes by the on-call engineer."), ch(B, body)]
+    ctx = [*cited, ch(C, body, title="Code Review")]
+    got, out = F.expand_numbered("페이지는 15분 [1]. 리뷰는 2영업일 [2].", cited, ctx)
+    assert got == "페이지는 15분 [1]. 리뷰는 2영업일 [2][3]." and [c["chunk_id"] for c in out] == [A, B, C]
+
+
 # ---------- A3 ----------
 def test_relax_one_source_changes_the_answer_prompt_and_skill():
     system = P.answer_picked(P.ANSWER_SYSTEM)
@@ -30,6 +127,15 @@ def test_relax_one_source_changes_the_answer_prompt_and_skill():
     assert F.ONE_SOURCE_RULE not in relaxed and F.MULTI_SOURCE_RULE in relaxed and F.MULTI_PICK in relaxed
     body = load_skill("citation-rules", enabled=True)
     assert F.SKILL_ONE in body and F.SKILL_MULTI in F.relax_skill(body)
+
+
+# ---------- A4 ----------
+def test_team_docs_go_last_only_when_no_team_is_asked():
+    chunks = [ch(A, "x", title="Support Team Workflow"), ch(B, "y", title="Code Review Guidelines"), ch(C, "z", title="Data Group")]
+    got = F.team_docs_last("코드 리뷰는 며칠 안에 해?", chunks)
+    assert [c["chunk_id"] for c in got] == [B, A, C]
+    assert F.team_docs_last("데이터팀 인시던트 심각도가 애매하면?", chunks) == chunks  # 14번처럼 팀을 말하면 그대로
+    assert F.team_docs_last("support team 절차는?", chunks) == chunks
 
 
 # ---------- A5 ----------
@@ -277,6 +383,45 @@ def _boundary_case(shared: int, unique: int) -> tuple[list[dict], dict, float]:
     cand = ch(B, f"30 days {words}\n{extra}", title="Other page")
     whole = len(F._tokens(F._body(cand)) & F._tokens(F._body(cited[0]))) / len(F._tokens(F._body(cand)))
     return cited, cand, whole
+
+
+@pytest.mark.parametrize("shared, unique, whole_milli, added", [
+    (5, 16, 304, True),     # 7/23 = 0.3043: 운영 v2 36번의 정답 추가 인용과 같은 자리(0.304)
+    (5, 17, 292, False),    # 7/24 = 0.2917: 같은 줄 겹침이어도 청크 전체 겹침이 모자라면 더하지 않는다
+    (11, 30, 302, True),    # 13/43 = 0.3023: 운영 검증 101번의 정답 추가 인용과 같은 자리(0.302)
+    (11, 31, 295, False),   # 13/44 = 0.2955
+    (4, 14, 300, True),     # 6/20 = 0.3 정확히 문턱: 이상이면 더한다
+    (4, 15, 286, False),    # 6/21 = 0.2857
+])
+def test_pick_extra_whole_chunk_overlap_boundary(shared, unique, whole_milli, added):
+    cited, cand, whole = _boundary_case(shared, unique)
+    assert F.MIN_OVERLAP == 0.3 and round(whole * 1000) == whole_milli
+    got = F.pick_extra(cited, [cited[0], cand])
+    assert [(c["chunk_id"], i) for c, i in got] == ([(B, 0)] if added else [])
+    # 줄 겹침은 모두 같아야 하므로 후보의 값 줄만 보면 둘 다 넘는다(청크 전체 겹침이 가르는 경계다)
+    assert F._value_lines(F._own_body(cand, cited), F.value_keys(F._body(cited[0])))[0][1] == F._tokens(f"30 days {' '.join(f'zq{i:03d}' for i in range(shared))}")
+
+
+@pytest.mark.parametrize("shared, unique, added", [
+    (1, 7, True),     # 후보 값 줄 단어 10개(30, days, 공통 1, 고유 7) 중 3개가 인용 줄과 같다 = 0.3 정확히 문턱
+    (1, 8, False),    # 3/11 = 0.2727
+])
+def test_pick_extra_value_line_overlap_boundary(shared, unique, added):
+    """값 줄끼리의 겹침 문턱. 후보는 한 줄이라 청크 전체 겹침도 같은 값이다."""
+    common = " ".join(f"zq{i:03d}" for i in range(shared))
+    cited = [ch(A, f"30 days {common} " + " ".join(f"zc{i:03d}" for i in range(40)))]
+    cand = ch(B, f"30 days {common} " + " ".join(f"zo{i:03d}" for i in range(unique)), title="Other page")
+    assert len(F._tokens(F._body(cand))) == 2 + shared + unique
+    got = F.pick_extra(cited, [cited[0], cand])
+    assert [c["chunk_id"] for c, _ in got] == ([B] if added else [])
+
+
+def test_pick_extra_boundary_behavior_is_unchanged_for_caps_and_repeats():
+    """경계에서 더해진 청크도 인용 합계 cap과 MAX_ADD, 이미 인용한 청크 건너뛰기를 그대로 따른다."""
+    cited, cand, _ = _boundary_case(5, 16)
+    assert F.pick_extra(cited, [cited[0], cand], cap=1) == []
+    assert F.pick_extra(cited, [cited[0], cand, cand]) == F.pick_extra(cited, [cited[0], cand])     # 같은 청크를 두 번 더하지 않는다
+    assert F.expand_citations(f"x [{A}]", cited, [cited[0], cand])[0] == f"x [{A}][{B}]"
 
 
 def test_unknown_name_message_does_not_echo_urls_sql_or_long_text():

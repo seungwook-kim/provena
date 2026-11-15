@@ -1,6 +1,5 @@
-"""남은 문항 수정안 시험: 근거 확인 구절 먼저(`GRAPH_GROUNDING_QUOTE`)와 일반 규칙의 문항 단어 누출 검사. 가짜 모델과 가짜 검색기만 쓴다.
-문장 공유 인용 더하기, 제목 경로 검색, 제품 한정 인용 빼기, 제목 경로 알림 시험은 사전 등록 62.72로 그 장치를 코드째 제거하면서 지웠다.
-같은 사전 등록으로 범위 메모 거절과 안내 구절 거절의 정규식이 없어져 누출 검사는 `answer_fixes.py` 모듈 설명만 본다."""
+"""남은 문항 수정안 시험(기본 꺼짐). A1b `GRAPH_CITE_PHRASE`: 인용 청크와 긴 문장을 그대로 공유하는 다른 페이지 청크를 인용에 더한다.
+가짜 모델과 가짜 검색기만 쓴다."""
 from __future__ import annotations
 
 import pytest
@@ -9,19 +8,67 @@ from qgraph_fakes import j
 from backend.graph import answer_fixes as F
 from backend.graph.build import build_graph
 from backend.graph.multi import build_multi_graph
-from test_answer_fixes_graph import Q_REVIEW, REVIEW, cite, llm, run
+from test_answer_fixes_graph import Q_REVIEW, REVIEW, cite, llm, mk, run
+
+SENT = "Patch releases are deployed to production during the scheduled patch window after the release manager approves the package."
+PATCH = mk(SENT, title="Patch Releases", seq=71001, article="Patch window")
+DEPLOY = mk(f"For deployments, {SENT[0].lower()}{SENT[1:]}", title="Deployments", seq=71002, article="PDM execution")
+TEAM_COPY = mk(SENT, title="Delivery Group", seq=71003, article="Notes")
+SAME_PAGE = mk(SENT + " More text.", title="Patch Releases", seq=71001, article="Other")
+SHORT = mk("Patch releases are deployed to production during the window.", title="Release Notes", seq=71004)
 
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in ("GRAPH_CITE_MULTI", "GRAPH_KEEP_CITES",
-                 "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_REQUERY_VOCAB", "GRAPH_UNKNOWN_NAME",
+    for name in ("GRAPH_CITE_PHRASE", "GRAPH_CITE_EXPAND", "GRAPH_CITE_MULTI", "GRAPH_TEAM_LAST", "GRAPH_KEEP_CITES",
+                 "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_REQUERY_VOCAB", "GRAPH_UNKNOWN_NAME", "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES",
                  "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS", "SEARCH_DECOMPOSE", "USE_SKILLS",
                  "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_STOP_STALLED_SEARCH", "GRAPH_DECOMPOSE_CAP_S", "GRAPH_REFUSE_ON_NONE",
-                 "GRAPH_GROUNDING_QUOTE"):
+                 "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_HEADING_TERMS", "GRAPH_GROUNDING_QUOTE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_HEADING_MARK", "GRAPH_HEADING_HEADS"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
     monkeypatch.setenv("GRAPH_JUDGE_QUERY", "1")
+
+
+def d(c):
+    return c.model_dump()
+
+
+# ---------- A1b 규칙 ----------
+def test_longest_shared_run():
+    assert F.longest_shared_run("a b c d e".split(), "x b c d y".split()) == 3
+    assert F.longest_shared_run([], ["a"]) == 0
+
+
+def test_phrase_picker_adds_only_other_pages_with_a_long_shared_run():
+    got = F.pick_phrase_extra([d(PATCH)], [d(PATCH), d(SAME_PAGE), d(SHORT), d(TEAM_COPY), d(DEPLOY)], cap=4)
+    assert [(c["chunk_id"], i) for c, i in got] == [(DEPLOY.chunk_id, 0)]  # 같은 페이지, 짧은 겹침, 다른 팀 페이지는 빼고 다른 페이지만
+    assert F.pick_phrase_extra([d(PATCH)], [d(DEPLOY)], cap=1) == []  # 상한
+    assert F.pick_phrase_extra([d(PATCH)], [d(DEPLOY)], cap=4, n=99) == []
+
+
+def test_phrase_picker_keeps_a_team_page_when_the_anchor_is_that_page():
+    other = mk(SENT, title="Delivery Group", seq=71005, article="Copy")
+    got = F.pick_phrase_extra([d(TEAM_COPY)], [d(other)], cap=4)
+    assert [c["chunk_id"] for c, _ in got] == [other.chunk_id]  # 제목이 같으면 다른 팀 페이지가 아니다
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_cite_phrase_adds_the_other_page_after_grounding(monkeypatch, multi):
+    monkeypatch.setenv("GRAPH_CITE_PHRASE", "1")
+    fn = lambda q: [PATCH, DEPLOY, REVIEW]  # noqa: E731
+    m = llm(answer=cite(PATCH, text="패치 릴리스는 승인 뒤 정해진 패치 시간에 배포한다"))
+    g = build_multi_graph(fn, llm=m) if multi else build_graph(fn, llm=m)
+    out = run(g, "패치 릴리스는 언제 배포해?")
+    assert [c["chunk_id"] for c in out["citations"]] == [PATCH.chunk_id, DEPLOY.chunk_id]
+    assert "[1][2]" in out["answer"] and out["grounding"]["cite_phrase"] == [DEPLOY.chunk_id]
+    assert "cite_expand" not in out["grounding"]
+
+
+def test_cite_phrase_off_keeps_the_citations():
+    m = llm(answer=cite(PATCH, text="패치 릴리스는 승인 뒤 정해진 패치 시간에 배포한다"))
+    out = run(build_graph(lambda q: [PATCH, DEPLOY], llm=m), "패치 릴리스는 언제 배포해?")
+    assert [c["chunk_id"] for c in out["citations"]] == [PATCH.chunk_id] and "cite_phrase" not in out["grounding"]
 
 
 OK = j(reason="", grounded=True)
@@ -33,8 +80,7 @@ def test_grounding_quoted_prompt():
     base = P.GROUNDING_SYSTEM
     q = P.grounding_quoted(base)
     assert q.startswith(base.rpartition("JSON 한 개만 출력한다.")[0])  # 앞 규칙은 그대로
-    assert "NOTHING FOUND" in q and "번역이나 다른 말 바꿈" in q
-    assert "간접 근거" not in q  # 제목 경로(적용 범위)의 간접 근거 문장은 사전 등록 62.72로 뺐다
+    assert "NOTHING FOUND" in q and "번역이나 다른 말 바꿈" in q and "제목 경로" in q
     assert q.count("JSON 한 개만 출력한다.") == 1 and '"quote"' in q
     assert "NOTHING FOUND" not in P.grounding_checked(base)  # 끄면 지금 프롬프트
 
@@ -67,14 +113,39 @@ def test_grounding_quote_off_keeps_the_checked_prompt(monkeypatch):
     assert seen and all("NOTHING FOUND" not in s and '"source"' in s for s in seen)
 
 
-# ---------- 일반 규칙의 문항 단어 누출 검사 ----------
+# ---------- P 제품 한정 페이지 인용 빼기 ----------
+DEDICATED = mk("If no response in 10 minutes, reassign to another Dedicated SRE.", title="GitLab Dedicated IMOC Response Team", seq=71020, article="Scenario 3")
+NOTE_P = "질문의 나머지 부분은 근거를 확인하지 못해 답에서 뺐습니다."
+
+
+def test_qualifiers_are_words_before_an_asked_word_missing_elsewhere():
+    q = "IMOC가 응답이 없으면?"
+    assert F.qualifiers(q, d(DEDICATED)) == ["dedicated"] and F.scoped_out(q, d(DEDICATED))
+    assert not F.scoped_out("GitLab Dedicated IMOC가 응답이 없으면?", d(DEDICATED))  # 질문에 있으면 한정어가 아니다
+    assert F.qualifiers("Dedicated IMOC가 응답이 없으면?", d(DEDICATED)) == ["gitlab"]  # 앞 낱말이 질문에 있으면 그 앞 낱말을 본다(알려진 한계)
+    assert not F.scoped_out("코드 리뷰는?", d(DEDICATED))  # 질문에 영어 낱말이 없으면 보지 않는다
+    other = mk("x", title="Dedicated IMOC Handbook", seq=71021)
+    assert not F.scoped_out(q, d(DEDICATED), [d(DEDICATED), d(other)])  # 문맥의 다른 페이지 제목에 있으면 한정어가 아니다
+    same_page = mk("y", title="GitLab Dedicated IMOC Response Team", seq=71020, article="Other")
+    assert F.scoped_out(q, d(DEDICATED), [d(DEDICATED), d(same_page)])  # 같은 페이지는 다른 페이지로 세지 않는다
+    section = mk("z", title="Deployments", seq=71022, article="Overview and terminology > Post-deploy migration (PDM)")
+    assert not F.scoped_out("post-deploy migration(PDM)은 왜?", d(section))  # 절 제목은 보지 않는다(좁은 형태)
+    assert F.qualifiers("post-deploy migration(PDM)은 왜?", d(section), adjacent=False)  # 넓은 형태는 걸린다(쓰지 않음)
+    org_title = mk("w", title="TEST-eng IMOC Guide", seq=71023)
+    assert not F.scoped_out(q, d(org_title))  # 조직 이름은 한정어가 아니다
+
+
 def test_no_item_page_or_product_names_in_the_general_rules():
     import inspect
     import re as _re
-    assert not any(hasattr(F, n) for n in ("scope_note_refuses", "pointer_only", "_SCOPE_LIMITED", "_POINTER", "_TEAM_TITLE", "head_owner_cites"))  # 62.72로 제거
-    src = inspect.getsource(F).split('"""', 2)[1]  # 모듈 설명
+    from backend.rag.retrieve.search import Searcher
+    src = "".join(inspect.getsource(fn) for fn in (F.qualifiers, F.scoped_out, F.drop_scoped_cites, F._heading_words,
+                                                    Searcher.intro_fill, F.scope_note_refuses,
+                                                    F.drop_odd_cites, F.pointer_only))
+    src += F.CITE_PICK_RULE + F._SCOPE_LIMITED.pattern + F._SCOPE_ABSENT.pattern + F._POINTER.pattern
     for name in LEAK_NAMES_RULES:
         assert name not in src.lower(), name
+    src += inspect.getsource(F).split('"""', 2)[1]  # 모듈 설명도
     low = src.lower()
     assert not _re.search(LEAK_ID, low)  # 청크·페이지 id 없음
     for name in LEAK_NAMES_MORE:
@@ -91,23 +162,61 @@ def _leak_source(which: str) -> str:
     import inspect
 
     from backend.graph import decompose as dec
+    from backend.graph import query_plan as QP
     from backend.prompts import question as P
+    if which == "query_plan.py":
+        return inspect.getsource(QP)
     if which == "prompts/question.py":
         return inspect.getsource(P)
     return dec._PRODUCT_TARGET.pattern  # 분해의 제품 대상 정규식(`GRAPH_KEEP_PRODUCT_NAME`)
 
 
 @pytest.mark.parametrize("which", [
-    # 용어표(`query_plan.py`)는 사전 등록 62.72로 코드째 제거했으므로 실패 기록용 표시(strict xfail)도 지웠다.
+    "query_plan.py",  # 사전 등록 62.74: 대상별 나누기만 남았다(질문 용어표·제목 경로 표는 특정 문항의 표현에 맞춘 항목이라 다시 넣지 않는다)
     "prompts/question.py",
     "decompose._PRODUCT_TARGET",
 ])
 def test_no_item_page_or_product_names_in_terms_prompts_and_decompose(which):
-    """같은 누출 검사를 질문 프롬프트와 분해의 제품 정규식에도 건다. 문항 단어가 들어 있으면 실패로 남긴다."""
+    """같은 누출 검사를 질문 계획 코드, 질문 프롬프트, 분해의 제품 정규식에도 건다. 문항 단어가 들어 있으면 실패로 남긴다."""
     import re as _re
     low = _leak_source(which).lower()
     hits = [name for name in (*LEAK_NAMES_RULES, *LEAK_NAMES_MORE) if name in low]
     ids = sorted(set(_re.findall(LEAK_ID, low)) - {"0123456789abcdef"})  # 출력 예의 자리표시 id(HEAD 때부터)는 문항 id가 아니다
     assert not hits and not ids, (hits, ids)
 
+def test_drop_scoped_cites_removes_only_scoped_sentences_and_renumbers():
+    body = "EOC는 incident.io로 올린다 [1]. IMOC는 10분 뒤 다른 SRE에게 넘긴다 [2]. 둘 다 리더십이 본다 [1][2]."
+    got = F.drop_scoped_cites(body, [d(REVIEW), d(DEDICATED)], "EOC와 IMOC가 응답이 없으면?", NOTE_P)
+    assert got is not None
+    nb, kept, removed = got
+    assert nb == f"EOC는 incident.io로 올린다 [1]. 둘 다 리더십이 본다 [1]. {NOTE_P}"
+    assert [c["chunk_id"] for c in kept] == [REVIEW.chunk_id] and removed == [DEDICATED.chunk_id]
+    body2 = "IMOC는 넘긴다 [1]. EOC는 올린다 [2]."
+    nb2, kept2, _ = F.drop_scoped_cites(body2, [d(DEDICATED), d(REVIEW)], "IMOC?", NOTE_P)
+    assert nb2 == f"EOC는 올린다 [1]. {NOTE_P}" and [c["chunk_id"] for c in kept2] == [REVIEW.chunk_id]
 
+
+def test_drop_scoped_cites_keeps_the_answer_when_nothing_would_be_left():
+    assert F.drop_scoped_cites("IMOC는 넘긴다 [1].", [d(DEDICATED)], "IMOC?", NOTE_P) is None
+    assert F.drop_scoped_cites("리뷰는 2일 [1].", [d(REVIEW)], "리뷰?", NOTE_P) is None
+    assert F.drop_scoped_cites("IMOC는 넘긴다 [1]. 리뷰 [2].", [d(DEDICATED), d(REVIEW)], "GitLab Dedicated IMOC?", NOTE_P) is None
+
+
+@pytest.mark.parametrize("multi", [False, True])
+def test_drop_scoped_switch_in_the_graph(monkeypatch, multi):
+    monkeypatch.setenv("GRAPH_DROP_SCOPED_CITES", "1")
+    ans = j(asked=["a"], picks=[], answer=f"리뷰는 2영업일 안이다 [{REVIEW.chunk_id}]. 응답이 없으면 다른 SRE에게 넘긴다 [{DEDICATED.chunk_id}].",
+            citations=[{"chunk_id": REVIEW.chunk_id}, {"chunk_id": DEDICATED.chunk_id}], period_covered=True)
+    m = llm(answer=ans, grounding=OK)
+    fn = lambda q: [REVIEW, DEDICATED]  # noqa: E731
+    g = build_multi_graph(fn, llm=m, grounding_llm=True) if multi else build_graph(fn, llm=m, grounding_llm=True)
+    out = run(g, "코드 리뷰 첫 응답 기한과 IMOC 무응답 처리는?")
+    assert [c["chunk_id"] for c in out["citations"]] == [REVIEW.chunk_id]
+    assert out["grounding"]["scoped_drop"] == [DEDICATED.chunk_id] and NOTE_P in out["answer"] and "[2]" not in out["answer"]
+
+
+def test_drop_scoped_off_keeps_both(monkeypatch):
+    ans = j(asked=["a"], picks=[], answer=f"리뷰는 2영업일 안이다 [{REVIEW.chunk_id}]. 응답이 없으면 다른 SRE에게 넘긴다 [{DEDICATED.chunk_id}].",
+            citations=[{"chunk_id": REVIEW.chunk_id}, {"chunk_id": DEDICATED.chunk_id}], period_covered=True)
+    out = run(build_graph(lambda q: [REVIEW, DEDICATED], llm=llm(answer=ans, grounding=OK), grounding_llm=True), "코드 리뷰 첫 응답 기한과 IMOC 무응답 처리는?")
+    assert len(out["citations"]) == 2 and "scoped_drop" not in out["grounding"]

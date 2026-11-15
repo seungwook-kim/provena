@@ -24,8 +24,8 @@ from backend.services import step_cost
 
 SWITCH = "GRAPH_ADOPT_GROUNDED_CANDIDATE"
 OTHERS = ("GRAPH_SPECULATE_GROUND", "GRAPH_ANSWER_BEST2", "GRAPH_JUDGE_ANSWER", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_JUDGE_VOTE",
-          "GRAPH_JUDGE_QUOTE", "GRAPH_REVISE_AHEAD", "GRAPH_UNCHANGED_REJUDGE", "GRAPH_KEEP_CITES", 
-          "GRAPH_GROUNDING_QUOTE", "GROUND_SKIP_BACKED",
+          "GRAPH_JUDGE_QUOTE", "GRAPH_REVISE_AHEAD", "GRAPH_POINTER_REFUSE", "GRAPH_UNCHANGED_REJUDGE", "GRAPH_KEEP_CITES", "GRAPH_BEST2_SAMEDOC",
+          "GRAPH_GROUNDING_QUOTE", "GRAPH_CITE_EXPAND", "GRAPH_CITE_PHRASE", "GRAPH_CITE_CONSENSUS", "GRAPH_DROP_SCOPED_CITES", "GROUND_SKIP_BACKED",
           "SEARCH_DECOMPOSE", "USE_SKILLS")
 REDRAFT_MARK = "이전 답이 근거 판정을 통과하지 못했다"   # 다시 쓰는 답 입력(`redraft_user`)에만 있는 문장
 CHOSEN, OTHER, REDONE = "첫 후보 답", "둘째 후보 답", "다시 쓴 답"
@@ -232,20 +232,10 @@ def test_adoption_leaves_the_early_verdict_registry_to_the_normal_expiry(monkeyp
 
 
 def test_sibling_failing_the_after_checks_redrafts(monkeypatch):
-    """다른 후보가 고른 답과 같은 후처리(여기서는 코드 근거 규칙)에서 거절되면 쓰지 않고 다시 쓴다.
-    (전에는 다른 자료 안내뿐인 구절 거절로 시험했으나 그 장치는 사전 등록 62.72로 제거했다.)"""
+    """다른 후보가 고른 답과 같은 후처리(여기서는 다른 자료 안내뿐인 구절 거절)에서 거절되면 쓰지 않고 다시 쓴다."""
     monkeypatch.setenv(SWITCH, "1")
-    real = B.G.check_rules
-    seen: list = []
-
-    def rules(question, cited, retrieved, **kw):
-        # 둘째 후보(REVIEW_TOO 인용)는 미리 부른 근거 확인 때는 통과하고, 고른 답 대신 쓰려고 다시 거칠 때 코드 규칙에서 거절된다
-        if any(c.get("chunk_id") == REVIEW_TOO.chunk_id for c in cited):
-            seen.append(1)
-            if len(seen) > 1:
-                return B.G.Verdict(ok=False, reason=B.G.UNSUPPORTED, detail="시험")
-        return real(question, cited, retrieved, **kw)
-    monkeypatch.setattr(B.G, "check_rules", rules)
+    monkeypatch.setenv("GRAPH_POINTER_REFUSE", "1")
+    monkeypatch.setattr(B.AF, "pointer_only", lambda quotes: True)
     out, m = _scenario()
     assert REDONE in out["answer"] and _redraft_calls(m) == 1
     assert out["grounding"]["switch_failed"] == "refused_after_switch" and "switched_from" not in out["grounding"]

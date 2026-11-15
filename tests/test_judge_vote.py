@@ -18,7 +18,7 @@ NO = j(sufficient=False, partial=False, reason="없음", missing=["리뷰 기한
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in ("GRAPH_JUDGE_VOTE", "GRAPH_JUDGE_QUOTE", "GRAPH_PROMPTS_HEAD", "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S"):
+    for name in ("GRAPH_JUDGE_VOTE", "GRAPH_JUDGE_QUOTE", "GRAPH_CITE_PICK", "GRAPH_PROMPTS_HEAD", "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
     monkeypatch.setenv("GRAPH_JUDGE_QUERY", "1")

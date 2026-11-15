@@ -491,7 +491,13 @@ def _chat(monkeypatch, *, on, **env_kw):
 
 
 def _stable(ev):
-    return [(n, {k: v for k, v in d["data"].items() if k != "answer_id"}) for n, d in ev]
+    """answer_id와 단계 시간(`path.timing`, `path.vote_s`, 사전 등록 62.72의 실측 초)은 실행마다 달라 비교에서 뺀다."""
+    def data(d):
+        out = {k: v for k, v in d["data"].items() if k != "answer_id"}
+        if isinstance(out.get("path"), dict):
+            out["path"] = {k: v for k, v in out["path"].items() if k not in ("timing", "vote_s")}
+        return out
+    return [(n, data(d)) for n, d in ev]
 
 
 def test_chat_off_reads_the_final_state_and_on_does_not_and_the_events_are_the_same(monkeypatch):

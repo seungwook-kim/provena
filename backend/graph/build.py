@@ -35,6 +35,7 @@ from langgraph.store.memory import InMemoryStore
 
 from backend.graph import grounding as G
 from backend.graph import answer_fixes as AF
+from backend.graph import query_plan as QP
 from backend.graph.answer_store import AnswerStore
 from backend.graph.citations import check_citations
 from backend.graph.decision.execute import DecisionExecutor, decision_citation, format_decision_answer, make_execute_node
@@ -48,6 +49,7 @@ from backend.memory.profile import get_profile
 from backend.prompts import question as P
 from backend.graph import untrusted as U
 from backend.prompts.question import leaks_internal
+from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
@@ -65,16 +67,19 @@ INTAKE_KEY = "__intake__"  # `search_cache` 안에서 미리 받은 LLM 응답�
 MAX_CHUNKS = 10  # 재검색 결과를 합친 근거 목록의 최대 길이
 MAX_SECTION_CHARS = 6000  # 섹션을 통째로 읽어 넓힐 수 있는 본문 길이. 넘으면 넓히지 않는다
 AUTHZ_TITLE = "Authorization Matrix"  # 현재 페이지와 고정 판(2023-05)의 공통 제목
-SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5). 나뉜 질문의 첫 검색도 같다(62.73 `GRAPH_SPLIT_FULL_K`를 켜면 그 검색만 `MAX_CHUNKS`)
+SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5)
+SPLIT_K = 8  # 나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 하위 질문과 링크 확장으로 7자리 + 끝 1자리는 원 질문 목록(`search.FULL_TAIL`). 나뉘지 않은 질문과 재검색은 `SEARCH_K` 그대로(사전 등록 62.38). 달러 금액이 든 질문은 나뉘어도 `SEARCH_K`(사전 등록 62.43, `split_k`). 62.73 `GRAPH_SPLIT_FULL_K`를 켜면 나뉜 질문의 첫 검색은 `MAX_CHUNKS`
+MAX_CITATIONS = P.MAX_CITATIONS  # 답 하나가 인용할 수 있는 청크 수의 상한. 답 프롬프트와 같은 값이다
 JSON_ATTEMPTS = 2  # LLM 응답 형식이 깨지면 1회 다시 요청한다 (Spec EC-06)
 ROUTES = ("rule", "decision", "review", "out_of_domain")
 # 한 실행 안에서만 뜻이 있는데 `load_memory`의 기본값에 없는 칸. 체크포인터가 있으면 앞 실행의 값이 남아 있으므로 새 질문에서 비운다.
 # 남아 있을 때만 쓴다: 체크포인터 없는 실행의 결과에 없던 칸이 생기지 않는다
 LEFTOVER_FIELDS = {"search_query": "", "search_org": None, "decision_query": {}, "decision_result": {}, "decision_error": {}, "review_status": "", "issue_table": {},
                    "early_answer": {}, "judged_chunks": 0, "search_stalled": False, "judge_missing": [], "judge_query": "", "judge_scope": "", "section_reads": 0,
-                   "sub_research": "", "sub_research_phase": "", "judge_none": False, "judge_quotes": [],
+                   "query_targets": [], "sub_research": "", "sub_research_phase": "", "judge_none": False, "intro_chunk_ids": [], "judge_quotes": [],
                    "judge_votes": []}
 MAX_MISSING = 4  # 판정이 적은 빠진 사실을 재작성에 넘기는 개수의 상한
+REQUERY_NEW = 5  # SS: 페이지 재검색이 더하는 새 청크 수(문맥에 있는 청크는 세지 않는다). 61.10: 3이면 새 청크가 4번째로 빠진 행이 있다
 GROUND_AHEAD_WORKERS = 64  # 근거 확인 미리 부르기(`GRAPH_SPECULATE_GROUND`) 일꾼 수. 그래프 하나(서버 프로세스)의 모든 요청이 같이 쓴다. 요청 하나가 후보 여럿을 부르므로 동시 요청이 몰리면 줄을 선다(사전 등록 62.67: 16에서 늘림)
 GROUND_AHEAD_MAX_RUNS = 256  # 미리 부른 판정을 동시에 등록해 두는 상한(모든 요청 합). 넘으면 미리 부르지 않고 쓸 때 부른다(사전 등록 62.67: 64에서 늘림)
 SEARCH_MS_KEYS = ("translate", "embed", "vector", "link")  # 기록만(사전 등록 62.72): `search_stats`의 `ms_*` 칸으로 옮기는 검색 단계 시간(`SearchTrace.ms`)
@@ -171,6 +176,38 @@ def finish_answer(answer: str, citations: list[dict], as_of: str | None) -> str:
 mentions_period = G.mentions_period  # 질문에 시점 표현이 있는지. 없는 질문에 재작성이 기준일을 채워 내면(오늘 날짜 등) 그 값은 쓰지 않는다. 근거 판정(grounding.recode_vote)과 같은 판별이다
 
 
+def has_dollar_amount(question: str | None, sub_queries) -> bool:
+    """질문이나 하위 질문에 달러 금액이 있는지. 검색기의 금액 구간 조회(`Searcher._range_expand`)가 쓰는 조건과 같다(`ranges.amounts_in`)."""
+    return bool(ranges.amounts_in([question, *(sub_queries or ())]))
+
+
+def split_k(question: str | None, sub_queries) -> int:
+    """나뉜 질문(하위 질문 2개 이상)의 첫 검색 자리 수. 달러 금액이 든 질문은 금액 구간 조회가 정답 구간 행을 따로 넣으므로 넓히지 않고 `SEARCH_K`로 둔다(사전 등록 62.43)."""
+    return SPLIT_K if len(sub_queries or ()) >= 2 and not has_dollar_amount(question, sub_queries) else SEARCH_K
+
+
+def chunk_cap(sub_queries, question: str | None = None, page_fill: int = 0) -> int:
+    """근거 목록의 최대 길이. 첫 검색이 `split_k`만큼 넓어진 나뉜 질문은 그만큼 상한을 올려야 재검색이 새 청크를 받는다.
+    같은 페이지 보충 청크(`page_fill`, 사전 등록 62.55)가 붙은 실행은 그 수만큼 더 올린다(재검색이 새 5청크를 다 받게)."""
+    return MAX_CHUNKS + split_k(question, sub_queries) - SEARCH_K + page_fill
+
+
+def page_filled(state) -> int:
+    """이 실행의 첫 검색이 같은 페이지 보충 청크를 붙였으면 그 수(`search_stats.page_fill`), 아니면 0. 재검색이 앞 문맥을 자르지 않고 새 청크를 받게 한다."""
+    stats = state.get("search_stats") or {}
+    return int(stats.get("page_fill") or 0)
+
+
+def core_chunks(state) -> list[dict]:
+    """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리와 도입부 채우기(R3)가 뒤에 더한 청크(`intro_chunk_ids`). 넓히지 않았거나 재검색 뒤면 문맥 전체다.
+    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51)."""
+    chunks = state.get("chunks", [])
+    if state.get("retries", 0) or split_k(state.get("question"), state.get("sub_queries")) <= SEARCH_K:
+        return chunks
+    intro = set(state.get("intro_chunk_ids") or ())
+    return chunks[:SEARCH_K] + [c for c in chunks[SEARCH_K:] if c.get("chunk_id") in intro]
+
+
 def merge_chunks(prev: list[dict], new: list[dict], limit: int = MAX_CHUNKS) -> list[dict]:
     """앞 검색 결과를 유지하고 새 청크를 뒤에 붙인다. 같은 청크(`chunk_id`, `version_id`)는 한 번만 두고, 길이는 `limit`까지만 둔다."""
     out = list(prev)[:limit]
@@ -214,13 +251,12 @@ def expand_chunk(chunks: list[dict], chunk_id: str, section: dict | None) -> lis
     return out
 
 
-def select_citations(valid: list[dict], answer: str) -> tuple[list[dict], list[dict], str]:
-    """답이 실제로 쓴 청크만 인용으로 남긴다. 본문에 표시가 있는 청크를 처음 나온 순서로 두고(본문에 표시가 하나도 없으면 목록 순서),
-    나머지는 잘린 인용으로 돌려준다. 잘린 청크의 표시는 본문에서 지운다. (남긴 인용, 잘린 인용, 정리한 답)
-    인용 수 상한(`MAX_CITATIONS`=4)은 사전 등록 62.72로 없앴다(설계에 평가 정답을 봤으므로)."""
+def select_citations(valid: list[dict], answer: str, limit: int = MAX_CITATIONS) -> tuple[list[dict], list[dict], str]:
+    """답이 실제로 쓴 청크만 인용으로 남긴다. 본문에 표시가 있는 청크를 처음 나온 순서로 `limit`개까지 두고(본문에 표시가 하나도 없으면 목록 순서),
+    나머지는 잘린 인용으로 돌려준다. 잘린 청크의 표시는 본문에서 지운다. (남긴 인용, 잘린 인용, 정리한 답)"""
     by_id = {c["chunk_id"]: c for c in valid}
     used = list(dict.fromkeys(i for i in _MARK.findall(answer or "") if i in by_id))
-    keep = used or [c["chunk_id"] for c in valid]
+    keep = (used or [c["chunk_id"] for c in valid])[:limit]
     kept = [by_id[i] for i in keep]
     trimmed = [c for c in valid if c["chunk_id"] not in keep]
     text = _MARK.sub(lambda m: m.group(0) if m.group(1) in keep else "", answer or "")
@@ -268,7 +304,7 @@ def candidate_rows(entries: list[dict]) -> list[dict]:
 
 def grounded_sibling(rows: list[dict], chosen_key: str, partial: bool) -> tuple[dict, dict, dict] | None:
     """사전 등록 62.68: 이 실행의 근거 확인 호출 기록(`rows`) 중 고른 답(`chosen_key`)이 아닌 후보의 미리 부른 판정으로, 이미 끝났고(기다리지 않는다)
-    받쳐졌다(`grounded`)고 한 첫 기록. 고른 답의 기록과 문맥(`scope`, 사전 등록 62.72 뒤로는 늘 전체)이 같고 넘긴 일부 답 값이 `partial`과 같으며 후보 답(`cand`)을 가진 기록만 본다.
+    받쳐졌다(`grounded`)고 한 첫 기록. 고른 답의 기록과 문맥(앞자리·전체, `scope`)이 같고 넘긴 일부 답 값이 `partial`과 같으며 후보 답(`cand`)을 가진 기록만 본다.
     돌려주는 값은 (고른 답 기록, 그 후보 기록, 그 판정)이고 없으면 None이다. 고른 답이 미리 부른 판정을 쓰지 않았으면 문맥을 알 수 없어 None이다.
     기록 하나를 읽지 못하면 None이다(지금처럼 다시 쓴다)."""
     try:
@@ -378,6 +414,8 @@ def build_graph(
     ground_skip_backed: bool | None = None,
     json_only: bool | None = None,
     page_search: Callable[..., list] | None = None,
+    intro_search: Callable[..., list] | None = None,
+    prev_chunk: Callable[..., Any] | None = None,
 ):
     """컴파일된 질문 그래프를 만든다.
 
@@ -430,7 +468,7 @@ def build_graph(
         judge_system = P.judge_quoted(judge_system, query=judge_query_on)
     elif "judge" in structured:
         judge_system = P.judge_checked(judge_system, query=judge_query_on)
-    grounding_quote = AF.grounding_quote_enabled()  # Q(`GRAPH_GROUNDING_QUOTE`, 기본 꺼짐): 구절 먼저 찾고 판정, 번역·말 바꿈 인정
+    grounding_quote = AF.grounding_quote_enabled()  # Q(`GRAPH_GROUNDING_QUOTE`, 기본 꺼짐): 구절 먼저 찾고 판정, 번역·말 바꿈과 제목 경로 간접 근거 인정
     if "grounding" in structured or grounding_quote:
         grounding_system = P.grounding_quoted(grounding_system) if grounding_quote else P.grounding_checked(grounding_system)
     requery_terms = env_flag("GRAPH_REQUERY_TERMS") and judge_query_on
@@ -439,15 +477,24 @@ def build_graph(
     answer_base = P.ANSWER_SYSTEM
     answer_system = P.answer_picked(answer_base) if "answer" in structured else answer_base
     # 놓친 문항 해결안(기본 꺼짐, answer_fixes.py). 끄면 입력, 프롬프트, 인용이 #50 측정 구성과 같다
-    cite_multi, keep_cites = AF.cite_multi_enabled(), AF.keep_cites_enabled()
+    cite_expand, cite_multi, team_last, keep_cites = AF.cite_expand_enabled(), AF.cite_multi_enabled(), AF.team_last_enabled(), AF.keep_cites_enabled()
     sub_research = AF.sub_research_enabled()
     page_research = AF.page_research_enabled() and page_search is not None  # page_search: (하위 질문, rule_seq 목록, org, as_of, k) -> 청크 목록
     unknown_name = AF.unknown_name_enabled()
     corpus = AF.corpus_text() if unknown_name else ""
     refuse_on_none = AF.refuse_on_none_enabled()  # R: 첫 판정이 전무면 재검색 없이 거절
+    same_page = AF.research_same_page_enabled() and page_search is not None  # 가: 부분 판정 뒤 재검색을 문맥 페이지 안 검색으로 바꾼다
+    cite_phrase = AF.cite_phrase_enabled()  # A1b: 인용 청크와 긴 문장을 그대로 공유하는 다른 페이지 청크를 인용에 더한다
+    drop_scoped = AF.drop_scoped_enabled()  # P: 질문에 없는 한정어가 붙은 페이지만 인용한 문장을 뺀다
+    intro_fill = AF.intro_fill_enabled() and intro_search is not None  # R3: 같은 페이지 청크가 3개 이상이면 그 페이지 도입부 절 청크 1개를 더한다
+    scope_refuse = AF.scope_note_refuse_enabled()  # SN: 충분 판정의 scope_note가 범위 한정과 부재를 함께 말하면 거절한다
+    skip_seen = AF.requery_skip_seen_enabled()  # SS: 페이지 재검색이 문맥에 이미 있는 청크를 건너뛰고 새 청크만 가져온다
+    consensus = AF.consensus_enabled()  # CS: 한 문장의 인용 중 여러 페이지가 되풀이하는 문장을 공유하지 않는 인용을 뺀다
+    pointer_refuse = AF.pointer_refuse_enabled()  # PT: 근거 구절이 모두 다른 자료를 가리키는 안내뿐이면 거절한다(Q 형식에서만 구절이 있다)
     unchanged_rejudge = AF.unchanged_rejudge_enabled()  # UR: 다시 쓴 답이 처음 답과 같으면 그 답을 한 번 더 판정한다
     facts_log = AF.facts_log_enabled()  # FL(진단): 판정 checks와 첫 답의 asked·picks를 상태에 남긴다. 답 경로는 그대로다
     best2 = AF.answer_best2_enabled()  # BO2: 답을 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽을 고른다(`--judge-quote`와 함께)
+    best2_samedoc = AF.best2_samedoc_enabled()  # BO2SD: BO2의 둘째 규칙에서 S 청크와 같은 문서인 S 밖 인용은 세지 않는다
     speculate = AF.speculate_enabled()  # SP: 분해를 기다리는 동안 원 질문으로 첫 검색과 판정을 미리 돌리고, 분해가 나누지 않으면 그 결과를 쓴다
     speculate_early = speculate and AF.speculate_early_search_enabled()  # SE(사전 등록 62.53, 62.15 재도입): SP의 원 질문 재작성·첫 검색을 예비 분해가 끝나길 기다리지 않고 같이 시작한다. 분해가 나누거나 경로가 정책이 아니면 결과를 버린다
     save_one_conn = env_flag("ANSWER_SAVE_ONE_CONN")  # 62.16: 답 저장과 근거 기록 저장을 연결 하나로(`PgAnswerStore.save_with_grounding`). 기본 꺼짐
@@ -456,14 +503,18 @@ def build_graph(
     spec_stops: dict[str, tuple[float, threading.Event]] = {}  # `GRAPH_SPEC_STOP_GROUND`: 열쇠 -> (등록 시각, 버리기로 하면 서는 표시). 쓰기로 하면 바로 지우고, 버린 것은 2분 뒤 청소한다
     spec_stop_ground = AF.spec_stop_ground_enabled()  # 사전 등록 62.72: 버리기로 한 미리 돌리기의 답 후보는 근거 확인을 미리 부르지 않는다
     split_full_k = AF.split_full_k_enabled()  # 사전 등록 62.73(`GRAPH_SPLIT_FULL_K`, 기본 꺼짐): 나뉜 질문의 첫 검색만 근거 목록 상한(`MAX_CHUNKS`)까지 요청한다
+    query_branches = QP.branches_enabled()  # `GRAPH_QUERY_BRANCHES`(기본 꺼짐, query_plan.py): 대상에 따라 절차가 갈리는 주제를 대상별 하위 질문으로 나눈다
     spec_lock = threading.Lock()
     speculate_ground = AF.speculate_ground_enabled()  # SG: 답 후보가 나오는 대로 근거 판정을 미리 부르고, 같은 입력의 판정이 필요할 때 그 결과를 쓴다
     ground_runs: dict[str, tuple[float, Any]] = {}  # SG: 판정 입력의 해시 -> (시작 시각, 미리 돌린 판정 Future). 쓰면 꺼낸다
     ground_twins: dict[str, tuple[str, ...]] = {}  # SG: 같은 답 후보를 일부 답 여부만 달리해 미리 부른 판정의 열쇠들(사전 등록 62.49). 하나를 쓰면 나머지를 지운다
     ground_notes: dict[str, tuple[float, list[dict]]] = {}  # 기록만(62.67): 실행 표지(`run_tag`) -> (처음 적은 시각, 근거 확인 호출 기록). `ground`가 꺼내 `grounding.candidates`로 옮긴다
     ground_lock = threading.Lock()
+    cite_guard = AF.cite_add_guard_enabled()  # 사전 등록 62.70(`GRAPH_CITE_ADD_GUARD`, 기본 꺼짐): 코드가 더하는 인용의 기준 확인(K), 겹친 머리 공유 글은 앞 청크로(L), 다시 쓴 답에도 겹친 머리 바로잡기(M)
     adopt_grounded = speculate_ground and AF.adopt_grounded_enabled()  # 사전 등록 62.68(`GRAPH_ADOPT_GROUNDED_CANDIDATE`, 기본 꺼짐): 근거 확인 실패 뒤 다시 쓰기 전에 이미 받쳐진 다른 후보를 쓴다
     ground_pool = ThreadPoolExecutor(max_workers=GROUND_AHEAD_WORKERS, thread_name_prefix="ground_ahead") if speculate_ground else None
+    if AF.cite_pick_enabled():  # CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서를 답 프롬프트에 더한다(추론 답, 빠른 답, 다시 쓰는 답)
+        answer_base, answer_system = P._add_rule(answer_base, AF.CITE_PICK_RULE), P._add_rule(answer_system, AF.CITE_PICK_RULE)
     if cite_multi:  # `GRAPH_CITE_MULTI=1`: 같은 사실을 다른 페이지가 말하면 3개까지 표시한다
         answer_base, answer_system = AF.relax_one_source(answer_base), AF.relax_one_source(answer_system)
     if AF.requery_vocab_enabled() and judge_query_on:  # `GRAPH_REQUERY_VOCAB=1`: 재검색어가 하위 질문의 영어 용어를 지킨다
@@ -1043,7 +1094,62 @@ def build_graph(
             except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
                 log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
         mixed = [c for group in zip_longest(*lists) for c in group if c is not None]
-        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=MAX_CHUNKS + SEARCH_K)}
+        return {**upd, "chunks": merge_chunks(chunks, mixed, limit=chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state)) + SEARCH_K)}
+
+    def page_requery(state: AgentState) -> dict:
+        """가(`GRAPH_RESEARCH_SAME_PAGE`): 재검색어(`search_query`)로 지금 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서만 찾는다. 전체 검색은 하지 않는다.
+        결과는 재검색과 같이 앞 목록에 합친다. 검색이 안 되면 목록을 그대로 두고 판정에 넘긴다."""
+        chunks = state.get("chunks", [])
+        seqs = list(dict.fromkeys(int(c["rule_seq"]) for c in chunks if c.get("rule_seq") is not None))
+        stats = dict(state.get("search_stats") or {"calls": 0, "cache_hits": 0})
+        stats["page_requeries"] = stats.get("page_requeries", 0) + 1
+        found: list[dict] = []
+        have = {c.get("chunk_id") for c in chunks}
+        try:
+            want = SEARCH_K + len(have) if skip_seen else SEARCH_K  # SS: 문맥에 있는 청크만큼 더 받아 거르고 새 청크 REQUERY_NEW개만 쓴다
+            got = page_search(state.get("search_query") or state["question"], seqs, state.get("search_org"), state.get("as_of"), want) if seqs else []
+            found = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
+            if skip_seen:
+                found = [c for c in found if c.get("chunk_id") not in have][:REQUERY_NEW]
+        except Exception as e:  # noqa: BLE001 - 페이지 범위 재검색 실패가 답을 막지 않는다
+            log.warning("페이지 범위 재검색 실패: %s", type(e).__name__)
+        return {"chunks": merge_chunks(chunks, found, limit=chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state))), "search_stats": stats}
+
+    def with_intro(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
+        """R3(`GRAPH_INTRO_FILL`): 첫 검색 문맥에 같은 페이지 판 청크가 3개 이상인 페이지의 도입부 절 청크(질문 벡터와 가장 가까운 1개, 절이 2개 이하 청크면 절 전체)를 뒤에 더한다.
+        재검색(페이지 재검색, 하위 질문 재검색) 뒤에는 붙이지 않는다.
+        query는 이 검색이 방금 임베딩한 질문이다(다시 임베딩하지 않는다). 이미 그 절이 문맥에 있으면 더하지 않으므로 여러 번 불러도 같다. 실패하면 그대로 둔다."""
+        if not intro_fill or not chunks:
+            return chunks
+        try:
+            got = intro_search(chunks, query, state.get("search_org"), state.get("as_of"))
+        except Exception as e:  # noqa: BLE001 - 도입부 채우기 실패가 답을 막지 않는다
+            log.warning("도입부 채우기 실패: %s", type(e).__name__)
+            return chunks
+        added = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
+        return merge_chunks(chunks, added, limit=len(chunks) + len(added)) if added else chunks
+
+    def read_prev_chunk(chunk: dict) -> dict | None:
+        """사전 등록 62.58: 인용 청크의 같은 페이지 판 바로 앞 청크(가림 처리 뒤). 없으면 None. 예외는 부른 쪽(`AF.head_owner_cites`)이 삼킨다."""
+        got = prev_chunk(chunk) if prev_chunk is not None else None
+        return redact_chunk(got.model_dump() if hasattr(got, "model_dump") else dict(got)) if got else None
+
+    def page_fill_chunk(state: AgentState, chunks: list[dict], query: str) -> list[dict]:
+        """사전 등록 62.55: 나뉜 질문(하위 질문 2개 이상, 달러 금액 질문 제외 = `split_k` > `SEARCH_K`)의 첫 검색 문맥에 든 페이지(rule_seq, 문맥 순서) 안에서
+        원 질문(`query`)과 가까운 청크 중 문맥에 없는 첫 1개를 찾아 돌려준다(없으면 빈 목록). 검색이 실패하면 빈 목록이라 문맥은 그대로다. 문맥은 건드리지 않는다."""
+        if page_search is None or not chunks:
+            return []
+        seqs = list(dict.fromkeys(int(c["rule_seq"]) for c in chunks if c.get("rule_seq") is not None))
+        if not seqs:
+            return []
+        have = {(c["chunk_id"], c.get("version_id")) for c in chunks}
+        try:
+            got = page_search(query, seqs, state.get("search_org"), state.get("as_of"), len(chunks) + 1)
+            rows = [redact_chunk(c.model_dump() if hasattr(c, "model_dump") else dict(c)) for c in got]
+        except Exception as e:  # noqa: BLE001 - 같은 페이지 보충 실패가 답을 막지 않는다
+            log.warning("같은 페이지 보충 실패: %s", type(e).__name__)
+            return []
+        return [c for c in rows if (c["chunk_id"], c.get("version_id")) not in have][:1]
 
     def search_ms(memo: dict) -> dict:
         """기록만(사전 등록 62.72): 방금 한 검색의 단계 시간(`SearchTrace.ms`의 translate, embed, vector, link, 밀리초)을 `search_stats`의 숫자 칸(`ms_*`)에 더한다.
@@ -1069,6 +1175,8 @@ def build_graph(
             return widen(state, state["next_section"])
         if state.get("sub_research_phase") == "search":
             return sub_search(state)
+        if same_page and state.get("retries", 0) and state.get("judge_partial"):  # 가: 부분 판정 뒤 재검색은 문맥 페이지 안에서만 찾는다(횟수는 그대로)
+            return page_requery(state)
         if unknown_name and not state.get("retries", 0):  # `GRAPH_UNKNOWN_NAME=1`: 코퍼스 어디에도 없는 영문 구를 묻는 질문은 검색 없이 되묻는다
             unknown = AF.unknown_phrases(state["question"], corpus)
             if unknown:
@@ -1088,9 +1196,13 @@ def build_graph(
             subs, source = early["decompose"] if early is not None and "decompose" in early else split_question(state)
             extra = {"sub_queries": subs, "decompose_source": source}
         query = drop_company_prefix([state["question"]])[0] if split else state["search_query"]
-        # 나뉜 질문의 첫 검색도 SEARCH_K다. 62.73(`GRAPH_SPLIT_FULL_K`)을 켜면 하위 질문이 있는 첫 검색만 근거 목록 상한(MAX_CHUNKS)까지 요청한다.
-        # `subs`는 첫 검색에서 분해가 나눴을 때만 2개 이상이다(안 나눔, 분해 실패, 재검색, 미리 돌린 원 질문 검색은 비어 SEARCH_K 그대로). 검색 기억 열쇠에 k가 들어 있어 k=5 결과와 섞이지 않는다
-        k = MAX_CHUNKS if split_full_k and subs else SEARCH_K
+        if split and query_branches:  # `GRAPH_QUERY_BRANCHES`(기본 꺼짐): 대상이 없는 계정 주제는 대상마다 하위 질문을 만든다(query_plan.py)
+            plan = QP.plan_first_search(state["question"], query, subs, branches=True)
+            query, subs = plan.query, plan.subs
+            extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
+        # 나뉜 질문의 첫 검색만 SPLIT_K(달러 금액이 든 질문은 SEARCH_K). 62.73(`GRAPH_SPLIT_FULL_K`, 서비스 설정 꺼짐)을 켜면 하위 질문이 있는 첫 검색은 근거 목록 상한(MAX_CHUNKS)까지 요청한다.
+        # `subs`는 첫 검색에서 분해가 나눴을 때만 2개 이상이다(안 나눔, 분해 실패, 재검색, 미리 돌린 원 질문 검색은 비어 SEARCH_K 그대로). 검색 기억 열쇠에 k가 들어 있어 다른 k 결과와 섞이지 않는다
+        k = (MAX_CHUNKS if split_full_k and subs else split_k(state["question"], subs)) if first else SEARCH_K
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"), k=k, sub_queries=subs or None)
         _forget_search_trace()
         try:
@@ -1102,18 +1214,38 @@ def build_graph(
             return {**extra, **memo, "kind": "refuse", "answer": MSG_REFUSE_NO_KEY, "citations": [], "search_error": "no_key"}
         memo = search_ms(memo)
         # 재검색은 앞 결과를 버리지 않고 합친다. 판단, 인용 검사, 근거 판정은 모두 이 합친 목록과 대조한다
-        merged = merge_chunks(state.get("chunks", []), found, limit=MAX_CHUNKS)
-        return {"chunks": merged, **memo, **extra}
+        cap = chunk_cap(subs if first else state.get("sub_queries"), state["question"], 0 if first else page_filled(state))
+        merged = merge_chunks(state.get("chunks", []), found, limit=cap)
+        if not first:
+            return {"chunks": merged, **memo, **extra}
+        fill_ahead = None
+        if page_search is not None and split_k(state["question"], subs) > SEARCH_K:  # 62.55: 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
+            fill_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pagefill")
+            fill_ahead = fill_pool.submit(contextvars.copy_context().run, page_fill_chunk, state, merged, query)
+            fill_pool.shutdown(wait=False)
+        filled = with_intro(state, merged, query)  # R3는 첫 검색에만 붙인다
+        intro_ids = [c["chunk_id"] for c in filled[len(merged):]]  # 뒤에 더해진 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산이 넓힌 자리와 가른다(`core_chunks`)
+        if fill_ahead is not None:
+            have = {(c["chunk_id"], c.get("version_id")) for c in filled}
+            extra_chunk = [c for c in fill_ahead.result() if (c["chunk_id"], c.get("version_id")) not in have]  # 순서는 도입부 → 보충. 보충은 앞자리도 도입부 청크도 아니다
+            if extra_chunk:
+                filled = [*filled, *extra_chunk]
+                memo = {**memo, "search_stats": {**(memo.get("search_stats") or state.get("search_stats") or {}), "page_fill": len(extra_chunk)}}  # 이 실행에서만 뜻이 있다(`load_memory`가 통계를 비운다)
+        return {"chunks": filled, **memo, **extra, **({"intro_chunk_ids": intro_ids} if intro_ids else {})}
 
     def judge(state: AgentState) -> dict:
         chunks = state.get("chunks", [])
         if not chunks:  # 자료가 없으면 LLM에 묻지 않고 부족으로 본다
             return {"judge_reason": "검색 결과 없음", "judge_partial": False, "retries": state.get("retries", 0) + 1}
         seen: dict = {"judged_chunks": len(chunks)} if stop_stalled else {}
-        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or ())
+        core_ids = [c["chunk_id"] for c in core_chunks(state)]
+        widened = judge_quote and len(core_ids) < len(chunks)  # 넓힌 첫 검색이고 인용 먼저 판정일 때만(사전 등록 62.44)
+        judge_input = P.judge_user(state["question"], chunks, state.get("sub_queries") or (), extra=[c["chunk_id"] for c in chunks if c["chunk_id"] not in set(core_ids)] if widened else ())
         guide = skill("chat-tool-guide")  # 켜져 있을 때만 판정이 다음 도구를 고른다. 호출 수는 그대로다
         terms = skill("search-terms") if requery_terms else ""  # `GRAPH_REQUERY_TERMS=1`일 때만 재검색어 용어표를 붙인다(기본 꺼짐)
         guided = P.with_skills(judge_system, [("도구 고르기 Skill", guide), ("용어 Skill", terms)])
+        if widened:
+            guided = P.judge_widened(guided)  # 넓힌 자리가 있는 판정에만 구절을 앞자리에서 먼저 찾게 하는 문장을 더한다
         names = [*(["chat-tool-guide"] if guide else []), *(["search-terms"] if terms else [])]
         used = {"skills_used": note_skills(state, *names)} if names else {}
         if stop_stalled and state.get("retries", 0) and state.get("judged_chunks") == len(chunks):  # 재검색이 근거를 더하지 못했다. 입력이 같으므로 앞 판정을 그대로 두고 더 찾지 않는다
@@ -1126,13 +1258,13 @@ def build_graph(
             pool = ThreadPoolExecutor(max_workers=2 if best2 else 1, thread_name_prefix="draft")  # 기본은 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
             try:
                 ahead = ground_partials(state)  # 사전 등록 62.49: 이 판정이 충분·일부 어느 쪽으로 끝나도 같이 쓴 답의 근거 판정이 미리 돌아 있게 한다
-                writing = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, partials=ahead)))
+                writing = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead)))
                 writing2 = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state, partials=ahead))) if best2 else None  # BO2: 같은 입력으로 하나 더
                 obj = ask_judge(guided, judge_input)
                 if (obj or {}).get("sufficient") is True or (answer_wait and last_partial(state, obj or {})):
                     # 충분이면 같이 쓴 답을 쓴다(부족이면 순차라면 부르지 않았을 호출이라 결과와 오류를 모두 버린다).
                     # 기다리는 답을 켜고 재검색이 끝나 일부 답으로 가면 같이 쓴 답을 그대로 쓴다(새로 쓰는 시간을 아낀다)
-                    early = writing.result() if writing2 is None else pick_two(writing, writing2, AF.quote_chunk_ids(obj, chunks))
+                    early = writing.result() if writing2 is None else pick_two(writing, writing2, AF.quote_chunk_ids(obj, chunks), chunks, core_ids if widened else None)
             finally:
                 pool.shutdown(wait=not answer_wait, cancel_futures=bool(answer_wait))  # 기다리는 답을 켜면 판정이 부족일 때 답을 기다리지 않는다
         else:
@@ -1148,13 +1280,22 @@ def build_graph(
             used = {**used, "judge_quote_ids": AF.quote_chunk_ids(obj, chunks), "judge_quotes": AF.quote_rows(obj, chunks)}  # judge_quotes는 측정 기록용(답 경로는 읽지 않는다)
         if facts_log:  # FL: 판정 기록만 쌓는다(결론과 다음 단계는 그대로)
             used = {**used, "judge_checks_log": [*(state.get("judge_checks_log") or []), AF.judge_facts(obj, state.get("retries", 0))]}
+        if scope_refuse and AF.scope_note_refuses(obj):
+            # SN: 충분이라면서 자료가 다른 대상에 한정되고 질문한 것은 없다고 판정이 스스로 적었다. 충분으로 보지 않고 일부 근거로 바꿔 재검색 규칙을 따른다
+            # (재검색이 끝나면 나뉜 질문은 일부 답, 아니면 거절). 충분 판정으로 같이 받은 답은 버린다
+            note = str(obj.get("scope_note")).strip()
+            missing0 = obj.get("missing") if isinstance(obj.get("missing"), list) else []
+            obj = {**obj, "sufficient": False, "partial": True, "reason": note, "missing": [*missing0, note]}
+            early = None
+            used = {**used, "early_answer": {}}
         if obj.get("sufficient") is True:  # 파싱 실패나 모호한 값은 부족으로 본다
             return {"judge_reason": "", "judge_partial": False, "judge_missing": [], "judge_scope": "", "next_section": None, **seen, **used, **({"early_answer": early} if early else {})}
         clarify = obj["clarify"] if isinstance(obj.get("clarify"), str) and obj["clarify"].strip() else None
         missing = obj.get("missing") if isinstance(obj.get("missing"), list) else []
         scope = obj.get("scope_note")
+        requeried = skip_seen and (state.get("search_stats") or {}).get("page_requeries")  # SS: 페이지 재검색으로 새 청크를 받은 뒤에는 섹션 읽기를 더 하지 않는다
         split_partial = obj.get("partial") is True and len(state.get("sub_queries") or []) >= 2   # 62.63: 나뉜 질문의 일부 판정은 섹션 읽기도 재검색도 없이 일부 답으로 간다(`after_judge`)
-        section = pick_section(obj, chunks) if guide and not (section_extra and state.get("section_reads", 0)) and not split_partial else None
+        section = pick_section(obj, chunks) if guide and not (section_extra and state.get("section_reads", 0)) and not requeried and not split_partial else None
         out = {
             **({"early_answer": early} if early and answer_wait else {}),
             "judge_reason": str(obj.get("reason") or "근거 부족"),
@@ -1202,7 +1343,7 @@ def build_graph(
         if state.get("judge_partial") and len(state.get("sub_queries") or []) >= 2:  # 62.63: 나뉜 질문(사실 둘 이상)의 일부 판정은 재검색하지 않고 같이 쓴 답을 일부 답으로 낸다
             return "write_answer"
         # 근거 목록이 차면 `merge_chunks`가 새 청크를 받지 못해 재검색이 아무것도 바꾸지 못한다
-        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= MAX_CHUNKS)  # 섹션 읽기는 목록을 늘리지 않는다
+        stalled = stop_stalled and not state.get("next_section") and (state.get("search_stalled") or len(state.get("chunks", [])) >= chunk_cap(state.get("sub_queries"), state.get("question"), page_filled(state)))  # 섹션 읽기는 목록을 늘리지 않는다
         if state.get("retries", 0) <= research_limit + (state.get("section_reads", 0) if section_extra else 0) and not stalled:
             return "rewrite"
         # 사실이 하나인 질문의 "일부"는 없는 대상을 비슷한 자료로 답하는 길이 되므로 재검색이 끝나면 거절한다(나뉜 질문의 일부 판정은 위에서 일부 답으로 갔다)
@@ -1246,16 +1387,24 @@ def build_graph(
     def answer_skills_used(state: AgentState, blocks: list[tuple[str, str]]) -> list[str]:
         return note_skills(state, *[name for name, (_, body) in zip(("citation-rules", "delegation"), blocks) if body])
 
-    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None, partials: tuple[bool, ...] | None = None) -> dict:
+    def draft_reply(state: AgentState, careful: bool = False, abandoned: threading.Event | None = None, core: bool = False, partials: tuple[bool, ...] | None = None) -> dict:
         blocks = answer_blocks(state)
         system = P.with_skills(answer_base if careful else answer_system, blocks)
         used = answer_skills_used(state, blocks)
-        chunks = state.get("chunks", [])
+        chunks = core_chunks(state) if core else state.get("chunks", [])
+        if team_last:  # `GRAPH_TEAM_LAST=1`: 질문이 팀을 말하지 않으면 팀 문서를 답 입력 뒤로 보낸다(빼지 않고 순서만)
+            chunks = AF.team_docs_last(state["question"], chunks)
         user = P.answer_user(state["question"], chunks, state.get("as_of"), partial=bool(state.get("judge_partial")), scope_note=state.get("judge_scope") or "")
-        obj, raw = ask_json(system, user)
+        targets = (state.get("query_targets") or []) if query_branches else []
+        obj, raw = ask_json(system, user + QP.targets_note(targets))
+        missing = QP.missing_targets(str((obj or {}).get("answer") or ""), targets) if obj is not None else []
+        if missing:  # `GRAPH_QUERY_BRANCHES=1`: 답이 대상 하나를 빠뜨리면 빠진 대상을 적어 한 번 다시 쓴다. 다시 쓴 답이 JSON이 아니면 앞 답을 쓴다
+            again, raw2 = ask_json(system, user + QP.targets_note(targets, missing))
+            if again is not None:
+                obj, raw = again, raw2
         out = draft_fields(obj, raw, used)
         kind = "reasoning" if careful else ("fast" if answer_wait else "answer")   # 기록용 후보 종류: 추론 답, 빠른 답(추론 답과 같이 보낼 때), 한 가지 답
-        scope = "full"   # 기록 칸(사전 등록 62.67). 답은 늘 문맥 전체로 쓴다
+        scope = "core" if core else "full"
         if spec_dropped(state):  # 62.72 `GRAPH_SPEC_STOP_GROUND`: 버리기로 한 미리 돌리기 안의 답이다. 쓰이지 않으므로 근거 확인을 미리 부르지 않는다
             note_ground(state, {"kind": kind, "scope": scope, "verdict": "skipped_spec_dropped", "used": False, "ahead": False})
         elif abandoned is None or not abandoned.is_set():  # 추론 답이 대기 시간을 넘겨 빠른 답으로 넘어갔으면 이 답의 근거 판정은 쓰이지 않으므로 미리 부르지 않는다
@@ -1413,20 +1562,20 @@ def build_graph(
 
         start()  # 검사는 로컬 계산이라 답을 낸 쪽에서 바로 돈다. 그래야 판정이 등록된 뒤에 답이 다음 단계로 넘어가 같은 호출이 두 번 나가지 않는다
 
-    def timed_reply(state: AgentState, partials: tuple[bool, ...] | None = None) -> dict:
+    def timed_reply(state: AgentState, core: bool = False, partials: tuple[bool, ...] | None = None) -> dict:
         """`GRAPH_ANSWER_WAIT_S`가 있으면 첫 답은 추론 답을 그 시간까지 기다리고, 늦거나 실패하면 같이 보낸 빠른 답을 쓴다. 재검색 뒤의 답은 시간이 모자라 빠른 답이다."""
         if not answer_wait or state.get("retries", 0):
-            return draft_reply(state, partials=partials)
+            return draft_reply(state, core=core, partials=partials)
         wait_s = answer_wait
         if answer_budget and state.get("started_at"):
             wait_s = min(answer_wait, answer_budget - (time.monotonic() - state["started_at"]))
         if wait_s <= 0:
-            return draft_reply(state, partials=partials)
+            return draft_reply(state, core=core, partials=partials)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer")
         try:
             gave_up = threading.Event()  # 추론 답을 쓰지 않기로 하면 세운다. 늦게 끝난 추론 답이 쓰이지 않을 근거 판정을 부르지 않게 한다
-            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up, partials=partials))
-            fast = in_background(pool, "write_answer", lambda: draft_reply(state, partials=partials))
+            slow = in_background(pool, "write_answer", lambda: draft_reply(state, careful=True, abandoned=gave_up, core=core, partials=partials))
+            fast = in_background(pool, "write_answer", lambda: draft_reply(state, core=core, partials=partials))
             done, _ = wait_futures([slow], timeout=wait_s)
             if done and slow.exception() is None and slow.result().get("raw_citations"):
                 return slow.result()
@@ -1440,18 +1589,51 @@ def build_graph(
         blocks = answer_blocks({**state, "chunks": chunks})
         system = P.with_skills(joint_system, [*blocks, ("도구 고르기 Skill", skill("chat-tool-guide"))])
         used = answer_skills_used(state, blocks)
-        obj, raw = ask_json(system, P.answer_user(state["question"], chunks, state.get("as_of")))
+        shown = AF.team_docs_last(state["question"], chunks) if team_last else chunks
+        obj, raw = ask_json(system, P.answer_user(state["question"], shown, state.get("as_of")))
         return obj, (draft_fields(obj, raw, used) if obj and obj.get("sufficient") is True and "answer" in obj else None)
 
-    def pick_two(first: Any, second: Any, quote_ids: list[str]) -> dict:
-        """BO2: 두 답 Future 중 하나. 첫 답의 오류는 그대로 올리고(현행과 같다), 둘째 답이 실패하면 첫 답을 쓴다. 고른 기록은 best2_log 칸에 담는다."""
+    def pick_core_first(first: Any, second: Any, quote_ids: list[str], core_ids: list[str]) -> dict:
+        """넓힌 첫 검색의 답 고르기(사전 등록 62.44). 판정 구절이 든 청크가 모두 앞 5자리 안이고 앞자리 답이 인용을 가진 답이면 앞자리 답(첫 후보),
+        아니면 전체 문맥 답(둘째 후보)이다. 앞자리 답이 실패하면 전체 문맥 답을 쓰고, 전체 문맥 답이 실패하면 앞자리 답을 쓴다. 고른 기록은 `best2_log`에 `rule=core_first`로 담는다."""
+        def settle(future: Any) -> dict | None:
+            try:
+                return future.result()
+            except Exception as e:  # noqa: BLE001
+                if isinstance(e, CostCapExceeded):
+                    raise
+                log.warning("넓힌 문맥 답 후보 실패: %s", type(e).__name__)
+                return None
+
+        a, b = settle(first), settle(second)
+        if a is None and b is None:
+            first.result()  # 둘 다 실패하면 현행과 같이 첫 답의 오류를 올린다
+        usable = bool(a and a.get("raw_citations") and not G.says_only_absence(str(a.get("answer") or "")))
+        in_core = set(quote_ids or []) <= set(core_ids)
+        pick = 0 if b is None or (usable and in_core) else 1
+        why = "한쪽 후보 없음" if a is None or b is None else "판정 구절이 넓힌 자리에 있음" if not in_core else "앞자리 답 없음" if not usable else "판정 구절이 모두 앞자리"
+        cited = [[c.get("chunk_id") if isinstance(c, dict) else c for c in (d or {}).get("raw_citations") or []] for d in (a, b)]
+        if pick == 0 and why == "판정 구절이 모두 앞자리" and b is not None and cited[1] and set(cited[1]) <= set(core_ids) and not G.says_only_absence(str(b.get("answer") or "")):
+            # 사전 등록 62.59: 둘째 후보도 앞자리 청크만 인용했고 판정 구절 청크를 첫 후보보다 더 많이 인용했으면 둘째 후보(같거나 적으면 첫 후보, 둘째가 앞자리 밖·보충 청크를 인용해도 첫 후보)
+            quotes = set(quote_ids or [])
+            if len(quotes & set(cited[1])) > len(quotes & set(cited[0])):
+                pick, why = 1, "앞자리 인용끼리 판정 구절 청크 수"
+        log_row = {"quote_ids": list(quote_ids or []), "cands": [{"cited": cited[0]}, {"cited": cited[1]}], "pick": pick, "why": why, "rule": "core_first"}
+        return {**(a if pick == 0 else b), "best2_log": log_row}
+
+    def pick_two(first: Any, second: Any, quote_ids: list[str], chunks: list[dict], core_ids: list[str] | None = None) -> dict:
+        """BO2: 두 답 Future 중 하나. 첫 답의 오류는 그대로 올리고(현행과 같다), 둘째 답이 실패하면 첫 답을 쓴다. 고른 기록은 best2_log 칸에 담는다.
+        BO2SD면 문맥 청크의 rule_seq로 S 밖 인용이 S 청크와 같은 문서인지 본다."""
+        if core_ids is not None:  # 사전 등록 62.44: 넓힌 첫 검색. 첫 후보는 앞 5자리만 보고 쓴 답, 둘째 후보는 전체 문맥으로 쓴 답이다
+            return pick_core_first(first, second, quote_ids, core_ids)
         a = first.result()
         try:
             b = second.result()
         except Exception as e:  # noqa: BLE001
             log.warning("BO2 둘째 답 실패: %s", type(e).__name__)
             b = None
-        chosen, why = AF.pick_best2(a, b, quote_ids)
+        doc_of = {c.get("chunk_id"): c.get("rule_seq") for c in chunks or [] if c.get("chunk_id")} if best2_samedoc else None
+        chosen, why = AF.pick_best2(a, b, quote_ids, doc_of)
         return {**chosen, "best2_log": why}
 
     def write_answer(state: AgentState) -> dict:
@@ -1462,9 +1644,11 @@ def build_graph(
             return timed_reply(state)
         pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer2")  # BO2: 같은 입력으로 두 번 쓰고 판정 구절이 든 청크와 맞는 쪽
         try:
-            one = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state)))
+            core_ids = [c["chunk_id"] for c in core_chunks(state)]
+            widened = judge_quote and len(core_ids) < len(state.get("chunks", []))
+            one = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=widened)))
             two = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state)))
-            return pick_two(one, two, state.get("judge_quote_ids") or [])
+            return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []), core_ids if widened else None)
         finally:
             pool.shutdown(wait=True)
 
@@ -1557,6 +1741,8 @@ def build_graph(
             rec["result"] = f"rejudge_{second['state']}"
             return None
         info.update(revised=True, draft_answer=state["answer"], removed=[{"sentence": x, "reason": verdict["detail"]} for x in pruned.removed])
+        if cite_guard and second.get("quotes"):  # M(62.70): 문장을 뺀 답의 재확인 구절로 겹친 머리 바로잡기를 한다(`ground_checked`)
+            info["_claim_quotes"] = list(second["quotes"])
         # 뺀 문장이 있으면 답이 일부만 남았다고 밝힌다. 말없이 빼면 질문 전체에 답한 것처럼 보인다
         return {"kind": "answer", "answer": finish_answer(f"{cleaned} {MSG_PARTIAL_NOTE}", valid, as_of), "citations": valid, "grounding": info, "skills_used": used}
 
@@ -1606,7 +1792,8 @@ def build_graph(
         rec: dict = {"result": ""}
         info["redraft"] = rec
         try:
-            user = P.redraft_user(question, chunks, as_of, state.get("answer", ""), verdict["detail"], verdict["claims"])
+            shown = AF.team_docs_last(question, chunks) if team_last else chunks
+            user = P.redraft_user(question, shown, as_of, state.get("answer", ""), verdict["detail"], verdict["claims"])
             obj, _ = ask_json(P.with_skills(answer_system, answer_blocks(state)), user)
         except CostCapExceeded:
             raise
@@ -1629,8 +1816,10 @@ def build_graph(
             second = llm_verdict(question, state.get("answer", ""), cited, as_of, body, chunks, partial=partial)
             note_ground(state, {"kind": "extra", "check": "unchanged", "partial": partial, "verdict": second["state"], "used": True, "ahead": False})
             rec["rejudge"] = second["state"]
-            if second["state"] == "grounded":
+            if second["state"] == "grounded" and not (pointer_refuse and AF.pointer_only(second.get("quotes"))):  # PT 기준은 그대로 적용한다
                 info.update(rejudged_unchanged=True)
+                if cite_guard and second.get("quotes"):  # M(62.70): 같은 답을 다시 확인한 구절로 겹친 머리 바로잡기를 한다
+                    info["_claim_quotes"] = list(second["quotes"])
                 draft = state.get("answer", "")
                 return {"kind": "answer", "answer": finish_answer(f"{draft} {MSG_PARTIAL_NOTE}" if partial else draft, cited, as_of), "citations": cited, "grounding": info, "skills_used": used}
         if rec["result"]:
@@ -1649,7 +1838,7 @@ def build_graph(
         kept, trimmed, cleaned = select_citations(valid, unmarked if _MARK.search(unmarked) else cleaned)
         if keep_cites:  # `GRAPH_KEEP_CITES=1`: 처음 답에서 지적받지 않은 문장의 인용을 코드가 넘겨받는다. 아래 검사와 재판정을 그대로 거친다
             before = len(kept)
-            cleaned, kept = AF.carry_citations(state.get("answer", ""), state.get("citations", []), verdict["claims"], cleaned, kept)
+            cleaned, kept = AF.carry_citations(state.get("answer", ""), state.get("citations", []), verdict["claims"], cleaned, kept, cap=MAX_CITATIONS)
             if len(kept) > before:
                 rec["carried"] = [c["chunk_id"] for c in kept[before:]]
         again = G.check_rules(question, kept, chunks)
@@ -1662,6 +1851,8 @@ def build_graph(
         if second["state"] != "grounded":
             return None
         info.update(redrafted=True, draft_answer=state.get("answer", ""))
+        if cite_guard and second.get("quotes"):  # M(62.70): 다시 쓴 답의 재확인 구절로 겹친 머리 바로잡기를 한다(`ground_checked`)
+            info["_claim_quotes"] = list(second["quotes"])
         noted = redraft_needs_note(bool(state.get("judge_partial")), obj.get("partial") is True, state.get("judge_quotes"), [c["chunk_id"] for c in kept])
         if obj.get("partial") is True and not noted:
             rec["partial_note"] = "dropped_facts_cited"   # 기록만: 다시 쓰는 모델은 일부라고 했지만 판정의 사실마다 구절 청크를 다시 쓴 답이 인용했다
@@ -1764,6 +1955,8 @@ def build_graph(
             if verdict.get("ahead"):
                 info["ground_ahead"] = True
             info["llm"] = "ungrounded" if verdict["state"] == "ungrounded" else verdict["state"]
+            if verdict["state"] == "grounded" and verdict.get("quotes"):
+                info["_claim_quotes"] = list(verdict["quotes"])  # HO가 쓰고 `ground`가 지운다(기록에 남기지 않는다)
             if verdict.get("error"):
                 info["llm_error"] = verdict["error"]
             if verdict.get("caveat_only"):
@@ -1786,6 +1979,10 @@ def build_graph(
                         revised = revise_answer(state, cited, verdict, info, body, used)
                     if revised is not None:
                         return revised
+            elif verdict["state"] == "grounded" and pointer_refuse and AF.pointer_only(verdict.get("quotes")):
+                # PT: 판정이 받친다고 한 구절이 모두 다른 자료를 가리키는 안내뿐이다. 질문한 내용은 자료에 없으므로 다시 쓰지 않고 거절한다
+                reason, detail = G.UNSUPPORTED, "근거 구절이 다른 자료를 가리키는 안내뿐"
+                info["pointer_only"] = True
             elif verdict["state"] == "grounded" and verdict.get("off_topic") and not reason:
                 final = without_off_topic(state, cited, verdict["off_topic"], info, partial) or final
         if not reason and partial and "citations" not in final:  # 62.66: 일부 답에서 단 인용이 모두 판정 구절 청크 밖인 문장을 뺀다(근거 확인이 끝난 뒤라 그 입력은 그대로다)
@@ -1811,9 +2008,8 @@ def build_graph(
         return {**final, "grounding": info, "skills_used": used}
 
     def ground(state: AgentState) -> dict:
-        """근거 판정(`ground_once`)에 이 실행의 근거 확인 호출 기록(`grounding.candidates`, 사전 등록 62.67)을 붙인다. 기록만이고 답·인용·거절은 그대로다.
-        겹친 머리 인용 바로잡기(사전 등록 62.52, 62.58)는 사전 등록 62.72로 제거했다(설계에 평가 정답을 봤으므로)."""
-        out = ground_once(state)
+        """근거 판정(`ground_checked`)에 이 실행의 근거 확인 호출 기록(`grounding.candidates`, 사전 등록 62.67)을 붙인다. 기록만이고 답·인용·거절은 그대로다."""
+        out = ground_checked(state)
         try:   # 기록만: 기록을 모으거나 붙이다 실패해도 판정 결과를 그대로 낸다
             rows = ground_candidates(state)
             if rows and isinstance(out.get("grounding"), dict):
@@ -1821,6 +2017,76 @@ def build_graph(
         except Exception:
             log.debug("근거 확인 호출 기록 붙이기 실패", exc_info=True)
         return out
+
+    def ground_checked(state: AgentState) -> dict:
+        """근거 판정(`ground_once`). `GRAPH_CITE_EXPAND=1`이면 판정이 끝난 답에 같은 값을 말하는 다른 청크의 인용을 코드가 더한다(LLM 호출 없음, 판정 입력은 그대로)."""
+        out = ground_once(state)
+        claim_quotes: list[str] = []
+        if isinstance(out.get("grounding"), dict) and "_claim_quotes" in out["grounding"]:  # HO 입력은 꺼내고 기록에서 지운다
+            kept_info = dict(out["grounding"])
+            claim_quotes = kept_info.pop("_claim_quotes") or []
+            out = {**out, "grounding": kept_info}
+        if not (cite_expand or cite_phrase or drop_scoped or consensus or claim_quotes) or out.get("kind", state.get("kind")) != "answer":
+            return out
+        cited = out.get("citations", state.get("citations", []))
+        body, sep, _ = str(out.get("answer") or "").rpartition("\n\n기준일 ")
+        if not sep:
+            return out
+        info, more = dict(out.get("grounding") or {}), cited
+        context = state.get("chunks", [])  # G가 뺀 청크도 다시 쓰기 뒤와 같이 A1, A1b가 볼 수 있다(지금 동작과 같게 둔다)
+        reader = read_prev_chunk if prev_chunk is not None else None
+        # HO(사전 등록 62.52): 처음 답이 그대로 받쳐졌을 때만(구절이 그 답의 것이다). M(62.70)이 켜져 있으면 다시 쓴 답·문장을 뺀 답도 그 답의 재확인 구절로 한다
+        if claim_quotes and (cite_guard or not (info.get("revised") or info.get("redrafted"))):
+            got = AF.head_owner_cites(body, more, context, claim_quotes, prev_reader=reader)  # 62.58: 원래 청크가 문맥에 없으면 앞 청크를 읽는다
+            if got:
+                body, more, info["head_owner"] = got
+        guard_kw: dict = {}
+        bases: dict[str, str] = {}  # K: 코드가 더한 청크 -> 그 청크가 기댄 모델 인용(바로잡기 전 청크 id)
+        if cite_guard:
+            quote_ids = {str(i) for i in state.get("judge_quote_ids") or []}
+            swapped = {h["to"]: h["from"] for h in info.get("head_owner") or [] if isinstance(h, dict)}
+
+            def base_of(x: dict) -> str:
+                return bases.get(x["chunk_id"]) or swapped.get(x["chunk_id"], x["chunk_id"])
+
+            def anchor_ok(x: dict) -> bool:  # K: 판정 구절이 없으면 지금처럼 모든 인용에 기댄다
+                return not quote_ids or base_of(x) in quote_ids
+
+            def noted(picker):
+                def pick(cited_now, ctx, **kw):
+                    got = picker(cited_now, ctx, **kw)
+                    for c, i in got:
+                        bases[c["chunk_id"]] = base_of(cited_now[i])
+                    return got
+                return pick
+            def add_ok(c: dict) -> bool:  # K 예외: 더할 후보 자체가 판정 구절 청크면 기준 인용과 상관없이 더한다
+                return c["chunk_id"] in quote_ids
+            guard_kw = {"anchor_ok": anchor_ok, "add_ok": add_ok}
+        if cite_expand:
+            before = len(more)
+            body, more = AF.expand_numbered(body, more, context, cap=MAX_CITATIONS, **({"picker": noted(AF.pick_extra), **guard_kw} if cite_guard else {}))
+            if len(more) > before:
+                info["cite_expand"] = [c["chunk_id"] for c in more[before:]]
+        if cite_phrase:  # A1b: A1 뒤에 문장 공유 규칙으로 더한다(A1이 더한 청크도 인용으로 본다)
+            before = len(more)
+            heads: list[dict] = []
+            phrase_kw = {**guard_kw, "head_fix": True, "prev_reader": reader, "log": heads} if cite_guard else {}  # L(62.70): 겹친 머리 공유 글은 앞 청크로
+            body, more = AF.expand_numbered(body, more, context, cap=MAX_CITATIONS, picker=noted(AF.pick_phrase_extra) if cite_guard else AF.pick_phrase_extra, **phrase_kw)
+            if len(more) > before:
+                info["cite_phrase"] = [c["chunk_id"] for c in more[before:]]
+            if heads:
+                info["cite_phrase_head"] = heads
+        if drop_scoped:  # P: 질문에 없는 한정어가 붙은 페이지만 인용한 문장을 뺀다(A1, A1b가 더한 인용도 본다)
+            got = AF.drop_scoped_cites(body, more, state["question"], MSG_PARTIAL_NOTE, context=state.get("chunks", []))
+            if got:
+                body, more, info["scoped_drop"] = got
+        if consensus:  # CS: 한 문장에서 여러 페이지가 되풀이하는 문장 쪽 인용만 남긴다(A1, A1b가 더한 인용도 본다)
+            got = AF.drop_odd_cites(body, more)
+            if got:
+                body, more, info["consensus_drop"] = got
+        if more == cited:
+            return out
+        return {**out, "answer": finish_answer(body, more, state.get("as_of")), "citations": more, "grounding": info}
 
     def after_ground(state: AgentState) -> str:
         return "save" if state.get("kind") == "answer" else END

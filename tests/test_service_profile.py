@@ -68,18 +68,15 @@ EARLY_SEARCH_6253 = {"GRAPH_SPECULATE_EARLY_SEARCH": "1"}
 PROMPT_CACHE_6267 = {"LLM_PROMPT_CACHE": "1"}
 # 사전 등록 62.68: 근거 확인 실패 뒤 이미 받쳐진 다른 후보 쓰기(서비스 경로만, 측정 실행기 인자에는 없다)
 ADOPT_GROUNDED_6268 = {"GRAPH_ADOPT_GROUNDED_CANDIDATE": "1"}
+# 사전 등록 62.70: 코드가 더하는 인용의 보정(서비스 경로만, 측정 실행기 인자에는 없다)
+CITE_ADD_GUARD_6270 = {"GRAPH_CITE_ADD_GUARD": "1"}
 # 사전 등록 62.72: 둘째 '없음' 표 뒤 셋째 표 대기 상한, 버린 추측 실행의 근거 확인 멈춤(서비스 경로만, 측정 실행기 인자에는 없다. 코드 기본은 꺼짐)
 BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
-# 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(서비스 경로만, 측정 실행기 인자에는 없다. 코드 기본은 꺼짐)
-BLIND_6273 = {"GRAPH_SPLIT_FULL_K": "1"}
-# 사전 등록 62.72로 코드째 제거한 스위치(설계에 평가 정답을 봤다). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
-REMOVED_6272 = ("GRAPH_CITE_EXPAND", "GRAPH_CITE_PHRASE", "GRAPH_DROP_SCOPED_CITES", "GRAPH_CITE_PICK", "GRAPH_CITE_CONSENSUS", "GRAPH_CITE_ADD_GUARD",
-                "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK", "GRAPH_INTRO_FILL",
-                "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_BEST2_SAMEDOC",
-                "GRAPH_SCOPE_NOTE_REFUSE", "GRAPH_POINTER_REFUSE", "GRAPH_TEAM_LAST")
-REMOVED_ARGS_6272 = ("--cite-expand", "--cite-phrase", "--drop-scoped-cites", "--cite-pick", "--cite-consensus", "--query-terms", "--query-branches",
-                     "--heading-terms", "--heading-heads", "--heading-mark", "--intro-fill", "--research-same-page", "--requery-skip-seen", "--best2-samedoc",
-                     "--scope-note-refuse", "--pointer-refuse", "--team-last")
+# 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(코드 기본은 꺼짐). 사전 등록 62.74로 서비스 값에서 뺐다(되살린 SPLIT_K가 같은 검색을 넓힌다)
+BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
+# 표의 행이 특정 문항에 맞춘 내용이라 제거한 채 둔 스위치(사전 등록 62.72·62.74). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
+REMOVED_6274 = ("GRAPH_QUERY_TERMS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK")
+REMOVED_ARGS_6274 = ("--query-terms", "--heading-terms", "--heading-heads", "--heading-mark")
 
 
 def test_62_40_speed_values_are_service_defaults():
@@ -109,14 +106,14 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *BLIND_6272, *BLIND_6273)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272)}
     assert have == want
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
-    assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6273} == BLIND_6273 and not set(BLIND_6273) & set(SP.CANDIDATE_ENV)   # 62.73: 서비스 기본 켬
+    assert not set(BLIND_6273) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))   # 62.73: 사전 등록 62.74로 서비스 값에서 뺐다(코드 기본 꺼짐)
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"                 # 일찍 시작하는 검색은 예비 분해(SP)가 켜져 있어야 쓰인다
-    assert "GRAPH_CITE_HEAD_OWNER" not in SP.SERVICE_ENV                  # 62.52(겹친 머리 인용 바로잡기)는 사전 등록 62.72로 코드째 제거했다
+    assert "GRAPH_CITE_HEAD_OWNER" not in SP.SERVICE_ENV                  # 62.52는 스위치 없이 기본 동작이다
     assert SP.SERVICE_ENV["SEARCH_HNSW"] == "1"  # 측정 환경 변수
     # openrouter 공급자는 같은 수준을 LLM_REASONING*로 읽는다
     assert (SP.SERVICE_ENV["LLM_REASONING"], SP.SERVICE_ENV["LLM_REASONING_BY_TASK"]) == (SP.SERVICE_ENV["LLM_EFFORT"], SP.SERVICE_ENV["LLM_EFFORT_BY_TASK"])
@@ -124,20 +121,19 @@ def test_service_values_match_the_measured_arguments():
     assert args.via_mcp and args.connected  # 서비스에서는 SEARCH_VIA_MCP(MCP_TOKEN이 있을 때)와 원래 연결된 결정표·합동 검토
 
 
-def test_removed_switches_are_not_in_the_service_profile():
-    """사전 등록 62.72: 설계에 평가 정답을 본 장치는 코드째 제거했다. 서비스 값, 후보 값, 측정 인자, 서비스 검색 어디에도 남지 않는다."""
-    assert not set(REMOVED_6272) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))
-    assert not set(REMOVED_ARGS_6272) & set(SP.MEASURED_ARGS)
+def test_switches_left_removed_are_not_in_the_service_profile():
+    """사전 등록 62.74: 검색어 덧붙임, 대상별 나누기, 제목 경로 추가·절 이름 구·알림은 제거한 채 둔다. 서비스 값, 후보 값, 측정 인자, 서비스 검색 어디에도 없다."""
+    assert not set(REMOVED_6274) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))
+    assert not set(REMOVED_ARGS_6274) & set(SP.MEASURED_ARGS)
     assert "GRAPH_HEADING_BEST" not in SP.SERVICE_ENV
-    assert set(SP.service_searches()) == {"page_search"} and not hasattr(SP, "prev_chunk")
-    assert not hasattr(SP, "heading_search") and not hasattr(SP, "intro_search")
+    assert set(SP.service_searches()) == {"page_search", "intro_search", "prev_chunk"} and not hasattr(SP, "heading_search")
 
 
 def test_measured_args_are_the_61_51_setting():
     _, args = measured_args()
     assert (args.effort, args.effort_by_task) == ("none", "decompose=low,answer=low,judge=low")
     assert (args.llm_deadline, args.llm_hedge, args.llm_retries, args.answer_wait, args.answer_budget) == ("8", "3.5", "2", 4.0, 6.5)
-    assert args.judge_quote and args.answer_best2 and args.judge_vote and args.max_research == 1
+    assert args.judge_quote and args.answer_best2 and args.best2_samedoc and args.judge_vote and args.max_research == 1
 
 
 def test_values_are_valid_for_the_readers(clean_env):
@@ -182,7 +178,7 @@ def test_fills_empty_and_missing_keeps_given_and_off_clears():
     env = {"GRAPH_JUDGE_VOTE": "", "SEARCH_MAX_RESEARCH": "2", "LLM_STRUCTURED": "off", "LLM_DEADLINE_S": " OFF "}
     original = dict(env)
     before = SP.apply_service_profile(env)
-    assert env["GRAPH_JUDGE_VOTE"] == "1" and env["GRAPH_SPEC_STOP_GROUND"] == "1"     # 빈 값, 없는 값은 서비스 값
+    assert env["GRAPH_JUDGE_VOTE"] == "1" and env["GRAPH_CITE_PICK"] == "1"     # 빈 값, 없는 값은 서비스 값
     assert env["SEARCH_MAX_RESEARCH"] == "2"                                     # 직접 준 값은 그대로
     assert env["LLM_STRUCTURED"] == "" and env["LLM_DEADLINE_S"] == ""          # off는 그 설정을 쓰지 않는다
     assert "SEARCH_VIA_MCP" not in env                                           # MCP_TOKEN이 없으면 직접 호출
@@ -244,10 +240,15 @@ def test_service_searches_call_the_service_searcher(monkeypatch):
             calls.append(("pages", a))
             return ["p"]
 
+        def intro_fill(self, *a):
+            calls.append(("intro", a))
+            return ["i"]
+
     monkeypatch.setattr(S, "_searcher", FakeSearcher())
     parts = SP.service_searches()
     assert parts["page_search"]("q", [1, 2], None, "2026-11-09", 8) == ["p"]
-    assert [c[0] for c in calls] == ["pages"]
+    assert parts["intro_search"]([{"chunk_id": "a"}], "q", None, None) == ["i"]
+    assert [c[0] for c in calls] == ["pages", "intro"]
     assert calls[0][1] == ("q", [1, 2], None, "2026-11-09", 8)
 
 
@@ -288,7 +289,7 @@ def test_app_builds_the_service_graph_with_the_profile_and_restores_env(clean_en
         assert app.state.question_graph is not None
         assert os.environ["GRAPH_ANSWER_BEST2"] == "1"
     assert seen["env"] == {**SP.SERVICE_ENV, "GRAPH_JUDGE_VOTE": ""}
-    assert "page_search" in seen and "prev_chunk" not in seen and "heading_search" not in seen and "intro_search" not in seen and isinstance(seen["llm"], SP.SharedChatModel)
+    assert {"page_search", "intro_search", "prev_chunk"} <= set(seen) and "heading_search" not in seen and isinstance(seen["llm"], SP.SharedChatModel)
     assert seen["decision_repo"] is not None and seen["review_graph"] is not None  # --connected: 결정표와 합동 검토가 연결돼 있다
     assert "GRAPH_ANSWER_BEST2" not in os.environ and os.environ["GRAPH_JUDGE_VOTE"] == "off"  # 앱이 내려가면 되돌린다
 

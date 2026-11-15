@@ -10,7 +10,7 @@
   문항별 Recall@5 = 상위 5개 안에서 찾은 정답 위치 수 / 정답 위치 수, 집계 = 채점 문항 값의 단순 평균(`evals/exclusions.json`과 코퍼스에 없는 정답 위치는 분모에서 뺀다).
 - 첫 검색 = 한 trace(= `/chat` 한 번)에서 시작 시각이 가장 이른 `search` 관측(LangGraph `search` 노드).
 - 첫 검색 상위 5개 = 그 관측 output(JSON 문자열)의 `chunks` 목록 앞 5개. `chunks`는 서비스가 판정·답에 문맥으로 쓴 순서이고(backend/graph/build.py `search`),
-  나뉜 질문이면 하위 질문 목록(과 링크 확장)을 번갈아 합친 5개다. 사전 등록 62.72 이전 기록은 넓힌 첫 검색 8개의 앞 5개였고(끝 1자리 원 질문 목록과 맨 뒤 도입부 채우기는 앞 5개에 들지 않는다), 이 정의로 같은 값을 센다.
+  나뉜 질문이면 `backend/rag/retrieve/search.py`가 하위 질문 목록(과 링크 확장)으로 7자리를 채우고 끝 1자리만 원 질문 목록으로 채운 SPLIT_K(8)개의 앞 5개(끝 1자리는 앞 5개에 들지 않는다), 뒤에 도입부 채우기(R3)가 붙으면 맨 뒤에 붙으므로 앞 5개에 들지 않는다.
 - 짝짓기: 측정기 행의 `thread_id` == Langfuse `sessionId`(`<user_id>:<thread_id>`)의 뒤쪽. 행에 `thread_id`가 없으면 멈춘다(`--pairing legacy`는 리허설 전용 근사).
 """
 from __future__ import annotations

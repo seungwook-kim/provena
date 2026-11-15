@@ -5,7 +5,8 @@
 기본(확정 조합, 2026-11-05): voyage-4 · dense_en(영어 문장 벡터) · 리랭커 없음 · k=5 · 링크 확장 L1x2.
 
 하위 질문(SearchQuery.sub_queries, 그래프의 질문 분해): 하위 질문마다 위 과정으로 상위 k → 차례로 하나씩 번갈아 합쳐 상위 k.
-전체 질문 목록은 만들지 않는다(확정 조합 측정과 같다).
+k가 기본 자리 수(DEFAULT_K)보다 크면(그래프의 나뉜 질문 첫 검색 SPLIT_K) 하위 질문과 링크 확장으로 k-FULL_TAIL자리를 먼저 만들고 끝 FULL_TAIL자리를
+전체 질문의 후보 목록에서 아직 없는 앞 청크로 채운다(사전 등록 62.38). k가 기본 자리 수 이하면 전체 질문 목록을 만들지 않는다(확정 조합 측정과 같다).
 링크 확장(SEARCH_LINK_N=n, 0이면 끔): 상위 k 청크가 링크한 페이지의 청크(같은 org·as_of 필터) 중 상위 k에 없는 것을
 전체 질문 벡터와 가까운 순으로 n개 → 뒤 n자리를 바꾼다. 둘 다 확정 조합 측정 코드(evals/retrieval/exp_decompose_v1.py)와 같다.
 금액 구간 조회(SEARCH_RANGE_N=n, 기본 3, 0이면 끔, 사전 등록 62.7·62.13·62.27): 질문에 달러 금액이 있으면 상위 k가 든 페이지(질문을 나눴으면
@@ -232,6 +233,12 @@ class MemoryStore:
         q = np.asarray(qvec, dtype=np.float32)
         return {k: float(self.vectors[self._idx[k]] @ q) for k in keys if k in self._idx}
 
+    def page_chunks(self, rule_seq, version_id):
+        """한 페이지 판의 청크 (키, 절 제목) 목록, ord 순(없으면 행 순서). R3 도입부 채우기(`Searcher.intro_fill`)가 쓴다."""
+        pos = [i for i, r in enumerate(self.rows) if int(r["rule_seq"]) == int(rule_seq) and r["version_id"] == version_id]
+        pos.sort(key=lambda i: (int(self.rows[i].get("ord", i)), self.rows[i]["chunk_id"]))
+        return [(self._rm.keys[i], self.rows[i].get("article")) for i in pos]
+
     def fetch(self, keys):
         return {k: self.rows[self._idx[k]] for k in keys if k in self._idx}
 
@@ -392,6 +399,11 @@ WHERE c.embedder = %(embedder)s"""
                                "ids": [k[0] for k in keys], "vers": [k[1] for k in keys]})
         return {(r[0], r[1]): float(r[2]) for r in rows}
 
+    def page_chunks(self, rule_seq, version_id):
+        """한 페이지 판의 청크 (키, 절 제목) 목록, ord·chunk_id 순(MemoryStore와 같다)."""
+        sql = "SELECT c.chunk_id, c.version_id, c.article FROM chunks c WHERE c.rule_seq = %(s)s AND c.version_id = %(v)s ORDER BY c.ord, c.chunk_id"
+        return [((r[0], r[1]), r[2]) for r in self._all(sql, {"s": int(rule_seq), "v": version_id})]
+
     def fetch(self, keys):
         if not keys:
             return {}
@@ -443,6 +455,12 @@ def rrf(rankings: list[list[Key]], k: int = RRF_K) -> list[tuple[Key, float]]:
 
 
 MAX_SUB_QUERIES = 3       # 측정 분해 규칙: 서로 다른 사실이 둘 이상일 때만, 최대 3개(exp_decompose_v1.py)
+# 나뉜 질문을 기본 자리 수(DEFAULT_K)보다 넓혀 찾을 때 전체 질문의 후보 목록이 받는 끝자리 수(사전 등록 62.38).
+# 전체 질문 목록을 번갈아 합치기의 첫 목록으로 두면 k=8에서 하위 질문마다 2자리만 남는다. 사전 등록 평가셋에서는 두 위치가 같았다:
+# 첫 검색 문맥의 정답 위치가 v2 36/37, 검증 14/16이고 분해 표본 8개 합도 v2 270/296, 검증 104/128로 같아, 평가셋은 두 방식을 가르지 못했다.
+# 동점을 가른 것은 평가셋 밖의 데모 질문 "5만 달러 승인"이다(정답인 승인 권한표 행 둘이 하위 질문 목록 3~5위라 첫 목록으로 두면 둘 다 빠졌고(0/2), 끝 1자리 방식은 2/2).
+# 그 데모 질문은 달러 금액이 있어 결정 0105(사전 등록 62.43)로 k=5가 되므로 지금은 이 끝자리 규칙을 타지 않는다. 이 규칙은 달러 금액이 없는 나뉜 질문의 k=8 첫 검색에만 쓰이고, 끝 1자리를 고른 근거는 그 데모 사례 하나다
+FULL_TAIL = 1
 MAX_QUERY_CHARS = 1000    # MCP 도구 입력 한도와 같다(extras/mcp_skill/mcp_server/server.py MAX_QUERY)
 
 
@@ -457,6 +475,18 @@ def roundrobin(lists: list[list[Key]], k: int) -> list[Key]:
                 if len(out) == k:
                     break
         r += 1
+    return out
+
+
+def fill_tail(top: list[Key], lists: list[list[Key]], k: int) -> list[Key]:
+    """`top` 뒤를 k개가 될 때까지 채운다. 목록을 앞에서부터 차례로 쓰고(앞 목록을 다 본 뒤 다음 목록), 이미 든 것은 건너뛴다."""
+    out = list(top)
+    for x in lists:
+        for key in x:
+            if len(out) >= k:
+                return out
+            if key not in out:
+                out.append(key)
     return out
 
 
@@ -567,7 +597,7 @@ class Searcher:
             translator = lambda query, kind: translate.translate(query, kind, store)  # noqa: E731
         self.translator = translator
         self._lock = threading.Lock()
-        self._qvecs: OrderedDict[tuple[str, str], np.ndarray] = OrderedDict()  # (방식, 질문) -> 벡터. 같은 질문 벡터를 다시 쓰는 페이지 안 검색(`query_vector`)이 다시 임베딩하지 않게 한다
+        self._qvecs: OrderedDict[tuple[str, str], np.ndarray] = OrderedDict()  # (방식, 질문) -> 벡터. R3가 같은 질문을 다시 임베딩하지 않게 한다
         if bm25 is None:
             self._build_bm25()
         else:
@@ -766,8 +796,10 @@ class Searcher:
         n = max(q.k, cfg.rerank_top if self.reranker else 0)
 
         merge = sub_merge_enabled() and len(texts) > 1
-        # 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다
-        idx = range(len(texts)) if merge or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
+        # 나뉜 질문을 기본 자리 수보다 넓혀 찾으면(q.k > DEFAULT_K) 전체 질문(0번)의 후보 목록도 만들어 끝 FULL_TAIL자리를 준다(사전 등록 62.38).
+        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다
+        tail = FULL_TAIL if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
+        idx = range(len(texts)) if merge or tail or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
 
@@ -825,9 +857,16 @@ class Searcher:
                 for key, s in m.items():
                     best[key] = max(s, best.get(key, float("-inf")))
             top = merge_by_score(lists, best, q.k)
+        elif tail:
+            # lists[0]은 전체 질문, lists[1:]은 하위 질문이다. 하위 질문만 번갈아 합친 k-tail자리에 링크 확장까지 한 뒤(전체 질문 목록이 없는 검색의 k-tail 결과와 같다),
+            # 끝자리를 전체 질문 목록의 아직 없는 앞 청크로 채운다. 전체 질문 목록에 새 청크가 없으면 하위 질문 목록의 다음 청크가 든다
+            inner = q.model_copy(update={"k": q.k - tail})
+            head = self._link_expand(roundrobin(lists[1:], inner.k), rows, None if qvecs is None else qvecs[0], inner, tr)
+            top = fill_tail(head, [lists[0], roundrobin(lists[1:], sum(len(x) for x in lists[1:]))], q.k)
         else:
             top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
-        top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
+        if not tail:
+            top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
         top = self._range_expand(top[: q.k], rows, qvecs, [*texts, *trans], q, tr)
         out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)
@@ -901,9 +940,76 @@ class Searcher:
         self._remember(mode, query, vec)
         return np.asarray(vec, dtype=np.float32)
 
+    def prev_chunk(self, chunk) -> Chunk | None:
+        """사전 등록 62.58: 같은 페이지 판(rule_seq, version_id)에서 `chunk` 바로 앞 청크(ord 순) 1개. 첫 청크이거나 못 찾으면 None. DB 읽기(`page_chunks`, `fetch`) 각 1번이다."""
+        self._refresh()
+        d = chunk.model_dump() if hasattr(chunk, "model_dump") else dict(chunk)
+        top = getattr(self.store, "page_chunks", None)
+        if top is None or d.get("rule_seq") is None or not d.get("version_id"):
+            return None
+        page = [k for k, _ in top(int(d["rule_seq"]), d["version_id"])]
+        me = (d["chunk_id"], d["version_id"])
+        if me not in page or page.index(me) == 0:
+            return None
+        key = page[page.index(me) - 1]
+        rows = self.store.fetch([key])
+        return to_chunk(rows[key]) if key in rows else None
+
+    def intro_fill(self, chunks: list, query: str, org: str | None = None, as_of: str | None = None) -> list[Chunk]:
+        """R3 도입부 채우기(그래프 `GRAPH_INTRO_FILL=1`, 기본 꺼짐) 전용. 문맥(`chunks`)에 같은 페이지 판(rule_seq, version_id)의 청크가 `INTRO_MIN`개 이상이면
+        그 페이지 첫 청크의 첫 절(h2, 절 제목의 첫 ' > ' 앞) 청크 중 질문 벡터와 가장 가까운 1개를 돌려준다. 그 절이 청크 `INTRO_WHOLE`개 이하면 절 전체(ord 순)다.
+        그 절의 청크가 이미 문맥에 있으면 그 페이지는 건너뛴다.
+        기본 검색(`search`)은 바꾸지 않는다. 문항 id나 페이지 이름은 쓰지 않는다."""
+        self._refresh()
+        pages: dict[tuple[int, str], list[dict]] = {}
+        for c in chunks or []:
+            d = c.model_dump() if hasattr(c, "model_dump") else dict(c)
+            if d.get("rule_seq") is None or not d.get("version_id"):
+                continue
+            pages.setdefault((int(d["rule_seq"]), d["version_id"]), []).append(d)
+        want = [(pk, mem) for pk, mem in pages.items() if len(mem) >= INTRO_MIN]
+        top = getattr(self.store, "page_chunks", None)
+        if not want or top is None:
+            return []
+        have = {(d["chunk_id"], d["version_id"]) for mem in pages.values() for d in mem}
+        picks: list[Key] = []
+        qvec = None
+        for (seq, ver), mem in want:
+            page = top(seq, ver)
+            if not page:
+                continue
+            first = _h2(page[0][1])
+            if any(_h2(d.get("article")) == first for d in mem):
+                continue
+            section = [k for k, a in page if _h2(a) == first]
+            cand = {k for k in section if k not in have and k not in picks}
+            if not cand:
+                continue
+            if len(section) <= INTRO_WHOLE:  # 도입부 절이 청크 2개 이하면 한 문단이 나뉜 것이라 절 전체를 ord 순으로 더한다(벡터 순위를 쓰지 않는다)
+                picks += [k for k in section if k in cand]
+                continue
+            if qvec is None:
+                qvec = self.query_vector(query)
+                if qvec is None:
+                    return []
+            ranked = self.store.page_vector_top(qvec, self.cfg.embed_model, [seq], org, as_of, list(have), len(page))
+            best = next((k for k, _ in ranked if k in cand), None)
+            if best is not None:
+                picks.append(best)
+        rows = self.store.fetch(picks) if picks else {}
+        return [to_chunk(rows[k]) for k in picks if k in rows]
+
 
 _TRACE_LOCK = threading.Lock()
-QVEC_CACHE = 512   # 질문 벡터 기억 상한(`query_vector`용)
+QVEC_CACHE = 512   # 질문 벡터 기억 상한(R3용)
+INTRO_MIN = 3      # R3: 같은 페이지 판의 청크가 이만큼 문맥에 있어야 도입부를 채운다
+INTRO_WHOLE = 2    # R3: 도입부 절의 청크가 이 수 이하면 절 전체를 더한다
+
+
+def _h2(article) -> str:
+    """절 제목의 첫 단계(h2). 'A > B'면 'a'."""
+    return str(article or "").split(" > ")[0].strip().lower()
+
 _db_ms: contextvars.ContextVar[dict | None] = contextvars.ContextVar("search_db_ms", default=None)
 VECTOR_ONLY_MODES = ("dense_en", "dense_ko")
 
