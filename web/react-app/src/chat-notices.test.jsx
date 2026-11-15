@@ -98,6 +98,27 @@ describe('실패 경로 안내 (D11)', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
   })
 
+  // 제공자 한도·잔액 부족(provider_limit)과 시간 초과(timeout)는 backend/api/routes.py의 MSG_PROVIDER_LIMIT, MSG_TIMEOUT 문장이다
+  it.each([
+    ['provider_limit', 'LLM 제공자의 요청 한도에 닿았거나 사용 잔액이 부족해 답을 만들지 못했습니다. 1~2분 뒤 다시 시도해 주세요. 같은 안내가 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.'],
+    ['timeout', '답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.'],
+  ])('%s 오류는 서버 문구와 다시 시도 버튼을 보인다', async (code, MSG) => {
+    await askInThread(stream([{ type: 'error', data: { code, message: MSG, request_id: 'r1' } }]))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(MSG)
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+
+  it.each([
+    ['provider_limit', '관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청해 주세요.'],
+    ['timeout', '질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.'],
+  ])('%s 오류에 안내 문구가 빠져 와도 코드별 기본 안내와 다시 시도 버튼을 보인다', async (code, part) => {
+    await askInThread(stream([{ type: 'error', data: { code } }]))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(part)
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()
+  })
+
   it('검색 결과가 없어 답하지 않으면 근거 부족 표시와 다음 행동을 보인다', async () => {
     await askInThread(stream([{ type: 'done', data: { kind: 'refuse', code: 'no_results', refuse_stage: 'give_up', refuse_reason: 'no_evidence', message: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.' } }]))
     expect(await screen.findByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.')).toBeTruthy()

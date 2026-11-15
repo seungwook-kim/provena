@@ -370,7 +370,7 @@ flowchart TD
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
 
-**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장).
+**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장).
 
 **재시도.** 응답에 `Retry-After` 헤더는 없다. 코드의 안내 문구가 재시도를 말하는 경우는 아래와 같다.
 
@@ -378,6 +378,8 @@ flowchart TD
 |---|---|
 | 429 `rate_limited` | 잠시 후 다시 시도한다 |
 | SSE `error` `internal_error` | 잠시 후 다시 시도한다 |
+| SSE `error` `provider_limit` | 1~2분 뒤 다시 시도하고, 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청한다 |
+| SSE `error` `timeout` | 질문을 더 짧게 줄이거나 나누어 잠시 뒤 다시 묻는다 |
 | 409 `approval_pending` | 관리자 승인이 끝난 뒤 이어 간다 |
 | 503 `save_failed` | 같은 결정을 다시 보내면 이어서 처리한다 |
 
@@ -552,7 +554,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
 | `token` | `text`. 답이 비면 나오지 않는다 | 없음 |
 | `citation` | `chunk_id`, `rule_title`, `article`, `version_date`, `version_date_before`, `source_url` | `text`: 인용 청크 본문(화면 인용 패널용) |
 | `approval_request` | `approval_id`, `kind`, `summary` (`ApprovalItem`과 같은 이름). 초안과 대조표는 `GET /approvals`로 본다 | `code`: 항상 `approval_pending`. 이 thread의 새 질문은 승인이 끝날 때까지 HTTP 409 `approval_pending`이다 |
-| `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `internal_error`: 그 밖의 모든 예외), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
+| `error` | `code`(예외 클래스 이름), `message`(예외 문구) | 세 키로 바꾼다: `code`(`limit_exceeded`: 질문 1건의 LLM 비용 상한, `provider_limit`: LLM 제공자의 요청 한도(429)·잔액 부족, `timeout`: LLM 호출 시간 초과, `internal_error`: 그 밖의 모든 예외. 분류는 `backend/api/routes.py`의 `chat_error`), 안내 `message`, `request_id`. 예외 원문은 응답에 싣지 않고 로그에만 남긴다. 스트림이 HTTP 200으로 시작된 뒤이므로 HTTP 상태가 아니라 이 `code`로 판단한다 |
 | `done` | `answer_id` (거절·되묻기로 저장한 답이 없으면 `null`). 이어 묻는 질문을 완전한 질문으로 다시 썼을 때만 `understood_question`(다시 쓴 질문) | `kind`(`answer`, `clarify`, `refuse`), `as_of`, `usage`(`input_tokens`, `output_tokens`, `cost_usd`, `calls`). 거절이면 `code`, 답이면 `attribution`. 측정용 칸(아래 목록, 항상 포함): `cost_by_step`, `cost_by_step_total_usd`, `embed_tokens`, `embed_calls`, `embed_cost_usd`. 거절·되묻기면 `refuse_stage`, `refuse_reason` |
 
 `done.data.code`는 아래 하나뿐이다. 승인 대기(`approval_pending`)는 `approval_request`의 `code`이고 `done`에는 오지 않는다.

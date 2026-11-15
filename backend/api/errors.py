@@ -20,6 +20,8 @@
 | limit_exceeded | 429 | LLM 비용 상한 초과 (SSE `error` 이벤트의 data.code도 같은 값) |
 | not_configured | 503 | 서버 설정이나 저장소를 쓸 수 없음 |
 | internal_error | 500 | 예상 못 한 오류(내용은 로그에만) |
+| provider_limit | - | LLM 제공자의 요청 한도(429)·잔액 부족 (SSE `error` 이벤트의 data.code만, `backend/api/routes.py`의 `chat_error`) |
+| timeout | - | LLM 호출 시간 초과 (SSE `error` 이벤트의 data.code만, `backend/api/routes.py`의 `chat_error`) |
 | no_results | - | 근거를 못 찾아 거절 (SSE `done` 이벤트의 data.code). 검색 색인이 적재되지 않은 경우도 같다 |
 
 옮기는 규칙

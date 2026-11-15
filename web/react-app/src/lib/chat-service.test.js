@@ -39,6 +39,16 @@ describe('createApiChatAdapter event handling', () => {
     expect(answer.errorCode).toBe('limit_exceeded')
   })
 
+  it.each(['provider_limit', 'timeout'])('keeps the %s code and the server message on error events', async code => {
+    const { snapshots, service } = setup([{ type: 'error', thread_id: 't1', data: { code, message: '서버 안내' } }])
+    await service.sendMessage({ threadId: 't1', message: '질문' })
+    const answer = snapshots.at(-1)[0].messages.at(-1)
+    expect(answer.state).toBe('error')
+    expect(answer.errorCode).toBe(code)
+    expect(answer.error).toBe('서버 안내')
+    expect(answer.question).toBe('질문')
+  })
+
   it('marks no_results done events as no-evidence', async () => {
     const { snapshots, service } = setup([{ type: 'done', thread_id: 't1', data: { code: 'no_results', message: '근거 없음' } }])
     await service.sendMessage({ threadId: 't1', message: '질문' })
