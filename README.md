@@ -197,7 +197,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | `SEARCH_DECOMPOSE` | 질문 분해(1이면 켬) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인(OAuth). 셋 중 하나라도 비면 `/auth/google/start`가 `/login?oauth_error=google_unavailable`로 돌려보낸다(설정 방법은 아래 "Google 로그인 설정") |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | Langfuse 트레이스. 키 두 개가 있으면 켜진다 |
-| `PROFILE_ENC_KEYS` | 내 정보(`/me/profile`) AES-256-GCM 키(`backend/services/profile_crypto.py`). 형식 `번호:base64(32바이트)`, 쉼표로 여러 개. 없거나 형식이 틀리면 배포 모드에서는 서버가 시작하지 않는다 |
+| `PROFILE_ENC_KEYS` | 내 정보(`/me/profile`) AES-256-GCM 키(`backend/services/profile_crypto.py`). 형식 `번호:base64(32바이트)`, 쉼표로 여러 개. 없거나 형식이 틀리면 배포 모드에서는 서버가 시작하지 않는다. 로컬 데모는 비워 두면 키를 한 번 만들어 키 파일(`PROFILE_KEY_FILE`, 기본 `~/.provena/local_demo_profile.key`, compose는 볼륨 `profilekey`)에 두고 재시작 때 다시 쓴다 |
 | `EVAL_REVIEW_SINGLE` | 평가 전용 `POST /admin/eval/review`(관리자 전용, CSRF)를 여는 스위치. `1`이면 열리고 그 밖(비움 포함)은 404다. 서비스 값에 넣지 않으며 합동 검토 팀 대 단일 운영 측정 리비전(사전 등록 62.41)에서만 켜고 측정이 끝나면 지운다. 하루 호출 상한 `EVAL_REVIEW_SINGLE_MAX_PER_DAY`(기본 200) |
 | `PROVENA_OWNER_LOGIN_ID` | 최고 관리자 로그인 아이디(`/admin/users`, `docs/specs/admin-roles.md`). 비었거나 그 계정이 admin·활성이 아니면 사용자 관리만 403이고 나머지는 정상 |
 
