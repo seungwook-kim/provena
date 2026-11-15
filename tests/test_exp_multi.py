@@ -402,11 +402,13 @@ OFF = {"parallel_intake": False, "brief_output": False, "max_research": 2, "judg
 
 
 MODEL_OFF = {"LLM_REASONING": "", "LLM_PROVIDER_SORT": "", "LLM_DEADLINE_S": "", "LLM_MAX_RETRIES": "", "LLM_TRACE_DETAIL": "", "LLM_JSON_REMINDER": "", "LLM_REASONING_BY_TASK": "", "GRAPH_SECTION_KEEPS_RESEARCH": "", "LLM_HEDGE_S": "", "GRAPH_ANSWER_WAIT_S": "", "GRAPH_ANSWER_BUDGET_S": "", "LLM_STRUCTURED": "", "GRAPH_JUDGE_QUERY": "", "EMBED_KEEPALIVE": "", "SEARCH_PARALLEL_SUBS": "",
-             "GRAPH_KEEP_PRODUCT_NAME": "", "GRAPH_REQUERY_TERMS": "", 
-             "GRAPH_CITE_MULTI": "", "GRAPH_KEEP_CITES": "", "GRAPH_SUB_RESEARCH": "", "GRAPH_PAGE_RESEARCH": "",
-             "GRAPH_REQUERY_VOCAB": "", "GRAPH_UNKNOWN_NAME": "", "GRAPH_DECOMPOSE_CAP_S": "", "GRAPH_REFUSE_ON_NONE": "", 
-             "GRAPH_GROUNDING_QUOTE": "", 
-             "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_SPECULATE_GROUND": "",
+             "GRAPH_KEEP_PRODUCT_NAME": "", "GRAPH_REQUERY_TERMS": "", "GRAPH_QUERY_BRANCHES": "",
+             "GRAPH_CITE_EXPAND": "", "GRAPH_CITE_MULTI": "", "GRAPH_TEAM_LAST": "", "GRAPH_KEEP_CITES": "", "GRAPH_SUB_RESEARCH": "", "GRAPH_PAGE_RESEARCH": "",
+             "GRAPH_REQUERY_VOCAB": "", "GRAPH_UNKNOWN_NAME": "", "GRAPH_DECOMPOSE_CAP_S": "", "GRAPH_REFUSE_ON_NONE": "", "GRAPH_RESEARCH_SAME_PAGE": "",
+             "GRAPH_CITE_PHRASE": "", "GRAPH_GROUNDING_QUOTE": "", "GRAPH_DROP_SCOPED_CITES": "", 
+             "GRAPH_INTRO_FILL": "",
+             "GRAPH_SCOPE_NOTE_REFUSE": "", "GRAPH_CITE_PICK": "",
+             "GRAPH_REQUERY_SKIP_SEEN": "", "GRAPH_CITE_CONSENSUS": "", "GRAPH_POINTER_REFUSE": "", "GRAPH_SPECULATE_FIRST": "", "GRAPH_UNCHANGED_REJUDGE": "", "GRAPH_PROMPTS_HEAD": "", "GRAPH_JUDGE_VOTE": "", "GRAPH_JUDGE_QUOTE": "", "SEARCH_SUB_MERGE": "", "GRAPH_FACTS_LOG": "", "GRAPH_ANSWER_BEST2": "", "GRAPH_BEST2_SAMEDOC": "", "GRAPH_SPECULATE_GROUND": "",
             "SEARCH_HEDGE": "", "SEARCH_HEDGE_S": "", "GRAPH_SPECULATE_EARLY_SEARCH": ""}
 
 
@@ -427,16 +429,20 @@ def test_switches_can_be_chosen_on_the_command_line():
     args = _parse(["--llm-deadline", "6", "--llm-retries", "2", "--trace-detail", "--parallel-subs", "--json-reminder"])
     assert M.chosen_model_switches(args) == {**MODEL_OFF, "LLM_DEADLINE_S": "6", "LLM_MAX_RETRIES": "2", "LLM_TRACE_DETAIL": "1", "SEARCH_PARALLEL_SUBS": "1", "LLM_JSON_REMINDER": "1"}
     assert M.chosen_model_switches(_parse(["--decompose-cap", "2.5"])) == {**MODEL_OFF, "GRAPH_DECOMPOSE_CAP_S": "2.5"}
-    assert M.chosen_model_switches(_parse(["--refuse-on-none"])) == {**MODEL_OFF, "GRAPH_REFUSE_ON_NONE": "1"}
+    assert M.chosen_model_switches(_parse(["--refuse-on-none", "--research-same-page"])) == {**MODEL_OFF, "GRAPH_REFUSE_ON_NONE": "1", "GRAPH_RESEARCH_SAME_PAGE": "1"}
+    assert M.chosen_model_switches(_parse(["--cite-phrase"])) == {**MODEL_OFF, "GRAPH_CITE_PHRASE": "1"}
     assert M.chosen_model_switches(_parse(["--grounding-quote"])) == {**MODEL_OFF, "GRAPH_GROUNDING_QUOTE": "1"}
-    assert M.chosen_model_switches(_parse(["--speculate-first"])) == {**MODEL_OFF, "GRAPH_SPECULATE_FIRST": "1"}
+    assert M.chosen_model_switches(_parse(["--drop-scoped-cites"])) == {**MODEL_OFF, "GRAPH_DROP_SCOPED_CITES": "1"}
+    assert M.chosen_model_switches(_parse(["--intro-fill"])) == {**MODEL_OFF, "GRAPH_INTRO_FILL": "1"}
+    assert M.chosen_model_switches(_parse(["--scope-note-refuse", "--cite-pick"])) == {
+        **MODEL_OFF, "GRAPH_SCOPE_NOTE_REFUSE": "1", "GRAPH_CITE_PICK": "1"}
+    assert M.chosen_model_switches(_parse(["--requery-skip-seen", "--cite-consensus", "--pointer-refuse", "--speculate-first"])) == {
+        **MODEL_OFF, "GRAPH_REQUERY_SKIP_SEEN": "1", "GRAPH_CITE_CONSENSUS": "1", "GRAPH_POINTER_REFUSE": "1", "GRAPH_SPECULATE_FIRST": "1"}
 
 
-@pytest.mark.parametrize("flag", ["--research-same-page", "--cite-phrase", "--drop-scoped-cites", "--intro-fill", "--heading-terms", "--heading-mark",
-                                  "--heading-heads", "--query-terms", "--cite-pick", "--requery-skip-seen", "--cite-consensus", "--best2-samedoc",
-                                  "--query-branches", "--cite-expand", "--team-last", "--scope-note-refuse", "--pointer-refuse"])
-def test_removed_flags_are_gone(flag):
-    """사전 등록 62.72: 설계에 평가 정답을 본 장치는 코드째 제거했으므로 그 명령줄 인자도 없다."""
+@pytest.mark.parametrize("flag", ["--heading-terms", "--heading-mark", "--heading-heads", "--query-terms"])
+def test_flags_left_removed_are_gone(flag):
+    """사전 등록 62.74: 질문 용어표·제목 경로 표는 특정 문항의 표현에 맞춘 항목이라 다시 넣지 않는다. 명령줄 인자도 없다."""
     with pytest.raises(SystemExit):
         _parse([flag])
 
@@ -445,7 +451,7 @@ def test_prompts_head_flag_sets_only_its_switch():
     assert M.chosen_model_switches(_parse(["--prompts-head"])) == {**MODEL_OFF, "GRAPH_PROMPTS_HEAD": "1"}
 
 
-@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2")])
+@pytest.mark.parametrize("flag, env", [("--judge-vote", "GRAPH_JUDGE_VOTE"), ("--judge-quote", "GRAPH_JUDGE_QUOTE"), ("--sub-merge", "SEARCH_SUB_MERGE"), ("--facts-log", "GRAPH_FACTS_LOG"), ("--answer-best2", "GRAPH_ANSWER_BEST2"), ("--best2-samedoc", "GRAPH_BEST2_SAMEDOC")])
 def test_research_fix_flags_set_only_their_switch(flag, env):
     assert M.chosen_model_switches(_parse([flag])) == {**MODEL_OFF, env: "1"}
 

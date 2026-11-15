@@ -1,9 +1,9 @@
-"""사전 등록 62.73 시험: `GRAPH_SPLIT_FULL_K`(코드 기본 꺼짐, 서비스 설정에서 켬). 가짜 모델과 가짜 검색기, 합성 청크만 쓴다(키와 네트워크 없음).
+"""사전 등록 62.73 시험: `GRAPH_SPLIT_FULL_K`(코드 기본 꺼짐, 사전 등록 62.74로 서비스 설정에서도 뺌). 가짜 모델과 가짜 검색기, 합성 청크만 쓴다(키와 네트워크 없음).
 
 - 켬: 분해가 하위 질문을 2개 이상 낸 첫 검색만 `k`를 `MAX_CHUNKS`(10)로 요청한다. 재검색은 `SEARCH_K`(5)이고 하위 질문을 넘기지 않는다.
 - 켬: 나뉘지 않은 질문, 분해 오류, 미리 돌린 원 질문 검색(`GRAPH_SPECULATE_FIRST`, `GRAPH_SPECULATE_EARLY_SEARCH`)은 5 그대로다.
 - 켬: 근거 목록은 기존 상한(`MAX_CHUNKS`) 안이고 판정 입력에도 그 수까지만 들어간다. 새 상한은 없다.
-- 끔: 모든 검색이 지금과 같다(나뉜 질문의 첫 검색도 5).
+- 끔: 나뉜 질문의 첫 검색은 되살린 `SPLIT_K`(8, 사전 등록 62.38·62.74)이고 재검색은 5다.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from qgraph_fakes import j
 from test_answer_fixes_graph import Q_ESC, SUBS, cite, llm, mk, run
 
 from backend.graph import answer_fixes as AF
-from backend.graph.build import MAX_CHUNKS, SEARCH_K, build_graph
+from backend.graph.build import MAX_CHUNKS, SEARCH_K, SPLIT_K, build_graph
 from backend.graph.multi import build_multi_graph
 
 # 합성 청크 12개(검색기가 돌려줄 수 있는 수가 상한보다 많게)
@@ -99,9 +99,9 @@ def test_off_split_first_search_is_unchanged(monkeypatch, multi):
     fn, seen = pool_searcher()
     m = split_llm(judge=[NO, OK])
     out = run(graph(multi, fn, m, decompose=True), Q_ESC)
-    assert seen[0].k == SEARCH_K and seen[0].sub_queries == SUBS
-    assert all(q.k == SEARCH_K for q in seen)
-    assert len(judged_ids(m)[0]) == SEARCH_K and len(out["chunks"]) <= MAX_CHUNKS
+    assert seen[0].k == SPLIT_K and seen[0].sub_queries == SUBS               # 62.74: 끄면 되살린 넓힌 첫 검색(8)
+    assert all(q.k == SEARCH_K for q in seen[1:])
+    assert len(judged_ids(m)[0]) == SPLIT_K
 
 
 @pytest.mark.parametrize("decompose_reply", [j(split=False, sub_questions=[]), "분해 응답이 아님"])

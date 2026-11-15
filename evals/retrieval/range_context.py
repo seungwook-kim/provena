@@ -9,7 +9,8 @@
 - 질문 임베딩만 Voyage(`VOYAGE_API_KEY`, 환경 변수로만)로 구하고 같은 글은 `--vec-cache`에서 다시 쓴다. 키가 없고 캐시에도 없으면 멈춘다.
 - 번역은 LLM 대신 저장된 값을 쓴다: demo는 `data/demo_replay/recorded.jsonl`의 영어 문장(금액만 바꿈), regress는 `--translations`
   (운영 DB `query_translations`를 읽기 전용으로 조회해 만든 파일, `evals/results/range_retrieval_62_7/translations.json`).
-- 첫 검색 문맥은 질문 그래프 `search` 노드와 같이 `search()` 결과 그대로다(사전 등록 62.72로 질문 계획·제목 경로 검색·도입부 채우기를 뺐다). 답 작성과 판정은 LLM이라 하지 않는다.
+- 첫 검색 문맥은 질문 그래프 `search` 노드와 같은 순서로 만든다: `search()` -> 도입부 채우기. 질문 계획(용어 덧붙임)과 제목 경로 검색은
+  사전 등록 62.72·62.74로 그래프에서 뺀 채라 여기서도 하지 않는다. 답 작성과 판정은 LLM이라 하지 않는다.
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ from typing import Any
 
 import numpy as np
 
+from backend.graph.build import merge_chunks
 from backend.rag.retrieve import embed, ranges, translate
 from backend.rag.retrieve.search import MemoryStore, SearchConfig, Searcher
 from backend.schemas.chunk import SearchQuery
@@ -91,10 +93,12 @@ def make_searcher(store: MemoryStore, embedder, sentences: dict[str, str], range
 
 
 def first_context(searcher: Searcher, question: str, query: str, subs: list[str], as_of: str | None) -> tuple[list[SimpleNamespace], list[SimpleNamespace]]:
-    """(search() 결과, 첫 검색 문맥). 그래프 build.py의 첫 검색 노드와 같이 문맥은 검색 결과 그대로다(`question`은 부르는 쪽과 맞추려고 받기만 한다)."""
+    """(search() 결과, 첫 검색 문맥). 그래프 build.py의 첫 검색 노드(도입부 R3)와 같은 순서와 상한이다(`question`은 부르는 쪽과 맞추려고 받기만 한다)."""
     q = SearchQuery(query=query, as_of=as_of, k=5, sub_queries=subs or None)
-    found = [SimpleNamespace(**c.model_dump()) for c in searcher.search(q)]
-    return found, list(found)
+    found = [c.model_dump() for c in searcher.search(q)]
+    intro = [c.model_dump() for c in searcher.intro_fill(found, query, None, as_of)]
+    ctx = merge_chunks(found, intro, limit=len(found) + len(intro))
+    return [SimpleNamespace(**c) for c in found], [SimpleNamespace(**c) for c in ctx]
 
 
 # ---------- 데모 재현 ----------

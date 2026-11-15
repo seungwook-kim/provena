@@ -210,10 +210,11 @@ def refuse_meta(stage: str, kind: str | None, state: dict, messages: dict[str, s
 PATH_TEXT_WIDTH = 200
 # 단계 시간(62.72)의 칸 이름 -> 그래프 노드 이름. `answer_pick`은 답 작성(두 후보를 쓰고 고르는 일 포함)이다
 TIMING_NODES = {"classify": "classify", "search": "search", "judge": "judge", "answer_pick": "write_answer", "ground": "ground", "save": "save"}
-# candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(full. 앞자리 문맥 core는 사전 등록 62.72로 제거), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
+# candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(core | full), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
 # switched_from, switched_to: 근거 확인 실패 뒤 이미 받쳐진 다른 후보를 쓴 경우의 후보 종류, switch_failed: 그 후보가 다시 거친 검사에서 걸린 곳(사전 등록 62.68)
-_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "ground_ahead",
-                        "partial_filter", "candidates", "switched_from", "switched_to", "switch_failed")
+_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead",
+                        "partial_filter", "candidates", "switched_from", "switched_to", "switch_failed",
+                        "cite_phrase_head")   # cite_phrase_head: 62.70 L이 앞 청크로 바꿔 더한 기록({from, to})
 # redraft: 답 다시 쓰기 기록 중 결과, 재판정, 일부 답 안내 결과(`partial_note`, 62.67), 넘겨받은 인용, 버린 인용만 싣는다. 다시 쓴 답 본문(`answer`)은 싣지 않는다(사전 등록 62.68)
 _PATH_REDRAFT_KEYS = ("result", "rejudge", "partial_note", "carried", "dropped")
 
@@ -239,6 +240,7 @@ def path_meta(state: dict) -> dict:
         "sub_queries": [str(s)[:PATH_TEXT_WIDTH] for s in state.get("sub_queries") or []],
         "decompose_source": state.get("decompose_source") or "",
         "context_ids": [c.get("chunk_id") for c in chunks if isinstance(c, dict)],
+        "intro_chunk_ids": list(state.get("intro_chunk_ids") or []),
         "retries": int(state.get("retries") or 0),
         "search_stats": {k: v for k, v in (state.get("search_stats") or {}).items() if isinstance(v, (int, float))},   # 숫자 칸만(62.72의 검색 단계 시간 `ms_*` 포함)
         "judge_partial": bool(state.get("judge_partial")),

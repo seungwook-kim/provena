@@ -550,21 +550,21 @@ def _answer_marking(ids_in_body, ids_in_list):
     return lambda user: j(answer=body, citations=[{"chunk_id": c} for c in ids_in_list])
 
 
-def test_no_citation_cap_keeps_every_body_mark_in_body_order():
-    """사전 등록 62.72: 인용 수 상한(4)을 없앴다. 본문에 표시한 인용은 모두 본문 순서로 남고 잘린 인용과 가짜 인용은 없다."""
-    import backend.graph.build as B
+def test_citation_cap_keeps_first_four_in_body_order_and_records_trimmed():
+    """인용 상한: 본문에 먼저 나온 4개만 남기고 나머지는 `trimmed_citations`에 둔다. 가짜 인용이 아니므로 `dropped_citations`는 비어 있다."""
+    from backend.graph.build import MAX_CITATIONS
 
     chunks = _six_chunks()
     ids = [c.chunk_id for c in chunks]
     body_order = [ids[5], ids[0], ids[3], ids[1], ids[4], ids[2]]
     llm = normal_llm(answer=_answer_marking(body_order, ids))
     out = run(graph(lambda q: chunks, llm=llm), question="일반 질문입니다")
-    assert not hasattr(B, "MAX_CITATIONS")
+    assert MAX_CITATIONS == 4
     assert out["kind"] == "answer"
-    assert [c["chunk_id"] for c in out["citations"]] == body_order
-    assert out["trimmed_citations"] == []
+    assert [c["chunk_id"] for c in out["citations"]] == body_order[:4]
+    assert out["trimmed_citations"] == [c for c in ids if c not in body_order[:4]]
     assert out["dropped_citations"] == []
-    assert "[6]" in out["answer"]
+    assert all(t not in out["answer"] for t in body_order[4:]) and "[5]" not in out["answer"]
 
 
 def test_citation_not_marked_in_body_is_not_kept():
@@ -575,12 +575,12 @@ def test_citation_not_marked_in_body_is_not_kept():
     assert [c["chunk_id"] for c in out["citations"]] == [ids[0]] and out["trimmed_citations"] == [ids[1], ids[2]]
 
 
-def test_citations_without_any_body_mark_follow_list_order_without_a_cap():
+def test_citations_without_any_body_mark_follow_list_order_up_to_cap():
     from backend.graph.build import select_citations
 
     valid = [{"chunk_id": f"{i:016x}"} for i in range(6)]
     kept, trimmed, text = select_citations(valid, "표시 없는 답입니다.")
-    assert [c["chunk_id"] for c in kept] == [f"{i:016x}" for i in range(6)] and trimmed == [] and text == "표시 없는 답입니다."
+    assert [c["chunk_id"] for c in kept] == [f"{i:016x}" for i in range(4)] and len(trimmed) == 2 and text == "표시 없는 답입니다."
     kept, trimmed, _ = select_citations(valid[:3], "답 [" + valid[2]["chunk_id"] + "]")
     assert [c["chunk_id"] for c in kept] == [valid[2]["chunk_id"]] and len(trimmed) == 2
 
@@ -593,11 +593,10 @@ def test_two_citations_are_untouched():
     assert [c["chunk_id"] for c in out["citations"]] == [ids[1], ids[0]] and out["trimmed_citations"] == []
 
 
-def test_answer_prompt_asks_for_directly_supporting_chunks_without_a_cap():
-    import backend.prompts.question as P
-    from backend.prompts.question import ANSWER_SYSTEM
+def test_answer_prompt_asks_for_directly_supporting_chunks_with_the_same_cap():
+    from backend.prompts.question import ANSWER_SYSTEM, MAX_CITATIONS
 
-    assert not hasattr(P, "MAX_CITATIONS") and "개 이하로 넣는다" not in ANSWER_SYSTEM   # 사전 등록 62.72: 인용 수 상한 문장을 뺐다
+    assert MAX_CITATIONS == 4 and "4개 이하" in ANSWER_SYSTEM
     assert "직접 받치는 근거" in ANSWER_SYSTEM and "답에 표시한 chunk_id만" in ANSWER_SYSTEM
     assert "답에 쓰지 않은 자료는 citations에 넣지 않는다" in ANSWER_SYSTEM
 
@@ -1026,13 +1025,14 @@ def test_empty_or_broken_or_unchanged_rewrite_is_refused_without_another_judgeme
 
 
 def test_unchanged_rewrite_gets_one_more_judgement_when_ur_is_on(monkeypatch):
-    """UR: 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정한다. 받쳐지면 그 답을 내고, 아니면 지금처럼 거절한다.
-    (안내뿐인 구절 거절 PT는 사전 등록 62.72로 제거해 그 경우는 지웠다.)"""
+    """UR: 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정한다. 받쳐지면 그 답을 내고, 아니면(PT 안내뿐 포함) 지금처럼 거절한다."""
     monkeypatch.setenv("GRAPH_UNCHANGED_REJUDGE", "1")
+    monkeypatch.setenv("GRAPH_POINTER_REFUSE", "1")
     paging = _by_article("Incident Response > Paging")
     same = _sentences_answer(("SEV2 장애 최초 대응은 2시간 이내이다", paging.chunk_id))
     bad = j(grounded=False, reason_code="unsupported", reason="적용 대상이 자료에 없음", unsupported_sentences=["SEV2 장애 최초 대응은 2시간 이내이다"])
-    for name, second, state in (("grounded", j(grounded=True), "grounded"), ("ungrounded", bad, "ungrounded")):
+    pointer = j(grounded=True, claims=[{"claim": "안내", "quote": "For more information, please refer to the following links.", "scope": None}])
+    for name, second, state in (("grounded", j(grounded=True), "grounded"), ("ungrounded", bad, "ungrounded"), ("pointer", pointer, "grounded")):
         llm, _, chunks = _redraft_setup(same, verdicts=[bad, second])
         out = run(graph(lambda q: chunks, llm=llm, grounding_llm=True))
         assert llm.count("grounding") == 2, name  # 판정 +1. 다시 판정이 거절하면 문장 빼기 뒤 남는 답이 없어 더 부르지 않는다

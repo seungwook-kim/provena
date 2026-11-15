@@ -14,9 +14,9 @@
   claude_cli(로컬 개발)는 `CLAUDE_CLI_EFFORT*`를 읽고 시간 제한을 쓰지 않는다.
 - 측정 전용 인자는 넣지 않는다: `--llm`, `--store`, `--out`, `--arms`, `--ids`, `--repeat`, `--dataset*`, `--trace-detail`(호출 기록에 응답 원문),
   `--facts-log`(진단 기록), `--warm`(서비스는 `SEARCH_WARMUP=1`의 시작 준비가 `SEARCH_HNSW=1`일 때 같은 색인 미리 읽기를 한다).
-- 측정 실행기가 그래프에 따로 넘긴 페이지 안 검색과 앞 청크 읽기는 서비스 검색기(`backend.rag.retrieve.search`)로 같은 일을 하는 함수를 넘긴다(`service_searches`).
-- 사전 등록 62.72: 설계에 평가 정답을 본 장치(용어 덧붙임, 대상별 나누기, 제목 경로 추가·알림·절 이름 구, 인용 더하기·문장 공유 더하기·한정어 인용 빼기·되풀이 문장 쪽 인용,
-  같은 페이지 재검색, 도입부 채우기, 페이지 재검색 새 청크만, 근거 고르는 순서 문장, 두 답 고르기 같은 문서 예외, 인용 추가 보정)는 코드째 제거해 이 표에 없다.
+- 측정 실행기가 그래프에 따로 넘긴 페이지 안 검색, 도입부 채우기, 앞 청크 읽기는 서비스 검색기(`backend.rag.retrieve.search`)로 같은 일을 하는 함수를 넘긴다(`service_searches`).
+- 사전 등록 62.74: 62.72 정리 범위를 조정해 일반 규칙(대상별 나누기 포함)을 되살렸다. 검색어 용어표 덧붙임과 제목 경로 추가·알림·절 이름 구는
+  질문 용어표·제목 경로 표는 특정 문항의 표현에 맞춘 항목이라 다시 넣지 않는다(이 표에 없다). 62.73 `GRAPH_SPLIT_FULL_K`는 되살린 나뉜 질문 첫 검색 넓힘(`SPLIT_K`)과 같은 검색을 넓히므로 서비스 값에서 뺐다(코드 기본 꺼짐).
 """
 from __future__ import annotations
 
@@ -38,12 +38,13 @@ OFF = "off"
 MEASURED_ARGS = (
     "--via-mcp", "--connected", "--structured", "judge,answer,grounding", "--section-keeps-research", "--parallel-intake", "--skip-first-rewrite",
     "--stop-stalled-search", "--judge-answer", "parallel_all", "--judge-query", "--embed-keepalive", "--brief-output", "--max-research", "1",
-    "--json-reminder", "--parallel-subs",
-    "--unknown-name", "--refuse-on-none", "--grounding-quote",
-    "--speculate-first", "--unchanged-rejudge", "--judge-vote",
+    "--json-reminder", "--parallel-subs", "--query-branches",
+    "--cite-expand", "--team-last", "--unknown-name", "--refuse-on-none", "--research-same-page", "--cite-phrase", "--grounding-quote",
+    "--drop-scoped-cites", "--intro-fill", "--scope-note-refuse", "--cite-pick", "--requery-skip-seen", "--cite-consensus",
+    "--pointer-refuse", "--speculate-first", "--unchanged-rejudge", "--judge-vote",
     "--effort", "none", "--effort-by-task", "decompose=low,answer=low,judge=low", "--llm-deadline", "8", "--llm-hedge", "3.5", "--llm-retries", "2",
     "--answer-wait", "4.0", "--answer-budget", "6.5",
-    "--judge-quote", "--answer-best2", "--speculate-ground",
+    "--judge-quote", "--answer-best2", "--best2-samedoc", "--speculate-ground",
 )
 
 EFFORT_BY_TASK = "decompose=low,answer=low,judge=low"  # 질문 분해, 답 작성, 근거 충분 판정만 낮은 추론. 나머지 단계는 끔
@@ -65,16 +66,29 @@ SERVICE_ENV: dict[str, str] = {
     "EMBED_KEEPALIVE": "1",             # --embed-keepalive
     "SEARCH_PARALLEL_SUBS": "1",        # --parallel-subs
     "SEARCH_HNSW": "1",                 # 측정 환경 SEARCH_HNSW=1(운영 DB의 HNSW 색인, db/manual/chunks_hnsw_voyage4.sql)
+    "GRAPH_QUERY_BRANCHES": "1",        # --query-branches
     # 문항 수정 스위치(#44 이후)
+    "GRAPH_CITE_EXPAND": "1",           # --cite-expand
+    "GRAPH_TEAM_LAST": "1",             # --team-last
     "GRAPH_UNKNOWN_NAME": "1",          # --unknown-name
     "GRAPH_REFUSE_ON_NONE": "1",        # --refuse-on-none
+    "GRAPH_RESEARCH_SAME_PAGE": "1",    # --research-same-page (page_search가 필요하다)
+    "GRAPH_CITE_PHRASE": "1",           # --cite-phrase
     "GRAPH_GROUNDING_QUOTE": "1",       # --grounding-quote
+    "GRAPH_DROP_SCOPED_CITES": "1",     # --drop-scoped-cites
+    "GRAPH_INTRO_FILL": "1",            # --intro-fill (intro_search가 필요하다)
+    "GRAPH_SCOPE_NOTE_REFUSE": "1",     # --scope-note-refuse
+    "GRAPH_CITE_PICK": "1",             # --cite-pick
+    "GRAPH_REQUERY_SKIP_SEEN": "1",     # --requery-skip-seen
+    "GRAPH_CITE_CONSENSUS": "1",        # --cite-consensus
+    "GRAPH_POINTER_REFUSE": "1",        # --pointer-refuse
     "GRAPH_SPECULATE_FIRST": "1",       # --speculate-first
     "GRAPH_UNCHANGED_REJUDGE": "1",     # --unchanged-rejudge
     "GRAPH_JUDGE_VOTE": "1",            # --judge-vote
     # 답 고르기
     "GRAPH_JUDGE_QUOTE": "1",           # --judge-quote
     "GRAPH_ANSWER_BEST2": "1",          # --answer-best2
+    "GRAPH_BEST2_SAMEDOC": "1",         # --best2-samedoc
     "GRAPH_SPECULATE_GROUND": "1",      # --speculate-ground (사전 등록 62.8. 통과 기준은 못 넘었고 사용자 결정으로 켬)
     # 추론과 시간
     "LLM_EFFORT": "none",               # --effort none (anthropic)
@@ -108,14 +122,16 @@ SERVICE_ENV: dict[str, str] = {
     # 사전 등록 62.68: 고른 답의 근거 확인이 실패하면 다시 쓰기 전에, 미리 부른 근거 확인이 이미 받쳐졌다고 한 다른 후보(같은 일부 답 값·같은 문맥)를 같은 검사를 거쳐 쓴다
     # (GRAPH_SPECULATE_GROUND가 켜져 있어야 한다). 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_ADOPT_GROUNDED_CANDIDATE": "1",  # 62.68
+    # 사전 등록 62.70: 근거 판정 뒤 코드가 더하는 인용의 보정(K 기준 인용이 판정 구절 청크 밖이면 더하지 않음, L 겹친 머리에만 있는 공유 글은 앞 청크로,
+    # M 다시 쓴 답에도 겹친 머리 바로잡기). 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "GRAPH_CITE_ADD_GUARD": "1",           # 62.70
     # 사전 등록 62.72: 판정 첫 두 표가 모두 근거 없음이면 셋째 표를 이 초까지만 기다리고 두 표로 확정한다(GRAPH_JUDGE_VOTE가 켜져 있어야 한다),
     # 버리기로 한 미리 돌리기의 답 후보는 근거 확인을 미리 부르지 않는다(GRAPH_SPECULATE_FIRST, GRAPH_SPECULATE_GROUND가 켜져 있어야 한다).
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_NONE_VOTE_WAIT_S": "1.0",       # 62.72
     "GRAPH_SPEC_STOP_GROUND": "1",         # 62.72
-    # 사전 등록 62.73: 분해가 하위 질문을 2개 이상 낸 첫 검색만 근거 목록 상한(MAX_CHUNKS=10)까지 요청한다(다른 검색은 k=5 그대로).
-    # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
-    "GRAPH_SPLIT_FULL_K": "1",             # 62.73
+    # 사전 등록 62.73 `GRAPH_SPLIT_FULL_K`는 넣지 않는다(사전 등록 62.74): 되살린 `SPLIT_K`(나뉜 질문 첫 검색 8자리, 달러 금액 질문 제외)가 같은 검색을 넓힌다.
+    # 켜면 나뉜 질문의 첫 검색이 근거 목록 상한(MAX_CHUNKS=10)까지 요청한다
 }
 
 
@@ -221,10 +237,20 @@ def _searcher():
 
 
 def page_search(query: str, rule_seqs: list[int], org: str | None, as_of: str | None, k: int) -> list:
-    """페이지 안 재검색(`GRAPH_PAGE_RESEARCH`). 측정 실행기의 `PageSearch`와 같은 `Searcher.search_pages`다."""
+    """페이지 안 재검색(`GRAPH_RESEARCH_SAME_PAGE`, `GRAPH_PAGE_RESEARCH`). 측정 실행기의 `PageSearch`와 같은 `Searcher.search_pages`다."""
     return _searcher().search_pages(query, rule_seqs, org, as_of, k)
 
 
+def intro_search(chunks: list, query: str, org: str | None, as_of: str | None) -> list:
+    """도입부 채우기(`GRAPH_INTRO_FILL`). 측정 실행기의 `IntroSearch`와 같은 `Searcher.intro_fill`이다."""
+    return _searcher().intro_fill(chunks, query, org, as_of)
+
+
+def prev_chunk(chunk: Any) -> Any:
+    """겹친 머리 인용 바로잡기(사전 등록 62.58): 문맥 밖 앞 청크 읽기. `Searcher.prev_chunk`다."""
+    return _searcher().prev_chunk(chunk)
+
+
 def service_searches() -> dict[str, Any]:
-    """`build_graph`에 넘길 페이지 안 검색. 해당 스위치(`GRAPH_PAGE_RESEARCH`)가 켜졌을 때만 부른다."""
-    return {"page_search": page_search}
+    """`build_graph`에 넘길 페이지·도입부 검색과 앞 청크 읽기. 페이지·도입부 검색은 해당 스위치가 켜졌을 때(같은 페이지 보충은 나뉜 질문의 첫 검색에서 항상), 앞 청크 읽기는 겹친 머리 인용 바로잡기가 바꿀 때만 부른다."""
+    return {"page_search": page_search, "intro_search": intro_search, "prev_chunk": prev_chunk}
