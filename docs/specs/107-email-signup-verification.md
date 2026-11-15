@@ -26,6 +26,8 @@ Edge cases: 만료 코드, 잘못된 코드, 재사용 코드, 재발송 제한,
 - 적용 순서: `db/101_auth_users.sql` → `db/106_signup_approval.sql` → `db/107_email_signup_verification.sql` → `db/108_auth_privacy_hardening.sql` → `db/113_signup_edges.sql`. 번호 107은 [107-user-profile-fields.md](./107-user-profile-fields.md)(프로필 추가 칸 제안, 적용하지 않음)와 겹치지만 별개다. 운영 DB에는 아직 적용하지 않았다.
 - `signup_requests`의 RLS 및 anon/authenticated 권한 회수는 유지한다.
 
+운영 확인 범위: 113 관련 인덱스와 조건은 운영 Supabase에서 확인했지만, 이 사실만으로 107·108의 전체 적용이나 실행 이력을 확정하지 않는다. 저장소는 스키마 존재 여부를 확인해 구버전 DB에서 이메일 인증·비밀번호 가입을 유지하고 Google 경로만 사용 불가로 닫는다.
+
 ## AC
 
 - Given 신규 이메일 신청, When 인증 전 승인, Then 409로 거부되고 사용자는 생성되지 않는다.
