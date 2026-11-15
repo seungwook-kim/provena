@@ -30,7 +30,6 @@ import hashlib
 import json
 import os
 import sys
-import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -152,39 +151,6 @@ class PageSearch:
         return out
 
 
-class HeadingSearch:
-    """H 제목 경로 검색(`--heading-terms`)을 검색기(`Searcher.search_headings`)에 직접 부르고, 검색 기록(`rec.calls`)에 kind="heading"으로 남긴다. 결과는 바꾸지 않는다."""
-
-    def __init__(self, searcher, rec):
-        self.searcher, self.rec = searcher, rec
-
-    def __call__(self, phrase: str, org: str | None, as_of: str | None, n: int):
-        t0 = time.perf_counter()
-        out = self.searcher.search_headings(phrase, org, as_of, n)
-        with _HEADING_LOCK:   # 그래프가 구 여럿을 동시에 부른다(사전 등록 62.69)
-            self.rec.calls.append({"n": len(self.rec.calls) + 1, "kind": "heading", "graph_query": phrase, "org": org, "as_of": as_of,
-                                   "k_requested": n, "returned": [c.chunk_id for c in out], "trace": None, "wall_s": round(time.perf_counter() - t0, 3)})
-        return out
-
-
-_HEADING_LOCK = threading.Lock()
-
-
-class IntroSearch:
-    """R3 도입부 채우기(`--intro-fill`)를 검색기(`Searcher.intro_fill`)에 직접 부르고, 검색 기록(`rec.calls`)에 kind="intro"로 남긴다. 결과는 바꾸지 않는다."""
-
-    def __init__(self, searcher, rec):
-        self.searcher, self.rec = searcher, rec
-
-    def __call__(self, chunks: list, query: str, org: str | None, as_of: str | None):
-        t0 = time.perf_counter()
-        out = self.searcher.intro_fill(chunks, query, org, as_of)
-        if out:  # 더한 것이 있을 때만 남긴다(검색마다 불리므로)
-            self.rec.calls.append({"n": len(self.rec.calls) + 1, "kind": "intro", "graph_query": query, "org": org, "as_of": as_of,
-                                   "k_requested": 0, "returned": [c.chunk_id for c in out], "trace": None, "wall_s": round(time.perf_counter() - t0, 3)})
-        return out
-
-
 def run_arm_item(arm: Arm, item: dict, run_id: str) -> dict:
     """한 경로로 문항 하나를 돌려 행을 만든다. 단일과 멀티가 같은 행 칸을 낸다(멀티는 에이전트 기록이 더 붙는다)."""
     arm.rec.set_item(item)
@@ -206,7 +172,6 @@ def run_arm_item(arm: Arm, item: dict, run_id: str) -> dict:
     row["judge_scope"] = out.get("judge_scope")
     row["sub_research"] = out.get("sub_research") or ""
     row["page_searches"] = sum(c["kind"] == "page" for c in arm.rec.calls)
-    row["heading_searches"] = sum(c["kind"] == "heading" for c in arm.rec.calls)
     if out.get("judge_checks_log") is not None or out.get("answer_facts") is not None:  # FL(`--facts-log`): 진단 기록(점수에는 쓰지 않는다)
         row["judge_checks_log"] = out.get("judge_checks_log")
         row["answer_facts"] = out.get("answer_facts")
@@ -332,32 +297,17 @@ def chosen_model_switches(args) -> dict:
     return {"LLM_REASONING": args.reasoning, "LLM_PROVIDER_SORT": args.provider_sort, "LLM_DEADLINE_S": args.llm_deadline, "LLM_HEDGE_S": args.llm_hedge, "LLM_MAX_RETRIES": args.llm_retries,
             "LLM_TRACE_DETAIL": "1" if args.trace_detail else "", "LLM_JSON_REMINDER": "1" if args.json_reminder else "", "LLM_REASONING_BY_TASK": args.reasoning_by_task, "GRAPH_SECTION_KEEPS_RESEARCH": "1" if args.section_keeps_research else "", "GRAPH_ANSWER_WAIT_S": str(args.answer_wait) if args.answer_wait else "", "GRAPH_ANSWER_BUDGET_S": str(args.answer_budget) if args.answer_budget else "", "LLM_STRUCTURED": args.structured, "GRAPH_JUDGE_QUERY": "1" if args.judge_query else "", "EMBED_KEEPALIVE": "1" if args.embed_keepalive else "", "SEARCH_PARALLEL_SUBS": "1" if args.parallel_subs else "",
             "GRAPH_KEEP_PRODUCT_NAME": "1" if args.keep_product_name else "", "GRAPH_REQUERY_TERMS": "1" if args.requery_terms else "",
-            # 첫 검색어 코드 보강(기본 꺼짐, backend/graph/query_plan.py)
-            "GRAPH_QUERY_TERMS": "1" if args.query_terms else "", "GRAPH_QUERY_BRANCHES": "1" if args.query_branches else "",
             # 놓친 문항 해결안(기본 꺼짐, backend/graph/answer_fixes.py)
-            "GRAPH_CITE_EXPAND": "1" if args.cite_expand else "", "GRAPH_CITE_MULTI": "1" if args.cite_multi else "", "GRAPH_TEAM_LAST": "1" if args.team_last else "",
+            "GRAPH_CITE_MULTI": "1" if args.cite_multi else "",
             "GRAPH_KEEP_CITES": "1" if args.keep_cites else "", "GRAPH_SUB_RESEARCH": "1" if args.sub_research else "", "GRAPH_PAGE_RESEARCH": "1" if args.page_research else "",
             "GRAPH_REQUERY_VOCAB": "1" if args.requery_vocab else "", "GRAPH_UNKNOWN_NAME": "1" if args.unknown_name else "",
             # 분해 상한(기본 꺼짐): 이 초 안에 분해가 오지 않으면 원 질문 하나로 검색한다
             "GRAPH_DECOMPOSE_CAP_S": str(args.decompose_cap) if args.decompose_cap else "",
-            # 재검색 수정안(기본 꺼짐): R 첫 판정 전무면 바로 거절, 가 부분 판정 뒤 재검색을 문맥 페이지 안 검색으로 교체
-            "GRAPH_REFUSE_ON_NONE": "1" if args.refuse_on_none else "", "GRAPH_RESEARCH_SAME_PAGE": "1" if args.research_same_page else "",
-            # 남은 문항 수정안(기본 꺼짐): A1b 문장 공유 인용 보강
-            "GRAPH_CITE_PHRASE": "1" if args.cite_phrase else "",
-            # 남은 문항 수정안(기본 꺼짐): H 용어표 용어가 제목 경로에 든 청크를 첫 검색 문맥에 더한다(사전 등록 62.69)
-            "GRAPH_HEADING_TERMS": "1" if args.heading_terms else "",
+            # 재검색 수정안(기본 꺼짐): R 첫 판정 전무면 바로 거절
+            "GRAPH_REFUSE_ON_NONE": "1" if args.refuse_on_none else "",
             # Q 근거 확인을 구절 먼저 찾고 판정으로
             "GRAPH_GROUNDING_QUOTE": "1" if args.grounding_quote else "",
-            # P 질문에 없는 한정어가 붙은 페이지만 인용한 문장 빼기
-            "GRAPH_DROP_SCOPED_CITES": "1" if args.drop_scoped_cites else "",
-            # HM H가 더한 청크를 답 입력에서 알림, R3 도입부 채우기
-            "GRAPH_HEADING_MARK": "1" if args.heading_mark else "", "GRAPH_INTRO_FILL": "1" if args.intro_fill else "",
-            # HT 표 줄의 절 이름 구 제목 검색, SN 범위 한정 scope_note 거절, CP 답의 근거 고르는 순서
-            "GRAPH_HEADING_HEADS": "1" if args.heading_heads else "", "GRAPH_SCOPE_NOTE_REFUSE": "1" if args.scope_note_refuse else "",
-            "GRAPH_CITE_PICK": "1" if args.cite_pick else "",
-            # SS 페이지 재검색이 문맥에 있는 청크 건너뛰기, CS 되풀이 문장 쪽 인용만 남기기, PT 안내 구절뿐인 근거 거절
-            "GRAPH_REQUERY_SKIP_SEEN": "1" if args.requery_skip_seen else "", "GRAPH_CITE_CONSENSUS": "1" if args.cite_consensus else "",
-            "GRAPH_POINTER_REFUSE": "1" if args.pointer_refuse else "",
+            # SN 범위 한정 scope_note 거절, PT 안내 구절뿐인 근거 거절
             # SP 분해를 기다리는 동안 원 질문으로 첫 검색·판정을 미리 돌리기
             "GRAPH_SPECULATE_FIRST": "1" if args.speculate_first else "",
             # UR 다시 쓰기가 처음 답을 그대로 내면 한 번 더 판정
@@ -368,7 +318,7 @@ def chosen_model_switches(args) -> dict:
             "GRAPH_JUDGE_VOTE": "1" if args.judge_vote else "", "GRAPH_JUDGE_QUOTE": "1" if args.judge_quote else "",
             "SEARCH_SUB_MERGE": "1" if args.sub_merge else "",
             "GRAPH_FACTS_LOG": "1" if args.facts_log else "",
-            "GRAPH_ANSWER_BEST2": "1" if args.answer_best2 else "", "GRAPH_BEST2_SAMEDOC": "1" if args.best2_samedoc else "",
+            "GRAPH_ANSWER_BEST2": "1" if args.answer_best2 else "",
             # SG 답 후보가 나오는 대로 근거 판정을 미리 부르고 같은 입력이면 그 결과를 쓴다
             "GRAPH_SPECULATE_GROUND": "1" if args.speculate_ground else "",
             # 사전 등록 62.14, 62.53: 검색 hedge(초, 0이면 끔), 원 질문 첫 검색을 예비 분해와 같이 시작(--speculate-first가 필요하다)
@@ -437,11 +387,7 @@ def run_cmd(args) -> int:
             from backend.graph.mcp_retriever import make_mcp_retriever
             retriever = make_mcp_retriever(server)
         joined = connected_parts(retriever, llm) if args.connected else {}
-        pages = {"page_search": PageSearch(searcher, rec)} if args.page_research or args.research_same_page else {}
-        if args.heading_terms:
-            pages["heading_search"] = HeadingSearch(searcher, rec)
-        if args.intro_fill:
-            pages["intro_search"] = IntroSearch(searcher, rec)
+        pages = {"page_search": PageSearch(searcher, rec)} if args.page_research else {}
         arms.append(Arm(name, build_arm_graph(name, retriever, llm, section_reader=S.section_reader_for(server, use_pg), **joined, **switches, **pages), rec, llm))
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -525,25 +471,14 @@ def main(argv=None) -> int:
     p.add_argument("--effort-by-task", default="", action=MergeTaskMap,
                    help="--llm anthropic 전용 단계별 추론 수준. 예: decompose=low,answer=low. 비우면 claude_cli 기본(answer=medium,grounding=medium)과 같게")
     p.add_argument("--section-keeps-research", action="store_true", help="섹션 읽기가 재검색 기회를 쓰지 않는다")
-    p.add_argument("--cite-expand", action="store_true", help="A1: 근거 판정 뒤 같은 숫자·단위와 영어 내용어 겹침 0.3 이상인 문맥 청크를 인용에 2개까지 더한다. 기본 꺼짐")
     p.add_argument("--cite-multi", action="store_true", help="A3: 같은 사실을 다른 페이지가 말하면 근거를 3개까지 표시하게 한다. 기본 꺼짐")
-    p.add_argument("--team-last", action="store_true", help="A4: 질문이 팀을 말하지 않으면 제목에 Team, Group이 든 청크를 답 입력 뒤로 보낸다. 기본 꺼짐")
     p.add_argument("--keep-cites", action="store_true", help="A5: 근거 판정 뒤 다시 쓴 답에 지적받지 않은 문장의 인용을 넘긴다. 기본 꺼짐")
     p.add_argument("--sub-research", action="store_true", help="B1: 일부 근거로 끝나는 나뉜 질문에서 빠진 하위 질문을 원래 문구로 한 번 더 찾는다. 기본 꺼짐")
     p.add_argument("--page-research", action="store_true", help="B4: B1과 같은 때에 그 하위 질문을 문맥의 페이지 안에서만 다시 찾는다. 기본 꺼짐")
     p.add_argument("--requery-vocab", action="store_true", help="B2: 판정 재검색어가 하위 질문의 영어 용어를 지키고 빠진 사실은 받는 쪽 동사로 쓴다(--judge-query와 같이). 기본 꺼짐")
     p.add_argument("--unknown-name", action="store_true", help="D1: 질문의 영문 구가 코퍼스 전체에 없으면 검색 없이 되묻는다. 기본 꺼짐")
     p.add_argument("--refuse-on-none", action="store_true", help="R: 첫 근거 판정이 전무(충분도 부분도 아니고 되묻기도 없음)면 재검색 없이 거절한다. 기본 꺼짐")
-    p.add_argument("--research-same-page", action="store_true", help="가: 부분 판정 뒤 재검색을 전체 검색 대신 문맥에 든 페이지 안 검색으로 바꾼다(횟수 그대로). 기본 꺼짐")
-    p.add_argument("--cite-phrase", action="store_true", help="A1b: 근거 판정 뒤 인용 청크와 영어 단어 12개 이상을 그대로 공유하는 다른 페이지 청크를 인용에 2개까지 더한다(다른 팀 페이지 제외). 기본 꺼짐")
-    p.add_argument("--heading-terms", action="store_true", help="H: 첫 검색어와 하위 질문에 용어표 전체의 두 단어 이상 영어 용어가 들어 있으면 그 용어가 제목 경로에 든 청크를 용어마다 1개 더한다. 통화 금액이 든 질문은 건너뛴다(사전 등록 62.69). 기본 꺼짐")
-    p.add_argument("--grounding-quote", action="store_true", help="Q: 근거 확인이 주장마다 받치는 영어 구절을 먼저 복사(없으면 NOTHING FOUND)하고 판정한다. 번역·말 바꿈과 제목 경로 간접 근거를 인정. 기본 꺼짐")
-    p.add_argument("--heading-mark", action="store_true", help="HM: H가 더한 청크의 id와 용어를 답 입력 끝에 알리고 그 자료가 질문한 사실을 말하면 먼저 근거로 달게 한다(--heading-terms와 같이). 기본 꺼짐")
-    p.add_argument("--intro-fill", action="store_true", help="R3: 첫 검색 문맥에 같은 페이지 판 청크가 3개 이상이면 그 페이지 도입부 절 청크 중 질문 벡터와 가장 가까운 1개(절이 2개 이하 청크면 절 전체)를 더한다. 기본 꺼짐")
-    p.add_argument("--heading-heads", action="store_true", help="HT: 맞는 용어표 줄의 절 이름 구(heads)도 제목 경로에서 찾고, 문맥에 이미 있는 청크는 건너뛴다(--heading-terms와 같이). 기본 꺼짐")
-    p.add_argument("--scope-note-refuse", action="store_true", help="SN: 충분 판정의 scope_note가 자료 범위 한정과 질문 내용 부재를 함께 말하면 재검색 없이 거절한다. 기본 꺼짐")
-    p.add_argument("--requery-skip-seen", action="store_true", help="SS: 페이지 재검색(--research-same-page)이 문맥에 이미 있는 청크를 건너뛰고 새 청크 3개만 더하며, 그 뒤에는 섹션 읽기를 하지 않는다. 기본 꺼짐")
-    p.add_argument("--best2-samedoc", action="store_true", help="BO2SD: --answer-best2의 둘째 규칙에서 S 청크와 같은 문서(rule_seq)인 S 밖 인용은 세지 않고 다른 문서 인용 수만 비교한다. 기본 꺼짐")
+    p.add_argument("--grounding-quote", action="store_true", help="Q: 근거 확인이 주장마다 받치는 영어 구절을 먼저 복사(없으면 NOTHING FOUND)하고 판정한다. 번역·말 바꿈을 인정. 기본 꺼짐")
     p.add_argument("--answer-best2", action="store_true", help="BO2: 답을 같은 입력으로 두 번 쓰고 판정 구절(--judge-quote)이 든 문맥 청크를 더 많이, 그 밖 청크를 더 적게 인용한 쪽을 고른다. 구절이 없으면 첫 답. 행에 best2_log. 기본 꺼짐")
     p.add_argument("--facts-log", action="store_true", help="FL(진단): 판정 checks와 첫 답의 asked·picks를 행에 남긴다(judge_checks_log, answer_facts). 답 경로는 그대로다. 기본 꺼짐")
     p.add_argument("--sub-merge", action="store_true", help="분해 검색에서 전체 질문도 후보에 넣고, 하위 질문마다 한 자리를 먼저 준 뒤 남은 자리를 유사도 순으로 채운다(k와 임베딩은 그대로). 기본 꺼짐")
@@ -556,12 +491,6 @@ def main(argv=None) -> int:
     p.add_argument("--unchanged-rejudge", action="store_true", help="UR: 근거 판정 사유를 받은 다시 쓰기가 처음 답을 그대로 내면 처음 답을 한 번 더 판정하고, 받쳐지면 그대로 낸다. 기본 꺼짐")
     p.add_argument("--speculate-first", action="store_true", help="SP: 예비 분해(단계 decompose_gate, 추론은 --reasoning 값)가 나누지 않는다고 하면 분해를 기다리는 동안 원 질문으로 "
                    "첫 검색과 판정을 미리 돌린다. 분해(decompose)가 나누지 않으면 그 결과를 쓰고, 나누면 버린다(--parallel-intake, --skip-first-rewrite가 필요). 기본 꺼짐")
-    p.add_argument("--cite-consensus", action="store_true", help="CS: 한 문장의 인용 셋 이상 중 다른 페이지 둘 이상이 같은 문장을 공유하면 그 문장을 공유하지 않는 다른 페이지 인용을 뺀다. 기본 꺼짐")
-    p.add_argument("--pointer-refuse", action="store_true", help="PT: 근거 확인(Q 형식)이 복사한 구절이 모두 다른 자료를 가리키는 안내뿐이면 다시 쓰지 않고 거절한다. 기본 꺼짐")
-    p.add_argument("--cite-pick", action="store_true", help="CP: 같은 사실을 여러 자료가 말할 때 근거 고르는 순서(온전한 문장, 되풀이된 문장, 절 제목, 공통 규범)와 주어·조건 확인을 답 프롬프트에 더한다. 기본 꺼짐")
-    p.add_argument("--drop-scoped-cites", action="store_true", help="P: 질문에 없는 한정어(제목 경로에서 질문 낱말 바로 앞, 문맥의 다른 페이지 제목에 없는 낱말)가 붙은 페이지만 인용한 문장을 근거 판정 뒤 코드가 뺀다. 기본 꺼짐")
-    p.add_argument("--query-terms", action="store_true", help="첫 검색의 하위 질문에 핸드북 영어 용어를 코드 표로 붙인다(query_plan.TERM_ROWS). 통화 금액이 든 질문은 건너뛴다(사전 등록 62.69). 기본 꺼짐")
-    p.add_argument("--query-branches", action="store_true", help="대상에 따라 절차가 갈리는 주제인데 대상이 없으면 대상마다 하위 질문을 만들고, 답이 대상을 빠뜨리면 한 번 다시 쓴다. 기본 꺼짐")
     p.add_argument("--keep-product-name", action="store_true", help="첫 검색에서 'GitLab 계정'처럼 제품의 대상을 가리키는 회사 이름은 떼지 않는다. 기본 꺼짐")
     p.add_argument("--requery-terms", action="store_true", help="판정 재검색어를 핸드북 용어(search-terms Skill)로 쓰고 질문에 없는 고유 이름을 넣지 않는다(--judge-query와 같이). 기본 꺼짐")
     p.add_argument("--answer-budget", type=float, default=0, help="질문을 받은 뒤 이 초가 지나면 추론 답을 기다리지 않는다(--answer-wait과 같이)")

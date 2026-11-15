@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: 사전 등록 62.72(설계에 평가 정답을 봤으므로 제거). `question.py`에서 넓힌 자리 판정 문장(`JUDGE_WIDENED_SENTENCE`, `judge_widened`)과 자료 머리 줄 `[보충]` 표시(`format_materials`의 `marked`, `judge_user`의 `extra`)를 지웠다. 판정 입력은 표시 없이 자료만 싣는다. 같은 이유로(사용자 결정) 인용 수 상한 `MAX_CITATIONS`와 답 프롬프트의 "4개 이하로" 문장, 근거 확인 구절 형식(`GROUNDING_QUOTE_RULES`)의 제목 경로(적용 범위) 간접 근거 문장을 뺐다. 구절 형식(주장마다 받치는 영어 구절 복사, 없으면 NOTHING FOUND)과 번역·말 바꿈 기준은 그대로다 | (커밋 전) |
 | 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: `question.py` `followup_question`이 새로 들어온 글자·숫자가 4개 미만인 다시 쓰기(조사·접속사만 바뀐 응답)를 버린다(`followup_new_letters`, `FOLLOWUP_MIN_GAIN`, 놓친 것 N-1·리뷰 보완). 프롬프트 문구는 바꾸지 않았다 | (커밋 전) |
 | 2026-11-15 | 박진형 (jinyeong-731) | D-14 이어 묻기(팀장 결정 ①, 조장 지시로 처리): `question.py`에 이어 묻기 프롬프트 `FOLLOWUP_SYSTEM`(표지 `[[task:rewrite_followup]]`, 출력 `followup`, `question`)과 입력 `followup_user`, 앞 질문 정화 `followup_prev`(가짜 자료 구분자·프롬프트 요구·지시 문장을 빼고 한 줄 500자), 응답 검사 `followup_question`(4000자 상한, 내부 표식·프롬프트 문장·지시 문장이 있으면 쓰지 않음)을 더했다. 기존 프롬프트 5개와 `SYSTEM_PROMPTS`는 글자 그대로다 | #162 |
 | 2026-11-12 | 김승욱 (Claude Code) | 넓힌 첫 검색의 판정 입력에서 넓힌 자리 청크 머리 줄에 `[보충]`을 붙이고(`format_materials(marked=)`, `judge_user(extra=)`), 그런 판정에만 구절을 [보충]이 아닌 자료에서 먼저 찾게 하는 문장 1개를 판정 구절 규칙에 더함(`judge_widened`). 표시가 없는 판정의 입력과 프롬프트는 글자까지 같다(사전 등록 62.44) | 이번 PR |

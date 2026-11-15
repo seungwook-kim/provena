@@ -9,6 +9,8 @@
 - 요청 경계는 contextvar다. `/chat`이 `begin()`으로 열고 `end()`로 닫는다. 다른 스레드로 넘길 때는 `bind(fn)`으로 집계 자리만 옮긴다
   (그래프 노드와 hedge, 하위 질문 병렬 검색은 `contextvars.copy_context()`를 써서 이미 따라온다).
 - 거절 단계·사유 코드(`refuse_meta`)는 마지막으로 `kind`를 거절·되묻기로 쓴 그래프 노드 이름과 그 상태 값에서 읽는다.
+- 단계 시간(사전 등록 62.72, 기록만): 그래프 노드와 배경 호출의 시작·끝(`record_time`), 판정 표마다 받기까지 걸린 초(`record_votes`)를 요청 단위로 모은다.
+  `path_meta`가 `timing`(노드별 초 합)과 `vote_s`로 싣는다. 모으거나 싣다 실패해도 답 경로는 그대로다.
 """
 from __future__ import annotations
 
@@ -53,6 +55,8 @@ class StepMeter:
         self.steps: dict[str, dict] = {}   # 그래프 밖에서 보탠 단계(질문 번역). 그래프 단계는 `CostTracker`가 갖고 있다
         self.embed_tokens = 0
         self.embed_calls = 0
+        self.times: list[tuple[str, float, float, bool]] = []   # (노드, 시작, 끝, 배경 호출인지). 시각은 `time.monotonic()`
+        self.votes: list[dict] = []   # 다수결 한 번마다 {"task", "s": [표마다 걸린 초(도착 순서)]}
         self._lock = threading.Lock()
 
     def merge_steps(self, by_step: dict[str, dict]) -> None:
@@ -65,6 +69,25 @@ class StepMeter:
                 for k in CACHE_KEYS:   # 프롬프트 캐시 칸(`CostTracker.by_step`)은 들어온 행에 있을 때만 더한다
                     if k in row:
                         cur[k] = cur.get(k, 0) + (row.get(k) or 0)
+
+    def add_time(self, node: str, start: float, end: float, background: bool) -> None:
+        with self._lock:
+            self.times.append((str(node), float(start), float(end), bool(background)))
+
+    def add_votes(self, task: str, took: list[float]) -> None:
+        with self._lock:
+            self.votes.append({"task": str(task), "s": [round(float(x), 3) for x in took]})
+
+    def timing(self) -> dict:
+        """노드별 걸린 초의 합(`TIMING_NODES` 이름으로). 그래프 노드 자체의 시간만 더한다(배경 호출은 노드 안에서 겹쳐 돌아 더하면 두 번 센다)."""
+        with self._lock:
+            rows = list(self.times)
+        out: dict[str, float] = {}
+        for label, node in TIMING_NODES.items():
+            spent = [end - start for name, start, end, background in rows if name == node and not background]
+            if spent:
+                out[label] = round(sum(spent), 3)
+        return out
 
     def add_embed(self, tokens: int) -> None:
         with self._lock:
@@ -122,6 +145,26 @@ def record_embed(tokens: int) -> None:
         m.add_embed(tokens)
 
 
+def record_time(node: str, start: float, end: float, background: bool = False) -> None:
+    """기록만(사전 등록 62.72): 노드나 배경 호출 하나의 시작·끝. 요청 밖이거나 실패하면 아무 일도 하지 않는다."""
+    try:
+        m = _current.get()
+        if m is not None:
+            m.add_time(node, start, end, background)
+    except Exception:  # noqa: BLE001 - 기록이 답 경로를 막지 않는다
+        log.debug("단계 시간 기록 실패", exc_info=True)
+
+
+def record_votes(task: str, took: list[float]) -> None:
+    """기록만(사전 등록 62.72): 다수결 한 번의 표마다 걸린 초. 요청 밖이거나 실패하면 아무 일도 하지 않는다."""
+    try:
+        m = _current.get()
+        if m is not None and took:
+            m.add_votes(task, took)
+    except Exception:  # noqa: BLE001 - 기록이 답 경로를 막지 않는다
+        log.debug("판정 표 시간 기록 실패", exc_info=True)
+
+
 def usage_tokens(body: Any) -> int:
     """Voyage 응답 본문의 `usage.total_tokens`. 없거나 이상하면 0."""
     try:
@@ -165,12 +208,12 @@ def refuse_meta(stage: str, kind: str | None, state: dict, messages: dict[str, s
 # 답 경로 기록(측정용). 검색·판정·답 고르기에서 코드가 정한 값만 싣는다: 하위 질문, 문맥 청크 id, 판정 구절이 든 청크 id(구절 글은 싣지 않는다), 답 후보의 인용과 고른 쪽, 인용 후처리 기록.
 # 답 본문·초안·판정 이유 문장·판정 구절 글은 싣지 않는다. 상태를 읽기만 하므로 답 경로는 그대로다.
 PATH_TEXT_WIDTH = 200
-_PATH_STATS_LISTS = ("heading_terms", "heading_added")   # `search_stats` 중 숫자가 아니어도 싣는 칸(사전 등록 62.69 제목 경로 추가의 구와 더한 청크 id)
-# candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(core | full), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
+# 단계 시간(62.72)의 칸 이름 -> 그래프 노드 이름. `answer_pick`은 답 작성(두 후보를 쓰고 고르는 일 포함)이다
+TIMING_NODES = {"classify": "classify", "search": "search", "judge": "judge", "answer_pick": "write_answer", "ground": "ground", "save": "save"}
+# candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(full. 앞자리 문맥 core는 사전 등록 62.72로 제거), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
 # switched_from, switched_to: 근거 확인 실패 뒤 이미 받쳐진 다른 후보를 쓴 경우의 후보 종류, switch_failed: 그 후보가 다시 거친 검사에서 걸린 곳(사전 등록 62.68)
-_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead",
-                        "partial_filter", "candidates", "switched_from", "switched_to", "switch_failed",
-                        "cite_phrase_head")   # cite_phrase_head: 62.70 L이 앞 청크로 바꿔 더한 기록({from, to})
+_PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "ground_ahead",
+                        "partial_filter", "candidates", "switched_from", "switched_to", "switch_failed")
 # redraft: 답 다시 쓰기 기록 중 결과, 재판정, 일부 답 안내 결과(`partial_note`, 62.67), 넘겨받은 인용, 버린 인용만 싣는다. 다시 쓴 답 본문(`answer`)은 싣지 않는다(사전 등록 62.68)
 _PATH_REDRAFT_KEYS = ("result", "rejudge", "partial_note", "carried", "dropped")
 
@@ -196,11 +239,8 @@ def path_meta(state: dict) -> dict:
         "sub_queries": [str(s)[:PATH_TEXT_WIDTH] for s in state.get("sub_queries") or []],
         "decompose_source": state.get("decompose_source") or "",
         "context_ids": [c.get("chunk_id") for c in chunks if isinstance(c, dict)],
-        "intro_chunk_ids": list(state.get("intro_chunk_ids") or []),
         "retries": int(state.get("retries") or 0),
-        "search_stats": {k: (v if isinstance(v, (int, float)) else [str(x)[:PATH_TEXT_WIDTH] for x in v])
-                         for k, v in (state.get("search_stats") or {}).items()
-                         if isinstance(v, (int, float)) or (k in _PATH_STATS_LISTS and isinstance(v, (list, tuple)))},   # 62.69: 제목 경로 구와 더한 청크 id
+        "search_stats": {k: v for k, v in (state.get("search_stats") or {}).items() if isinstance(v, (int, float))},   # 숫자 칸만(62.72의 검색 단계 시간 `ms_*` 포함)
         "judge_partial": bool(state.get("judge_partial")),
         "judge_quote_ids": list(state.get("judge_quote_ids") or []),
         "judge_quotes": quotes,
@@ -210,4 +250,12 @@ def path_meta(state: dict) -> dict:
                       **({"redraft": redraft_row(redraft)} if redraft else {})},
         "judge_votes": [v for v in state.get("judge_votes") or [] if isinstance(v, dict)],   # 판정마다 표 구성(표별 충분·일부, 확정 방식, 일찍 확정했는지). 사전 등록 62.67
     }
+    try:   # 기록만(사전 등록 62.72): 이 요청의 노드별 시간과 판정 표마다 걸린 초. 요청 밖(집계 없음)이면 싣지 않는다
+        m = _current.get()
+        if m is not None:
+            path["timing"] = m.timing()
+            with m._lock:
+                path["vote_s"] = [dict(v) for v in m.votes]
+    except Exception:  # noqa: BLE001 - 기록이 답 경로를 막지 않는다
+        log.debug("단계 시간 싣기 실패", exc_info=True)
     return {"path": path}

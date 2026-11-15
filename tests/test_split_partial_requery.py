@@ -15,9 +15,9 @@ OK = j(sufficient=True, reason="", clarify=None)
 NONE = j(checks=[], sufficient=False, partial=False, reason="관련 규정 없음", missing=["EOC 무응답 단계"], scope_note=None, clarify=None, query="EOC escalation")
 SPLIT = j(split=True, sub_questions=SUBS)
 NO_SPLIT = j(split=False, sub_questions=[])
-SWITCHES = ("GRAPH_REFUSE_ON_NONE", "GRAPH_RESEARCH_SAME_PAGE", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_JUDGE_VOTE", "GRAPH_SCOPE_NOTE_REFUSE",
+SWITCHES = ("GRAPH_REFUSE_ON_NONE", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH", "GRAPH_JUDGE_VOTE",
             "GRAPH_SPECULATE_GROUND", "GRAPH_JUDGE_ANSWER", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_STOP_STALLED_SEARCH", "GRAPH_SECTION_KEEPS_RESEARCH",
-            "GRAPH_REQUERY_SKIP_SEEN", "GRAPH_SPECULATE_FIRST", "SEARCH_DECOMPOSE", "USE_SKILLS")
+            "GRAPH_SPECULATE_FIRST", "SEARCH_DECOMPOSE", "USE_SKILLS")
 
 
 @pytest.fixture(autouse=True)
@@ -45,8 +45,6 @@ def page_recorder(found):
     pages: list = []
 
     def page_search(query, seqs, org, as_of, k):
-        if query == Q_ESC:   # 사전 등록 62.55: 나뉜 질문의 첫 검색 뒤 같은 페이지 보충 검색은 여기서 세지 않는다
-            return []
         pages.append((query, list(seqs)))
         return [c for c in found if c.rule_seq in seqs]
     return page_search, pages
@@ -70,7 +68,6 @@ def in_order(*outs):
 # ---------- (1) 나뉜 질문 + 첫 판정 일부 ----------
 @pytest.mark.parametrize("multi", [False, True])
 def test_split_question_with_a_partial_first_judgement_answers_partially_without_requery(monkeypatch, multi):
-    monkeypatch.setenv("GRAPH_RESEARCH_SAME_PAGE", "1")
     fn, seen = recorder([ESC])
     page_search, pages = page_recorder([IMOC])
     m = llm(decompose=SPLIT, judge=[PARTIAL, OK], answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))
@@ -91,14 +88,18 @@ def test_split_partial_also_skips_the_global_requery(multi):
 
 # ---------- (2) 나뉘지 않은 질문의 일부 판정 ----------
 @pytest.mark.parametrize("multi", [False, True])
-def test_unsplit_question_with_a_partial_judgement_still_requeries_the_page(monkeypatch, multi):
-    monkeypatch.setenv("GRAPH_RESEARCH_SAME_PAGE", "1")
-    fn, seen = recorder([ESC])
+def test_unsplit_question_with_a_partial_judgement_still_requeries(monkeypatch, multi):
+    """같은 페이지 재검색(`GRAPH_RESEARCH_SAME_PAGE`)은 사전 등록 62.72로 제거했다. 나뉘지 않은 질문의 일부 판정은 전체 재검색을 한다."""
+    seen: list = []
+
+    def fn(q):
+        seen.append(q)
+        return [ESC] if len(seen) == 1 else [IMOC]
     page_search, pages = page_recorder([IMOC])
     m = llm(decompose=NO_SPLIT, judge=[PARTIAL, OK], answer=lambda u: cite(*[c for c in (ESC, IMOC) if c.chunk_id in u]))
     out = run(graph(multi, fn, m, decompose=True, max_research=1, page_search=page_search), Q_ESC)
-    assert out["kind"] == "answer" and len(seen) == 1 and pages == [("EOC escalation", [ESC.rule_seq])]
-    assert out["search_stats"].get("page_requeries") == 1 and judges(m) == 2
+    assert out["kind"] == "answer" and len(seen) == 2 and seen[1].query == "EOC escalation" and pages == []
+    assert "page_requeries" not in (out.get("search_stats") or {}) and judges(m) == 2
     assert IMOC.chunk_id in [c["chunk_id"] for c in out["chunks"]]
 
 
@@ -162,29 +163,6 @@ def test_unsplit_partial_still_reads_the_section_the_judge_picked():
     m = llm(decompose=NO_SPLIT, judge=[_read_section_judge(), OK], answer=lambda u: cite(ESC))
     out = run(build_graph(fn, llm=m, decompose=True, max_research=1, use_skills=True, section_reader=reader), Q_ESC)
     assert out["kind"] == "answer" and len(reads) == 1 and out["search_stats"]["section_reads"] == 1 and len(seen) == 1
-
-
-# ---------- (5) 범위 메모로 충분을 일부로 바꾼 경우 ----------
-NOTE = "IMOC 자료는 다른 팀에 한정된 절차이며 일반 IMOC 절차는 자료에 없음"
-
-
-@pytest.mark.parametrize("multi", [False, True])
-def test_scope_note_turned_partial_drops_the_early_answer_and_writes_a_new_one(monkeypatch, multi):
-    monkeypatch.setenv("GRAPH_SCOPE_NOTE_REFUSE", "1")
-    monkeypatch.setenv("GRAPH_JUDGE_ANSWER", "parallel_all")
-    monkeypatch.setenv("GRAPH_ANSWER_WAIT_S", "3")
-    note = j(checks=[], sufficient=True, partial=False, reason="", missing=[], clarify=None, query="IMOC", scope_note=NOTE)
-    users: list = []
-
-    def answer(u):
-        users.append(u)
-        return cite(ESC, text="새 답" if NOTE in u else "같이 쓴 답")
-    fn, seen = recorder([ESC])
-    m = llm(decompose=SPLIT, judge=note, answer=answer, answer_fast=answer)
-    out = run(graph(multi, fn, m, decompose=True, max_research=1), Q_ESC)
-    assert out["kind"] == "answer" and len(seen) == 1 and judges(m) == 1       # 재검색 없이 끝난다
-    assert out["answer"].startswith("새 답") and MSG_PARTIAL_NOTE in out["answer"]   # 판정 전에 같이 쓴 답이 아니라 범위 메모를 받아 새로 쓴 답이다
-    assert any(NOTE not in u for u in users) and any(NOTE in u for u in users)
 
 
 # ---------- (6) 일부 답의 근거 확인을 미리 부른다 ----------

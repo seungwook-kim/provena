@@ -96,12 +96,10 @@ class AgentState(TypedDict, total=False):
     sub_research: str  # 빠진 하위 질문 한 번 더 찾기(`GRAPH_SUB_RESEARCH`, `GRAPH_PAGE_RESEARCH`)의 대상 하위 질문
     sub_research_phase: str  # ""(안 함), "due"(판정이 정함), "search"(재작성이 넘김), "done"(찾음)
     judge_none: bool  # `GRAPH_REFUSE_ON_NONE=1`일 때 첫 판정이 전무(충분도 부분도 아니고 되묻기도 없음)였는지. 참이면 재검색 없이 거절한다
-    query_targets: list[str]  # 첫 검색이 대상별로 나눈 대상 이름(`GRAPH_QUERY_BRANCHES=1`일 때만 생긴다). 답 작성이 대상마다 답했는지 코드로 검사한다
     clarify_question: str | None
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
     search_cache: dict  # 이번 실행 안의 검색 결과 기억. `GRAPH_PARALLEL_INTAKE`를 켜면 첫 재작성과 첫 검색에서 쓸 때까지 미리 받은 LLM 응답도 잠깐 담긴다
-    search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수}
-    intro_chunk_ids: list[str]  # R3(`GRAPH_INTRO_FILL`)가 첫 검색 문맥 뒤에 더한 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산(`build.core_chunks`)이 넓힌 자리와 가른다(사전 등록 62.51). 제목 경로로 더한 청크 포함(62.69)
+    search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수, "ms_*": 검색 단계 시간(사전 등록 62.72, 기록만)}
     sub_queries: list[str]  # 첫 검색 전에 나눈 한국어 하위 질문(나누지 않았거나 분해를 끄면 빈 목록)
     started_at: float  # `GRAPH_ANSWER_BUDGET_S`를 켰을 때 질문을 받은 시각(time.monotonic). 첫 답의 추론 대기를 남은 시간으로 줄인다
     judge_checks_log: list[dict]  # FL(`GRAPH_FACTS_LOG=1`, 진단): 판정마다 대표 표의 checks, sufficient, partial, 표 수
@@ -120,7 +118,7 @@ class AgentState(TypedDict, total=False):
     answer: str
     citations: list[dict]  # 검사를 통과한 인용 청크
     dropped_citations: list  # 검사에서 걸러진 인용
-    trimmed_citations: list  # 인용 수 상한(`MAX_CITATIONS`)이나 본문에 표시되지 않아 잘린 청크 id. 가짜 인용이 아니므로 `dropped_citations`와 따로 둔다
+    trimmed_citations: list  # 본문에 표시되지 않아 잘린 청크 id(인용 수 상한은 사전 등록 62.72로 없앴다). 가짜 인용이 아니므로 `dropped_citations`와 따로 둔다
     answer_id: str | None
     refuse_reason: str  # no_evidence | out_of_period | nonexistent_entity | unsupported
     grounding: dict  # 근거 판정 기록
