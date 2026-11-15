@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 김승욱 (팀장 수정, Claude Code) | 팀장 수정: 사전 등록 62.69(결정 0119)로 `search.py`의 제목 경로 검색(`heading_text`, `MemoryStore.heading_top`, `PgStore.heading_top`, `Searcher.search_headings`)을 되살렸다. `closest_to_query`는 되살리지 않았다. 기본 검색 `search()`의 결과는 그대로다 | (커밋 전) |
 | 2026-11-13 | 박진형 (jinyeong-731) | `section.py` 맨 위 설명을 현재 동작에 맞춤(주석만, 동작 변경 없음): 겹침을 `overlap_tail`만으로 뗀다고 적혀 있던 것을 표 행 겹침 `chunk.overlap_for`(`ROW_TAIL_MAX=400`)와 `body_of`의 지문·앞 청크 끝 일치 줄바꿈 찾기로 고침. 438섹션 수치에 "515acc3d 이전 기준" 표시 | #157 |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #119) 요청 단위 임베딩 토큰 집계: `embed.py`가 Voyage 응답의 `usage.total_tokens`를 `step_cost`에 더하고 `translate.py`의 번역 호출 비용도 그 요청 집계에 합침(커밋 0a15fc2). `search.py`에서 검색어 표 붙이기·제목 경로 더하기 장치(`search_headings`, `closest_to_query`)와 그 스위치를 지움(결정 0101, e1e37e1) | #119 |
 | 2026-11-10 | 김승욱 (Claude Code) | 금액 구간 조회의 표 고르기 수정(사전 등록 62.27). 운영 00032 금액 15건 중 1만 달러 3/3 거절의 검색 쪽 원인: 금액이 드는 표 5개의 구간 행 점수가 0.03 안에 몰려 상한 3에서 질문의 "$10,000"과 글자가 겹치는 `Bad debt write off > Up to $10K`가 들고 3만~10만 달러가 함께 인용하던 `Approving Payment` 행은 빠졌다(저장된 운영 첫 검색 14건 0원 재현, 정답 행 자체는 14/14 들었다). (가) 질문 글(원문·번역·하위 질문)에 표 이름의 낱말이 같은 어간으로 있는 표(`ranges.table_named`, "approver"와 "Approving expense")를 먼저 두고 그 안에서 전체 질문 벡터 점수 순. (나) 질문을 나눴으면 전체 질문 벡터의 상위 k 페이지도 구간 행 후보 페이지에 넣는다(벡터 질의 1회). 금액이 없는 질문은 그대로. 시험 `tests/test_range_search.py` | 미정 |

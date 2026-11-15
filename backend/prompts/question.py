@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import difflib
 import json
 import re
 import unicodedata
@@ -541,9 +542,19 @@ def followup_user(prev: list[str], question: str) -> str:
 _FOLLOWUP_FRAGMENTS = sorted({f for ln in FOLLOWUP_SYSTEM.splitlines() for f in (_letters(piece) for piece in (ln, *_SENTENCE_END.split(ln))) if len(f) >= _MIN_LEAK_LINE})
 
 
+FOLLOWUP_MIN_GAIN = 4  # 다시 쓴 질문에 새로 들어온 글자·숫자 수(`followup_new_letters`)의 하한. 이보다 적으면 앞 질문의 말을 채우지 않은 것으로 본다(조사·접속사만 바뀐 응답)
+
+
+def followup_new_letters(original: str, text: str) -> int:
+    """다시 쓴 질문에 새로 들어온 글자·숫자 수. 공백·문장부호를 뺀 두 글(`_letters`)을 맞대어 넣기·바꾸기 쪽의 새 글자를 더한다.
+    지시어를 빼고 대상을 채운 다시 쓰기("그건 누가 승인해?" -> "CUD 계약은 누가 승인해?")는 길이가 거의 같아도 새 글자가 있어 센다."""
+    a, b = _letters(str(original or "")), _letters(str(text or ""))
+    return sum(j2 - j1 for tag, _i1, _i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes() if tag in ("insert", "replace"))
+
+
 def followup_question(obj: object, original: str) -> str | None:
     """이어 묻기 응답에서 쓸 수 있는 다시 쓴 질문. 쓸 수 없으면 None(원 질문으로 간다).
-    조건: `followup`이 true, `question`이 비지 않은 문자열, `MAX_QUESTION_CHARS` 이하, 원 질문과 다름.
+    조건: `followup`이 true, `question`이 비지 않은 문자열, `MAX_QUESTION_CHARS` 이하, 원 질문과 다름, 새로 들어온 글자·숫자가 `FOLLOWUP_MIN_GAIN`개 이상(`followup_new_letters`).
     코드 검사: 내부 표식·프롬프트 문장(`leaks_internal`, 이 프롬프트의 줄), 프롬프트 요구(`asks_internal`), 가짜 자료 구분자, 지시 문장(`strip_instructions`)이 없어야 한다.
     다시 쓴 질문은 뒤 단계에서 사용자의 질문으로 쓰이므로(출력 검사가 질문에 있던 말은 봐준다) 앞 질문의 지시가 여기로 옮겨 오면 안 된다."""
     from backend.graph import untrusted as U
@@ -552,6 +563,8 @@ def followup_question(obj: object, original: str) -> str | None:
         return None
     text = " ".join(obj["question"].split())
     if not text or len(text) > MAX_QUESTION_CHARS or text == " ".join(str(original or "").split()):
+        return None
+    if followup_new_letters(original, text) < FOLLOWUP_MIN_GAIN:  # 조사·접속사만 바뀐 응답("10만 달러는요?" -> "10만 달러면요?")은 채운 말이 없다
         return None
     if leaks_internal(text) or asks_internal(text) or any(f in _letters(text) for f in _FOLLOWUP_FRAGMENTS):
         return None

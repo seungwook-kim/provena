@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, TypedDict
 
 MAX_PREV_QUESTIONS = 2  # 이어 묻기(D-14)에 쓰는 같은 대화의 앞 질문 수(직전 질문과 그 앞 질문)
+MAX_UNDERSTOOD = MAX_PREV_QUESTIONS + 1  # 다시 쓴 질문 기록(`understood_by_asked`)에 남기는 줄 수(`asked`와 같은 3개)
 
 
 def keep_recent_questions(old: list[str] | None, new: list[str] | None) -> list[str]:
@@ -22,13 +23,30 @@ def keep_recent_questions(old: list[str] | None, new: list[str] | None) -> list[
     return out[-(MAX_PREV_QUESTIONS + 1):]
 
 
+def remember_understood(table: object, typed: str, rewritten: str) -> dict[str, str]:
+    """다시 쓴 질문 기록(친 글 -> 다시 쓴 글)에 한 줄을 더한 새 표. 같은 친 글은 새 줄로 바꾸고 최근 `MAX_UNDERSTOOD`줄만 남긴다. 문자열이 아닌 줄은 버린다."""
+    old = table if isinstance(table, dict) else {}
+    out = {k: v for k, v in old.items() if isinstance(k, str) and isinstance(v, str) and v.strip() and k != typed}
+    out[typed] = rewritten
+    return dict(list(out.items())[-MAX_UNDERSTOOD:])
+
+
+def forget_understood(table: object, typed: str) -> dict[str, str] | None:
+    """`typed` 줄을 지운 새 기록 표. 지울 줄이 없으면 None(상태를 고치지 않는다). 이번에 다시 쓰지 않은 질문이 같은 글의 옛 다시 쓴 글로 읽히지 않게 한다."""
+    if not isinstance(table, dict) or typed not in table:
+        return None
+    return {k: v for k, v in table.items() if k != typed}
+
+
 def previous_questions(state: dict | None) -> list[str]:
     """이어 묻기에 넘길 같은 대화의 앞 질문(오래된 것이 앞, 최대 `MAX_PREV_QUESTIONS`개). `asked`의 마지막은 지금 질문이라 뺀다.
-    직전 질문을 이어 묻기로 다시 썼으면(`user_question`이 그 질문) 다시 쓴 쪽(`understood_question`)을 준다: 혼자서도 뜻이 통해 이어 묻기가 여러 번 이어져도 대상이 남는다.
+    앞 질문마다 이어 묻기로 다시 쓴 기록(`understood_by_asked`)이 있으면 다시 쓴 쪽을 준다: 혼자서도 뜻이 통해, 이어 묻기 사이에 다른 질문이 끼어도 대상이 남는다.
+    기록 표가 없는 대화(이 칸을 더하기 전의 체크포인트)는 직전 질문만 `user_question`·`understood_question`으로 바꾼다.
     `asked`가 없거나 질문이 하나뿐이면(새 대화, 평가 실행기) 빈 목록이다."""
     state = state or {}
     asked = [q for q in (state.get("asked") or ()) if isinstance(q, str) and q.strip()]
-    prev = asked[:-1][-MAX_PREV_QUESTIONS:]
+    table = state.get("understood_by_asked") if isinstance(state.get("understood_by_asked"), dict) else {}
+    prev = [table[q] if isinstance(table.get(q), str) and table[q].strip() else q for q in asked[:-1][-MAX_PREV_QUESTIONS:]]
     understood = state.get("understood_question")
     if prev and isinstance(understood, str) and understood.strip() and state.get("user_question") == prev[-1]:
         prev[-1] = understood
@@ -60,6 +78,7 @@ class AgentState(TypedDict, total=False):
     followup_off: bool  # 이어 묻기 끔(`/chat`이 `CHAT_FOLLOWUP=0`일 때 질문마다 True로 넘긴다). True면 앞 질문이 있어도 `followup`을 지나지 않는다
     user_question: str | None  # 이어 묻기로 `question`을 다시 쓴 질문에서 사용자가 친 글. `followup` 노드가 지날 때마다 다시 쓴다(다시 쓰지 않았으면 None)
     understood_question: str | None  # 이어 묻기로 다시 쓴 질문(그 질문의 `question`과 같다). 다시 쓰지 않았으면 None. 화면의 "이렇게 이해했습니다"와 다음 질문의 앞 질문에 쓴다
+    understood_by_asked: dict[str, str]  # 이어 묻기로 다시 쓴 질문 기록(친 글 -> 다시 쓴 글, 최근 `MAX_UNDERSTOOD`줄). `followup`이 다시 쓰면 줄을 더하고, 다시 쓰지 않으면 그 질문 글의 옛 줄을 지운다. 앞 질문을 다시 쓴 글로 바꾸는 데 쓴다(`previous_questions`)
     # --- 대화 중 값 ---
     profile: dict
     route: str  # rule | decision | review | out_of_domain
@@ -82,7 +101,7 @@ class AgentState(TypedDict, total=False):
     raw_citations: list  # 답 작성이 낸 인용(검사 전)
     search_cache: dict  # 이번 실행 안의 검색 결과 기억. `GRAPH_PARALLEL_INTAKE`를 켜면 첫 재작성과 첫 검색에서 쓸 때까지 미리 받은 LLM 응답도 잠깐 담긴다
     search_stats: dict  # {"calls": 실제 검색 수, "cache_hits": 기억에서 쓴 수}
-    intro_chunk_ids: list[str]  # R3(`GRAPH_INTRO_FILL`)가 첫 검색 문맥 뒤에 더한 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산(`build.core_chunks`)이 넓힌 자리와 가른다(사전 등록 62.51)
+    intro_chunk_ids: list[str]  # R3(`GRAPH_INTRO_FILL`)가 첫 검색 문맥 뒤에 더한 도입부 절 청크. 넓힌 첫 검색의 앞자리 계산(`build.core_chunks`)이 넓힌 자리와 가른다(사전 등록 62.51). 제목 경로로 더한 청크 포함(62.69)
     sub_queries: list[str]  # 첫 검색 전에 나눈 한국어 하위 질문(나누지 않았거나 분해를 끄면 빈 목록)
     started_at: float  # `GRAPH_ANSWER_BUDGET_S`를 켰을 때 질문을 받은 시각(time.monotonic). 첫 답의 추론 대기를 남은 시간으로 줄인다
     judge_checks_log: list[dict]  # FL(`GRAPH_FACTS_LOG=1`, 진단): 판정마다 대표 표의 checks, sufficient, partial, 표 수

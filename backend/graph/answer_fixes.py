@@ -19,6 +19,10 @@
   공유하는, 다른 페이지(rule_seq)의 문맥 청크를 최대 2개 더한다. 숫자가 없는 같은 사실(A1이 보지 못함)을 다른 페이지가 말할 때의 보완이다.
   다른 팀의 페이지(제목에 Team이나 Group이 있고 인용 청크의 페이지 제목과 다름)는 더하지 않는다(다른 팀 페이지에 옮겨 적은 글).
   문턱 12는 v2 기존 행(#44, #49, #52~#54 답한 421행)에서 10~15가 같은 결과(33번 5행 정답 근거 +1, 비정답 추가 0)를 낸 구간의 가운데다(과적합 위험).
+- H `GRAPH_HEADING_TERMS=1`: 첫 검색어와 하위 질문에 코드 용어표(`query_plan.TERM_ROWS`) 전체의 두 단어 이상 영어 용어가 그대로 들어 있으면, 그 용어가 제목 경로(페이지 제목 > 절 제목)에
+  그대로 든 청크를 용어마다 1개(ord 순) 첫 검색 문맥 뒤에 더한다(`Searcher.search_headings`, 임베딩·LLM 호출 없음, DB 질의 용어당 약 0.1초). 그래프에 heading_search가 있어야 한다.
+  결정 0101로 뺐다가 사전 등록 62.69로 되살렸다. 질문이나 하위 질문에 통화 금액이 있으면 건너뛰고(`query_plan.mentions_money`), 더한 청크는 넓힌 첫 검색의 앞자리 문맥에 든다(`intro_chunk_ids`).
+  알려진 한계: 용어표의 두 행은 v2 문항의 말에 맞춘 것이다. 질문과 하위 질문의 영어 구를 모두 쓰는 넓은 형태는 다른 관련 문항에 비정답 20개, 비관련 문항에 12개를 더해 버렸다.
 - Q `GRAPH_GROUNDING_QUOTE=1`: 근거 확인 프롬프트를 '주장마다 받치는 영어 구절을 먼저 그대로 복사(없으면 NOTHING FOUND)하고 판정'으로 바꾸고(`prompts.question.grounding_quoted`),
   번역·말 바꿈과 제목 경로의 간접 근거(적용 범위)를 받쳐진 것으로 보는 기준을 적는다. 호출 수는 그대로다. 근거: 기존 425행 중 근거 확인이 받쳐지지 않는다고 한 관련 문항 12행은
   모두 첫 답이 정답 근거를 인용했고(3, 4, 7, 14, 15, 39번, 다시 쓰기 +3~4초, 7번 1행은 거절), 비관련 4행은 모두 22번이다.
@@ -27,12 +31,16 @@
 - R3 `GRAPH_INTRO_FILL=1`: 검색 결과를 합친 문맥에 같은 페이지 판(rule_seq, version_id)의 청크가 3개 이상이면, 그 페이지 첫 청크의 첫 절(h2) 청크 중
   방금 검색한 질문 벡터와 가장 가까운 1개를 문맥 뒤에 더한다(`Searcher.intro_fill`, 임베딩·LLM 호출 없음). 그 절의 청크가 이미 문맥에 있으면 더하지 않는다. 그래프에 intro_search가 있어야 한다.
   근거(다른 에이전트 오프라인 분석, #54·#55·#61 기존 행): 도입부 절이 정답인 문항(Overview)은 4/4행에서 문맥에 들고, 다른 관련 문항에는 비정답 77개가 섞이며 문맥 글자가 7.4% 는다.
+- HM `GRAPH_HEADING_MARK=1`(H가 켜져 있을 때만): H가 더한 청크의 id와 용어를 답 입력 끝에 한 줄로 알리고, 그 자료가 질문한 사실을 직접 말하면 먼저 근거로 달게 한다(`heading_note`).
+  근거 판정 뒤 다시 쓰는 답(redraft) 입력에도 같은 줄을 붙인다. H가 더한 청크가 없으면 답 입력은 바뀌지 않는다. 근거: H가 더한 정답 청크가 문맥에 있어도 답이 같은 사실을 말하는 다른 페이지를 인용했다(#58 6행 중 4행, #61 2행 모두).
+- HT `GRAPH_HEADING_HEADS=1`(H가 켜져 있을 때만): 맞는 용어표 줄의 절 이름 구(`TermRow.heads`)도 제목 경로에서 찾고, 구마다 ord 순 6개 중 문맥에 이미 있는 청크를 건너뛴 첫 1개를 쓴다.
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
@@ -192,6 +200,47 @@ def grounding_quote_enabled() -> bool:
     return _flag("GRAPH_GROUNDING_QUOTE")
 
 
+def heading_terms_enabled() -> bool:
+    return _flag("GRAPH_HEADING_TERMS")
+
+
+def heading_phrases(texts: list[str] | None, table: list[str] | None = None) -> list[str]:
+    """H: 첫 검색어와 하위 질문(`texts`)에 그대로 든 코드 용어표(`query_plan.TERM_ROWS`) 전체의 두 단어 이상 영어 용어(소문자, 표 순서, 중복 없음).
+    표의 특정 줄에 묶지 않는다. 한 단어 용어는 제목에 너무 많이 나와 쓰지 않는다. table을 주면 그 목록을 표 대신 쓴다(시험용)."""
+    if table is None:
+        from backend.graph import query_plan as QP
+        table = [t for row in QP.TERM_ROWS for t in row.terms.split(",")]
+    low = " ".join(str(t) for t in texts or []).lower()
+    out: list[str] = []
+    for term in table:
+        t = term.strip().lower()
+        if " " in t and len(t) >= 6 and t in low and t not in out:
+            out.append(t)
+    return out
+
+
+def heading_mark_enabled() -> bool:
+    return _flag("GRAPH_HEADING_MARK")
+
+
+HEADING_MARK_KEY = "heading_match"
+
+
+def heading_note(chunks: list[dict]) -> str:
+    """HM: H가 더한 청크(`HEADING_MARK_KEY`가 있는 청크)를 답 입력 끝에 알리는 안내. 그런 청크가 없으면 빈 문자열(입력이 그대로다).
+    용어는 질문과 하위 질문에 이미 있던 영어 용어이고, 청크 id는 자료 머리에 있는 값이다."""
+    marked = [(c.get("chunk_id"), c.get(HEADING_MARK_KEY)) for c in chunks or [] if c.get(HEADING_MARK_KEY)]
+    if not marked:
+        return ""
+    listed = "\n".join(f"- chunk_id={cid} (용어: {str(term).replace('<<<', '').replace('>>>', '')})" for cid, term in marked)
+    return ("\n\n제목 경로(페이지 제목 > 절 제목)가 질문의 용어를 그대로 담은 자료:\n" + listed +
+            "\n이 자료가 질문한 사실을 직접 말하면 그 사실의 근거로 이 자료를 먼저 단다. 질문한 사실을 말하지 않으면 쓰지 않는다.")
+
+
+def heading_heads_enabled() -> bool:
+    return _flag("GRAPH_HEADING_HEADS")
+
+
 
 _NOTHING = "nothing found"
 
@@ -229,6 +278,23 @@ def speculate_early_search_enabled() -> bool:
 def speculate_ground_enabled() -> bool:
     """SG `GRAPH_SPECULATE_GROUND=1`: 답 후보가 나오는 대로 그 답의 근거 판정을 미리 부르고, 나중에 같은 입력의 판정이 필요하면 그 결과를 쓴다(입력과 판정 기준은 그대로)."""
     return _flag("GRAPH_SPECULATE_GROUND")
+
+
+def cite_add_guard_enabled() -> bool:
+    """`GRAPH_CITE_ADD_GUARD=1`(기본 꺼짐, 서비스 설정에서 켬, 사전 등록 62.70): 근거 판정 뒤 코드가 인용을 더하고 고치는 세 곳을 보정한다(LLM 호출 없음).
+    K: 기준 인용(더할 청크가 기대는 인용, 겹친 머리 바로잡기로 바뀐 인용은 바뀌기 전 청크)이 판정 구절 청크(`judge_quote_ids`) 밖이면 그 인용에 기대어 더하지 않는다
+    (`pick_extra`, `pick_phrase_extra`의 `anchor_ok`). 더할 후보 자체가 판정 구절 청크면 기준 인용과 상관없이 더한다(`add_ok`). 판정 구절이 없으면 지금처럼 더한다.
+    L: 문장 공유로 더할 청크의 공유 글이 그 청크의 겹친 머리에만 있고 앞 청크도 문턱 이상 공유하면 그 글의 원래 자리인 앞 청크를 더한다(`pick_phrase_extra`의 `head_fix`).
+    M: 다시 쓴 답과 문장을 뺀 답에도 다시 부른 근거 확인의 구절로 겹친 머리 인용 바로잡기(HO)를 한다(지금은 처음 답이 그대로 받쳐졌을 때만).
+    L과 M은 문맥 밖 앞 청크 읽기가 요청당 1~2번 늘 수 있다. 근거는 검증 20건의 101번 한 문항이다(알려진 한계)."""
+    return _flag("GRAPH_CITE_ADD_GUARD")
+
+
+def adopt_grounded_enabled() -> bool:
+    """`GRAPH_ADOPT_GROUNDED_CANDIDATE=1`(기본 꺼짐, `GRAPH_SPECULATE_GROUND`가 켜져 있어야 동작, 사전 등록 62.68): 고른 답의 근거 확인이 받쳐지지 않는 주장을 찾아
+    답을 다시 쓰기 전에, 같은 요청에서 미리 부른 다른 답 후보의 근거 확인이 이미 끝나 같은 일부 답 값·같은 문맥으로 받쳐졌다고 했으면 그 후보를 쓴다.
+    그 후보는 고른 답과 같은 검사와 후처리를 다시 거치고, 하나라도 통과하지 못하면 지금처럼 다시 쓴다."""
+    return _flag("GRAPH_ADOPT_GROUNDED_CANDIDATE")
 
 
 def unchanged_rejudge_enabled() -> bool:
@@ -364,10 +430,13 @@ def _same_section(c: dict, cited: list[dict]) -> bool:
     return c.get("rule_seq") is not None and bool(c.get("article")) and any(x.get("rule_seq") == c.get("rule_seq") and x.get("article") == c.get("article") for x in cited)
 
 
-def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[tuple[dict, int]]:
+def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4, anchor_ok: Callable[[dict], bool] | None = None,
+               add_ok: Callable[[dict], bool] | None = None) -> list[tuple[dict, int]]:
     """더할 청크와 그 청크와 가장 많이 겹친 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지.
     겹침은 청크 전체가 아니라 같은 값을 담은 줄끼리 잰다: 값(숫자, 단위)만 같고 그 값이 가리키는 대상이 다른 줄은 같은 사실이 아니다.
-    줄 겹침만 보면 값과 단위 단어만 같은 다른 문서의 짧은 줄이 붙는다(운영 00035·00037의 v2 8·9번). 청크 전체 겹침도 같이 넘어야 한다."""
+    줄 겹침만 보면 값과 단위 단어만 같은 다른 문서의 짧은 줄이 붙는다(운영 00035·00037의 v2 8·9번). 청크 전체 겹침도 같이 넘어야 한다.
+    `anchor_ok`(K, `GRAPH_CITE_ADD_GUARD`, 사전 등록 62.70)를 주면 그 함수가 참인 인용 청크에만 기대어 더한다. 없으면 모든 인용 청크다(지금 동작).
+    `add_ok`가 참인 후보(판정 구절 청크)는 `anchor_ok`와 상관없이 기댈 수 있다."""
     if not cited or len(cited) >= cap:
         return []
     keys = set().union(*(value_keys(_body(c)) for c in cited))
@@ -385,6 +454,8 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4) -> list[
         anchor, score = -1, 0.0
         for k, t, ln in _value_lines(_own_body(c, cited), keys):
             for i, rows in enumerate(cited_lines):
+                if anchor_ok is not None and not anchor_ok(cited[i]) and not (add_ok is not None and add_ok(c)):  # K: 판정 구절 청크 밖의 기준 인용에는 기대지 않는다(후보가 판정 구절 청크면 예외)
+                    continue
                 for k2, t2, ln2 in rows:
                     if is_table_row(ln) and is_table_row(ln2) and (row_first_cell(ln) != row_first_cell(ln2) or not row_first_cell(ln)):
                         continue  # 62.56(나): 표 행끼리는 첫 칸이 같을 때만 같은 값 줄로 본다
@@ -412,10 +483,10 @@ def expand_citations(answer: str, cited: list[dict], context: list[dict], *, cap
     return answer, [*cited, *(c for c, _ in added)]
 
 
-def expand_numbered(body: str, cited: list[dict], context: list[dict], *, cap: int = 4, picker=None) -> tuple[str, list[dict]]:
+def expand_numbered(body: str, cited: list[dict], context: list[dict], *, cap: int = 4, picker=None, **pick_kw) -> tuple[str, list[dict]]:
     """`finish_answer`를 거친 본문(표시가 `[n]`)에 같은 규칙으로 더한다. 새 청크는 인용 목록 끝에 붙어 번호가 이어진다.
-    `picker`를 주면 그 규칙(`pick_phrase_extra` 등)으로 고른다. 기본은 A1(`pick_extra`)."""
-    added = (picker or pick_extra)(cited, context, cap=cap)
+    `picker`를 주면 그 규칙(`pick_phrase_extra` 등)으로 고른다. 기본은 A1(`pick_extra`). `pick_kw`는 고르는 규칙에 그대로 넘긴다(62.70 `anchor_ok` 등)."""
+    added = (picker or pick_extra)(cited, context, cap=cap, **pick_kw)
     for j, (c, i) in enumerate(added, len(cited) + 1):
         body = _insert_after(body, f"[{i + 1}]", f"[{j}]")
     return body, [*cited, *(c for c, _ in added)]
@@ -467,9 +538,35 @@ def _other_team_page(c: dict, anchor: dict) -> bool:
     return bool(_TEAM_TITLE.search(title)) and title != str(anchor.get("rule_title") or "")
 
 
-def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n: int = PHRASE_MIN_WORDS) -> list[tuple[dict, int]]:
+def _shared_run(c_body: str, x: dict) -> int:
+    return longest_shared_run(_words_whole_rows(c_body, _body(x), "\x00c"), _words_whole_rows(_body(x), c_body, "\x00x"))
+
+
+def head_owner_of(c: dict, context: list[dict], prev_reader=None) -> tuple[dict, int] | None:
+    """L(사전 등록 62.70): `c`의 머리와 끝이 그대로 같은 같은 페이지 판의 앞 청크와 그 겹친 글자 수. 문맥에서 먼저 찾고, 없으면 `prev_reader(c)`로 읽는다.
+    없거나 읽기가 실패하면 None."""
+    for y in context or []:
+        n = head_overlap(c, y)
+        if n:
+            return y, n
+    if prev_reader is None:
+        return None
+    try:
+        y = prev_reader(c)
+    except Exception:  # noqa: BLE001 - 앞 청크 읽기 실패가 답을 막지 않는다
+        return None
+    n = head_overlap(c, y) if isinstance(y, dict) and y.get("chunk_id") else 0
+    return (y, n) if n else None
+
+
+def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n: int = PHRASE_MIN_WORDS, anchor_ok: Callable[[dict], bool] | None = None,
+                      add_ok: Callable[[dict], bool] | None = None,
+                      head_fix: bool = False, prev_reader=None, log: list[dict] | None = None) -> list[tuple[dict, int]]:
     """더할 청크와 그 청크와 문장을 공유한 인용 청크의 자리(0부터). 문맥 순서대로 보고 `MAX_ADD`개, 인용 합계 `cap`개까지.
-    인용 청크와 같은 페이지(rule_seq)의 청크와 다른 팀의 페이지는 더하지 않는다."""
+    인용 청크와 같은 페이지(rule_seq)의 청크와 다른 팀의 페이지는 더하지 않는다.
+    사전 등록 62.70(`GRAPH_CITE_ADD_GUARD`): `anchor_ok`(K)를 주면 그 함수가 참인 인용 청크에만 기대어 더한다. `head_fix`(L)면 공유한 글이 더할 청크의
+    겹친 머리(앞 청크에서 복사된 글)에만 있고 앞 청크(`head_owner_of`)도 그 글을 문턱 이상 공유하면 앞 청크를 대신 더하고 `log`에 {from, to}를 남긴다. 앞 청크가 이미 인용돼 있으면 더하지 않는다.
+    `add_ok`(K 예외)가 참인 후보는 `anchor_ok`와 상관없이 기댈 수 있다."""
     if not cited or len(cited) >= cap:
         return []
     have = {c["chunk_id"] for c in cited}
@@ -482,8 +579,20 @@ def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n
         for i, x in enumerate(cited):
             if c.get("rule_seq") == x.get("rule_seq") or _other_team_page(c, x):
                 continue
-            if longest_shared_run(_words_whole_rows(_body(c), _body(x), "\x00c"), _words_whole_rows(_body(x), _body(c), "\x00x")) >= n:
-                added.append((c, i))
+            if anchor_ok is not None and not anchor_ok(x) and not (add_ok is not None and add_ok(c)):  # K: 판정 구절 청크 밖의 기준 인용에는 기대지 않는다(후보가 판정 구절 청크면 예외)
+                continue
+            if _shared_run(_body(c), x) >= n:
+                pick = c
+                if head_fix:  # L: 겹친 머리를 뗀 본문으로는 공유가 모자라면 앞 청크가 그 글의 원래 자리다
+                    owner = head_owner_of(c, context, prev_reader)
+                    # 앞 청크도 같은 글을 문턱 이상 공유할 때만 바꾼다(못 넘으면 원래 청크를 더한다)
+                    if owner is not None and _shared_run(_body(c)[owner[1]:], x) < n and _shared_run(_body(owner[0]), x) >= n:
+                        pick = owner[0]
+                        if log is not None:
+                            log.append({"from": c["chunk_id"], "to": pick["chunk_id"]})
+                if pick["chunk_id"] not in have:
+                    added.append((pick, i))
+                    have.add(pick["chunk_id"])
                 have.add(c["chunk_id"])
                 break
     return added

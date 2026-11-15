@@ -1,16 +1,22 @@
-"""첫 검색어를 코드로 보강한다. LLM이 규칙을 따르기를 기대하지 않고 정해진 표로 하위 질문을 나눈다. 스위치는 기본 꺼짐이다.
+"""첫 검색어를 코드로 보강한다. LLM이 규칙을 따르기를 기대하지 않고 정해진 표로 검색어를 바꾼다. 두 스위치 모두 기본 꺼짐이다.
 
+- `GRAPH_QUERY_TERMS=1`: 질문 말이 표의 조건을 모두 채우면 그 하위 질문 끝에 핸드북 영어 용어를 괄호로 붙인다.
+  한국어 질문을 번역하면 핸드북이 쓰지 않는 말(예: "도입" -> adopt)이 되어 다른 팀의 문서로 끌리는 일을 막는다.
+  질문이나 하위 질문에 통화 금액이 있으면 붙이지 않는다(`mentions_money`, 그래프가 판단한다. 사전 등록 62.69).
 - `GRAPH_QUERY_BRANCHES=1`: 대상에 따라 핸드북 절차가 갈리는 주제(계정, 2FA, 비밀번호 등)인데 질문에 대상이 없으면,
   그 하위 질문을 대상마다 하나씩 나눠 둘 다 검색한다. 답 작성에는 대상 목록을 넘기고, 답이 대상 하나를 빠뜨리면 한 번 다시 쓰게 한다.
 
 표는 문항이나 청크가 아니라 핸드북의 개념에 묶는다. 검색 방식(분해 합치기, 순위 합치기, k)은 그대로다. 하위 질문 수는 검색의 상한(3개)을 넘지 않는다.
-검색어 용어 덧붙임(`GRAPH_QUERY_TERMS`)과 제목 경로 추가(`GRAPH_HEADING_*`)는 용어표가 v2 문항 단어에 맞춘 것이라 걷어냈다(결정 0101, 2026-11-10).
+검색어 용어 덧붙임(`GRAPH_QUERY_TERMS`)과 제목 경로 추가(`GRAPH_HEADING_*`)는 결정 0101로 뺐다가 사전 등록 62.69로 되살렸다.
+두 행은 v2 문항 말에 맞춘 알려진 한계다.
 """
 from __future__ import annotations
 
 import os
 import re
 from dataclasses import dataclass
+
+from backend.rag.retrieve import ranges
 
 MAX_SUBS = 3  # backend.rag.retrieve.search.MAX_SUB_QUERIES와 같다(검색이 받는 하위 질문 상한)
 
@@ -19,8 +25,64 @@ def _flag(name: str) -> bool:
     return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def terms_enabled() -> bool:
+    return _flag("GRAPH_QUERY_TERMS")
+
+
 def branches_enabled() -> bool:
     return _flag("GRAPH_QUERY_BRANCHES")
+
+
+@dataclass(frozen=True)
+class TermRow:
+    """`all_of`의 정규식이 모두 맞으면 `terms`를 붙인다. `none_of`가 하나라도 맞으면 붙이지 않는다."""
+    name: str
+    all_of: tuple[str, ...]
+    terms: str
+    none_of: tuple[str, ...] = ()
+    heads: tuple[str, ...] = ()  # 제목 경로 검색(H, `GRAPH_HEADING_HEADS`)에만 쓰는 핸드북 절 이름 구. 검색어에는 붙이지 않는다
+
+    def hits(self, text: str) -> bool:
+        return all(re.search(p, text, re.I) for p in self.all_of) and not any(re.search(p, text, re.I) for p in self.none_of)
+
+
+# 핸드북 용어표(`skills/search-terms/SKILL.md`의 같은 개념 행). 한국어 말이 번역되면 핸드북 용어와 멀어지는 개념만 둔다.
+# 알려진 한계: 두 행은 v2 문항의 말에 맞춘 것이다(결정 0078·0101, 사전 등록 62.69). 금액이 든 질문에는 붙이지 않는다(`mentions_money`)
+TERM_ROWS: tuple[TermRow, ...] = (
+    TermRow("구매·새 도구 도입", (r"도입|구매|구입|사고\s*싶|사려", r"도구|툴|소프트웨어|SaaS|앱|애플리케이션|솔루션|벤더|업체"),
+            "procurement, purchase request, new vendor", heads=("new request",)),
+    TermRow("업체 보안 검토", (r"TPRM|보안\s*(검토|평가|심사)|(업체|벤더|공급사)\s*보안",), "TPRM, third party risk management assessment", heads=("TPRM assessment",)),
+)
+# heads: 핸드북이 그 개념의 절 제목에 쓰는 구(구매 요청을 시작하는 'New Request', 업체 보안 검토의 'TPRM Assessment'). 검색어 벡터는 바꾸지 않는다
+# 넣지 않은 행: "2FA 초기화 -> 2FA removal, account recovery"는 영어 검색 점검에서 셀프 복구 안내로 끌려 대상별 절차 청크를 밀어냈다(2026-11-06)
+
+
+def heading_heads(texts: list[str]) -> list[str]:
+    """H 확장: 첫 검색어·하위 질문 중 하나라도 맞는 표 줄의 `heads`(소문자, 표 순서, 중복 없음)."""
+    out: list[str] = []
+    for r in TERM_ROWS:
+        if any(r.hits(t or "") for t in texts):
+            out += [h.strip().lower() for h in r.heads if h.strip().lower() not in out]
+    return out
+
+
+# 통화 금액 표현: 달러 판정(`ranges.amounts_in`)에 원·유로·엔·파운드 등 통화 기호·단어와 숫자를 더한다(사전 등록 62.69).
+# 통화 단어가 없어도 숫자에 K/M/B나 천·만·억이 붙으면 금액으로 본다. 다만 바로 뒤에 셈 단위(명, 개, 건, 시간, 일 등)가 오면 금액이 아니다
+# 통화 "원" 뒤에 바로 붙는 말(500만 원짜리, 3만 원이면). 그 밖의 글자가 붙은 "원"(원격, 원칙)은 통화가 아니다
+_WON = r"원(?:\b|(?=짜리|어치|가량|정도|이상|이하|미만|초과|까지|부터|으로|대|이|을|의|에|은|도|씩|쯤|선|가|만))"
+_COUNT_AFTER = r"(?!\s*(?:명|개|건|시간|일|분|초|회|년|개월|주|원))"   # 원: 통화 원은 위 두 갈래가 이미 잡는다
+_MONEY = re.compile(
+    r"[$€£₩¥]\s*\d|\d[\d,\.]*\s*(?:[KMBkmb]\b|천|만|억|백만|thousand|million|billion)?\s*(?:달러|불\b|" + _WON + r"|유로|엔\b|파운드|USD|KRW|EUR|GBP|JPY|dollars?|won\b|euros?)"
+    r"|\d[\d,\.]*\s*(?:천|만|억)\s*(?:" + _WON + r"|달러)"
+    r"|\d[\d,\.]*\s*(?:[KMBkmb]\b|천|만|억)" + _COUNT_AFTER, re.I)
+
+
+def mentions_money(texts: list[str | None]) -> bool:
+    """질문이나 하위 질문에 통화 금액이 있는지. 있으면 용어 덧붙임과 제목 경로 추가를 모두 건너뛴다(사전 등록 62.69).
+    금액으로 승인자를 묻는 질문에 구매 절차 용어가 붙어 무관한 구매 안내 청크가 문맥에 드는 일을 막는다(결정 0101 사례)."""
+    if ranges.amounts_in(list(texts)):
+        return True
+    return any(_MONEY.search(t) for t in texts if t)
 
 
 @dataclass(frozen=True)
@@ -44,6 +106,13 @@ BRANCH_RULES: tuple[BranchRule, ...] = (
 )
 
 
+def add_terms(text: str) -> str:
+    """맞는 행의 용어를 괄호로 붙인다. 그 행의 용어가 이미 모두 들어 있으면 붙이지 않는다."""
+    low = text.lower()
+    extra = [r.terms for r in TERM_ROWS if r.hits(text) and not all(t.strip().lower() in low for t in r.terms.split(","))]
+    return f"{text} ({'; '.join(extra)})" if extra else text
+
+
 def branch_rule(text: str) -> BranchRule | None:
     return next((r for r in BRANCH_RULES if r.hits(text)), None)
 
@@ -55,8 +124,8 @@ class Plan:
     targets: list[str]  # 답이 다뤄야 할 대상 이름(나누지 않았으면 빈 목록)
 
 
-def plan_first_search(question: str, query: str, subs: list[str], *, branches: bool) -> Plan:
-    """첫 검색의 (검색어, 하위 질문, 대상). 스위치가 꺼져 있으면 받은 값 그대로다.
+def plan_first_search(question: str, query: str, subs: list[str], *, terms: bool, branches: bool) -> Plan:
+    """첫 검색의 (검색어, 하위 질문, 대상). 스위치가 둘 다 꺼져 있으면 받은 값 그대로다. 대상별 나누기가 먼저, 용어 덧붙임이 뒤다.
     question: 사용자 원 질문(대상 말을 찾는다). query: 검색에 넘길 전체 질문. subs: 분해가 낸 하위 질문(나누지 않았으면 빈 목록)."""
     subs = list(subs)
     targets: list[str] = []
@@ -69,6 +138,10 @@ def plan_first_search(question: str, query: str, subs: list[str], *, branches: b
                 split = [f"{base[i]} ({add})" for _, add, _ in rule.targets]
                 subs = [*base[:i], *split, *base[i + 1:]]
                 targets = [label for label, _, _ in rule.targets]
+    if terms:
+        subs = [add_terms(s) for s in subs]
+        if not subs:
+            query = add_terms(query)
     return Plan(query, subs, targets)
 
 

@@ -66,6 +66,10 @@ SEARCH_HEDGE_6214 = {"SEARCH_HEDGE": "1", "SEARCH_HEDGE_S": "1.5"}
 EARLY_SEARCH_6253 = {"GRAPH_SPECULATE_EARLY_SEARCH": "1"}
 # 사전 등록 62.67: 프롬프트 캐시(서비스 경로만, 측정 실행기 인자에는 없다)
 PROMPT_CACHE_6267 = {"LLM_PROMPT_CACHE": "1"}
+# 사전 등록 62.68: 근거 확인 실패 뒤 이미 받쳐진 다른 후보 쓰기(서비스 경로만, 측정 실행기 인자에는 없다)
+ADOPT_GROUNDED_6268 = {"GRAPH_ADOPT_GROUNDED_CANDIDATE": "1"}
+# 사전 등록 62.70: 코드가 더하는 인용의 보정(서비스 경로만, 측정 실행기 인자에는 없다)
+CITE_ADD_GUARD_6270 = {"GRAPH_CITE_ADD_GUARD": "1"}
 
 
 def test_62_40_speed_values_are_service_defaults():
@@ -95,7 +99,7 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270)}
     assert have == want
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
@@ -106,6 +110,15 @@ def test_service_values_match_the_measured_arguments():
     assert (SP.SERVICE_ENV["LLM_REASONING"], SP.SERVICE_ENV["LLM_REASONING_BY_TASK"]) == (SP.SERVICE_ENV["LLM_EFFORT"], SP.SERVICE_ENV["LLM_EFFORT_BY_TASK"])
     _, args = measured_args()
     assert args.via_mcp and args.connected  # 서비스에서는 SEARCH_VIA_MCP(MCP_TOKEN이 있을 때)와 원래 연결된 결정표·합동 검토
+
+
+def test_heading_terms_switches_are_service_defaults():
+    """사전 등록 62.69: 검색어 덧붙임, 제목 경로 추가, 절 이름 구, 알림 네 스위치를 서비스에서 켠다(코드 기본은 꺼짐). 측정 실행기 인자에도 있다."""
+    names = ("GRAPH_QUERY_TERMS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK")
+    assert all(SP.SERVICE_ENV[n] == "1" for n in names) and not set(names) & set(SP.CANDIDATE_ENV)
+    assert {"--query-terms", "--heading-terms", "--heading-heads", "--heading-mark"} <= set(SP.MEASURED_ARGS)
+    assert "GRAPH_HEADING_BEST" not in SP.SERVICE_ENV   # 되살리지 않았다
+    assert SP.service_searches()["heading_search"] is SP.heading_search
 
 
 def test_measured_args_are_the_61_51_setting():
@@ -219,6 +232,10 @@ def test_service_searches_call_the_service_searcher(monkeypatch):
             calls.append(("pages", a))
             return ["p"]
 
+        def search_headings(self, *a):
+            calls.append(("headings", a))
+            return ["h"]
+
         def intro_fill(self, *a):
             calls.append(("intro", a))
             return ["i"]
@@ -226,9 +243,10 @@ def test_service_searches_call_the_service_searcher(monkeypatch):
     monkeypatch.setattr(S, "_searcher", FakeSearcher())
     parts = SP.service_searches()
     assert parts["page_search"]("q", [1, 2], None, "2026-11-09", 8) == ["p"]
+    assert parts["heading_search"]("new vendor", "org", None, 6) == ["h"]
     assert parts["intro_search"]([{"chunk_id": "a"}], "q", None, None) == ["i"]
-    assert [c[0] for c in calls] == ["pages", "intro"]
-    assert calls[0][1] == ("q", [1, 2], None, "2026-11-09", 8)
+    assert [c[0] for c in calls] == ["pages", "headings", "intro"]
+    assert calls[0][1] == ("q", [1, 2], None, "2026-11-09", 8) and calls[1][1] == ("new vendor", "org", None, 6)
 
 
 def _app(monkeypatch, **kw):
@@ -268,7 +286,7 @@ def test_app_builds_the_service_graph_with_the_profile_and_restores_env(clean_en
         assert app.state.question_graph is not None
         assert os.environ["GRAPH_ANSWER_BEST2"] == "1"
     assert seen["env"] == {**SP.SERVICE_ENV, "GRAPH_JUDGE_VOTE": ""}
-    assert {"page_search", "intro_search"} <= set(seen) and isinstance(seen["llm"], SP.SharedChatModel)
+    assert {"page_search", "heading_search", "intro_search"} <= set(seen) and isinstance(seen["llm"], SP.SharedChatModel)
     assert seen["decision_repo"] is not None and seen["review_graph"] is not None  # --connected: 결정표와 합동 검토가 연결돼 있다
     assert "GRAPH_ANSWER_BEST2" not in os.environ and os.environ["GRAPH_JUDGE_VOTE"] == "off"  # 앱이 내려가면 되돌린다
 

@@ -165,9 +165,22 @@ def refuse_meta(stage: str, kind: str | None, state: dict, messages: dict[str, s
 # 답 경로 기록(측정용). 검색·판정·답 고르기에서 코드가 정한 값만 싣는다: 하위 질문, 문맥 청크 id, 판정 구절이 든 청크 id(구절 글은 싣지 않는다), 답 후보의 인용과 고른 쪽, 인용 후처리 기록.
 # 답 본문·초안·판정 이유 문장·판정 구절 글은 싣지 않는다. 상태를 읽기만 하므로 답 경로는 그대로다.
 PATH_TEXT_WIDTH = 200
+_PATH_STATS_LISTS = ("heading_terms", "heading_added")   # `search_stats` 중 숫자가 아니어도 싣는 칸(사전 등록 62.69 제목 경로 추가의 구와 더한 청크 id)
 # candidates: 이 실행의 근거 확인 호출마다 후보 종류(reasoning | fast | answer | chosen | extra), 문맥(core | full), 넘긴 일부 답 값, 결론, 쓰였는지(사전 등록 62.67). partial_filter: 62.66 문장 빼기 결과
+# switched_from, switched_to: 근거 확인 실패 뒤 이미 받쳐진 다른 후보를 쓴 경우의 후보 종류, switch_failed: 그 후보가 다시 거친 검사에서 걸린 곳(사전 등록 62.68)
 _PATH_GROUNDING_KEYS = ("llm", "reason", "revised", "redrafted", "rejudge", "partial_route", "cite_expand", "cite_phrase", "head_owner", "ground_ahead",
-                        "partial_filter", "candidates")
+                        "partial_filter", "candidates", "switched_from", "switched_to", "switch_failed",
+                        "cite_phrase_head")   # cite_phrase_head: 62.70 L이 앞 청크로 바꿔 더한 기록({from, to})
+# redraft: 답 다시 쓰기 기록 중 결과, 재판정, 일부 답 안내 결과(`partial_note`, 62.67), 넘겨받은 인용, 버린 인용만 싣는다. 다시 쓴 답 본문(`answer`)은 싣지 않는다(사전 등록 62.68)
+_PATH_REDRAFT_KEYS = ("result", "rejudge", "partial_note", "carried", "dropped")
+
+
+def redraft_row(redraft: dict) -> dict:
+    """답 다시 쓰기 기록의 행. 버린 인용(`dropped`)은 모델이 낸 인용 값 그대로일 수 있어 청크 id(문자열 `chunk_id`)만 남긴다."""
+    row = {k: redraft[k] for k in _PATH_REDRAFT_KEYS if k in redraft}
+    if "dropped" in row:
+        row["dropped"] = [d["chunk_id"] for d in row["dropped"] or [] if isinstance(d, dict) and isinstance(d.get("chunk_id"), str)]
+    return row
 
 
 def path_meta(state: dict) -> dict:
@@ -177,6 +190,7 @@ def path_meta(state: dict) -> dict:
         return {}
     best2 = state.get("best2_log") if isinstance(state.get("best2_log"), dict) else None
     grounding = state.get("grounding") if isinstance(state.get("grounding"), dict) else {}
+    redraft = grounding.get("redraft") if isinstance(grounding.get("redraft"), dict) else None
     quotes = [[str(i) for i in q] for q in state.get("judge_quotes") or [] if isinstance(q, (list, tuple))]   # 사실마다 판정 구절이 든 청크 id(구절 글은 싣지 않는다)
     path = {
         "sub_queries": [str(s)[:PATH_TEXT_WIDTH] for s in state.get("sub_queries") or []],
@@ -184,13 +198,16 @@ def path_meta(state: dict) -> dict:
         "context_ids": [c.get("chunk_id") for c in chunks if isinstance(c, dict)],
         "intro_chunk_ids": list(state.get("intro_chunk_ids") or []),
         "retries": int(state.get("retries") or 0),
-        "search_stats": {k: v for k, v in (state.get("search_stats") or {}).items() if isinstance(v, (int, float))},
+        "search_stats": {k: (v if isinstance(v, (int, float)) else [str(x)[:PATH_TEXT_WIDTH] for x in v])
+                         for k, v in (state.get("search_stats") or {}).items()
+                         if isinstance(v, (int, float)) or (k in _PATH_STATS_LISTS and isinstance(v, (list, tuple)))},   # 62.69: 제목 경로 구와 더한 청크 id
         "judge_partial": bool(state.get("judge_partial")),
         "judge_quote_ids": list(state.get("judge_quote_ids") or []),
         "judge_quotes": quotes,
         "best2": {k: best2.get(k) for k in ("quote_ids", "cands", "pick", "why", "rule")} if best2 else None,
         "trimmed_citations": list(state.get("trimmed_citations") or []),
-        "grounding": {k: grounding[k] for k in _PATH_GROUNDING_KEYS if k in grounding},
+        "grounding": {**{k: grounding[k] for k in _PATH_GROUNDING_KEYS if k in grounding},
+                      **({"redraft": redraft_row(redraft)} if redraft else {})},
         "judge_votes": [v for v in state.get("judge_votes") or [] if isinstance(v, dict)],   # 판정마다 표 구성(표별 충분·일부, 확정 방식, 일찍 확정했는지). 사전 등록 62.67
     }
     return {"path": path}

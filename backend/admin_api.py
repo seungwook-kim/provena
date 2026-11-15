@@ -34,6 +34,7 @@ GOOGLE_LOGIN_PREFIX = "google-"
 
 OWNER_REQUIRED = "최고 관리자 권한이 필요합니다."
 NOT_FOUND = "사용자를 찾을 수 없습니다."
+SIGNUP_NOT_FOUND = "가입 신청을 찾을 수 없습니다."   # 가입 신청 경로의 없는 신청(사용자 계정 경로의 `NOT_FOUND`와 나눈다)
 OWNER_TARGET = "최고 관리자는 바꿀 수 없습니다."
 INACTIVE_TARGET = "비활성 계정입니다."
 UNAVAILABLE = "인증 저장소를 사용할 수 없습니다."
@@ -249,7 +250,7 @@ def create_admin_router(
         except Exception:
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
         if result == "missing":
-            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+            raise HTTPException(status_code=404, detail=SIGNUP_NOT_FOUND, headers=NO_STORE)
         if result == "unverified":
             raise HTTPException(status_code=409, detail=SIGNUP_UNVERIFIED, headers=NO_STORE)
         return {"login_id": login_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}
@@ -273,7 +274,7 @@ def create_admin_router(
         except Exception:
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
         if result == "missing":
-            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+            raise HTTPException(status_code=404, detail=SIGNUP_NOT_FOUND, headers=NO_STORE)
         if result == "unavailable":
             raise HTTPException(status_code=409, detail=RESET_UNAVAILABLE, headers=NO_STORE)
         return {"request_id": request_id, "reset": True}
@@ -299,7 +300,7 @@ def create_admin_router(
         except Exception:
             raise HTTPException(status_code=503, detail=UNAVAILABLE, headers=NO_STORE) from None
         if result == "missing":
-            raise HTTPException(status_code=404, detail=NOT_FOUND, headers=NO_STORE)
+            raise HTTPException(status_code=404, detail=SIGNUP_NOT_FOUND, headers=NO_STORE)
         if result == "unverified":
             raise HTTPException(status_code=409, detail=SIGNUP_UNVERIFIED, headers=NO_STORE)
         return {"request_id": request_id, "status": "approved" if action == "approve" else "rejected", "changed": result == "changed"}

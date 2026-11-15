@@ -129,8 +129,40 @@ describe('실패 경로 안내 (D11)', () => {
   ])('질문을 고쳐 써도 소용없는 거절(%s)에는 안내를 붙이지 않는다', async (reason, text) => {
     await askInThread(refusal(text, reason))
     expect(await screen.findByText(text)).toBeTruthy()
-    expect(screen.getByText('근거 부족')).toBeTruthy()
+    expect(screen.getByText(reason === 'out_of_domain' ? '범위 밖 질문' : reason === 'no_key' ? '안내' : '근거 부족')).toBeTruthy()
     expect(screen.queryByText(HINT)).toBeNull()
+  })
+
+  // 놓친 것 N-5: 거절 머리표는 사유에 맞춘다(범위 밖 질문, 키 없음 안내, 그 밖은 근거 부족)
+  it.each([
+    ['out_of_domain', '핸드북과 관련 없는 질문이라 답하지 않습니다.', '범위 밖 질문'],
+    ['no_key', '검색에 필요한 키가 설정되어 있지 않아 답하지 않습니다.', '안내'],
+    ['no_evidence', '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.', '근거 부족'],
+  ])('거절 사유(%s)에 맞는 머리표를 보인다', async (reason, text, label) => {
+    await askInThread(refusal(text, reason))
+    const bubble = (await screen.findByText(text)).closest('article')
+    expect(bubble.querySelector('small').textContent).toBe(label)
+  })
+
+  it('새로고침 뒤 대화 이력의 거절도 사유에 맞는 머리표를 보인다', async () => {
+    window.history.replaceState({}, '', '/chat')
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      if (path === '/me') return json(user)
+      if (path === '/threads') return json([listed])
+      if (path === '/threads/t1') return json({ ...listed, messages: [
+        { role: 'user', text: '오늘 점심 메뉴 추천해줘' },
+        { role: 'assistant', text: '핸드북과 관련 없는 질문이라 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'out_of_domain' },
+        { role: 'user', text: '없는 정책을 물음' },
+        { role: 'assistant', text: '핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.', state: 'no-evidence', kind: 'refuse', refuse_reason: 'no_evidence' },
+      ] })
+      return json({ detail: 'not found' }, 404)
+    }))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '연차 질문' }))
+    const refused = (await screen.findByText('핸드북과 관련 없는 질문이라 답하지 않습니다.')).closest('article')
+    const lacking = screen.getByText('핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.').closest('article')
+    expect(refused.querySelector('small').textContent).toBe('범위 밖 질문')
+    expect(lacking.querySelector('small').textContent).toBe('근거 부족')
   })
 
   it('새로고침 뒤 대화 이력에서도 사유에 맞게 붙인다(이력의 refuse_reason)', async () => {

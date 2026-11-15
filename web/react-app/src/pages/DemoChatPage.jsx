@@ -162,6 +162,12 @@ export function showsNoEvidenceHint(message) {
   return message?.state === 'no-evidence' && HINT_REFUSE_REASONS.has(message.refuseReason) && !String(message.text ?? '').includes('다시')
 }
 
+// 거절 말풍선 머리표. 사유 코드(refuse_reason)가 범위 밖이면 "범위 밖 질문", 키 없음이면 "안내", 그 밖(사유를 모르는 옛 서버 포함)은 "근거 부족"(놓친 것 N-5)
+const REFUSE_LABELS = { out_of_domain: '범위 밖 질문', no_key: '안내' }
+export function refuseLabel(message) {
+  return REFUSE_LABELS[message?.refuseReason] ?? '근거 부족'
+}
+
 function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) {
   return <>{messages.map((message, index) => {
     const timestamp = messageTimestamp(message)
@@ -173,7 +179,7 @@ function MessageList({ messages, selectedCitation, onSelectCitation, onRetry }) 
       {showDivider && <div className="demo-message-date"><span>{formatDateDivider(timestamp)}</span></div>}
       {message.role === 'user' ? <div className="demo-user-message" title={messageTime} tabIndex={messageTime ? 0 : undefined}>{message.text}</div> : <article className={`demo-answer ${message.state}`} title={messageTime} tabIndex={messageTime ? 0 : undefined}>
         {message.state === 'approval' && <p>{APPROVAL_WAITING_TEXT}</p>}
-        <small>{message.state === 'no-evidence' ? '근거 부족' : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
+        <small>{message.state === 'no-evidence' ? refuseLabel(message) : message.state === 'generating' ? 'Provena' : message.state === 'error' || message.state === 'stopped' ? '알림' : 'Provena'}</small>
         {message.understoodQuestion && <p className="demo-answer-understood" role="note">이렇게 이해했습니다: {message.understoodQuestion}</p>}
         {message.state === 'generating' && <GeneratingProgress />}
         {message.text && <p>{message.text}</p>}
