@@ -75,7 +75,7 @@ def test_parser_returns_empty_for_outputs_without_chunks(bad):
 
 
 def test_top5_is_the_first_five_of_the_context_order_so_intro_chunks_appended_last_are_out():
-    chunks = [ch("a/p.md", f"S{i}", A(i)) for i in range(1, 9)]       # 나뉜 질문: SPLIT_K=8
+    chunks = [ch("a/p.md", f"S{i}", A(i)) for i in range(1, 9)]       # 나뉜 질문의 옛 넓힌 문맥(8자리, 사전 등록 62.72 전)
     top = L.top_k_chunks(L.parse_search_output({"chunks": chunks}), 5)
     assert [c["chunk_id"] for c in top] == [A(i) for i in range(1, 6)]
     assert len(L.top_k_chunks(L.parse_search_output({"chunks": chunks[:3]}), 5)) == 3

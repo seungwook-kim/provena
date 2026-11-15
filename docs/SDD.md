@@ -570,6 +570,7 @@ class MaintenanceCandidate(BaseModel):   # 연결 정책 개정 → 관리자 "�
   - `usage`의 `calls`, `input_tokens`, `output_tokens`, `cost_usd`는 질문 번역을 뺀 그래프 합이다. `cost_by_step`의 번역 단계를 뺀 합과 같다(반올림 오차 안에서). `cost_by_step_total_usd`는 번역을 포함한 단계 비용 합이다.
   - `embed_tokens`, `embed_calls`: 이 요청에서 부른 Voyage 임베딩 API 응답의 `usage.total_tokens` 합과 호출 수. 캐시 적중 등으로 호출이 없으면 0이다. `embed_cost_usd`는 `llm_prices.json`의 `embeddings`(voyage-4 100만 토큰당 0.06달러)로 환산한 값이며 계정 무료 한도는 반영하지 않는다.
   - `refuse_stage`: 마지막으로 `kind`를 거절·되묻기로 낸 그래프 노드(`out_of_domain`, `search`, `give_up`, `verify`, `ground`, `decision_answer` 등). `refuse_reason`: 사유 코드. 그래프가 정한 `refuse_reason`(`no_evidence`, `out_of_period`, `nonexistent_entity`, `unsupported`)이 있으면 그 값, 없으면 `unavailable`/`no_key`/`unknown_name`(검색), `decision_error`, `out_of_domain`, `leak`, `citation_check`, `no_evidence`(`give_up`의 거절), `clarify`(되묻기), `index_not_ready`(색인 미준비). 답이면 두 칸 모두 없다.
+  - `path`: 답 경로 기록(검색한 실행만, `backend/services/step_cost.py` `path_meta`). 사전 등록 62.72부터 노드별 초 합 `timing`(`classify`, `search`, `judge`, `answer_pick`, `ground`, `save`), 판정 표마다 걸린 초 `vote_s`, `search_stats`의 검색 단계 시간 `ms_translate`·`ms_embed`·`ms_vector`·`ms_link`(밀리초)를 싣는다. 기록만이라 실패해도 답은 그대로다.
 
 정상 종료 스트림의 예시다. 값은 형식을 보이기 위한 것이며 실제 값이 아니다.
 

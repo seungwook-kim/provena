@@ -16,11 +16,7 @@ from backend.graph.build import (
     MSG_REFUSE_SEARCH_DOWN,
     MAX_CHUNKS,
     SEARCH_K,
-    SPLIT_K,
     build_graph,
-    chunk_cap,
-    has_dollar_amount,
-    split_k,
 )
 from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.schemas import SearchQuery
@@ -78,7 +74,7 @@ def test_first_search_carries_original_question_and_sub_queries_and_research_doe
     assert llm.count("decompose") == 1
     assert calls[0].query == Q and calls[0].sub_queries == ["SEV2 장애 최초 대응은 몇 분 이내인가요?", "SEV2 장애는 누가 호출하나요?"]
     assert [c.sub_queries for c in calls[1:]] == [None, None]                       # 재검색은 분해 없이
-    assert SPLIT_K == 8 and calls[0].k == SPLIT_K and [c.k for c in calls[1:]] == [SEARCH_K, SEARCH_K]   # 나뉜 질문의 첫 검색만 k=8(사전 등록 62.38)
+    assert SEARCH_K == 5 and [c.k for c in calls] == [SEARCH_K] * 3   # 나뉜 질문의 첫 검색도 k=5(넓힌 첫 검색 62.38은 사전 등록 62.72로 제거)
     assert [c.query for c in calls[1:]] == ["SEV2 최초 대응 1", "SEV2 최초 대응 2"]  # 재작성 검색어(영어)로
     assert next(u for t, u in llm.calls if t == "decompose") == Q                   # 분해 입력은 한국어 원 질문 그대로
 
@@ -95,34 +91,12 @@ def numbered_search():
     return fn, calls
 
 
-def test_chunk_cap_grows_by_the_extra_places_only_for_split_questions():
-    assert (SPLIT_K - SEARCH_K, MAX_CHUNKS) == (3, 10)
-    assert [chunk_cap(x) for x in (None, [], ["a"], ["a", "b"], ["a", "b", "c"])] == [10, 10, 10, 13, 13]
-    assert [chunk_cap(x, Q) for x in (None, ["a"], ["a", "b"])] == [10, 10, 13]                      # 달러 금액이 없는 질문은 질문을 알려 줘도 같다
-
-
-def test_dollar_amount_question_keeps_the_default_places_and_cap():
-    assert [split_k(AMOUNT_Q, x) for x in (None, ["a"], AMOUNT_SUBS)] == [SEARCH_K, SEARCH_K, SEARCH_K]   # 달러 금액이 든 질문은 나뉘어도 k=5
-    assert [chunk_cap(x, AMOUNT_Q) for x in (None, ["a"], AMOUNT_SUBS)] == [MAX_CHUNKS] * 3            # 근거 목록 상한도 10
-    assert split_k(Q, ["a", "b"]) == SPLIT_K and chunk_cap(["a", "b"], Q) == MAX_CHUNKS + SPLIT_K - SEARCH_K
-
-
-@pytest.mark.parametrize("question,subs,want", [
-    ("계약 금액이 3만 달러라면 누가 승인하나요?", None, True),
-    ("Contract is $30,000. Who approves?", [], True),
-    ("승인 기준이 뭔가요?", ["금액이 10만 달러이면", "누가 승인하나요?"], True),                        # 하위 질문에만 금액이 있어도 검색기의 금액 구간 조회가 켜지는 조건과 같다
-    ("SEV2 장애 최초 대응은 15분 이내인가요?", ["SEV2 대응", "15분 기준"], False),                       # 통화 표시 없는 숫자는 금액이 아니다
-    ("금액 구간별 승인자는 누구인가요?", None, False),                                                  # "금액", "구간" 낱말만 있고 달러 금액이 없다
-    (None, None, False),
-])
-def test_has_dollar_amount_follows_the_range_lookup_condition(question, subs, want):
-    assert has_dollar_amount(question, subs) is want
-
-
-def test_evidence_list_cap_is_three_higher_for_a_split_question_and_unchanged_otherwise():
+def test_evidence_list_cap_is_ten_for_split_and_unsplit_questions():
+    """넓힌 첫 검색과 근거 목록 상한 +3(62.38)은 사전 등록 62.72로 제거했다. 나뉜 질문도 k=5, 상한 10이다."""
+    assert MAX_CHUNKS == 10
     fn, calls = numbered_search()
     out = run(build_graph(fn, llm=insufficient_llm(decompose=GOOD), decompose=True))
-    assert [c.k for c in calls] == [8, 5, 5] and len(out["chunks"]) == 13      # 첫 8 + 재검색 5(상한 13에서 멈춘다)
+    assert [c.k for c in calls] == [5, 5, 5] and len(out["chunks"]) == 10
     fn, calls = numbered_search()
     out = run(build_graph(fn, llm=insufficient_llm(decompose=NOT_SPLIT), decompose=True))
     assert [c.k for c in calls] == [5, 5, 5] and len(out["chunks"]) == 10      # 나뉘지 않은 질문은 지금과 같다
@@ -134,11 +108,6 @@ def test_split_dollar_amount_question_searches_first_with_k_five_and_keeps_cap_t
     assert calls[0].sub_queries == AMOUNT_SUBS and [c.k for c in calls] == [5, 5, 5]                  # 나뉘었지만 첫 검색도 k=5
     assert len(out["chunks"]) == 10                                                                    # 상한 10에서 멈춘다(13이 아니다)
 
-
-def test_split_question_without_dollar_amount_keeps_k_eight_and_cap_thirteen():
-    fn, calls = numbered_search()
-    out = run(build_graph(fn, llm=insufficient_llm(decompose=GOOD), decompose=True))
-    assert calls[0].sub_queries and [c.k for c in calls] == [SPLIT_K, 5, 5] and len(out["chunks"]) == 13
 
 
 def test_decompose_state_is_recorded():
@@ -326,7 +295,7 @@ def test_answer_step_still_works_with_sub_queries_and_default_retriever_gets_the
 
     monkeypatch.setattr(search_mod, "_searcher", type("S", (), {"search": lambda self, q: (seen.append(q), fake_search(q))[1]})())
     out = run(build_graph(llm=normal_llm(decompose=GOOD, answer=lambda u: j(answer=f"답 [{first_chunk_id(u)}]", citations=[{"chunk_id": first_chunk_id(u)}])), decompose=True))
-    assert seen and seen[0].sub_queries and seen[0].k == SPLIT_K and out["kind"] in ("answer", "refuse")
+    assert seen and seen[0].sub_queries and seen[0].k == SEARCH_K and out["kind"] in ("answer", "refuse")
 
 
 # ---------- 첫 검색의 회사 이름 ----------

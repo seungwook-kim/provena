@@ -138,7 +138,7 @@
 | 재검색 결과 합치기 | `backend/graph/build.py` `search` 노드, `MAX_CHUNKS` 10 | #12 |
 | 되묻기 제한 | `JUDGE_SYSTEM`, `clarify_has_number` | #13 |
 | 도메인 밖 라우팅 | `classify`의 `out_of_domain` 경로. 두 번 모두 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다 | #14, #23 |
-| 인용 범위 | `ANSWER_SYSTEM`, `citation-rules`, `select_citations`, `MAX_CITATIONS` 4. 묻는 사실에만 답하고 한 사실에 근거 하나, 주제 전용 섹션을 우선한다 | #17, #23 |
+| 인용 범위 | `ANSWER_SYSTEM`, `citation-rules`, `select_citations`. 묻는 사실에만 답하고 한 사실에 근거 하나, 주제 전용 섹션을 우선한다. 인용 수 상한(`MAX_CITATIONS` 4, #17)은 사전 등록 62.72로 없앴다 | #17, #23 |
 | 근거 판정의 부분 제거 | `GROUNDING_SYSTEM`, `grounding.prune_answer`, `ground` 노드. 뺀 문장이 있으면 답에 밝힌다(`MSG_PARTIAL_NOTE`) | #18, #23 |
 | 요청 기간 자료 없음은 거절 | `grounding.period_missing`, 답 JSON의 `period_covered` | #19 |
 | 기준일 | `rewrite`의 `mentions_period`, 평가 실행기 `_as_of` | #20 |
@@ -147,7 +147,7 @@
 **인용 범위 (AC-08)**
 - GIVEN: 답이 본문에서 청크 5개를 인용하고 검색 결과에는 더 많은 청크가 있다
 - WHEN: `verify`가 인용을 정리한다
-- THEN: 본문에 표시가 있는 청크만 처음 나온 순서로 최대 4개(`MAX_CITATIONS`)를 인용으로 남기고, 잘린 청크의 표시는 본문에서 지운다. 잘린 청크는 `trimmed_citations`에 기록하며 가짜 인용으로 세지 않는다
+- THEN: 본문에 표시가 있는 청크만 처음 나온 순서로 모두 인용으로 남긴다(사전 등록 62.72 뒤로 수 상한 없음). 본문에 표시가 없는 청크는 `trimmed_citations`에 기록하며 가짜 인용으로 세지 않는다
 
 **근거 판정의 부분 제거 (AC-09)**
 - GIVEN: 판정 LLM이 `unsupported`(근거 없는 주장)로 판정하고 받쳐지지 않는 문장을 원문 그대로 돌려준다
@@ -174,11 +174,11 @@
 | 프롬프트와 응답 읽기 | `evals/retrieval/exp_decompose_v1.py`와 같은 본문(`decompose.SYSTEM`)과 같은 JSON 읽기 규칙. 시험이 두 코드의 본문 일치를 확인한다 |
 | 측정 코드와 다른 점 | ① 프롬프트 맨 앞에 노드 표지(`[[task:decompose]]`)를 붙인다. ② 응답이 깨지면 1회만 다시 묻는다(최대 2번, 측정은 최대 3번). ③ 하위 질문이 1000자를 넘으면 나누지 않은 것으로 본다(검색의 `check_query` 규칙). ④ 하위 질문 맨 앞의 `GitLab`을 뗀다. `GitLab.com`처럼 이어진 말은 그대로 둔다. ⑤ 원 질문이 두 문장 이상이고 마지막 문장 앞의 문장(전제)이 물음이 아닌데 그 내용어가 어느 하위 질문에도 없으면, 모든 하위 질문 앞에 전제 문장을 붙인다(`keep_premise`, 사전 등록 62.45). 앞 문장이 물음이면 붙이지 않는다 |
 | 넘기는 값 | 하위 질문 2~3개이면 `sub_queries`로 넘긴다. 1개이거나 규칙을 어기면 넘기지 않는다(`None`). 4개 이상이면 앞 3개만 쓴다 |
-| k | `DEFAULT_K`(5) 상수(`SEARCH_K`). 나뉜 질문의 첫 검색만 `SPLIT_K`(8). 질문이나 하위 질문에 달러 금액이 있으면(`ranges.amounts_in`, 검색기의 금액 구간 조회와 같은 조건) 나뉜 질문도 5이고 근거 목록 상한도 10이다(사전 등록 62.43) |
-| 첫 검색 | 원 질문(한국어, 맨 앞의 `GitLab`은 뗀다)과 `sub_queries`. 영어 번역은 검색 서비스가 한다. 나뉜 질문(하위 질문 2개 이상, 달러 금액이 없는 질문)은 `k=8`로 찾아 하위 질문 결과로 7자리를 채우고 끝 1자리만 원 질문 결과를 쓴다. 끝 1자리 규칙이 평가셋 운영 측정 행에서 한 일의 0원 계산은 `evals/results/tail_slot_rule_20261113/report.md`에 있다 |
-| 넓힌 첫 검색의 답 근거 | 첫 검색을 넓힌 나뉜 질문(달러 금액 없음)의 첫 판정에서만, 판정 입력의 넓힌 자리(앞 5자리 밖) 청크 머리 줄에 `[보충]`이 붙고 판정은 구절을 [보충]이 아닌 자료에서 먼저 찾는다. 답 후보 둘 중 첫 후보는 앞 5자리만 보고 쓰고 둘째 후보는 전체 문맥으로 쓰며, 판정 구절이 모두 앞 5자리 안이면 첫 후보를, 넓힌 자리에 있으면 둘째 후보를 쓴다(사전 등록 62.44). 나뉘지 않은 질문, 달러 금액 질문, 재검색 뒤는 이전과 같다 |
-| 첫 검색 뒤 보충과 앞자리 | (스위치 없이 기본 동작, 사전 등록 62.51, 62.55, 62.59) 첫 검색 뒤 도입부 채우기가 더한 청크는 앞자리로 센다(`intro_chunk_ids`, `core_chunks`). 나뉜 질문(달러 금액 없음)은 도입부 채우기와 같이 문맥 페이지 안에서 원 질문과 가까운 새 청크 1개를 문맥 끝에 보충한다(앞자리 아님, `[보충]`, 근거 목록 상한 +1, `search_stats.page_fill`, 페이지 검색이 연결된 그래프에서만, 실패하면 그대로). 판정 구절이 모두 앞자리일 때 둘째 후보가 앞자리 청크만 인용하고 판정 구절 청크를 더 많이 인용했으면 둘째 후보를 쓴다 |
-| 인용 후처리 | (사전 등록 62.52, 62.56~62.58) 겹친 머리 바로잡기: 근거 구절이 인용 청크의 겹친 머리에만 있으면 원래 청크로 바꾸고, 원래 청크가 문맥에 없으면 같은 페이지 판의 바로 앞 청크를 읽어(`prev_chunk`, 구절이 본문 앞 400자 안일 때만) 그 끝이 머리와 같을 때 바꾼다. 인용 더하기는 같은 절 청크를 더하지 않고 표 행은 첫 칸이 같을 때만, 문장 공유 더하기는 표 행을 줄 전체가 같을 때만 센다 |
+| k | `DEFAULT_K`(5) 상수(`SEARCH_K`). 나뉜 질문도 첫 검색과 재검색 모두 5이고 근거 목록 상한은 10이다(`MAX_CHUNKS`). 나뉜 질문 첫 검색 넓힘(`SPLIT_K`=8, 근거 상한 +3, 사전 등록 62.38)과 달러 금액 질문 구분(62.43)은 사전 등록 62.72로 코드째 제거했다(설계에 평가 정답을 봤으므로) |
+| 첫 검색 | 원 질문(한국어, 맨 앞의 `GitLab`은 뗀다)과 `sub_queries`. 영어 번역은 검색 서비스가 한다. 나뉜 질문은 하위 질문 결과를 번갈아 합친다. 끝 1자리를 원 질문 결과로 채우던 규칙은 62.72로 제거했다(제거 전 0원 계산은 `evals/results/tail_slot_rule_20261113/report.md`) |
+| 답 근거와 답 후보 | 판정 입력에는 자리 표시가 없다. 답 후보 둘(`GRAPH_ANSWER_BEST2`)은 모두 문맥 전체로 쓰고, 판정 구절이 든 청크를 더 많이 인용한 후보, 같으면 그 밖 인용이 적은 후보를 쓴다(사전 등록 61.45, 기록 `rule="s_in,s_out"`). 넓힌 자리의 `[보충]` 표시와 앞 5자리 답 후보(62.44), 같은 문서 이웃 절 예외(61.47) 등은 사전 등록 62.72로 제거했다 |
+| 첫 검색 뒤 | 첫 검색 결과를 그대로 문맥으로 쓴다. 도입부 채우기(61.5, 62.51), 같은 페이지 보충(62.55), 제목 경로 청크 추가와 검색어 덧붙임(62.69), 앞자리 인용끼리 비교(62.59)는 사전 등록 62.72로 제거했다 |
+| 인용 후처리 | 코드가 근거 확인 뒤 인용을 바꾸지 않는다. 겹친 머리 바로잡기(62.52, 62.58, `head_owner_cites`, `prev_chunk`), 인용을 더하는 장치(인용 더하기, 문장 공유 더하기, 인용 추가 보정, 62.56·62.57·62.70), 한정어·되풀이 문장 기준으로 인용을 빼는 장치는 사전 등록 62.72로 제거했다. 일부 답에서 판정 구절 청크 밖 인용만 단 문장 빼기(62.66 `drop_unjudged_cites`)는 남는다 |
 | 재검색 | 재작성한 영어 검색어 하나, 분해 없이 |
 | 검색 기억 | 같은 실행 안의 검색 기억 열쇠에 `sub_queries`를 넣는다. 하위 질문이 다르면 다른 검색이다 |
 | 실패 처리 | 분해 호출 오류나 응답 형식 오류이면 원 질문 하나로 검색한다(답은 멈추지 않는다). 비용 상한 초과 예외는 그대로 올린다 |
@@ -272,3 +272,24 @@
 
 **AC-21 · 녹화 재생과 끄기**
 - THEN: 재생 모델로 둘째 질문을 보내도 원 질문으로 끝난다(`test_replay_model_keeps_the_original_question`). `CHAT_FOLLOWUP=0`이면 앞 질문이 쌓이지 않고 다시 쓰기 호출이 없다(`test_switch_off_passes_no_history`)
+
+## 사전 등록 62.72: 평가 정답을 본 장치 제거와 실행 기록에서 고른 세 가지 (2026-11-15)
+
+### Why
+- 설계 단계에서 평가셋의 정답(정답 청크, 기대 답)을 보고 만든 장치는 처음 보는 질문에서 통한다는 근거가 없다. 그래서 감사(2026-11-15)에서 그렇게 만든 것으로 분류한 장치를 코드, 시험, 문서에서 함께 제거했다.
+- 남은 속도 꼬리와 쓰이지 않는 호출은 정답을 보지 않은 운영 실행 기록(00056~00057)만으로 찾았다.
+
+### What
+- 제거(코드째, 스위치와 시험 포함): 검색어 용어표와 덧붙임(`GRAPH_QUERY_TERMS`), 제목 경로 추가·알림·절 이름 구(`GRAPH_HEADING_TERMS`, `GRAPH_HEADING_MARK`, `GRAPH_HEADING_HEADS`), 대상별 나누기(`GRAPH_QUERY_BRANCHES`, `query_plan.py` 삭제), 인용 더하기(`GRAPH_CITE_EXPAND`), 문장 공유 더하기(`GRAPH_CITE_PHRASE`), 같은 페이지 재검색(`GRAPH_RESEARCH_SAME_PAGE`), 한정어 인용 빼기(`GRAPH_DROP_SCOPED_CITES`), 도입부 채우기(`GRAPH_INTRO_FILL`), 되풀이 문장 쪽 인용만(`GRAPH_CITE_CONSENSUS`), 페이지 재검색 새 청크만(`GRAPH_REQUERY_SKIP_SEEN`), 근거 고르는 순서 프롬프트(`GRAPH_CITE_PICK`), 두 답 고르기 같은 문서 예외(`GRAPH_BEST2_SAMEDOC`), 나뉜 질문 첫 검색 넓힘(`SPLIT_K`, `FULL_TAIL`, 근거 상한 +3), 넓힌 문맥 앞자리 우선(`core_chunks`, `[보충]`, 앞자리 답 후보), 같은 페이지 보충(`page_fill`), 인용 추가 보정(`GRAPH_CITE_ADD_GUARD`).
+- 같은 이유로 함께 제거(사용자 결정): 범위 메모 거절(`GRAPH_SCOPE_NOTE_REFUSE`, 정규식 `_SCOPE_LIMITED`·`_SCOPE_ABSENT`), 안내 구절 거절(`GRAPH_POINTER_REFUSE`, `_POINTER`, `pointer_only`), 팀 문서 뒤로(`GRAPH_TEAM_LAST`, `team_docs_last`, `_TEAM_TITLE`), 겹친 머리 인용 바로잡기(62.52·62.58, `head_owner_cites`, `head_overlap`, 앞 청크 읽기 `prev_chunk`·`page_chunks`), 근거 확인 구절 형식(`GROUNDING_QUOTE_RULES`)의 제목 경로(적용 범위) 간접 근거 문장, 인용 수 상한(`MAX_CITATIONS`=4, 코드 자르기와 답 프롬프트의 "4개 이하" 문장).
+- 제거한 뒤 동작: 나뉜 질문도 k=5, 근거 목록 상한 10. 일부 판정 뒤 재검색은 전체 검색이다. 코드가 근거 확인 뒤 인용을 더하거나 빼거나 바꾸지 않는다(62.66 일부 답 문장 빼기만 남는다). 답 후보 둘은 61.45 규칙으로 고른다. 충분 판정은 범위 메모가 있어도 그대로 충분이고, 받쳐진 답은 구절이 안내 문장이어도 그대로 나간다. 답 입력의 자료 순서는 검색 순서 그대로다. 본문에 표시한 인용은 수 제한 없이 모두 남는다. 구절 형식(주장마다 받치는 영어 구절 복사, 없으면 NOTHING FOUND)과 번역·말 바꿈 기준은 그대로다.
+- 새 스위치 둘(코드 기본 꺼짐, 서비스 설정 `SERVICE_ENV`에서 켬):
+  - `GRAPH_NONE_VOTE_WAIT_S`(초, 서비스 값 `1.0`): 판정 다수결(`GRAPH_JUDGE_VOTE`)에서 먼저 온 두 표가 모두 "근거 없음"(충분도 일부도 아님)이면 셋째 표를 이 초까지만 기다린다. 오지 않으면 두 표로 확정하고 `judge_votes`에 `how="none_capped"`를 남긴다. 빈 값이면 지금처럼 셋째 표를 끝까지 기다리고, 숫자가 아니거나 음수면 시작할 때 오류다. 근거: 첫 두 표가 모두 근거 없음인 143행 중 셋째 표가 달랐던 것은 비관련 질문 1행(재검색 뒤 거절)이고 관련 질문은 0행이었다.
+  - `GRAPH_SPEC_STOP_GROUND`(서비스 값 `1`): 분해가 질문을 나눠 미리 돌리기(`GRAPH_SPECULATE_FIRST`)를 버리기로 하면, 그 미리 돌리기 안에서 나온 답 후보는 근거 확인을 미리 부르지 않고 기록(`grounding.candidates`)에 `verdict="skipped_spec_dropped"`만 남긴다. 쓰는 미리 돌리기와 본 경로는 그대로다. 버림 표시는 늦게 끝나는 답 작성 일꾼도 보도록 바로 지우지 않고 2분 뒤 청소한다.
+- 단계 시간 기록(스위치 없음, 기록만): 요청 집계(`step_cost.begin`) 안에서 `done.path`에 노드별 초 합 `timing`(`classify`, `search`, `judge`, `answer_pick`, `ground`, `save`. 노드 안 배경 호출은 더하지 않는다)과 판정 표마다 걸린 초 `vote_s`를 싣는다. `search_stats`에는 검색 단계 시간 `ms_translate`, `ms_embed`, `ms_vector`, `ms_link`(밀리초)를 더한다. 기록이 실패해도 답은 그대로다.
+
+### AC
+- GIVEN 다수결이 켜져 있고 `GRAPH_NONE_VOTE_WAIT_S=0.1`이다. WHEN 앞 두 표가 근거 없음이고 셋째 표가 1.5초 뒤에 온다. THEN 셋째 표를 기다리지 않고 거절하며 `how="none_capped"`다(`tests/test_blind_6272.py::test_two_none_votes_settle_when_the_third_is_later_than_the_cap`). 상한 안에 온 셋째 표, 충분·일부 두 표, 스위치 끔은 지금과 같다(같은 파일의 나머지 다수결 시험).
+- GIVEN 미리 돌리기와 미리 부르는 근거 확인이 켜져 있다. WHEN 분해가 질문을 나눠 미리 돌리기를 버린다. THEN `GRAPH_SPEC_STOP_GROUND`를 켜면 근거 확인 호출이 끈 때보다 1건 적고 답은 같다(`test_dropped_speculation_does_not_ground_ahead`). 미리 돌리기를 쓰는 실행은 호출 수가 같다(`test_used_speculation_still_grounds_ahead`).
+- GIVEN 옛 스위치 이름(`GRAPH_SCOPE_NOTE_REFUSE`, `GRAPH_POINTER_REFUSE`)을 켠다. THEN 충분 판정과 받쳐진 답은 그대로 답으로 간다(`tests/test_d7_fixes.py::test_scope_note_never_turns_a_sufficient_judgement_into_a_refusal`, `test_pointer_quote_does_not_refuse_a_grounded_answer`). 구절이 겹친 머리에만 있어도 인용은 그대로다(`tests/test_trace_fixes_1113.py::test_graph_keeps_the_citation_when_the_quote_is_only_in_the_copied_head`). 본문에 표시한 인용 6개가 모두 남는다(`tests/test_question_graph.py::test_no_citation_cap_keeps_every_body_mark_in_body_order`).
+- GIVEN 요청 집계 안이다. THEN `path_meta`에 `timing`과 `vote_s`가 있고(`test_path_meta_has_node_timing_and_vote_seconds_inside_a_request`), 기록이 실패해도 답과 인용이 같다(`test_recording_failures_do_not_change_the_answer`).

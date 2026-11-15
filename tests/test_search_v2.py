@@ -12,7 +12,7 @@ import pytest
 
 from backend.rag.retrieve import embed, links, translate
 from backend.rag.retrieve.embed import EmbedConfigError, EmbedNoKey, EmbedUnavailable
-from backend.rag.retrieve.search import FULL_TAIL, MemoryStore, SearchConfig, Searcher, fill_tail, last_search_trace, roundrobin
+from backend.rag.retrieve.search import MemoryStore, SearchConfig, Searcher, last_search_trace, roundrobin
 from backend.schemas.chunk import DEFAULT_K, SearchQuery
 
 # 벡터 칸: 0 = 전체 질문, 1 = 하위 질문 1, 2 = 하위 질문 2. 점수 = 내적이라 칸 값이 곧 점수다.
@@ -129,24 +129,18 @@ def test_sub_queries_roundrobin_then_l1x2_with_full_query_vector():
     assert last_search_trace().n_sub == 2
 
 
-def test_split_question_wider_than_default_k_gives_the_last_place_to_the_full_question_list():
-    """사전 등록 62.38: 나뉜 질문을 기본 자리 수보다 넓혀 찾으면(k=8) 하위 질문과 링크 확장으로 7자리를 먼저 만들고,
-    끝 1자리를 전체 질문(0번)의 후보 목록에서 아직 없는 가장 앞 청크로 채운다. 하위 질문 목록의 3위(a3, c3)가 전체 질문 목록에 밀리지 않는다."""
-    assert FULL_TAIL == 1
+def test_split_question_wider_than_default_k_does_not_use_the_full_question_list():
+    """원 질문 끝자리 규칙(62.38)은 사전 등록 62.72로 제거했다. 나뉜 질문을 k=8로 찾아도 k=5와 같은 규칙으로
+    하위 질문만 번갈아 합치고 뒤 2자리를 링크 확장으로 채운다. 전체 질문 목록(0번)은 벡터 질의도 하지 않는다."""
     rows = ROWS + [row("z1", [2.0, 0, 0], page=30)]                   # 전체 질문에만 아주 가까운 청크: 하위 질문만으로는 못 찾는다
-    calls = []
-    got = make(rows, calls=calls).search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8))
-    # 하위 질문만 번갈아 7개(a1 c1 a2 c2 a3 c3 a4) → 뒤 2자리를 링크 청크로(b2 b3) → 끝자리는 전체 질문 1위 z1
-    assert ids(got) == ["a1", "c1", "a2", "c2", "a3", "b2", "b3", "z1"]
+    s = make(rows)
+    seen = []
+    real = s.store.vector_top
+    s.store.vector_top = lambda *a, **k: (seen.append(1), real(*a, **k))[1]
+    got = s.search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8))
+    assert ids(got) == ["a1", "c1", "a2", "c2", "a3", "c3", "b2", "b3"] and len(seen) == 2
     assert last_search_trace().n_link == 2 and last_search_trace().n_sub == 2
-    assert calls == [[Q, S1, S2]]                                      # 임베딩은 한 번에
-    # 전체 질문 목록의 앞 청크가 이미 들어 있으면 그다음 새 청크가 든다(a1 a2 a3은 이미 있다 → a4)
-    assert ids(make().search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8))) == ["a1", "c1", "a2", "c2", "a3", "b2", "b3", "a4"]
-    # 링크 확장을 끄면 하위 질문 7자리가 그대로 남는다(하위 질문 목록의 3위 a3 c3 포함)
-    assert ids(make(rows, link_n=0).search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8))) == ["a1", "c1", "a2", "c2", "a3", "c3", "a4", "z1"]
-    # 하위 질문 3개: 6자리 + 링크 1자리 + 끝자리
-    three = make(rows).search(SearchQuery(query=Q, sub_queries=[S1, S2, "third part"], k=8))
-    assert len(three) == 8 and "z1" in ids(three) and (last_search_trace().n_link, last_search_trace().n_sub) == (1, 3)
+    assert ids(make(rows, link_n=0).search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8))) == ["a1", "c1", "a2", "c2", "a3", "c3", "a4", "c4"]
 
 
 def test_split_question_at_default_k_does_not_use_the_full_question_list():
@@ -173,18 +167,12 @@ def test_full_question_equal_to_a_sub_question_has_no_full_list_and_is_searched_
     got = s.search(SearchQuery(query=Q, sub_queries=[Q, S2], k=8))
     assert calls == [[Q, S2]] and len(seen) == 2                       # 같은 문장을 두 번 임베딩·질의하지 않는다
     assert last_search_trace().n_sub == 2                              # 기록의 하위 질문 수는 넘긴 그대로
-    # 번갈아 합친 6자리(z1 c1 a1 c2 a2 c3) + 링크 2자리. 원 질문 끝자리 규칙(FULL_TAIL)을 타지 않는다
+    # 번갈아 합친 6자리(z1 c1 a1 c2 a2 c3) + 링크 2자리
     assert ids(got) == ["z1", "c1", "a1", "c2", "a2", "c3", "b2", "b3"]
     no_link = ids(make(rows, link_n=0).search(SearchQuery(query=Q, sub_queries=[Q, S2], k=8)))
     assert no_link == ["z1", "c1", "a1", "c2", "a2", "c3", "a3", "c4"]
-    # 서비스 질문 그래프의 나뉜 질문(원 질문과 다른 하위 질문)은 그대로 끝자리를 받는다
-    assert ids(make(rows, link_n=0).search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8)))[-1] == "z1"
-
-
-def test_fill_tail_takes_lists_in_order_and_skips_what_is_already_in():
-    assert fill_tail(["a", "b"], [["b", "c", "d"], ["e"]], 4) == ["a", "b", "c", "d"]
-    assert fill_tail(["a", "b"], [["a", "b"], ["b", "e", "f"]], 4) == ["a", "b", "e", "f"]   # 앞 목록에 새 것이 없으면 다음 목록
-    assert fill_tail(["a", "b"], [[], []], 4) == ["a", "b"] and fill_tail(["a", "b"], [["c"]], 2) == ["a", "b"]
+    # 원 질문과 다른 하위 질문으로 나뉜 질문도 끝자리를 받지 않는다(원 질문 끝자리 규칙은 사전 등록 62.72로 제거)
+    assert "z1" not in ids(make(rows, link_n=0).search(SearchQuery(query=Q, sub_queries=[S1, S2], k=8)))
 
 
 @pytest.mark.parametrize("subs", [None, []])

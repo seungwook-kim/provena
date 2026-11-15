@@ -1,4 +1,4 @@
-"""놓친 문항 해결안의 그래프 배선 시험(`GRAPH_CITE_EXPAND` 외). 가짜 모델과 가짜 검색기만 쓴다(키와 네트워크 없음).
+"""놓친 문항 해결안의 그래프 배선 시험(`GRAPH_CITE_MULTI` 외. 인용 더하기 A1과 팀 문서 뒤로 A4는 사전 등록 62.72로 제거). 가짜 모델과 가짜 검색기만 쓴다(키와 네트워크 없음).
 모든 스위치는 기본 꺼짐이고, 꺼져 있으면 검색, 답 입력, 인용이 #50 측정 구성과 같아야 한다."""
 from __future__ import annotations
 
@@ -13,13 +13,13 @@ from backend.graph.build import build_graph
 from backend.graph.multi import build_multi_graph
 from backend.schemas import Chunk
 
-SWITCHES = ("GRAPH_CITE_EXPAND", "GRAPH_CITE_MULTI", "GRAPH_TEAM_LAST", "GRAPH_KEEP_CITES", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH",
+SWITCHES = ("GRAPH_CITE_MULTI", "GRAPH_KEEP_CITES", "GRAPH_SUB_RESEARCH", "GRAPH_PAGE_RESEARCH",
             "GRAPH_REQUERY_VOCAB", "GRAPH_UNKNOWN_NAME")
 
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for name in (*SWITCHES, "GRAPH_QUERY_TERMS", "GRAPH_QUERY_BRANCHES", "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS",
+    for name in (*SWITCHES, "GRAPH_KEEP_PRODUCT_NAME", "GRAPH_REQUERY_TERMS",
                  "SEARCH_DECOMPOSE", "USE_SKILLS", "GRAPH_ANSWER_WAIT_S", "GRAPH_ANSWER_BUDGET_S", "GRAPH_STOP_STALLED_SEARCH"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LLM_STRUCTURED", "judge,answer,grounding")
@@ -82,20 +82,6 @@ def test_all_off_keeps_citations_prompt_and_order():
     assert len(seen) == 1 and out.get("sub_research", "") == ""
 
 
-# ---------- A1 ----------
-@pytest.mark.parametrize("multi", [False, True])
-def test_cite_expand_adds_the_same_value_after_grounding(monkeypatch, multi):
-    monkeypatch.setenv("GRAPH_CITE_EXPAND", "1")
-    fn, _ = searcher([("리뷰", [REVIEW, REVIEW_TOO, ESC])])
-    m = llm(answer=cite(REVIEW, text="첫 리뷰 응답은 2영업일 안이다"))
-    g = build_multi_graph(fn, llm=m) if multi else build_graph(fn, llm=m)
-    out = run(g, Q_REVIEW)
-    assert [c["chunk_id"] for c in out["citations"]] == [REVIEW.chunk_id, REVIEW_TOO.chunk_id]
-    assert "[1][2]" in out["answer"] and out["grounding"]["cite_expand"] == [REVIEW_TOO.chunk_id]
-    grounding_inputs = [u for t, u in m.calls if t == "grounding"]
-    assert all(REVIEW_TOO.chunk_id not in u.split("참고")[0] for u in grounding_inputs)  # 판정 입력은 그대로다
-
-
 # ---------- A3 ----------
 def test_cite_multi_relaxes_the_answer_rule(monkeypatch):
     monkeypatch.setenv("GRAPH_CITE_MULTI", "1")
@@ -114,18 +100,6 @@ def test_cite_multi_relaxes_the_answer_rule(monkeypatch):
     assert F.SKILL_MULTI in answer_sys[0]
 
 
-# ---------- A4 ----------
-def test_team_last_moves_team_docs_back_unless_asked(monkeypatch):
-    monkeypatch.setenv("GRAPH_TEAM_LAST", "1")
-    fn, _ = searcher([("리뷰", [TEAM, REVIEW])])
-    m = llm(answer=cite(REVIEW))
-    run(build_graph(fn, llm=m), Q_REVIEW)
-    u = [u for t, u in m.calls if t == "answer"][0]
-    assert u.index(REVIEW.chunk_id) < u.index(TEAM.chunk_id)
-    m = llm(answer=cite(TEAM))
-    run(build_graph(fn, llm=m), "데이터팀 코드 리뷰는 며칠 안에 해?")
-    u = [u for t, u in m.calls if t == "answer"][0]
-    assert u.index(TEAM.chunk_id) < u.index(REVIEW.chunk_id)
 
 
 # ---------- B1, B4 ----------

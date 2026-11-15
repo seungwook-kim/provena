@@ -81,16 +81,16 @@ RETRIEVER = AgentSpec(
     ("rewrite", "search", "judge"),
     reads=frozenset({"question", "profile", "org", "as_of", "as_of_given", "retries", "judge_reason", "search_query", "search_org", "chunks",
                      "search_cache", "search_stats", "skills_used", "judged_chunks", "judge_missing", "judge_query", "sub_queries", "next_section", "section_reads", "started_at",
-                     "query_targets", "sub_research", "sub_research_phase", "judge_partial", "judge_checks_log"}),  # judge_partial: 가(`GRAPH_RESEARCH_SAME_PAGE`)가 재검색 방식을 고른다. query_targets: `GRAPH_QUERY_BRANCHES=1`일 때만 생기는 칸. 꺼져 있으면 상태에 없어 넘어가지 않는다
+                     "sub_research", "sub_research_phase", "judge_partial", "judge_checks_log"}),  # judge_partial: 판정 노드가 같이 쓰는 답의 근거 판정을 미리 부를 때 앞 판정 값을 본다(`ground_partials`)
     writes=frozenset({"search_query", "search_org", "skills_used", "as_of", "sub_queries", "decompose_source", "kind", "answer", "citations",
                       "search_error", "chunks", "search_cache", "search_stats", "judge_reason", "judge_partial", "retries", "clarify_question",
                       "early_answer", "judged_chunks", "search_stalled", "judge_missing", "judge_query", "judge_scope", "next_section", "section_reads",
-                      "query_targets", "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids", "intro_chunk_ids", "judge_quotes"}),
+                      "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids", "judge_quotes"}),
 )
 WRITER = AgentSpec(
     "writer",
     ("write_answer",),
-    reads=frozenset({"question", "chunks", "as_of", "skills_used", "judge_partial", "judge_scope", "early_answer", "route", "retries", "started_at", "query_targets", "judge_quote_ids"}),
+    reads=frozenset({"question", "chunks", "as_of", "skills_used", "judge_partial", "judge_scope", "early_answer", "route", "retries", "started_at", "judge_quote_ids"}),
     writes=frozenset({"answer", "raw_citations", "period_covered", "drafted", "skills_used", "answer_facts", "best2_log"}),
 )
 VERIFIER = AgentSpec(
@@ -319,9 +319,6 @@ def build_multi_graph(
     ground_skip_backed: bool | None = None,
     json_only: bool | None = None,
     page_search=None,
-    heading_search=None,
-    intro_search=None,
-    prev_chunk=None,
 ):
     """컴파일된 멀티 에이전트 질문 그래프. 라우팅 방식(`router`)을 뺀 인자와 뜻은 `build_graph`와 같다(그대로 넘긴다).
 
@@ -338,7 +335,7 @@ def build_multi_graph(
     single = build_graph(retriever, None, llm=llm, answer_store=answer_store, store=store, use_skills=use_skills,
                          grounding_llm=grounding_llm, decompose=decompose, section_reader=section_reader, decision_repo=decision_repo, review_graph=review_graph,
                          parallel_intake=parallel_intake, brief_output=brief_output, max_research=research_limit, judge_answer=judge_answer,
-                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search, heading_search=heading_search, intro_search=intro_search, prev_chunk=prev_chunk)
+                         skip_first_rewrite=skip_first_rewrite, stop_stalled_search=stop_stalled_search, ground_skip_backed=ground_skip_backed, json_only=json_only, page_search=page_search)
     parts = SingleParts(single)
     agents = build_agents(parts)
     specs = {name: {**AGENTS, **CONNECTED_AGENTS}[name] for name in agents}

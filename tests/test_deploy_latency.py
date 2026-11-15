@@ -137,7 +137,7 @@ def test_stream_saves_server_step_fields_and_keeps_existing_columns():
 
 
 def test_stream_saves_the_answer_path_as_is_and_none_for_an_old_server():
-    path = {"sub_queries": ["가", "나"], "context_ids": ["a1", "b2"], "intro_chunk_ids": ["b2"], "judge_quotes": [["a1"], []], "best2": {"pick": 0, "why": "x"}}
+    path = {"sub_queries": ["가", "나"], "context_ids": ["a1", "b2"], "timing": {"search": 0.5}, "vote_s": [1.2, 1.4], "judge_quotes": [["a1"], []], "best2": {"pick": 0, "why": "x"}}
     got = dl.consume_chat_stream(sse("done", {**STEP_DONE, "path": path}), t0=0.0, clock=Clock([0.0, 1.0]))
     assert got["path"] == path and "path" in dl.STEP_FIELDS
     assert dl.consume_chat_stream(sse("done", STEP_DONE), t0=0.0, clock=Clock([0.0, 1.0]))["path"] is None   # 옛 서버나 검색하지 않은 실행

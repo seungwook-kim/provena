@@ -9,8 +9,7 @@
 - 질문 임베딩만 Voyage(`VOYAGE_API_KEY`, 환경 변수로만)로 구하고 같은 글은 `--vec-cache`에서 다시 쓴다. 키가 없고 캐시에도 없으면 멈춘다.
 - 번역은 LLM 대신 저장된 값을 쓴다: demo는 `data/demo_replay/recorded.jsonl`의 영어 문장(금액만 바꿈), regress는 `--translations`
   (운영 DB `query_translations`를 읽기 전용으로 조회해 만든 파일, `evals/results/range_retrieval_62_7/translations.json`).
-- 첫 검색 문맥은 질문 그래프 `search` 노드와 같은 순서로 만든다: 질문 계획(`query_plan.plan_first_search`) -> `search()` -> 제목 경로 검색(용어·절 이름 구)
-  -> 도입부 채우기. 통화 금액이 든 질문은 그래프처럼 용어 덧붙임과 제목 경로 검색을 건너뛴다(`query_plan.mentions_money`, 사전 등록 62.69). 답 작성과 판정은 LLM이라 하지 않는다.
+- 첫 검색 문맥은 질문 그래프 `search` 노드와 같이 `search()` 결과 그대로다(사전 등록 62.72로 질문 계획·제목 경로 검색·도입부 채우기를 뺐다). 답 작성과 판정은 LLM이라 하지 않는다.
 """
 from __future__ import annotations
 
@@ -26,9 +25,6 @@ from typing import Any
 
 import numpy as np
 
-from backend.graph import answer_fixes as AF
-from backend.graph import query_plan as QP
-from backend.graph.build import HEADS_SCAN, merge_chunks
 from backend.rag.retrieve import embed, ranges, translate
 from backend.rag.retrieve.search import MemoryStore, SearchConfig, Searcher
 from backend.schemas.chunk import SearchQuery
@@ -95,22 +91,10 @@ def make_searcher(store: MemoryStore, embedder, sentences: dict[str, str], range
 
 
 def first_context(searcher: Searcher, question: str, query: str, subs: list[str], as_of: str | None) -> tuple[list[SimpleNamespace], list[SimpleNamespace]]:
-    """(search() 결과, 첫 검색 문맥). 그래프 build.py의 첫 검색 노드(제목 경로 검색 H·HT, 도입부 R3)와 같은 순서와 상한이다."""
+    """(search() 결과, 첫 검색 문맥). 그래프 build.py의 첫 검색 노드와 같이 문맥은 검색 결과 그대로다(`question`은 부르는 쪽과 맞추려고 받기만 한다)."""
     q = SearchQuery(query=query, as_of=as_of, k=5, sub_queries=subs or None)
-    found = [c.model_dump() for c in searcher.search(q)]
-    added: list[dict] = []
-    if not QP.mentions_money([question, *subs]):   # 62.69: 금액이 든 질문은 제목 경로 검색을 건너뛴다
-        phrases = AF.heading_phrases([query, *subs])
-        phrases += [h for h in QP.heading_heads([question, query, *subs]) if h not in phrases]
-        have = {c["chunk_id"] for c in found}
-        for ph in phrases:
-            fresh = [c.model_dump() for c in searcher.search_headings(ph, None, as_of, HEADS_SCAN) if c.chunk_id not in have][:1]
-            have |= {c["chunk_id"] for c in fresh}
-            added += fresh
-    ctx = merge_chunks(found, added, limit=len(found) + len(added))
-    intro = [c.model_dump() for c in searcher.intro_fill(ctx, query, None, as_of)]
-    ctx = merge_chunks(ctx, intro, limit=len(ctx) + len(intro))
-    return [SimpleNamespace(**c) for c in found], [SimpleNamespace(**c) for c in ctx]
+    found = [SimpleNamespace(**c.model_dump()) for c in searcher.search(q)]
+    return found, list(found)
 
 
 # ---------- 데모 재현 ----------
@@ -144,17 +128,15 @@ def demo(args) -> dict:
     rows: list[dict] = []
     for label, (question, ko0, en0) in bases.items():
         subs0 = split[question]
-        base = QP.plan_first_search(question, question, subs0, terms=not QP.mentions_money([question, *subs0]), branches=True)   # 그래프와 같은 용어 붙이기(금액 질문은 건너뜀)
-        base_texts = [base.query, *base.subs]
+        base_texts = [question, *subs0]   # 그래프와 같이 분해 결과 그대로
         assert all(en0 in english[t] for t in base_texts), f"녹화 영어 문장에 {en0}가 없다: {label}"
         for name, (ko, en, band) in AMOUNTS.items():
             qn, subs = question.replace(ko0, ko), [s.replace(ko0, ko) for s in subs0]
-            plan = QP.plan_first_search(qn, qn, subs, terms=not QP.mentions_money([qn, *subs]), branches=True)
-            sentences = {t: english[b].replace(en0, en) for t, b in zip([plan.query, *plan.subs], base_texts)}
+            sentences = {t: english[b].replace(en0, en) for t, b in zip([qn, *subs], base_texts)}
             eid = expected[name]["chunk_id"]
-            row: dict[str, Any] = {"variant": label, "amount": name, "question": qn, "sub_queries": plan.subs, "expected_title": EXPENSE + band, "expected_chunk": eid}
+            row: dict[str, Any] = {"variant": label, "amount": name, "question": qn, "sub_queries": subs, "expected_title": EXPENSE + band, "expected_chunk": eid}
             for tag, n in (("before", 0), ("after", AFTER_RANGE_N)):
-                found, ctx = first_context(make_searcher(store, voyage, sentences, n), qn, plan.query, plan.subs, None)
+                found, ctx = first_context(make_searcher(store, voyage, sentences, n), qn, qn, subs, None)
                 ids, cids = [c.chunk_id for c in found], [c.chunk_id for c in ctx]
                 row[tag] = {"search": [c.article for c in found], "search_rank": ids.index(eid) + 1 if eid in ids else None,
                             "context_rank": cids.index(eid) + 1 if eid in cids else None, "context_size": len(cids)}
