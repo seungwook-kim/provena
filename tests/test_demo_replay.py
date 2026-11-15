@@ -141,7 +141,7 @@ def _readme_demo_questions() -> tuple[list[str], list[str]]:
 def test_readme_demo_questions_are_recorded_as_written():
     """README가 키 없이 된다고 적은 질문은 적힌 글자 그대로 녹화돼 있어야 한다(괄호 설명을 붙이면 다른 질문이라 녹화에 없다)."""
     answers, refusals = _readme_demo_questions()
-    assert len(answers) == 6 and len(refusals) == 3
+    assert len(answers) == 7 and len(refusals) == 2
     rows = [json.loads(x) for x in (RECORDED / "recorded.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
     classified = [r["user_preview"] for r in rows if r["role"] == "classify"]
     for q in answers + refusals:

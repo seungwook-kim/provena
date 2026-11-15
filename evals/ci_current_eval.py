@@ -3,7 +3,7 @@
     PROVENA_D5_PG_URL=postgresql://app:pw@127.0.0.1:5432/postgres python evals/ci_current_eval.py --out evals/results/ci_current_<날짜>/result.json
 
 왜: 지금까지 CI 비교는 커밋된 옛 측정 결과 파일만 읽어서, 현재 코드가 바뀌어도 점수가 그대로였다. 이 도구는 현재 코드의 질문 그래프(서비스 설정 61.51, 서버와 같은 Postgres 검색)를
-키·네트워크 없이 README의 데모 질문 9개(인용 답 6, 거절 3)에 돌리고, 녹화(`data/demo_replay/recorded.jsonl`)에서 찾지 못한 LLM 요청 수와 결과를 센다.
+키·네트워크 없이 README의 데모 질문 9개(인용 답 7, 거절 2)에 돌리고, 녹화(`data/demo_replay/recorded.jsonl`)에서 찾지 못한 LLM 요청 수와 결과를 센다.
 LLM·Voyage·운영 호출은 없다(`LLM_API_KEY`, `VOYAGE_API_KEY` 등을 이 프로세스에서 지우고 돌린다). 임시 DB를 만들어 색인을 적재하고 끝나면 그 DB만 지운다.
 
 지표(질문 그래프 한 번 돌린 값, 추론 답을 보내는 경로와 빠른 답만 보내는 경로 둘 다):
