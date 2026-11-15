@@ -65,7 +65,7 @@ INTAKE_KEY = "__intake__"  # `search_cache` 안에서 미리 받은 LLM 응답�
 MAX_CHUNKS = 10  # 재검색 결과를 합친 근거 목록의 최대 길이
 MAX_SECTION_CHARS = 6000  # 섹션을 통째로 읽어 넓힐 수 있는 본문 길이. 넘으면 넓히지 않는다
 AUTHZ_TITLE = "Authorization Matrix"  # 현재 페이지와 고정 판(2023-05)의 공통 제목
-SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5). 나뉜 질문의 첫 검색도 같다
+SEARCH_K = DEFAULT_K  # 검색마다 요청하는 청크 수. 그래프와 MCP가 같은 상수(`backend/schemas/chunk.py`)를 쓴다(확정 조합 k=5). 나뉜 질문의 첫 검색도 같다(62.73 `GRAPH_SPLIT_FULL_K`를 켜면 그 검색만 `MAX_CHUNKS`)
 JSON_ATTEMPTS = 2  # LLM 응답 형식이 깨지면 1회 다시 요청한다 (Spec EC-06)
 ROUTES = ("rule", "decision", "review", "out_of_domain")
 # 한 실행 안에서만 뜻이 있는데 `load_memory`의 기본값에 없는 칸. 체크포인터가 있으면 앞 실행의 값이 남아 있으므로 새 질문에서 비운다.
@@ -455,6 +455,7 @@ def build_graph(
     spec_boxes: dict[str, dict] = {}  # SP: 열쇠 -> 미리 돌리기 상태(돌렸는지). 첫 검색 노드가 기록 표시를 쓰고 지운다
     spec_stops: dict[str, tuple[float, threading.Event]] = {}  # `GRAPH_SPEC_STOP_GROUND`: 열쇠 -> (등록 시각, 버리기로 하면 서는 표시). 쓰기로 하면 바로 지우고, 버린 것은 2분 뒤 청소한다
     spec_stop_ground = AF.spec_stop_ground_enabled()  # 사전 등록 62.72: 버리기로 한 미리 돌리기의 답 후보는 근거 확인을 미리 부르지 않는다
+    split_full_k = AF.split_full_k_enabled()  # 사전 등록 62.73(`GRAPH_SPLIT_FULL_K`, 기본 꺼짐): 나뉜 질문의 첫 검색만 근거 목록 상한(`MAX_CHUNKS`)까지 요청한다
     spec_lock = threading.Lock()
     speculate_ground = AF.speculate_ground_enabled()  # SG: 답 후보가 나오는 대로 근거 판정을 미리 부르고, 같은 입력의 판정이 필요할 때 그 결과를 쓴다
     ground_runs: dict[str, tuple[float, Any]] = {}  # SG: 판정 입력의 해시 -> (시작 시각, 미리 돌린 판정 Future). 쓰면 꺼낸다
@@ -1087,7 +1088,10 @@ def build_graph(
             subs, source = early["decompose"] if early is not None and "decompose" in early else split_question(state)
             extra = {"sub_queries": subs, "decompose_source": source}
         query = drop_company_prefix([state["question"]])[0] if split else state["search_query"]
-        q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"), k=SEARCH_K, sub_queries=subs or None)  # 나뉜 질문의 첫 검색도 SEARCH_K
+        # 나뉜 질문의 첫 검색도 SEARCH_K다. 62.73(`GRAPH_SPLIT_FULL_K`)을 켜면 하위 질문이 있는 첫 검색만 근거 목록 상한(MAX_CHUNKS)까지 요청한다.
+        # `subs`는 첫 검색에서 분해가 나눴을 때만 2개 이상이다(안 나눔, 분해 실패, 재검색, 미리 돌린 원 질문 검색은 비어 SEARCH_K 그대로). 검색 기억 열쇠에 k가 들어 있어 k=5 결과와 섞이지 않는다
+        k = MAX_CHUNKS if split_full_k and subs else SEARCH_K
+        q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"), k=k, sub_queries=subs or None)
         _forget_search_trace()
         try:
             found, memo = memo_search(state, q)
