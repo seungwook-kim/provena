@@ -27,6 +27,10 @@ services:
       # 검색 모델·BM25를 시작할 때 백그라운드로 올린다(backend/main.py). 색인이 없으면 경고만 남고 서버는 뜬다.
       # 로컬 데모는 기다리지 않는다(G2 시작 시간). 운영의 기본값(비우면 시작 때 기다려 끝냄)과 다르다
       SEARCH_WARMUP: ${SEARCH_WARMUP:-background}
+    volumes:
+      # 로컬 데모 내 정보 암호화 키 파일(K-23). 내 정보는 pgdata에 남으므로 키도 같이 남아야 `docker compose down` 뒤 `up`, 이미지 다시 빌드 뒤에도 연다.
+      # `docker compose down -v`는 pgdata와 함께 지운다. 운영(Cloud Run)은 PROFILE_ENC_KEYS를 쓰고 이 파일을 읽지 않는다
+      - profilekey:/home/app/.provena
     depends_on:
       db:
         condition: service_healthy
@@ -85,3 +89,4 @@ services:
 
 volumes:
   pgdata:
+  profilekey:

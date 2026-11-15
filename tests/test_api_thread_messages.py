@@ -86,6 +86,26 @@ def test_refusal_is_no_evidence_without_citations(monkeypatch):
         assert bot["text"] == _streamed(ev)[0]
 
 
+@pytest.mark.parametrize("llm_kw, reason", [
+    ({"judge": j(sufficient=False, reason="부족", clarify=None)}, "no_evidence"),   # 근거를 못 찾음
+    ({"classify": j(route="out_of_domain")}, "out_of_domain"),                      # 핸드북 밖 질문
+])
+def test_refusal_history_carries_the_same_reason_code_as_the_chat_done_event(monkeypatch, llm_kw, reason):
+    """H-34: 화면이 새로고침 뒤에도 거절 사유에 맞는 안내만 붙이게, 이력의 거절 답에 `/chat` done과 같은 `refuse_reason`을 싣는다. 답에는 이 칸이 없다."""
+    with Env(monkeypatch, llm=normal_llm(**llm_kw)) as env:
+        c = env.client(env.alice)
+        _, ev = ask(c, Q1, "t1", as_of=AS_OF)
+        done = ev[-1][1]["data"]
+        assert done["kind"] == "refuse" and done["refuse_reason"] == reason
+        _, bot = c.get("/threads/t1").json()["messages"]
+        assert bot["kind"] == "refuse" and bot["refuse_reason"] == reason
+    with Env(monkeypatch) as env:
+        c = env.client(env.alice)
+        ask(c, Q1, "t1", as_of=AS_OF)
+        _, bot = c.get("/threads/t1").json()["messages"]
+        assert bot["kind"] == "answer" and "refuse_reason" not in bot
+
+
 def test_failed_question_keeps_only_the_question(monkeypatch):
     def broken_search(_q):
         raise RuntimeError("검색 실패")

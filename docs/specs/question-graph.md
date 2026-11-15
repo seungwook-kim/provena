@@ -162,7 +162,7 @@
 **기준일 (AC-11)**
 - GIVEN: 사용자가 기준일을 주지 않았고, 질문에 시점 표현이 없다
 - WHEN: `rewrite`가 기준일을 돌려준다
-- THEN: 그 기준일은 버리고 오늘 날짜를 쓴다. 평가 실행기는 `YYYY-MM` 형태의 평가 기준일을 그 달의 마지막 날로 바꿔 넘긴다
+- THEN: 그 기준일은 버리고 오늘 날짜를 쓴다. 오늘은 서버(UTC) 날짜가 아니라 한국 날짜다(`backend/graph/state.py` `today_kst`, 고정 +9시간. 2026-11-14 16:30 UTC이면 2026-11-15, 놓친 것 D-15). 평가 실행기는 `YYYY-MM` 형태의 평가 기준일을 그 달의 마지막 날로 바꿔 넘긴다
 
 ## 질문 분해의 그래프 연결 (4단계 `search` 노드)
 
@@ -198,3 +198,77 @@
 - THEN: 예외 없이 고정 문구의 거절로 끝나고, 판단과 답 작성 단계는 호출되지 않는다
 
 측정 조건 기록: 그래프가 재검색에 넘기는 재작성 영어 검색어(키워드 형태)는 측정에서 쓰던 영어 문장과 형태가 다르다. 이 차이는 고치지 않고 `EVAL_REPORT.md` 3-3-1에 측정 조건으로 적었다.
+
+## 이어 묻기: 같은 대화의 앞 질문으로 완전한 질문 만들기 (D-14, 2026-11-15, 팀장 결정 ①)
+
+**Why**
+- 같은 대화에서 "고객은요?"처럼 주어·대상이 빠진 뒤 질문은 새 질문으로 처리됐다. 그래프 입력이 지금 질문 하나뿐이었기 때문이다(`backend/api/routes.py`의 `graph_input`, `backend/graph/build.py`의 `load_memory`). 검색어가 "고객"만 남아 엉뚱한 근거를 찾거나 거절했다.
+- 팀장 결정(①): 같은 대화의 앞 질문을 함께 넘기고, 지금 질문이 이어 묻는 질문이면 완전한 질문으로 다시 써서 답하고, 화면에 "이렇게 이해했습니다: <다시 쓴 질문>"을 보인다. 버린 대안은 `docs/decisions.md` 2026-11-15 행.
+
+**Goal**
+- 이어 묻는 질문은 앞 질문의 빠진 말을 채운 질문으로 분류, 검색, 판정, 답 작성을 한다.
+- 새 대화와 대화의 첫 질문은 호출 수, 노드 순서, 입력 글자가 그대로다(추가 LLM 호출 0). 평가 실행기는 문항마다 새 thread로 그래프를 직접 부르고 `asked`를 넘기지 않으므로 호출과 답이 그대로다(상태에 빈 목록 `asked: []` 칸만 더 생긴다).
+- 다시 쓰기가 실패해도 요청은 실패하지 않는다(원 질문으로 그대로 답한다).
+- Out of Scope: 앞 답의 내용을 이어 받는 대화(답 요약, 인용 재사용), 대화 전체 이력 요약, 다시 쓴 질문의 품질 측정(실제 모델 호출이 필요해 이번 작업에서 하지 않았다).
+
+**What**
+
+| 항목 | 규칙 |
+|---|---|
+| 앞 질문이 오는 곳 | `/chat`이 질문마다 그래프 입력에 `asked: [질문]`을 더한다(`backend/api/routes.py`). 상태의 `asked` 칸에는 합치기 규칙(`backend/graph/state.py`의 `keep_recent_questions`)이 있어, 같은 thread의 체크포인트에 최근 질문 3개(지금 질문과 앞 질문 2개)가 쌓인다. 그래프가 실행을 시작하며 체크포인트를 열 때 같이 오므로 `/chat`은 앞 질문을 찾으려고 체크포인트를 따로 읽지 않는다(사전 등록 62.16의 왕복 줄이기 그대로). 체크포인트 thread 이름은 `<user_id>:<thread_id>`라 같은 사용자의 같은 대화 질문만 쌓인다 |
+| 넘기는 양 | 직전 질문과 그 앞 질문까지 최대 2개(`state.MAX_PREV_QUESTIONS`, `state.previous_questions`). 직전 질문을 다시 썼으면 다시 쓴 쪽을 넘긴다(혼자서 뜻이 통해 이어 묻기가 여러 번 이어져도 대상이 남는다). 프롬프트에는 질문마다 앞 500자만 넣는다(`prompts.question.PREV_QUESTION_CHARS`). 앞 답은 넘기지 않는다: 답에는 검색 원문에서 온 글이 섞여 인젝션 표면과 토큰이 늘고, 빠진 주어·대상은 질문에 있다 |
+| `asked`에 쌓이는 것 | `/chat`이 그래프에 넘긴 질문(사용자가 친 글). 바로 앞과 같은 글(다시 시도)은 다시 쌓지 않는다. 승인 대기 중이라 409로 막힌 질문은 그래프에 가지 않아 쌓이지 않는다. `asked`를 넘기지 않는 실행(평가 실행기, 그래프 직접 호출)의 상태에는 빈 목록 `asked: []`만 생긴다 |
+| 노드 | `followup`(`load_memory` 다음, `classify` 앞). 앞 질문이 있을 때만 지난다(`load_memory`의 조건 분기가 `previous_questions`를 본다). 없으면 지금처럼 `load_memory -> classify`다 |
+| LLM 호출 | 1회, `backend/services/llm.py`로 받은 같은 모델. 프롬프트 `backend/prompts/question.py`의 `FOLLOWUP_SYSTEM`(표지 `[[task:rewrite_followup]]`), 입력 `followup_user`. 출력 JSON `{"followup": true 또는 false, "question": "..."}`. 형식이 깨져도 다시 묻지 않는다(앞 단계라 지연을 늘리지 않는다) |
+| 다시 쓴 질문을 쓰는 조건 | `followup`이 `true`이고 `question`이 비지 않은 문자열이고 4000자 이하(`/chat` 질문 상한과 같다)이고 원 질문과 다르고, 코드 검사(내부 표식·프롬프트 문장 `leaks_internal`, 프롬프트 요구 `asks_internal`, 가짜 자료 구분자, 지시 문장 `untrusted.strip_instructions`)에 걸리지 않을 때만 |
+| 그 밖의 모든 경우 | 원 질문 그대로 간다: 이어 묻기가 아님, 응답 형식 오류, LLM 예외, 빈 값, 너무 긴 값, 코드 검사에 걸림. 비용 상한 예외(`CostCapExceeded`)만 그대로 올린다 |
+| 다시 썼을 때 상태 | `question` = 다시 쓴 질문(분류, 재작성, 분해, 검색, 판정, 답, 근거 판정, 저장이 모두 이 값을 쓴다), `user_question` = 사용자가 친 글, `understood_question` = 다시 쓴 질문. 다시 쓰지 않으면 두 칸은 `None`이다. 두 칸은 다음 질문이 앞 질문으로 읽을 수 있게 상태에 남고, 다음 질문의 `followup` 노드가 다시 쓴다. 그래서 `done`은 이번 실행의 노드 갱신에서만 읽고, 대화 이력은 `understood_question`이 그 질문의 `question`과 같을 때만 그 질문의 값으로 본다 |
+| 안전 검사가 보는 글 | 프롬프트 요구만 있는 질문(`only_asks_internal`)은 사용자가 친 글로 먼저 보고, 걸리면 다시 쓰지 않아 `classify`가 지금처럼 범위 밖으로 끝낸다. 범위 밖 분류, 시점 표현(`mentions_period`), 되묻기, 답의 기간 검사는 다시 쓴 질문으로 본다(빠진 대상·시점이 채워진 글이어야 판정이 맞다). 출력 검사(`scrub_answer`, `leaks_instruction`)가 "질문에 있던 말"로 보는 글도 다시 쓴 질문이다. 그래서 앞 질문은 프롬프트에 넣기 전에 지시 문장을 빼고, 다시 쓴 질문에 지시 문장이 남으면 쓰지 않는다 |
+| 앞 질문 정화 | `followup_prev`: 가짜 자료 구분자와 프롬프트 요구 문장을 빼고(`question_for_prompt`), 지시 문장을 문장째 빼고(`strip_instructions(whole_sentence=True)`), 한 줄로 접고, 500자로 자른다. 비거나 프롬프트 요구뿐인 앞 질문은 버린다. 남는 앞 질문이 없으면 LLM을 부르지 않는다 |
+| 화면 전달 | 다시 썼을 때만 `done.data.understood_question`(`backend/graph/stream.py`). `GET /threads/{id}`의 `messages`는 질문 글을 사용자가 친 글로 주고, 그 답 항목에 `understood_question`을 더한다. 대화 제목은 지금처럼 첫 질문의 사용자가 친 글이다 |
+| 답 저장 | 저장되는 질문은 다시 쓴 질문이다(리콜이 다시 판정할 때 혼자서 뜻이 통해야 한다) |
+| 멀티 그래프 | Supervisor가 첫 방문에서 `load_memory` 다음에 같은 분기와 같은 노드를 부른다(`backend/graph/multi.py`). 하위 에이전트는 이미 `question`을 읽으므로 `reads`는 그대로다 |
+| 키 없는 데모(녹화 재생) | 녹화한 질문은 대화의 첫 질문이라 이 호출이 없다. 같은 대화의 둘째 질문부터는 녹화에 없는 호출이라 재생 모델이 고정 문장을 돌려주고(JSON 아님) 원 질문으로 그대로 간다 |
+| 비용·단계 이름 | 단계 이름은 노드와 표지에서 자동으로 `followup/rewrite_followup`이 된다(`llm_trace.step_of`). `done.cost_by_step`과 Langfuse에 그 이름으로 잡힌다. 추론 수준은 기본값(단계별 목록에 넣지 않았다) |
+| 끄는 법 | 환경 변수 `CHAT_FOLLOWUP=0`(기본 켬). 끄면 `/chat`이 `asked`를 넘기지 않아 앞 질문이 쌓이지도 쓰이지도 않는다 |
+
+**한계**
+- 대화의 둘째 질문부터 LLM 호출 1회가 늘어난다(이어 묻기가 아닌 질문도). 응답 시간과 비용은 재지 않았다. DB 왕복은 늘지 않는다.
+- 이 기능을 넣기 전에 만든 대화는 `asked`가 비어 있어, 넣은 뒤 첫 질문은 앞 질문 없이 처리되고 그다음 질문부터 이어진다.
+- 다시 쓴 질문의 정확도는 실제 모델로 재지 않았다(가짜 모델 시험만 했다).
+- 지시 문장 검사는 규칙 목록이라 목록에 없는 말투는 놓친다(`backend/graph/untrusted.py` 한계와 같다). 앞 질문은 같은 사용자가 같은 대화에서 친 글이다.
+
+**AC (시험 `tests/test_followup_question.py`)**
+
+**AC-14 · 첫 질문은 그대로**
+- GIVEN: 앞 질문이 없는 입력(새 대화, `asked`를 넘기지 않는 평가 실행기)
+- WHEN: 그래프 실행
+- THEN: `rewrite_followup` 호출 0회, 노드 순서에 `followup`이 없고, 분류 입력의 질문 글자가 그대로다(`test_first_question_makes_no_followup_call_and_skips_the_node`, `test_chat_first_question_of_a_named_thread_makes_no_call`). `/chat`은 앞 질문 때문에 체크포인트를 더 읽지 않는다(`test_chat_new_thread_reads_no_history`: `get_state` 0회)
+
+**AC-15 · 이어 묻기는 완전한 질문으로**
+- GIVEN: 앞 질문이 있고 가짜 모델이 `followup=true`와 다시 쓴 질문을 낸다
+- WHEN: 그래프 실행
+- THEN: 분류·검색·답 입력이 다시 쓴 질문이고, 상태에 `user_question`(친 글)과 `understood_question`이 남는다(`test_followup_question_is_rewritten_and_used_downstream`). 멀티 그래프도 같은 결과다(`test_multi_graph_rewrites_followup_like_single`)
+
+**AC-16 · 이어 묻기가 아니면 그대로**
+- GIVEN: 앞 질문이 있고 가짜 모델이 `followup=false`를 낸다
+- THEN: 질문은 그대로이고 `understood_question`이 없다(`test_not_a_followup_keeps_the_question`)
+
+**AC-17 · 실패해도 답한다**
+- GIVEN: 다시 쓰기 호출이 예외, 빈 응답, JSON 아님, 빈 질문, 4000자 초과, 문자열 아님
+- THEN: 원 질문으로 답이 끝까지 나온다(`test_bad_followup_reply_falls_back_to_the_original_question`). 비용 상한 예외는 그대로 올라간다(`test_cost_cap_is_not_swallowed`)
+
+**AC-18 · 앞 질문의 지시는 프롬프트에 들어가지 않는다**
+- GIVEN: 앞 질문에 지시 문장, 자료 구분자, 프롬프트 요구가 있다
+- THEN: 다시 쓰기 입력에 그 글이 없다(`test_instructions_in_previous_questions_never_reach_the_prompt`). 다시 쓴 질문에 내부 표식이나 지시 문장이 있으면 쓰지 않는다(`test_rewritten_question_with_instruction_or_marker_is_dropped`). 프롬프트 요구뿐인 지금 질문은 다시 쓰지 않는다(`test_prompt_request_is_not_rewritten`)
+
+**AC-19 · 같은 사용자의 같은 대화만**
+- GIVEN: 앨리스의 t1, 앨리스의 t2, 밥의 t1에 서로 다른 질문이 있다
+- WHEN: 각 대화에 둘째 질문을 보낸다
+- THEN: 다시 쓰기 입력에는 그 사용자의 그 대화 질문만, 최대 2개 있다(`test_chat_passes_only_same_user_same_thread_questions`, `test_asked_keeps_the_current_and_two_previous_questions`, `test_previous_questions_drop_the_current_one_and_prefer_the_understood_question`)
+
+**AC-20 · 화면 전달**
+- THEN: `done.understood_question`은 다시 썼을 때만 있고(`test_chat_done_has_understood_question_only_when_rewritten`), 대화 이력의 질문 글은 친 글 그대로이며 답 항목에 `understood_question`이 붙는다(`test_thread_messages_keep_typed_text_and_carry_understood_question`). 다음 질문에서는 앞 질문의 값이 남지 않는다(`test_next_question_does_not_inherit_understood_question`)
+
+**AC-21 · 녹화 재생과 끄기**
+- THEN: 재생 모델로 둘째 질문을 보내도 원 질문으로 끝난다(`test_replay_model_keeps_the_original_question`). `CHAT_FOLLOWUP=0`이면 앞 질문이 쌓이지 않고 다시 쓰기 호출이 없다(`test_switch_off_passes_no_history`)

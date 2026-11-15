@@ -43,7 +43,7 @@ from backend.graph.decompose import decompose_enabled, decompose_question, drop_
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
 from backend.graph.service_profile import SharedChatModel
-from backend.graph.state import AgentState
+from backend.graph.state import MAX_PREV_QUESTIONS, AgentState, previous_questions, today_kst
 from backend.memory.profile import get_profile
 from backend.prompts import question as P
 from backend.graph import untrusted as U
@@ -53,7 +53,7 @@ from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
 from backend.schemas.chunk import DEFAULT_K
-from backend.services.demo_replay import ReplayChatModel, env_flag
+from backend.services.demo_replay import ReplayChatModel, env_flag, in_lane
 from backend.services.llm import CostCapExceeded, get_chat_model, is_demo_mode
 from backend.services.skills import load_skill, skills_enabled
 
@@ -591,7 +591,7 @@ def build_graph(
             **{k: v for k, v in LEFTOVER_FIELDS.items() if k in state},
             **({"started_at": time.monotonic()} if answer_budget else {}),
             "profile": get_profile(store, user_id) if user_id and not replay_demo() else {},
-            "as_of": state.get("as_of") or date.today().isoformat(),
+            "as_of": state.get("as_of") or today_kst().isoformat(),  # 서버(UTC) 날짜가 아니라 한국 날짜(D-15)
             "as_of_given": bool(state.get("as_of")),
             "kind": "",
             "answer": "",
@@ -618,6 +618,26 @@ def build_graph(
             "search_stats": {"calls": 0, "cache_hits": 0},
         }
 
+    def followup(state: AgentState) -> dict:
+        """이어 묻기(D-14, `docs/specs/question-graph.md`): 같은 대화의 앞 질문(`asked`, `state.previous_questions`)이 있을 때만 지나는 노드. 지금 질문이 앞 질문에 기대는 질문이면
+        혼자서도 뜻이 통하는 질문으로 다시 써 `question`을 바꾼다(LLM 1회, 다시 묻지 않는다). 그 밖의 모든 경우(이어 묻기가 아님, 형식 오류, 호출 실패, 코드 검사에 걸림)는
+        질문을 그대로 둔다. 비용 상한 예외만 올린다. 프롬프트 요구뿐인 질문은 다시 쓰지 않아 `classify`가 사용자가 친 글로 범위 밖 처리한다."""
+        keep = {"user_question": None, "understood_question": None}
+        original = state["question"]
+        prev = P.followup_prev(previous_questions(state), MAX_PREV_QUESTIONS)   # 앞 질문의 다시 쓴 기록은 아래에서 덮기 전에 읽는다
+        if not prev or not isinstance(original, str) or P.only_asks_internal(original):
+            return keep
+        try:
+            rewritten = P.followup_question(parse_json_obj(ask(P.FOLLOWUP_SYSTEM, P.followup_user(prev, original))), original)
+        except CostCapExceeded:
+            raise
+        except Exception as e:  # noqa: BLE001  다시 쓰기 실패가 답을 막지 않는다
+            log.warning("이어 묻기 다시 쓰기 실패: %s", type(e).__name__)
+            return keep
+        if rewritten is None:
+            return keep
+        return {"question": rewritten, "user_question": original, "understood_question": rewritten}
+
     def split_first_search() -> bool:
         return decompose_enabled() if decompose is None else decompose
 
@@ -643,6 +663,11 @@ def build_graph(
             return fn()
 
         return pool.submit(contextvars.copy_context().run, call)
+
+    def as_candidate(n: int, fn: Callable[[], Any]) -> Callable[[], Any]:
+        """답 두 번 쓰기의 n번째 후보(0 = 첫 후보)를 쓰는 함수. 키 없는 데모(녹화 재생)에서만 후보 자리를 붙이고(`demo_replay.in_lane`), 실제 모델이면 `fn` 그대로다.
+        두 후보가 같은 요청을 동시에 보내면 재생이 어느 후보에 어느 녹화 응답을 줄지가 스레드 경쟁으로 정해져, 동점일 때 고르는 첫 후보의 답이 실행마다 달랐다(K-24)."""
+        return in_lane(n, fn) if replay_demo() else fn
 
     def start_split(state: AgentState) -> tuple[Any, ThreadPoolExecutor, float]:
         """분해 상한을 켰을 때 분해를 따로 된 일꾼에서 시작한다. 상한을 넘긴 분해를 기다리지 않고 나가려고 접수 일꾼과 나눈다."""
@@ -1134,8 +1159,8 @@ def build_graph(
             pool = ThreadPoolExecutor(max_workers=2 if best2 else 1, thread_name_prefix="draft")  # 기본은 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
             try:
                 ahead = ground_partials(state)  # 사전 등록 62.49: 이 판정이 충분·일부 어느 쪽으로 끝나도 같이 쓴 답의 근거 판정이 미리 돌아 있게 한다
-                writing = in_background(pool, "write_answer", lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead))
-                writing2 = in_background(pool, "write_answer", lambda: timed_reply(state, partials=ahead)) if best2 else None  # BO2: 같은 입력으로 하나 더
+                writing = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=bool(best2 and widened), partials=ahead)))
+                writing2 = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state, partials=ahead))) if best2 else None  # BO2: 같은 입력으로 하나 더
                 obj = ask_judge(guided, judge_input)
                 if (obj or {}).get("sufficient") is True or (answer_wait and last_partial(state, obj or {})):
                     # 충분이면 같이 쓴 답을 쓴다(부족이면 순차라면 부르지 않았을 호출이라 결과와 오류를 모두 버린다).
@@ -1510,8 +1535,8 @@ def build_graph(
         try:
             core_ids = [c["chunk_id"] for c in core_chunks(state)]
             widened = judge_quote and len(core_ids) < len(state.get("chunks", []))
-            one = in_background(pool, "write_answer", lambda: timed_reply(state, core=widened))
-            two = in_background(pool, "write_answer", lambda: timed_reply(state))
+            one = in_background(pool, "write_answer", as_candidate(0, lambda: timed_reply(state, core=widened)))
+            two = in_background(pool, "write_answer", as_candidate(1, lambda: timed_reply(state)))
             return pick_two(one, two, state.get("judge_quote_ids") or [], state.get("chunks", []), core_ids if widened else None)
         finally:
             pool.shutdown(wait=True)
@@ -1890,6 +1915,7 @@ def build_graph(
     g = StateGraph(AgentState)
     for name, fn in (
         ("load_memory", load_memory),
+        ("followup", followup),
         ("classify", classify),
         ("out_of_domain", out_of_domain),
         ("rewrite", rewrite_node),
@@ -1903,7 +1929,10 @@ def build_graph(
     ):
         g.add_node(name, fn)
     g.add_edge(START, "load_memory")
-    g.add_edge("load_memory", "classify")
+    # 이어 묻기(D-14): 같은 대화에 앞 질문이 쌓여 있을 때만 `followup`을 지난다. 없는 질문(새 대화, `asked`를 넘기지 않는 평가 실행기)은 지금처럼 바로 `classify`다
+    # `followup_off`(스위치 끔)이면 체크포인트에 앞 질문이 쌓여 있어도 지나지 않는다(놓친 것 D-14 후속: 끈 뒤에도 쌓인 대화에서 다시 쓰기가 돌던 것)
+    g.add_conditional_edges("load_memory", lambda s: "followup" if previous_questions(s) and not s.get("followup_off") else "classify", {"followup": "followup", "classify": "classify"})
+    g.add_edge("followup", "classify")
     # 결정표와 합동 검토를 연결하면 이 표의 목적지만 바꾼다
     if decision_repo is not None:   # 결정표 저장소가 있을 때만 결정표 경로를 따로 연다. 없으면 지금처럼 정책 질문으로 처리한다
         g.add_node("decision_params", decision_params)

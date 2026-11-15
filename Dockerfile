@@ -16,7 +16,10 @@ FROM python:3.12-slim
 # 서버는 root가 아닌 사용자(app, uid 10001)로 돈다. 코드·패키지는 root 소유(읽기 전용)로 두고,
 # 실행 중에 쓰는 곳(data/ 아래 색인 다시 풀기·녹화, HF 캐시, 홈의 ~/.cache)만 app 소유로 둔다
 RUN groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
+    && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app \
+    && mkdir -p /home/app/.provena && chown app:app /home/app/.provena
+# /home/app/.provena: 로컬 데모 내 정보 암호화 키 파일 자리(K-23, backend/services/profile_crypto.py). compose가 이름 있는 볼륨을 여기에 붙인다.
+# 이미지에 app 소유로 만들어 두어야 처음 붙는 빈 볼륨도 app 소유가 된다(없으면 docker가 root 소유로 만들어 키를 못 쓴다)
 WORKDIR /app
 
 COPY backend/requirements.txt backend/requirements-local-models.txt backend/

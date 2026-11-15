@@ -8,7 +8,7 @@
   이때 `AUTH_SECRET`(32바이트 이상)이 없으면 시작하지 않습니다. 로컬 데모 모드에서만 비어 있으면 실행마다 무작위로 만듭니다.
 - 같은 조건에서 내 정보 라우터(`GET/PUT /me/profile`, backend/profile_api.py)도 붙이고, `/me`에 `profile_completed`를 더합니다.
   `PROFILE_ENC_KEYS`(AES-256 키, backend/services/profile_crypto.py)가 없거나 형식이 틀리면 시작하지 않습니다. 로컬 데모 모드에서만
-  비어 있으면 실행마다 무작위 키를 만듭니다(재시작하면 내 정보를 다시 입력).
+  비어 있으면 키를 한 번 만들어 키 파일(`PROFILE_KEY_FILE`, 기본 `~/.provena/local_demo_profile.key`, compose는 볼륨 `profilekey`)에 두고 재시작 때 다시 씁니다(K-23).
 - 같은 조건에서 사용자 관리 라우터(`GET /admin/users`, `POST /admin/users/{login_id}/promote|revoke`, backend/admin_api.py)도 붙이고,
   `/me`에 `is_owner`를 더합니다. 최고 관리자는 `PROVENA_OWNER_LOGIN_ID`(시작할 때 한 번 읽음). 비었거나 계정과 맞지 않으면
   시작 로그 1줄(값은 쓰지 않음)을 남기고 사용자 관리만 닫습니다(모두 403). 서버는 멈추지 않습니다.

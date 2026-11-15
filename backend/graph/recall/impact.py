@@ -22,7 +22,6 @@ import os
 import re
 import sys
 from collections.abc import Mapping
-from datetime import date
 from pathlib import Path
 from urllib.parse import quote
 from typing import Any, Literal
@@ -32,6 +31,7 @@ from pydantic import BaseModel, Field
 from backend.graph.recall.graph import min_confidence_from_env
 from backend.graph.recall.judge import default_judge
 from backend.graph.recall.notice import is_affected
+from backend.graph.state import today_kst
 from backend.schemas.recall import ChangedArticle
 
 Verdict = Literal["changed", "unchanged", "needs_review"]
@@ -199,7 +199,7 @@ def preview_impact(changes: list[ChangedArticle], *, answers: Any, read_section:
         decision_cells_unverified=sum(1 for c in cells_out if c.confidence == "unverified"),
         recipients=len({a.user_id for a in invalid}),
     )
-    return ImpactReport(judge_mode="rule" if getattr(judge_, "mode", "") == "rule" else "llm", generated_on=today or date.today().isoformat(),
+    return ImpactReport(judge_mode="rule" if getattr(judge_, "mode", "") == "rule" else "llm", generated_on=today or today_kst().isoformat(),
                         summary=summary, changes=views, answers=rows_out, cells=cells_out, notes=notes)
 
 

@@ -535,7 +535,7 @@ def test_runs_without_a_checkpointer_get_no_new_fields(build):
 @pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
 def test_date_from_an_earlier_question_is_not_inherited_through_the_chat_adapter(build):
     """AC-11: 기준일을 주지 않았고 질문에 시점 표현이 없으면 오늘 날짜다. 앞 질문이 고른 기준일은 다음 질문의 입력이 아니다."""
-    from datetime import date
+    from backend.graph.state import today_kst
 
     llm, (fn, calls) = _thread_llm(rewrite=lambda u: j(query="SEV2 최초 대응", org=None, as_of="2024-01-15" if "2024" in u else None)), recorded()
     g = _thread_graph(build, llm, fn)
@@ -543,19 +543,19 @@ def test_date_from_an_earlier_question_is_not_inherited_through_the_chat_adapter
     assert calls[-1].as_of == "2024-01-15"
     list(stream_events(g, _bare_input(Q2), thread_id="tn"))
     state = g.get_state(THREAD).values
-    assert calls[-1].as_of == date.today().isoformat() and state["as_of"] == date.today().isoformat() and state["as_of_given"] is False
+    assert calls[-1].as_of == today_kst().isoformat() and state["as_of"] == today_kst().isoformat() and state["as_of_given"] is False
 
 
 @pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
 def test_given_date_and_section_are_not_inherited_through_the_chat_adapter(build):
-    from datetime import date
+    from backend.graph.state import today_kst
 
     llm, (fn, calls) = _thread_llm(rewrite=j(query="SEV2 최초 대응", org=None, as_of=None)), recorded()
     g = _thread_graph(build, llm, fn)
     list(stream_events(g, _bare_input(Q, as_of="2025-06-01", org="TEST-security"), thread_id="tn"))
     assert (calls[-1].as_of, calls[-1].org) == ("2025-06-01", "TEST-security")
     list(stream_events(g, _bare_input(Q2), thread_id="tn"))
-    assert (calls[-1].as_of, calls[-1].org) == (date.today().isoformat(), None) and g.get_state(THREAD).values["org"] is None
+    assert (calls[-1].as_of, calls[-1].org) == (today_kst().isoformat(), None) and g.get_state(THREAD).values["org"] is None
 
 
 @pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
@@ -570,13 +570,13 @@ def test_adapter_keeps_values_given_for_this_question(build):
 
 @pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)
 def test_explicit_none_clears_the_date_on_a_direct_call(build):
-    from datetime import date
+    from backend.graph.state import today_kst
 
     llm, (fn, calls) = _thread_llm(), recorded()
     g = _thread_graph(build, llm, fn)
     g.invoke(_input(Q), THREAD)
     out = g.invoke(_bare_input(Q2, as_of=None), THREAD)
-    assert out["as_of"] == date.today().isoformat() and out["as_of_given"] is False and calls[-1].as_of == out["as_of"]
+    assert out["as_of"] == today_kst().isoformat() and out["as_of_given"] is False and calls[-1].as_of == out["as_of"]
 
 
 @pytest.mark.parametrize("build", GRAPHS, ids=GRAPH_IDS)

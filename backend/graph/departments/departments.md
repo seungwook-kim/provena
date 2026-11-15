@@ -12,6 +12,7 @@
 
 | 날짜 | 작업자 | 한 일 | PR |
 |---|---|---|---|
+| 2026-11-15 | 박진형 (jinyeong-731) | `review.py` supervisor와 `single_review.py` `run_single`의 기준일 기본값을 한국 날짜(`backend/graph/state.py` `today_kst`)로(놓친 것 D-15, 조장 지시로 처리. 문제 기록은 `backend/graph/graph.md` G-002). 시험 `tests/test_today_kst.py` | #162 |
 | 2026-11-10 | 김승욱 (Claude Code) | 쟁점표 topic 칸에 쟁점 문장과 같은 출력 검사 추가(`issue_table.build_rows`, 사전 등록 62.26) | - |
 | 2026-11-10 | 김승욱 (기록: 박진형) | (보충, PR #116) 합친 표(DB 재정렬)에 맞춰 `store.py`를 고침 | #116 |
 | 2026-11-09 | 김승욱 (기록: 박진형) | (보충, PR #83) 프롬프트 인젝션 방어에 맞춰 `review.py`를 고침 | #83 |
