@@ -23,10 +23,10 @@ Edge cases: 만료 코드, 잘못된 코드, 재사용 코드, 재발송 제한,
 - 신규 이메일은 공백 제거·소문자화한 값을 기존 `login_id`에 저장한다.
 - `signup_requests`에 인증 필요 여부, 코드 HMAC, 만료·시도·발송 상태를 추가한다.
 - `EmailSender`는 Gmail SMTP, Resend, 기록 전용 테스트 구현으로 분리한다. Gmail/Resend를 선택했는데 필수 설정이 없으면 Recording sender로 내리지 않고 실패한다.
-- 적용 순서: `db/101_auth_users.sql` → `db/106_signup_approval.sql` → `db/107_email_signup_verification.sql` → `db/108_auth_privacy_hardening.sql` → `db/113_signup_edges.sql`. 번호 107은 [107-user-profile-fields.md](./107-user-profile-fields.md)(프로필 추가 칸 제안, 적용하지 않음)와 겹치지만 별개다. 운영 DB에는 아직 적용하지 않았다.
+- 적용 순서: `db/101_auth_users.sql` → `db/106_signup_approval.sql` → `db/107_email_signup_verification.sql` → `db/108_auth_privacy_hardening.sql` → `db/113_signup_edges.sql`. 이 순서에 해당하는 SQL 파일은 저장소에 존재한다. 번호 107은 [107-user-profile-fields.md](./107-user-profile-fields.md)(프로필 추가 칸 제안, 적용하지 않음)와 겹치지만 별개다. 운영 DB에서 107·108·113 전체를 이 순서로 실행했다는 이력이나 각 파일의 전체 적용 여부는 확인하지 않았다.
 - `signup_requests`의 RLS 및 anon/authenticated 권한 회수는 유지한다.
 
-운영 확인 범위: 113 관련 인덱스와 조건은 운영 Supabase에서 확인했지만, 이 사실만으로 107·108의 전체 적용이나 실행 이력을 확정하지 않는다. 저장소는 스키마 존재 여부를 확인해 구버전 DB에서 이메일 인증·비밀번호 가입을 유지하고 Google 경로만 사용 불가로 닫는다.
+운영 확인 범위: 113 관련 인덱스와 조건을 운영 DB에서 직접 관찰했다는 원본 기록은 저장소에서 찾지 못했다. `db/db.md`의 2026-11-09 운영 조회 기록, 2026-11-11 기준 109 적용 기록, 107·108에 대한 저장소 내 로컬 시험 기록은 각각 대상과 시점이 다르며, 107·108·113의 전체 운영 적용·실행 이력이나 114의 운영 적용을 확정하지 않는다. 저장소는 스키마 존재 여부를 확인해 구버전 DB에서 이메일 인증·비밀번호 가입을 유지하고 Google 경로만 사용 불가로 닫는다.
 
 ## AC
 
