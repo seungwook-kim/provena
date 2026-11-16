@@ -35,7 +35,8 @@ SYSTEM = (
 )
 SYSTEM_TAGGED = f"[[task:{TASK}]]\n{SYSTEM}"
 # `GRAPH_DECOMPOSE_KEEP_SUBJECT=1`(코드 기본 꺼짐, 서비스 설정 켬): 하위 질문이 원 질문의 대상·조건을 빠뜨리면 하위 질문 검색이 원 질문과 다른 대상을 찾는다.
-# 켜면 아래 규칙 한 줄을 프롬프트 끝에 더하고(`system_prompt`), 코드가 빠진 앞머리 대상 구를 하위 질문 앞에 붙인다(`keep_subject`). 예시는 핸드북과 무관한 일반 문장이다
+# 켜면 아래 규칙 한 줄을 프롬프트 끝에 더하고(`system_prompt`), 코드가 빠진 앞머리 대상 구를 하위 질문 앞에 붙인다(`keep_subject`). 예시는 핸드북과 무관한 일반 문장이다.
+# 인용 표시(근거 섹션, 출처, 판 날짜)만 묻는 하위 질문은 먼저 뺀다(`drop_citation_asks`). 규칙이 그 말에도 대상·조건을 붙여 판정이 별도 사실로 세기 때문이다
 KEEP_SUBJECT_RULE = (
     "\n- 원 질문에 대상(누구·어디·무엇)이나 조건(기간·금액·역할·지역 등)이 있으면 모든 하위 질문에 그 대상과 조건을 그대로 넣는다. "
     "하위 질문 하나만 따로 읽어도 원 질문과 같은 대상과 조건을 묻는 질문이어야 한다. "
@@ -159,6 +160,27 @@ def keep_subject(question: str, subs: list[str]) -> list[str]:
     return out if all(len(s) <= MAX_SUB_CHARS for s in out) else subs
 
 
+# 인용 표시만 묻는 말: 답마다 코드가 근거 제목 경로, 판 날짜, 출처를 붙인다(`build.py`의 인용 표시, 답 작성·근거 판정 지침).
+# 그래서 "근거 섹션은 어디야?", "판 날짜는 언제야?"는 따로 찾을 사실이 아니라 본 사실의 인용으로 채워진다. 하위 질문 끝이 이 말에 묻는 말만 붙은 꼴일 때만 해당한다.
+# "근거는 뭐야?"(이유일 수 있다), "해지 조항은 뭐야?"(조항 내용), "릴리스 날짜는 언제야?"(정책 사실)는 해당하지 않는다
+_CITATION_ASK = re.compile(
+    r"(?:^|\s|의)(?:근거(?:가\s*되는)?\s*(?:섹션|조항|절|문서|규정)|출처(?:\s*(?:섹션|문서|링크))?|"
+    r"판\s*(?:\([^)]*\)\s*)?(?:날짜|번호|일자))"
+    r"\s*(?:은|는|이|가)\s*(?:무엇|뭐|어디|언제|몇)[가-힣]*\s*[?？]?$")
+
+
+def drop_citation_asks(subs: list[str]) -> list[str]:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`의 코드 쪽 보정: 인용 표시(근거 섹션, 출처, 판 날짜·번호)만 묻는 하위 질문은 뺀다.
+    이 말은 따로 찾을 사실이 아니다. 하위 질문으로 남으면 판정이 그 말을 별도 사실로 세고, 대상·조건을 붙인 꼴("... 10만 달러일 때 판 날짜는 언제야?")은 본 사실의 근거로 채워지지 않는 것처럼 보인다.
+    빼고 남은 하위 질문이 `MIN_SUB`개 미만이면 나누지 않은 것(빈 목록)이다. LLM을 부르지 않는다."""
+    if not subs:
+        return subs
+    kept = [s for s in subs if not _CITATION_ASK.search(s.strip())]
+    if len(kept) == len(subs):
+        return subs
+    return kept if len(kept) >= MIN_SUB else []
+
+
 def keep_premise(question: str, subs: list[str]) -> list[str]:
     """원 질문이 두 문장 이상이고, 앞 문장(전제)의 내용어가 어느 하위 질문에도 없으면 모든 하위 질문 앞에 그 전제 문장을 붙인다(사전 등록 62.45).
     분해가 전제("외부 SaaS를 도입")를 하위 질문에서 빼거나 줄이면 첫 검색 문맥의 맨 위가 바뀌어 판정이 갈린다. LLM 호출과 프롬프트는 그대로이고 코드가 문장만 붙인다.
@@ -218,7 +240,10 @@ def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
         log.warning("예비 분해 호출 실패: %s", type(e).__name__)
         return None
     obj = parse_split(text)
-    return None if obj is None else bool(normalize(question, obj))
+    if obj is None:
+        return None
+    subs = normalize(question, obj)
+    return bool(drop_citation_asks(subs) if keep_subject_enabled() else subs)
 
 
 def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
@@ -241,7 +266,7 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
         if obj is not None:
             subs = drop_company_prefix(normalize(question, obj))
             if keep:
-                subs = keep_subject(question, subs)
+                subs = keep_subject(question, drop_citation_asks(subs))
             return keep_premise(question, subs), "llm"
         source = "invalid"
     return [], source

@@ -86,3 +86,50 @@ def test_service_profile_turns_the_switch_on():
     env2: dict = {SWITCH: "off"}
     SP.apply_service_profile(env2)
     assert env2[SWITCH] == ""   # 운영에서 off를 주면 재배포 없이 끈다(빈 값 = 코드 기본 꺼짐)
+
+
+# 인용 표시(근거 섹션, 출처, 판 날짜)만 묻는 부분은 따로 찾을 사실이 아니다. 답마다 코드가 붙인다
+CITE_Q = "해외 주문의 반품 수수료는 얼마이고, 근거 섹션과 판 날짜는 무엇인가요?"
+CITE_SUBS = ["해외 주문의 반품 수수료는 얼마야?", "해외 주문의 반품 수수료 근거 섹션은 어디야?", "해외 주문의 반품 수수료의 판 날짜는 언제야?"]
+
+
+def test_on_citation_parts_do_not_become_standalone_subs(on):
+    seen: list = []
+    assert D.decompose_question(fake_ask(CITE_SUBS, seen), CITE_Q) == ([], "llm")   # 사실 하나만 남으면 나누지 않은 것이다
+    assert D.gate_split(fake_ask(CITE_SUBS, seen), CITE_Q) is False
+
+
+def test_on_citation_parts_drop_but_two_facts_stay_split(on):
+    q = "해외 주문의 배송은 며칠 걸리고 반품 수수료는 얼마이며, 출처는 어디야?"
+    subs = ["해외 주문의 배송은 며칠 걸려?", "해외 주문의 반품 수수료는 얼마야?", "해외 주문 규정의 출처는 어디야?"]
+    assert D.decompose_question(fake_ask(subs, []), q) == (subs[:2], "llm")
+
+
+def test_off_keeps_citation_subs_as_measured(off):
+    assert D.decompose_question(fake_ask(CITE_SUBS, []), CITE_Q) == (CITE_SUBS, "llm")
+    assert D.gate_split(fake_ask(CITE_SUBS, []), CITE_Q) is True
+
+
+@pytest.mark.parametrize("sub", [
+    "근거 섹션은 어디야?", "해외 주문의 반품 수수료 근거 조항은 무엇이야?", "출처는 어디야?", "출처 문서는 뭐야?",
+    "규정의 판 날짜는 언제야?", "규정의 판(버전) 날짜는 언제야?", "판 번호는 몇이야?", "반품 규정의 근거가 되는 문서는 무엇인가요?",
+])
+def test_citation_ask_matches(sub):
+    assert D._CITATION_ASK.search(sub)
+
+
+@pytest.mark.parametrize("sub", [
+    "반품 수수료의 근거는 뭐야?",          # 이유를 묻는 말일 수 있다
+    "계약 해지 조항은 무엇이야?",          # 조항의 내용을 묻는다
+    "다음 릴리스 날짜는 언제야?",          # 정책 사실이다
+    "반품 수수료는 얼마야?",
+    "판매 날짜는 언제야?",
+    "근거 섹션을 보고 반품 수수료는 얼마야?",
+])
+def test_citation_ask_leaves_facts(sub):
+    assert not D._CITATION_ASK.search(sub)
+
+
+def test_drop_citation_asks_keeps_lists_without_citation_parts():
+    assert D.drop_citation_asks(SUBS_DROPPED) == SUBS_DROPPED
+    assert D.drop_citation_asks([]) == []
