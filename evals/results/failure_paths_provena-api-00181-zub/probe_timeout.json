@@ -1,0 +1,40 @@
+{
+  "path": "timeout",
+  "where": "0% 판 LLM_DEADLINE_S=0.01, LLM_MAX_RETRIES=0",
+  "base_kind": "tag",
+  "tag": "fptime",
+  "revision": "provena-api-fptime1117",
+  "question_id": "1",
+  "org": null,
+  "as_of_sent": "2026-10-27",
+  "at": "2026-11-17T04:00:41+09:00",
+  "expected": {
+    "event": "error",
+    "code": "timeout",
+    "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요."
+  },
+  "got": {
+    "code": "timeout",
+    "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.",
+    "message_matches": true
+  },
+  "passed": true,
+  "response": {
+    "http_status": 200,
+    "status": "error",
+    "total_s": 0.495,
+    "events": [
+      "error"
+    ],
+    "error": {
+      "code": "timeout",
+      "message": "답을 만드는 시간이 제한을 넘어 중단했습니다. 질문을 더 짧게 줄이거나 여러 개로 나누어 잠시 뒤 다시 물어봐 주세요.",
+      "request_id": "b3b2c73c47fe4aef908fc1582fdf3399"
+    },
+    "done": null,
+    "answer_chars": 0,
+    "citation_count": 0,
+    "token_text": ""
+  },
+  "cost_usd": 0.0
+}

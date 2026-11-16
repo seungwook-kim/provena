@@ -1,0 +1,24 @@
+2026-11-16 02:14:01 시작 2026-11-16 02:14:01 +09:00 (UTC 2026-11-15 17:14:01) 모드=실행 trigger=schedule 컴퓨터=<컴퓨터> PS=5.1.26100.9818
+2026-11-16 02:14:01 로그 <사용자 폴더>\provena_sync_logs\sync_20261116_021401.log
+2026-11-16 02:14:01   [있음] 저장소 <저장소>
+2026-11-16 02:14:01   [있음] 파이썬 <저장소>\.venv\Scripts\python.exe
+2026-11-16 02:14:01   [있음] git
+2026-11-16 02:14:01   [있음] gcloud
+2026-11-16 02:14:01   [있음] 핸드북 캐시 <사용자 폴더>\.cache\provena\handbook
+2026-11-16 02:14:01 저장소 커밋 0e4738ac (seunguk)
+2026-11-16 02:14:02 gcloud 활성 계정 있음
+2026-11-16 02:14:04   운영 연결 DATABASE_URL <- <PROVENA_DB_SECRET_NAME>:latest
+2026-11-16 02:14:04   운영 연결 DATABASE_DIRECT_URL <- <DB 직접 연결 비밀 이름>:latest
+2026-11-16 02:14:04   운영 연결 VOYAGE_API_KEY <- <PROVENA_VOYAGE_SECRET_NAME>:2
+2026-11-16 02:14:04   운영 연결 GMAIL_APP_PASSWORD <- <PROVENA_GMAIL_SECRET_NAME>:latest
+2026-11-16 02:14:04   EMBED_MODEL 운영 서비스에 없음 → 코드 기본값 voyage-4
+2026-11-16 02:14:07 비밀값 받음: DATABASE_URL<-<PROVENA_DB_SECRET_NAME>(latest), VOYAGE_API_KEY<-<PROVENA_VOYAGE_SECRET_NAME>(2) (값은 기록하지 않음)
+2026-11-16 02:14:07 정시 실행: 슬롯 = UTC 날짜 2026-11-15 (trigger=schedule)
+2026-11-16 02:14:07 실행: python -m backend.rag.ingest.schedule --once (작업 폴더 저장소, 제한 30분)
+2026-11-16 02:14:47 --- 파이썬 출력(비밀 가림) ---
+2026-11-16 02:14:47   비교 8586740b5a → 8fce826733: {'pages': 60, 'added': 2, 'modified': 56, 'removed': 2, 'moved': 0, 'unchanged': 1507, 'list_complete': True, 'reasons': [], 'by_kind': {'content': 52, 'format_only': 6, 'no_section_change': 2}, 'sections': {'added': 50, 'format_only': 17, 'modified': 74, 'removed': 60}, 'articles': 184}
+2026-11-16 02:14:47   반영 완료: {'added': 2, 'modified': 50, 'format_only': 6, 'removed_seen': 2, 'removed_applied': 0, 'removed_held': 0, 'removed_retried': 0, 'articles': 184, 'embedded': 167, 'reused': 964}
+2026-11-16 02:14:47   {"status": "succeeded", "run_id": 2, "slot": "2026-11-15", "added": 2, "modified": 50, "format_only": 6, "removed_seen": 2, "removed_applied": 0, "removed_held": 0, "removed_retried": 0, "articles": 184, "embedded": 167, "reused": 964, "list_reasons": []}
+2026-11-16 02:14:47 --- 끝 (걸린 시간 40.6초) ---
+2026-11-16 02:14:47 sync_runs 요약: status=succeeded run_id=2 slot=2026-11-15 added=2 modified=50 format_only=6 removed_seen=2 removed_applied=0 removed_held=0 removed_retried=0 articles=184 embedded=167 reused=964 list_reasons=
+2026-11-16 02:14:47 끝 2026-11-16 02:14:47 +09:00 종료 코드 0 (걸린 시간 46.7초)

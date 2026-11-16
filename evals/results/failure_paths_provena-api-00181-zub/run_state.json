@@ -1,0 +1,40 @@
+{
+  "start": "2026-11-17T03:53:30",
+  "serving_start": "provena-api-00178-max=100",
+  "tags_start": "c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex",
+  "template_start": "provena-api-00181-zub",
+  "cost_cap": {
+    "url": "https://fpcap---provena-api-cttaanqntq-du.a.run.app",
+    "rev": "provena-api-fpcap1117",
+    "health": "200",
+    "image": "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:1a49f9e393a6a4b029b38cf9c5651e511052d611846372ffdc089893f6791e3c"
+  },
+  "timeout": {
+    "url": "https://fptime---provena-api-cttaanqntq-du.a.run.app",
+    "rev": "provena-api-fptime1117",
+    "health": "200",
+    "image": "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:1a49f9e393a6a4b029b38cf9c5651e511052d611846372ffdc089893f6791e3c"
+  },
+  "template_vars_left": "",
+  "deleted": [
+    {
+      "result": "Deleted revision [provena-api-fpcap1117].",
+      "revision": "provena-api-fpcap1117"
+    },
+    {
+      "result": "Deleted revision [provena-api-fptime1117].",
+      "revision": "provena-api-fptime1117"
+    },
+    {
+      "result": "ERROR: (gcloud.run.revisions.delete) FAILED_PRECONDITION: The latest created Revision \"provena-api-fprest1117\" cannot be directly deleted.",
+      "revision": "provena-api-fprest1117"
+    }
+  ],
+  "end": "2026-11-17T04:01:03",
+  "serving_end": "provena-api-00178-max=100",
+  "tags_end": "c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex",
+  "template_end": "provena-api-fprest1117",
+  "template_end_image_ok": true,
+  "remaining_my_revisions": "provena-api-fprest1117",
+  "restore_revision_check": "provena-api-fprest1117 vs provena-api-00181-zub (2026-11-17 04:03 KST): 환경 변수 이름·값·비밀 참조 차이 0, 이미지 digest 같음, CPU 1·메모리 1Gi·최대 인스턴스 1·동시 요청 80 같음, 라벨 commit=9bc7d587"
+}

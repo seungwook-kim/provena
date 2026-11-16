@@ -1,0 +1,97 @@
+{
+ "index_meta": {
+  "id": "1",
+  "embedder": "voyage-4",
+  "revision": "api:voyage-4",
+  "dim": "1024",
+  "prefixes": "{'note': '1차 비교 캐시 — check로 이 장비 재계산과 대조할 것'}",
+  "max_seq_length": "512",
+  "n_chunks": "23095",
+  "chunks_sha256": "19d9a8f82f0b94d6409c864b59d510c51c7a253ef6f7bb28775c646801fe3227",
+  "vectors_sha256": "cedc40bb0084d26006c9dee763547ef7a16e944f3bfc5de386f6c29b3ef3ead2",
+  "status": "ready",
+  "generation": "6",
+  "loaded_at": "2026-11-13 08:10:13.500064+00:00",
+  "links_sha256": "07fc380a247d6e8ca3f2af64af9ff113cb55af9569fe5726b35178385781e07f"
+ },
+ "versions_valid_from_2026_11_16": [
+  {
+   "version_id": "0d33f51d13ae",
+   "rule_seq": "1088585461",
+   "org": "security",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 36,
+   "source_url": "https://handbook.gitlab.com/handbook/security/corporate/how-we-work/"
+  },
+  {
+   "version_id": "c4d43b827ec5",
+   "rule_seq": "1647261768",
+   "org": "data-engineering",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 19,
+   "source_url": "https://handbook.gitlab.com/handbook/engineering/data-engineering/database-excellence/self-managed-database-experience/"
+  },
+  {
+   "version_id": "c4d43b827ec5",
+   "rule_seq": "1946950226",
+   "org": "data-engineering",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 19,
+   "source_url": "https://handbook.gitlab.com/handbook/engineering/data-engineering/database-excellence/"
+  },
+  {
+   "version_id": "07ab32dd3234",
+   "rule_seq": "2177044734",
+   "org": "infra",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 24,
+   "source_url": "https://handbook.gitlab.com/handbook/engineering/infrastructure-platforms/production-engineering/cloud-cost-utilization/opportunities/"
+  },
+  {
+   "version_id": "0d33f51d13ae",
+   "rule_seq": "2685322003",
+   "org": "security",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 32,
+   "source_url": "https://handbook.gitlab.com/handbook/security/corporate/systems/"
+  },
+  {
+   "version_id": "0d33f51d13ae",
+   "rule_seq": "3484626618",
+   "org": "security",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 2,
+   "source_url": "https://handbook.gitlab.com/handbook/security/threat-management/"
+  },
+  {
+   "version_id": "0d33f51d13ae",
+   "rule_seq": "3856313882",
+   "org": "security",
+   "version_date": "2026-11-16",
+   "valid_from": "2026-11-16",
+   "valid_to": "None",
+   "chunks": 23,
+   "source_url": "https://handbook.gitlab.com/handbook/security/security-operations/red-team/how-we-operate/"
+  }
+ ],
+ "versions_valid_to_2026_11_16": 40,
+ "counts": {
+  "docs": 1520,
+  "versions": 1863,
+  "open_versions": 1485,
+  "chunks": 31457
+ },
+ "multi_open_versions": 0
+}

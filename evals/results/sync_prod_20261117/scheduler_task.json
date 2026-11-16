@@ -1,0 +1,11 @@
+{
+  "task_name": "provena-handbook-sync",
+  "state": "Ready",
+  "trigger": "매일 02:14 (시작 2026-11-16T02:14:00+09:00, 1일 간격)",
+  "action": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"<사용자 폴더>\\provena_sync\\sync_task.ps1\" -Trigger schedule -AlertTo \"<주소>\"",
+  "repo_copy": "scripts/ops/sync_task.ps1 (같은 로직, 프로젝트 id·비밀 이름·주소·개인 경로를 환경 변수로 바꾼 사본)",
+  "last_run": "2026-11-17 02:14:01 KST",
+  "last_result": 0,
+  "next_run": "2026-11-18 02:14:00 KST",
+  "checked_at": "2026-11-17T03:49:55+09:00"
+}
