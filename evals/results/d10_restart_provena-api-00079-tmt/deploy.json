@@ -1,0 +1,15 @@
+﻿{
+    "revision_before":  "provena-api-00075-5zk",
+    "revision_after":  "provena-api-00079-tmt",
+    "commit_after":  "c565998d",
+    "commit_after_full":  "c565998d89fce2e2c38238d44650603a1b5d0a8d",
+    "deployed_at_utc":  "2026-11-16T01:14:03Z",
+    "serving":  "provena-api-00079-tmt=100%",
+    "tags":  "",
+    "health":  "200",
+    "mcp_no_token":  "401",
+    "mcp_token_env":  true,
+    "leftover_env":  "",
+    "image":  "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:7ac39b8f18c0a2a37acd6dd38e7e8fe9bccd8478a4e2cde1ad86a7484fb4878b",
+    "ok":  true
+}

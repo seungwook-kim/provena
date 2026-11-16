@@ -6,7 +6,7 @@
    single·multi summary.json을 3회 평균한다.
 2. 결과 summary의 dataset_sha256이 `evals/FROZEN.json`의 현재 동결 해시와 같은 결과만 비교한다.
    해시가 다른 옛 결과(첫 동결 해시로 잰 값 등)는 비교에서 빼고 표에 적는다.
-3. 통과선(README 목표 지표, EVAL_REPORT 4장)과 기준 결과(`evals/ci_baseline.json`)와 비교한다.
+3. 통과선(docs/SPEC.md 3장 기준, EVAL_REPORT 4장)과 기준 결과(`evals/ci_baseline.json`)와 비교한다.
    통과선 미달이거나 기준보다 나빠지면 종료 코드 1.
 4. 기준 파일에 `operating` 항목이 있으면 가장 최근 운영 배포판 측정도 같은 방식으로 비교한다.
    `evals/results/deploy_latency_provena-api-*/`(배포 응답 시간 측정과 그 정답 근거 대조 `citation_gold.json`) 중
