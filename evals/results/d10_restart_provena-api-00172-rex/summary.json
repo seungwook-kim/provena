@@ -1,0 +1,45 @@
+{
+  "revision_before_restart": "provena-api-00172-rex",
+  "commit_before_restart": "194dfd9a",
+  "revision_after_restart": "provena-api-d10r1116",
+  "commit_after_restart": "194dfd9a",
+  "pending_created_at_utc": "2026-11-16T14:17:16+00:00",
+  "resume_started_at_utc": "2026-11-16T14:32:38+00:00",
+  "resume_finished_at_utc": "2026-11-16T14:32:45+00:00",
+  "c_category": "Legal Contracts",
+  "c_decision": "reject",
+  "items_expected": 3,
+  "items_passed": 3,
+  "all_passed": true,
+  "resume_log": "통과",
+  "restart_mode": "tag0",
+  "restarted_at_utc": "2026-11-16T14:19:02Z",
+  "items": [
+    {
+      "label": "a",
+      "kind": "issue_table",
+      "decision": "approve",
+      "passed": true,
+      "failed_checks": [],
+      "resume_log_R10": true
+    },
+    {
+      "label": "b",
+      "kind": "issue_table",
+      "decision": "reject",
+      "passed": true,
+      "failed_checks": [],
+      "resume_log_R10": true
+    },
+    {
+      "label": "c",
+      "kind": "decision_table",
+      "decision": "reject",
+      "passed": true,
+      "failed_checks": [],
+      "resume_log_R10": true
+    }
+  ],
+  "problems": [],
+  "evidence_file": "restart_resume.json"
+}
