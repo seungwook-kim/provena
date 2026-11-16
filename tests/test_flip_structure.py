@@ -48,7 +48,7 @@ def _first(body: str) -> str:
 
 
 def test_set_is_the_frozen_copy():
-    assert hashlib.sha256(SET.read_bytes()).hexdigest().upper() == SET_SHA256
+    assert hashlib.sha256(SET.read_bytes().replace(b"\r\n", b"\n")).hexdigest().upper() == SET_SHA256   # 동결 값은 LF 기준(Windows autocrlf로 받아도 같게)
     assert (len(FLIP), len(FLIP_TEXT), len(NORMAL)) == (16, 2, 14)
 
 
