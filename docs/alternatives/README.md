@@ -15,7 +15,7 @@
 | `chatbot_ref_sonnet_2026-11-13.md` | 2026-11-13 같은 회사 상위 모델 Claude Sonnet 5.5의 1~10번(비교 대상이 아니라 참고). 머리에 공유 링크와 판정 표 | 답 전문 |
 | `captures_2026-11-13/` | 위 세 대화의 공유 페이지 전체 화면 캡처 PNG 3장(`chatgpt_share_full.png`, `claude_haiku_share_full.png`, `claude_sonnet_share_full.png`) | 이미지 |
 
-우리 서비스의 답은 10장에서 1~5번에 리비전 `provena-api-00035-h69`의 측정 행을 썼습니다. 위치는 `evals/results/deploy_latency_provena-api-00035-h69/run1~3/rows.jsonl`(v2 6, 15, 28, 16번)과 `evals/results/deploy_latency_holdout_provena-api-00035-h69/run1~3/rows.jsonl`(검증 109번)의 `answer` 칸입니다. 6~10번은 최종 배포 뒤 운영 측정의 3회 값에서 가져오며, 위치는 `evals/results/deploy_latency_<리비전>/run1~3/rows.jsonl`(v2 40, 3, 31번)과 `evals/results/range_retrieval_62_7/answers_deploy_<리비전>/`(금액 201, 202번)입니다. 리비전은 측정 뒤 적습니다.
+우리 서비스의 답은 10장에서 10문항 모두 최종 측정 판 리비전 `provena-api-00065-q84`의 측정 행을 썼습니다. 위치는 `evals/results/deploy_latency_provena-api-00065-q84/run1~3/rows.jsonl`(v2 6, 15, 28, 16, 40, 3, 31번), `evals/results/deploy_latency_holdout_provena-api-00065-q84/run1~3/rows.jsonl`(검증 109번)의 `answer` 칸과 `evals/results/range_retrieval_62_7/answers_deploy_provena-api-00065-q84/rows.jsonl`(금액 201, 202번)입니다. 이전에는 `provena-api-00044-49s`, 그 앞에는 `provena-api-00035-h69`의 값을 썼습니다. 우리 서비스 칸의 판정 가안과 근거는 `judge_sheet_00065.md`에 있습니다.
 
 ## 한계
 
