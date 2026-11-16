@@ -240,7 +240,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 ### 4-2. rag: 검색
 
 - 입력 `SearchQuery(query, org, as_of, k)` → 출력 `list[Chunk]` (점수 포함). `org`는 "절"(예: security), `as_of`는 "이 날짜 기준 핸드북 판"이다(6장).
-- 설계 당시 순서: 절·판 필터 → 벡터 검색(pgvector) + BM25 → RRF로 합치기 → 리랭킹 → 상위 k. **현재 확정 조합(2026-11-05)은 voyage-4 · `dense_en`(영어 문장 벡터만, BM25 없음) · 리랭커 없음 · k=5 · 질문 분해 · 링크 확장 L1x2 + 금액 구간 조회**다(`docs/specs/search.md` 확정 조합·Happy Path, `.env.example:156-157`). 하이브리드·리랭커는 `SEARCH_MODE`·`RERANK_*`로 켤 수 있는 비교용이다
+- 설계 당시 순서: 절·판 필터 → 벡터 검색(pgvector) + BM25 → RRF로 합치기 → 리랭킹 → 상위 k. **현재 확정 조합(2026-11-05)은 voyage-4 · `dense_en`(영어 문장 벡터만, BM25 없음) · 리랭커 없음 · k=5 · 질문 분해 · 링크 확장 L1x2 + 금액 구간 조회**다(`docs/specs/search.md` 확정 조합·Happy Path, `.env.example:193-195`). 하이브리드·리랭커는 `SEARCH_MODE`·`RERANK_*`로 켤 수 있는 비교용이다
 - **한국어 질문, 영어 문서:** 설계 당시에는 다국어 임베딩으로 한국어 질문을 그대로 쓰는 방식과 번역 후 검색을 비교하기로 했다. 비교 결과 현재 기본은 LLM이 질문을 영어 문장으로 바꿔(`QUERY_TRANSLATE`, 번역은 장부에 저장) 그 문장의 벡터로 검색하는 `dense_en`이다(`docs/specs/search.md` 3·4단계).
 - `as_of`가 있으면 그 날짜에 유효했던 커밋 판만 검색한다.
 - **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. **(2026-11-11 현재 미구현 부분: `data/acl_policy.json`과 `SearchQuery.allowed_groups`는 코드에 없다(`backend/schemas/chunk.py:35-40`, grep 0건). `chunks.acl`·`users.groups` 칸과 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만 있고 코퍼스 `acl`은 전부 비어 있다. 검색 단계 거르기를 만들지는 팀장 판단이다. 2026-11-11 진형 결정: 검색 결과와 평가 점수가 바뀌므로 동결 전에는 만들지 않는다, 알려진 한계로 EVAL_REPORT 6장에 적었다.)** 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
@@ -287,13 +287,13 @@ flowchart TD
 
 | 노드 | LLM 사용 | 설명 |
 |---|---|---|
-| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:141-145`의 `MemoryPatch`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
+| 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:142-146`의 `MemoryPatch`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |
 | 이어 묻기(`followup`) | 있음 | 같은 대화에 앞 질문이 쌓여 있을 때만 지난다. 지금 질문이 앞 질문에 기대면 혼자서도 뜻이 통하는 질문으로 다시 쓴다(LLM 1회). 그 밖에는 질문을 그대로 둔다. 스위치 `CHAT_FOLLOWUP`(기본 켬)을 끄면 지나지 않는다 |
 | 질문 종류 | 있음 | 정책 질문 / 결정표 질문 / 합동 검토 / 도메인 밖 |
 | 도메인 밖 거절(`out_of_domain`) | 없음 | 분명히 핸드북과 무관한 질문을 재작성과 검색 없이 거절한다 |
 | 질의 재작성 | 있음 | 핸드북 용어(영어)로 바꾸고 절·시점 조건을 뽑는다. `glossary` Skill을 쓴다 |
 | 검색 | 없음 | `search_handbook` 호출 (MCP 또는 직접 호출, `SEARCH_VIA_MCP`) |
-| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:64`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:56`, `.env.example:65`) |
+| 근거 충분 판정 | 있음 | 재검색은 최대 2회(`MAX_RESEARCH=2`, `backend/graph/build.py:64`). 서비스 기본값(`SERVICE_PROFILE`)은 1회다(`backend/graph/service_profile.py:56`, `.env.example:60`) |
 | 되묻기 또는 거절(`give_up`) | 없음 | 근거 충분 판정이 재검색 한도 초과 등으로 답을 쓰지 않기로 했을 때(`after_judge`) 판정이 낸 되묻기 문장(유출·출력 검사 통과, 숫자 없음)을 내거나 거절한다 |
 | 답 작성 | 있음 | `citation-rules` Skill을 쓴다. 결정표 질문이면 `delegation` Skill도 쓴다 |
 | 인용 검사 | 없음 | 인용한 섹션 id·판이 실제로 있는지. 답(`answer`)이면 근거 판정으로, 거절이면 끝으로 간다 |
@@ -418,6 +418,8 @@ flowchart TD
 | 503 `save_failed` | 같은 결정을 다시 보내면 이어서 처리한다 |
 
 SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 멈췄다고 알리고, 질문을 줄이거나 나누어 다시 물어보라고 안내한다(2026-11-13 보완, `MSG_LIMIT`).
+
+**질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(`MAX_RESEARCH=2`, `backend/graph/build.py:64`)이 호출 수를 묶는다. 최종 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
 
 리콜 웹훅 형식(수신 경로, 본문, 서명)은 11장 11-1에서 정한다.
 
@@ -631,7 +633,7 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 데모 (G2) | 로컬 pgvector 컨테이너 + 스냅샷 | 키 없음: 기록해 둔 응답 재생 | 데모 전용 2개 시드 (평가용과 다른 값) | `docker compose up` (10분 안) |
 | 운영 (G1) | Supabase Postgres + pgvector | 생성 LLM (11장) | 평가용 테스트 계정 2개 (비공개 제출) | GCP Cloud Run |
 
-- 기본 임베딩은 `voyage-4` API이고(`backend/rag/retrieve/embed.py:51, 53`), 리랭커는 쓰지 않는다(`.env.example:156`, `backend/rag/retrieve/retrieve.md:5`). 로컬 모델(`HF_HUB_OFFLINE=1` 기본, `backend/requirements-local-models.txt`)은 비교용이다. 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재하고(`data/index.tar.gz`), 키 없는 데모는 기록된 질문 벡터·응답만 재생한다(`docs/specs/search.md`, `embed.py` 질문 벡터 재생, PR #81).
+- 기본 임베딩은 `voyage-4` API이고(`backend/rag/retrieve/embed.py:51, 53`), 리랭커는 쓰지 않는다(`.env.example:194-195`의 `RERANK_MODEL`·`RERANK_TOP` 빈 값, `backend/rag/retrieve/retrieve.md:5`). 로컬 모델(`HF_HUB_OFFLINE=1` 기본, `backend/requirements-local-models.txt`)은 비교용이다. 문서 임베딩은 오프라인에서 API로 만들어 스냅샷으로 적재하고(`data/index.tar.gz`), 키 없는 데모는 기록된 질문 벡터·응답만 재생한다(`docs/specs/search.md`, `embed.py` 질문 벡터 재생, PR #81).
 - 데모 모드는 키가 없으므로 한→영 질의 변환과 질문 벡터도 기록된 것을 재생한다. 기록에 없는 질문은 재생할 수 없다(`README.md`·`docs/GATES.md` G2의 한계 설명).
 - 모든 LLM 호출은 `backend/services/llm.py` 한 곳을 거친다. 데모 모드 재생, Langfuse 트레이스, 비용 상한을 이곳에서 처리한다.
 - Cloud Run 메모리와 이미지 크기는 D0에 확인한다(11장).

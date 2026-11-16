@@ -322,7 +322,7 @@
 |---|---|---|---|---|---|
 | `approval_id` | `text` | NO | | PK | 승인 건 id |
 | `kind` | `text` | NO | | | `decision_table`, `issue_table`, `team_review_failed`(CHECK `approvals_kind_check`) |
-| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:328`) |
+| `thread_id` | `text` | NO | | | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:149-150`의 `internal_thread`) |
 | `status` | `text` | NO | `'pending'` | | `pending`, `approved`, `rejected`(CHECK). `team_review_failed`의 읽는 법은 `COMMENT ON COLUMN`(102:43)에 있다 |
 | `decided_by` | `text` | YES | | | 결정한 사용자 id |
 | `summary` | `text` | NO | `''` | | 승인함 화면(`ApprovalItem`) 요약 |
@@ -330,6 +330,10 @@
 | `comment` | `text` | NO | `''` | | 결정 사유. 쟁점표 반려 사유가 여기에 쓰인다 |
 | `decided_at` | `timestamptz` | YES | | | 결정 시각 |
 | `target_id` | `text` | YES | | | 승인 대상 id. 결정표면 `table_id`, 쟁점표면 승인 전 `approval_id`와 승인 뒤 저장된 `table_id`, 팀 실패 알림이면 `approval_id`(102:41) |
+| `resume_count` | `integer` | NO | `0` | | 결정 처리가 그래프를 재개한 횟수(성공·실패·재개 값 거절 포함). `db/112_approval_resume_log.sql:5` |
+| `duplicate_ignored_count` | `integer` | NO | `0` | | 이미 끝난 건에 같은 결정이 다시 와서 그래프를 돌리지 않은 횟수(112:6) |
+| `last_resumed_at` | `timestamptz` | YES | | | 마지막으로 그래프를 재개한 시각. 재개한 적이 없으면 NULL(112:7) |
+| `last_resume_result` | `text` | YES | | | `resumed`(재개해 끝까지), `resume_failed`(재개 도중 오류), `rejected_value`(그래프가 재개 값을 거절), `duplicate_ignored`(같은 결정 재전송이라 그래프를 돌리지 않음). `COMMENT ON COLUMN`(112:9). 네 칸을 쓰는 곳은 `PostgresDecisionRepo.record_resume`, 읽는 곳은 `GET /approvals`, `GET /approvals/{approval_id}` |
 
 | 색인 이름 | 정의 | 그 이유가 되는 질의 |
 |---|---|---|
@@ -831,7 +835,7 @@
 
 | 칼럼명 | 타입 | NULL | 기본값 | 키 | 설명 |
 |---|---|---|---|---|---|
-| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:90-91, 234`) |
+| `thread_id` | `text` | NO | | PK | 그래프 thread 이름 `<user_id>:<thread_id>`(`backend/api/routes.py:149-150`의 `internal_thread`, `/chat`은 307) |
 | `checkpoint_ns` | `text` | NO | `''` | PK | 체크포인트 네임스페이스 |
 | `checkpoint_id` | `text` | NO | | PK | 체크포인트 id |
 | `parent_checkpoint_id` | `text` | YES | | | 이전 체크포인트 id |
