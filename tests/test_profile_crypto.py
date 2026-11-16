@@ -152,6 +152,37 @@ def test_broken_key_file_is_replaced_with_a_new_key(tmp_path):
     assert two.decrypt(UID_A, "name", one.encrypt(UID_A, "name", "김민수"), 1) == "김민수"
 
 
+def test_badly_formatted_key_file_is_removed_and_regenerated(tmp_path):
+    """읽기는 됐는데 형식이 틀린 파일만 지우고 새 키를 적는다."""
+    path = tmp_path / "k.key"
+    path.write_text("garbage", encoding="ascii")
+    keys = load_or_create_local_key(path)
+    assert set(keys) == {1}
+    assert parse_keys(path.read_text(encoding="ascii")) == keys   # 새 키가 같은 경로에 적혔다
+
+
+@pytest.mark.parametrize("error", [PermissionError("denied"), UnicodeDecodeError("ascii", b"\xff", 0, 1, "bad")])
+def test_key_file_read_error_keeps_the_file_and_raises(tmp_path, monkeypatch, error):
+    """읽는 중 오류(권한·잠금·해독 실패)는 파일을 지우지도 덮어쓰지도 않고 시작을 멈춘다(기존 내 정보 보호)."""
+    from pathlib import Path
+    path = tmp_path / "k.key"
+    original = _key_text(1) + "\n"
+    path.write_text(original, encoding="ascii")
+    real_read_text = Path.read_text
+
+    def failing_read_text(self, *args, **kwargs):
+        if self == path:
+            raise error
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", failing_read_text)
+    with pytest.raises(ProfileCryptoError):
+        ProfileCipher.from_env({KEY_FILE_ENV: str(path)}, allow_ephemeral=True)
+    monkeypatch.undo()
+    assert path.read_text(encoding="ascii") == original
+    assert [p.name for p in tmp_path.iterdir()] == ["k.key"]   # 임시 파일도 남기지 않는다
+
+
 def test_unwritable_key_file_falls_back_to_this_run_only(tmp_path, caplog):
     blocker = tmp_path / "file-not-dir"
     blocker.write_text("x", encoding="ascii")

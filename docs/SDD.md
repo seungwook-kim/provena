@@ -31,7 +31,7 @@ flowchart LR
   MCPc[외부 MCP 클라이언트 IDE 등] --> MCP[extras/mcp_skill/ FastMCP]
   API --> AG[backend/graph/ LangGraph]
   MCP --> RAG
-  AG -->|search| RAG[backend/rag/ 검색·리랭킹]
+  AG -->|search| RAG[backend/rag/ 검색]
   AG --> LLM[(생성 LLM)]
   RAG --> DB[(Postgres + pgvector)]
   AG --> DB
@@ -48,7 +48,7 @@ flowchart LR
 | `web/` | 로그인, 채팅, 승인함, 리콜 알림, 관리자 화면 | Vite + React + Tailwind. 빌드 결과(정적 파일)를 FastAPI가 직접 내준다 |
 | `backend/` (`main.py`, `auth.py`) | 인증·권한, 채팅 스트리밍, 승인, 결정표 실행(리콜·웹훅·변경 감시 라우트는 `api/recalls.py`, `api/changes.py`) | FastAPI, OpenAPI 자동 문서 |
 | `backend/graph/` | 질문 처리 그래프, 결정표 변환, 리콜 판정, 변경 전 영향 미리보기(F-05, 드라이런), 리콜 알림 확신도·심각도·요약(F-08). 리콜 판정 그래프, F-05, F-08은 `graph/recall/`에 구현했다(F-06 문서 권한은 연결 지점과 기본 공개 구현까지) | LangGraph (체크포인트, interrupt, Store). LangChain은 채팅 모델(`langchain-anthropic`·`langchain-openai`, `backend/services/llm.py`)과 메시지·콜백·Runnable 타입(`langchain_core`)에만 쓴다. 결정표 변환·리콜 판정 로직은 직접 구현 |
-| `backend/rag/retrieve/` | 하이브리드 검색(벡터 + BM25), 판(커밋 날짜)·절·문서 권한 필터, 리랭킹, 한국어 질문의 영어 질의 변환, 한국어 문서 토큰 | 임베딩은 Voyage API(`voyage-4`)를 직접 호출하고, pgvector는 psycopg SQL로 직접 조회한다(LangChain 임베딩·저장소·리트리버는 쓰지 않는다). 리랭커는 로컬 모델(11-0, 현재 미사용). 인용 검사는 직접 구현 |
+| `backend/rag/retrieve/` | 벡터 검색(확정 구성은 영어 문장 벡터만 쓰는 `dense_en`), 판(커밋 날짜)·절 필터, 한국어 질문의 영어 질의 변환, 링크 확장, 금액 구간 조회. 하이브리드(벡터 + BM25)와 리랭킹은 `SEARCH_MODE`·`RERANK_*`로 켜는 비교용이며 확정 구성에는 없다(결정 0048, `EVAL_REPORT.md` 3-2) | 임베딩은 Voyage API(`voyage-4`)를 직접 호출하고, pgvector는 psycopg SQL로 직접 조회한다(LangChain 임베딩·저장소·리트리버는 쓰지 않는다). 리랭커는 로컬 모델(11-0, 현재 미사용). 인용 검사는 직접 구현 |
 | `backend/rag/ingest/` | 핸드북 git 저장소 수집, Markdown·PDF 파싱, 청킹, 커밋 비교, git 없는 두 시점 문서 묶음 비교(F-07) | Python, git. 제목·절 단위 청킹은 직접 구현. 문서 출처는 `DocumentSource`(git, 디렉터리 스냅샷)로 바꿔 끼운다. 한계(F-10, 2026-11-13 소유자 결정: 지금 잇지 않고 알려진 한계로 둔다): `handbook.collect()`(`backend/rag/ingest/handbook.py:254`)와 `schedule.py`는 아직 `DocumentSource`를 거치지 않는다(`backend/rag/ingest/source.py:7`, 추상화 정의 `source.py:29`). `DocumentSource`를 쓰는 곳은 `source.py` 자신과 `tests/test_ingest_source.py`뿐이다 |
 | `extras/mcp_skill/` | 검색·섹션 조회·바뀐 섹션 목록, 결정표 실행 결과, 에이전트 실행 단계, 답의 근거 판정 기록을 읽기 전용 MCP 도구 6개로 노출. 에이전트 검색 노드가 MCP 클라이언트로 호출 (2-3) | FastMCP |
 | `skills/` | 에이전트가 실행 중에 읽는 판단 규칙 (2-3) | SKILL.md |
@@ -170,6 +170,10 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │  │     chunk.py              # 제목(#) 단위 청킹, 긴 절은 문단으로 나눔, 120자 겹침
 │  │  │     diff.py               # 커밋 사이 섹션 비교, 바뀐 섹션 찾기
 │  │  │     load.py               # 임베딩 적재, manifest, 스냅샷
+│  │  │     snapshot.py           # 스냅샷 압축·풀기: data/corpus/ ↔ data/corpus.tar.gz, data/index/ ↔ data/index.tar.gz
+│  │  │     changes.py            # 바뀐 섹션 목록 읽기 list_changed (MCP list_changed_sections, SELECT만)
+│  │  │     hash_report.py        # 청크 해시 기록 다시 만들기(읽기만)
+│  │  │     rechunk_increments.py # 증분이 넣은 현재 판 청크를 고친 청크 생성 코드로 한 번 다시 만듦(일회성, 결정 0118)
 │  │  │     schedule.py           # 증분 수집(새 커밋만), 정시 실행, 중복 실행 방지, 변경 감시를 멈췄으면 건너뜀 (가산: 자동화)
 │  │  │     snapshot_diff.py      # git 없는 변경 감지(F-07): 두 시점 문서 묶음을 섹션 단위로 비교해 같은 형식의 바뀐 섹션 목록을 만든다
 │  │  │     source.py             # 문서 출처 추상화 `DocumentSource`(F-10). 한계: `handbook.collect()`·`schedule.py`는 아직 거치지 않는다(source.py:7)
@@ -180,6 +184,12 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 │  │        ranges.py             # 금액 구간 조회 재료
 │  │        rerank.py             # 리랭커 불러오기(기본은 쓰지 않음)
 │  │        links.py              # 핸드북 페이지 링크 추출·주소 풀기 (가산: GraphRAG). 링크 확장은 search.py
+│  │        index.py              # 색인 만들기(오프라인): data/chunks/chunks.jsonl → data/index/
+│  │        load_snapshot.py      # 적재: data/index/ → DB (compose의 loader가 한 번 실행)
+│  │        reembed_changed.py    # 바뀐 청크만 다시 임베딩해 색인 갈아 끼우기
+│  │        section.py            # 섹션 원문 조회 get_section · section_names (MCP)
+│  │        privacy.py            # 비공개 주소 가리기(MCP 서버와 그래프 공용)
+│  │        hedge.py              # 검색 hedge(SEARCH_HEDGE, 기본 꺼짐)
 │  ├─ graph/        graph.md      # 질문 처리 그래프(build.py의 build_graph로 조립), 상태, 라우팅, 인용 검사, 답변 저장. checkpoint.py = 체크포인터·Store(DATABASE_URL이면 Postgres)
 │  │  ├─ departments/ departments.md # Supervisor와 팀 에이전트 (보안·인프라·IT 운영·재무)
 │  │  ├─ decision/  decision.md   # 권한표를 결정표로 변환 (F-04)
@@ -725,7 +735,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | 임베딩 | `bge-m3` / 비교 후보(Qwen3-Embedding-0.6B 등). 한국어 질문 → 영어 문서라 다국어 모델이 필요하다 | D0 당시 추천은 `bge-m3` 기본. **확정: `voyage-4` API**(2026-11-03 결정 `docs/decisions.md:48`, 위 11-0 표). `bge-m3`는 기준선 | D0 후보, 11/3 확정 |
 | 한→영 질의 변환 | LLM이 BM25용 영어 검색어를 만든다 / 다국어 임베딩만 쓴다 | 두 방식을 평가셋으로 비교 | D2~D3 |
 | 로컬 모델 실행, Cloud Run 메모리·이미지 크기 | 각자 PC에서 `bge-m3`를 불러 보고 확인(D0 당시 계획. 기본 임베딩이 `voyage-4` API로 확정돼 서비스 이미지에는 로컬 모델을 넣지 않는다, `docs/specs/search.md:89`) | 오늘 확인 | D0 |
-| 리랭커 속도 | CPU(Cloud Run)에서 질문당 수 초가 걸릴 수 있다. 검색+리랭킹 p95 3초 기준(SPEC 3장)을 지킬 수 있는지, 리랭킹 후보 수를 줄일지 | 재고 정한다 | D2 |
+| 리랭커 속도 | CPU(Cloud Run)에서 질문당 수 초가 걸릴 수 있다. 검색+리랭킹 p95 3초 기준(SPEC 3장)을 지킬 수 있는지, 리랭킹 후보 수를 줄일지 | **확정: 리랭커를 쓰지 않는다.** `voyage-4`에서 Recall@5를 올리지 못했고 CPU p95 추정이 늘었다(결정 0048, `EVAL_REPORT.md` 3-2, 위 11-0 표) | D2, 11/5 확정 |
 | Skill 폴더 이름 | `security`, `infra`(인프라·SRE), `itops`(IT 운영), `finance` | 이 이름 | D0 |
 | 로그인 방식 | 자체 구현(FastAPI + Postgres + bcrypt + JWT 쿠키) / Supabase Auth | 자체 구현 (Supabase Auth는 데모 모드와 충돌) | D5 전 |
 | MCP 서버 위치 | FastAPI 앱에 붙여 같은 Cloud Run 서비스 / 별도 서비스 | 같은 서비스 (데모 모드에서 같은 컨테이너가 단순) | D0 |

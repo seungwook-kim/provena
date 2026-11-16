@@ -6,7 +6,8 @@
 - 키가 없으면: 로컬 데모 모드(PROVENA_ENV=local, PROVENA_DEV_MODE=1)만 무작위 키를 한 번 만들어 키 파일에 두고 다음 실행에
   다시 읽는다(놓친 것 K-23: 전에는 실행마다 새 키라 api를 재시작하면 저장된 내 정보를 풀지 못해 503이었다).
   키 파일은 `PROFILE_KEY_FILE`, 비우면 실행 사용자 홈의 `~/.provena/local_demo_profile.key`(저장소 밖, 컨테이너에서는 /home/app).
-  파일을 못 쓰면 이번 실행만 쓰는 키로 돈다. 그 밖의 모드는 키 파일을 읽지도 쓰지도 않고 시작하지 않는다.
+  파일을 못 쓰면 이번 실행만 쓰는 키로 돈다. 파일이 있는데 읽지 못하면 지우거나 덮어쓰지 않고 시작을 멈춘다(형식이 틀린
+  파일만 지우고 새로 만든다). 그 밖의 모드는 키 파일을 읽지도 쓰지도 않고 시작하지 않는다.
 - 로컬에서 만든 키로 도는 암호기는 `local_generated=True` 다. 내 정보 API는 이때만 "풀 수 없는 줄 → 다시 입력" 안내를 낸다.
 - 오류 메시지·로그에 키·평문·암호문을 쓰지 않는다.
 """
@@ -65,17 +66,25 @@ def local_key_file(environ: Mapping[str, str] | None = None) -> Path:
 
 
 def _read_local_key(path: Path) -> dict[int, bytes] | None:
-    """키 파일이 없으면 None. 있는데 못 읽거나 형식이 틀리면 지우고 None(새로 만든다. 옛 내 정보는 다시 입력)."""
+    """키 파일이 없으면 None. 읽었는데 형식이 틀리면 지우고 None(새로 만든다. 옛 내 정보는 다시 입력).
+
+    읽는 중 오류(권한·잠금 같은 OSError, ascii 해독 실패 ValueError)는 파일을 지우지 않고 ProfileCryptoError 를 낸다.
+    None 을 돌려주면 호출한 쪽이 새 키를 만들어 같은 경로에 쓰게 되고(하드링크를 못 쓰는 파일 시스템에서는 os.replace 로
+    덮어쓴다), 그러면 일시적인 읽기 오류만으로 기존 키와 그 키로 잠근 내 정보를 잃는다. 로컬 데모 전용 경로다.
+    """
     try:
         text = path.read_text(encoding="ascii").strip()
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):   # 파일이 없다(부모 경로가 파일인 경우 포함) → 새로 만든다
         return None
-    except (OSError, ValueError):
-        text = ""
+    except (OSError, ValueError) as exc:
+        log.warning("로컬 데모 키 파일을 읽지 못했다(파일은 그대로 둔다): %s (%s)", path, type(exc).__name__)
+        raise ProfileCryptoError(
+            "로컬 데모 키 파일을 읽지 못했습니다. 기존 키를 지키려고 새 키를 만들지 않습니다. "
+            f"파일 권한·잠금을 확인하거나 {KEY_ENV} 를 설정하세요") from None
     try:
         return parse_keys(text)
     except ProfileCryptoError:
-        log.warning("로컬 데모 키 파일을 읽을 수 없어 새로 만든다(저장된 내 정보는 다시 입력): %s", path)
+        log.warning("로컬 데모 키 파일의 형식이 틀려 새로 만든다(저장된 내 정보는 다시 입력): %s", path)
         try:
             path.unlink()
         except OSError:
