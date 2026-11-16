@@ -11,6 +11,7 @@
 요청 키(`request_key`): sha256(역할 + 정규화한 메시지). 역할은 시스템 프롬프트 첫 줄의 `[[task:...]]` 표지(없으면 `generic`).
 공급자·모델 이름은 키에 넣지 않는다(녹화한 모델과 재생하는 쪽의 모델 설정이 달라도 같은 요청이면 같은 응답을 찾으려는 것이고, 모델 이름은 녹화 줄에 정보로만 남긴다).
 정규화: 공백을 하나로 접고, 맨 앞 `기준일: YYYY-MM-DD` 줄의 날짜는 지운다(오늘 날짜가 들어가서 날마다 키가 바뀌는 것을 막는다).
+답 끝 표시의 `기준일 YYYY-MM-DD · 근거 판 날짜` 날짜도 지운다(2026-11-16: 저장한 답 전문을 입력으로 받는 리콜 판정 요청이 날마다 바뀌지 않게. 질문 그래프의 요청에는 이 표시가 없다).
 
 추론 답이 녹화에 없을 때(2026-11-11): 서비스 설정(`GRAPH_ANSWER_WAIT_S`)에서 그래프는 추론 답(`answer`)과 빠른 답(`answer_fast`)을 같이 보내고, 추론 답이 시간 안에 인용과 함께 오면 그것을 쓴다.
 녹화 때 질문이 차가운 검색(첫 질문)이라 `GRAPH_ANSWER_BUDGET_S`를 넘겨 추론 답을 보내지 않았으면 그 질문에는 빠른 답만 녹화돼 있다. 재생은 추론 답을 보내므로(검색이 따뜻하면 예산 안),
@@ -61,6 +62,8 @@ DEFAULT_FAKE_TEXT = "(가짜 모델 응답) 합성 시험용 답변입니다. �
 _TRUE = ("1", "true", "yes", "on")
 _TASK = re.compile(r"\[\[task:(\w+)\]\]")
 _ASOF_LINE = re.compile(r"(?m)^기준일: \d{4}-\d{2}-\d{2}")
+# 답 끝에 코드가 붙이는 표시(`backend/graph/build.py` finish_answer: "기준일 YYYY-MM-DD · 근거 판 날짜 ...")의 오늘 날짜. 저장한 답을 입력으로 받는 리콜 판정 요청에 들어간다
+_ASOF_FOOTER = re.compile(r"기준일 \d{4}-\d{2}-\d{2}(?= · 근거 판 날짜)")
 
 
 def env_flag(name: str) -> bool:
@@ -78,7 +81,7 @@ def _content_text(m: BaseMessage) -> str:
 
 
 def _normalize(text: str) -> str:
-    return " ".join(_ASOF_LINE.sub("기준일: <date>", text).split())
+    return " ".join(_ASOF_FOOTER.sub("기준일 <date>", _ASOF_LINE.sub("기준일: <date>", text)).split())
 
 
 def message_role(messages: list[BaseMessage]) -> str:

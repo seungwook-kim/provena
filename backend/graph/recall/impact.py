@@ -188,7 +188,9 @@ def preview_impact(changes: list[ChangedArticle], *, answers: Any, read_section:
     by_type = {k: sum(1 for c in changes if c.change_type == k) for k in ("added", "removed", "modified")}
     if not rows_out:
         notes.append("바뀐 섹션을 인용한 과거 답이 없습니다(답 저장소가 비어 있으면 0건으로 나옵니다).")
-    if getattr(judge_, "mode", "") == "rule":
+    # 키 없는 데모의 ReplayJudge는 녹화한 판정 요청(데모 가상 개정)만 LLM 판정을 재생하고 붙여 넣은 변경은 규칙 판정이므로 규칙으로 표시한다
+    rule_mode = getattr(judge_, "mode", "") in ("rule", "replay")
+    if rule_mode:
         notes.append("규칙 판정(키 없음)이라 결론 변화는 사람이 확인해야 합니다.")
     summary = ImpactSummary(
         changes=len(changes), changes_by_type=by_type, answers_checked=len(seen_answers),
@@ -199,7 +201,7 @@ def preview_impact(changes: list[ChangedArticle], *, answers: Any, read_section:
         decision_cells_unverified=sum(1 for c in cells_out if c.confidence == "unverified"),
         recipients=len({a.user_id for a in invalid}),
     )
-    return ImpactReport(judge_mode="rule" if getattr(judge_, "mode", "") == "rule" else "llm", generated_on=today or today_kst().isoformat(),
+    return ImpactReport(judge_mode="rule" if rule_mode else "llm", generated_on=today or today_kst().isoformat(),
                         summary=summary, changes=views, answers=rows_out, cells=cells_out, notes=notes)
 
 

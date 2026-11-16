@@ -5,6 +5,7 @@
 - `DATABASE_URL`이 있으면 바뀐 섹션 목록(`changed_articles`), 섹션 원문(`get_section`), 링크 그래프(`chunks.link_targets`), 문서 권한(`chunks.acl`)을
   같은 DB에서 읽는다. 없으면 빈 목록·원문 없음·후보 없음·공개다.
 - 로컬 데모 모드(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`)에서 `RECALL_STORE=postgres`면 시작할 때 120 SQL을 실행한다(운영은 db/db.md 절차).
+- 키 없는 로컬 데모(로컬 데모 모드 + LLM 데모 모드)는 시작할 때 가상 개정 한 건을 처리 대기로 넣고, 섹션 읽기가 그 개정본을 돌려준다(`demo_change.py`, 2026-11-16).
 """
 from __future__ import annotations
 
@@ -74,11 +75,24 @@ def section_reader(database_url: str | None = None):
     return read
 
 
+def keyless_demo() -> bool:
+    """키 없는 로컬 데모(로컬 데모 모드이고 LLM 데모 모드). 이때만 가상 개정 한 건(`demo_change.py`)을 쓴다."""
+    from backend.services.demo_seed import is_local_demo
+    from backend.services.llm import is_demo_mode
+
+    return is_local_demo() and is_demo_mode()
+
+
 def build_service(*, answers: Any, database_url: str | None = None, store: Any = None) -> RecallService:
     url = database_url or os.environ.get("DATABASE_URL")
     store = store if store is not None else (PgRecallStore(url) if use_postgres() and url else InMemoryRecallStore())
+    read = section_reader(url)
+    if keyless_demo():
+        from backend.graph.recall.demo_change import load_demo_change, with_demo_revision
+
+        read = with_demo_revision(read, load_demo_change())
     return RecallService(
-        store=store, answers=answers, read_section=section_reader(url),
+        store=store, answers=answers, read_section=read,
         links=PgLinks(url) if url else None, acl=PgAcl(url) if url else PublicAcl(), sender=WebhookSender(store),
     )
 
@@ -110,6 +124,15 @@ def open_recall_runtime(app: Any, database_url: str | None) -> Iterator[None]:
             answers = make_answer_store(database_url)
         state.recall_service = build_service(answers=answers, database_url=database_url)
         state.change_store = make_change_store(database_url)
+        if database_url and keyless_demo():
+            from backend.graph.recall.demo_change import load_demo_change, seed_pending_change
+
+            rec = load_demo_change()
+            if rec is not None:
+                try:   # 메모리 리콜 저장소는 다시 시작하면 알림이 비므로 가상 개정도 처리 대기로 되돌린다
+                    seed_pending_change(database_url, rec, reset=not use_postgres())
+                except Exception as exc:  # noqa: BLE001 - 접속 문자열이 섞일 수 있어 종류만 남긴다. 데모 개정이 없어도 서버는 뜬다
+                    log.warning("데모 가상 개정을 넣지 못함: %s", type(exc).__name__)
         yield
     finally:
         state.recall_service = state.change_store = None

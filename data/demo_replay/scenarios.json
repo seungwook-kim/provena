@@ -1,0 +1,18 @@
+{
+ "_note": "키 없는 데모의 추가 시나리오(2026-11-16). review: 팀 합동 검토 요청(녹화 data/demo_replay/recorded_scenarios.jsonl). recall: 데모용 가상 개정 한 건(backend/graph/recall/demo_change.py). 가상 개정본은 실제 GitLab 핸드북 문구가 아니고, 승인 권한표 2023-05판 행에서 업무 승인자 한 줄(Director -> Sr Director)만 바꿨다.",
+ "review": {
+  "question": "외부 SaaS 로그 모니터링 도구를 연 4만 달러에 도입하려고 합니다. 업체와 제품 선정은 끝났고, 데이터는 미국 리전에 저장됩니다. 프로덕션 서비스 로그가 이 도구로 전송되고, 온콜 담당자가 알림을 받는 경로에도 들어갑니다. 합동 검토를 부탁합니다."
+ },
+ "recall": {
+  "rule_seq": 3054269612,
+  "article": "Approving expense > >$25K up to $50K",
+  "old_version_date": "2023-05-11",
+  "new_version_date": "2027-07-01",
+  "change_type": "modified",
+  "new_text": "(데모용 가상 개정본. 실제 핸드북 문구가 아니다)\nApproving expense, >$25K up to $50K:\n- Sr Director (functional approval): Approves\n- PAO or VP Finance (financial approval): Approves/Signs\n(1) Delegation of authority not to exceed 90 days in duration is permitted. Written notice of delegation shall be provided by the delegating team member to the CFO, CLO, PAO and Director of Legal, Corporate in order for the delegation to be effective.\n(4) Approval from function responsible for supporting associated objectives and goals.",
+  "recalled_questions": [
+   "외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인자와 재무 승인자는 누구인가요?",
+   "외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인자와 재무 승인자는 누구인가요?"
+  ]
+ }
+}

@@ -40,7 +40,7 @@ v2 값은 같은 50건의 실패 문항에서 출발해 고친 뒤의 값이라 
 | 답 작성, 질의 분석(`classify`), 질문 분해·재작성, 근거 충분 판정(`judge`), 근거 확인(`ground`), 질문 번역 | `claude-haiku-5-5`, Anthropic API 직접 호출 | 같음(배포 측정은 운영 서비스를 그대로 부른다. 4장 로컬 최종 측정도 Anthropic API 직접 호출) | `LLM_PROVIDER`, `backend/services/llm.py:70`(`DEFAULT_ANTHROPIC_MODEL`), `backend/graph/build.py:445`, `backend/rag/retrieve/translate.py:83` |
 | 팀 합동 검토(Supervisor, 팀 에이전트 4개) | 같은 모델 | 같음 | `backend/graph/departments/review.py:139` |
 | 결정표 변환 초안 | 같은 모델 | - | `backend/graph/decision/routes.py:550-552` |
-| 답변 리콜의 결론 재판정 | 같은 모델(키 없는 데모는 규칙 판정) | - | `backend/graph/recall/judge.py:97-101` |
+| 답변 리콜의 결론 재판정 | 같은 모델(키 없는 데모는 녹화한 판정, 녹화에 없으면 규칙 판정) | - | `backend/graph/recall/judge.py` `default_judge` |
 | 추론 수준 | 분해·답 작성·근거 충분 판정만 `low`, 나머지 끔 | 같음 | `backend/graph/service_profile.py:50, 94-95` |
 | 임베딩(문서·질문) | `voyage-4`, Voyage AI API | 같음 | `EMBED_MODEL`, `backend/rag/retrieve/embed.py:53` |
 | 리랭커 | 없음 | 비교 측정에서만 4종(EVAL_REPORT 3-2절) | `RERANK_MODEL`, `backend/rag/retrieve/rerank.py:43` |
@@ -119,8 +119,12 @@ Windows에서는 clone 전에 `git config --global core.longpaths true`를 한 �
   - 외부 SaaS 계약 금액이 10만 달러일 때 승인 권한자는 누구이고, 근거 섹션과 판 날짜는 무엇인가요?
     - 참고(질문 글자가 아님): 위 세 금액 질문은 데모 구간 01이다. 5만·3만 달러 질문은 승인 권한표 2023-05판의 `>$25K up to $50K` 행을 인용해 업무 승인자(Director)와 재무 승인자(PAO 또는 VP Finance)를 답한다. 10만 달러 질문은 2026-11-13 녹화까지는 거절로 끝났으나, 2026-11-16 재녹화부터 같은 표의 `>$50K up to $250K` 행을 인용해 근거 섹션(Approving expense > >$50K up to $250K)과 판 날짜(2023-05-11)를 답한다. 다만 이 행이 지출 승인(Approving expense) 행이어서 외부 SaaS 계약에 그대로 적용되는지는 자료만으로 확정하지 않고, 승인 권한자(행에 적힌 Sr Director, PAO 또는 VP Finance)는 단정하지 않는다. 이 설명을 질문 뒤에 붙여 보내면 다른 질문이라 녹화에 없어 거절된다.
 - 키 없이 거절이 나오는 질문(녹화에도 거절): "구매 승인에는 어떤 승인자가 필요한가요?"(핸드북에 승인자 근거가 없다), "오늘 점심 메뉴 추천해줘"(범위 밖).
-- 키 없는 데모에서 만들어지지 않는 것(L-23): 합동 검토와 리콜 알림 생성은 LLM 호출이 필요해 실제 화면으로 확인할 수 없고, 정적 미리보기 화면(`/demo/*`, 실제 데이터 아님)으로만 본다. 결정표 변환은 "예시 응답"이라고 표시된 고정 응답(`status=example`)을 내며 저장·승인되지 않는다.
-- 규정 변경 웹훅(`POST /webhooks/regulation-updated`)은 `.env`의 `SERVICE_API_KEY`가 비면 항상 401이다. 로컬에서 리콜 흐름을 보려면 `.env`에 값을 넣고 요청 헤더 `X-Service-Key`에 같은 값을 보낸다.
+- 키 없이 재생하는 팀 합동 검토와 리콜(데모 구간 03, L-23 해소. 2026-11-16 녹화 `data/demo_replay/recorded_scenarios.jsonl`, 시나리오 `data/demo_replay/scenarios.json`):
+  - 팀 합동 검토: `demo-user`로 다음 요청을 글자 그대로 보내면 Supervisor와 팀 에이전트 4개(보안·인프라·IT 운영·재무)의 검토가 녹화로 재생되고 쟁점표 승인 요청에서 멈춘다. `demo-admin`으로 승인함에서 승인하면 쟁점표가 저장된다. 요청: 외부 SaaS 로그 모니터링 도구를 연 4만 달러에 도입하려고 합니다. 업체와 제품 선정은 끝났고, 데이터는 미국 리전에 저장됩니다. 프로덕션 서비스 로그가 이 도구로 전송되고, 온콜 담당자가 알림을 받는 경로에도 들어갑니다. 합동 검토를 부탁합니다.
+  - 리콜: `demo-user`로 위 5만·3만 달러 질문을 보낸 뒤, `demo-admin`으로 리콜 화면의 "처리 대기 변경 지금 처리"를 누르면 두 답이 리콜 대상이 된다. 바뀐 섹션은 데모용 가상 개정 한 건이다(승인 권한표 2023-05판 `>$25K up to $50K` 행에서 업무 승인자 Director를 Sr Director로 바꾼 글, 새 판 날짜 2027-07-01, 실제 핸드북 문구 아님). 결론 재판정 설명은 녹화한 LLM 판정을 재생하고, 녹화에 없는 판정 요청은 규칙 판정으로 낸다. 가상 개정은 키 없는 로컬 데모(`PROVENA_ENV=local`, `PROVENA_DEV_MODE=1`, LLM 키 없음)에서만 서버 시작 때 처리 대기로 들어가고(`backend/graph/recall/demo_change.py`), 리콜 저장소가 메모리(기본)이면 서버를 다시 띄울 때 다시 처리 대기가 된다. 처리 전에 물은 답만 대상이다.
+  - 녹화가 현재 코드와 맞는지는 `python -m pytest -m demo_replay`의 `tests/test_demo_replay_scenarios.py`가 본다(검토는 승인 멈춤과 재개 뒤 저장까지, 리콜은 두 답 경로의 판정 요청이 모두 녹화에 있는지).
+- 키 없는 데모에서 만들어지지 않는 것: 결정표 변환은 "예시 응답"이라고 표시된 고정 응답(`status=example`)을 내며 저장·승인되지 않는다. 녹화한 요청 밖의 합동 검토 요청은 다른 질문과 같이 녹화에 없어 처리되지 않는다.
+- 규정 변경 웹훅(`POST /webhooks/regulation-updated`)은 `.env`의 `SERVICE_API_KEY`가 비면 항상 401이다. 키 없는 데모의 리콜은 위 가상 개정과 관리자 화면 버튼으로 본다. 웹훅으로 보려면 `.env`에 값을 넣고 요청 헤더 `X-Service-Key`에 같은 값을 보낸다.
 - DB는 compose가 띄우는 로컬 pgvector 컨테이너이고 Supabase 계정이 필요 없다. 데모 전용 계정 2개는 `PROVENA_ENV=local`과 `PROVENA_DEV_MODE=1`이 모두 켜진 로컬 실행에서만 만들어지며, 배포 계정과 다르고 배포 계정 값은 저장소에 없다.
 
 ### 테스트
@@ -202,7 +206,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 - **값을 뒤집는 문장(I03 유형)의 방어는 낱말 목록 기반이다.** 실제 모델 재시험에서 뚫린 사례를 찾아 막았고 최종 판 재시험 3건은 모두 막혔으나, 목록 밖 표현까지 막는다는 근거는 아니다. EVAL_REPORT 6장
 - **CI 회귀 검사는 녹화된 데모 질문 9개만 본다.** 평가셋 50건 전체는 CI가 아니라 운영 배포 측정으로 확인했다. EVAL_REPORT 8장, [docs/GATES.md](./docs/GATES.md) G5
 - **재지 않은 지표가 있다.** 답변 리콜의 재현율·정밀도와 결정표 셀 정확도는 미측정이다. [docs/SPEC.md](./docs/SPEC.md) 3장
-- **키 없는 데모는 녹화한 질문만 답한다.** 합동 검토·리콜 알림 생성은 키 없이 볼 수 없다(L-23). 위 "키 없이 뜨는 데모 모드"
+- **키 없는 데모는 녹화한 질문만 답한다.** 합동 검토와 리콜도 녹화한 요청 한 건과 데모용 가상 개정 한 건만 키 없이 재생한다(2026-11-16, L-23 해소). 위 "키 없이 뜨는 데모 모드"
 - 가장 큰 약점에 대한 팀의 판단은 EVAL_REPORT 11장에 있다.
 
 ## 문서 안내

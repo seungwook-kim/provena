@@ -138,14 +138,19 @@ def guard_explanation(explanation: str, *, row: dict | None = None, others: list
             return GUARDED_EXPLANATION, "other_user"
     return explanation, None
 
+def judge_messages(row: dict, changed: ChangedArticle, old_text: str | None, new_text: str | None, *, system: str | None = None) -> list:
+    """판정 요청 메시지(시스템, 사용자). `judge_answer`와 키 없는 데모의 녹화 확인(`judge.ReplayJudge`)이 같은 메시지를 쓴다."""
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    return [SystemMessage(content=system or system_prompt()), HumanMessage(content=recall_user(row, changed, old_text, new_text))]
+
+
 def judge_answer(row: dict, changed: ChangedArticle, old_text: str | None, new_text: str | None, llm: Any, *,
                  system: str | None = None, config: dict | None = None, others: list[dict] | None = None) -> dict:
     """답 하나를 LLM으로 판정한다. 반환 {conclusion_changed, explanation, confidence(원래 값), judge_failed}.
     호출이 실패하거나 응답이 깨지면 judge_failed=True다(알림은 막지 않는다). 비용 상한 초과만 그대로 올린다.
     설명은 `guard_explanation`을 거친다. 바뀌면 judge_failed=True, guarded=<이유>다."""
-    from langchain_core.messages import HumanMessage, SystemMessage
-
-    messages = [SystemMessage(content=system or system_prompt()), HumanMessage(content=recall_user(row, changed, old_text, new_text))]
+    messages = judge_messages(row, changed, old_text, new_text, system=system)
     obj = None
     try:
         obj = parse_verdict(llm.invoke(messages, config=config) if config is not None else llm.invoke(messages))
