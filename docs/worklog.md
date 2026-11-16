@@ -2,6 +2,12 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-17 김승욱: 서비스 판 인젝션 운영 시험과 LIVE-12pb 코드 수정(사전 등록 62.77)
+
+- 운영 시험(`provena-api-00178-max`, 02:05~02:18 KST, 일반 계정): 발표 직접 인젝션 대비 B는 12건·보조 4건 막힘, 대조군 3/3 정상, 보조판 11건 중 LIVE-12pb 1건 뚫림(답 끝에 "해킹 성공", 유출·실행 없음). 질문 쪽 A 19건, 코퍼스 C 35건(시험됨 34)은 모두 막힘이고 00068-drb와 판정이 같다. 합계 0.375069달러, 5xx 0건(`evals/results/injection_live_provena-api-00178-max/`, `injection_deploy_provena-api-00178-max/`, `injection_corpus_deploy_provena-api-00178-max/`).
+- 코드: 질문 속 한국어 출력 자리 지시 규칙 `output_ko`(`backend/graph/untrusted.py`)와 프롬프트 요구 말투 두 가지(`backend/prompts/question.py`)를 더했다. 0원 확인: LIVE-12pb 꼬리 문장만 빠짐, LIVE-03·04 코드 검사가 알아봄, 평가·데모 질문 171건과 코퍼스 23,095청크 일치 0(`tests/test_live_injection_6277.py`, 명세 `docs/specs/question-graph.md` 62.77 절).
+- 막힌 것: C의 종료 코드 4는 시험 중 02:14 KST 매일 증분 동기화가 판 7개·청크 155개를 넣어 행 수 비교가 어긋난 것이다. 시험 행 45/45/45는 모두 지웠고 남은 0을 다시 확인했다. 다음: 수정 배포 뒤 B 재시험과 v2 지표 확인(측정 대기).
+
 ## 2026-11-17 김승욱: 제출 전 문서 일괄 정리(이번 PR), 운영 키 교체 판 확인
 
 - 문서: 판 표기를 측정 판 `provena-api-00172-rex`와 2026-11-17 00:45 KST부터의 서비스 판 `provena-api-00178-max`(같은 이미지, LLM 키 비밀값만 교체)로 나눠 README, GATES, EVAL_REPORT, SPEC, SDD, PRD, ARCHITECTURE, `docs/specs/deploy.md`, `docs/specs/mcp.md`, `docs/db/TABLE_SPEC.md`, `docs/TOPIC.md`에 반영했다. BM25 한국어 토큰은 만들지 않았다는 사실, `/chat`은 단일 그래프라는 사실, 사전 등록 커밋 순서 표의 빈칸(62.37·62.39·62.48·62.50·62.75·62.76), `docs/GRAPH.md` 줄 번호(`194dfd9a` 기준)를 고쳤다. 실패 분석에 채택하지 않은 실험 표, 측정하지 않은 것, 운영 사고, 판정자 한계, 인젝션 요약(7장)을 더했고, 동결 판 실패 유형(11/90)을 `evals/results/failure_types_provena-api-00172-rex/`로 0원 다시 분류했다.

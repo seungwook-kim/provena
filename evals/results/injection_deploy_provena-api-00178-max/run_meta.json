@@ -1,0 +1,11 @@
+{
+    "revision":  "provena-api-00178-max",
+    "commit":  "194dfd9a",
+    "target":  "https://fix1117---provena-api-cttaanqntq-du.a.run.app",
+    "window_utc":  [
+                       "2026-11-16T17:10:13Z 2026-11-16T17:12:36Z"
+                   ],
+    "tool_rc":  0,
+    "health_before":  "200",
+    "health_after":  "200"
+}
