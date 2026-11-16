@@ -1,0 +1,90 @@
+[
+  {
+    "RuleID": "generic-api-key",
+    "File": "evals/results/recall_webhook_20261116_0807/recall_webhook.json",
+    "StartLine": 31,
+    "Commit": "823f73b548060c1df23945b1330aa56cb6cd0b71",
+    "Fingerprint": "823f73b548060c1df23945b1330aa56cb6cd0b71:evals/results/recall_webhook_20261116_0807/recall_webhook.json:generic-api-key:31",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "evals/results/split_62_44_62_45_20261113/replay_split.py",
+    "StartLine": 36,
+    "Commit": "d89419ab9c60a5a48c2d5d831fc2323f3162a488",
+    "Fingerprint": "d89419ab9c60a5a48c2d5d831fc2323f3162a488:evals/results/split_62_44_62_45_20261113/replay_split.py:generic-api-key:36",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "tests/test_email_signup_hardening.py",
+    "StartLine": 140,
+    "Commit": "da5b76af9ed80faffdf218b7e628b012550046cb",
+    "Fingerprint": "da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:140",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "tests/test_email_signup_hardening.py",
+    "StartLine": 141,
+    "Commit": "da5b76af9ed80faffdf218b7e628b012550046cb",
+    "Fingerprint": "da5b76af9ed80faffdf218b7e628b012550046cb:tests/test_email_signup_hardening.py:generic-api-key:141",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "tests/test_db_realign.py",
+    "StartLine": 92,
+    "Commit": "57e632fea76ab8e1b5a5b56131923dab5234be59",
+    "Fingerprint": "57e632fea76ab8e1b5a5b56131923dab5234be59:tests/test_db_realign.py:generic-api-key:92",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "tests/test_db_realign.py",
+    "StartLine": 89,
+    "Commit": "b30c273cef97bc475badd13a7ec73526d572c595",
+    "Fingerprint": "b30c273cef97bc475badd13a7ec73526d572c595:tests/test_db_realign.py:generic-api-key:89",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "tests/test_signup_postgres_integration.py",
+    "StartLine": 174,
+    "Commit": "d1a262d0cfee2dc231994a222fed6c4df67c6dcb",
+    "Fingerprint": "d1a262d0cfee2dc231994a222fed6c4df67c6dcb:tests/test_signup_postgres_integration.py:generic-api-key:174",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "evals/results/d8_stage_report/stage_report_final_api.md",
+    "StartLine": 98,
+    "Commit": "bf18891ee4c23426a2a194a55faa2ddc87c10818",
+    "Fingerprint": "bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:98",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "evals/results/d8_stage_report/stage_report_final_api.md",
+    "StartLine": 99,
+    "Commit": "bf18891ee4c23426a2a194a55faa2ddc87c10818",
+    "Fingerprint": "bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:99",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "evals/results/d8_stage_report/stage_report_final_api.md",
+    "StartLine": 100,
+    "Commit": "bf18891ee4c23426a2a194a55faa2ddc87c10818",
+    "Fingerprint": "bf18891ee4c23426a2a194a55faa2ddc87c10818:evals/results/d8_stage_report/stage_report_final_api.md:generic-api-key:100",
+    "in_gitleaksignore": true
+  },
+  {
+    "RuleID": "generic-api-key",
+    "File": "backend/rag/ingest/handbook.py",
+    "StartLine": 47,
+    "Commit": "ec1376c9952d4f88311729ef54aa6106fd482a02",
+    "Fingerprint": "ec1376c9952d4f88311729ef54aa6106fd482a02:backend/rag/ingest/handbook.py:generic-api-key:47",
+    "in_gitleaksignore": true
+  }
+]

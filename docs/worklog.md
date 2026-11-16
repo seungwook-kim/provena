@@ -2,6 +2,18 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-17 김승욱: 제출 전 문서 일괄 정리(이번 PR), 운영 키 교체 판 확인
+
+- 문서: 판 표기를 측정 판 `provena-api-00172-rex`와 2026-11-17 00:45 KST부터의 서비스 판 `provena-api-00178-max`(같은 이미지, LLM 키 비밀값만 교체)로 나눠 README, GATES, EVAL_REPORT, SPEC, SDD, PRD, ARCHITECTURE, `docs/specs/deploy.md`, `docs/specs/mcp.md`, `docs/db/TABLE_SPEC.md`, `docs/TOPIC.md`에 반영했다. BM25 한국어 토큰은 만들지 않았다는 사실, `/chat`은 단일 그래프라는 사실, 사전 등록 커밋 순서 표의 빈칸(62.37·62.39·62.48·62.50·62.75·62.76), `docs/GRAPH.md` 줄 번호(`194dfd9a` 기준)를 고쳤다. 실패 분석에 채택하지 않은 실험 표, 측정하지 않은 것, 운영 사고, 판정자 한계, 인젝션 요약(7장)을 더했고, 동결 판 실패 유형(11/90)을 `evals/results/failure_types_provena-api-00172-rex/`로 0원 다시 분류했다.
+- 점검: 값 뒤집기 3건을 `provena-api-00178-max`에서 다시 물어 3건 막힘, 3건 모두 시험 청크 인용(0.013768달러, `evals/results/injection_corpus_valueflip_provena-api-00178-max/`). 최종 main gitleaks 전체 이력 검출 0건(`evals/results/gitleaks_20261117/`), 최종 main 새 clone `/health` 200까지 63.2초·README 질문 9/9·`demo_replay` 6 passed(`evals/results/fresh_clone_20261117/`). Langfuse 화면 6번의 내부 사용자 식별자를 가렸고 포트폴리오 양식(`docs/deliverables/portfolio.md`)을 제출물 목록과 함께 뺐다.
+- 막힌 것: 00:19~00:36 KST LLM 키 비밀값 삭제로 요청 실패, 00:45 KST 00178-max로 복구. 01:05 풀의 쉬는 연결에 남은 읽기 전용 설정을 지운 직후 채팅 1건 500(`AdminShutdown`). 새 지표 네 개는 판정자 정답 세트를 받지 못해 측정하지 못했다. 다음: diff 확인 뒤 커밋·PR, 발표 자료와 리허설.
+
+## 2026-11-16~17 김승욱: PR #171~#174(동결 판 반영과 제출물)
+
+- PR #171(`ad5df9d0`): 운영 판 `provena-api-00172-rex`(커밋 `194dfd9a`) 측정을 문서 수치로 반영하고 CI v2 50건 녹화, 결정 0126·0127을 기록했다. PR #172(`86c7d472`): D10 재시작 재개와 계정 분리를 00172-rex에서 다시 기록했다. 동결 대조(23:40 KST): main `47e3b82a`와 `194dfd9a`의 코드 경로 차이는 `backend/graph/graph.md` 한 줄뿐이다.
+- PR #173(`7f266c6f`): 실패 분석을 동결 판 기준으로 갱신하고 제출 체크리스트와 AI 도구 기록을 더했다. PR #174(`a5e9b231`): 운영 판 키 교체(00178-max) 경위 한 줄을 실패 분석에 더했다.
+- 다음: 남은 문서 공백을 한 PR로 정리.
+
 ## 2026-11-16 김승욱: 재배포 provena-api-00079-tmt, 재시작 재개 재측정, README 재구성
 
 - 재배포: 커밋 `c565998d`를 `provena-api-00079-tmt`로 배포했다(트래픽 100%, `/health` 200, `/mcp/` 토큰 없이 401). 측정 판 `provena-api-00065-q84`와 답 경로가 같고 코드 차이는 `/chat` 오류 분류와 내 정보 키 파일 읽기 오류 처리뿐이다. 동결 SHA는 이 운영 코드 `c565998d`이고 HEAD와의 차이는 문서와 결과 파일뿐이다.

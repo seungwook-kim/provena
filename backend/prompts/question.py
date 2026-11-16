@@ -507,8 +507,32 @@ def with_skills(system: str, skills: list[tuple[str, str]]) -> str:
 PROMPT_PROFILE_FIELDS = ("affiliation", "rank")  # 측정(main) 때 프롬프트에 들어간 칸. service 등 다른 칸은 저장만 하고 넣지 않는다.
 
 
+PROFILE_PROMPT_CHARS = 100  # 기억 칸 한 값의 프롬프트 상한. API 입력 상한(`routes.MemoryPatch`의 max_length)과 같다
+_FENCE = re.compile(r"`{3,}|~{3,}")
+
+
+def _profile_value(value: object) -> str:
+    """기억 칸 값(사용자가 직접 넣은 글, SP8)을 분류·재작성 입력에 넣을 꼴로 정리한다. 질문과 같은 규칙(`question_for_prompt`: 가짜 자료 구분자·머리 줄,
+    시스템 프롬프트 요구 문장, 구분자 문자열)과 앞 질문과 같은 입력 정화(`untrusted.strip_instructions`, 지시 문장째)를 쓰고,
+    코드 울타리(```, ~~~)와 줄바꿈·제어 문자를 빈칸으로 바꾸고 `PROFILE_PROMPT_CHARS`자로 자른다. 걸리는 것이 없는 값은 글자 하나도 바꾸지 않는다.
+    문자열이 아니면 빈 값이다(넣지 않는다)."""
+    if not isinstance(value, str):
+        return ""
+    from backend.graph import untrusted as U
+
+    s = U.strip_instructions(question_for_prompt(value), whole_sentence=True)[0]
+    s = "".join(" " if unicodedata.category(ch) == "Cc" else ch for ch in _FENCE.sub(" ", s))
+    if s != value:  # 무엇이든 뺐으면 빈칸을 한 칸으로 접는다(뺀 자리가 줄을 흉내 내지 않게)
+        s = " ".join(s.split())
+    return s[:PROFILE_PROMPT_CHARS]
+
+
 def _profile_for_prompt(profile: dict | None) -> dict:
-    return {k: v for k, v in (profile or {}).items() if k in PROMPT_PROFILE_FIELDS}
+    out = {}
+    for k, v in (profile or {}).items():
+        if k in PROMPT_PROFILE_FIELDS and (clean := _profile_value(v)):
+            out[k] = clean
+    return out
 
 
 def classify_user(question: str, profile: dict) -> str:

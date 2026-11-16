@@ -168,8 +168,10 @@ def create_changes_router(*, store: AuthStore, secret: str | None = None, revoca
         plan = {"slot": slot, "scheduled_slot": schedule.slot_of(now), "monitoring": _monitoring(st)}
         if body.dry_run:
             return {"dry_run": True, "started": False, **plan}
-        # 실제 실행 방식(Cloud Run Job, workflow_dispatch, 이미지에 git 설치)은 팀장이 정한다. 그 전에는 아무것도 시작하지 않는다
-        raise ApiError(501, "manual_sync_not_supported", "실제 수동 수집은 아직 지원하지 않습니다. 정시 수집(GitHub Actions handbook-sync)을 사용하세요. dry_run=true로는 계획만 볼 수 있습니다.")
+        # 실제 실행 방식(Cloud Run Job, workflow_dispatch, 이미지에 git 설치)은 팀장이 정한다. 그 전에는 아무것도 시작하지 않는다.
+        # 증분 수집은 매일 02:14 KST 정시 실행이 같은 명령(`python -m backend.rag.ingest.schedule --once`)으로 한다(docs/specs/incremental.md Happy Path 1).
+        # GitHub Actions workflow `handbook-sync`는 비활성이라 안내하지 않는다
+        raise ApiError(501, "manual_sync_not_supported", "실제 수동 수집은 지원하지 않습니다. 증분 수집은 매일 02:14(KST) 정시 실행으로 자동 반영됩니다. dry_run=true로는 계획만 볼 수 있습니다.")
 
     @router.get("/changes/{event_id}", response_model=None)
     def get_change(event_id: str, request: Request, response: Response):

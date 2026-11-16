@@ -226,6 +226,8 @@ def test_manual_sync_real_run_is_not_supported_and_spawns_nothing(env, monkeypat
     admin = env.client(env.admin)
     r = admin.post("/admin/sync", json={"dry_run": False})
     assert r.status_code == 501 and r.json()["error"]["code"] == "manual_sync_not_supported"
-    assert "handbook-sync" in r.json()["error"]["message"]
+    msg = r.json()["error"]["message"]
+    assert "02:14" in msg and "dry_run=true" in msg   # 실제로 도는 정시 실행(매일 02:14 KST)을 안내한다
+    assert "GitHub Actions" not in msg and "handbook-sync" not in msg   # 비활성 workflow로 보내지 않는다
     assert spawned == []
     assert admin.post("/admin/sync", json={"dry_run": "x", "extra": 1}).status_code == 422

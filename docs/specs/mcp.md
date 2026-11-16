@@ -113,7 +113,7 @@
 | `backend/rag/ingest/changes.py`, `tests/test_ingest_changes.py` | `list_changed` | 박진형 |
 | `extras/mcp_skill/mcp_server/server.py`, `tests/test_mcp_server.py`, `NOT_BUILT.md`, `mcp_skill.md` | 도구 6개(시험은 CI가 도는 `tests/`에 둔다, `pytest.ini` testpaths) | 박진형 |
 | `backend/main.py` | `/mcp` 붙이기 | 김승욱 리뷰 |
-| `Dockerfile` | `COPY extras/ ./extras/` 한 줄(지금 이미지에 `extras/`가 없다) | 김승욱 리뷰 |
+| `Dockerfile` | `COPY extras/ ./extras/` 한 줄(반영됨, 동결 코드 `194dfd9a`의 `Dockerfile` 62행) | 김승욱 리뷰 |
 | `backend/requirements.txt`, `.env.example` | `fastmcp==4.1.4`, `MCP_TOKEN=` | 내 줄만 |
 | `extras/mcp_skill/mcp_client/client.py`, `tests/test_mcp_client.py` | 클라이언트(아래 "클라이언트" 절). `requirements.txt`에 `langchain[mcp]==1.4.9` 한 줄 | 박진형 (그래프 연결은 김승욱) |
 | `extras/mcp_skill/mcp_server/decision_tool.py`, `tests/test_mcp_decision_tool.py` | `explain_decision`(아래 "도구 4·5" 절) | 박진형 |
@@ -125,7 +125,7 @@
 1. ~~담당 나눔~~ 정함(11/3): 서버 = 박진형, 그래프 쪽 클라이언트·Skill·점수 비교 = 김승욱
 2. ~~순서~~ 정함(11/3): 함수와 서버를 한 PR로 같이 낸다(11/6 가산 판단을 기다리지 않음)
 3. `Section`을 계약 밖 모델로 둘지 (위 How 1)
-4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다. 2026-11-16 운영 반영 뒤에는 컨테이너 접근 로그로만 MCP 호출을 확인했고, 운영 Langfuse에서 MCP 도구 호출이 단계로 보이는지는 확인하지 않았다
+4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다. 2026-11-16 운영 반영 뒤 컨테이너 접근 로그로 MCP 호출을 확인했고, 같은 날 운영 Langfuse 트레이스에서 MCP 도구 `search_handbook` 관측이 보이는 것을 확인했다(`EVAL_REPORT.md` 7장 그림 5, 6, 판 `provena-api-00065-q84`)
 5. 배포 호출 제한(#45 리뷰): **정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다. 확정: `/mcp`는 로그인 쿠키·CSRF 대상이 아니고 Bearer 토큰만 본다(`backend/main.py`의 `api_prefixes`에 `mcp`)
 

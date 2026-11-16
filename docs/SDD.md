@@ -78,7 +78,7 @@ flowchart LR
 - **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 변환·승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. `explain_decision`은 이미 사람이 승인한 표의 규칙을 계산해 돌려줄 뿐 표를 만들거나 승인하지 않는다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
 - 비공개(`internal.gitlab.com`)로만 연결된 칸·링크는 도구가 근거로 내보내지 않고 "비공개 문서"로 표시한다(9장).
 - 클라이언트는 `langchain[mcp]`(베타)를 쓴다. 서버는 `fastmcp` 4.x로 맞춘다. 옛 `langchain-mcp-adapters`는 보관(archived)되어 쓰지 않는다. 베타가 문제를 일으키면 공식 MCP Python SDK나 FastMCP 클라이언트를 직접 부른다.
-- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 당시 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음, `evals/results/mcp_prod_20261116/`). 그 뒤 운영 판 `provena-api-00075-5zk`(커밋 `eb7516ca`)와 직전 운영 판 `provena-api-00079-tmt`(커밋 `c565998d`, 현재 운영 판은 `docs/GATES.md` G1 칸)의 배포 확인에서도 `/mcp/`를 토큰 없이 부르면 401이었고 `MCP_TOKEN`이 설정되어 있었다.
+- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 당시 최종 판 `provena-api-00065-q84`와 당시 운영 판 `provena-api-00068-drb`에서 확인했다. 동결 판 `provena-api-00172-rex`와 서비스 판 `provena-api-00178-max`도 `/mcp/` 반영 판의 설정을 이어받았다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음, `evals/results/mcp_prod_20261116/`). 그 뒤 운영 판 `provena-api-00075-5zk`(커밋 `eb7516ca`)와 직전 운영 판 `provena-api-00079-tmt`(커밋 `c565998d`, 현재 운영 판은 `docs/GATES.md` G1 칸)의 배포 확인에서도 `/mcp/`를 토큰 없이 부르면 401이었고 `MCP_TOKEN`이 설정되어 있었다.
 - 접근은 토큰 헤더로 제한한다. 토큰은 로컬은 `.env`, 운영은 Secret Manager 비밀값으로 둔다. MCP 도구 호출도 Langfuse 트레이스에 단계로 남긴다.
 - 서버를 띄우는 곳(FastAPI 앱에 붙일지, 따로 띄울지)은 11장에서 정한다.
 
@@ -244,7 +244,7 @@ repo/  (강사 템플릿 docs/SCAFFOLD.md 구조를 따른다)
 - **한국어 질문, 영어 문서:** 설계 당시에는 다국어 임베딩으로 한국어 질문을 그대로 쓰는 방식과 번역 후 검색을 비교하기로 했다. 비교 결과 현재 기본은 LLM이 질문을 영어 문장으로 바꿔(`QUERY_TRANSLATE`, 번역은 장부에 저장) 그 문장의 벡터로 검색하는 `dense_en`이다(`docs/specs/search.md` 3·4단계).
 - `as_of`가 있으면 그 날짜에 유효했던 커밋 판만 검색한다.
 - **문서 권한(F-06):** 청크마다 볼 수 있는 그룹(`acl`, 비면 공개)을 붙인다. 그룹은 정책 파일(`data/acl_policy.json`, 절·경로 접두어 → 그룹)로 정하므로 임베딩을 다시 만들지 않는다. API는 항상 사용자 그룹을 `SearchQuery.allowed_groups`로 넘기고, 검색은 순위를 매기기 전에 거른다. **(2026-11-11 현재 미구현 부분: `data/acl_policy.json`과 `SearchQuery.allowed_groups`는 코드에 없다(`backend/schemas/chunk.py:35-40`, grep 0건). `chunks.acl`·`users.groups` 칸과 리콜 알림 쪽 확인(`backend/graph/recall/acl.py`)까지만 있고 코퍼스 `acl`은 전부 비어 있다. 검색 단계 거르기를 만들지는 팀장 판단이다. 2026-11-11 진형 결정: 검색 결과와 평가 점수가 바뀌므로 동결 전에는 만들지 않는다, 알려진 한계로 EVAL_REPORT 6장에 적었다.)** 검색 결과 캐시와 리랭킹 캐시는 그룹까지 키에 넣어 사용자 사이에 새지 않게 한다. 관리자는 전체를 본다.
-- **한국어 문서:** BM25 토큰에 한글 토큰을 더한다. 영어 토큰은 바꾸지 않아 기존 색인을 그대로 쓴다.
+- **한국어 문서:** 설계 당시에는 BM25 토큰에 한글 토큰을 더할 계획이었으나 만들지 않았다. 현재 BM25 토큰 함수(`backend/rag/retrieve/search.py`의 `tokens`)는 영문 소문자와 숫자(`[a-z0-9]+`)만 센다. 확정 검색 `dense_en`은 BM25를 쓰지 않으므로 서비스 검색에는 영향이 없고, 한국어 질문은 영어 검색어로 바꿔 영어 문서를 찾는다. 한국어 문서를 BM25로 찾는 기능은 없다.
 - 바꾸는 순서는 한 번에 하나: 청킹 → 임베딩 → 하이브리드 → 리랭킹. 나머지는 고정한 채(lasagna 방식) 바꿀 때마다 Recall·MRR을 다시 잰다.
 - GraphRAG(가산, 가이드 p.20): 핸드북 페이지 사이 링크 19,366개(전체 4,195쪽 중 2,622쪽이 링크를 가짐, 실측)로 정책 참조 그래프를 만든다. 비공개 주소로 가는 링크(450쪽에서 발견)는 끝점 없는 간선이라 뺀다. 벡터 검색이 지는 질문 유형(예: "배포 승인 정책이 바뀌면 영향받는 다른 정책은?")을 정의하고 개선 전후를 보인다. F-02 연결 정책 리콜도 이 그래프를 쓴다.
 
@@ -306,7 +306,7 @@ flowchart TD
 | Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다 |
 | 사람 승인 | 없음 | interrupt로 멈추고 `resume()`으로 이어 간다 |
 
-**단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`single_pass`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다. 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
+**단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`backend/graph/build.py`의 `build_graph`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다(`backend/graph/multi.py`의 `build_multi_graph`, 단일 그래프의 노드를 다시 배선). 서비스 `/chat`은 단일 그래프를 쓰고 멀티는 측정·시험에서만 쓴다. 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
 
 **체크포인트와 재시작:** 체크포인터는 Postgres에 둔다. 사람 승인(interrupt)에서 멈춘 뒤 서버를 재시작해도 같은 `thread_id`로 승인 지점부터 재개되는지 시험한다(가이드 p.7, p.22).
 
@@ -421,7 +421,7 @@ flowchart TD
 
 SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 멈췄다고 알리고, 질문을 줄이거나 나누어 다시 물어보라고 안내한다(2026-11-13 보완, `MSG_LIMIT`).
 
-**질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(코드 상한 2회 `MAX_RESEARCH=2`, `backend/graph/build.py:64`, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, `backend/graph/service_profile.py:56`. 운영에도 1회가 적용된다)이 호출 수를 묶는다. 최종 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
+**질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(코드 상한 2회 `MAX_RESEARCH=2`, `backend/graph/build.py:64`, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, `backend/graph/service_profile.py:56`. 운영에도 1회가 적용된다)이 호출 수를 묶는다. 동결 전 측정 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
 
 리콜 웹훅 형식(수신 경로, 본문, 서명)은 11장 11-1에서 정한다.
 
@@ -676,9 +676,9 @@ data: {"type":"done","thread_id":"t-1a2b3c4d5e6f","data":{"answer_id":"5c1d...",
 | 결정표 변환 정확도 | `evals/agent/` | 셀 단위, 2023 권한표 정답과 대조 |
 | 답변 리콜 | `evals/agent/` | 핸드북 실제 개정 커밋 전후 판 쌍으로 재현율·정밀도 (PRD 13-2) |
 | 연결 정책 후보, 링크 추출 | `evals/agent/` | 후보 정밀도, 링크 그래프 간선 정확도 |
-| GraphRAG (가산) | `evals/retrieval/`, 비교셋 `evals/graphrag_v1/questions.jsonl`(12건), 사전 등록 62.76 | 벡터 검색이 지는 질문 유형에서 그래프 검색 개선 전후 (가이드 p.20). 운영 비교: 링크 확장(`SEARCH_LINK_N`) 켬·끔을 같은 커밋의 트래픽 0% 태그 판에서 비교(결정 0123), 비교셋 12건 링크 확장 켬(최종 판 `provena-api-00065-q84`, 비교셋 12건 1회) 인용 정확도 0.569, 정답 근거 인용률 0.388, 답 12/12, p95 12.869초, 0.098달러 대 끔(0% 판 `provena-api-00078-keb`, 1회) 0.528(정답 근거 인용률 0.413, 답 12/12, p95 12.454초, 0.110달러). v2 50건은 켬 0.953(최종 판 3회 평균, 정답 근거 인용률 0.942, 과잉 거절 0.000, p95 8.758초) 대 끔 0.896(1회, 정답 근거 인용률 0.853, 과잉 거절 0.040, p95 10.067초). 결과 `evals/results/deploy_latency_graphrag_off_provena-api-00078-keb/`, `evals/results/deploy_latency_graphoff_v2_provena-api-00078-keb/`, `evals/results/deploy_latency_graphrag_on_provena-api-00065-q84/` |
-| Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다. 운영 비교(사전 등록 62.75, 0% 태그 판 `USE_SKILLS=0`, 결정 0123): Skill 켬(최종 판 `provena-api-00065-q84` 3회 평균) v2 인용 정확도 0.953·회당 0.244달러, 검증 20건 0.911·회당 0.095달러 대 Skill 끔(0% 판 `provena-api-00076-zok` 1회) v2 0.940(정답 근거 인용률 0.933, p95 9.045초, 0.142달러), 검증 20건 0.883(p95 7.062초, 0.049달러), 결과 `evals/results/deploy_latency_skilloff_provena-api-00076-zok/`, `evals/results/deploy_latency_holdout_skilloff_provena-api-00076-zok/`. 11/9 로컬 비교(0.982 대 0.960)는 공급자가 달라 참고값이다 |
-| MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용). 운영 증거(2026-11-16): `/mcp/`는 토큰 없이 401, `MCP_TOKEN`은 Secret Manager 비밀값으로 연결, 최종 측정 판 `provena-api-00065-q84`의 컨테이너 안 접근 로그에 `POST /mcp/ 200` 1,170줄(검색 노드의 MCP 호출), 0% 판 v2 50건 1회 p95 8.368초·실패 0(`evals/results/deploy_latency_mcp_provena-api-00061-wuq/`, `evals/results/mcp_prod_20261116/`). 최종 판 `provena-api-00065-q84`의 Langfuse 트레이스에 MCP 도구 `search_handbook` 관측이 보인다(2026-11-16, `EVAL_REPORT.md` 7장 그림 5, 6) |
+| GraphRAG (가산) | `evals/retrieval/`, 비교셋 `evals/graphrag_v1/questions.jsonl`(12건), 사전 등록 62.76 | 벡터 검색이 지는 질문 유형에서 그래프 검색 개선 전후 (가이드 p.20). 운영 비교: 링크 확장(`SEARCH_LINK_N`) 켬·끔을 같은 커밋의 트래픽 0% 태그 판에서 비교(결정 0123), 비교셋 12건 링크 확장 켬(당시 최종 판 `provena-api-00065-q84`, 비교셋 12건 1회) 인용 정확도 0.569, 정답 근거 인용률 0.388, 답 12/12, p95 12.869초, 0.098달러 대 끔(0% 판 `provena-api-00078-keb`, 1회) 0.528(정답 근거 인용률 0.413, 답 12/12, p95 12.454초, 0.110달러). v2 50건은 켬 0.953(최종 판 3회 평균, 정답 근거 인용률 0.942, 과잉 거절 0.000, p95 8.758초) 대 끔 0.896(1회, 정답 근거 인용률 0.853, 과잉 거절 0.040, p95 10.067초). 결과 `evals/results/deploy_latency_graphrag_off_provena-api-00078-keb/`, `evals/results/deploy_latency_graphoff_v2_provena-api-00078-keb/`, `evals/results/deploy_latency_graphrag_on_provena-api-00065-q84/` |
+| Skill 있을 때와 없을 때 (가산) | `evals/agent/` | 같은 평가셋(v2 50건과 합동 검토 질문), `USE_SKILLS` 켬·끔. 답 정확도, 근거 인용률, 거절 정확도를 `delegation` 대상 질문만 따로도 본다. 점수 차이 표와 실제 답 비교 예시 2~3개를 싣고, 차이가 없거나 나빠진 경우도 그대로 공개한다. 운영 비교(사전 등록 62.75, 0% 태그 판 `USE_SKILLS=0`, 결정 0123): Skill 켬(당시 최종 판 `provena-api-00065-q84` 3회 평균) v2 인용 정확도 0.953·회당 0.244달러, 검증 20건 0.911·회당 0.095달러 대 Skill 끔(0% 판 `provena-api-00076-zok` 1회) v2 0.940(정답 근거 인용률 0.933, p95 9.045초, 0.142달러), 검증 20건 0.883(p95 7.062초, 0.049달러), 결과 `evals/results/deploy_latency_skilloff_provena-api-00076-zok/`, `evals/results/deploy_latency_holdout_skilloff_provena-api-00076-zok/`. 11/9 로컬 비교(0.982 대 0.960)는 공급자가 달라 참고값이다 |
+| MCP 경로 결과 일치 (가산) | `tests/test_mcp_server.py` (`pytest.ini` `testpaths = tests`라 CI가 도는 곳) | 직접 호출과 chunk_id 순서 같음. Langfuse 트레이스에 MCP 도구 호출 단계가 보이고, 외부 MCP 클라이언트 하나에서 `search_handbook` 결과가 나옴 (시연 영상용). 운영 증거(2026-11-16): `/mcp/`는 토큰 없이 401, `MCP_TOKEN`은 Secret Manager 비밀값으로 연결, 당시 최종 측정 판 `provena-api-00065-q84`의 컨테이너 안 접근 로그에 `POST /mcp/ 200` 1,170줄(검색 노드의 MCP 호출), 0% 판 v2 50건 1회 p95 8.368초·실패 0(`evals/results/deploy_latency_mcp_provena-api-00061-wuq/`, `evals/results/mcp_prod_20261116/`). 당시 최종 판 `provena-api-00065-q84`의 Langfuse 트레이스에 MCP 도구 `search_handbook` 관측이 보인다(2026-11-16, `EVAL_REPORT.md` 7장 그림 5, 6) |
 | 범용 챗봇 비교 | `evals/safety/` | PRD 10-1 (IT 질문으로 수집) |
 | 재현 | `EVAL_REPORT.md` 9장, SPEC 3장 | 지표마다 실행 명령을 적었다. 모든 지표를 한 번에 재는 `evals/run_all.py`는 만들지 않았다 |
 
@@ -702,7 +702,7 @@ D0(10/30) 회의에서 안건마다 추천안을 먼저 보고, 반대가 없으
 | MCP 서버 위치 | 같은 서비스에 `/mcp`로 마운트. 운영 반영 2026-11-16(`MCP_TOKEN` 비밀값, 토큰 없이 401) | `backend/main.py`, `evals/results/mcp_prod_20261116/` |
 | 증분 수집 정시 실행 | 팀장 PC 작업 스케줄러, 매일 02:14 KST, 운영 첫 실행 2026-11-16 성공(`sync_runs` run_id=2), 동결 뒤에도 계속 | `docs/specs/incremental.md`, `evals/results/sync_prod_20261116/` |
 | F-05~F-08 | 모두 유지(결정 0066) | 11-4 표 |
-| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 6장도 김승욱이 `docs/images/langfuse/`에 올렸다(앞 4장은 커밋 이력, 최종 판 `provena-api-00065-q84` 캡처 2장은 2026-11-16 추가). 시연 영상 3분은 저장소에 없고 담당을 정한 기록이 없다. 촬영은 D11(11/16) | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
+| README, 시연 영상 3분, Langfuse 스크린샷(G7) 담당 | README는 김승욱이 작성했고 Langfuse 화면 캡처 6장도 김승욱이 `docs/images/langfuse/`에 올렸다(앞 4장은 커밋 이력, 당시 최종 판 `provena-api-00065-q84` 캡처 2장은 2026-11-16 추가). 시연 영상 3분은 2026-11-17 현재 저장소에 없고 담당을 정한 기록이 없다. 가이드 일정상 촬영은 D11(11/16)이다 | `git log -- README.md`, `docs/images/langfuse/`, 가이드 D11 |
 | SDK 생성 도구 | openapi-generator 7.26.0 (진형 선택 2026-11-11: Java·Python을 한 도구로 만듦). 산출물 `mock_erp/sdk/`, 재생성 `bash mock_erp/sdk/generate.sh`. 업무시스템 쪽 예제는 `mock_erp/python_example/`에 있고(`mock_erp/src/`에는 Java 코드가 없고 설명 문서뿐이다) 명세는 `docs/api/openapi.json` | `mock_erp/mock_erp.md`, `docs/api/api.md` |
 
 
