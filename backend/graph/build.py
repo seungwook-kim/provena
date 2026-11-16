@@ -40,7 +40,7 @@ from backend.graph.answer_store import AnswerStore
 from backend.graph.citations import check_citations
 from backend.graph.decision.execute import DecisionExecutor, decision_citation, format_decision_answer, make_execute_node
 from backend.graph.decision.params import DECISION_PARAMS_SYSTEM, params_from_obj, params_user
-from backend.graph.decompose import decompose_enabled, decompose_question, drop_company_prefix, gate_split
+from backend.graph.decompose import decompose_detail, decompose_enabled, decompose_question, drop_company_prefix, gate_split, keep_subject_union_enabled
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
 from backend.graph.service_profile import SharedChatModel
@@ -620,15 +620,23 @@ def build_graph(
         """검색 범위(절). 입력의 절, 사용자가 직접 정한 소속 순이다. 둘 다 없으면 전체 절이다."""
         return state.get("org") or (state.get("profile") or {}).get("affiliation") or None
 
-    def memo_search(state: AgentState, q: SearchQuery) -> tuple[list[dict], dict]:
-        """한 번의 실행 안에서 같은 검색(질의, 절, 기준일, k, 하위 질문)은 한 번만 한다. 하위 질문이 다르면 다른 검색이다."""
-        key = json.dumps([q.query, q.org, q.as_of, q.k, q.sub_queries], ensure_ascii=False)
+    def memo_search(state: AgentState, q: SearchQuery, alts: list[str] | None = None) -> tuple[list[dict], dict]:
+        """한 번의 실행 안에서 같은 검색(질의, 절, 기준일, k, 하위 질문)은 한 번만 한다. 하위 질문이 다르면 다른 검색이다.
+        alts: 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION`). 있으면 검색하는 동안만 힌트(`sub_alts.given`)로 두고 기억 열쇠에도 넣는다. 없으면 지금과 같다."""
+        key = json.dumps([q.query, q.org, q.as_of, q.k, q.sub_queries, *([alts] if alts else [])], ensure_ascii=False)
         cache = dict(state.get("search_cache") or {})
         stats = dict(state.get("search_stats") or {"calls": 0, "cache_hits": 0})
         if key in cache:
             stats["cache_hits"] += 1
             return cache[key], {"search_cache": cache, "search_stats": stats}
-        chunks = [redact_chunk(c.model_dump()) for c in retrieve(q)]  # 직접 호출과 MCP가 같은 본문을 받는다
+        if alts:
+            from backend.rag import sub_alts
+
+            with sub_alts.given(q.sub_queries or [], alts):
+                found = retrieve(q)
+        else:
+            found = retrieve(q)
+        chunks = [redact_chunk(c.model_dump()) for c in found]  # 직접 호출과 MCP가 같은 본문을 받는다
         cache[key] = chunks
         stats["calls"] += 1
         return chunks, {"search_cache": cache, "search_stats": stats}
@@ -733,11 +741,19 @@ def build_graph(
         두 후보가 같은 요청을 동시에 보내면 재생이 어느 후보에 어느 녹화 응답을 줄지가 스레드 경쟁으로 정해져, 동점일 때 고르는 첫 후보의 답이 실행마다 달랐다(K-24)."""
         return in_lane(n, fn) if replay_demo() else fn
 
+    def split_call(question: str) -> tuple:
+        """질문 분해(LLM 1회, 형식 오류면 1회 더). (하위 질문, 출처)이고, `GRAPH_KEEP_SUBJECT_UNION=1`이며 대상 구를 붙인 하위 질문이 있으면
+        끝에 원 하위 질문(`decompose.subject_alts`)을 더한 셋이다. 분해 호출과 하위 질문은 스위치와 상관없이 같다."""
+        if not keep_subject_union_enabled():
+            return decompose_question(ask, question)
+        subs, source, alts = decompose_detail(ask, question)
+        return (subs, source, alts) if alts else (subs, source)
+
     def start_split(state: AgentState) -> tuple[Any, ThreadPoolExecutor, float]:
         """분해 상한을 켰을 때 분해를 따로 된 일꾼에서 시작한다. 상한을 넘긴 분해를 기다리지 않고 나가려고 접수 일꾼과 나눈다."""
         own = ThreadPoolExecutor(max_workers=1, thread_name_prefix="decompose")
         started = time.monotonic()
-        return in_background(own, "search", lambda: decompose_question(ask, state["question"])), own, started
+        return in_background(own, "search", lambda: split_call(state["question"])), own, started
 
     def finish_split(handle: tuple[Any, ThreadPoolExecutor, float]) -> tuple[list[str], str]:
         """시작한 뒤 `decompose_cap`초까지 기다린다. 넘으면 하위 질문 없이(원 질문 하나로) 검색하고 늦게 온 결과는 버린다. 분해의 오류는 그대로 올린다."""
@@ -751,7 +767,7 @@ def build_graph(
             own.shutdown(wait=False, cancel_futures=True)
 
     def split_question(state: AgentState) -> tuple[list[str], str]:
-        return finish_split(start_split(state)) if decompose_cap else decompose_question(ask, state["question"])
+        return finish_split(start_split(state)) if decompose_cap else split_call(state["question"])
 
     def needs_rewrite_call(state: AgentState) -> bool:
         """재작성 LLM을 불러야 하는지. 재검색은 언제나 부른다. 분해가 켜진 첫 검색은 원 질문으로 찾으므로 재작성에서 쓰는 값은 기준 시점뿐이다(절은 입력과 프로필을 쓴다)."""
@@ -812,7 +828,7 @@ def build_graph(
         try:
             with ThreadPoolExecutor(max_workers=2, thread_name_prefix="intake") as pool:
                 rewriting = in_background(pool, "rewrite", lambda: rewrite_reply(state)) if needs_rewrite_call(state) else None
-                splitting = in_background(pool, "search", lambda: decompose_question(ask, state["question"])) if split_first_search() and capped is None else None
+                splitting = in_background(pool, "search", lambda: split_call(state["question"])) if split_first_search() and capped is None else None
                 route = decide()
                 if spec is not None:
                     spec["route"] = route
@@ -1192,21 +1208,28 @@ def build_graph(
         if early is not None:  # 미리 받은 분해 결과를 꺼내고 자리를 지운다
             state = {**state, "search_cache": {k: v for k, v in state["search_cache"].items() if k != INTAKE_KEY}}
             cleared = {"search_cache": state["search_cache"]}
+        alts: list[str] | None = None   # 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION=1`이고 대상 구를 붙인 하위 질문이 있을 때만). 검색 입력에만 쓰고 상태와 LLM 입력에는 넣지 않는다
         if split:
-            subs, source = early["decompose"] if early is not None and "decompose" in early else split_question(state)
+            got = early["decompose"] if early is not None and "decompose" in early else split_question(state)
+            subs, source = got[0], got[1]
+            alts = got[2] if len(got) > 2 else None
             extra = {"sub_queries": subs, "decompose_source": source}
         query = drop_company_prefix([state["question"]])[0] if split else state["search_query"]
         if split and query_branches:  # `GRAPH_QUERY_BRANCHES`(기본 꺼짐): 대상이 없는 계정 주제는 대상마다 하위 질문을 만든다(query_plan.py)
             plan = QP.plan_first_search(state["question"], query, subs, branches=True)
+            if alts and plan.subs != subs:   # 대상마다 나눈 하위 질문은 원 하위 질문이 없다. 그대로 남은 하위 질문만 짝을 잇는다
+                pair = dict(zip(subs, alts))
+                alts = [pair.get(s, "") for s in plan.subs]
             query, subs = plan.query, plan.subs
             extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
+        alts = alts if alts and subs and len(alts) == len(subs) and any(alts) else None
         # 나뉜 질문의 첫 검색만 SPLIT_K(달러 금액이 든 질문은 SEARCH_K). 62.73(`GRAPH_SPLIT_FULL_K`, 서비스 설정 꺼짐)을 켜면 하위 질문이 있는 첫 검색은 근거 목록 상한(MAX_CHUNKS)까지 요청한다.
         # `subs`는 첫 검색에서 분해가 나눴을 때만 2개 이상이다(안 나눔, 분해 실패, 재검색, 미리 돌린 원 질문 검색은 비어 SEARCH_K 그대로). 검색 기억 열쇠에 k가 들어 있어 다른 k 결과와 섞이지 않는다
         k = (MAX_CHUNKS if split_full_k and subs else split_k(state["question"], subs)) if first else SEARCH_K
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"), k=k, sub_queries=subs or None)
         _forget_search_trace()
         try:
-            found, memo = memo_search(state, q)
+            found, memo = memo_search(state, q, alts) if alts else memo_search(state, q)
         except EmbedUnavailable as e:  # 임베딩 API가 잠깐 안 되는 경우: 죽지 않고 정해진 거절로 끝낸다(다시 시도하면 될 수 있다)
             log.warning("검색 임베딩 API 일시 오류: %s", e)
             return {**extra, **cleared, "kind": "refuse", "answer": MSG_REFUSE_SEARCH_DOWN, "citations": [], "search_error": "unavailable"}

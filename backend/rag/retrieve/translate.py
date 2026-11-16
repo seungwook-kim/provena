@@ -12,10 +12,12 @@
 from __future__ import annotations
 
 import concurrent.futures as cf
+import contextvars
 import hashlib
 import logging
 import os
 import re
+import threading
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -33,6 +35,29 @@ PROMPTS = {
 TIMEOUT_S = 15.0     # 11/1 실측(claude_cli Haiku, v1 30문항×2): keywords p95 8.3초·최대 9.6초 → 10초면 정상 호출이 잘린다. 최대값 + 여유
 ATTEMPTS = 2         # 첫 호출 + 재시도 1회 (Spec EC-02)
 _pool = cf.ThreadPoolExecutor(max_workers=4, thread_name_prefix="translate")
+# 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION`) 번역 전용 일꾼. 처음 쓸 때 만든다. 위 일꾼(전체 질문 + 하위 질문 최대 4개)에 줄 서지 않게 따로 둔다
+_side_pool: cf.ThreadPoolExecutor | None = None
+_side_lock = threading.Lock()
+_on_side: contextvars.ContextVar[bool] = contextvars.ContextVar("translate_on_side_pool", default=False)
+
+
+def _pool_now() -> cf.ThreadPoolExecutor:
+    global _side_pool
+    if not _on_side.get():
+        return _pool
+    with _side_lock:
+        if _side_pool is None:
+            _side_pool = cf.ThreadPoolExecutor(max_workers=3, thread_name_prefix="translate_alt")
+        return _side_pool
+
+
+def on_side_pool(fn, *args):
+    """`fn(*args)`를 부르는 동안 번역 호출이 원 하위 질문 전용 일꾼을 쓰게 한다(`search.Searcher._translate_one`의 side)."""
+    token = _on_side.set(True)
+    try:
+        return fn(*args)
+    finally:
+        _on_side.reset(token)
 
 
 def query_sha(query: str) -> str:
@@ -102,7 +127,7 @@ def translate(query: str, kind: str, store: TranslationStore, call=_call) -> Res
     reason = "error"
     for _ in range(1 if demo else ATTEMPTS):      # 재생은 같은 입력에 같은 답이라 다시 불러도 소용없다
         try:
-            text = _pool.submit(step_cost.bind(llm_trace.bind(call)), query, kind).result(timeout=TIMEOUT_S)
+            text = _pool_now().submit(step_cost.bind(llm_trace.bind(call)), query, kind).result(timeout=TIMEOUT_S)
         except cf.TimeoutError:
             reason = "timeout"
             continue

@@ -133,6 +133,10 @@ SERVICE_ENV: dict[str, str] = {
     # 하위 질문에 원 질문의 대상·조건 유지(`backend/graph/decompose.py` `keep_subject_enabled`): 분해 프롬프트에 규칙 한 줄을 더하고, 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 붙인다.
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_DECOMPOSE_KEEP_SUBJECT": "1",
+    # 대상 구를 붙인 하위 질문마다 붙이기 전 하위 질문으로도 찾아 두 후보 목록을 번갈아 합친다(`backend/graph/decompose.py` `keep_subject_union_enabled`, `search.Searcher.search`).
+    # 분해 호출은 그대로이고, 붙인 하위 질문 하나마다 임베딩 묶음에 문장 1개, 벡터 질의 1번, 번역 1번(따로 된 일꾼)이 는다. 자리 수(k)와 근거 목록 상한은 그대로다.
+    # 코드 기본은 꺼짐(끄면 검색 입력이 그대로). 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "GRAPH_KEEP_SUBJECT_UNION": "1",
     # 값 뒤집기의 구조 판정(`backend/graph/untrusted.py` `structure_enabled`): 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 값을 내세우는 문장을
     # 주장하는 낱말이 없어도 입력에서 빼고, 그 새 값이 든 답 문장은 출력 검사가 뺀다. 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_FLIP_STRUCTURE": "1",

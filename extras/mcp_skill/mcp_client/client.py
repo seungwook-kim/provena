@@ -23,6 +23,7 @@ from typing import Any
 
 from fastmcp import Client
 
+from backend.rag import sub_alts
 from backend.schemas.chunk import Chunk, SearchQuery
 
 DEFAULT_URL = "http://127.0.0.1:8000/mcp/"
@@ -75,11 +76,13 @@ async def load_tools(target: Any = None, token: str | None = None) -> list:
     return await MCPAdapter(make_client(target, token)).list_tools()
 
 
-def _args(q: SearchQuery) -> dict[str, Any]:
+def _args(q: SearchQuery, alts: list[str] | None = None) -> dict[str, Any]:
     args: dict[str, Any] = {"query": q.query, "k": q.k}
     if q.sub_queries:
         # 몰래 빼지 않고 그대로 보낸다(빼면 직접 search()와 결과가 달라진다). 검사(2~3개)는 서버가 invalid로 돌려준다.
         args["sub_queries"] = list(q.sub_queries)
+    if alts:   # 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION`을 켠 그래프가 검색하는 동안만 있는 힌트). 없으면 보내지 않아 도구 입력이 지금과 같다
+        args["sub_query_alts"] = alts
     if q.org is not None:
         args["org"] = q.org
     if q.as_of is not None:
@@ -103,13 +106,13 @@ def _read(content: dict[str, Any] | None) -> tuple[list[Chunk], str | None]:
 
 async def asearch_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> tuple[list[Chunk], str | None]:
     """(청크 목록, 서버 note). note에는 fallback_reason(번역 실패·no_key 등)이 올 수 있다."""
-    chunks, note, _usage = await _asearch(q, target, token)
+    chunks, note, _usage = await _asearch(q, target, token, sub_alts.current(q.sub_queries))
     return chunks, note
 
 
-async def _asearch(q: SearchQuery, target: Any = None, token: str | None = None) -> tuple[list[Chunk], str | None, dict | None]:
+async def _asearch(q: SearchQuery, target: Any = None, token: str | None = None, alts: list[str] | None = None) -> tuple[list[Chunk], str | None, dict | None]:
     """(청크 목록, 서버 note, 서버가 센 임베딩 사용량 `usage`). 사용량은 비용 집계용이다(`graph/mcp_retriever.py`가 /chat 집계에 더한다)."""
-    args = _args(q)
+    args = _args(q, alts)
     client = make_client(target, token)
     try:
         async with client:
@@ -140,8 +143,10 @@ def _is_transport(e: BaseException) -> bool:
 
 def search_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> list[Chunk]:
     """search(q)와 같은 모양. 그래프 노드가 동기 함수라도, 이미 이벤트 루프 안이어도 부를 수 있다(그때는 새 스레드에서)."""
+    alts = sub_alts.current(q.sub_queries)   # 원 하위 질문 힌트는 부른 쪽 문맥에서 읽는다(아래 새 스레드에서는 보이지 않는다)
+
     def go():
-        return asyncio.run(_asearch(q, target, token))
+        return asyncio.run(_asearch(q, target, token, alts))
     _last_usage.set(None)
     try:
         asyncio.get_running_loop()

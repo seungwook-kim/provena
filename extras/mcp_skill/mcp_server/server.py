@@ -227,7 +227,7 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
 
     @mcp.tool(annotations=READ_ONLY)
     async def search_handbook(query: str, org: str | None = None, as_of: str | None = None, k: int = DEFAULT_K,
-                              sub_queries: list[str] | None = None) -> ToolResponse:
+                              sub_queries: list[str] | None = None, sub_query_alts: list[str] | None = None) -> ToolResponse:
         """GitLab 핸드북에서 질문과 관련된 청크(섹션 조각)를 찾는다. 질문을 영어 문장으로 바꿔 voyage-4 벡터로 찾은 상위 k개이고
         (리랭커 없음), k가 3 이상이면 뒤 2자리는 상위 결과가 링크한 다른 페이지의 청크다(링크 확장, 같은 org·as_of 필터).
 
@@ -235,7 +235,8 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
         언제 쓰지 않나: 섹션 하나를 통째로 읽을 때는 get_section, 최근 바뀐 섹션 목록은 list_changed_sections.
         입력: query 1~1000자 / org = 핸드북 절(예: security, finance, engineering), 모르면 비움 /
               as_of = YYYY-MM-DD, 그날 유효했던 판만(비우면 현재 판) / k = 1~20, 기본 5 /
-              sub_queries = 질문을 나눈 하위 질문 2~3개(선택). 주면 하위 질문마다 찾아 번갈아 합친다. 나누지 않으면 비움.
+              sub_queries = 질문을 나눈 하위 질문 2~3개(선택). 주면 하위 질문마다 찾아 번갈아 합친다. 나누지 않으면 비움 /
+              sub_query_alts = sub_queries와 같은 자리의 다른 표현(선택, 빈 글은 그 자리 없음). 주면 그 자리는 두 문장으로 찾아 번갈아 합친다(자리 수 k는 그대로).
         출력: results = Chunk 목록(chunk_id, rule_seq, article, text, source_url, version_date ...). 첫 줄은 제목 경로.
               비공개 주소 링크는 [비공개 문서]로 바꿔 보낸다 — 그 링크 너머 내용은 근거가 아니다.
               usage = 이 검색이 쓴 임베딩 사용량(embed_tokens, embed_calls). 비용 집계용이며 답의 근거가 아니다.
@@ -258,12 +259,25 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
                     raise Invalid(f"sub_queries는 2~{MAX_SUB_QUERIES}개, 각 1~{MAX_QUERY}자(지금 {len(subs)}개)")
                 for sub in subs:
                     _check_text(sub, "sub_queries")
+            alts = sub_query_alts or None
+            if alts is not None:
+                if subs is None or len(alts) != len(subs) or not all(isinstance(a, str) and len(a) <= MAX_QUERY for a in alts):
+                    raise Invalid(f"sub_query_alts는 sub_queries와 같은 수, 각 0~{MAX_QUERY}자(지금 {len(alts)}개)")
+                for alt in alts:
+                    if alt:
+                        _check_text(alt, "sub_query_alts")
             await _run(_check_org, org, deps)
             try:
                 q = SearchQuery(query=query, org=org, as_of=as_of, k=k, sub_queries=subs)
             except ValueError as e:                              # pydantic 검사 — 위 검사와 어긋날 때만
                 raise Invalid("검색 입력이 형식에 맞지 않습니다(query·org·as_of·k).") from e
-            chunks, fallback, usage = await _run(deps.metered_search, q)
+            if alts:   # 원 하위 질문은 검색 계약(SearchQuery) 밖의 힌트로 넘긴다(backend/rag/sub_alts.py). `asyncio.to_thread`가 문맥을 옮긴다
+                from backend.rag import sub_alts
+
+                with sub_alts.given(subs, alts):
+                    chunks, fallback, usage = await _run(deps.metered_search, q)
+            else:
+                chunks, fallback, usage = await _run(deps.metered_search, q)
         except Exception as e:  # noqa: BLE001 — 상태로 돌려준다
             return _failure("search_handbook", src, e)
         note = f"fallback_reason={fallback}" if fallback else None

@@ -246,10 +246,33 @@ def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
     return bool(drop_citation_asks(subs) if keep_subject_enabled() else subs)
 
 
-def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
-    """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
+def keep_subject_union_enabled() -> bool:
+    """`GRAPH_KEEP_SUBJECT_UNION`이 1이면 켬. 코드 기본은 꺼짐이고 끄면 검색 입력이 지금과 같다(`decompose_detail`의 원 하위 질문을 검색에 넘기지 않는다).
+    켜면 `keep_subject`가 대상 구를 붙인 하위 질문마다 붙이기 전 하위 질문으로도 찾아 두 후보 목록을 번갈아 합친다(`backend/rag/sub_alts.py` 힌트, `search.Searcher.search`)."""
+    return (os.environ.get("GRAPH_KEEP_SUBJECT_UNION") or "").strip() == "1"
+
+
+def subject_alts(base: list[str], kept: list[str], final: list[str]) -> list[str] | None:
+    """`keep_subject`가 고친 하위 질문의 고치기 전 문장(검색에 같이 넘길 원 하위 질문). 자리는 `final`과 같고, 고치지 않은 자리는 빈 글이다.
+    base: `keep_subject`에 넣은 하위 질문, kept: 그 결과, final: `keep_premise`까지 거친 최종 하위 질문. 전제 문장이 붙었으면 원 하위 질문에도 같은 전제를 붙인다.
+    한 자리도 고치지 않았으면 None이다. LLM을 부르지 않는다."""
+    if not final or len(base) != len(kept) or len(kept) != len(final):
+        return None
+    out = []
+    for b, k, f in zip(base, kept, final):
+        if b == k:
+            out.append("")
+            continue
+        prefix = f[: len(f) - len(k)] if f != k and f.endswith(k) else ""
+        alt = f"{prefix}{b}"
+        out.append(alt if alt != f and len(alt) <= MAX_SUB_CHARS else "")
+    return out if any(out) else None
+
+
+def decompose_detail(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str, list[str] | None]:
+    """`decompose_question`과 같은 호출, 같은 하위 질문과 출처에 원 하위 질문(`subject_alts`)을 더해 돌려준다. 분해 LLM 호출과 프롬프트는 그대로다."""
     if not question or not question.strip():
-        return [], "skipped"
+        return [], "skipped", None
     source = "invalid"
     keep = keep_subject_enabled()
     system = system_prompt(TASK)
@@ -265,8 +288,19 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
         obj = parse_split(text)
         if obj is not None:
             subs = drop_company_prefix(normalize(question, obj))
+            alts = None
             if keep:
-                subs = keep_subject(question, drop_citation_asks(subs))
-            return keep_premise(question, subs), "llm"
+                base = drop_citation_asks(subs)
+                subs = keep_subject(question, base)
+                final = keep_premise(question, subs)
+                alts = subject_alts(base, subs, final)
+                return final, "llm", alts
+            return keep_premise(question, subs), "llm", alts
         source = "invalid"
-    return [], source
+    return [], source, None
+
+
+def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
+    """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
+    subs, source, _ = decompose_detail(ask, question)
+    return subs, source
