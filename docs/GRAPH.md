@@ -314,7 +314,7 @@ flowchart TD
 | `GET /approvals` | 관리자 | 승인 대기 목록. 각 건의 interrupt 값을 가장 안쪽 그래프 상태에서 읽는다(`pending_interrupt`) | `decision/routes.py:457`, `convert.py:195` |
 | `GET /approvals/{approval_id}` | 관리자 | 승인 건 하나와 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`) | `decision/routes.py:472` |
 | `POST /approvals/{approval_id}` | 관리자와 CSRF | 결정표·쟁점표는 `{approve, comment}`, 팀 실패 알림은 `{action, comment}`를 받아 같은 `thread_id`로 `Command(resume=값)`을 넘긴다. `decided_by`는 로그인한 관리자로 채운다. 결정표는 변환 그래프, 쟁점표와 팀 실패 알림은 질문 그래프로 재개한다 | `decision/routes.py:485`, `_resume` `decision/routes.py:351` |
-| `POST /decision-tables/convert` | 관리자와 CSRF | 결정표 변환 그래프를 새 `thread_id`로 시작해 `human_approval`에서 멈춘 승인 건을 돌려준다 | `decision/routes.py:424` |
+| `POST /decision-tables/convert` | 관리자와 CSRF | 결정표 변환 그래프를 새 `thread_id`로 시작해 `human_approval`에서 멈춘 승인 건을 돌려준다. `?draft_only=true`이면 그래프를 시작하지 않고 초안 단계(`convert.make_draft`)와 셀 대조만 돌려 200으로 돌려준다(저장·체크포인트 없음) | `decision/routes.py:424` |
 
 ### 5-3. 중복·잘못된 결정 처리
 

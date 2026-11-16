@@ -61,6 +61,7 @@ class Ctx:
         self.app.state.token_revocation_store = MemoryRevocationStore()
         self.app.state.decision_repo = self.repo
         self.app.state.decision_graph = self.graph
+        self.app.state.decision_llm = self.llm               # 초안만 만드는 변환(draft_only)이 그래프와 같은 모델을 쓴다
         self.app.state.review_graph = build_review_graph(Retriever(), InMemorySaver(), llm=review_llm(), approvals=self.repo)
         self.app.include_router(create_decision_router(store=FakeAuthStore(self.admin, self.user), secret=self.secret))
 
@@ -497,6 +498,62 @@ def test_convert_can_start_again_after_rejection(ctx):
     c.post(f"/approvals/{first['approval_id']}", json={"approve": False, "comment": "다시"})
     second = c.post("/decision-tables/convert", json={"category": EXPENSE})
     assert second.status_code == 201 and second.json()["approval_id"] != first["approval_id"]
+
+
+# --- 초안만 만드는 변환(draft_only, 저장 없음) -------------------------------------------------------------
+
+def _stored(ctx) -> tuple[int, int, int]:
+    return len(ctx.repo._approvals), len(ctx.repo._tables), len(list(ctx.graph.checkpointer.list(None)))
+
+
+def test_draft_only_returns_the_same_draft_and_writes_nothing(ctx):
+    tid = ctx.table(EXPENSE)                                                           # 승인된 표가 이미 있다
+    before = _stored(ctx)
+    r = ctx.client(ctx.admin).post("/decision-tables/convert?draft_only=true", json={"category": EXPENSE})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["approval_id"] == Routes.DRAFT_ONLY_ID and body["status"] == "draft_only" and body["table_id"] is None
+    assert body["summary"].startswith(Routes.DRAFT_ONLY_LABEL) and len(ctx.llm.calls) == 1
+    assert [{k: v for k, v in d.items() if k != "band_label"} for d in body["draft"]] == R.rules_from_cells(cells_of(EXPENSE))
+    assert body["comparison"]["mismatch_count"] == 0
+    assert _stored(ctx) == before                                                      # 승인 건·결정표·체크포인트 0건 추가
+    assert [t["table_id"] for t in ctx.client(ctx.user).get("/decision-tables").json()] == [tid]
+
+
+def test_draft_only_uses_the_graph_prompt(ctx):
+    ctx.client(ctx.admin).post("/decision-tables/convert?draft_only=true", json={"category": EXPENSE})
+    ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
+    assert len(ctx.llm.calls) == 2 and ctx.llm.calls[0] == ctx.llm.calls[1]           # 같은 입력(초안 단계 make_draft 한 곳)
+
+
+def test_draft_only_keeps_auth_and_csrf(ctx):
+    url = "/decision-tables/convert?draft_only=true"
+    assert ctx.client(None).post(url, json={"category": EXPENSE}).status_code == 401
+    assert ctx.client(ctx.user).post(url, json={"category": EXPENSE}).status_code == 403
+    assert ctx.client(ctx.admin, csrf=False).post(url, json={"category": EXPENSE}).status_code == 403
+    assert ctx.llm.calls == []
+
+
+def test_draft_only_still_refuses_while_a_draft_waits(ctx):
+    c = ctx.client(ctx.admin)
+    assert c.post("/decision-tables/convert", json={"category": EXPENSE}).status_code == 201
+    assert c.post("/decision-tables/convert?draft_only=true", json={"category": EXPENSE}).status_code == 409
+    assert len(ctx.llm.calls) == 1
+
+
+def test_without_the_flag_an_approved_table_still_409s(ctx):
+    ctx.table(EXPENSE)
+    r = ctx.client(ctx.admin).post("/decision-tables/convert", json={"category": EXPENSE})
+    assert r.status_code == 409 and ctx.llm.calls == []
+    assert ctx.client(ctx.admin).post("/decision-tables/convert?draft_only=false", json={"category": EXPENSE}).status_code == 409
+
+
+def test_draft_only_errors_match_the_normal_path(ctx, real_llm):
+    ctx.llm.reply = "이건 JSON이 아니다"
+    r = ctx.client(ctx.admin).post("/decision-tables/convert?draft_only=true", json={"category": EXPENSE})
+    assert r.status_code == 502 and r.json()["detail"]["reason"] == "draft_unreadable"
+    assert ctx.client(ctx.admin).post("/decision-tables/convert?draft_only=true", json={"category": "없는 업무"}).status_code == 404
+    assert _stored(ctx) == (0, 0, 0)
 
 
 def test_convert_without_the_cells_file_is_503(ctx, monkeypatch, tmp_path):

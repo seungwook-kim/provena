@@ -4,6 +4,7 @@
 - `POST /decision-tables/run`: 로그인. 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행한다 (EC-04, AC-06).
 - `GET /decision-tables`: 로그인. 승인된 결정표 목록 (SDD 5장). 금액은 원문 표기와 함께 정확한 금액 표기(`band_label`)를 낸다.
 - `POST /decision-tables/convert`: 관리자와 CSRF. 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 간다 (AC-03).
+  `?draft_only=true`이면 같은 초안 단계와 셀 대조만 돌려 200으로 돌려주고 승인 건·결정표·체크포인트를 쓰지 않는다. 승인된 표가 있어도 막지 않는다(셀 정확도 측정용).
 - `GET /approvals`: 관리자. 승인 대기 목록과 초안, 셀 대조표. 쟁점표 건은 쟁점표 본문, 팀 실패 알림 건은 실패한 팀(`failed_teams`).
 - `GET /approvals/{approval_id}`: 관리자. 승인 건 하나(끝난 건 포함)와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`).
   같은 건에 결정이 여러 번 와도 `resume_count`는 그래프가 실제로 돈 횟수만 센다(같은 결정 재전송은 `duplicate_ignored_count`). 저장소는 `record_resume`, Postgres 칸은 `db/112_approval_resume_log.sql`이다.
@@ -251,9 +252,10 @@ def _known_category(category: str) -> bool:
     return any(R.norm(json.loads(line)["category"]) == R.norm(category) for line in lines if line.strip())
 
 
-def _check_convertible(repo, category: str) -> None:
-    """같은 업무 종류로 승인된 표가 둘이 되면 실행이 거절되고(AC-06), 대기 건이 둘이면 승인함이 겹치므로 시작 전에 막는다."""
-    if repo.find_approved(category):
+def _check_convertible(repo, category: str, *, allow_approved: bool = False) -> None:
+    """같은 업무 종류로 승인된 표가 둘이 되면 실행이 거절되고(AC-06), 대기 건이 둘이면 승인함이 겹치므로 시작 전에 막는다.
+    `allow_approved`는 초안만 만드는 변환(`draft_only`)에서만 켠다. 저장하지 않으므로 승인된 표가 둘이 될 일이 없다."""
+    if not allow_approved and repo.find_approved(category):
         raise R.Conflict("이 업무 종류로 승인된 결정표가 이미 있다")
     for rec in repo.list_pending():
         if rec.kind == KIND and R.norm(table_category(repo.get_table(rec.target_id))) == R.norm(category):
@@ -276,6 +278,43 @@ def _example_view(category: str, cells: list[dict]) -> ApprovalView:
     return ApprovalView(approval_id="example-convert", kind=KIND, summary=f"{EXAMPLE_LABEL}: {category} 결정표 초안 (키 없는 데모, 저장·승인되지 않음)",
                         created_at=datetime.now(), status="example",
                         draft=[{**r, "band_label": R.band_label(r, rules)} for r in rules])
+
+
+DRAFT_ONLY_ID = "draft-only"
+DRAFT_ONLY_LABEL = "초안만"
+
+
+def _draft_only(request: Request, response: Response, repo, category: str) -> ApprovalView:
+    """`POST /decision-tables/convert?draft_only=true`: 변환 그래프의 초안 단계(`make_draft`)와 셀 대조(`compare_cells`)만 돌려 결과를 돌려준다(200).
+    승인 건·결정표·체크포인트를 쓰지 않는다. 승인된 표가 있어도 막지 않고(`allow_approved`), 대기 중인 초안이 있으면 일반 변환과 같이 409다.
+    모델은 변환 그래프와 같은 것(`app.state.decision_llm`)을 쓰고, 키 없는 데모·오류 응답도 일반 변환과 같다. 셀 정확도 측정(evals/newmetrics)용이다."""
+    from backend.graph.decision.convert import make_draft
+
+    cells_ok = False
+    try:
+        cells = _authz_cells(category)
+        category = cells[0]["category"]
+        _check_convertible(repo, category, allow_approved=True)
+        cells_ok = True
+        rules, error = make_draft(_state(request, "decision_llm"), cells, category)
+        if error and is_demo_mode():
+            return _example_view(category, cells)
+        if error:
+            raise HTTPException(status_code=502, detail={"reason": error, "message": "초안을 읽지 못했다" if error == ERR_DRAFT else "권한표 칸을 읽지 못했다"})
+        comparison = R.compare_cells(cells, rules)
+    except R.DecisionError as e:
+        raise _http(e) from None
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 - LLM 오류. 메시지에 접속 문자열이 섞일 수 있어 종류만 남긴다
+        log.warning("결정표 초안(저장 없음) 실패: %s", type(exc).__name__)
+        if is_demo_mode() and cells_ok:
+            return _example_view(category, cells)
+        raise HTTPException(status_code=503, detail={"reason": "convert_failed", "message": "결정표 초안을 만들지 못했다"}) from None
+    response.status_code = 200
+    return ApprovalView(approval_id=DRAFT_ONLY_ID, kind=KIND, created_at=datetime.now(), status="draft_only",
+                        summary=f"{DRAFT_ONLY_LABEL}: {category} 결정표 초안 (구간 {len(rules)}개, 원문과 다른 칸 {comparison['mismatch_count']}개, 저장·승인되지 않음)",
+                        draft=[{**r, "band_label": R.band_label(r, rules)} for r in rules], comparison=comparison)
 
 
 def _paused(graph, rec) -> tuple[dict | None, dict | None]:
@@ -421,12 +460,16 @@ def create_decision_router(
     def list_decision_tables(request: Request, _user: AuthUser = Depends(current_user)) -> list[DecisionTableItem]:
         return [_table_item(t) for t in _state(request, "decision_repo").list_approved()]
 
-    @router.post("/decision-tables/convert", response_model=ApprovalView, status_code=201)
+    @router.post("/decision-tables/convert", response_model=ApprovalView, status_code=201,
+                 responses={200: {"model": ApprovalView, "description": "draft_only=true: 초안과 셀 대조만, 저장·승인 없음"}})
     def start_convert(
-        request: Request, admin: AuthUser = Depends(require_admin), _csrf: None = Depends(require_csrf), body: Any = Depends(_json_body),
+        request: Request, response: Response, draft_only: bool = False, admin: AuthUser = Depends(require_admin),
+        _csrf: None = Depends(require_csrf), body: Any = Depends(_json_body),
     ) -> ApprovalView:
         repo, graph = _state(request, "decision_repo"), _state(request, "decision_graph")
         category = _parse_convert(body)
+        if draft_only:
+            return _draft_only(request, response, repo, category)
         thread_id = new_id("convert")
         cells, cells_ok = [], False
         try:
@@ -573,10 +616,11 @@ def open_decision_runtime(app: Any) -> Iterator[None]:
         issue_store = PgIssueTableStore(_default_connect(os.environ["DATABASE_URL"])) if durable else InMemoryIssueTableStore()
         app.state.checkpointer, app.state.store, app.state.issue_store = saver, store, issue_store   # 질문 그래프(backend/main.py)가 같은 것을 쓴다
         app.state.decision_repo = repo
-        app.state.decision_graph = build_convert_graph(_LazyChatModel(), repo, saver, store)
+        app.state.decision_llm = _LazyChatModel()     # 변환 그래프와 초안만 만드는 변환(draft_only)이 같은 모델을 쓴다
+        app.state.decision_graph = build_convert_graph(app.state.decision_llm, repo, saver, store)
         app.state.review_graph = build_review_graph(None, saver, llm=_LazyChatModel(), store=issue_store, approvals=repo)
         yield
     finally:
-        app.state.decision_repo = app.state.decision_graph = app.state.review_graph = None
+        app.state.decision_repo = app.state.decision_graph = app.state.review_graph = app.state.decision_llm = None
         app.state.checkpointer = app.state.store = app.state.issue_store = None
         persistence.__exit__(None, None, None)

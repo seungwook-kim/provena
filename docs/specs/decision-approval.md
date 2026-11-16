@@ -60,6 +60,8 @@
 POST /decision-tables/{id}/run          표를 지정해 실행
 POST /decision-tables/run               표를 모를 때: 업무 종류로 승인된 표가 정확히 1개면 실행 (EC-04, AC-06)
 POST /decision-tables/convert           관리자 + CSRF: 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (AC-03)
+POST /decision-tables/convert?draft_only=true  관리자 + CSRF: 같은 초안 단계와 셀 대조만 돌려 200으로 돌려준다. 승인 건·결정표·체크포인트를 쓰지 않고,
+                                        승인된 표가 있어도 막지 않는다(대기 중인 초안이 있으면 409). 결정표 셀 정확도 측정(evals/newmetrics)용
 (구현: backend/graph/decision/routes.py:412, :416, :424)
 인증: 로그인 필수 (업무시스템의 "승인권자 확인" 호출). 실행(run)은 LLM을 쓰지 않는다.
 
@@ -100,6 +102,7 @@ POST /approvals/{approval_id} 결정표·쟁점표는 { approve, comment }, 팀 
                               `decided_by`는 로그인한 관리자로 서버가 채우고 요청 본문 값은 읽지 않는다
 GET  /approvals/{approval_id} 승인 건 하나(끝난 건 포함) (관리자)
 POST /decision-tables/convert 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 (관리자, CSRF, 성공 201)
+                              `?draft_only=true`: 초안과 셀 대조만, 저장·승인 없음 (관리자, CSRF, 성공 200, `status: "draft_only"`)
 ```
 
 화면: 승인함(`web/react-app/src/pages/ApprovalsPage.jsx`) 관리자에게 결정표 변환 폼(`DecisionConvertPanel.jsx`). 키 없는 데모의 예시 응답(`status: "example"`)은 "예시"로 표시하고 승인함 목록을 다시 부르지 않는다. 실제 초안이면 목록을 다시 부른다(H-21, 2026-11-12 박진형).
