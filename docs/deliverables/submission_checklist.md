@@ -2,6 +2,8 @@
 
 가이드 11장 "제출물" 표와 D12(11/17) 항목을 저장소 위치와 함께 정리한 목록입니다. 기준은 main `47e3b82a`(동결 코드 `194dfd9a`, 측정 판 `provena-api-00172-rex`, 2026-11-17 00:45 KST부터 같은 이미지에 LLM 키 비밀값만 바꾼 서비스 판 `provena-api-00178-max`)이며 2026-11-17에 점검했습니다. 동결(11/16 24:00) 뒤에는 `docs/deliverables/`와 발표 자료만 반영됩니다.
 
+**코드 위치(2026-11-17 `gcloud run services describe`·`revisions list`로 확인).** 동결 SHA `47e3b82a`(실행 코드는 `194dfd9a`와 같음)는 서비스 판 `provena-api-00178-max`(트래픽 100%, 이미지 `sha256:23557e67…`, 라벨 `commit=194dfd9a`)가 서비스합니다. main HEAD(`d994c291`)에는 동결 뒤 코드 병합 커밋 `c7a0e29d`(PR #175)와 `9bc7d587`(PR #176)이 더 있으며, 바뀐 실행 코드는 backend 4개 파일 `backend/api/changes.py`, `backend/api/errors.py`, `backend/graph/untrusted.py`, `backend/prompts/question.py`(+43/−5, web 변경 없음)입니다. 이 두 커밋은 트래픽 0% 판 `provena-api-00180-xap`(`c7a0e29d`)과 `provena-api-00181-zub`(`9bc7d587`)에만 배포되어 있고, 00181-zub의 승격 여부는 팀장 결정 대기입니다.
+
 상태: 있음(저장소에서 열어 볼 수 있음), 사용자 처리(저장소 밖에서 팀이 제출).
 
 ## 가이드 11장 제출물
@@ -48,4 +50,6 @@
 
 | 항목 | 내용 | 상태 |
 |---|---|---|
+| D11 실패 경로(키 한도, 검색 0건, 시간 초과)와 사용자 안내 | main `9bc7d587` 이미지(트래픽 0% 판 `provena-api-00181-zub`와 같은 이미지의 임시 0% 판)에서 2026-11-17 03:53~04:00 KST에 다시 확인: 검색 0건 `no_results`, 비용 상한 `limit_exceeded`(`LLM_COST_CAP_USD=0.0001`), 시간 초과 `timeout`(`LLM_DEADLINE_S=0.01`, `LLM_MAX_RETRIES=0`) 모두 기대 코드와 서버 문구가 일치했고, 웹 화면의 대체 문구도 서버 문구와 같다. 제공자 요청 한도·잔액 부족(`provider_limit`)은 운영에서 안전하게 만들 수 없어 코드와 단위 시험으로만 확인했다. 브라우저 화면 캡처는 평가용 계정 로그인이 필요해 하지 않았다. 비용 0.000747달러, 운영 트래픽 `provena-api-00178-max` 100% 유지, 임시 판 2개는 삭제했고 설정 복원 때 생긴 0% 판 `provena-api-fprest1117`(00181-zub와 같은 이미지·설정)은 최근 판이라 지우지 못해 남아 있다([evals/results/failure_paths_provena-api-00181-zub/](../../evals/results/failure_paths_provena-api-00181-zub/)). 동결 코드 쪽 이전 기록은 `provena-api-00075-5zk`(커밋 `eb7516ca`)의 [failure_paths_after_fix_20261116/](../../evals/results/failure_paths_after_fix_20261116/)이며 `/chat` 오류 분류 코드(`backend/api/routes.py`)와 웹 코드는 그 뒤 바뀌지 않았다 | 있음(provider_limit는 단위 시험) |
+| 증분 수집·정시 실행(가산) 증거 | 정시 실행 주체는 팀장 PC 작업 스케줄러(매일 02:14 KST)이고, 그 작업이 부르는 감싸개의 저장소 사본은 [scripts/ops/sync_task.ps1](../../scripts/ops/sync_task.ps1)이다(실패·시간 초과·준비 실패 때 메일 1통, 삭제 보류 때 메일 1통, 비밀값은 실행할 때만 받음, 값·주소는 환경 변수로 받음). 운영 DB `sync_runs`의 정시 실행 기록은 2026-11-16 02:14 run_id=2(추가 2·수정 50·서식만 6)와 2026-11-17 02:14 run_id=3(수정 6·서식만 1·삭제 33, 새 판 7개, `generation` 5→6) 두 건이며 모두 성공했다([evals/results/sync_prod_20261116/](../../evals/results/sync_prod_20261116/), [evals/results/sync_prod_20261117/](../../evals/results/sync_prod_20261117/), [docs/specs/incremental.md](../specs/incremental.md) "재임베딩 단위와 실행 기록의 현재 상태") | 있음 |
 | 변이 시험 2번의 대상 줄 | [GATES](../GATES.md)의 변이 시험 표 2번은 "재현 주의"로 표시했다. 현재 같은 자리는 `backend/graph/build.py` 1298행 `merged = merge_chunks(state.get("chunks", []), found, limit=cap)`이며 2026-11-05 뒤 다시 돌리지 않았다 | 있음(재현 주의) |

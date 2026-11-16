@@ -1,0 +1,55 @@
+{
+  "path": "zero_results",
+  "where": "0% 판 00181-zub(기존 태그 c1117b), org=no-such-org-1116",
+  "base_kind": "tag",
+  "tag": "c1117b",
+  "revision": "provena-api-00181-zub",
+  "question_id": "1",
+  "org": "no-such-org-1116",
+  "as_of_sent": "2026-10-27",
+  "at": "2026-11-17T03:53:56+09:00",
+  "expected": {
+    "event": "done",
+    "code": "no_results",
+    "message": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
+  },
+  "got": {
+    "code": "no_results",
+    "message": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다.",
+    "message_matches": true
+  },
+  "passed": true,
+  "response": {
+    "http_status": 200,
+    "status": "done",
+    "total_s": 3.775,
+    "events": [
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "done"
+    ],
+    "error": null,
+    "done": {
+      "kind": "refuse",
+      "code": "no_results",
+      "as_of": "2026-10-27",
+      "answer_id": null,
+      "refuse_reason": "no_evidence",
+      "refuse_stage": "give_up",
+      "understood_question": null,
+      "cost_usd": 0.00074655,
+      "cost_by_step_total_usd": 0.00074655
+    },
+    "answer_chars": 36,
+    "citation_count": 0,
+    "token_text": "핸드북에서 질문에 답할 충분한 근거를 찾지 못해 답하지 않습니다."
+  },
+  "cost_usd": 0.00074655
+}
