@@ -133,6 +133,9 @@ SERVICE_ENV: dict[str, str] = {
     # 하위 질문에 원 질문의 대상·조건 유지(`backend/graph/decompose.py` `keep_subject_enabled`): 분해 프롬프트에 규칙 한 줄을 더하고, 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 붙인다.
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_DECOMPOSE_KEEP_SUBJECT": "1",
+    # 값 뒤집기의 구조 판정(`backend/graph/untrusted.py` `structure_enabled`): 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 값을 내세우는 문장을
+    # 주장하는 낱말이 없어도 입력에서 빼고, 그 새 값이 든 답 문장은 출력 검사가 뺀다. 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "GRAPH_FLIP_STRUCTURE": "1",
     # 사전 등록 62.73 `GRAPH_SPLIT_FULL_K`는 넣지 않는다(사전 등록 62.74): 되살린 `SPLIT_K`(나뉜 질문 첫 검색 8자리, 달러 금액 질문 제외)가 같은 검색을 넓힌다.
     # 켜면 나뉜 질문의 첫 검색이 근거 목록 상한(MAX_CHUNKS=10)까지 요청한다
 }

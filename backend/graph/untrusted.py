@@ -33,6 +33,11 @@
 이 방어는 어휘 목록이다. 주장하는 말, 본문 값을 가리키는 것, 새 숫자+단위 값이 한 문장에 함께 있어야 걸리므로 목록에 없는 말투는 입력과 출력 모두에서 놓친다.
 출력 검사도 같은 목록을 쓰므로 목록이 놓친 말은 출력에서도 막지 못한다.
 
+보강(2026-11-16, 값 뒤집기의 구조 판정 `GRAPH_FLIP_STRUCTURE`, 코드 기본 꺼짐, 서비스 설정 켬): 위 어휘 목록이 없어도, 같은 섹션의 앞 값을 가리키는 말("위 15분은", "상기 금액은",
+"the 15 minutes above", "the deadline above")을 주어·주제로 두고 그 값과 같은 종류의 새 숫자+단위 값을 뒤에 내세우는 문장을 값을 뒤집는 문장으로 본다. 조건문과 앞 값과의 관계를 말하는 문장
+(포함, 중, 범위를 나누는 "에는", includes, applies to, maximum 등)은 뺀다. 자세한 조건은 아래 "값을 가리켜 다른 값을 내세우는 문장의 구조 판정" 절 주석.
+가리키는 말이 없는 문장("15분은 구버전 값이다"), 가리킴과 새 값이 두 문장으로 나뉜 문장, 숫자+단위가 아닌 값은 이 판정도 보지 않는다(앞의 둘은 어휘 목록이 잡는 경우가 있다).
+
 한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
 지시가 아닌 사실처럼 쓴 거짓 가운데 오기·정정 주장 없이 값만 다르게 적은 것, 옛 값을 적은 변경 기록처럼 쓴 것("종전 15분에서 45분으로 변경"), 숫자와 단위가 아닌 값(낱말, 한글 수사)을 뒤집는 것은 못 잡는다.
@@ -422,11 +427,87 @@ def _flip_claim(s: str, outside: set[tuple[str, str]]) -> tuple[str, list[tuple[
     return ("label", []) if _FLIP_LABEL.match(s) or _FLIP_HEAD.match(s) or _FLIP_CHANGED.search(s) else ("", [])
 
 
+# ---------- 값을 가리켜 다른 값을 내세우는 문장의 구조 판정(`GRAPH_FLIP_STRUCTURE`) ----------
+# 위 낱말 목록(주장하는 말)이 없어도, 문장이 (1) 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 (2) 그 값과 같은 종류의 새 값을 뒤에 내세우면
+# 값을 뒤집는 문장으로 본다. 주장하는 말("오기", "구버전", "stale" ...)은 목록에 없는 말로 얼마든지 바꿀 수 있지만, 앞 값을 가리켜 다른 값을 세우는 구조는 바꾸기 어렵다.
+#   가리킴(닻): (가) 가리키는 말이 붙은 앞 값("위 15분은", "상기 20만 원은", "the 15 minutes above", "the 20 minutes stated earlier"),
+#              (나) 가리키는 말이 붙은 값 이름("위 기준은", "상기 금액은", "the deadline above", "the figure above").
+#              한국어는 닻 바로 뒤가 주제·주어 조사(은·는·이·가·도)이거나 "대신"이어야 한다("위 15분에는", "위 15분 중", "위 기간 만료"는 닻이 아니다).
+#              영어는 닻 앞이 전치사가 아니어야 한다("after the 30 days above"는 닻이 아니다).
+#   새 값: 닻 뒤에 오는, 닻이 가리킨 값과 같은 종류(시간·금액·비율·횟수 ...)의 숫자+단위 값이며 그 문장 밖 같은 섹션 본문에 없는 값.
+#   빼는 것: 조건문(if, when, ~면, ~경우, ~때), 닻과 새 값 사이에 앞 값과의 관계를 말하는 말(포함, 중, 제외, 에는·에서는(범위), 이상·이하·최대,
+#           includes, starts, applies to, maximum, up to ...)이 있는 문장. 이런 문장은 앞 값을 바꾸지 않고 다른 속성을 더한다.
+# 숫자+단위가 아닌 값(이름, 직책)과 닻과 새 값이 두 문장으로 나뉜 문장은 이 판정도 보지 않는다.
+_STRUCT_HINT = re.compile(r"(?<![가-힣])위(?![가-힣])|(?<![가-힣])위의|상기|(?<![가-힣])앞(?:의|서)|본문|전술|\b(?:above|aforementioned|earlier|previous(?:ly)?|preceding|stated|listed|mentioned|quoted)\b", _I)
+_KO_POINT = r"(?:(?<![가-힣])위(?:의)?|상기(?:의)?|(?<![가-힣])앞(?:의|서\s*(?:말한|적은|밝힌))|본문(?:의|에\s*적힌)?|전술한)"
+_KO_POINT_END = re.compile(_KO_POINT + r"\s*$")
+_KO_TOPIC_AFTER = re.compile(r"^(?:은|는|이|가|도)(?![가-힣])|^\s*(?:을|를)?\s*대신(?![가-힣])")
+_KO_VALUE_NOUN = r"(?:기준|값|수치|기한|시한|시간|한도|금액|숫자|기간|일수|비율|요율|횟수|주기|목표치?|단가)"
+_KO_NOUN_ANCHOR = re.compile(_KO_POINT + r"\s*(?:[가-힣]+\s+)?" + _KO_VALUE_NOUN + r"(?:(?:은|는|이|가|도)(?![가-힣])|\s*(?:을|를)?\s*대신(?![가-힣]))")
+_EN_DEICTIC_ADJ = r"(?:above|aforementioned|stated|earlier|previous|preceding|listed|quoted|mentioned)"
+_EN_POST = r"(?:(?:stated|mentioned|listed|quoted|given|specified|noted|cited|shown|written)\s+)?(?:above|earlier|previously|in\s+the\s+(?:body|text|section|policy))\b"
+_EN_DET_END = re.compile(r"\b(the|this|that|these|those)\s+(?:" + _EN_DEICTIC_ADJ + r"[-\s]+)?$", _I)
+_EN_DET_ADJ_END = re.compile(r"\b(?:the|this|that|these|those)\s+" + _EN_DEICTIC_ADJ + r"[-\s]+$", _I)
+_EN_POST_START = re.compile(r"^(?:[-\s]+(?:figure|value|number|limit|deadline|target|window|period|amount|cap|threshold|sla|slo|timeframe|time))?\s*" + _EN_POST, _I)   # 값 읽기(`quantities`)가 값 뒤 공백을 먹을 수 있어 \s*
+_EN_VALUE_NOUN = r"(?:figures?|values?|numbers?|limits?|deadlines?|targets?|thresholds?|amounts?|caps?|rates?|percentages?|fees?|prices?|costs?|durations?|periods?|windows?|time\s?frames?|slas?|slos?|intervals?|cycles?|frequenc(?:y|ies))"
+_EN_NOUN_ANCHOR = re.compile(r"\b(?:the|this|that|these|those)\s+(?:" + _EN_DEICTIC_ADJ + r"\s+(?:[\w-]+\s+)?" + _EN_VALUE_NOUN + r"\b|(?:[\w-]+\s+)?" + _EN_VALUE_NOUN + r"\s+" + _EN_POST + ")", _I)
+_EN_PREP_BEFORE = re.compile(r"\b(?:after|before|within|beyond|than|of|from|until|till|during|in|on|at|over|under|past|by|for|to|into|between|exceeding|below|above|except|besides|including)\s*$", _I)
+_RELATION = re.compile(
+    r"포함|(?<![가-힣])중(?![가-힣])|제외|합산|별도|추가|더해|외에|에는|에서는|의\s*경우|(?<!더)(?<!더\s)이상|이하|초과|미만|최대|최소|상한|하한|"   # "더 이상"(no longer)은 관계 말이 아니다
+    r"\b(?:includ\w*|contain\w*|cover\w*|exclud\w*|plus|additional|extra|on\s+top|start\w*|begin\w*|count\w*|appl(?:y|ies|ied)\s+(?:only\s+)?to|only\s+for|"
+    r"maximum|minimum|at\s+(?:most|least)|up\s+to|capped|respectively)\b", _I)
+
+
+def structure_enabled() -> bool:
+    """`GRAPH_FLIP_STRUCTURE`가 1, true, yes, on이면 켬. 코드 기본은 꺼짐이고 서비스 설정(`service_profile.SERVICE_ENV`)이 켠다."""
+    return (os.environ.get("GRAPH_FLIP_STRUCTURE") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _anchors(s: str, qs: list[tuple[str, str, str, int, int]], outside: list[tuple[str, str, str, int, int]]) -> list[tuple[int, set[str], set[tuple[str, str]]]]:
+    """문장 속 닻 목록: (닻 끝 위치, 가리킨 값의 종류, 가리킨 앞 값). 앞 값은 문장 밖 같은 섹션 본문에 있는 값이어야 한다."""
+    out_keys = {q[:2] for q in outside}
+    out_kinds = {q[2] for q in outside}
+    found: list[tuple[int, set[str], set[tuple[str, str]]]] = []
+    for q in qs:   # (가) 가리키는 말이 붙은 앞 값
+        if q[:2] not in out_keys:
+            continue
+        left, right = s[:q[3]], s[q[4]:]
+        if _KO_POINT_END.search(left) and _KO_TOPIC_AFTER.search(right):
+            found.append((q[4], {q[2]}, {q[:2]}))
+            continue
+        det = _EN_DET_END.search(left)
+        if det and (_EN_DET_ADJ_END.search(left) or _EN_POST_START.match(right)) and not _EN_PREP_BEFORE.search(left[:det.start()]):
+            post = _EN_POST_START.match(right)
+            found.append((q[4] + (post.end() if post else 0), {q[2]}, {q[:2]}))
+    for rx, english in ((_KO_NOUN_ANCHOR, False), (_EN_NOUN_ANCHOR, True)):   # (나) 가리키는 말이 붙은 값 이름
+        for m in rx.finditer(s):
+            if english and _EN_PREP_BEFORE.search(s[:m.start()]):
+                continue
+            if out_kinds:
+                found.append((m.end(), set(out_kinds), set()))
+    return found
+
+
+def _flip_by_structure(s: str, outside: list[tuple[str, str, str, int, int]]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]] | None:
+    """(새 값, 옛 값) 또는 None. 위 구조 판정 절의 규칙."""
+    if not _STRUCT_HINT.search(s) or _COND_BEFORE.search(s) or _COND_AFTER.search(s):
+        return None
+    qs = quantities(s)
+    out_keys = {q[:2] for q in outside}
+    for end, kinds, old in _anchors(s, qs, outside):
+        new = [q for q in qs if q[3] >= end and q[2] in kinds and q[:2] not in out_keys and q[:2] not in old]
+        if new and not _RELATION.search(s[end:new[0][3]]):
+            return list(dict.fromkeys(q[:2] for q in new)), sorted(old)
+    return None
+
+
 def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:
     """문장 목록에서 본문의 값을 뒤집는 문장을 찾는다: {문장 번호: (새 값, 옛 값)}. `context`는 같은 섹션의 다른 청크 본문.
-    새 값이 없는 주장("위 표기는 오타이다"뿐인 문장)은 뒤집는 값이 없으므로 대상이 아니다."""
+    새 값이 없는 주장("위 표기는 오타이다"뿐인 문장)은 뒤집는 값이 없으므로 대상이 아니다.
+    `GRAPH_FLIP_STRUCTURE`를 켜면 주장하는 말이 없는 문장도 구조 판정(`_flip_by_structure`)으로 본다."""
     sents = [i for i, p in enumerate(pieces) if p.strip() and not _SENT.fullmatch(p)]
-    if not any(_FLIP_STRONG.search(pieces[i]) or _FLIP_WEAK.search(pieces[i]) for i in sents):   # 대부분의 본문은 여기서 끝난다
+    structural = structure_enabled() and any(_STRUCT_HINT.search(pieces[i]) for i in sents)
+    if not structural and not any(_FLIP_STRONG.search(pieces[i]) or _FLIP_WEAK.search(pieces[i]) for i in sents):   # 대부분의 본문은 여기서 끝난다
         return {}
     vals = {i: quantities(pieces[i]) for i in sents}
     ctx = quantities(context)
@@ -451,6 +532,9 @@ def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tup
         rest = [q for j in sents if j != i for q in vals[j]] + ctx
         kind, old = _flip_claim(pieces[i], {q[:2] for q in rest})
         if not kind:
+            got = _flip_by_structure(pieces[i], rest) if structural else None
+            if got:
+                hits[i] = got
             continue
         old_keys = sorted({q[:2] for q in old})
         new = fresh(kind, old, vals[i], rest)
@@ -462,6 +546,10 @@ def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tup
             if new:
                 hits[i] = ([], old_keys)
                 hits[j] = (new, old_keys)
+        if structural and i not in hits:
+            got = _flip_by_structure(pieces[i], rest)
+            if got:
+                hits[i] = got
     return hits
 
 

@@ -342,7 +342,7 @@ flowchart TD
 
 ## 6. 경로를 바꾸는 설정 스위치
 
-"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다. `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:158`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
+"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다. `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:161`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
 
 | 스위치 | 읽는 곳 | 코드 기본값 | 서비스 값 | 바뀌는 경로 |
 |---|---|---|---|---|
@@ -363,11 +363,12 @@ flowchart TD
 | `GRAPH_QUERY_BRANCHES` | `backend/graph/query_plan.py:24` | 끔 | 켬(`service_profile.py:69`) | 대상별로 절차가 갈리는 주제의 첫 검색을 대상별 하위 질문으로 나눈다(`query_targets`) |
 | `GROUND_SKIP_BACKED` | `build.py:534` | 끔 | 채우지 않음(끔) | 값이 모두 인용 청크에 있으면 `ground`의 LLM 판정을 건너뛴다 |
 | `USE_SKILLS` | `backend/services/skills.py:21` | 켬 | 채우지 않음(켬) | 끄면 `ground`의 LLM 판정을 건너뛰고 Skill 본문을 붙이지 않는다 |
-| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:59` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
-| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:153-154`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
+| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:63` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
+| `GRAPH_FLIP_STRUCTURE` | `backend/graph/untrusted.py:461` | 끔 | 켬(`service_profile.py:138`) | 검색 원문에서 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 숫자+단위 값을 내세우는 문장을, 주장하는 낱말이 없어도 입력에서 빼고 그 새 값이 든 답 문장을 출력 검사가 뺀다(조건문, 포함·범위·상한 같은 관계 문장은 제외) |
+| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:156-157`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
 | `CHAT_FOLLOWUP` | `backend/api/routes.py:188` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |
 | `RECALL_MIN_CONFIDENCE` | `recall/graph.py:36` | 0.5 | 채우지 않음 | 리콜 `notify`에서 이 값보다 확신도가 낮은 알림을 관리자 검토함으로 보낸다 |
 
-경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-138`에 있다.
+경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-141`에 있다.

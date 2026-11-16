@@ -74,8 +74,8 @@ CITE_ADD_GUARD_6270 = {"GRAPH_CITE_ADD_GUARD": "1"}
 BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
 # 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(코드 기본은 꺼짐). 사전 등록 62.74로 서비스 값에서 뺐다(되살린 SPLIT_K가 같은 검색을 넓힌다)
 BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
-# 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지
-SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1"}
+# 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지, 값 뒤집기의 구조 판정
+SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1"}
 # 표의 행이 특정 문항에 맞춘 내용이라 제거한 채 둔 스위치(사전 등록 62.72·62.74). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
 REMOVED_6274 = ("GRAPH_QUERY_TERMS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK")
 REMOVED_ARGS_6274 = ("--query-terms", "--heading-terms", "--heading-heads", "--heading-mark")
