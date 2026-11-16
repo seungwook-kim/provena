@@ -1,0 +1,19 @@
+{
+    "mode":  "tag0",
+    "revision_before":  "provena-api-00172-rex",
+    "revision_after":  "provena-api-d10r1116",
+    "commit":  "194dfd9a",
+    "restarted_at_utc":  "2026-11-16T14:19:02Z",
+    "base_url_after":  "https://d10r---provena-api-cttaanqntq-du.a.run.app",
+    "same_image":  true,
+    "same_env":  true,
+    "old_instances_short":  null,
+    "new_instances_short":  null,
+    "shutdown_at_utc":  null,
+    "startup_after_prepare":  null,
+    "traffic_after":  "provena-api-00172-rex=100%",
+    "ok":  true,
+    "note":  "health=200. 되돌리기(promote): gcloud run services update-traffic provena-api --to-revisions provena-api-00172-rex=100",
+    "same_labels":  true,
+    "same_scale":  true
+}
