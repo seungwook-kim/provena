@@ -285,6 +285,8 @@ flowchart TD
 
 배선은 `backend/graph/build.py`의 `build_graph` "배선" 부분(2124~2167행)이다. 결정표 경로(`decision_params` → `decision_run` → `decision_answer`)는 결정표 저장소가 있을 때만 열리고 `decision_answer`에서 바로 끝난다(답 작성·인용 검사·저장을 지나지 않는다). 합동 검토(`review`)는 하위 그래프로 붙고 끝나면 바로 끝으로 간다(쟁점표 저장은 하위 그래프 안에서 한다). 결정표 저장소나 합동 검토 그래프가 없으면 해당 질문은 정책 질문 경로(`rewrite`)로 간다.
 
+노드별 상세(책임, 읽고 쓰는 상태 키, 분기 조건, 실패 시 동작, 중단·재개)는 [GRAPH.md](./GRAPH.md)에 있다.
+
 | 노드 | LLM 사용 | 설명 |
 |---|---|---|
 | 기억 불러오기 | 없음 | Store namespace `(user_id, "profile")`: 설계는 팀, 역할(예: SRE, 개발), 담당 서비스. 현재 코드가 저장하는 칸은 소속(`affiliation`)·직급(`rank`)·담당 서비스(`service`) 셋이다(`backend/api/routes.py:142-146`의 `MemoryPatch`, `docs/specs/memory.md`). 칸을 늘릴지 문서를 맞출지는 정하지 않았다 |

@@ -213,6 +213,7 @@ gcloud run deploy provena-api --source . --project provena-team --region asia-no
 | [docs/SPEC.md](./docs/SPEC.md) | 정본 문서: 범위, 숫자 기준과 지표별 결과 이력, 데모 모드 |
 | [docs/PRD.md](./docs/PRD.md), [docs/deliverables/survey/](./docs/deliverables/survey/responses_summary.md) | 문제, 페르소나, 대체재, 요구 사항, 현직자 설문 |
 | [docs/SDD.md](./docs/SDD.md) | 설계 문서 |
+| [docs/GRAPH.md](./docs/GRAPH.md) | 그래프별 노드 책임, 읽고 쓰는 상태 키, 분기 조건, 중단·재개, 경로를 바꾸는 설정 스위치 |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [docs/why_langgraph.md](./docs/why_langgraph.md) | 요청 흐름, 설계 질문과 답, 그래프로 만든 이유, 멀티 그래프의 범위와 한계 |
 | [docs/decisions.md](./docs/decisions.md) | 결정 기록 |
 | [docs/deliverables/failure_analysis.md](./docs/deliverables/failure_analysis.md) | 실패 사례 분석 |
