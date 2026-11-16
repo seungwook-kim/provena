@@ -194,18 +194,31 @@ def score_run(items: list[dict], retrieved: dict[int, list[dict]], *, k: int = K
     return run.evaluate(rel, lambda q: by_q[q.query], k, exclusions=exclusions or {}, corpus=corpus)
 
 
+def extra_metric_keys(k: int = K) -> tuple[str, ...]:
+    """Recall 말고 함께 남기는 공식 지표(`evals/retrieval/metrics.py`의 행 키): 역순위(rr, 평균이 MRR@k), nDCG@k, 정답 위치 적중@k, 정답 쪽 적중@k."""
+    return ("rr", f"ndcg@{k}", f"hit@{k}", f"page_hit@{k}")
+
+
+def _metric_block(s: dict, k: int) -> dict:
+    """공식 요약 `s`에서 Recall 밖 지표의 값과 95% 구간. 요약에 없는 지표는 None."""
+    return {m: {"value": (s.get(m) or {}).get("value"), "ci95": (s.get(m) or {}).get("ci95")} for m in extra_metric_keys(k)}
+
+
 def summarize(per_run: dict[int, dict], k: int = K) -> dict:
-    """회차별·전체 요약. 전체 = 모든 회차의 채점 행을 합쳐 공식 `aggregate`로 낸 값(문항·회차 쌍의 단순 평균)."""
+    """회차별·전체 요약. 전체 = 모든 회차의 채점 행을 합쳐 공식 `aggregate`로 낸 값(문항·회차 쌍의 단순 평균).
+    `recall`과 `ci95`는 Recall@k이고, `metrics`에 MRR@k(`rr` 평균), nDCG@k, 적중@k, 쪽 적중@k를 같은 방식(같은 행, 같은 부트스트랩)으로 남긴다."""
     key = f"recall@{k}"
     out = {"per_run": {}, "k": k}
     pooled: list[dict] = []
     for n, res in sorted(per_run.items()):
         s = res["summary"]
-        out["per_run"][n] = {"recall": s[key]["value"], "ci95": s[key]["ci95"], "n_scored": s["n_relevant_scored"], "excluded": s["excluded"]}
+        out["per_run"][n] = {"recall": s[key]["value"], "ci95": s[key]["ci95"], "n_scored": s["n_relevant_scored"], "excluded": s["excluded"],
+                             "metrics": _metric_block(s, k)}
         pooled += res["rows"]
     if pooled:
         s = aggregate(pooled, k)
-        out["all_runs"] = {"recall": s[key]["value"], "ci95": s[key]["ci95"], "n_scored": s["n_relevant_scored"], "excluded": s["excluded"]}
+        out["all_runs"] = {"recall": s[key]["value"], "ci95": s[key]["ci95"], "n_scored": s["n_relevant_scored"], "excluded": s["excluded"],
+                           "metrics": _metric_block(s, k)}
     return out
 
 
@@ -323,7 +336,8 @@ def build_report(runs: dict[int, list[dict]], items: list[dict], observations: l
         for row in per_run[n]["rows"]:
             for d in detail:
                 if d["run"] == n and d["id"] == row["id"]:
-                    d.update(scored=row.get("scored"), recall=row.get(f"recall@{k}"), first_hit_rank=row.get("first_hit_rank"), excluded_reason=row.get("excluded_reason"))
+                    d.update(scored=row.get("scored"), recall=row.get(f"recall@{k}"), first_hit_rank=row.get("first_hit_rank"), excluded_reason=row.get("excluded_reason"),
+                             **{m: row.get(m) for m in extra_metric_keys(k)})
     if problems and not allow_missing:
         raise ValueError(f"짝지을 수 없는 관련 문항 {len(problems)}건 (예: {problems[:5]}). 행에 thread_id를 남기는 측정기로 다시 재거나 --allow-missing")
     n_rel = sum(1 for rows in runs.values() for r in rows if (items_by_id.get(r["id"]) or {}).get("kind") == "relevant")
@@ -338,14 +352,20 @@ def render(report: dict, title: str = "") -> str:
     def f(v):
         return "없음" if v is None else f"{v:.3f}"
 
+    def ci(c):
+        return f" [{c[0]:.3f}, {c[1]:.3f}]" if c else ""
+
+    def m(v, name, with_ci=False):
+        x = (v.get("metrics") or {}).get(name) or {}
+        return f(x.get("value")) + (ci(x.get("ci95")) if with_ci else "")
+
     lines = [f"# 첫 검색 상위 {k} Recall@{k} (운영 Langfuse) {title}".strip(), "", f"짝짓기: {report['pairing']}" + (" (근사: 리허설 전용)" if report["pairing"] == "legacy" else ""), "",
-             "| 구분 | Recall@%d | 채점 문항 |" % k, "|---|---|---|"]
+             f"| 구분 | Recall@{k} | MRR@{k} | nDCG@{k} | 채점 문항 |", "|---|---|---|---|---|"]
     for n, v in s["per_run"].items():
-        lines.append(f"| {n}회차 | {f(v['recall'])} | {v['n_scored']} |")
+        lines.append(f"| {n}회차 | {f(v['recall'])} | {m(v, 'rr')} | {m(v, f'ndcg@{k}')} | {v['n_scored']} |")
     if "all_runs" in s:
         v = s["all_runs"]
-        ci = f" [{v['ci95'][0]:.3f}, {v['ci95'][1]:.3f}]" if v["ci95"] else ""
-        lines.append(f"| 전체 | {f(v['recall'])}{ci} | {v['n_scored']} |")
+        lines.append(f"| 전체 | {f(v['recall'])}{ci(v['ci95'])} | {m(v, 'rr', True)} | {m(v, f'ndcg@{k}', True)} | {v['n_scored']} |")
     c = report["coverage"]
     lines += ["", f"Langfuse 자료가 있는 관련 행: {c['with_langfuse_data']}/{c['relevant_rows']} ({c['fraction']}). 모자라면 Recall은 있는 행만의 값이다.",
               f"짝짓기 통계: {report['pair_stats']}"]

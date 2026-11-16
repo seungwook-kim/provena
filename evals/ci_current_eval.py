@@ -12,12 +12,16 @@ LLM·Voyage·운영 호출은 없다(`LLM_API_KEY`, `VOYAGE_API_KEY` 등을 이 
 - `missed_calls`: 녹화에 없는 LLM 요청과 질문 벡터 수(0이 아니면 프롬프트·검색·입력이 바뀌어 녹화가 오래된 것)
 - `fake_answers`: 녹화 답이 아니라 발췌형 대체 답이 나온 수
 
-전체 평가셋 확장(2026-11-13): 평가셋 v2 50건(`evals/dataset_v2.jsonl`, `as_of`는 평가셋 값)도 같은 방식으로 녹화해 두었으면(`data/demo_replay/v2_recorded.json`이 있으면)
+전체 평가셋 확장(2026-11-13, 2026-11-16 녹화 위치 변경): 평가셋 v2 50건(`evals/dataset_v2.jsonl`, `as_of`는 평가셋 값)도 녹화해 두었으면(`evals/ci_replay_v2/v2_recorded.json`이 있으면)
 데모 질문 9개에 더해 그 질문들도 돌려 `paths.<경로>.v2`에 따로 낸다(관련 질문 중 인용 답이 나온 수, 비관련 질문 중 거절이 나온 수, 녹화에 없는 요청, 발췌형 대체 답).
-`v2_recorded.json`이 없으면 이 확장은 하지 않고 9개만 돈다(위 지표 그대로). 녹화와 manifest 만드는 법은 `evals/ci_current_eval.py --help`와 저장소 밖 실행기 `step_record.ps1`을 본다.
+`v2_recorded.json`이 없으면 이 확장은 하지 않고 9개만 돈다(위 지표 그대로). `--require-v2`를 주면 그때는 실패(종료 코드 1)한다.
+50건 녹화는 서비스 이미지에 들어가지 않는 `evals/ci_replay_v2/`에 둔다(Dockerfile은 `data/`를 이미지에 복사하고 `evals/`는 복사하지 않는다). 데모 녹화(`data/demo_replay/`)와 섞지 않고,
+50건은 따로 만든 새 DB(번역 장부가 빈 상태)와 이 폴더의 녹화로 돈다. v2 질문 3개(CVSS, CUD, EOC)는 데모 질문과 글이 같아 분류·번역·질문 벡터 요청 키가 데모 녹화와 겹치므로,
+같은 폴더나 같은 DB를 쓰면 한쪽 녹화가 다른 쪽 재생을 바꾼다.
 
-    python evals/ci_current_eval.py --export-questions <파일.jsonl>                     # 녹화할 질문(데모 9 + v2 50, as_of 포함)을 demo_record 입력 형식으로 쓴다
-    python evals/ci_current_eval.py --write-v2-manifest <report.json>               # demo_record --report 결과에서 v2_recorded.json을 만든다
+    python evals/ci_current_eval.py --export-questions <파일.jsonl> --only-v2          # 녹화할 v2 50건(as_of 포함)을 demo_record 입력 형식으로 쓴다(--only-v2 없으면 데모 9 + v2 50)
+    python -m backend.services.demo_record --questions <파일.jsonl> --out evals/ci_replay_v2 --max-total-usd <달러> --report <report.json>   # 키와 색인 적재한 새 DB 필요(유료)
+    python evals/ci_current_eval.py --write-v2-manifest <report.json>               # demo_record --report 결과에서 evals/ci_replay_v2/v2_recorded.json을 만든다
 """
 from __future__ import annotations
 
@@ -36,7 +40,8 @@ ROOT = Path(__file__).resolve().parents[1]
 REPLAY_DIR = ROOT / "data" / "demo_replay"
 README = ROOT / "README.md"
 DATASET_V2 = ROOT / "evals" / "dataset_v2.jsonl"
-V2_MANIFEST = REPLAY_DIR / "v2_recorded.json"   # 평가셋 v2 질문을 녹화했다는 표지. 없으면 데모 질문 9개만 돈다
+V2_REPLAY_DIR = ROOT / "evals" / "ci_replay_v2"   # 평가셋 v2 50건 녹화(*.jsonl). 서비스 이미지 밖(Dockerfile은 evals/를 복사하지 않는다)
+V2_MANIFEST = V2_REPLAY_DIR / "v2_recorded.json"   # 평가셋 v2 질문을 녹화했다는 표지. 없으면 데모 질문 9개만 돈다
 FAKE_ANSWER_MARK = "실제 LLM이 쓴 답이 아닙니다"   # backend/services/demo_replay.py demo_fallback의 발췌형 대체 답 머리 문장
 ENV_CLEAR = (
     "LLM_API_KEY", "VOYAGE_API_KEY", "DEMO_MODE", "LLM_RECORD", "LLM_PROVIDER", "LLM_MODEL", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY",
@@ -112,12 +117,14 @@ def load_v2_selection(manifest: Path = V2_MANIFEST, dataset: Path = DATASET_V2) 
     return items, None
 
 
-def export_questions(out: Path) -> int:
-    """녹화할 질문(데모 질문 파일 + 평가셋 v2 전체, 기준일 포함)을 `demo_record --questions`가 읽는 jsonl로 쓴다. 같은 질문·기준일은 한 번만."""
+def export_questions(out: Path, only_v2: bool = False) -> int:
+    """녹화할 질문(데모 질문 파일 + 평가셋 v2 전체, 기준일 포함)을 `demo_record --questions`가 읽는 jsonl로 쓴다. 같은 질문·기준일은 한 번만.
+    `only_v2`면 평가셋 v2 50건만(평가셋 순서) 쓴다. 50건 녹화는 데모 녹화와 다른 폴더(`V2_REPLAY_DIR`)에 따로 만든다."""
     from backend.services.demo_record import load_questions
 
+    demo = [] if only_v2 else load_questions(REPLAY_DIR / "questions.txt")
     seen, rows = set(), []
-    for q in [*load_questions(REPLAY_DIR / "questions.txt"), *({"question": it["question"], "org": None, "as_of": it["as_of"]} for it in v2_questions())]:
+    for q in [*demo, *({"question": it["question"], "org": None, "as_of": it["as_of"]} for it in v2_questions())]:
         key = (q["question"], q.get("as_of"))
         if key not in seen:
             seen.add(key)
@@ -157,8 +164,21 @@ def make_db(admin_url: str, workdir: Path) -> tuple[str, str]:
     return url, name
 
 
-def run_questions(db_url: str, budget: str, v2_items: list[dict] | None = None) -> list[dict]:
-    """데모 질문(질문 파일)과, 주어졌으면 녹화해 둔 평가셋 v2 질문(`v2_items`)을 현재 코드의 질문 그래프에 돌린 줄. 줄의 `set`은 demo 또는 v2."""
+def demo_todo() -> list[dict]:
+    """데모 질문(질문 파일)의 할 일 줄."""
+    from backend.services.demo_record import load_questions
+
+    return [{"set": "demo", "id": None, "question": x["question"], "as_of": None, "expected": None} for x in load_questions(REPLAY_DIR / "questions.txt")]
+
+
+def v2_todo(v2_items: list[dict]) -> list[dict]:
+    """녹화해 둔 평가셋 v2 질문의 할 일 줄(평가셋 순서, 녹화 때와 같은 순서라 번역 장부가 같은 차례로 쌓인다)."""
+    return [{"set": "v2", "id": it["id"], "question": it["question"], "as_of": it["as_of"], "expected": it["kind"]} for it in v2_items]
+
+
+def run_questions(db_url: str, budget: str, v2_items: list[dict] | None = None, *, todo: list[dict] | None = None, replay_dir: Path = REPLAY_DIR) -> list[dict]:
+    """할 일 줄(`todo`, 없으면 데모 질문과 주어진 `v2_items`)을 현재 코드의 질문 그래프에 돌린 줄. 줄의 `set`은 demo 또는 v2.
+    `replay_dir`은 이번 실행이 재생할 녹화 폴더다(데모는 `data/demo_replay`, 50건은 `evals/ci_replay_v2`)."""
     from langgraph.checkpoint.memory import InMemorySaver
     from langgraph.store.memory import InMemoryStore
 
@@ -168,14 +188,13 @@ def run_questions(db_url: str, budget: str, v2_items: list[dict] | None = None) 
     from backend.graph.service_profile import service_profile
     from backend.main import build_question_graph
     from backend.services import demo_replay as dr
-    from backend.services.demo_record import load_questions
     from backend.services.llm import finish_run, run_config
 
     search = importlib.import_module("backend.rag.retrieve.search")
     for name in ENV_CLEAR:
         os.environ.pop(name, None)
     os.environ["DATABASE_URL"] = db_url
-    os.environ["DEMO_REPLAY_DIR"] = str(REPLAY_DIR)
+    os.environ["DEMO_REPLAY_DIR"] = str(replay_dir)
     os.environ["GRAPH_ANSWER_BUDGET_S"] = budget
     missed: list[str] = []
 
@@ -186,7 +205,7 @@ def run_questions(db_url: str, budget: str, v2_items: list[dict] | None = None) 
                 missed.append("query_embedding")
             return row
 
-    dr._stores[str(REPLAY_DIR)] = SpyStore(REPLAY_DIR)
+    dr._stores[str(replay_dir)] = SpyStore(replay_dir)
     dr._warned = True
     real_role, real_fallback = dr.message_role, dr.demo_fallback
     dr.demo_fallback = lambda messages: (missed.append(real_role(messages)), real_fallback(messages))[1]
@@ -197,8 +216,8 @@ def run_questions(db_url: str, budget: str, v2_items: list[dict] | None = None) 
             st = SimpleNamespace(issue_store=InMemoryIssueTableStore(), decision_repo=InMemoryDecisionRepo(), checkpointer=InMemorySaver(),
                                  store=InMemoryStore(), answer_store=make_answer_store(None))
             graph = build_question_graph(st)
-            todo = [{"set": "demo", "id": None, "question": x["question"], "as_of": None, "expected": None} for x in load_questions(REPLAY_DIR / "questions.txt")]
-            todo += [{"set": "v2", "id": it["id"], "question": it["question"], "as_of": it["as_of"], "expected": it["kind"]} for it in (v2_items or [])]
+            if todo is None:
+                todo = demo_todo() + v2_todo(v2_items or [])
             for t in todo:
                 q = t["question"]
                 missed.clear()
@@ -260,11 +279,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=None, help="결과 JSON을 쓸 파일(평가를 돌릴 때 필요)")
     ap.add_argument("--pg-url", default=os.environ.get("PROVENA_D5_PG_URL", ""), help="임시 DB를 만들 Postgres 관리 주소(기본: PROVENA_D5_PG_URL)")
     ap.add_argument("--export-questions", type=Path, default=None, help="녹화할 질문(데모 9 + 평가셋 v2 50, 기준일 포함)을 demo_record 입력 jsonl로 쓰고 끝낸다(평가 안 함)")
-    ap.add_argument("--write-v2-manifest", type=Path, default=None, metavar="REPORT", help="demo_record --report 결과에서 data/demo_replay/v2_recorded.json을 만들고 끝낸다(평가 안 함)")
-    ap.add_argument("--manifest-out", type=Path, default=V2_MANIFEST, help="--write-v2-manifest가 쓸 파일(기본 data/demo_replay/v2_recorded.json)")
+    ap.add_argument("--only-v2", action="store_true", help="--export-questions가 평가셋 v2 50건만 쓴다(50건 녹화는 evals/ci_replay_v2에 따로 만든다)")
+    ap.add_argument("--write-v2-manifest", type=Path, default=None, metavar="REPORT", help="demo_record --report 결과에서 evals/ci_replay_v2/v2_recorded.json을 만들고 끝낸다(평가 안 함)")
+    ap.add_argument("--manifest-out", type=Path, default=V2_MANIFEST, help="--write-v2-manifest가 쓸 파일(기본 evals/ci_replay_v2/v2_recorded.json)")
+    ap.add_argument("--require-v2", action="store_true", help="평가셋 v2 50건 녹화가 없거나 평가셋과 어긋나면 평가하지 않고 실패한다(종료 코드 1)")
     args = ap.parse_args(argv)
     if args.export_questions is not None:
-        print(f"녹화할 질문 {export_questions(args.export_questions)}개를 {args.export_questions}에 썼습니다.")
+        print(f"녹화할 질문 {export_questions(args.export_questions, only_v2=args.only_v2)}개를 {args.export_questions}에 썼습니다.")
         return 0
     if args.write_v2_manifest is not None:
         manifest = build_v2_manifest(json.loads(args.write_v2_manifest.read_text(encoding="utf-8")))
@@ -284,18 +305,30 @@ def main(argv: list[str] | None = None) -> int:
 
     answers, refusals = readme_questions()
     v2_items, v2_problem = load_v2_selection()
+    if args.require_v2 and (not v2_items or v2_problem):
+        print("평가셋 v2 50건 녹화가 필요합니다(--require-v2):", v2_problem or f"{V2_MANIFEST}가 없습니다")
+        return 1
     workdir = Path(tempfile.mkdtemp(prefix="provena-ci-current-"))
-    url, name = make_db(args.pg_url, workdir)
+    made: list[str] = []
     try:
-        per_path = {}
-        for label, budget in PATHS:
-            rows = run_questions(url, budget, v2_items)
-            per_path[label] = {"summary": summarize(rows, answers, refusals), "rows": rows}
+        # 데모 9개: 데모 녹화(data/demo_replay)와 그 질문만 적재한 DB. 두 경로(추론 답 보냄, 빠른 답만)를 같은 DB에서 차례로 돈다(번역 장부가 녹화 때처럼 쌓인다)
+        url, name = make_db(args.pg_url, workdir / "demo")
+        made.append(name)
+        per_path = {label: {"rows": run_questions(url, budget, todo=demo_todo(), replay_dir=REPLAY_DIR)} for label, budget in PATHS}
+        if v2_items:
+            # 평가셋 v2 50건: 따로 만든 새 DB와 50건 녹화(evals/ci_replay_v2). 데모와 글이 같은 질문의 번역·질문 벡터가 데모 실행에서 섞이지 않게 한다
+            url2, name2 = make_db(args.pg_url, workdir / "v2")
+            made.append(name2)
+            for label, budget in PATHS:
+                per_path[label]["rows"] += run_questions(url2, budget, todo=v2_todo(v2_items), replay_dir=V2_REPLAY_DIR)
+        for label, body in per_path.items():
+            body["summary"] = summarize(body["rows"], answers, refusals)
             if v2_items:
-                per_path[label]["v2"] = summarize_v2(rows)
+                body["v2"] = summarize_v2(body["rows"])
     finally:
         with psycopg.connect(args.pg_url, autocommit=True) as c:
-            c.execute(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)")
+            for n in made:
+                c.execute(f"DROP DATABASE IF EXISTS {n} WITH (FORCE)")
     commit = ""
     try:
         import subprocess
