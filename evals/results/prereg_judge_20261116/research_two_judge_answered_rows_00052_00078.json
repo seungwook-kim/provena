@@ -1,0 +1,170 @@
+[
+ {
+  "result_dir": "deploy_latency_graphoff_v2_provena-api-00078-keb",
+  "revision": "00078-keb",
+  "run": 1,
+  "id": 11,
+  "total_s": 10.828,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.007,
+  "judge_node_s": 3.886,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_mcp_provena-api-00061-wuq",
+  "revision": "00061-wuq",
+  "run": 1,
+  "id": 39,
+  "total_s": 14.98,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.285,
+  "judge_node_s": 4.337,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00058-gzd",
+  "revision": "00058-gzd",
+  "run": 1,
+  "id": 39,
+  "total_s": 14.969,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.001,
+  "judge_node_s": 5.893,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00058-gzd",
+  "revision": "00058-gzd",
+  "run": 2,
+  "id": 39,
+  "total_s": 16.668,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.001,
+  "judge_node_s": 5.163,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00058-gzd",
+  "revision": "00058-gzd",
+  "run": 3,
+  "id": 39,
+  "total_s": 16.214,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.002,
+  "judge_node_s": 6.096,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00059-pzr",
+  "revision": "00059-pzr",
+  "run": 2,
+  "id": 39,
+  "total_s": 14.947,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.002,
+  "judge_node_s": 5.318,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00059-pzr",
+  "revision": "00059-pzr",
+  "run": 3,
+  "id": 35,
+  "total_s": 8.615,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.002,
+  "judge_node_s": 4.339,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ },
+ {
+  "result_dir": "deploy_latency_provena-api-00059-pzr",
+  "revision": "00059-pzr",
+  "run": 3,
+  "id": 39,
+  "total_s": 14.662,
+  "judge_rounds": [
+   "일부/부족",
+   "충분"
+  ],
+  "ground_node_s": 0.002,
+  "judge_node_s": 6.758,
+  "used_ground_candidate": [
+   {
+    "kind": "fast",
+    "scope": "full",
+    "partial": false,
+    "ahead": true
+   }
+  ]
+ }
+]

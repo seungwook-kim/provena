@@ -1,0 +1,38 @@
+{
+ "embedder": "voyage-4",
+ "current_snapshot": 1190,
+ "current_incremental": 328,
+ "closed_incremental": 16,
+ "ord_anomaly": 0,
+ "targets": 328,
+ "skipped": 13,
+ "skipped_by_kind": {
+  "version_mismatch": 13
+ },
+ "versions_unchanged": 315,
+ "versions_to_replace": 0,
+ "pages_to_replace": 0,
+ "rows": {
+  "unchanged": 7267,
+  "changed": 0,
+  "new": 0,
+  "removed": 0
+ },
+ "rows_to_write": 0,
+ "rows_new_in_replaced": 0,
+ "embeddings_needed": 0,
+ "vectors_reused": 0,
+ "estimate": {
+  "texts": 0,
+  "chars": 0,
+  "est_tokens": 0,
+  "usd_per_mtok": 0.06,
+  "est_cost_usd": 0.0
+ },
+ "dry_run": true,
+ "replaced": 0,
+ "failed": [],
+ "stale": [],
+ "generation_bumped": false,
+ "note": "second --dry-run 2026-11-16, read-only connection; skipped_list and dirty_versions omitted (counts only)"
+}

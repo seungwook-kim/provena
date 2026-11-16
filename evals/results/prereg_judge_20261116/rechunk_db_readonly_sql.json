@@ -1,0 +1,61 @@
+{
+ "snapshot_versions_in_manifest": 1565,
+ "chunks_total": 31302,
+ "index_meta": [
+  [
+   "5",
+   "ready"
+  ]
+ ],
+ "by_kind": {
+  "snapshot": {
+   "versions": 1512,
+   "rows": 23095,
+   "current_versions": 1190,
+   "max_ord": 23094,
+   "min_ord": 0
+  },
+  "incremental_current": {
+   "versions": 328,
+   "rows": 7698,
+   "min_ord": 23095,
+   "visible_at_2026_10_27_versions": 0,
+   "visible_at_2026_10_27_rows": 0
+  },
+  "incremental_closed": {
+   "versions": 16,
+   "rows": 509,
+   "min_ord": 23582,
+   "visible_at_2026_10_27_versions": 0,
+   "visible_at_2026_10_27_rows": 0
+  }
+ },
+ "dup_rule_seq_version_seq_groups": 0,
+ "dup_rule_seq_version_seq_extra_rows": 0,
+ "dup_groups_by_kind": {
+  "snapshot": 0,
+  "incremental": 0
+ },
+ "dup_chunk_id_extra_rows": 7299,
+ "dup_ord_extra_rows": 0,
+ "same_body_sha_within_version_groups_extra": {
+  "snapshot": [
+   75,
+   144
+  ],
+  "incremental": [
+   20,
+   25
+  ]
+ },
+ "snapshot_ord_rows_in_db": 23095,
+ "index_file_rows": 23095,
+ "snapshot_ord_chunk_id_mismatch_vs_index": 0,
+ "snapshot_ord_missing_in_db": 0,
+ "sync_runs_by_status": [
+  [
+   "succeeded",
+   "2"
+  ]
+ ]
+}
