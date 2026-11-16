@@ -1,0 +1,11 @@
+{
+    "revision":  "provena-api-00181-zub",
+    "commit":  "9bc7d587",
+    "target":  "https://c1117b---provena-api-cttaanqntq-du.a.run.app",
+    "window_utc":  [
+                       "2026-11-16T17:50:08Z 2026-11-16T17:53:22Z"
+                   ],
+    "tool_rc":  0,
+    "health_before":  "200",
+    "health_after":  "200"
+}

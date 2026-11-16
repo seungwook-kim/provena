@@ -1,0 +1,3638 @@
+{
+ "base": {
+  "revision": "00172-rex",
+  "gold_v2": {
+   "cited_correct_rate": {
+    "mean": 0.9467,
+    "min": 0.9467,
+    "max": 0.9467
+   },
+   "wrong_citation_rate": {
+    "mean": 0.04,
+    "min": 0.04,
+    "max": 0.04
+   },
+   "citation_accuracy": {
+    "mean": 0.96,
+    "min": 0.96,
+    "max": 0.96
+   },
+   "over_refusal_rate": {
+    "mean": 0.0,
+    "min": 0.0,
+    "max": 0.0
+   },
+   "correct_refusal_rate": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0
+   },
+   "wrong_citation_rows": {
+    "mean": 1.0,
+    "min": 1,
+    "max": 1
+   },
+   "citation_accuracy_pooled": {
+    "mean": 0.969,
+    "min": 0.9545,
+    "max": 0.9762
+   }
+  },
+  "gold_v2_per_run": [
+   {
+    "run": 1,
+    "cited_correct_rate": 0.9466666666666668,
+    "citation_accuracy": 0.96,
+    "wrong_citation_rate": 0.04,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 2,
+    "cited_correct_rate": 0.9466666666666668,
+    "citation_accuracy": 0.96,
+    "wrong_citation_rate": 0.04,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 3,
+    "cited_correct_rate": 0.9466666666666668,
+    "citation_accuracy": 0.96,
+    "wrong_citation_rate": 0.04,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   }
+  ],
+  "lat_v2": {
+   "per_run": {
+    "1": {
+     "p50": 5.083,
+     "p95": 8.125,
+     "ans_p50": 6.688,
+     "ans_p95": 8.125,
+     "n": 50,
+     "n_ok": 50,
+     "n_ans": 25
+    },
+    "2": {
+     "p50": 5.313,
+     "p95": 8.514,
+     "ans_p50": 7.087,
+     "ans_p95": 9.492,
+     "n": 50,
+     "n_ok": 50,
+     "n_ans": 25
+    },
+    "3": {
+     "p50": 4.963,
+     "p95": 8.152,
+     "ans_p50": 6.145,
+     "ans_p95": 8.253,
+     "n": 50,
+     "n_ok": 50,
+     "n_ans": 25
+    }
+   },
+   "mean_run_p95": 8.264,
+   "mean_run_p50": 5.12,
+   "pooled_p50": 5.083,
+   "pooled_p95": 8.223,
+   "ans_pooled_p50": 6.688,
+   "ans_pooled_p95": 8.385,
+   "n_fail": 0,
+   "cost_sum": 0.750128,
+   "cost_per_q": 0.005001,
+   "kinds": {
+    "answer": 75,
+    "clarify": 3,
+    "refuse": 72
+   }
+  },
+  "gold_holdout": {
+   "cited_correct_rate": {
+    "mean": 0.9,
+    "min": 0.9,
+    "max": 0.9
+   },
+   "wrong_citation_rate": {
+    "mean": 0.2,
+    "min": 0.1,
+    "max": 0.3
+   },
+   "citation_accuracy": {
+    "mean": 0.9111,
+    "min": 0.8667,
+    "max": 0.95
+   },
+   "over_refusal_rate": {
+    "mean": 0.0,
+    "min": 0.0,
+    "max": 0.0
+   },
+   "correct_refusal_rate": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0
+   },
+   "wrong_citation_rows": {
+    "mean": 2.0,
+    "min": 1,
+    "max": 3
+   },
+   "citation_accuracy_pooled": {
+    "mean": 0.8844,
+    "min": 0.8333,
+    "max": 0.9375
+   }
+  },
+  "gold_holdout_per_run": [
+   {
+    "run": 1,
+    "cited_correct_rate": 0.9,
+    "citation_accuracy": 0.95,
+    "wrong_citation_rate": 0.1,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 2,
+    "cited_correct_rate": 0.9,
+    "citation_accuracy": 0.9166666666666666,
+    "wrong_citation_rate": 0.2,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 3,
+    "cited_correct_rate": 0.9,
+    "citation_accuracy": 0.8666666666666666,
+    "wrong_citation_rate": 0.3,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   }
+  ],
+  "lat_holdout": {
+   "per_run": {
+    "1": {
+     "p50": 4.539,
+     "p95": 10.433,
+     "ans_p50": 6.661,
+     "ans_p95": 11.168,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 10
+    },
+    "2": {
+     "p50": 4.646,
+     "p95": 7.895,
+     "ans_p50": 6.055,
+     "ans_p95": 8.734,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 10
+    },
+    "3": {
+     "p50": 4.159,
+     "p95": 7.302,
+     "ans_p50": 6.339,
+     "ans_p95": 7.882,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 10
+    }
+   },
+   "mean_run_p95": 8.543,
+   "mean_run_p50": 4.448,
+   "pooled_p50": 4.646,
+   "pooled_p95": 8.483,
+   "ans_pooled_p50": 6.318,
+   "ans_pooled_p95": 8.734,
+   "n_fail": 0,
+   "cost_sum": 0.285635,
+   "cost_per_q": 0.004761,
+   "kinds": {
+    "answer": 30,
+    "clarify": 3,
+    "refuse": 27
+   }
+  },
+  "gold_holdout_v2": {
+   "cited_correct_rate": {
+    "mean": 0.8571,
+    "min": 0.8571,
+    "max": 0.8571
+   },
+   "wrong_citation_rate": {
+    "mean": 0.5,
+    "min": 0.5,
+    "max": 0.5
+   },
+   "citation_accuracy": {
+    "mean": 0.6607,
+    "min": 0.6548,
+    "max": 0.6667
+   },
+   "over_refusal_rate": {
+    "mean": 0.0,
+    "min": 0.0,
+    "max": 0.0
+   },
+   "correct_refusal_rate": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0
+   },
+   "wrong_citation_rows": {
+    "mean": 7.0,
+    "min": 7,
+    "max": 7
+   },
+   "citation_accuracy_pooled": {
+    "mean": 0.6341,
+    "min": 0.625,
+    "max": 0.6522
+   }
+  },
+  "gold_holdout_v2_per_run": [
+   {
+    "run": 1,
+    "cited_correct_rate": 0.8571428571428571,
+    "citation_accuracy": 0.6666666666666667,
+    "wrong_citation_rate": 0.5,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 2,
+    "cited_correct_rate": 0.8571428571428571,
+    "citation_accuracy": 0.6547619047619048,
+    "wrong_citation_rate": 0.5,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   },
+   {
+    "run": 3,
+    "cited_correct_rate": 0.8571428571428571,
+    "citation_accuracy": 0.6607142857142857,
+    "wrong_citation_rate": 0.5,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   }
+  ],
+  "lat_holdout_v2": {
+   "per_run": {
+    "1": {
+     "p50": 5.948,
+     "p95": 9.145,
+     "ans_p50": 6.669,
+     "ans_p95": 13.817,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 14
+    },
+    "2": {
+     "p50": 6.267,
+     "p95": 9.682,
+     "ans_p50": 7.504,
+     "ans_p95": 11.323,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 14
+    },
+    "3": {
+     "p50": 5.957,
+     "p95": 9.941,
+     "ans_p50": 6.898,
+     "ans_p95": 11.479,
+     "n": 20,
+     "n_ok": 20,
+     "n_ans": 14
+    }
+   },
+   "mean_run_p95": 9.589,
+   "mean_run_p50": 6.057,
+   "pooled_p50": 6.174,
+   "pooled_p95": 9.941,
+   "ans_pooled_p50": 6.898,
+   "ans_pooled_p95": 11.323,
+   "n_fail": 0,
+   "cost_sum": 0.433788,
+   "cost_per_q": 0.00723,
+   "kinds": {
+    "answer": 42,
+    "refuse": 18
+   }
+  },
+  "gold_cite": null,
+  "gold_cite_per_run": null,
+  "lat_cite": null,
+  "lat_colleague": null,
+  "colleague_rows": [],
+  "range": {
+   "n": 0,
+   "gold_cited": 0,
+   "refused": 0,
+   "functional_named": 0,
+   "cost_sum": 0,
+   "rows": []
+  },
+  "ragas": {
+   "mean_of_runs": {
+    "context_precision": 0.9666,
+    "context_recall": 0.9013,
+    "faithfulness": 0.9324,
+    "answer_relevancy": 0.6353
+   },
+   "per_run": {
+    "1": {
+     "n": 25,
+     "context_precision": 0.9733,
+     "context_recall": 0.9,
+     "faithfulness": 0.9233,
+     "answer_relevancy": 0.6344
+    },
+    "2": {
+     "n": 25,
+     "context_precision": 0.9733,
+     "context_recall": 0.8933,
+     "faithfulness": 0.9273,
+     "answer_relevancy": 0.6162
+    },
+    "3": {
+     "n": 25,
+     "context_precision": 0.9533,
+     "context_recall": 0.9107,
+     "faithfulness": 0.9467,
+     "answer_relevancy": 0.6554
+    }
+   },
+   "n_rows": 75,
+   "cost_usd": 0.20761
+  },
+  "mrr": {
+   "v2": {
+    "per_run": {
+     "1": {
+      "recall@5": {
+       "value": 0.9266666666666667,
+       "ci95": [
+        0.8266666666666667,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.778,
+       "ci95": [
+        0.6426666666666666,
+        0.9
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.8122432452351143,
+       "ci95": [
+        0.6912943270142331,
+        0.9156972197267279
+       ]
+      },
+      "hit@5": {
+       "value": 0.96,
+       "ci95": [
+        0.88,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 1.0,
+       "ci95": [
+        1.0,
+        1.0
+       ]
+      },
+      "n_scored": 25
+     },
+     "2": {
+      "recall@5": {
+       "value": 0.9266666666666667,
+       "ci95": [
+        0.8266666666666667,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.778,
+       "ci95": [
+        0.6426666666666666,
+        0.9
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.8122432452351143,
+       "ci95": [
+        0.6912943270142331,
+        0.9156972197267279
+       ]
+      },
+      "hit@5": {
+       "value": 0.96,
+       "ci95": [
+        0.88,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 1.0,
+       "ci95": [
+        1.0,
+        1.0
+       ]
+      },
+      "n_scored": 25
+     },
+     "3": {
+      "recall@5": {
+       "value": 0.9266666666666667,
+       "ci95": [
+        0.8266666666666667,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.778,
+       "ci95": [
+        0.6426666666666666,
+        0.9
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.8122432452351143,
+       "ci95": [
+        0.6912943270142331,
+        0.9156972197267279
+       ]
+      },
+      "hit@5": {
+       "value": 0.96,
+       "ci95": [
+        0.88,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 1.0,
+       "ci95": [
+        1.0,
+        1.0
+       ]
+      },
+      "n_scored": 25
+     }
+    },
+    "all_runs": {
+     "recall@5": {
+      "value": 0.9266666666666666,
+      "ci95": [
+       0.8711111111111111,
+       0.9733333333333334
+      ]
+     },
+     "rr": {
+      "value": 0.778,
+      "ci95": [
+       0.704,
+       0.8522222222222222
+      ]
+     },
+     "ndcg@5": {
+      "value": 0.8122432452351142,
+      "ci95": [
+       0.748205849118623,
+       0.8757641535360821
+      ]
+     },
+     "hit@5": {
+      "value": 0.96,
+      "ci95": [
+       0.9066666666666666,
+       1.0
+      ]
+     },
+     "page_hit@5": {
+      "value": 1.0,
+      "ci95": [
+       1.0,
+       1.0
+      ]
+     },
+     "n_scored": 75
+    },
+    "pair_status": {
+     "paired": 75
+    }
+   },
+   "holdout": {
+    "per_run": {
+     "1": {
+      "recall@5": {
+       "value": 0.85,
+       "ci95": [
+        0.6,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.64,
+       "ci95": [
+        0.39,
+        0.8699999999999999
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.6818742758962996,
+       "ci95": [
+        0.44852987527769717,
+        0.883470984152791
+       ]
+      },
+      "hit@5": {
+       "value": 0.9,
+       "ci95": [
+        0.7,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 1.0,
+       "ci95": [
+        1.0,
+        1.0
+       ]
+      },
+      "n_scored": 10
+     },
+     "2": {
+      "recall@5": {
+       "value": 0.7,
+       "ci95": [
+        0.4,
+        0.9
+       ]
+      },
+      "rr": {
+       "value": 0.6,
+       "ci95": [
+        0.3,
+        0.85
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.6194692238959159,
+       "ci95": [
+        0.33868528072345416,
+        0.8642549273252527
+       ]
+      },
+      "hit@5": {
+       "value": 0.7,
+       "ci95": [
+        0.4,
+        0.9
+       ]
+      },
+      "page_hit@5": {
+       "value": 0.9,
+       "ci95": [
+        0.7,
+        1.0
+       ]
+      },
+      "n_scored": 10
+     },
+     "3": {
+      "recall@5": {
+       "value": 0.9,
+       "ci95": [
+        0.7,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.6533333333333333,
+       "ci95": [
+        0.4066666666666666,
+        0.8699999999999999
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.715218676514902,
+       "ci95": [
+        0.49683978534282414,
+        0.8941527443624947
+       ]
+      },
+      "hit@5": {
+       "value": 0.9,
+       "ci95": [
+        0.7,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 1.0,
+       "ci95": [
+        1.0,
+        1.0
+       ]
+      },
+      "n_scored": 10
+     }
+    },
+    "all_runs": {
+     "recall@5": {
+      "value": 0.8166666666666667,
+      "ci95": [
+       0.6666666666666666,
+       0.9333333333333333
+      ]
+     },
+     "rr": {
+      "value": 0.6311111111111111,
+      "ci95": [
+       0.48333333333333334,
+       0.7777777777777778
+      ]
+     },
+     "ndcg@5": {
+      "value": 0.6721873921023724,
+      "ci95": [
+       0.5337811665974052,
+       0.8046250451089293
+      ]
+     },
+     "hit@5": {
+      "value": 0.8333333333333334,
+      "ci95": [
+       0.7,
+       0.9666666666666667
+      ]
+     },
+     "page_hit@5": {
+      "value": 0.9666666666666667,
+      "ci95": [
+       0.9,
+       1.0
+      ]
+     },
+     "n_scored": 30
+    },
+    "pair_status": {
+     "paired": 30
+    }
+   },
+   "holdout_v2": {
+    "per_run": {
+     "1": {
+      "recall@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.7380952380952381,
+       "ci95": [
+        0.5595238095238095,
+        0.8928571428571429
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.7134395637624166,
+       "ci95": [
+        0.5669645249967277,
+        0.8529101902668332
+       ]
+      },
+      "hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "n_scored": 14
+     },
+     "2": {
+      "recall@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.7380952380952381,
+       "ci95": [
+        0.5595238095238095,
+        0.8928571428571429
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.7134395637624166,
+       "ci95": [
+        0.5669645249967277,
+        0.8529101902668332
+       ]
+      },
+      "hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "n_scored": 14
+     },
+     "3": {
+      "recall@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "rr": {
+       "value": 0.7380952380952381,
+       "ci95": [
+        0.5595238095238095,
+        0.8928571428571429
+       ]
+      },
+      "ndcg@5": {
+       "value": 0.7084841435043142,
+       "ci95": [
+        0.5622404842944452,
+        0.8505624772730014
+       ]
+      },
+      "hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "page_hit@5": {
+       "value": 0.9285714285714286,
+       "ci95": [
+        0.7857142857142857,
+        1.0
+       ]
+      },
+      "n_scored": 14
+     }
+    },
+    "all_runs": {
+     "recall@5": {
+      "value": 0.9285714285714286,
+      "ci95": [
+       0.8333333333333334,
+       1.0
+      ]
+     },
+     "rr": {
+      "value": 0.7380952380952381,
+      "ci95": [
+       0.634920634920635,
+       0.8293650793650794
+      ]
+     },
+     "ndcg@5": {
+      "value": 0.7117877570097157,
+      "ci95": [
+       0.621784008381179,
+       0.7938386366081056
+      ]
+     },
+     "hit@5": {
+      "value": 0.9285714285714286,
+      "ci95": [
+       0.8333333333333334,
+       1.0
+      ]
+     },
+     "page_hit@5": {
+      "value": 0.9285714285714286,
+      "ci95": [
+       0.8333333333333334,
+       1.0
+      ]
+     },
+     "n_scored": 42
+    },
+    "pair_status": {
+     "paired": 42
+    }
+   }
+  },
+  "stage": null,
+  "ctx_first": {
+   "v2": {
+    "rows": 75,
+    "mean": 0.9733,
+    "pooled": 0.964
+   },
+   "holdout": {
+    "rows": 30,
+    "mean": 0.95,
+    "pooled": 0.9375
+   },
+   "holdout_v2": {
+    "rows": 42,
+    "mean": 0.9286,
+    "pooled": 0.9048
+   }
+  },
+  "ctx_final": {
+   "v2": {
+    "rows": 75,
+    "mean": 0.9733,
+    "pooled": 0.964
+   },
+   "holdout": {
+    "rows": 30,
+    "mean": 0.95,
+    "pooled": 0.9375
+   },
+   "holdout_v2": {
+    "rows": 42,
+    "mean": 0.9524,
+    "pooled": 0.9365
+   }
+  }
+ },
+ "new": {
+  "revision": "00181-zub",
+  "gold_v2": {
+   "cited_correct_rate": {
+    "mean": 0.9333,
+    "min": 0.9333,
+    "max": 0.9333
+   },
+   "wrong_citation_rate": {
+    "mean": 0.08,
+    "min": 0.08,
+    "max": 0.08
+   },
+   "citation_accuracy": {
+    "mean": 0.94,
+    "min": 0.94,
+    "max": 0.94
+   },
+   "over_refusal_rate": {
+    "mean": 0.0,
+    "min": 0.0,
+    "max": 0.0
+   },
+   "correct_refusal_rate": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0
+   },
+   "wrong_citation_rows": {
+    "mean": 2.0,
+    "min": 2,
+    "max": 2
+   },
+   "citation_accuracy_pooled": {
+    "mean": 0.9524,
+    "min": 0.9524,
+    "max": 0.9524
+   }
+  },
+  "gold_v2_per_run": [
+   {
+    "run": 1,
+    "cited_correct_rate": 0.9333333333333332,
+    "citation_accuracy": 0.94,
+    "wrong_citation_rate": 0.08,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 0
+   }
+  ],
+  "lat_v2": {
+   "per_run": {
+    "1": {
+     "p50": 5.321,
+     "p95": 7.819,
+     "ans_p50": 6.428,
+     "ans_p95": 7.837,
+     "n": 50,
+     "n_ok": 50,
+     "n_ans": 25
+    }
+   },
+   "mean_run_p95": 7.819,
+   "mean_run_p50": 5.321,
+   "pooled_p50": 5.321,
+   "pooled_p95": 7.819,
+   "ans_pooled_p50": 6.428,
+   "ans_pooled_p95": 7.837,
+   "n_fail": 0,
+   "cost_sum": 0.245564,
+   "cost_per_q": 0.004911,
+   "kinds": {
+    "answer": 25,
+    "clarify": 1,
+    "refuse": 24
+   }
+  },
+  "gold_holdout": null,
+  "gold_holdout_per_run": null,
+  "lat_holdout": null,
+  "gold_holdout_v2": null,
+  "gold_holdout_v2_per_run": null,
+  "lat_holdout_v2": null,
+  "gold_cite": null,
+  "gold_cite_per_run": null,
+  "lat_cite": null,
+  "lat_colleague": null,
+  "colleague_rows": [],
+  "range": {
+   "n": 0,
+   "gold_cited": 0,
+   "refused": 0,
+   "functional_named": 0,
+   "cost_sum": 0,
+   "rows": []
+  },
+  "ragas": null,
+  "mrr": {
+   "v2": null,
+   "holdout": null,
+   "holdout_v2": null
+  },
+  "stage": null,
+  "ctx_first": null,
+  "ctx_final": null
+ },
+ "changed_questions": {
+  "v2": [
+   {
+    "id": 1,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 2,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 3,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 4,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 5,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 6,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 7,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 8,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 9,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 10,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 11,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 12,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 13,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 14,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 15,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 16,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 17,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 18,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 19,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 20,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 21,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 22,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 23,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 24,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 25,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "clarify",
+      "clarify",
+      "clarify"
+     ],
+     [
+      "clarify",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 26,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 27,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 28,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 29,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 30,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 31,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 32,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 33,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 34,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 35,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 36,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/3",
+      "True/3",
+      "True/3"
+     ],
+     [
+      "True/3",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 37,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      "True/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 38,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "False/2",
+      "False/2",
+      "False/2"
+     ],
+     [
+      "False/2",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      true,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 39,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/3",
+      "True/3",
+      "True/3"
+     ],
+     [
+      "True/3",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      true,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 40,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      "answer",
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      "True/1",
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      false,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 41,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 42,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 43,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 44,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 45,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 46,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 47,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 48,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 49,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 50,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      "refuse",
+      null,
+      null
+     ]
+    ]
+   }
+  ],
+  "holdout": [
+   {
+    "id": 101,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 102,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 103,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 104,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 105,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 106,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 107,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 108,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 109,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 110,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 111,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 112,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 113,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "clarify",
+      "clarify",
+      "clarify"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 114,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 115,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 116,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 117,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 118,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 119,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 120,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   }
+  ],
+  "holdout_v2": [
+   {
+    "id": 501,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 502,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 503,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 504,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 505,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 506,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 507,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "False/1",
+      "False/1",
+      "False/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 508,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 509,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 510,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 511,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 512,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 513,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 514,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/2",
+      "True/2",
+      "True/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 515,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "False/2",
+      "False/2",
+      "False/2"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 516,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      false,
+      false,
+      false
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 517,
+    "kind": "relevant",
+    "result": [
+     [
+      "answer",
+      "answer",
+      "answer"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "gold": [
+     [
+      "True/1",
+      "True/1",
+      "True/1"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ],
+    "wrong": [
+     [
+      true,
+      true,
+      true
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 518,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 519,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   },
+   {
+    "id": 520,
+    "kind": "irrelevant",
+    "result": [
+     [
+      "refuse",
+      "refuse",
+      "refuse"
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   }
+  ],
+  "cite": []
+ }
+}
