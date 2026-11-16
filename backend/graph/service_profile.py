@@ -130,6 +130,9 @@ SERVICE_ENV: dict[str, str] = {
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_NONE_VOTE_WAIT_S": "1.0",       # 62.72
     "GRAPH_SPEC_STOP_GROUND": "1",         # 62.72
+    # 하위 질문에 원 질문의 대상·조건 유지(`backend/graph/decompose.py` `keep_subject_enabled`): 분해 프롬프트에 규칙 한 줄을 더하고, 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 붙인다.
+    # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "GRAPH_DECOMPOSE_KEEP_SUBJECT": "1",
     # 사전 등록 62.73 `GRAPH_SPLIT_FULL_K`는 넣지 않는다(사전 등록 62.74): 되살린 `SPLIT_K`(나뉜 질문 첫 검색 8자리, 달러 금액 질문 제외)가 같은 검색을 넓힌다.
     # 켜면 나뉜 질문의 첫 검색이 근거 목록 상한(MAX_CHUNKS=10)까지 요청한다
 }

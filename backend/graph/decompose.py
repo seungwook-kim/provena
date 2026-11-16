@@ -34,6 +34,13 @@ SYSTEM = (
     "예 2: 질문 \"휴가 신청은 어떻게 해?\" -> {\"split\": false, \"sub_questions\": []}."
 )
 SYSTEM_TAGGED = f"[[task:{TASK}]]\n{SYSTEM}"
+# `GRAPH_DECOMPOSE_KEEP_SUBJECT=1`(코드 기본 꺼짐, 서비스 설정 켬): 하위 질문이 원 질문의 대상·조건을 빠뜨리면 하위 질문 검색이 원 질문과 다른 대상을 찾는다.
+# 켜면 아래 규칙 한 줄을 프롬프트 끝에 더하고(`system_prompt`), 코드가 빠진 앞머리 대상 구를 하위 질문 앞에 붙인다(`keep_subject`). 예시는 핸드북과 무관한 일반 문장이다
+KEEP_SUBJECT_RULE = (
+    "\n- 원 질문에 대상(누구·어디·무엇)이나 조건(기간·금액·역할·지역 등)이 있으면 모든 하위 질문에 그 대상과 조건을 그대로 넣는다. "
+    "하위 질문 하나만 따로 읽어도 원 질문과 같은 대상과 조건을 묻는 질문이어야 한다. "
+    "예 3: 질문 \"해외 주문의 배송은 며칠 걸리고 반품 수수료는 얼마야?\" -> {\"split\": true, \"sub_questions\": [\"해외 주문의 배송은 며칠 걸려?\", \"해외 주문의 반품 수수료는 얼마야?\"]}."
+)
 _COMPANY_PREFIX = re.compile(r"^GitLab(?:의|은|는|이|에서는|에서)?\s+", re.I)
 
 
@@ -43,6 +50,16 @@ _OFF_VALUES = {"0", "false", "no", "off"}
 def decompose_enabled() -> bool:
     """SEARCH_DECOMPOSE가 없거나 비어 있으면 켬(확정 조합). 0, false, no, off면 끔."""
     return (os.environ.get("SEARCH_DECOMPOSE") or "1").strip().lower() not in _OFF_VALUES
+
+
+def keep_subject_enabled() -> bool:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`가 1, true, yes, on이면 켬. 코드 기본은 꺼짐(측정 코드와 같은 프롬프트), 서비스 설정(`service_profile.SERVICE_ENV`)이 켠다."""
+    return (os.environ.get("GRAPH_DECOMPOSE_KEEP_SUBJECT") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def system_prompt(tag: str) -> str:
+    """표지(`[[task:...]]`)를 붙인 분해 프롬프트. 스위치를 켜면 대상·조건 유지 규칙을 끝에 더한다. 끄면 `SYSTEM_TAGGED`, `SYSTEM_GATE`와 글자가 같다."""
+    return f"[[task:{tag}]]\n{SYSTEM}{KEEP_SUBJECT_RULE if keep_subject_enabled() else ''}"
 
 
 def parse_split(text: str) -> dict | None:
@@ -92,21 +109,54 @@ _ENDINGS_BY_VERB = {  # 서술어 첫 글자(하다·되다·있다 계열의 �
 _PREDICATE_FORMS = frozenset(head + tail for head, tails in _ENDINGS_BY_VERB.items() for tail in tails)  # "합니다", "하려고", "있는데" 같은 서술어 조각은 내용어로 세지 않는다
 
 
+def _stem(word: str) -> str | None:
+    """낱말 하나의 내용어 줄기(`_content_stems`의 규칙). 내용어가 아니면 None."""
+    for p in _PARTICLES:
+        if word.endswith(p) and len(word) - len(p) >= _MIN_STEM:
+            word = word[: -len(p)]
+            break
+    if len(word) < 2 or word in _SKIP_WORDS or word in _PREDICATE_FORMS or word in _PARTICLES:  # 조사만 따로 떨어진 낱말("(연 3천 달러)으로")도 내용어가 아니다
+        return None
+    if "가" <= word[0] <= "힣":
+        word = word[:2]
+    return word.casefold()
+
+
 def _content_stems(sentence: str) -> list[str]:
     """문장의 내용어 줄기. 끝의 조사는 떼고 남는 줄기가 두 글자 이상일 때만 뗀다(두 글자 명사의 끝 글자를 조사로 보지 않는다). 한글 낱말은 앞 두 글자만 쓴다(어미가 붙어도 하위 질문의 같은 낱말과 맞게).
     한 글자 낱말, 대명사·접속어, 서술어 조각(`_PREDICATE_FORMS`: 낱말 전체가 하다·되다·있다 계열의 활용형일 때)은 뺀다. 첫 글자가 같다고 서술어로 보지 않는다("해외", "하드웨어", "합의")."""
-    out: list[str] = []
-    for word in _WORD.findall(sentence):
-        for p in _PARTICLES:
-            if word.endswith(p) and len(word) - len(p) >= _MIN_STEM:
-                word = word[: -len(p)]
-                break
-        if len(word) < 2 or word in _SKIP_WORDS or word in _PREDICATE_FORMS or word in _PARTICLES:  # 조사만 따로 떨어진 낱말("(연 3천 달러)으로")도 내용어가 아니다
-            continue
-        if "가" <= word[0] <= "힣":
-            word = word[:2]
-        out.append(word.casefold())
-    return out
+    return [s for s in (_stem(w) for w in _WORD.findall(sentence)) if s]
+
+
+_ASK_WORDS = {"언제", "어디", "어디서", "어디에", "어디에서", "누가", "누구", "무엇", "무엇을", "뭐", "뭘", "어떻게", "얼마", "얼마나", "몇", "왜", "어느", "어떤", "무슨"}  # 묻는 말은 대상 구가 아니다
+MAX_SUBJECT_CHARS = 60   # 앞머리 대상 구로 보는 최대 길이. 이보다 길면 붙이지 않는다
+
+
+def keep_subject(question: str, subs: list[str]) -> list[str]:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`의 코드 쪽 보정: 질문 문장(마지막 문장)의 앞머리 대상 구가 하위 질문에서 빠졌으면 그 구를 빠진 하위 질문 앞에 붙인다.
+    앞머리 대상 구는 질문 문장에서 어느 하위 질문에든 나오는 첫 내용어 앞까지의 낱말이다(예: "해외 주문의 배송은 ... 반품 수수료는 ..."에서 "해외 주문의").
+    그 구의 내용어가 어느 하위 질문에도 없을 때만 대상이 빠진 것으로 본다. 한 하위 질문에라도 남아 있으면 그 구가 한 사실에만 걸린 말일 수 있어(한국어 꾸밈 범위) 손대지 않고 프롬프트 규칙에 맡긴다. 맨 앞 회사 이름은 `drop_company_prefix`가 뺀 것이므로 구에 넣지 않는다.
+    나뉘지 않았거나, 구가 없거나 묻는 말뿐이거나, 구가 `MAX_SUBJECT_CHARS`자를 넘거나, 붙이면 길이 한도를 넘으면 하위 질문을 그대로 돌려준다. LLM을 부르지 않는다."""
+    if not subs:
+        return subs
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split((question or "").strip()) if s.strip()]
+    if not sentences:
+        return subs
+    last = _COMPANY_PREFIX.sub("", sentences[-1], count=1)
+    joined = " ".join(subs).casefold()
+    words = list(_WORD.finditer(last))
+    cut = next((i for i, m in enumerate(words) if (st := _stem(m.group(0))) and st in joined), None)
+    if not cut:   # 첫 낱말부터 하위 질문에 있거나(None 아님, 0), 어느 내용어도 하위 질문에 없다(None: 분해가 질문을 크게 바꿈, 판단하지 않는다)
+        return subs
+    head = [m for m in words[:cut] if m.group(0) not in _ASK_WORDS]
+    stems = [st for m in head if (st := _stem(m.group(0)))]
+    if not stems or any(st in joined for st in stems):
+        return subs
+    phrase = last[head[0].start():words[cut].start()].strip()
+    if not phrase or len(phrase) > MAX_SUBJECT_CHARS:
+        return subs
+    out = [s if any(st in s.casefold() for st in stems) else f"{phrase} {s}" for s in subs]
+    return out if all(len(s) <= MAX_SUB_CHARS for s in out) else subs
 
 
 def keep_premise(question: str, subs: list[str]) -> list[str]:
@@ -161,7 +211,7 @@ def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
     if not question or not question.strip():
         return None
     try:
-        text = ask(SYSTEM_GATE, _for_prompt(question))
+        text = ask(system_prompt(GATE_TASK), _for_prompt(question))
     except Exception as e:  # noqa: BLE001  예비 분해가 실패하면 미리 돌리지 않을 뿐이다. 비용 상한은 그대로 올린다
         if type(e).__name__ == "CostCapExceeded":
             raise
@@ -176,9 +226,11 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
     if not question or not question.strip():
         return [], "skipped"
     source = "invalid"
+    keep = keep_subject_enabled()
+    system = system_prompt(TASK)
     for _ in range(ATTEMPTS):
         try:
-            text = ask(SYSTEM_TAGGED, _for_prompt(question))
+            text = ask(system, _for_prompt(question))
         except Exception as e:  # noqa: BLE001  분해가 실패해도 검색은 원 질문 그대로 이어 간다. 비용 상한은 그대로 올린다
             if type(e).__name__ == "CostCapExceeded":
                 raise
@@ -187,6 +239,9 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
             continue
         obj = parse_split(text)
         if obj is not None:
-            return keep_premise(question, drop_company_prefix(normalize(question, obj))), "llm"
+            subs = drop_company_prefix(normalize(question, obj))
+            if keep:
+                subs = keep_subject(question, subs)
+            return keep_premise(question, subs), "llm"
         source = "invalid"
     return [], source

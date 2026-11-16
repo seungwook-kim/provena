@@ -74,6 +74,8 @@ CITE_ADD_GUARD_6270 = {"GRAPH_CITE_ADD_GUARD": "1"}
 BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
 # 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(코드 기본은 꺼짐). 사전 등록 62.74로 서비스 값에서 뺐다(되살린 SPLIT_K가 같은 검색을 넓힌다)
 BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
+# 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지
+SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1"}
 # 표의 행이 특정 문항에 맞춘 내용이라 제거한 채 둔 스위치(사전 등록 62.72·62.74). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
 REMOVED_6274 = ("GRAPH_QUERY_TERMS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK")
 REMOVED_ARGS_6274 = ("--query-terms", "--heading-terms", "--heading-heads", "--heading-mark")
@@ -106,7 +108,7 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116)}
     assert have == want
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
     assert not set(BLIND_6273) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))   # 62.73: 사전 등록 62.74로 서비스 값에서 뺐다(코드 기본 꺼짐)

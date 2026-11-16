@@ -342,11 +342,12 @@ flowchart TD
 
 ## 6. 경로를 바꾸는 설정 스위치
 
-"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다. `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:155`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
+"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다. `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:158`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
 
 | 스위치 | 읽는 곳 | 코드 기본값 | 서비스 값 | 바뀌는 경로 |
 |---|---|---|---|---|
 | `SEARCH_DECOMPOSE` | `backend/graph/decompose.py:45` | 켬 | 채우지 않음(켬) | 첫 `search`에서 질문을 하위 질문으로 나눈다(`sub_queries`). 하위 질문이 2개 이상이면 일부 판정이 재검색 없이 `write_answer`로 간다 |
+| `GRAPH_DECOMPOSE_KEEP_SUBJECT` | `backend/graph/decompose.py:55` | 끔 | 켬(`service_profile.py:135`) | 분해 프롬프트에 원 질문의 대상·조건을 모든 하위 질문에 넣으라는 규칙 한 줄을 더하고(예비 분해도 같은 프롬프트), 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 하위 질문 앞에 붙인다(`keep_subject`). 합치는 방식과 자리 수는 그대로다 |
 | `SEARCH_MAX_RESEARCH` | `build.py:371`(상한 `MAX_RESEARCH = 2`, `build.py:64`) | 2 | 1(`service_profile.py:56`) | `after_judge`의 `rewrite`(재검색) 횟수 상한. 0~2 밖이면 시작 오류 |
 | `GRAPH_SECTION_KEEPS_RESEARCH` | `build.py:458` | 끔 | 켬(`service_profile.py:64`) | 판정이 고른 섹션 읽기가 재검색 횟수를 쓰지 않는다 |
 | `GRAPH_STOP_STALLED_SEARCH` | `build.py:533` | 끔 | 켬(`service_profile.py:59`) | 재검색이 근거를 더하지 못했거나 근거 목록이 찼으면 `judge`가 판정을 다시 부르지 않고, `after_judge`가 `rewrite` 대신 `give_up`으로 보낸다 |
@@ -363,10 +364,10 @@ flowchart TD
 | `GROUND_SKIP_BACKED` | `build.py:534` | 끔 | 채우지 않음(끔) | 값이 모두 인용 청크에 있으면 `ground`의 LLM 판정을 건너뛴다 |
 | `USE_SKILLS` | `backend/services/skills.py:21` | 켬 | 채우지 않음(켬) | 끄면 `ground`의 LLM 판정을 건너뛰고 Skill 본문을 붙이지 않는다 |
 | `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:59` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
-| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:150-151`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다) |
+| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:153-154`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다) |
 | `CHAT_FOLLOWUP` | `backend/api/routes.py:188` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |
 | `RECALL_MIN_CONFIDENCE` | `recall/graph.py:36` | 0.5 | 채우지 않음 | 리콜 `notify`에서 이 값보다 확신도가 낮은 알림을 관리자 검토함으로 보낸다 |
 
-경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-135`에 있다.
+경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-138`에 있다.
