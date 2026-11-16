@@ -1,0 +1,678 @@
+[
+ {
+  "id": 201,
+  "repeat": 1,
+  "trace": "40e15faebc2f",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "72b09f608ddee143"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ]
+  ]
+ },
+ {
+  "id": 201,
+  "repeat": 2,
+  "trace": "701e4b5401e0",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "72b09f608ddee143"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확인되지 않"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    "unsupported"
+   ],
+   [
+    false,
+    "out_of_period"
+   ]
+  ]
+ },
+ {
+  "id": 201,
+  "repeat": 3,
+  "trace": "2095d405364e",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "72b09f608ddee143"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ]
+  ]
+ },
+ {
+  "id": 202,
+  "repeat": 1,
+  "trace": "bbf7bf466975",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "SaaS 구매가 이 행으로 판정되는지는 자료로 확인되지 않아 확인"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ]
+  ]
+ },
+ {
+  "id": 202,
+  "repeat": 2,
+  "trace": "9eb6edba245b",
+  "result": "refuse",
+  "refuse_reason": "unsupported",
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "SaaS 계약 자체의 승인 행으로 확인"
+  ],
+  "ground_llm_final": "ungrounded",
+  "redraft": "empty",
+  "revise": "citation_check_failed",
+  "ground_detail": "지출 행의 승인자는 자료에 있으나 SaaS 계약 행으로 옮긴 근거는 없음",
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ]
+  ]
+ },
+ {
+  "id": 202,
+  "repeat": 3,
+  "trace": "92417185fbc3",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "out_of_period"
+   ]
+  ]
+ },
+ {
+  "id": 203,
+  "repeat": 1,
+  "trace": "8935ff0548c6",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확인 필요"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    "unsupported"
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    true,
+    null
+   ]
+  ]
+ },
+ {
+  "id": 203,
+  "repeat": 2,
+  "trace": "7fb07e461341",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ]
+  ]
+ },
+ {
+  "id": 203,
+  "repeat": 3,
+  "trace": "466a0b5ca39e",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "9b386ea93519a5a3"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "ungrounded",
+  "redraft": "rejudge_grounded",
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 9,
+  "grounding_verdicts": [
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    null
+   ]
+  ]
+ },
+ {
+  "id": 204,
+  "repeat": 1,
+  "trace": "187afa900864",
+  "result": "refuse",
+  "refuse_reason": "unsupported",
+  "judge_quote_ids": [
+   "96eff1a8c833ff33"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확정할 수 없",
+   "SaaS 계약에 그대로 적용되는지는 자료로 확인",
+   "확인 필요"
+  ],
+  "ground_llm_final": "ungrounded",
+  "redraft": "empty",
+  "revise": "citation_check_failed",
+  "ground_detail": "답은 자료에 없는 SaaS 계약 적용을 단정하지 않으며, 자료의 지출 구간 값은 본문과 일치함",
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "no_evidence"
+   ],
+   [
+    false,
+    "out_of_period"
+   ]
+  ]
+ },
+ {
+  "id": 204,
+  "repeat": 2,
+  "trace": "5ebe587f7476",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "96eff1a8c833ff33"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확인되지 않"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ]
+  ]
+ },
+ {
+  "id": 204,
+  "repeat": 3,
+  "trace": "76c3d4fb0358",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "96eff1a8c833ff33"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확인되지 않"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    true,
+    "unsupported"
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "unsupported"
+   ]
+  ]
+ },
+ {
+  "id": 205,
+  "repeat": 1,
+  "trace": "4b4b4b1a1f34",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "fdde953c7bca6352"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "unsupported"
+   ]
+  ]
+ },
+ {
+  "id": 205,
+  "repeat": 2,
+  "trace": "fb25c68c6f90",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "fdde953c7bca6352"
+  ],
+  "draft_has_caveat": false,
+  "draft_caveat_spans": [],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    null
+   ],
+   [
+    false,
+    "out_of_period"
+   ]
+  ]
+ },
+ {
+  "id": 205,
+  "repeat": 3,
+  "trace": "da4bf4e055c5",
+  "result": "answer",
+  "refuse_reason": null,
+  "judge_quote_ids": [
+   "fdde953c7bca6352"
+  ],
+  "draft_has_caveat": true,
+  "draft_caveat_spans": [
+   "확인되지 않",
+   "확인 필요"
+  ],
+  "ground_llm_final": "grounded",
+  "redraft": null,
+  "revise": null,
+  "ground_detail": null,
+  "n_grounding_calls": 6,
+  "grounding_verdicts": [
+   [
+    true,
+    ""
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "out_of_period"
+   ],
+   [
+    false,
+    "unsupported"
+   ],
+   [
+    true,
+    ""
+   ],
+   [
+    true,
+    "unsupported"
+   ]
+  ]
+ }
+]

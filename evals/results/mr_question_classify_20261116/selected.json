@@ -1,0 +1,440 @@
+{
+ "seed": 20261116,
+ "n_question_notes": 310,
+ "n_policy": 24,
+ "n_rest": 286,
+ "items": [
+  {
+   "no": 1,
+   "group": "policy_all",
+   "iid": 18124,
+   "note_id": "3306322619",
+   "created_at": "2026-05-01T07:21:25.896Z",
+   "text": "@[멘션] Do we still need to work on this? :sweat_smile:"
+  },
+  {
+   "no": 2,
+   "group": "policy_all",
+   "iid": 18124,
+   "note_id": "3712510103",
+   "created_at": "2026-08-20T18:06:44.571Z",
+   "text": "@[멘션] where should I add the text for the EOP policy?"
+  },
+  {
+   "no": 3,
+   "group": "policy_all",
+   "iid": 18124,
+   "note_id": "3939885275",
+   "created_at": "2026-10-01T17:42:01.843Z",
+   "text": "Hi @[멘션] - could you approve this MR for me please so I can merge and close out the controlled doc audit? TY!!"
+  },
+  {
+   "no": 4,
+   "group": "policy_all",
+   "iid": 20543,
+   "note_id": "3595811860",
+   "created_at": "2026-07-23T22:23:50.225Z",
+   "text": "Hi @[멘션] can you please review?"
+  },
+  {
+   "no": 5,
+   "group": "policy_all",
+   "iid": 21003,
+   "note_id": "3822193213",
+   "created_at": "2026-09-11T15:08:51.062Z",
+   "text": "@[멘션] Could you review this MR and confirm whether the amendments I've made are okay? CC @[멘션]"
+  },
+  {
+   "no": 6,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3809355312",
+   "created_at": "2026-09-09T14:08:18.577Z",
+   "text": "cc @[멘션] If you find the time, would you mind reviewing and giving feedback on those changes? :thankyou:"
+  },
+  {
+   "no": 7,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3812479199",
+   "created_at": "2026-09-10T01:15:21.632Z",
+   "text": "Could we be specific about who that reviewer is? Someone migth assume AppSec has it covered, while that is probably not be the case for the first pass. The guidance elsewhere in this doc states \"the team\" reviews it. That is also not super, but better than \"a human\". Maybe we could name the primary reviewer explicitly, e.g. the TM who triggered the model, with AppSec available for support if the agent can't help with any questions."
+  },
+  {
+   "no": 8,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3815264203",
+   "created_at": "2026-09-10T12:48:47.222Z",
+   "text": "Not sure what you mean by confirming the time-outs. It might happen, sometimes the time-outs are out of our (AppSec) control. I think that's where the local agent skill makes sense, actually something I would recommend for this exact reason. Do you think this should be stressed more?"
+  },
+  {
+   "no": 9,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3943264416",
+   "created_at": "2026-10-02T07:28:03.793Z",
+   "text": "Using a bullet list makes more sense here for making it more readable. WDYT? [코드]"
+  },
+  {
+   "no": 10,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3943285763",
+   "created_at": "2026-10-02T07:32:44.713Z",
+   "text": "Regarding this, can't we enforce a model now with `tags` ?"
+  },
+  {
+   "no": 11,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3943414819",
+   "created_at": "2026-10-02T08:00:18.595Z",
+   "text": "Not sure what you mean by `tags`. As far as I know, there's no reliable way to enforce a model for an agent - it's always the one the user of the agent selects. Could you elaborate on this?"
+  },
+  {
+   "no": 12,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3943489992",
+   "created_at": "2026-10-02T08:15:56.386Z",
+   "text": "@[멘션] Interesting enough, this would contradict with the [statement in the same document]([주소] > We’ve developed an issue template available here (private link) that you can use to create an issue documenting your threat model. It’s required that Engineering provide technical documentation when creating a threat model issue. We also request that the application decomposition, use case, external entrypoints, trust levels, data flow diagram as well as the previous security issues (if any) sections are filled out. Also we still have a threat model issue template. I know this is how we created threat models in the past, but I would rather move to MR-centric threat models, especially with Agent tooling the primary way to create them. Is there any reason why we should stick to issues for threat models? If not, I would eliminate creating threat models in an issue from the handbook completely."
+  },
+  {
+   "no": 13,
+   "group": "policy_all",
+   "iid": 21031,
+   "note_id": "3969160606",
+   "created_at": "2026-10-07T09:42:50.945Z",
+   "text": "@[멘션] can you merge the handbook page, or do you thing there's something missing? :pray:"
+  },
+  {
+   "no": 14,
+   "group": "policy_all",
+   "iid": 21235,
+   "note_id": "3981032501",
+   "created_at": "2026-10-08T21:52:03.161Z",
+   "text": "The wording of this could be interpreted as a requirement that a software engineer cannot review an MR submitted by their manage. Is this intended?"
+  },
+  {
+   "no": 15,
+   "group": "policy_all",
+   "iid": 21235,
+   "note_id": "3981032520",
+   "created_at": "2026-10-08T21:52:03.487Z",
+   "text": "How far do you want to go with this requirement? It could be strengthened by requiring that the record is immutable."
+  },
+  {
+   "no": 16,
+   "group": "policy_all",
+   "iid": 21306,
+   "note_id": "4008731220",
+   "created_at": "2026-10-13T23:38:58.493Z",
+   "text": "The failed hugolint job comes from the fork pipeline, not from the change. The job could not fetch the upstream linkcheck.json baseline artifact (project 42817607), so the broken-link comparison never ran and the job exited 1. Could a maintainer run a pipeline in the parent project when there is time? Happy to rebase first if that helps. Thanks!"
+  },
+  {
+   "no": 17,
+   "group": "policy_all",
+   "iid": 21306,
+   "note_id": "4091264319",
+   "created_at": "2026-10-26T14:31:37.447Z",
+   "text": "Hi @[멘션], could you fix the hugo linting errors so the pipeline runs green? Then I can find you the correct reviewer."
+  },
+  {
+   "no": 18,
+   "group": "policy_all",
+   "iid": 21306,
+   "note_id": "4091830167",
+   "created_at": "2026-10-26T15:35:12.613Z",
+   "text": "Thanks @[멘션]! I looked at the failed hugolint job: it isn't a lint error in this change. The link check itself ran, then the comparison step failed with \"403 Forbidden ... The following token permission is required: read_jobs\" while downloading the target branch's linkcheck.json, which a pipeline in my fork can't read. This MR only changes \"30\" to \"90\" in one sentence and touches no links, and none of the existing linkcheck findings are in this file. Could you run the pipeline for this MR in the parent project? If you'd rather I move the branch to the community fork, I'm happy to do that instead."
+  },
+  {
+   "no": 19,
+   "group": "policy_all",
+   "iid": 21387,
+   "note_id": "3969698439",
+   "created_at": "2026-10-07T10:53:39.279Z",
+   "text": "@[멘션] Thank you for the contribution! I see that there's a conflict, could I ask you to resolve it? :handshake:"
+  },
+  {
+   "no": 20,
+   "group": "policy_all",
+   "iid": 21512,
+   "note_id": "4040279505",
+   "created_at": "2026-10-19T07:38:17.606Z",
+   "text": "Things still missing from @[멘션] 's original analysis: [주소] * Push rules (example: signed commits) * Is CODEOWNERS a must have for production projects? * `Pipeline execution is blocked when critical or high severity vulnerabilities are detected.` - Do we want to change to merge is blocked instead? (i.e instead of failing pipeline, we stop merge with merge approval policies)"
+  },
+  {
+   "no": 21,
+   "group": "policy_all",
+   "iid": 21512,
+   "note_id": "4040288281",
+   "created_at": "2026-10-19T07:40:09.168Z",
+   "text": "Do we want to standardize format or consolidate requirements? Example: add CODEOWNERS and protected branches to the itemized list."
+  },
+  {
+   "no": 22,
+   "group": "policy_all",
+   "iid": 21676,
+   "note_id": "4068763633",
+   "created_at": "2026-10-22T14:30:53.677Z",
+   "text": "[주소] Do we need this one as well?"
+  },
+  {
+   "no": 23,
+   "group": "policy_all",
+   "iid": 21730,
+   "note_id": "4113189435",
+   "created_at": "2026-10-29T03:23:17.068Z",
+   "text": "Thank you Sarah - I made some very minor changes in my latest commit, just finishing things off. Would you mind reviewing/approving once more? :pray:"
+  },
+  {
+   "no": 24,
+   "group": "policy_all",
+   "iid": 21759,
+   "note_id": "4118354117",
+   "created_at": "2026-10-29T16:25:01.988Z",
+   "text": "@[멘션] why is this not merged as yet?"
+  },
+  {
+   "no": 25,
+   "group": "nonpolicy_sample",
+   "iid": 19956,
+   "note_id": "4009448071",
+   "created_at": "2026-10-14T03:51:59.525Z",
+   "text": "> Suggestion: name available destination-cell Zoekt storage as a precondition checked before an org is scheduled, with `EnabledNamespace#metadata.last_used_storage_bytes` or `EstimateStorageService` as the sizing input. @[멘션] Why is this an issue ? It seems comparable to a customer importing an entire group. That would similar start filling up Zoekt too. How does Zoekt indexing handle lack of storage when an import starts ?"
+  },
+  {
+   "no": 26,
+   "group": "nonpolicy_sample",
+   "iid": 20030,
+   "note_id": "3446997544",
+   "created_at": "2026-06-11T16:21:48.001Z",
+   "text": "@[멘션], is this relevant for this ADR?"
+  },
+  {
+   "no": 27,
+   "group": "nonpolicy_sample",
+   "iid": 20030,
+   "note_id": "3970701932",
+   "created_at": "2026-10-07T13:13:54.753Z",
+   "text": "The Artifact Manager row says it can manage access rules. In [ADR 021]([주소] it cannot: only Artifact Admin manages access. If the UI follows this table, a Manager gets more access than we intend. Can we remove the role table and link to ADR 021 instead? Then the two docs cannot drift apart."
+  },
+  {
+   "no": 28,
+   "group": "nonpolicy_sample",
+   "iid": 20111,
+   "note_id": "3642302660",
+   "created_at": "2026-08-04T14:08:39.990Z",
+   "text": "**thought non-blocking:** this table seems rather thin, which makes more sense for DAP as we mostly control the identity we're shipping alongside our agent identities but there's a lot missing here that I'm wondering whether we need; i.e. model, provider, `glab version`, etc... I do see a ` duo_workflows_workflows.model_metadata_json`, but I didn't dig in enough to see how its used. IIRC @[멘션] mentioned the bulk of this living within `ai_audit_events.details`, I understand that but might be a pit of a pain to aggregate. Especially if we want to address model allowlisting in Stage 2, cost attribution, or provider attribution (different costs with GCP vs Bedrock). I think most of this data should already be dumped with the jsonl attribution, so we _have_ it. Just want to make sure we persist it somewhere. Maybe we at least start with `glab version`?"
+  },
+  {
+   "no": 29,
+   "group": "nonpolicy_sample",
+   "iid": 21120,
+   "note_id": "3884745751",
+   "created_at": "2026-09-22T13:44:02.967Z",
+   "text": "@[멘션] good question. Let's explore this: * **TLG A** – 3 owners: * Matt * Jennifer * Drew * **TLG B** – 2 owners: * Matt * Peter * **TLC C** – 4 owners * Jennifer * Jason * Shane * Drew My **TLG A** is granted beta access to Organizations. This means I can access its settings and enable the \"transfer to Organizations\" option. In that workflow, I see the following TLGs listed which I can transfer into my new org: * TLG A * TLG B I select them both. When the org is created, the following people are Owners: * Matt (via TLG A) * Jennifer (via TLG A) * Drew (via TLG A) * Peter (via TLG B) ... are you saying that we should only add people who were owners of **all** the TLGs? eg. in the above case, that would only be me (**Matt)?** I don't actually know how the current behaviour works but these docs already make it sound like it's the first scenario (all owners, regardless of overlap). @[멘션] / @[멘션] , what's your stance?"
+  },
+  {
+   "no": 30,
+   "group": "nonpolicy_sample",
+   "iid": 21240,
+   "note_id": "3927480154",
+   "created_at": "2026-09-30T02:40:11.123Z",
+   "text": "Thank you @[멘션], you spoke my mind, you suggestion is very fair and I strongly recommend we add it in this MR, @[멘션] could you review 3b6ddbb3 please? :thankyou:"
+  },
+  {
+   "no": 31,
+   "group": "nonpolicy_sample",
+   "iid": 21263,
+   "note_id": "3906280717",
+   "created_at": "2026-09-25T17:11:10.491Z",
+   "text": ":wave: @[멘션] LGTM! Is this ready to merge?"
+  },
+  {
+   "no": 32,
+   "group": "nonpolicy_sample",
+   "iid": 21273,
+   "note_id": "3977551697",
+   "created_at": "2026-10-08T12:47:29.945Z",
+   "text": "@[멘션] can we change this to state \"where possible\"? It is possible that an ASE could have multiple account escalations simultaneously and they would then need to prioritize. Also, given EMEA does not currently have an ASE manager, and APAC does not have a dedicated manager (as Wei-Meng has a dual role) we should tweak the language to say if an ASE manager is available in region, they are the preferred DRI, but otherwise, Global Support Leadership will need to be DRI."
+  },
+  {
+   "no": 33,
+   "group": "nonpolicy_sample",
+   "iid": 21285,
+   "note_id": "3977635338",
+   "created_at": "2026-10-08T12:58:31.317Z",
+   "text": "@[멘션] Thank you! I applied your suggestions in these commits: - [주소] - [주소] - [주소] - [주소] - [주소] Would you mind another look?"
+  },
+  {
+   "no": 34,
+   "group": "nonpolicy_sample",
+   "iid": 21289,
+   "note_id": "3937531437",
+   "created_at": "2026-10-01T12:32:13.638Z",
+   "text": "@[멘션] is there a reason for removing this line as part of this work?"
+  },
+  {
+   "no": 35,
+   "group": "nonpolicy_sample",
+   "iid": 21310,
+   "note_id": "3928892079",
+   "created_at": "2026-09-30T09:06:59.521Z",
+   "text": "> or represent one repository as several logical Zoekt repositories partitioned by branch group This sounds interesting! Do you know other companies indexing churning branches this way? We should do a PoC about this."
+  },
+  {
+   "no": 36,
+   "group": "nonpolicy_sample",
+   "iid": 21310,
+   "note_id": "3934653537",
+   "created_at": "2026-10-01T03:02:04.111Z",
+   "text": "Thank you, this is the comment with the most consequence for the plan, and the links are new to me. The row you are on argues that a graph store should not become the text-search layer, and it sounds like the Orbit team reached the same conclusion from the other direction. The part I want to avoid is the obvious failure mode: two teams building code search at the same time. Before this document moves from proposed to accepted I would like a working session with the Orbit team and you, with a written split as the output: who owns the text index, who owns the graph, who owns the SCIP symbol store, and one request contract in front of both. The document already proposes a single SCIP symbol store with a single owning team consumed by both the plane and the graph, so that decision is on the table rather than being asserted here. One question that decides whether this is overlap or a layer: does orbit-next target the same scope this document does, meaning organization-wide, server-side, and permission-aware at the source of truth, or is it retrieval scoped to what an agent already has checked out? If it is the former, we should pick one and staff it. If it is the latter, the two compose and the contract is where they meet. I will add orbit-next and the knowledge-graph MR to the related work in the document either way, so the next reader finds them."
+  },
+  {
+   "no": 37,
+   "group": "nonpolicy_sample",
+   "iid": 21319,
+   "note_id": "3942234839",
+   "created_at": "2026-10-02T01:30:04.027Z",
+   "text": "@[멘션] could I please pass to you? Erran is on PTO"
+  },
+  {
+   "no": 38,
+   "group": "nonpolicy_sample",
+   "iid": 21337,
+   "note_id": "3939564512",
+   "created_at": "2026-10-01T16:46:14.663Z",
+   "text": "@[멘션] can you also take a look at this MR that removes the old SC FE team page?"
+  },
+  {
+   "no": 39,
+   "group": "nonpolicy_sample",
+   "iid": 21389,
+   "note_id": "3981730215",
+   "created_at": "2026-10-09T01:53:54.873Z",
+   "text": "> By delegation are you referring to having a setting the determines if new group/project members automatically become org members? @[멘션] Yes, this is correct."
+  },
+  {
+   "no": 40,
+   "group": "nonpolicy_sample",
+   "iid": 21396,
+   "note_id": "3979864719",
+   "created_at": "2026-10-08T18:12:54.911Z",
+   "text": "What does it mean for the doc block to go unseen? It is added to view."
+  },
+  {
+   "no": 41,
+   "group": "nonpolicy_sample",
+   "iid": 21417,
+   "note_id": "4006103301",
+   "created_at": "2026-10-13T15:31:29.841Z",
+   "text": "thanks a lot @[멘션] for the comments, especially about rtests! It lead me to find a few useful tools in there that I think are well worth using it over vitest. Can you have another look and merge if it looks good to you? Thank you!"
+  },
+  {
+   "no": 42,
+   "group": "nonpolicy_sample",
+   "iid": 21420,
+   "note_id": "3998921495",
+   "created_at": "2026-10-12T14:41:29.717Z",
+   "text": "question: if this ADR amends a claim in ADR 20, why don't we directly update that ADR?"
+  },
+  {
+   "no": 43,
+   "group": "nonpolicy_sample",
+   "iid": 21441,
+   "note_id": "3998002558",
+   "created_at": "2026-10-12T12:25:15.050Z",
+   "text": "**suggestion:** The `string[] | null` example does not work in practice: the code refuses nullable schemas for `restrict` settings. With `everyList` an allowlist does not need `null` anymore. Reword so the example matches the code? [코드]"
+  },
+  {
+   "no": 44,
+   "group": "nonpolicy_sample",
+   "iid": 21444,
+   "note_id": "3997202672",
+   "created_at": "2026-10-12T10:17:02.046Z",
+   "text": "This change makes sense to me - it stops the CI from breaking as we introduce new linter rules and will help reduce noise for engineering teams. I assume we'll still have a process for encouraging them to move to the latest pinned version?"
+  },
+  {
+   "no": 45,
+   "group": "nonpolicy_sample",
+   "iid": 21446,
+   "note_id": "3999064042",
+   "created_at": "2026-10-12T15:03:09.826Z",
+   "text": "@[멘션] Could you or someone else from Runway review this?"
+  },
+  {
+   "no": 46,
+   "group": "nonpolicy_sample",
+   "iid": 21537,
+   "note_id": "4064106983",
+   "created_at": "2026-10-22T00:16:13.785Z",
+   "text": "@[멘션] Would you mind reviewing this page and seeing if there's anything else you would add? :pray: @[멘션] Would you mind reviewing and merging this change adding the vendor development process to the handbook? :pray:"
+  },
+  {
+   "no": 47,
+   "group": "nonpolicy_sample",
+   "iid": 21537,
+   "note_id": "4068335385",
+   "created_at": "2026-10-22T13:39:15.956Z",
+   "text": "**suggestion (non-blocking)**: If `401` is the only code for a revoked token, mapping it to `unknown` leaves no `inactive` outcome, and [`VendorDefinition` rejects the definition]([주소] Maybe point to the hand-written client section here instead? [코드]"
+  },
+  {
+   "no": 48,
+   "group": "nonpolicy_sample",
+   "iid": 21564,
+   "note_id": "4023275607",
+   "created_at": "2026-10-15T18:36:57.431Z",
+   "text": "@[멘션] @[멘션] @[멘션] Any concerns with this change to your pairing?"
+  },
+  {
+   "no": 49,
+   "group": "nonpolicy_sample",
+   "iid": 21586,
+   "note_id": "4034200518",
+   "created_at": "2026-10-17T07:08:44.959Z",
+   "text": "**Issue (blocking):** at the moment we don't cross-post failure category, uncategorized job, or systemic incidents to group channels. Only test file incidents get cross-posted, and only when all the files belong to one group. Should this say \"and, for test file incidents, in the owning group's channel\"?"
+  },
+  {
+   "no": 50,
+   "group": "nonpolicy_sample",
+   "iid": 21680,
+   "note_id": "4075562336",
+   "created_at": "2026-10-23T11:03:23.228Z",
+   "text": ":robot: AI-generated > Could the wording here say \"per module\" explicitly to match ADR-007 and avoid the ambiguity? Done. The Go clause now reads \"the cap applies per module path and counts every version name ever published for that module, deleted names included\", which matches ADR-007's \"stay bounded per module path\" and no longer reads as a repository-wide cap."
+  },
+  {
+   "no": 51,
+   "group": "nonpolicy_sample",
+   "iid": 21680,
+   "note_id": "4075562666",
+   "created_at": "2026-10-23T11:03:26.307Z",
+   "text": ":robot: AI-generated > Should a short note (e.g., \"5 reserved for Debian\") be added next to the enum so the gap is self-explanatory without needing the MR description? Done, in both places a reader would hit the gap. The ERD comment now reads `..., 4=generic, 5=debian (reserved), 6=go`, and the `repositories` bullet adds one clause after the format list: \"Value `5` is reserved for the Debian format, which has its own amendment, so Go takes `6`.\" It only explains the reservation; Debian itself stays in its own amendment."
+  },
+  {
+   "no": 52,
+   "group": "nonpolicy_sample",
+   "iid": 21680,
+   "note_id": "4076866677",
+   "created_at": "2026-10-23T13:59:41.095Z",
+   "text": "issue (blocking, process): our process for ADRs changed recently. An ADR now holds only the direction and the constraints it sets, the things that must always hold. It leaves out code identifiers, per-feature detail and step-by-step mechanics, which go to the spec. See the [flow table]([주소] and the [ADR template]([주소] Most of what this adds is detail that only applies to the new Go modules format, and your Reach answer is that one format, so it belongs in the Go modules spec (gitlab-org/ops/artifact-registry!3484). Could you add to the ADRs only what must always hold for Go modules, and put the rest in the spec? ADR-007 already has this level of detail for the other package formats, and there's no need to trim that here. Let's just not add more of it."
+  },
+  {
+   "no": 53,
+   "group": "nonpolicy_sample",
+   "iid": 21696,
+   "note_id": "4077196266",
+   "created_at": "2026-10-23T14:36:02.271Z",
+   "text": "Hi @[멘션] @[멘션] @[멘션] 👋 This MR updates the SDD design document with work that merged after the last update. Some of it is yours, so could you give your parts a quick read? If you're all happy with them, I'll merge. - @[멘션]: `human-in-the-loop.md`, in **Open questions** → **Updating the spec** (the description-update service from !262147) and **Resolving without replies** (posting flow comments as discussions). - @[멘션]: `workplan-flow.md`, in **Lifecycle and safety** → **Observability** (the `work_item_workplan` source type from !263691). - @[멘션]: `decision_log.md`, in **Interactions** (deep links to archived and missing decisions from !263112, and creating a decision from a thread without resolving it, from gitlab-org/gitlab#634656). The `readiness.md` changes and the rest are from my own MRs, so no need to review those. Thank you! 🙏"
+  },
+  {
+   "no": 54,
+   "group": "nonpolicy_sample",
+   "iid": 21779,
+   "note_id": "4115588235",
+   "created_at": "2026-10-29T11:05:41.222Z",
+   "text": "**question (non-blocking):** this is a decision change, not only a trim. Before, Self-Managed admins could override the size and entity defaults, and ADR-021 said the 20-upstream cap was adjustable per instance. Now the code decides which caps are overridable, and that sits a bit oddly next to \"Limits live in the Artifact Registry service's own configuration\". Are the repository and upstream caps fixed on purpose?"
+  }
+ ]
+}

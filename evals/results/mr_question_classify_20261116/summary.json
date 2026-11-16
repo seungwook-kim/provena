@@ -1,0 +1,27 @@
+{
+ "정책 경로 전부": {
+  "n": 24,
+  "question": 13,
+  "policy_question": 5,
+  "policy_question_mrs": [
+   21031,
+   21235,
+   21512,
+   21676
+  ]
+ },
+ "정책 경로 아님 무작위": {
+  "n": 30,
+  "question": 11,
+  "policy_question": 1,
+  "policy_question_mrs": [
+   21444
+  ]
+ },
+ "seed": 20261116,
+ "population": {
+  "question_mark_notes": 310,
+  "policy_path": 24,
+  "non_policy": 286
+ }
+}

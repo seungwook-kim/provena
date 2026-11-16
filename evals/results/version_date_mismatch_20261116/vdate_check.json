@@ -1,0 +1,892 @@
+{
+ "summary": {
+  "chunks_lines": 23095,
+  "index_lines": 23095,
+  "common": 23095,
+  "mismatch_lines": 1005,
+  "mismatch_versions": 40,
+  "mismatch_lines_other_fields_differ": 0,
+  "chunks_later_lines": 698,
+  "chunks_earlier_lines": 307,
+  "versions_found_in_cache": 40,
+  "versions_chunks_utc_and_index_cs": 40,
+  "versions_chunks_cs_and_index_utc": 0,
+  "lines_chunks_utc_and_index_cs": 1005,
+  "lines_chunks_cs_and_index_utc": 0,
+  "versions_neither": [],
+  "cache_head": "129243bcffcf",
+  "cache_shallow": true,
+  "control_versions_checked": 592,
+  "control_versions_where_cs_ne_utc_but_files_agree": 0
+ },
+ "versions": [
+  {
+   "version_id": "04a7b782c384",
+   "lines": 7,
+   "chunks_date": [
+    "2026-07-31"
+   ],
+   "index_date": [
+    "2026-07-30"
+   ],
+   "rule_seq": [
+    3680798023
+   ],
+   "commit": "04a7b782c384",
+   "utc_day": "2026-07-31",
+   "cs": "2026-07-30",
+   "ci": "2026-07-30 18:18:10 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "092b3395d88d",
+   "lines": 15,
+   "chunks_date": [
+    "2026-09-15"
+   ],
+   "index_date": [
+    "2026-09-14"
+   ],
+   "rule_seq": [
+    3849773194
+   ],
+   "commit": "092b3395d88d",
+   "utc_day": "2026-09-15",
+   "cs": "2026-09-14",
+   "ci": "2026-09-14 21:28:01 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "0a1d04341275",
+   "lines": 9,
+   "chunks_date": [
+    "2026-07-31"
+   ],
+   "index_date": [
+    "2026-07-30"
+   ],
+   "rule_seq": [
+    3803569042
+   ],
+   "commit": "0a1d04341275",
+   "utc_day": "2026-07-31",
+   "cs": "2026-07-30",
+   "ci": "2026-07-30 18:09:41 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "1b656af9a684",
+   "lines": 10,
+   "chunks_date": [
+    "2025-11-23"
+   ],
+   "index_date": [
+    "2025-11-24"
+   ],
+   "rule_seq": [
+    475303498
+   ],
+   "commit": "1b656af9a684",
+   "utc_day": "2025-11-23",
+   "cs": "2025-11-24",
+   "ci": "2025-11-24 10:33:46 +1300",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "25e2b90cf4a2",
+   "lines": 11,
+   "chunks_date": [
+    "2026-06-25"
+   ],
+   "index_date": [
+    "2026-06-24"
+   ],
+   "rule_seq": [
+    1850446252
+   ],
+   "commit": "25e2b90cf4a2",
+   "utc_day": "2026-06-25",
+   "cs": "2026-06-24",
+   "ci": "2026-06-24 22:31:31 -0400",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "2a09c693cd08",
+   "lines": 38,
+   "chunks_date": [
+    "2026-10-15"
+   ],
+   "index_date": [
+    "2026-10-16"
+   ],
+   "rule_seq": [
+    1647261768,
+    1946950226
+   ],
+   "commit": "2a09c693cd08",
+   "utc_day": "2026-10-15",
+   "cs": "2026-10-16",
+   "ci": "2026-10-16 11:46:58 +1300",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "2ed44af9a115",
+   "lines": 1,
+   "chunks_date": [
+    "2025-12-08"
+   ],
+   "index_date": [
+    "2025-12-09"
+   ],
+   "rule_seq": [
+    1477046327
+   ],
+   "commit": "2ed44af9a115",
+   "utc_day": "2025-12-08",
+   "cs": "2025-12-09",
+   "ci": "2025-12-09 10:46:58 +1100",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "3af2b6cffd44",
+   "lines": 41,
+   "chunks_date": [
+    "2026-10-22"
+   ],
+   "index_date": [
+    "2026-10-23"
+   ],
+   "rule_seq": [
+    734286140
+   ],
+   "commit": "3af2b6cffd44",
+   "utc_day": "2026-10-22",
+   "cs": "2026-10-23",
+   "ci": "2026-10-23 11:59:21 +1300",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "4503c261c6da",
+   "lines": 15,
+   "chunks_date": [
+    "2026-08-27"
+   ],
+   "index_date": [
+    "2026-08-26"
+   ],
+   "rule_seq": [
+    3744761256
+   ],
+   "commit": "4503c261c6da",
+   "utc_day": "2026-08-27",
+   "cs": "2026-08-26",
+   "ci": "2026-08-26 21:27:16 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "4dbc93df1c4a",
+   "lines": 11,
+   "chunks_date": [
+    "2025-09-24"
+   ],
+   "index_date": [
+    "2025-09-25"
+   ],
+   "rule_seq": [
+    1036736366
+   ],
+   "commit": "4dbc93df1c4a",
+   "utc_day": "2025-09-24",
+   "cs": "2025-09-25",
+   "ci": "2025-09-25 10:42:45 +1200",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "555c2b3fd5b7",
+   "lines": 29,
+   "chunks_date": [
+    "2025-09-10"
+   ],
+   "index_date": [
+    "2025-09-09"
+   ],
+   "rule_seq": [
+    132323904,
+    398200605,
+    3309976940
+   ],
+   "commit": "555c2b3fd5b7",
+   "utc_day": "2025-09-10",
+   "cs": "2025-09-09",
+   "ci": "2025-09-09 19:33:15 -0600",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "555e42604233",
+   "lines": 20,
+   "chunks_date": [
+    "2025-11-21"
+   ],
+   "index_date": [
+    "2025-11-20"
+   ],
+   "rule_seq": [
+    453632696,
+    3454985762
+   ],
+   "commit": "555e42604233",
+   "utc_day": "2025-11-21",
+   "cs": "2025-11-20",
+   "ci": "2025-11-20 17:06:05 -0800",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "60e7e93bf30e",
+   "lines": 17,
+   "chunks_date": [
+    "2026-09-03"
+   ],
+   "index_date": [
+    "2026-09-04"
+   ],
+   "rule_seq": [
+    3431433773
+   ],
+   "commit": "60e7e93bf30e",
+   "utc_day": "2026-09-03",
+   "cs": "2026-09-04",
+   "ci": "2026-09-04 11:57:39 +1200",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "655ce943e6f7",
+   "lines": 19,
+   "chunks_date": [
+    "2026-10-27"
+   ],
+   "index_date": [
+    "2026-10-28"
+   ],
+   "rule_seq": [
+    4106741603
+   ],
+   "commit": "655ce943e6f7",
+   "utc_day": "2026-10-27",
+   "cs": "2026-10-28",
+   "ci": "2026-10-28 09:06:43 +1300",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "69b8861472ba",
+   "lines": 32,
+   "chunks_date": [
+    "2025-05-16"
+   ],
+   "index_date": [
+    "2025-05-15"
+   ],
+   "rule_seq": [
+    523619239
+   ],
+   "commit": "69b8861472ba",
+   "utc_day": "2025-05-16",
+   "cs": "2025-05-15",
+   "ci": "2025-05-15 23:00:58 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "73dd6a860c2f",
+   "lines": 10,
+   "chunks_date": [
+    "2026-07-31"
+   ],
+   "index_date": [
+    "2026-07-30"
+   ],
+   "rule_seq": [
+    3525220555
+   ],
+   "commit": "73dd6a860c2f",
+   "utc_day": "2026-07-31",
+   "cs": "2026-07-30",
+   "ci": "2026-07-30 18:03:41 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "7809c2762c09",
+   "lines": 9,
+   "chunks_date": [
+    "2026-05-07"
+   ],
+   "index_date": [
+    "2026-05-08"
+   ],
+   "rule_seq": [
+    2137328159
+   ],
+   "commit": "7809c2762c09",
+   "utc_day": "2026-05-07",
+   "cs": "2026-05-08",
+   "ci": "2026-05-08 11:59:14 +1200",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "87fbd05e73c7",
+   "lines": 11,
+   "chunks_date": [
+    "2026-03-09"
+   ],
+   "index_date": [
+    "2026-03-10"
+   ],
+   "rule_seq": [
+    2356762850
+   ],
+   "commit": "87fbd05e73c7",
+   "utc_day": "2026-03-09",
+   "cs": "2026-03-10",
+   "ci": "2026-03-10 11:40:11 +1300",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "8c28a3b04a71",
+   "lines": 7,
+   "chunks_date": [
+    "2026-10-05"
+   ],
+   "index_date": [
+    "2026-10-06"
+   ],
+   "rule_seq": [
+    3040369501
+   ],
+   "commit": "8c28a3b04a71",
+   "utc_day": "2026-10-05",
+   "cs": "2026-10-06",
+   "ci": "2026-10-06 10:48:37 +1100",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "9881a4f4374b",
+   "lines": 21,
+   "chunks_date": [
+    "2026-02-26"
+   ],
+   "index_date": [
+    "2026-02-25"
+   ],
+   "rule_seq": [
+    2387305568
+   ],
+   "commit": "9881a4f4374b",
+   "utc_day": "2026-02-26",
+   "cs": "2026-02-25",
+   "ci": "2026-02-25 17:45:06 -0800",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "a31bad05858f",
+   "lines": 2,
+   "chunks_date": [
+    "2025-10-03"
+   ],
+   "index_date": [
+    "2025-10-02"
+   ],
+   "rule_seq": [
+    1585873161
+   ],
+   "commit": "a31bad05858f",
+   "utc_day": "2025-10-03",
+   "cs": "2025-10-02",
+   "ci": "2025-10-02 22:41:22 -0500",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "aacf882233b9",
+   "lines": 20,
+   "chunks_date": [
+    "2026-09-16"
+   ],
+   "index_date": [
+    "2026-09-15"
+   ],
+   "rule_seq": [
+    1569291149
+   ],
+   "commit": "aacf882233b9",
+   "utc_day": "2026-09-16",
+   "cs": "2026-09-15",
+   "ci": "2026-09-15 18:06:12 -0600",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "af3ed83649ed",
+   "lines": 28,
+   "chunks_date": [
+    "2026-09-30"
+   ],
+   "index_date": [
+    "2026-09-29"
+   ],
+   "rule_seq": [
+    3063681099
+   ],
+   "commit": "af3ed83649ed",
+   "utc_day": "2026-09-30",
+   "cs": "2026-09-29",
+   "ci": "2026-09-29 19:55:18 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "b0adf1e9ff7a",
+   "lines": 11,
+   "chunks_date": [
+    "2026-08-20"
+   ],
+   "index_date": [
+    "2026-08-21"
+   ],
+   "rule_seq": [
+    1126769613
+   ],
+   "commit": "b0adf1e9ff7a",
+   "utc_day": "2026-08-20",
+   "cs": "2026-08-21",
+   "ci": "2026-08-21 03:07:26 +1200",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "b432e8824aae",
+   "lines": 7,
+   "chunks_date": [
+    "2026-01-15"
+   ],
+   "index_date": [
+    "2026-01-14"
+   ],
+   "rule_seq": [
+    2070209752
+   ],
+   "commit": "b432e8824aae",
+   "utc_day": "2026-01-15",
+   "cs": "2026-01-14",
+   "ci": "2026-01-14 16:37:42 -0800",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "c45b58379080",
+   "lines": 11,
+   "chunks_date": [
+    "2026-07-20"
+   ],
+   "index_date": [
+    "2026-07-19"
+   ],
+   "rule_seq": [
+    1805849283
+   ],
+   "commit": "c45b58379080",
+   "utc_day": "2026-07-20",
+   "cs": "2026-07-19",
+   "ci": "2026-07-19 22:46:40 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "c5031adfafb9",
+   "lines": 5,
+   "chunks_date": [
+    "2026-05-01"
+   ],
+   "index_date": [
+    "2026-05-02"
+   ],
+   "rule_seq": [
+    142309761
+   ],
+   "commit": "c5031adfafb9",
+   "utc_day": "2026-05-01",
+   "cs": "2026-05-02",
+   "ci": "2026-05-02 09:46:16 +1200",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "c8104eae1fb9",
+   "lines": 13,
+   "chunks_date": [
+    "2026-08-08"
+   ],
+   "index_date": [
+    "2026-08-07"
+   ],
+   "rule_seq": [
+    3044284005
+   ],
+   "commit": "c8104eae1fb9",
+   "utc_day": "2026-08-08",
+   "cs": "2026-08-07",
+   "ci": "2026-08-07 17:18:03 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "cb15166c9e72",
+   "lines": 25,
+   "chunks_date": [
+    "2026-10-15"
+   ],
+   "index_date": [
+    "2026-10-14"
+   ],
+   "rule_seq": [
+    3346004156,
+    4274699365
+   ],
+   "commit": "cb15166c9e72",
+   "utc_day": "2026-10-15",
+   "cs": "2026-10-14",
+   "ci": "2026-10-14 20:25:01 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "d61c60395177",
+   "lines": 48,
+   "chunks_date": [
+    "2026-08-28"
+   ],
+   "index_date": [
+    "2026-08-29"
+   ],
+   "rule_seq": [
+    3309212837
+   ],
+   "commit": "d61c60395177",
+   "utc_day": "2026-08-28",
+   "cs": "2026-08-29",
+   "ci": "2026-08-29 07:56:36 +1000",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "ddaf7ac2e7a0",
+   "lines": 1,
+   "chunks_date": [
+    "2025-04-23"
+   ],
+   "index_date": [
+    "2025-04-22"
+   ],
+   "rule_seq": [
+    2250680575
+   ],
+   "commit": "ddaf7ac2e7a0",
+   "utc_day": "2025-04-23",
+   "cs": "2025-04-22",
+   "ci": "2025-04-22 14:45:09 -1000",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "e375f84ee31c",
+   "lines": 42,
+   "chunks_date": [
+    "2026-04-24"
+   ],
+   "index_date": [
+    "2026-04-23"
+   ],
+   "rule_seq": [
+    891148112
+   ],
+   "commit": "e375f84ee31c",
+   "utc_day": "2026-04-24",
+   "cs": "2026-04-23",
+   "ci": "2026-04-23 17:10:19 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "ec00b81e663d",
+   "lines": 33,
+   "chunks_date": [
+    "2025-08-21"
+   ],
+   "index_date": [
+    "2025-08-20"
+   ],
+   "rule_seq": [
+    264456422
+   ],
+   "commit": "ec00b81e663d",
+   "utc_day": "2025-08-21",
+   "cs": "2025-08-20",
+   "ci": "2025-08-20 17:21:03 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "eca9c2208af5",
+   "lines": 7,
+   "chunks_date": [
+    "2026-07-27"
+   ],
+   "index_date": [
+    "2026-07-26"
+   ],
+   "rule_seq": [
+    396246116
+   ],
+   "commit": "eca9c2208af5",
+   "utc_day": "2026-07-27",
+   "cs": "2026-07-26",
+   "ci": "2026-07-26 20:53:54 -0700",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "ed165fc6e06e",
+   "lines": 58,
+   "chunks_date": [
+    "2026-02-26"
+   ],
+   "index_date": [
+    "2026-02-25"
+   ],
+   "rule_seq": [
+    3347028029
+   ],
+   "commit": "ed165fc6e06e",
+   "utc_day": "2026-02-26",
+   "cs": "2026-02-25",
+   "ci": "2026-02-25 17:41:52 -0800",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "f5bfedd4b60f",
+   "lines": 11,
+   "chunks_date": [
+    "2026-01-08"
+   ],
+   "index_date": [
+    "2026-01-07"
+   ],
+   "rule_seq": [
+    2720684372
+   ],
+   "commit": "f5bfedd4b60f",
+   "utc_day": "2026-01-08",
+   "cs": "2026-01-07",
+   "ci": "2026-01-07 21:24:13 -0600",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "fa5055367681",
+   "lines": 271,
+   "chunks_date": [
+    "2026-02-07"
+   ],
+   "index_date": [
+    "2026-02-06"
+   ],
+   "rule_seq": [
+    196737536,
+    676112784,
+    725065281,
+    1236798801,
+    1632344819,
+    1668928166,
+    1928626261,
+    2151627289,
+    2547817492,
+    2696717172,
+    2701671268,
+    2775638245,
+    2795441558,
+    2885783280,
+    3433372846,
+    3533136458,
+    3578877820,
+    3611405618,
+    3694287836,
+    3699940363,
+    4013998923,
+    4056074765,
+    4125702844
+   ],
+   "commit": "fa5055367681",
+   "utc_day": "2026-02-07",
+   "cs": "2026-02-06",
+   "ci": "2026-02-06 19:27:57 -0500",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "fb446c0d559f",
+   "lines": 6,
+   "chunks_date": [
+    "2026-01-11"
+   ],
+   "index_date": [
+    "2026-01-12"
+   ],
+   "rule_seq": [
+    2152161020
+   ],
+   "commit": "fb446c0d559f",
+   "utc_day": "2026-01-11",
+   "cs": "2026-01-12",
+   "ci": "2026-01-12 09:02:45 +1100",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "fb8d91d965fd",
+   "lines": 34,
+   "chunks_date": [
+    "2025-10-21"
+   ],
+   "index_date": [
+    "2025-10-22"
+   ],
+   "rule_seq": [
+    2984090243
+   ],
+   "commit": "fb8d91d965fd",
+   "utc_day": "2025-10-21",
+   "cs": "2025-10-22",
+   "ci": "2025-10-22 09:53:02 +1100",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  },
+  {
+   "version_id": "fe623e11baf1",
+   "lines": 39,
+   "chunks_date": [
+    "2026-08-04"
+   ],
+   "index_date": [
+    "2026-08-05"
+   ],
+   "rule_seq": [
+    533199946,
+    619345015
+   ],
+   "commit": "fe623e11baf1",
+   "utc_day": "2026-08-04",
+   "cs": "2026-08-05",
+   "ci": "2026-08-05 08:42:06 +0900",
+   "chunks_is_utc": true,
+   "index_is_cs": true,
+   "chunks_is_cs": false,
+   "index_is_utc": false
+  }
+ ]
+}
