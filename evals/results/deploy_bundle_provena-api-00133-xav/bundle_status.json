@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2519,
+    "revision":  "provena-api-00133-xav",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0069,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00133-xav"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2449,
+                       "detail":  "evals/results/deploy_latency_provena-api-00133-xav"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "42a4b9f9+GRAPH_FLIP_STRUCTURE=off"
+}

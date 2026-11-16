@@ -50,9 +50,10 @@ jobs:
           python -m pytest -q -m demo_replay -rs | tee demo_replay.log
           if grep -q "skipped" demo_replay.log; then echo "demo_replay 시험이 건너뛰어졌습니다(Postgres 연결 확인)"; exit 1; fi
       # 커밋된 옛 측정 결과만 읽으면 현재 코드가 바뀌어도 점수가 그대로라 회귀를 못 잡는다. 현재 코드로 0원(키 없는 데모 재생, 오프라인) 평가를 돌려 결과 파일을 만들고 아래 비교가 기준값과 견준다.
+      # 데모 질문 9개와 평가셋 v2 50건 녹화(evals/ci_replay_v2/)를 함께 재생한다. --require-v2: 50건 녹화가 없거나 평가셋과 어긋나면 데모 9개만 돌고 넘어가지 않고 이 단계가 실패한다.
       - name: 현재 코드 0원 평가 (키 없는 데모 재생, 키·네트워크 없음)
         env:
           PROVENA_D5_PG_URL: postgresql://app:pw@127.0.0.1:5432/postgres
-        run: python evals/ci_current_eval.py --out ci_current_result.json
+        run: python evals/ci_current_eval.py --out ci_current_result.json --require-v2
       - name: 평가 점수 비교 (커밋된 결과 파일과 현재 코드 0원 평가, 키·네트워크 없음)
         run: python evals/ci_compare.py --current ci_current_result.json

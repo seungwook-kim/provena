@@ -13,3 +13,13 @@ targetRules = ["generic-api-key"]
 paths = ['''^data/demo_replay/[^/]+\.jsonl$''']
 regexTarget = "match"
 regexes = ['''^key": "[0-9a-f]{64}"$''']
+
+# 평가셋 v2 50건의 CI 재생 녹화(evals/ci_replay_v2/*.jsonl, evals/ci_current_eval.py --require-v2)도 같은 형식의 요청 키를 쓴다. 조건은 위와 같고 경로만 다르다.
+# 이 파일은 커서 `gitleaks dir`이 나눠 읽는데, 나눈 경계가 키 값 가운데에 걸리면 잡힌 글자가 `key": "<16진수 일부>`로 잘린다. 그래서 끝 따옴표 없이 16진수만 이어지는 경우도 받는다(16진수 외 글자가 섞이면 계속 잡는다)
+[[allowlists]]
+description = "평가셋 v2 50건 CI 재생 녹화의 요청 키(sha256) 필드"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''^evals/ci_replay_v2/[^/]+\.jsonl$''']
+regexTarget = "match"
+regexes = ['''^key": "[0-9a-f]{10,64}"?$''']

@@ -1,0 +1,49 @@
+{
+  "n_rows": 75,
+  "per_run": {
+    "1": {
+      "n": 25,
+      "context_precision": 0.9333,
+      "context_recall": 0.8547,
+      "faithfulness": 0.9127,
+      "answer_relevancy": 0.6425
+    },
+    "2": {
+      "n": 25,
+      "context_precision": 0.96,
+      "context_recall": 0.8827,
+      "faithfulness": 0.9367,
+      "answer_relevancy": 0.6259
+    },
+    "3": {
+      "n": 25,
+      "context_precision": 0.9133,
+      "context_recall": 0.8547,
+      "faithfulness": 0.8555,
+      "answer_relevancy": 0.6736
+    }
+  },
+  "mean_of_runs": {
+    "context_precision": 0.9355,
+    "context_recall": 0.864,
+    "faithfulness": 0.9016,
+    "answer_relevancy": 0.6473
+  },
+  "overall_row_mean": {
+    "context_precision": 0.9356,
+    "context_recall": 0.864,
+    "faithfulness": 0.9016,
+    "answer_relevancy": 0.6473
+  },
+  "missing_values": {
+    "context_precision": 0,
+    "context_recall": 0,
+    "faithfulness": 0,
+    "answer_relevancy": 0
+  },
+  "faithfulness_line": 0.91,
+  "faithfulness_pass": false,
+  "cost_usd": 0.211938,
+  "elapsed_s_this_invocation": 223,
+  "exit_code": 0
+}

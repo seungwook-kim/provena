@@ -1,0 +1,39 @@
+{
+  "revision": "provena-api-00165-kag",
+  "results_dir": "evals/results/deploy_latency_provena-api-00165-kag",
+  "dataset": "dataset_v2.jsonl",
+  "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
+  "runs": [
+    1,
+    2,
+    3
+  ],
+  "corpus_source": "<scratchpad>/bundle2/snap_194dfd9a/data/index/chunks.jsonl",
+  "corpus_n_chunks": 23095,
+  "corpus_meta": {
+    "n_chunks": 23095,
+    "chunks_sha256": "19d9a8f82f0b94d6409c864b59d510c51c7a253ef6f7bb28775c646801fe3227",
+    "chunks_fingerprint": "9c5b56c959250db26fff8caf10f617654c22f0d5b4e4dcf24ac0edb6f81a1b36"
+  },
+  "input": {
+    "rows": 150,
+    "not_target": 75,
+    "no_answer_field": 0,
+    "no_context": 0,
+    "unresolved_ids": 0,
+    "version_date_mismatch": 0,
+    "unknown_dataset_id": 0,
+    "scored_rows": 75
+  },
+  "estimate": {
+    "usd_per_row": 0.00471,
+    "usd": 0.353,
+    "minutes": 7.2,
+    "basis": "61.51 실측 1.412301달러/300행(evals/results/ragas_d6151)"
+  },
+  "judge": "claude-haiku-5-5",
+  "embedding": "voyage-4",
+  "contexts": "인용한 청크 본문(61.51은 검색한 5개)",
+  "max_cost_usd": 0.5,
+  "started_at": "2026-11-16T20:55:44+0900"
+}

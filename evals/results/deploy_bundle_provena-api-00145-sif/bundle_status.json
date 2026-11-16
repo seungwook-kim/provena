@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2535,
+    "revision":  "provena-api-00145-sif",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0106,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00145-sif"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2429,
+                       "detail":  "evals/results/deploy_latency_provena-api-00145-sif"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "42a4b9f9+GRAPH_FIRST_PAGE_FILL=0"
+}

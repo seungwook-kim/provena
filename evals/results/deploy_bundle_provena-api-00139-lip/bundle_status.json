@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2541,
+    "revision":  "provena-api-00139-lip",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0065,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00139-lip"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2476,
+                       "detail":  "evals/results/deploy_latency_provena-api-00139-lip"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "42a4b9f9+GRAPH_ADOPT_GROUNDED_CANDIDATE=off"
+}

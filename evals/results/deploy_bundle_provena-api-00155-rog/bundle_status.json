@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2584,
+    "revision":  "provena-api-00155-rog",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0077,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00155-rog"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2506,
+                       "detail":  "evals/results/deploy_latency_provena-api-00155-rog"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "11cc305f+GRAPH_CITE_PHRASE_WHOLE_ROWS=0"
+}

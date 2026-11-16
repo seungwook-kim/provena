@@ -1,0 +1,10 @@
+﻿{
+    "note":  "run1, run2는 provena-api-00118-zaj(같은 이미지 digest, 같은 env: 절제 env 없음, SEARCH_HEDGE=1, SEARCH_HEDGE_S=1.5, min 0 / max 1 / conc 80)에서 잰 결과를 복사했다. 00118은 운영 503 대응으로 15:16:57 삭제됨. run3은 이 판에서 새로 잰다.",
+    "image":  "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:69d13da5f68210579643a84a6363554fe5d2e369fea89fe95b9b600baba8c9f4",
+    "commit":  "42a4b9f9",
+    "run1_run2_from":  "provena-api-00118-zaj",
+    "run1_run2_source":  "<scratchpad>/bundle2/snap_42a4b9f9/evals/results/deploy_latency_provena-api-00118-zaj",
+    "run3_on":  "provena-api-00130-faq",
+    "copied_at":  "2026-11-16T15:24:43",
+    "old_run3_failed503":  "<scratchpad>/bundle2/snap_42a4b9f9/evals/results/deploy_latency_provena-api-00118-zaj/run3_failed503_1512"
+}

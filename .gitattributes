@@ -10,6 +10,7 @@ evals/dataset_v1.jsonl text eol=crlf
 evals/dataset_v2.jsonl text eol=crlf
 # 검증 문항·인용 새 문항 세트도 같다. 적어 둔 sha256(검증 20건 c877c065…는 EVAL_REPORT.md, 인용 새 문항 8823195a…는 evals/results/deploy_latency_cite_new_*/summary.json)은 CRLF 바이트 기준이다
 evals/dataset_holdout_v1.jsonl text eol=crlf
+evals/dataset_holdout_v2.jsonl text eol=crlf
 evals/dataset_cite_new_v1.jsonl text eol=crlf
 data/corpus/** -text
 

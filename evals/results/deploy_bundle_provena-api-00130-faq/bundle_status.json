@@ -1,0 +1,73 @@
+﻿{
+    "spent_usd":  1.9387,
+    "revision":  "provena-api-00130-faq",
+    "stages":  [
+                   {
+                       "stage":  "preflight",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.014,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.6935,
+                       "detail":  "evals/results/deploy_latency_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "ragas",
+                       "state":  "done",
+                       "cost_usd":  0.2119,
+                       "detail":  "evals/results/ragas_deploy_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "holdout",
+                       "state":  "done",
+                       "cost_usd":  0.2819,
+                       "detail":  "evals/results/deploy_latency_holdout_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "holdout_v2",
+                       "state":  "done",
+                       "cost_usd":  0.4084,
+                       "detail":  "evals/results/deploy_latency_holdout_v2_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "recalc",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "cite",
+                       "state":  "done",
+                       "cost_usd":  0.1507,
+                       "detail":  "evals/results/deploy_latency_cite_new_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "range",
+                       "state":  "done",
+                       "cost_usd":  0.15,
+                       "detail":  "evals/results/range_retrieval_62_7/answers_deploy_provena-api-00130-faq"
+                   },
+                   {
+                       "stage":  "colleague",
+                       "state":  "done",
+                       "cost_usd":  0.0283,
+                       "detail":  "evals/results/deploy_latency_colleague10_provena-api-00130-faq"
+                   }
+               ],
+    "commit":  "42a4b9f9"
+}

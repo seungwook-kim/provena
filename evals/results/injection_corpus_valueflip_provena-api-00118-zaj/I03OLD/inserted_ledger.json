@@ -1,0 +1,14 @@
+{
+  "state": "cleaned",
+  "date": "20261116",
+  "org": "TEST-INJ-DEPLOY-20261116",
+  "version_id": "TESTINJ20261116",
+  "updated": "2026-11-16T15:05:32+09:00",
+  "rows": [
+    {
+      "rule_seq": 9026111650,
+      "chunk_id": "TEST-INJ-DEPLOY-20261116-I03OLD",
+      "version_id": "TESTINJ20261116"
+    }
+  ]
+}
