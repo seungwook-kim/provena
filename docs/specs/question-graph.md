@@ -15,7 +15,7 @@
 ## Goal
 
 - **해결 목표**: 한국어 정책 질문에 핸드북 섹션을 인용한 한국어 답을 판 날짜, 출처 URL과 함께 준다. 근거가 부족하면 되묻거나 거절한다.
-- **성공 기준** (`docs/PRD.md` 13-2와 같은 값, 동결됨. 단 "재검색 최대 2회"는 코드 상한이고 서비스 기본은 1회다, `backend/graph/service_profile.py:54`):
+- **성공 기준** (`docs/PRD.md` 13-2와 같은 값, 동결됨. 단 "재검색 최대 2회"는 코드 상한이고 서비스 기본은 1회다, `backend/graph/service_profile.py:56`):
   - 인용 정확도 0.85 이상
   - 판 날짜 표시 100%
   - 비관련 질문 거절 0.90 이상
@@ -50,7 +50,7 @@
 
 | # | 상황 | 처리 방식 |
 |---|---|---|
-| EC-01 | 재검색 2회 뒤에도 근거 부족 | 절이나 기간이 빠진 질문이면 되묻고, 아니면 거절 사유와 함께 거절한다 |
+| EC-01 | 재검색 상한(코드 상한 2회, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, 운영 적용)을 다 쓴 뒤에도 근거 부족 | 절이나 기간이 빠진 질문이면 되묻고, 아니면 거절 사유와 함께 거절한다 |
 | EC-02 | 비관련 질문 4종(도메인 밖, 코퍼스에 없는 대상, 없는 항목, 기간이 다른 질문) | 거절. 어디서 거를지(검색 단계 / 답 단계)는 D0 안건. 답 단계에서 거르면 `docs/GATES.md` G5 규칙대로 그 효과를 따로 보고한다 |
 | EC-03 | LLM이 검색 결과에 없는 `chunk_id`를 인용 | 인용 검사에서 지운다 |
 | EC-04 | 질문에 기준일이 있음("2024년 기준") | `as_of`로 검색하고, 답에 그 판의 날짜를 표시한다 |
@@ -67,7 +67,7 @@
 - **조립 함수**: `build_graph(retriever=None, checkpointer=None)`. 검색기와 체크포인터를 주입받아, 검색 파트가 늦어도 가짜 검색기와 메모리 체크포인터로 키 없이 시험한다. 검색 호출 수를 셀 수 있어야 한다.
 - **계약**: 입력 `SearchQuery`, `Chunk`, 출력 `AgentEvent` (`backend/schemas/`, `docs/SDD.md` 6장. D0에 동결)
 - **체크포인터**: Postgres. 같은 `thread_id`로 재개된다. `open_persistence()`는 `setup` 직후 LangGraph 표 6개(`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `store`, `store_migrations`)에 RLS를 켜고 정책은 두지 않는다. 공개 키 역할은 막히고, 표 소유자인 앱은 그대로 쓴다.
-- **상한**: 재검색 횟수는 상수 하나(2). 한 질문의 LLM 비용 상한은 환경변수로 둔다.
+- **상한**: 재검색 횟수의 코드 상한은 상수 하나(`MAX_RESEARCH` 2)이고, 서비스 설정은 1회(`SEARCH_MAX_RESEARCH=1`, 운영 적용)다. 한 질문의 LLM 비용 상한은 환경변수로 둔다.
 - **환경변수**: `.env.example`의 LLM 키, `DEMO_MODE`, `DATABASE_URL`, `LANGFUSE_*`. 새로 쓰는 변수는 `docs/ARCHITECTURE.md` 조원 간 계약서에 적는다.
 - **런타임 Skill**: `citation-rules`(답 작성), `grounding-check`(인용 검사), `glossary`(질의 재작성) (`docs/SDD.md` 2-3장)
 
@@ -118,7 +118,7 @@
 | `classify` | 질의 라우팅 | `backend/graph/build.py` |
 | `rewrite` | 질의 재작성(영어 검색어) | `backend/graph/build.py` |
 | `search` | `search()` 호출 | `backend/graph/build.py` |
-| `judge`, `give_up` | 문서 채점, 재검색 2회 뒤 되묻기나 거절 | `backend/graph/build.py` |
+| `judge`, `give_up` | 문서 채점, 재검색 상한(코드 상한 2회, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, 운영 적용) 뒤 되묻기나 거절 | `backend/graph/build.py` |
 | `write_answer` | 답 작성, 기준일과 판 날짜, 라이선스 표시 | `backend/graph/build.py`, `backend/graph/citations.py` |
 | `verify` | 인용 검사(코드) | `backend/graph/citations.py` |
 | `ground` | 근거 판정 | `backend/graph/grounding.py` |
