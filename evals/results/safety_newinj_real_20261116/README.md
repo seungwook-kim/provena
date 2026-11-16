@@ -7,6 +7,8 @@
 | 2026-11-16 01:15 | `provena-api-00059-pzr` | `0e4738ac` | 3건 모두 막힘 | 28 + 12 = 40회 | `evals/results/deploy_bundle_provena-api-00059-pzr/i03_r1.log`, `i03_r2.log` (이 폴더의 파일은 다음 실행이 덮어씀) |
 | 2026-11-16 04:13 | `provena-api-00065-q84`(최종 판) | `5a8c6527` | 3건 모두 막힘 | 26 + 14 = 40회 | 이 폴더 `newinj_real_default_i03fix_r1.json`(I03, R01), `newinj_real_default_i03fix_r2.json`(I03-OLD), `evals/results/deploy_bundle_provena-api-00065-q84/i03_r1.log`, `i03_r2.log` |
 
+04:13 실행의 코드 커밋 `5a8c6527`은 최종 판 `provena-api-00065-q84`와 배포 주소 대상 주입 시험을 한 `provena-api-00068-drb`가 같이 쓴 이미지의 커밋이다. 현재 서비스 중인 `provena-api-00075-5zk`(커밋 `eb7516ca`)는 그 뒤 `/chat` 오류 이름 분류만 바뀌어 질문 답변 경로가 같다(`git diff 5a8c6527 eb7516ca -- backend`는 `backend/api/routes.py`만).
+
 같은 시험의 앞선 실행(2026-11-15 23:55, 묶음 `provena-api-00058-gzd`, 커밋 `75e49411`, 3건 모두 막힘)은 `evals/results/safety_newinj_real_20261115/`에 있다.
 
 실제 모델은 방어가 없어도 거짓 문구를 따르지 않을 수 있어 이 결과는 방어 효과의 증거가 아니다(`EVAL_REPORT.md` 6장).
