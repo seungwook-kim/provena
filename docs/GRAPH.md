@@ -364,7 +364,7 @@ flowchart TD
 | `GROUND_SKIP_BACKED` | `build.py:534` | 끔 | 채우지 않음(끔) | 값이 모두 인용 청크에 있으면 `ground`의 LLM 판정을 건너뛴다 |
 | `USE_SKILLS` | `backend/services/skills.py:21` | 켬 | 채우지 않음(켬) | 끄면 `ground`의 LLM 판정을 건너뛰고 Skill 본문을 붙이지 않는다 |
 | `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:59` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
-| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:153-154`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다) |
+| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:153-154`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
 | `CHAT_FOLLOWUP` | `backend/api/routes.py:188` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |

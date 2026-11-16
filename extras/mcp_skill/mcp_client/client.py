@@ -31,6 +31,7 @@ SEARCH_TOOL = "search_handbook"
 SECTION_TOOL = "get_section"
 
 _last_note: contextvars.ContextVar[str | None] = contextvars.ContextVar("mcp_last_note", default=None)
+_last_usage: contextvars.ContextVar[dict | None] = contextvars.ContextVar("mcp_last_usage", default=None)
 
 
 class McpSearchError(RuntimeError):
@@ -102,6 +103,12 @@ def _read(content: dict[str, Any] | None) -> tuple[list[Chunk], str | None]:
 
 async def asearch_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> tuple[list[Chunk], str | None]:
     """(청크 목록, 서버 note). note에는 fallback_reason(번역 실패·no_key 등)이 올 수 있다."""
+    chunks, note, _usage = await _asearch(q, target, token)
+    return chunks, note
+
+
+async def _asearch(q: SearchQuery, target: Any = None, token: str | None = None) -> tuple[list[Chunk], str | None, dict | None]:
+    """(청크 목록, 서버 note, 서버가 센 임베딩 사용량 `usage`). 사용량은 비용 집계용이다(`graph/mcp_retriever.py`가 /chat 집계에 더한다)."""
     args = _args(q)
     client = make_client(target, token)
     try:
@@ -115,7 +122,9 @@ async def asearch_via_mcp(q: SearchQuery, target: Any = None, token: str | None 
         raise
     if res.is_error:   # 서버가 도구 실행 자체를 실패로 돌려줌(우리 서버는 상태로 답하므로 드묾)
         raise McpSearchError("error", "MCP 도구 실행 오류", retryable=False)
-    return _read(res.structured_content)
+    chunks, note = _read(res.structured_content)
+    usage = res.structured_content.get("usage")
+    return chunks, note, (usage if isinstance(usage, dict) else None)
 
 
 def _is_transport(e: BaseException) -> bool:
@@ -132,21 +141,28 @@ def _is_transport(e: BaseException) -> bool:
 def search_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> list[Chunk]:
     """search(q)와 같은 모양. 그래프 노드가 동기 함수라도, 이미 이벤트 루프 안이어도 부를 수 있다(그때는 새 스레드에서)."""
     def go():
-        return asyncio.run(asearch_via_mcp(q, target, token))
+        return asyncio.run(_asearch(q, target, token))
+    _last_usage.set(None)
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        chunks, note = go()
+        chunks, note, usage = go()
     else:
         with ThreadPoolExecutor(max_workers=1) as ex:
-            chunks, note = ex.submit(go).result()
+            chunks, note, usage = ex.submit(go).result()
     _last_note.set(note)
+    _last_usage.set(usage)
     return chunks
 
 
 def last_mcp_note() -> str | None:
     """같은 스레드의 마지막 search_via_mcp가 받은 서버 note(fallback_reason 등). search.last_search_trace()의 짝."""
     return _last_note.get()
+
+
+def last_mcp_usage() -> dict | None:
+    """같은 스레드의 마지막 search_via_mcp가 받은 서버의 임베딩 사용량 `{"embed_tokens", "embed_calls"}`. 실패했거나 서버가 주지 않았으면 None."""
+    return _last_usage.get()
 
 
 async def aget_section_via_mcp(rule_seq: int, article: str | None, as_of: str | None = None, target: Any = None, token: str | None = None) -> dict | None:

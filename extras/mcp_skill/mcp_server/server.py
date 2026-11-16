@@ -65,6 +65,7 @@ class ToolResponse(BaseModel):
     as_of: str | None
     source: str
     note: str | None = None
+    usage: dict[str, int] | None = None   # search_handbook만: 이 검색이 쓴 임베딩 사용량 {"embed_tokens", "embed_calls"}. 다른 도구는 None
 
 
 class Invalid(ValueError):
@@ -82,6 +83,18 @@ class _Deps:
 
     def __init__(self, search_fn=None, section_store=None, changes_store=None):
         self._search_fn, self._section_store, self._changes_store = search_fn, section_store, changes_store
+
+    def metered_search(self, q: SearchQuery):
+        """(검색 결과, fallback_reason, 임베딩 사용량). 이 검색만의 요청 집계(`step_cost`)를 따로 열어 Voyage 사용량을 센다.
+        /chat이 루프백으로 부르면 서버 쪽에는 /chat 집계가 없고, 같은 프로세스에서 바로 불러 /chat 집계가 따라와도 여기서 따로 세므로
+        부른 쪽(`graph/mcp_retriever.py`)이 응답의 사용량을 한 번만 더한다."""
+        from backend.services import step_cost
+        meter, token = step_cost.begin()
+        try:
+            out, fallback = self.search(q)
+        finally:
+            step_cost.end(token)
+        return out, fallback, {"embed_tokens": meter.embed_tokens, "embed_calls": meter.embed_calls}
 
     def search(self, q: SearchQuery):
         """검색 결과와 그 검색의 기록(fallback_reason). 기록은 contextvar라 같은 스레드에서 읽는다."""
@@ -225,6 +238,7 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
               sub_queries = 질문을 나눈 하위 질문 2~3개(선택). 주면 하위 질문마다 찾아 번갈아 합친다. 나누지 않으면 비움.
         출력: results = Chunk 목록(chunk_id, rule_seq, article, text, source_url, version_date ...). 첫 줄은 제목 경로.
               비공개 주소 링크는 [비공개 문서]로 바꿔 보낸다 — 그 링크 너머 내용은 근거가 아니다.
+              usage = 이 검색이 쓴 임베딩 사용량(embed_tokens, embed_calls). 비용 집계용이며 답의 근거가 아니다.
         제약: 결과가 없으면 status=not_found(빈 ok가 아님). note에 검색이 내려간 이유(번역 실패, 임베딩 키 없음 no_key 등)가
               올 수 있다. 임베딩 API 연결 실패·시간 초과는 status=unavailable(잠시 뒤 다시).
         """
@@ -249,13 +263,13 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
                 q = SearchQuery(query=query, org=org, as_of=as_of, k=k, sub_queries=subs)
             except ValueError as e:                              # pydantic 검사 — 위 검사와 어긋날 때만
                 raise Invalid("검색 입력이 형식에 맞지 않습니다(query·org·as_of·k).") from e
-            chunks, fallback = await _run(deps.search, q)
+            chunks, fallback, usage = await _run(deps.metered_search, q)
         except Exception as e:  # noqa: BLE001 — 상태로 돌려준다
             return _failure("search_handbook", src, e)
         note = f"fallback_reason={fallback}" if fallback else None
         if not chunks:
-            return _resp("not_found", src, as_of=as_of, note=note or "조건에 맞는 청크가 없습니다.")
-        return _resp("ok", src, [_out(c) for c in chunks], as_of=as_of, note=note)
+            return _resp("not_found", src, as_of=as_of, note=note or "조건에 맞는 청크가 없습니다.").model_copy(update={"usage": usage})
+        return _resp("ok", src, [_out(c) for c in chunks], as_of=as_of, note=note).model_copy(update={"usage": usage})
 
     @mcp.tool(annotations=READ_ONLY)
     async def get_section(rule_seq: int, article: str | None = None, as_of: str | None = None) -> ToolResponse:
