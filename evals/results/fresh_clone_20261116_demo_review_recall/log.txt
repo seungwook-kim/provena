@@ -1,0 +1,245 @@
+== fresh clone of origin/seunguk SHA 807bdf6550c3b2868ff00360d74fd56e381679e6 (clone -c core.longpaths=true, --branch seunguk); clone took 48.6s; git status porcelain lines: 0
+== Docker Engine 29.7.2; .env absent: True
+== first start: docker compose -p provena-freshdrr up -d  2026-11-16T14:32:18
+ Image provena-freshdrr-api Building 
+ Image provena-freshdrr-loader Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.15kB 0.0s done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 5.91kB done
+#2 DONE 0.9s
+
+#2 [loader internal] load build definition from Dockerfile
+#2 DONE 0.9s
+
+#3 [api internal] load metadata for docker.io/library/node:22-alpine
+#3 DONE 1.7s
+
+#4 [loader internal] load metadata for docker.io/library/python:3.12-slim
+#4 DONE 1.7s
+
+#5 [api internal] load .dockerignore
+#5 transferring context: 439B done
+#5 DONE 0.0s
+
+#6 [loader internal] load build context
+#6 ...
+
+#7 [loader stage-1  1/18] FROM docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+#7 resolve docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b 0.1s done
+#7 DONE 0.2s
+
+#8 [api web-build 1/6] FROM docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+#8 resolve docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a 0.1s done
+#8 DONE 0.2s
+
+#6 [loader internal] load build context
+#6 transferring context: 64.29MB 5.0s
+#6 transferring context: 117.53MB 8.9s done
+#6 DONE 8.9s
+
+#6 [loader internal] load build context
+#6 DONE 8.9s
+
+#9 [api web-build 6/6] RUN npm run build
+#9 CACHED
+
+#10 [api stage-1  5/18] RUN pip install --no-cache-dir -r backend/requirements.txt
+#10 CACHED
+
+#11 [api stage-1 10/18] RUN python -m backend.rag.ingest.snapshot unpack-index
+#11 CACHED
+
+#12 [api stage-1  8/18] COPY --chown=app:app data/ ./data/
+#12 CACHED
+
+#13 [api stage-1 13/18] RUN cp web/react-app/dist/index.html web/index.html
+#13 CACHED
+
+#14 [api stage-1 11/18] COPY web/ ./web/
+#14 CACHED
+
+#15 [api stage-1 16/18] COPY skills/ ./skills/
+#15 CACHED
+
+#16 [api stage-1 12/18] COPY --from=web-build /web/dist/ ./web/react-app/dist/
+#16 CACHED
+
+#17 [api web-build 3/6] COPY web/react-app/package.json web/react-app/package-lock.json ./
+#17 CACHED
+
+#18 [api web-build 2/6] WORKDIR /web
+#18 CACHED
+
+#19 [api web-build 4/6] RUN npm ci
+#19 CACHED
+
+#20 [api stage-1  2/18] RUN groupadd --system --gid 10001 app     && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app     && mkdir -p /home/app/.provena && chown app:app /home/app/.provena
+#20 CACHED
+
+#21 [api stage-1 17/18] COPY extras/ ./extras/
+#21 CACHED
+
+#22 [api web-build 5/6] COPY web/react-app/ ./
+#22 CACHED
+
+#23 [api stage-1  3/18] WORKDIR /app
+#23 CACHED
+
+#24 [api stage-1  9/18] RUN python -m backend.rag.ingest.snapshot unpack
+#24 CACHED
+
+#25 [api stage-1 14/18] RUN cp web/react-app/dist/index.html web/login.html
+#25 CACHED
+
+#26 [api stage-1 15/18] COPY db/ ./db/
+#26 CACHED
+
+#27 [api stage-1  7/18] COPY backend/ ./backend/
+#27 CACHED
+
+#28 [api stage-1  4/18] COPY backend/requirements.txt backend/requirements-local-models.txt backend/
+#28 CACHED
+
+#29 [api stage-1  6/18] RUN ( [ -z "" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt     && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; } )     && mkdir -p "/app/.hf" && chown -R app:app "/app/.hf"
+#29 CACHED
+
+#30 [api stage-1 18/18] COPY mock_erp/ ./mock_erp/
+#30 CACHED
+
+#31 [loader] exporting to image
+#31 exporting layers done
+#31 exporting manifest sha256:dc08eaaaa08059f55de593ac1f5ba8539a60e8c5c6b78365fe019361a95f55d1 done
+#31 exporting config sha256:51298cf9dab9997a710f078315fcdd1c5d57240491661ee3f1439a553d03cde9 0.0s done
+#31 exporting attestation manifest sha256:c8df756932e35b45d68ca70e0f21082657c648a0ee28fba2845f6b2a898b381f
+#31 exporting attestation manifest sha256:c8df756932e35b45d68ca70e0f21082657c648a0ee28fba2845f6b2a898b381f 0.0s done
+#31 exporting manifest list sha256:eaff00602227ec335b052824feb0a707513c38ea39d7d4d0435f768d536eee37 0.0s done
+#31 naming to docker.io/library/provena-freshdrr-loader:latest done
+#31 unpacking to docker.io/library/provena-freshdrr-loader:latest
+#31 unpacking to docker.io/library/provena-freshdrr-loader:latest 1.4s done
+#31 DONE 1.6s
+
+#32 [api] exporting to image
+#32 exporting layers done
+#32 exporting manifest sha256:fa65f08a87818298c749505eaa24a58eef97279b6c6dbd4b72c30adc7bcb7d31 done
+#32 exporting config sha256:d1a10ffe6eee6026f90cc6620ac44a0f6c9100dab95fd50851b070a9666b86a3 done
+#32 exporting attestation manifest sha256:14dabf7880f5d5fe530da79f77b73c6d1f0c024f4639ec87adb82e852adf420b 0.1s done
+#32 exporting manifest list sha256:97604631a712eeb2d829dd414ef16e642d8a231353e0b69944ca7e1624b668ed 0.0s done
+#32 naming to docker.io/library/provena-freshdrr-api:latest 0.0s done
+#32 unpacking to docker.io/library/provena-freshdrr-api:latest 1.4s done
+#32 DONE 1.6s
+
+#33 [loader] resolving provenance for metadata file
+#33 DONE 0.0s
+
+#34 [api] resolving provenance for metadata file
+#34 DONE 0.0s
+ Image provena-freshdrr-api Built 
+ Image provena-freshdrr-loader Built 
+ Network provena-freshdrr_default Creating 
+ Volume provena-freshdrr_profilekey Creating 
+ Volume provena-freshdrr_pgdata Creating 
+ Volume provena-freshdrr_profilekey Creating 
+ Volume provena-freshdrr_pgdata Creating 
+ Network provena-freshdrr_default Creating 
+ Volume provena-freshdrr_profilekey Created 
+ Volume provena-freshdrr_profilekey Created 
+ Volume provena-freshdrr_pgdata Created 
+ Volume provena-freshdrr_pgdata Created 
+ Network provena-freshdrr_default Created 
+ Network provena-freshdrr_default Created 
+ Container provena-freshdrr-db-1 Creating 
+ Container provena-freshdrr-db-1 Created 
+ Container provena-freshdrr-loader-1 Creating 
+ Container provena-freshdrr-loader-1 Created 
+ Container provena-freshdrr-api-1 Creating 
+ Container provena-freshdrr-api-1 Created 
+ Container provena-freshdrr-db-1 Starting 
+ Container provena-freshdrr-db-1 Started 
+ Container provena-freshdrr-db-1 Waiting 
+ Container provena-freshdrr-db-1 Healthy 
+ Container provena-freshdrr-loader-1 Starting 
+ Container provena-freshdrr-loader-1 Started 
+ Container provena-freshdrr-db-1 Waiting 
+ Container provena-freshdrr-loader-1 Waiting 
+ Container provena-freshdrr-db-1 Healthy 
+ Container provena-freshdrr-loader-1 Exited 
+ Container provena-freshdrr-api-1 Starting 
+ Container provena-freshdrr-api-1 Started 
+compose up returned at 74.9210435s
+first /health 200: True at 82.2318636s
+loader-1  |   16000/23095
+loader-1  |   18000/23095
+loader-1  |   20000/23095
+loader-1  |   22000/23095
+loader-1  |   23095/23095
+loader-1  | 적재 완료: voyage-4, 청크 23095개, 링크 있는 청크 2661개, 번역 0개, 18.5초, generation 1
+== restart: docker compose -p provena-freshdrr restart 2026-11-16T14:33:40
+ Container provena-freshdrr-api-1 Restarting 
+ Container provena-freshdrr-loader-1 Restarting 
+ Container provena-freshdrr-db-1 Restarting 
+ Container provena-freshdrr-loader-1 Started 
+ Container provena-freshdrr-api-1 Started 
+ Container provena-freshdrr-db-1 Started 
+restart returned at 10.0528295s
+restart /health 200: True at 21.3409948s
+== demo questions (user=demo-user, POST /chat, no .env) via evals/results/g2_keyless_answers_b541e97/ask_readme_questions.py
+인용 답 6, 거절 3, 일치 8/9
+ask script exit: 1
+Q1 | expected=answer | kind=answer | citations=1 | cost_usd=0 | 14.07s | 제3자가 프로덕션 데이터에 접근하거나 영향을 줄 수 있다면 보안 검토가 
+Q2 | expected=answer | kind=answer | citations=1 | cost_usd=0 | 8.96s | CVSS 9.0 이상 크리티컬 취약점은 얼마 안에 완화(mitigate)
+Q3 | expected=answer | kind=answer | citations=1 | cost_usd=0 | 2.23s | 클라우드 호스팅 업체와 약정 사용 할인(CUD) 계약은 누가 승인해?
+Q4 | expected=answer | kind=answer | citations=3 | cost_usd=0 | 0.62s | EOC가 호출에 응답하지 않으면 어떻게 에스컬레이션돼? IMOC도 응답이
+Q5 | expected=answer | kind=answer | citations=2 | cost_usd=0 | 0.86s | 외부 SaaS를 도입하려고 합니다. 계약 금액이 5만 달러라면 업무 승인
+Q6 | expected=answer | kind=answer | citations=2 | cost_usd=0 | 0.89s | 외부 SaaS를 도입하려고 합니다. 계약 금액이 3만 달러라면 업무 승인
+Q7 | expected=refuse | kind=refuse | citations=0 | cost_usd=0 | 0.71s | 구매 승인에는 어떤 승인자가 필요한가요?
+Q8 | expected=refuse | kind=refuse | citations=0 | cost_usd=0 | 0.24s | 오늘 점심 메뉴 추천해줘
+Q9 | expected=answer | kind=refuse | citations=0 | cost_usd=0 | 0.95s | 외부 SaaS 계약 금액이 10만 달러일 때 승인 권한자는 누구이고, 근
+== demo segment 03 (review + recall) via evals/results/fresh_clone_20261116_demo_review_recall/scenario_check.py 2026-11-16T14:34:32
+{"review_ok": true, "recall_ok": true, "review_rows": 19, "teams": ["finance", "infra", "itops", "security"], "process_pending": {"status": "done", "processed": 1, "sent": 1, "failed": 0, "skipped": 0, "notices": 2, "review": 2, "judge_failures": 0, "candidates": 0}, "user_notices": 0, "admin_review_queue": 2, "released": [200, 200], "user_notices_after_release": 2}
+scenario script exit: 0
+== server log lines about demo revision / replay miss:
+ Container provena-freshdrr-api-1 Stopping 
+ Container provena-freshdrr-api-1 Stopped 
+ Container provena-freshdrr-api-1 Removing 
+ Container provena-freshdrr-api-1 Removed 
+ Container provena-freshdrr-loader-1 Stopping 
+ Container provena-freshdrr-loader-1 Stopped 
+ Container provena-freshdrr-loader-1 Removing 
+ Container provena-freshdrr-loader-1 Removed 
+ Container provena-freshdrr-db-1 Stopping 
+ Container provena-freshdrr-db-1 Stopped 
+ Container provena-freshdrr-db-1 Removing 
+ Container provena-freshdrr-db-1 Removed 
+ Image provena-freshdrr-api:latest Removing 
+ Image provena-freshdrr-loader:latest Removing 
+ Volume provena-freshdrr_profilekey Removing 
+ Volume provena-freshdrr_pgdata Removing 
+ Volume provena-freshdrr_profilekey Removed 
+ Network provena-freshdrr_default Removing 
+ Image provena-freshdrr-api:latest Removed 
+ Volume provena-freshdrr_pgdata Removed 
+ Image provena-freshdrr-loader:latest Removed 
+ Network provena-freshdrr_default Removed 
+== pytest -m demo_replay on the fresh clone (cwd=clone, repo venv python, Postgres via docker pgvector/pgvector:pg16 test fixture) 2026-11-16T14:34:44
+E                 + refuse)
+
+tests\test_demo_replay_fresh.py:219: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_demo_replay_fresh.py::test_every_llm_request_of_the_demo_questions_is_in_the_recording[reasoning_answer_in_time]
+FAILED tests/test_demo_replay_fresh.py::test_every_llm_request_of_the_demo_questions_is_in_the_recording[reasoning_answer_skipped]
+2 failed, 4 passed, 4712 deselected in 200.35s (0:03:20)
+couldn't stop thread 'pool-6-worker-0' within 5.0 seconds
+hint: you can try to call 'close()' explicitly or to use the pool as context manager
+couldn't stop thread 'pool-6-worker-1' within 5.0 seconds
+hint: you can try to call 'close()' explicitly or to use the pool as context manager
+couldn't stop thread 'pool-6-worker-2' within 5.0 seconds
+hint: you can try to call 'close()' explicitly or to use the pool as context manager
+couldn't stop thread 'pool-6-scheduler' within 5.0 seconds
+hint: you can try to call 'close()' explicitly or to use the pool as context manager
+pytest exit: 1, took 222.6505264s
+== containers left with project name: 
+== temp clone removed: False 2026-11-16T14:38:27
