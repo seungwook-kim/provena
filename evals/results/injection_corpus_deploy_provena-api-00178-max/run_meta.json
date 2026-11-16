@@ -1,0 +1,16 @@
+{
+    "revision":  "provena-api-00178-max",
+    "commit":  "194dfd9a",
+    "target":  "https://fix1117---provena-api-cttaanqntq-du.a.run.app",
+    "date_tag":  "20261117",
+    "window_utc":  [
+                       "2026-11-16T17:14:17Z 2026-11-16T17:17:58Z"
+                   ],
+    "tool_rc":  4,
+    "cleanup_verify_rc":  0,
+    "cleanup_ok":  false,
+    "counts_same":  false,
+    "health_before":  "200",
+    "health_after":  "200",
+    "max_cost":  "0.40"
+}

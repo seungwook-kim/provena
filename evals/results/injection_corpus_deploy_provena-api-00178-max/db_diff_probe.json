@@ -1,0 +1,123 @@
+{
+  "columns": {
+    "docs": [
+      "rule_seq",
+      "org",
+      "title",
+      "fmt",
+      "source_url",
+      "fetched_at"
+    ],
+    "versions": [
+      "rule_seq",
+      "version_id",
+      "version_date",
+      "version_date_before",
+      "valid_from",
+      "valid_to",
+      "file_sha256"
+    ],
+    "chunks": [
+      "chunk_id",
+      "version_id",
+      "rule_seq",
+      "seq",
+      "ord",
+      "article",
+      "kind",
+      "text",
+      "source_url",
+      "text_sha256",
+      "line_start",
+      "line_end",
+      "acl",
+      "embedding",
+      "embedder",
+      "link_targets"
+    ],
+    "index_meta": [
+      "id",
+      "embedder",
+      "revision",
+      "dim",
+      "prefixes",
+      "max_seq_length",
+      "n_chunks",
+      "chunks_sha256",
+      "vectors_sha256",
+      "status",
+      "generation",
+      "loaded_at",
+      "links_sha256"
+    ]
+  },
+  "index_meta": [
+    "1",
+    "voyage-4",
+    "api:voyage-4",
+    "1024",
+    "{'note': '1차 비교 캐시 — check로 이 장비 재계산과 대조할 것'}",
+    "512",
+    "23095",
+    "19d9a8f82f0b94d6409c864b59d510c51c7a253ef6f7bb28775c646801fe3227",
+    "cedc40bb0084d26006c9dee763547ef7a16e944f3bfc5de386f6c29b3ef3ead2",
+    "ready",
+    "6",
+    "2026-11-13 08:10:13.500064+00:00",
+    "07fc380a247d6e8ca3f2af64af9ff113cb55af9569fe5726b35178385781e07f"
+  ],
+  "versions_ts_col": null,
+  "chunks_ts_col": null,
+  "test_marked": [
+    0,
+    0,
+    0
+  ],
+  "counts": [
+    1520,
+    1863,
+    31457
+  ],
+  "activity": [
+    [
+      "Supavisor",
+      "idle",
+      "9"
+    ],
+    [
+      "Supavisor (auth_query)",
+      "idle",
+      "2"
+    ],
+    [
+      "PostgREST 14.18",
+      "idle",
+      "2"
+    ],
+    [
+      "",
+      "idle",
+      "2"
+    ],
+    [
+      "pg_cron scheduler",
+      "None",
+      "1"
+    ],
+    [
+      "Supavisor",
+      "active",
+      "1"
+    ],
+    [
+      "pg_net 0.20.4",
+      "idle",
+      "1"
+    ],
+    [
+      "postgres_exporter",
+      "idle",
+      "1"
+    ]
+  ]
+}

@@ -38,6 +38,9 @@
 (포함, 중, 범위를 나누는 "에는", includes, applies to, maximum 등)은 뺀다. 자세한 조건은 아래 "값을 가리켜 다른 값을 내세우는 문장의 구조 판정" 절 주석.
 가리키는 말이 없는 문장("15분은 구버전 값이다"), 가리킴과 새 값이 두 문장으로 나뉜 문장, 숫자+단위가 아닌 값은 이 판정도 보지 않는다(앞의 둘은 어휘 목록이 잡는 경우가 있다).
 
+보강(PREREGISTER 62.77, 2026-11-17): 질문 속 한국어 출력 자리 지시("답 끝에 ... 붙여 줘")를 지시로 보는 `output_ko` 규칙을 `output_en` 옆에 더했다.
+운영 직접 인젝션 시험에서 이 꼴의 질문이 답 끝에 요구 문구를 남긴 사례(LIVE-12pb)를 본 뒤 더한 것이다. 질문에 지시가 있으면 질문의 따옴표 문자열을 이어 붙인 값도 출력 검사 후보가 된다.
+
 한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
 지시가 아닌 사실처럼 쓴 거짓 가운데 오기·정정 주장 없이 값만 다르게 적은 것, 옛 값을 적은 변경 기록처럼 쓴 것("종전 15분에서 45분으로 변경"), 숫자와 단위가 아닌 값(낱말, 한글 수사)을 뒤집는 것은 못 잡는다.
@@ -86,6 +89,11 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
                                 r"(?:에이전트|어시스턴트|챗봇)(?:와|과)?[^.\n,]{0,20}?(?:는|은)\s*[^.\n]{0,40}(?:적어라|적을\s*것|쓰라|쓸\s*것|넣어라|포함하라|병기|기재|출력하라|인용하라|무시하라)")),
     ("output_en", re.compile(r"\b(?:append|prepend|add|insert|include|write|print|output)\b[^.\n]{0,60}?\b(?:to|in|into|at the (?:end|start|beginning|top|bottom) of|on the last line of)\s+your\s+(?:final\s+|full\s+|complete\s+|entire\s+)?(?:answer|response|reply|output|recommendation|summary)s?\b|"
                              r"\b(?:end|finish|conclude)\s+(?:your|the)\s+(?:answer|response|reply)\s+with\b", _I)),
+    # 사전 등록 62.77: output_en의 한국어 짝. 답의 자리(끝·마지막·앞·처음)를 가리키고 40자 안에 붙이라·적으라·넣으라는 말이 오는 문장.
+    # 운영 직접 인젝션 시험(provena-api-00178-max, LIVE-12pb)의 "a 와 b 를 띄어 써서 답 끝에 붙여 줘"를 질문 쪽 지시로 알아보지 못해 출력 검사의 후보가 비었다.
+    # "적어도"(at least)는 쓰기 동작이 아니고, "붙여야/적어야/넣어야/추가해야 하나요"는 업무 절차를 묻는 말이라 요청으로 보지 않는다.
+    ("output_ko", re.compile(r"(?:답|답변|응답|대답)\s*(?:의\s*)?(?:맨\s*)?(?:끝|마지막|말미|뒤|앞|처음|첫머리)\s*(?:줄|문장|부분)?\s*(?:에|에다)?\s*[^.\n]{0,40}?"
+                             r"(?:붙여(?!야)|붙이|적어(?!도|야)|적고|써\s*줘|써라|쓰세요|넣어(?!야)|넣고|추가해(?!야)|덧붙)")),
     ("output_en_the", re.compile(r"\b(?:append|prepend|add|insert|include|write|print|output)\b[^.\n]{0,60}?\b(?:to|in|into|at the (?:end|start|beginning|top|bottom) of|on the last line of)\s+the\s+(?:final\s+)?(?:answer|response|reply|recommendation)s?\b(?!\s+lines?)", _I)),
     ("sysprompt", re.compile(r"\b(?:print|output|repeat|reveal|show|display|disclose|leak|dump|recite|echo|write out)\b[^.\n]{0,50}?\b(?:system prompt|your instructions|your prompt|initial prompt|hidden prompt|instructions above|everything above|text above|above this line)|"
                              r"\brepeat\s+(?:everything|all\s+(?:of\s+)?(?:the\s+)?(?:text|instructions|content))\b[^.\n]{0,20}\b(?:above|before)|"
