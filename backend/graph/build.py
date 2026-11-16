@@ -452,6 +452,8 @@ def build_graph(
 
     research_limit = resolve_max_research(max_research)
     run_parallel = env_flag("GRAPH_PARALLEL_INTAKE") if parallel_intake is None else bool(parallel_intake)
+    # `GRAPH_CLASSIFY_RACE`(기본 꺼짐): 같은 분류 호출 두 개를 처음부터 동시에 보내 먼저 성공한 결과로 경로를 정한다. 도메인 밖 두 번 확인은 남은 호출의 결과를 쓴다(판정 규칙은 그대로)
+    classify_race = env_flag("GRAPH_CLASSIFY_RACE")
     brief = env_flag("LLM_BRIEF_OUTPUT") if brief_output is None else bool(brief_output)
     judge_system = P.JUDGE_SYSTEM_BRIEF if brief else P.JUDGE_SYSTEM
     judge_query_on = env_flag("GRAPH_JUDGE_QUERY")
@@ -797,12 +799,64 @@ def build_graph(
             return {"route": "out_of_domain"}
         picked: dict = {}   # 결정표 경로로 가기로 한 질문에서 분류 단계가 미리 뽑은 값. `decision_params`가 같은 값을 다시 뽑지 않고 쓴다
 
+        # 키 없는 데모(녹화 재생)는 동시 분류를 쓰지 않는다: 같은 요청 두 개가 녹화 변형을 받는 차례가 스레드 경쟁으로 정해지지 않게 지금처럼 차례로 부른다
+        race = classify_race and not replay_demo()
+        loser: list = []   # 동시 분류에서 먼저 성공한 쪽을 쓴 뒤 남은 호출(Future). 도메인 밖 두 번 확인이 그 결과를 쓴다
+
         def once() -> str:
             obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
             return route_of(obj)
 
+        def raced() -> str:
+            """`GRAPH_CLASSIFY_RACE=1`: 같은 분류 호출 두 개를 동시에 보내 먼저 성공한 결과를 쓰고, 남은 호출은 `loser`에 둔다.
+            한 호출이 실패하면 다른 호출을 기다리고, 둘 다 실패하면 먼저 확인한 오류를 올린다. 비용 상한 초과는 바로 올린다.
+            두 호출 모두 배경 호출(`in_background`)이라 분류 노드의 기록 아래에 남고 비용 집계(`CostTracker`)에도 각각 잡힌다."""
+            pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="classify_race")
+            calls = [in_background(pool, "classify", once) for _ in range(2)]
+            pool.shutdown(wait=False)
+            errors: list[BaseException] = []
+            pending = set(calls)
+            while pending:
+                done, pending = wait_futures(pending, return_when=FIRST_COMPLETED)
+                for fut in sorted(done, key=calls.index):
+                    try:
+                        route = fut.result()
+                    except CostCapExceeded:
+                        raise
+                    except Exception as e:  # noqa: BLE001  한 호출의 실패는 다른 호출의 결과로 넘긴다
+                        log.warning("동시 분류 호출 하나 실패: %s", type(e).__name__)
+                        errors.append(e)
+                        continue
+                    loser.append(calls[1 - calls.index(fut)])
+                    return route
+            raise errors[0]
+
+        def confirm() -> str:
+            """도메인 밖 두 번째 확인. 동시 분류를 켰으면 남은 호출의 결과를 기다려 쓴다. 그 호출이 실패했거나 동시 분류가 꺼져 있으면 지금처럼 한 번 더 부른다."""
+            if not loser:
+                return once()
+            try:
+                return loser.pop().result()
+            except CostCapExceeded:
+                raise
+            except Exception as e:  # noqa: BLE001
+                log.warning("동시 분류의 남은 호출 실패, 확인 호출을 한 번 더 부른다: %s", type(e).__name__)
+                return once()
+
+        def settle_loser(route: str) -> None:
+            """정책 경로가 아니면(검색 없이 일찍 끝날 수 있는 경로) 남은 분류 호출이 끝날 때까지 기다려 답이 나간 뒤에 호출이 돌지 않게 한다. 결과와 오류는 버리고 비용 상한만 올린다.
+            정책 경로는 기다리지 않는다: 검색·판정이 도는 동안 끝나 비용 집계에 잡힌다(답 작성의 추론 답 경쟁과 같은 방식)."""
+            if not loser or takes_policy_path(route):
+                return
+            try:
+                loser.pop().result()
+            except CostCapExceeded:
+                raise
+            except Exception as e:  # noqa: BLE001
+                log.warning("동시 분류의 남은 호출 실패(버림): %s", type(e).__name__)
+
         def decide() -> str:
-            route = once()
+            route = raced() if race else once()
             if route == "decision" and not decision_ready(state["question"]):  # 결정표를 실행할 수 없는 질문을 거절로 끝내지 않고 핸드북에서 찾는다
                 return "rule"
             if route == "decision" and decision_repo is not None:
@@ -813,12 +867,14 @@ def build_graph(
             if route == "review" and review_graph is not None and asks_fact_not_review(state["question"] or ""):  # 사실을 묻는 질문을 승인 대기로 멈추지 않는다
                 return "rule"
             # 도메인 밖은 검색 없이 끝나 뒤 단계가 되돌릴 수 없다. 두 번 다 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다
-            if route == "out_of_domain" and once() != "out_of_domain":
+            # (동시 분류를 켜면 두 번째 결과는 이미 같이 보낸 호출의 것이라 차례로 기다리지 않는다)
+            if route == "out_of_domain" and confirm() != "out_of_domain":
                 route = "rule"
             return route
 
         if not run_parallel:
             route = decide()
+            settle_loser(route)
             return {"route": route, **({"decision_query": picked} if route == "decision" else {})}
 
         # 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
@@ -837,6 +893,7 @@ def build_graph(
             if spec is not None:
                 spec["routed"].set()
         if not takes_policy_path(route):  # 순차라면 부르지 않았을 호출이다. 결과와 오류를 모두 버린다
+            settle_loser(route)
             if capped is not None:
                 capped[1].shutdown(wait=False, cancel_futures=True)
             if spec is not None:  # SP: 예비 분해만 돌았다(판정 전에 경로를 본다). 끝날 때까지 기다려 늦은 호출을 남기지 않는다

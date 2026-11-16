@@ -74,8 +74,9 @@ CITE_ADD_GUARD_6270 = {"GRAPH_CITE_ADD_GUARD": "1"}
 BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
 # 사전 등록 62.73: 나뉜 질문의 첫 검색만 근거 목록 상한까지 요청(코드 기본은 꺼짐). 사전 등록 62.74로 서비스 값에서 뺐다(되살린 SPLIT_K가 같은 검색을 넓힌다)
 BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
-# 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지, 값 뒤집기의 구조 판정
-SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1", "GRAPH_KEEP_SUBJECT_UNION": "1"}
+# 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지, 값 뒤집기의 구조 판정,
+# 원 하위 질문 검색 합치기, 분류 호출 동시 요청
+SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1", "GRAPH_KEEP_SUBJECT_UNION": "1", "GRAPH_CLASSIFY_RACE": "1"}
 # 2026-11-16 효과 분리 측정용 스위치 6개(코드 기본도 켬, 서비스 값은 지금 동작을 적은 것. 측정 실행기 인자에는 없다)
 ABLATION_1116 = {"GRAPH_INTRO_IN_CORE": "1", "GRAPH_CITE_HEAD_OWNER": "1", "GRAPH_FIRST_PAGE_FILL": "1", "GRAPH_CITE_EXPAND_NARROW": "1",
                  "GRAPH_CITE_PHRASE_WHOLE_ROWS": "1", "SEARCH_FULL_TAIL": "1"}
@@ -118,6 +119,8 @@ def test_service_values_match_the_measured_arguments():
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"                 # 일찍 시작하는 검색은 예비 분해(SP)가 켜져 있어야 쓰인다
+    assert {k: SP.SERVICE_ENV.get(k) for k in SERVICE_ONLY_1116} == SERVICE_ONLY_1116 and not set(SERVICE_ONLY_1116) & set(SP.CANDIDATE_ENV)
+    assert "GRAPH_CLASSIFY_RACE" not in SP.DEFAULT_ON_ENV                 # 코드 기본 꺼짐: off는 빈 값(= 끔)으로 바뀐다
     assert {k: SP.SERVICE_ENV.get(k) for k in ABLATION_1116} == ABLATION_1116 and set(ABLATION_1116) == SP.DEFAULT_ON_ENV   # 62.52 등: 코드 기본도 켬, 서비스 값 켬
     assert not set(ABLATION_1116) & set(SP.CANDIDATE_ENV)
     assert SP.SERVICE_ENV["SEARCH_HNSW"] == "1"  # 측정 환경 변수

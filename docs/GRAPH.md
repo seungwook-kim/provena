@@ -359,6 +359,7 @@ flowchart TD
 | `GRAPH_JUDGE_QUERY` | `build.py:457` | 끔 | 켬(`service_profile.py:62`) | 재검색 때 판정이 낸 검색어를 써서 `rewrite`가 LLM을 부르지 않는다 |
 | `GRAPH_SKIP_FIRST_REWRITE` | `build.py:532` | 끔 | 켬(`service_profile.py:58`) | 분해를 켜고 질문에 시점이 없으면 첫 `rewrite`의 LLM을 건너뛴다 |
 | `GRAPH_PARALLEL_INTAKE` | `build.py:454` | 끔 | 켬(`service_profile.py:54`) | `classify` 안에서 첫 재작성·분해를 동시에 부르고, 정책 경로가 아니면 결과를 버린다 |
+| `GRAPH_CLASSIFY_RACE` | `build.py:456`, 쓰는 곳 `build.py:803`(`raced`, `confirm`, `settle_loser`) | 끔 | 켬(`service_profile.py:156`) | `classify`가 같은 분류 호출 두 개를 처음부터 동시에 보내 먼저 성공한 결과로 경로를 정한다. 도메인 밖이면 남은 호출의 결과를 기다려 두 결과가 모두 도메인 밖일 때만 따른다(규칙은 그대로이고, 두 번째 호출을 차례로 부르지 않는다). 한 호출이 실패하면 다른 호출의 결과를 쓰고, 도메인 밖 확인에 쓸 남은 호출이 실패했으면 지금처럼 한 번 더 부른다. 정책 경로면 남은 호출을 기다리지 않고, 정책 경로가 아니면 노드가 끝나기 전에 남은 호출을 기다린다. 두 호출 모두 비용 집계와 호출 기록(`classify` 단계)에 남는다. 질문마다 분류 호출이 1번 는다(도메인 밖 질문은 그대로 2번). 키 없는 데모(녹화 재생)는 켜도 쓰지 않는다. 끄려면 `0`이나 `off` |
 | `GRAPH_SPECULATE_FIRST`, `GRAPH_SPECULATE_EARLY_SEARCH` | `answer_fixes.py:222`, `answer_fixes.py:228` | 끔 | 켬(`service_profile.py:85`, `service_profile.py:118`) | 분해가 "나누지 않음"이고 경로가 정책이면 미리 돌린 `rewrite`·`search`·`judge` 결과를 노드가 그대로 돌려준다. 아니면 버리고 노드를 직접 돌린다 |
 | `GRAPH_JUDGE_ANSWER` | `build.py:387` | 끔 | `parallel_all`(`service_profile.py:57`) | `judge`와 답 작성을 동시에 부르고, 충분 판정이면 `write_answer`가 그 답(`early_answer`)을 쓴다 |
 | `GRAPH_QUERY_BRANCHES` | `backend/graph/query_plan.py:24` | 끔 | 켬(`service_profile.py:69`) | 대상별로 절차가 갈리는 주제의 첫 검색을 대상별 하위 질문으로 나눈다(`query_targets`) |
