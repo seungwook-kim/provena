@@ -1,0 +1,2 @@
+2026-11-17 describe 비교 provena-api-00178-max(<=) vs provena-api-00181-zub(=>), env(비밀은 이름:키만)·주석·라벨·이미지·concurrency·timeout·sa·resources·ports·probe·volumes 57줄 대조
+차이: 이미지 digest(23557e67 -> 1a49f9e3), label commit(194dfd9a -> 9bc7d587), configurationGeneration(124 -> 126), 빌드 메타 주석(build-source-location, operation-id, creator)뿐. env·비밀 참조·스케일·동시성 차이 없음.

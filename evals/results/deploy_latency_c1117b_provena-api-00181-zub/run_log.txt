@@ -1,0 +1,28 @@
+2026-11-17T02:54:32 START serving=[provena-api-00178-max=100%] c1117b->provena-api-00181-zub (기대 provena-api-00181-zub) health=200
+2026-11-17T02:54:33 DB Supavisor=10 (상한 9)
+2026-11-17T02:55:33 DB Supavisor=10 (상한 9)
+2026-11-17T02:56:33 DB Supavisor=13 (상한 9)
+2026-11-17T02:57:34 DB Supavisor=13 (상한 9)
+2026-11-17T02:58:34 DB Supavisor=13 (상한 9)
+2026-11-17T02:59:35 DB Supavisor=13 (상한 9)
+2026-11-17T03:00:35 DB Supavisor=13 (상한 9)
+2026-11-17T03:01:36 DB Supavisor=13 (상한 9)
+2026-11-17T03:02:36 DB Supavisor=13 (상한 9)
+2026-11-17T03:03:37 DB Supavisor=13 (상한 9)
+2026-11-17T03:04:37 DB Supavisor=13 (상한 9)
+2026-11-17T03:05:37 DB Supavisor=13 (상한 9)
+2026-11-17T03:06:38 DB Supavisor=13 (상한 9)
+2026-11-17T03:07:38 DB Supavisor=13 (상한 9)
+2026-11-17T03:08:39 DB Supavisor=13 (상한 9)
+2026-11-17T03:09:39 DB Supavisor=13 (상한 9)
+2026-11-17T03:10:40 DB Supavisor=13 (상한 9)
+2026-11-17T03:11:40 DB Supavisor=13 (상한 9)
+2026-11-17T03:12:40 DB Supavisor=1 (상한 9)
+2026-11-17T03:17:18 run_bundle2 rc=0 window=2026-11-16T18:12:40Z..2026-11-16T18:17:18Z
+2026-11-17T03:17:18 v2 ok=50 fail=0 p95=7.819 cost=0.245564
+2026-11-17T03:17:18 gold | 1회차 | 0.933 | 0.080 | 2 | 0.940 | 0.000 | 1.000 | 25/25 | 0 |
+2026-11-17T03:17:18 gold | 회차 평균(범위) | 0.933 (0.933~0.933) | 0.080 (0.080~0.080) | 2.00 (2.00~2.00) | 0.940 (0.940~0.940) | 0.000 (0.000~0.000) | 1.000 (1.000~1.000) | | |
+2026-11-17T03:17:18 compare2 {"base": {"revision": "00172-rex", "gold_v2": {"cited_correct_rate": {"mean": 0.9467, "min": 0.9467, "max": 0.9467}, "wrong_citation_rate": {"mean": 0.04, "min": 0.04, "max": 0.04}, "citation_accuracy
+2026-11-17T03:18:23 5xx=0 (ok=True) chat_posts=51 (ok=True) window=2026-11-16T18:10:40Z..2026-11-16T18:19:18Z
+2026-11-17T03:18:25 END serving=[provena-api-00178-max=100%] (바뀌면 안 됨)
+2026-11-17T03:18:25 JOB076 DONE

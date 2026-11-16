@@ -1,0 +1,7 @@
+2026-11-17T02:49:24 START serving=[provena-api-00178-max=100%] c1117b->provena-api-00181-zub (기대 provena-api-00181-zub) health=200
+2026-11-17T02:49:24 DB Supavisor=6 (상한 9)
+2026-11-17T02:49:29 deploy_check rc=0 L0=통과 U1=통과 X1=통과 X2=통과 R1=통과 E1=통과 H1=통과
+2026-11-17T02:49:40 warmup rc=0 ok=1 fail=0 total_s=9.805 cost=0.014239 status=ok result=answer refuse_stage= refuse_reason= citations=4 thread=t-cefbd8759d82
+2026-11-17T02:49:41 thread_check thread=t-cefbd8759d82 threads_rows=1 checkpoints_rows=11 status=idle created_at=2026-11-16 17:49:31.489800+00:00 SAVED=1
+2026-11-17T02:49:43 END serving=[provena-api-00178-max=100%] (바뀌면 안 됨)
+2026-11-17T02:49:43 JOB074 DONE

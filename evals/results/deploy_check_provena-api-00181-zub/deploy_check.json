@@ -1,0 +1,47 @@
+{
+  "base_url": "https://c1117b---provena-api-cttaanqntq-du.a.run.app",
+  "checks": [
+    {
+      "id": "L0",
+      "desc": "두 계정으로 로그인한다",
+      "status": "통과",
+      "detail": "A와 B의 user_id가 다름"
+    },
+    {
+      "id": "U1",
+      "desc": "로그인하지 않은 요청은 401이다",
+      "status": "통과",
+      "detail": "7개 경로 모두 401"
+    },
+    {
+      "id": "X1",
+      "desc": "사용자 B는 A의 대화를 읽지 못한다(404)",
+      "status": "통과",
+      "detail": "B의 조회 404(not_found), B의 목록에 없음"
+    },
+    {
+      "id": "X2",
+      "desc": "B의 기억 조회에 A의 기억이 섞이지 않는다",
+      "status": "통과",
+      "detail": "B의 조회 3가지 모두 B 자신의 기억만 나옴(표식 대조)"
+    },
+    {
+      "id": "R1",
+      "desc": "관리자 전용 경로는 일반 사용자에게 403이다",
+      "status": "통과",
+      "detail": "3개 경로 모두 403"
+    },
+    {
+      "id": "E1",
+      "desc": "오류 본문에 스택 트레이스와 입력값이 없다",
+      "status": "통과",
+      "detail": "5가지 오류 응답 모두 깨끗함"
+    },
+    {
+      "id": "H1",
+      "desc": "응답에 X-Content-Type-Options와 X-Frame-Options가 있다",
+      "status": "통과",
+      "detail": "4개 응답 모두 있음"
+    }
+  ]
+}
