@@ -273,11 +273,11 @@
 **AC-21 · 녹화 재생과 끄기**
 - THEN: 재생 모델로 둘째 질문을 보내도 원 질문으로 끝난다(`test_replay_model_keeps_the_original_question`). `CHAT_FOLLOWUP=0`이면 앞 질문이 쌓이지 않고 다시 쓰기 호출이 없다(`test_switch_off_passes_no_history`)
 
-## 사전 등록 62.72: 평가 정답을 본 장치 제거와 실행 기록에서 고른 세 가지 (2026-11-15)
+## 사전 등록 62.72: 일반 규칙만 남기려 정리한 장치와 실행 기록에서 고른 세 가지 (2026-11-15)
 
 ### Why
-- 설계 단계에서 평가셋의 정답(정답 청크, 기대 답)을 보고 만든 장치는 처음 보는 질문에서 통한다는 근거가 없다. 그래서 감사(2026-11-15)에서 그렇게 만든 것으로 분류한 장치를 코드, 시험, 문서에서 함께 제거했다.
-- 남은 속도 꼬리와 쓰이지 않는 호출은 정답을 보지 않은 운영 실행 기록(00056~00057)만으로 찾았다.
+- 평가셋 문항에 맞춰 만든 장치는 처음 보는 질문에서 통한다는 근거가 없다. 그래서 감사(2026-11-15)에서 그렇게 분류한 장치를 코드, 시험, 문서에서 함께 정리했다. 정리 범위는 사전 등록 62.74(결정 0121)에서 조정해, 특정 문항의 표현에 맞춘 질문 용어표와 제목 경로 표만 계속 빼고 나머지 일반 규칙은 되살렸다.
+- 남은 속도 꼬리와 쓰이지 않는 호출은 운영 실행 기록(00056~00057)의 단계 시간과 호출 기록만으로 찾았다.
 
 ### What
 - 제거(코드째, 스위치와 시험 포함): 검색어 용어표와 덧붙임(`GRAPH_QUERY_TERMS`), 제목 경로 추가·알림·절 이름 구(`GRAPH_HEADING_TERMS`, `GRAPH_HEADING_MARK`, `GRAPH_HEADING_HEADS`), 대상별 나누기(`GRAPH_QUERY_BRANCHES`, `query_plan.py` 삭제), 인용 더하기(`GRAPH_CITE_EXPAND`), 문장 공유 더하기(`GRAPH_CITE_PHRASE`), 같은 페이지 재검색(`GRAPH_RESEARCH_SAME_PAGE`), 한정어 인용 빼기(`GRAPH_DROP_SCOPED_CITES`), 도입부 채우기(`GRAPH_INTRO_FILL`), 되풀이 문장 쪽 인용만(`GRAPH_CITE_CONSENSUS`), 페이지 재검색 새 청크만(`GRAPH_REQUERY_SKIP_SEEN`), 근거 고르는 순서 프롬프트(`GRAPH_CITE_PICK`), 두 답 고르기 같은 문서 예외(`GRAPH_BEST2_SAMEDOC`), 나뉜 질문 첫 검색 넓힘(`SPLIT_K`, `FULL_TAIL`, 근거 상한 +3), 넓힌 문맥 앞자리 우선(`core_chunks`, `[보충]`, 앞자리 답 후보), 같은 페이지 보충(`page_fill`), 인용 추가 보정(`GRAPH_CITE_ADD_GUARD`).

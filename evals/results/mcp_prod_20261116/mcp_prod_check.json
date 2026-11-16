@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-11-16T04:37:45+09:00",
+  "serving_revision": "provena-api-00068-drb",
+  "health": "200",
+  "mcp_initialize_without_token": "401",
+  "mcp_with_invalid_token": "401",
+  "MCP_TOKEN_env_present": true,
+  "max_instances": "1",
+  "langfuse_trace_with_search_handbook": "docs/images/langfuse/5-traces-00065-q84.jpg, 6-trace-detail-00065-q84.jpg",
+  "note": "토큰 값은 기록하지 않음. 토큰 없이·틀린 토큰으로 /mcp/ 호출 시 401 확인"
+}

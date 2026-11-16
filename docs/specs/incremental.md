@@ -37,7 +37,7 @@
 ## What
 
 **Happy Path**
-1. 매일 UTC 18:07(한국 03:07)에 workflow가 `python -m backend.rag.ingest.schedule --once` 를 부른다.
+1. 매일 02:14 KST에 정시 작업이 `python -m backend.rag.ingest.schedule --once` 를 부른다. Actions 무료 한도 소진으로 자동 실행이 멈춰 같은 명령을 팀장 PC 작업 스케줄러로 매일 02:14에 실행한다(2026-11-16부터). workflow 파일 `.github/workflows/handbook-sync.yml`(cron UTC 18:07, 한국 03:07)은 같은 명령을 담고 있고 비활성 상태다.
 2. 오늘 UTC 날짜 슬롯을 차지한다(`sync_runs` 의 `(job, slot)` UNIQUE). 이미 있으면 아무것도 하지 않고 끝난다.
 3. 색인 장부(`index_meta`)의 임베딩 모델 이름·차원이 지금 쓸 모델과 같은지 본다.
 4. 핸드북을 fetch하고, 마지막으로 성공 반영한 커밋(처음이면 고정 커밋)과 새 끝 커밋이 같으면 `noop` 으로 끝난다.
@@ -48,9 +48,9 @@
 9. 실패하면 전부 되돌리고 실행 기록을 `failed`(`error_kind`)로 남긴 뒤 종료 코드 1 → workflow의 `if: failure()` 단계가 디스코드로 알린다.
 
 **일회성 보정: 증분 판 다시 청킹 (결정 0118, 사전 등록 62.62)**
-`schedule.apply`는 이미 반영한 (rule_seq, version_id)를 건너뛰므로, 청크 생성 코드를 고쳐도 이미 들어간 증분 판은 다시 만들어지지 않는다. `python -m backend.rag.ingest.rechunk_increments`가 현재 판(`valid_to IS NULL`)이면서 스냅샷(`data/manifest.jsonl`)에 없는 판만 `schedule.page_chunks`로 다시 만든다. 쪽 원문은 그 판을 만든 실행의 `sync_runs.to_commit`에서 읽고(경로는 `detail`의 added·modified·format_only), 그 커밋에서 쪽의 마지막 수정이 `version_id`와 같은지 대조한다. 판마다 옛 행과 새 청크를 chunk_id로 맞춰 같음·바뀜·새로·사라짐을 세고, 바뀐 판은 한 트랜잭션으로 그 판의 행을 통째로 바꾼다(옛 행과 새 행이 한 판에 섞이지 않는다). 같은 글의 벡터는 DB에서 재사용하고(`schedule.apply`와 같은 질의) 없는 글만 임베딩하며, 추정 비용이 `--max-cost`(기본 0.10달러)를 넘으면 쓰기 전에 멈춘다. 스냅샷 행과 닫힌 증분 판은 바꾸지 않고 개수만 보고한다. 색인 장부가 `ready`가 아니거나 증분 수집이 실행 중이면 거부한다. 끝에서 `generation`을 한 번만 올리고, 바뀐 판이 없으면 올리지 않는다(두 번째 실행은 0). `--dry-run`은 연결을 읽기 전용으로 두고 Voyage를 부르지 않는다.
+`schedule.apply`는 이미 반영한 (rule_seq, version_id)를 건너뛰므로, 청크 생성 코드를 고쳐도 이미 들어간 증분 판은 다시 만들어지지 않는다. `python -m backend.rag.ingest.rechunk_increments`가 현재 판(`valid_to IS NULL`)이면서 스냅샷(`data/manifest.jsonl`)에 없는 판만 `schedule.page_chunks`로 다시 만든다. 쪽 원문은 그 판을 만든 실행의 `sync_runs.to_commit`에서 읽고(경로는 `detail`의 added·modified·format_only), 그 커밋에서 쪽의 마지막 수정이 `version_id`와 같은지 대조한다. 판마다 옛 행과 새 청크를 chunk_id로 맞춰 같음·바뀜·새로·사라짐을 세고, 바뀐 판은 한 트랜잭션으로 그 판의 행을 통째로 바꾼다(옛 행과 새 행이 한 판에 섞이지 않는다). 같은 글의 벡터는 DB에서 재사용하고(`schedule.apply`와 같은 질의) 없는 글만 임베딩하며, 추정 비용이 `--max-cost`(기본 0.10달러)를 넘으면 쓰기 전에 멈춘다. 스냅샷 행과 닫힌 증분 판은 바꾸지 않고 개수만 보고한다. 색인 장부가 `ready`가 아니거나 증분 수집이 실행 중이면 거부한다. 끝에서 `generation`을 한 번만 올리고, 바뀐 판이 없으면 올리지 않는다(두 번째 실행은 0). `--dry-run`은 연결을 읽기 전용으로 두고 Voyage를 부르지 않는다. 2026-11-16 운영 DB `--dry-run`: 증분 현재 판 328개 중 315개는 다시 잘라도 7,267행이 같아 바꿀 판 0, 13개는 `version_mismatch`(로컬 핸드북 캐시와 DB 판의 커밋이 다름, 11/16 02:14 수집분)로 건너뛰었다. 실행(쓰기)은 하지 않았다.
 
-**재임베딩 단위와 실행 기록의 현재 상태 (F-17·F-08, 2026-11-11 확인)**
+**재임베딩 단위와 실행 기록의 현재 상태 (F-17·F-08, 2026-11-16 갱신)**
 
 | 항목 | 현재 동작 | 근거 |
 |---|---|---|
@@ -58,9 +58,9 @@
 | 바뀐 쪽 안에서 | 청크 본문(머리말·겹침 포함, 임베딩 입력 그대로)이 같은 글은 DB의 벡터를 재사용하고 없는 글만 임베딩한다. 키는 **글 전체 문자열**이지 `text_sha256` 해시가 아니다 | `schedule.apply`의 `known`·`need`·`reused` |
 | 재사용 범위 | **같은 쪽(`rule_seq`)의 기존 청크 한정** + 같은 `embedder`. 다른 쪽에 같은 글이 있어도(예: 쪽 사이 이동) 새로 임베딩한다 | `schedule.apply`의 `known` 조회(`WHERE rule_seq = ANY(%s) AND embedder = %s`) |
 | 해시 단위로 안 한 것 | 전역 `text_sha256` 조회로 넓히면 쪽 이동·복제 문단도 재사용할 수 있으나, 아직 하지 않았다(같은 쪽 범위만으로 11/2 DB 사본 실행에서 새로 124·재사용 4,007) | ingest.md 작업 기록 11/02 |
-| 성공 실행 기록 | 코드는 한 트랜잭션 끝에서 `sync_runs.status='succeeded'` 를 남긴다(`schedule.apply`의 `finish(..., "succeeded", ...)` 호출). 그러나 **운영 DB에서 정시 실행이 성공한 기록은 아직 없다**: Actions 정시 실행 3회(UTC 11/3 00:54, 11/3 23:14, 11/4 23:36) 모두 `sync` 작업의 "증분 수집 한 번" 단계에서 실패했고 이후 workflow는 `disabled_manually`(11/11 API 확인). 로컬 새 DB에서 손으로 돌린 `--once`는 11/12 성공(아래 결정 ①)이며 운영 DB·Actions 기록은 아니다 | Actions API 실행 id 41556125760·41737577192·41935004516 |
-| 실패 원인(추정) | 저장소 비밀값 `DATABASE_URL`·`VOYAGE_API_KEY` 가 만들어진 시각이 2026-11-09 07:03Z로, 세 실행보다 뒤다. 그 단계는 `DATABASE_URL` 이 없으면 `SystemExit("DATABASE_URL이 없다")`(`schedule.main`의 `DATABASE_URL` 검사)로 종료 코드 1을 낸다. 작업 로그는 API로 읽을 수 없어(종료 코드 1 주석만 남음) 직접 확인한 것은 아니며, 단계 순서(캐시·pip 성공 → 수집 단계 실패)와 비밀값 시각이 일치하는 정황이다 | 비밀값 목록·변수 조회(값은 보지 않음), 작업 단계 결과 |
-| 다시 켜기 전 | `SYNC_ALERT_WEBHOOK` 비밀값은 아직 없다(실패 알림은 "알림 꺼짐"으로 끝남). 켜는 일은 조장 결정이고 이 문서는 켜지 않는다 | 비밀값 목록 |
+| 성공 실행 기록 | 코드는 한 트랜잭션 끝에서 `sync_runs.status='succeeded'` 를 남긴다(`schedule.apply`의 `finish(..., "succeeded", ...)` 호출). **운영 DB의 첫 정시 실행은 2026-11-16 02:14 KST에 성공했다: `sync_runs` run_id=2, trigger=schedule, slot 2026-11-15, 47초, 핸드북 `8586740b`→`8fce8267`, 추가 2·수정 50·서식만 6·삭제 감지 2(반영 0), 새로 임베딩 167·재사용 964**. 이후 매일 02:14에 실행하고 동결(2026-11-16 24:00) 뒤에도 계속한다. 이 문서와 `EVAL_REPORT.md`의 측정값은 11/16 색인 기준이다. 이전 기록: Actions 정시 실행 3회(UTC 11/3 00:54, 11/3 23:14, 11/4 23:36)는 모두 `sync` 작업의 "증분 수집 한 번" 단계에서 실패했고 이후 workflow는 `disabled_manually`(11/11 API 확인). 로컬 새 DB에서 손으로 돌린 `--once`는 11/12 성공(아래 결정 ①) | 운영 DB `sync_runs`(`evals/results/sync_prod_20261116/`), Actions API 실행 id 41556125760·41737577192·41935004516 |
+| 11/3~11/4 실패 원인(추정) | 저장소 비밀값 `DATABASE_URL`·`VOYAGE_API_KEY` 가 만들어진 시각이 2026-11-09 07:03Z로, 세 실행보다 뒤다. 그 단계는 `DATABASE_URL` 이 없으면 `SystemExit("DATABASE_URL이 없다")`(`schedule.main`의 `DATABASE_URL` 검사)로 종료 코드 1을 낸다. 작업 로그는 API로 읽을 수 없어(종료 코드 1 주석만 남음) 직접 확인한 것은 아니며, 단계 순서(캐시·pip 성공 → 수집 단계 실패)와 비밀값 시각이 일치하는 정황이다 | 비밀값 목록·변수 조회(값은 보지 않음), 작업 단계 결과 |
+| 실행 주체와 실패 알림 | Actions 무료 한도 소진으로 자동 실행이 멈춰 같은 명령을 팀장 PC 작업 스케줄러로 매일 02:14에 실행한다. 실패하면 메일로 알린다(시험 메일 수신 확인). DB는 세션 모드 주소로 연결한다. workflow는 비활성으로 두고, workflow의 `SYNC_ALERT_WEBHOOK` 비밀값은 없다 | 작업 스케줄러 등록 내역(`evals/results/sync_prod_20261116/`) |
 
 **Edge Cases**
 
@@ -116,10 +116,11 @@ backend/rag/ingest/rechunk_increments.py   (일회성, 결정 0118)
 - `schedule: cron "7 18 * * *"`(UTC), `workflow_dispatch`, `concurrency: {group: handbook-sync, cancel-in-progress: false}`, `permissions: contents: read`, `persist-credentials: false`, `timeout-minutes: 30`(첫 실행에서 재고 고침)
 - 핸드북 캐시·모델 캐시는 `actions/cache` 로 이어 쓴다. 정시 실행은 main에 있는 workflow만 돈다.
 - 비밀값: `DATABASE_URL`, `VOYAGE_API_KEY`(기본 모델 voyage-4가 API라 새 글이 있는 날 임베딩에 쓴다. 키가 없는 채로 새 글이 들어오는 날은 임베딩 단계에서 실패하고 실패 알림이 간다. 서식만 바뀐 날은 벡터를 재사용하므로 키를 쓰지 않는다), `SYNC_ALERT_WEBHOOK`(조장, 운영 DB가 정해진 뒤). 변수: `EMBED_MODEL`(색인 장부와 같은 모델)
+- 현재 정시 실행은 팀장 PC 작업 스케줄러가 맡는다(위 표). 아래는 Actions로 되돌릴 때의 절차다.
 - 켜고 첫 실행: workflow는 현재 비활성(`disabled_manually`)이다. 비밀값·변수를 등록한 뒤 `gh workflow enable handbook-sync.yml`, `gh workflow run handbook-sync.yml`로 한 번 돌리고 `gh run list --workflow handbook-sync.yml`로 결과를 본다. 손으로 돌린 실행은 `GITHUB_EVENT_NAME`이 `workflow_dispatch`라 `trigger=manual`로 기록되고, 슬롯은 기본으로 그날 UTC 날짜라 같은 날 정시 실행이 이미 있었으면 슬롯 충돌로 아무것도 하지 않는다. 첫 성공 뒤 DB `sync_runs`의 마지막 행(`status`, `to_commit`, `embedded`, `reused`)을 확인한다.
 - 지금까지 실행 3건(2026-11-03~04)은 모두 "증분 수집 한 번" 단계에서 실패했다. 원인은 비밀값 미등록(`DATABASE_URL` 없음)으로 **추정**한다(작업 로그를 API로 읽을 수 없어 직접 확인하지 못했다, 위 표 "실패 원인(추정)").
-- 결정(11/11): ① 로컬 DB에서 `--once`를 1회 실행해 성공 기록 남기기(**했음**, 11/12 로컬: 127.0.0.1 새 DB에 `data/index.tar.gz` 스냅샷(고정 커밋 129243bc, 23,095청크)을 적재한 뒤 `--slot manual-f08-1112`로 1회 실행, `status=succeeded`, 129243bc → d92556d4(11/11), 추가 3·수정 149·서식만 152·삭제 반영 2, 새로 임베딩 436·재사용 6,946, Voyage 4회 호출 52,539토큰(약 0.003달러), 63초. 운영 DB·Actions는 건드리지 않았다) ②  Actions 결제 한도 해소 뒤 workflow 켜고 수동 1회·정시 1회. 결제 한도는 조직 설정이라 해소 요청 필요(11/11 Actions 실행 20건 러너 미기동, API 확인).
-- 실행 기록의 현재 상태 (2026-11-13 정리, 저장소·문서만 읽음, 새 호출 없음). **알려진 것**: ① Actions 정시 실행 3회 모두 실패, 성공 0회(위 표, 11/11 API 확인) ② 로컬 새 DB 수동 `--once` 1회 성공(11/12, 운영 DB·Actions 아님) ③ workflow 파일의 cron `7 18 * * *`(UTC)은 11/02(`3eba2624`) 처음 들어온 뒤 바뀐 적이 없다(`git log -p`로 확인, 11/09 `a118f4d2`는 다른 줄만 고침) ④ 11/12 박진형 제안은 동결 뒤에도 비활성 유지이고 조장 승인 대기다(`docs/pr-notes/PR-135.md` 6절, 결정 문서에는 아직 없음). **모르는 것**: ① 지금 workflow가 켜져 있는지: 켜기·끄기는 GitHub 저장소 설정이라 저장소 파일에는 보이지 않고, 마지막 확인은 11/11(`disabled_manually`)이다 ② 3회 실패의 직접 원인(위 "추정"만 있음) ③ 비밀값이 지금도 등록돼 있는지(11/11 목록 이후 미확인). 이 셋은 `gh workflow list`·`gh run list --workflow handbook-sync.yml`·저장소 설정에서 조장 권한으로 확인한다
+- 결정(11/11): ① 로컬 DB에서 `--once`를 1회 실행해 성공 기록 남기기(**했음**, 11/12 로컬: 127.0.0.1 새 DB에 `data/index.tar.gz` 스냅샷(고정 커밋 129243bc, 23,095청크)을 적재한 뒤 `--slot manual-f08-1112`로 1회 실행, `status=succeeded`, 129243bc → d92556d4(11/11), 추가 3·수정 149·서식만 152·삭제 반영 2, 새로 임베딩 436·재사용 6,946, Voyage 4회 호출 52,539토큰(약 0.003달러), 63초. 운영 DB·Actions는 건드리지 않았다) ② 운영 정시 실행은 팀장 PC 작업 스케줄러로 옮겨 2026-11-16 02:14 첫 실행에 성공했다(run_id=2). Actions로 되돌리는 것은 Actions 자동 실행이 다시 시작된 뒤에 정한다(11/11 Actions 실행 20건 러너 미기동, API 확인).
+- 실행 기록의 현재 상태 (2026-11-16 갱신). **알려진 것**: ① Actions 정시 실행 3회 실패, 운영 정시 실행(팀장 PC 작업 스케줄러) 첫 성공 2026-11-16 02:14(run_id=2) ② 로컬 새 DB 수동 `--once` 1회 성공(11/12, 운영 DB·Actions 아님) ③ workflow 파일의 cron `7 18 * * *`(UTC)은 11/02(`3eba2624`) 처음 들어온 뒤 바뀐 적이 없다(`git log -p`로 확인, 11/09 `a118f4d2`는 다른 줄만 고침) ④ 11/12 박진형 제안은 동결 뒤에도 비활성 유지이고 조장 승인 대기다(`docs/pr-notes/PR-135.md` 6절, 결정 문서에는 아직 없음). **모르는 것**: ① 3회 실패의 직접 원인(위 "추정"만 있음) ② workflow 비밀값이 지금도 등록돼 있는지(11/11 목록 이후 미확인). 이 둘은 `gh workflow list`·`gh run list --workflow handbook-sync.yml`·저장소 설정에서 조장 권한으로 확인한다
 
 **재시도 규칙**
 

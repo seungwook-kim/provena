@@ -1,0 +1,76 @@
+{
+ "tables": 10,
+ "pages": 7,
+ "chunks_overlapping": 17,
+ "chunk_ids": [
+  "d63ccc569f14a6f3",
+  "6f7c8e0188ea103f",
+  "a3a35850015994b6",
+  "792fdb15ddcce792",
+  "09e308fcc8460284",
+  "c05a38d503ace64a",
+  "bb29217f206815c3",
+  "a435b9d8b440af34",
+  "257790beb7df714f",
+  "1daa7516255712f2",
+  "28356b61e1b4984f",
+  "9ed3f1c0e5ac7a29",
+  "c61fc07495d83cfd",
+  "8c2de8e80ad6027f",
+  "1500be7bb33d06fe",
+  "4a4894148bfb8a67",
+  "5be7a68b552c0703"
+ ],
+ "items": [
+  {
+   "page": "handbook/business-technology/tech-stack-applications.md",
+   "line_start": 180,
+   "line_end": 192
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/application-lifecycle/workflow.md",
+   "line_start": 180,
+   "line_end": 254
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/design-documents/component_performance_testing/_index.md",
+   "line_start": 115,
+   "line_end": 166
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/developer-experience/design-documents/component_performance_testing/_index.md",
+   "line_start": 399,
+   "line_end": 533
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 84,
+   "line_end": 115
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 131,
+   "line_end": 176
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/_index.md",
+   "line_start": 215,
+   "line_end": 268
+  },
+  {
+   "page": "handbook/engineering/infrastructure-platforms/rate-limiting/managing-limits.md",
+   "line_start": 145,
+   "line_end": 183
+  },
+  {
+   "page": "handbook/security/corporate/team/_index.md",
+   "line_start": 9,
+   "line_end": 212
+  },
+  {
+   "page": "handbook/security/security-assurance/_index.md",
+   "line_start": 28,
+   "line_end": 63
+  }
+ ]
+}

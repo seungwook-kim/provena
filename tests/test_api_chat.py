@@ -185,6 +185,19 @@ def test_chat_error_messages_name_the_next_action():
     assert chat_error({"code": "InternalServerError", "message": "Error code: 500 - x"})[0] == "internal_error"
 
 
+def test_langchain_anthropic_wrapped_errors_keep_their_code():
+    """운영(2026-11-16, LLM_DEADLINE_S=0.01 0% 판)에서 시간 초과가 `AnthropicTimeoutError`로 와 internal_error로 나갔다.
+    langchain_anthropic이 감싼 예외 이름도 SDK 원래 예외와 같은 code로 나가야 한다."""
+    import anthropic
+    from langchain_anthropic import chat_models as lc
+
+    from backend.api.routes import chat_error
+
+    assert chat_error({"code": lc.AnthropicTimeoutError.__name__, "message": "Request timed out or interrupted."})[0] == "timeout"
+    assert chat_error({"code": lc.AnthropicRateLimitError.__name__, "message": "rate limited"})[0] == "provider_limit"
+    assert issubclass(lc.AnthropicTimeoutError, anthropic.APITimeoutError) and issubclass(lc.AnthropicRateLimitError, anthropic.RateLimitError)
+
+
 def test_threads_list_and_detail(monkeypatch):
     with Env(monkeypatch) as env:
         c = env.client(env.alice)

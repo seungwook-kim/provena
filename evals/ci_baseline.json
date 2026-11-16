@@ -39,11 +39,11 @@
     }
   },
   "current": {
-    "source": "현재 코드로 돌린 0원(키 없는 데모 재생, 오프라인) 평가의 기준값. evals/ci_current_eval.py가 README 데모 질문 9개(인용 답 6, 거절 3)를 서비스 설정의 질문 그래프에 돌려 낸 결과를 ci_compare.py --current가 이 값과 견준다. 기준은 녹화가 현재 코드와 맞는 상태(녹화에 없는 요청 0, 발췌형 대체 답 0, 인용 답 6, 거절 3)다. 프롬프트·검색·입력을 바꾸는 변경은 이 값이 어긋나므로 다시 녹화(RERECORD_HINT: tests/test_demo_replay_fresh.py)한 뒤 통과시킨다.",
+    "source": "현재 코드로 돌린 0원(키 없는 데모 재생, 오프라인) 평가의 기준값. evals/ci_current_eval.py가 README 데모 질문 9개(인용 답 7, 거절 2)를 서비스 설정의 질문 그래프에 돌려 낸 결과를 ci_compare.py --current가 이 값과 견준다. 기준은 녹화가 현재 코드와 맞는 상태(녹화에 없는 요청 0, 발췌형 대체 답 0, 인용 답 7, 거절 2)다. 2026-11-16 재녹화부터 10만 달러 질문이 거절에서 인용 답으로 바뀌어 기준을 인용 답 6, 거절 3에서 옮겼다. 프롬프트·검색·입력을 바꾸는 변경은 이 값이 어긋나므로 다시 녹화(RERECORD_HINT: tests/test_demo_replay_fresh.py)한 뒤 통과시킨다.",
     "metrics": {
       "n_questions": 9,
-      "answers_ok": 6,
-      "refusals_ok": 3,
+      "answers_ok": 7,
+      "refusals_ok": 2,
       "missed_calls": 0,
       "fake_answers": 0
     }

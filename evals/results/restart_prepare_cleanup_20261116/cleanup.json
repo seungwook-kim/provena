@@ -1,0 +1,10 @@
+{
+ "pending_before": 25,
+ "pending_after": 19,
+ "listed": 6,
+ "already_done": 0,
+ "rejected": 6,
+ "failed": 0,
+ "not_found": 0,
+ "note": "상태 파일에 적힌 시험 건만 대상, 식별자는 적지 않음"
+}

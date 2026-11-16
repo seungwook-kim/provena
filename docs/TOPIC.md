@@ -50,7 +50,7 @@
 
 ## 근거 (제출본 첨부)
 
-1. 사람인 공고 집계(2026-10-27): LLM·RAG·에이전트 개발 공고 352건, 그중 50건을 목록으로 정리했다. https://www.saramin.co.kr
+1. 사람인 공고 집계(2026-10-27): LLM·RAG·에이전트 개발 공고 352건. 공고 목록은 저장소에 싣지 않았다. https://www.saramin.co.kr
 2. Stack Overflow Developer Survey 2024 (해당 문항 28,911명): https://survey.stackoverflow.co/2024/professional-developers
 3. Atlassian Developer Experience Report 2025 (3,500명): https://www.atlassian.com/blog/developer/developer-experience-report-2025
 4. Port 2025 State of Internal Developer Portals: https://www.port.io/state-of-internal-developer-portals

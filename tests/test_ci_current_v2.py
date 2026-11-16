@@ -113,7 +113,7 @@ def test_demo_summary_ignores_v2_rows_and_v2_summary_counts_by_expected_kind():
 
 
 # ---------------------------------------------------------------- ci_compare --current 의 50건 비교
-DEMO_BASE = {"n_questions": 9, "answers_ok": 6, "refusals_ok": 3, "missed_calls": 0, "fake_answers": 0}
+DEMO_BASE = {"n_questions": 9, "answers_ok": 7, "refusals_ok": 2, "missed_calls": 0, "fake_answers": 0}
 V2_BASE = {"n_questions": 50, "relevant_answered": 24, "irrelevant_refused": 25, "missed_calls": 0, "fake_answers": 0}
 
 

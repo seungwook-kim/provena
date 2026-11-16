@@ -10,7 +10,7 @@
 - 색인 표의 "그 이유가 되는 질의"는 그 색인이 받쳐 주는 조건이나 정렬을 가진 SQL의 위치다. 제약이 만드는 색인(기본키, UNIQUE)의 이름은 PostgreSQL 기본 규칙에 따른 이름이며, 이 문서는 운영 DB에서 이름을 확인하지 않았다.
 - 표마다 색인의 "이유가 되는 질의"는 `docs/db/QUERY_INDEX.md`의 질의-색인 대조표(코드의 SQL 약 150문장)와 같다. 대조 결과 색인이 없어 문제가 되는 질의는 없고, 쓰이지 않는 색인은 109가 지웠다.
 - RLS와 권한은 모든 앱 표가 같다. 각 SQL 파일이 `ENABLE ROW LEVEL SECURITY`를 실행하고 정책(`CREATE POLICY`)은 어디에도 없다. 앱은 `DATABASE_URL`의 소유자 역할로 접속하므로 RLS의 영향을 받지 않는다(`db/120_answers_recall.sql:160-161`). `anon`, `authenticated` 역할의 표 권한은 `db/109_realign.sql` 단계 5(109:108-131)가 회수한다. 일반 PostgreSQL처럼 두 역할이 없으면 건너뛴다. 표마다 RLS를 켠 위치만 적는다. `signup_requests`는 106이 `PUBLIC`까지 포함해 따로 회수하고, `db/108_auth_privacy_hardening.sql`이 `users`와 `signup_requests`의 RLS와 권한 회수를 한 번 더 실행한다(3-3).
-- 재정렬 뒤 `public` 표는 31개다. 앱 표 25개(4장)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3). 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42), 옛 표 삭제(2026-11-11)를 모두 적용했고, 삭제 뒤 운영 `public` 표는 이 문서와 같은 31개(앱 25 + LangGraph 6)다(적용 기록은 2-3).
+- 현재 `public` 표는 32개다. 앱 표 26개(4장, 재정렬 뒤 25개에 `db/114_google_identities.sql`의 `user_identities`를 더함)와 LangGraph 표 6개(5장)다. `db/109_realign.sql`(1단계)을 적용한 DB에는 여기에 옛 표 3개가 원래 이름으로 남고, 2단계 `db/manual/109_retire_old.sql`을 실행하면 이름이 `_old_20261110`으로 바뀌며, `db/manual/109_purge_old.sql`을 실행해야 사라진다(2-3). 운영 DB에는 1단계(2026-11-10 밤), 2단계(2026-11-11 00:42), 옛 표 삭제(2026-11-11)를 모두 적용했고, 삭제 직후 운영 `public` 표는 31개(앱 25 + LangGraph 6, `user_identities` 제외)였다(적용 기록은 2-3).
 
 ## 2. 요약
 
@@ -143,7 +143,7 @@
 - `db/108_auth_privacy_hardening.sql`(PR #113)은 `users`와 `signup_requests`에 `ENABLE ROW LEVEL SECURITY`(14-15), `users`와 `signup_requests_request_id_seq`의 `PUBLIC` 권한 회수(17-18)를 실행하고, `anon`, `authenticated` 역할이 있을 때만 `users`, `signup_requests`, `signup_requests_request_id_seq`의 권한을 회수한다(`DO` 블록 20-32, 역할 확인 25). `signup_requests`의 `PUBLIC` 권한 회수는 108에 없고 106(`db/106_signup_approval.sql:16`)이 한다. 겹침: `users`의 RLS는 101(`db/101_auth_users.sql:16`)이, `signup_requests`의 RLS와 표 권한 회수는 106(`db/106_signup_approval.sql:15-27`)이 이미 하고, `anon`, `authenticated`의 표 권한은 109 단계 5(109:108-131)도 회수한다. 108만 새로 하는 일은 `users`의 `PUBLIC` 권한 회수와 `signup_requests_request_id_seq`의 권한 회수다(추정: 106에 시퀀스 회수가 없고 이 문서가 읽은 109 단계 5 설명도 시퀀스는 두 역할만 회수한다). 이미 회수한 권한을 다시 `REVOKE`해도 오류는 없다.
 - 108은 106·109와 같은 방식으로 역할이 있는지 확인한 뒤 회수한다(`pg_roles` 확인 `db/108_auth_privacy_hardening.sql:25`, 106은 `db/106_signup_approval.sql:21, 24`). 조장 커밋 da5b76a가 이렇게 고쳤다(`git diff 3f6e240 origin/main -- db/108_auth_privacy_hardening.sql`). 그 전 108은 역할을 확인하지 않아 `anon`, `authenticated`가 없는 일반 PostgreSQL에서 `role "anon" does not exist`로 멈췄고, `ensure_schema()`가 108을 실행하므로(`backend/services/auth_store.py:797`) 그런 DB에서 이 함수가 실패했다. 지금은 두 역할이 없어도 멈추지 않으며 몇 번을 돌려도 결과가 같다(`db/108_auth_privacy_hardening.sql:5-7`).
 
-## 4. 앱 표 25개
+## 4. 앱 표 26개
 
 ### 4-1. 인증
 

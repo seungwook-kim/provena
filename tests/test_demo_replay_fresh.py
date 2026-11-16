@@ -40,9 +40,9 @@ def _file_questions() -> list[str]:
 
 
 def test_questions_file_contains_every_readme_demo_question_as_written():
-    """README가 키 없이 된다고 적은 질문(인용 답 6개, 거절 3개)이 질문 파일에 글자 그대로 있어야 녹화가 그 질문을 돈다."""
+    """README가 키 없이 된다고 적은 질문(인용 답 7개, 거절 2개)이 질문 파일에 글자 그대로 있어야 녹화가 그 질문을 돈다."""
     answers, refusals = _readme_demo_questions()
-    assert len(answers) == 6 and len(refusals) == 3
+    assert len(answers) == 7 and len(refusals) == 2
     got = _file_questions()
     assert len(got) == len(set(got)), "질문 파일에 같은 질문이 두 번 있다"
     for q in answers + refusals:
