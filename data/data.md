@@ -54,6 +54,14 @@
   3. 다시 압축한다: `python -m backend.rag.ingest.snapshot pack-index` (sha256을 확인한 뒤 `data/index.tar.gz`를 새로 만든다. 같은 색인이면 같은 파일이 나와 diff가 없다)
   4. `data/index.tar.gz`를 색인을 바꾼 코드와 같은 PR로 커밋하고, 아래 작업 기록에 한 줄 남긴다. 다시 커밋할 때마다 저장소 기록에 압축 파일 크기만큼 쌓이므로 모델·청크가 바뀔 때만 다시 만든다
 
+## 키 없는 데모 녹화
+
+`data/demo_replay/recorded.jsonl`은 키 없는 데모(`DEMO_MODE=1`)가 재생하는 LLM 응답과 질문 임베딩(voyage-4 벡터) 녹화이고, 질문 목록은 `data/demo_replay/questions.txt`(README "키 없이 뜨는 데모 모드"의 질문 9개)이다. 녹화 요청과 맞지 않는 호출은 결정적 가짜 응답으로 대신한다.
+
+- **확인.** 녹화가 현재 코드와 맞는지는 키·네트워크 없이 `python -m pytest -m demo_replay`(`tests/test_demo_replay_fresh.py`)로 본다. 데모 질문마다 서버와 같은 질문 그래프를 새 Postgres에서 돌려 녹화에 없는 요청이 하나라도 있으면 실패하고 다시 녹화하라고 안내한다(프롬프트나 검색을 바꾼 뒤 실행하며, Docker와 pgvector 이미지가 필요하다. 접속 정보를 직접 줄 때는 `PROVENA_D5_PG_URL`).
+- **다시 녹화.** 색인이나 프롬프트를 바꾸면 다시 녹화한다. 색인이 적재된 새 DB(`docker compose down -v` 뒤)에서 이미 있는 `recorded.jsonl`을 지우고(남아 있으면 새 응답이 섞인다) `python -m backend.services.demo_record --questions data/demo_replay/questions.txt`를 실행한다(`DATABASE_URL`, `LLM_API_KEY`, `LLM_PROVIDER`, `VOYAGE_API_KEY` 필요). 이 명령은 서버와 같은 질문 그래프와 검색 설정(금액 구간 조회 `SEARCH_RANGE_N` 기본 3 포함)으로 돌려 재생과 같은 검색 조건을 맞춘다. `SEARCH_RANGE_N`을 직접 주면 재생도 녹화와 같은 값이어야 녹화 키가 맞는다. 녹화 뒤 `python -m pytest -m demo_replay`로 확인한다.
+- **녹화 이력.** 현재 녹화는 2026-11-16 03:35~03:37에 커밋 `5a8c652`의 코드로 질문 9개 전부를 새 DB에서 다시 뜬 것이다(금액 구간 조회 켬, LLM 비용 0.136달러, 커밋 `a374decb`). 그 전 녹화는 2026-11-11 20:44의 전체 녹화(기준 커밋 `9c71e0a`)에 2026-11-12 16:31(커밋 `9966bd3`)과 23:43~23:44(커밋 `41377ad`, PR #140)의 일부 재녹화, 2026-11-13 03:22의 금액 질문 3개 재녹화(사전 등록 62.46)를 바꿔 넣은 것이었다. 2026-11-13 전에는 녹화가 금액 구간 조회를 넣기 전 것이라 데모 모드만 조회를 끄고 재생했다. 2026-11-09 녹화는 커밋 `4f03a8d` 이후의 프롬프트(`ANSWER_SYSTEM`, `redraft_user` 규칙 추가)와 맞지 않아 답 본문이 "검색된 근거를 그대로 발췌한 답입니다(데모 모드: 실제 LLM이 쓴 답이 아닙니다)"라는 대체 문장이 되던 상태여서 새 녹화로 대체했다. 10만 달러 질문은 2026-11-13 녹화까지는 거절로 끝났고 2026-11-16 재녹화부터 답한다. 새 clone 확인 기록은 `docs/GATES.md` G2에 있다.
+
 ## 작업 기록 (최신이 위)
 
 | 날짜 | 작업자 | 한 일 | PR |

@@ -64,7 +64,7 @@
 - ID 키는 `login_id` 단독이며 기본 한도는 60초/5회다. IP 키는 `request.client.host` 기준 IP 단독이며 기본 한도는 60초/30회다. 두 한도 중 하나라도 소진되면 다음 요청부터 비밀번호 검증 전에 429를 반환하고, 해당 429 요청을 실패 기록에 추가하지 않는다.
 - 성공 로그인은 해당 ID의 실패 기록만 초기화하며 IP 전체 실패 기록은 유지한다. 제한 검사와 실패 기록 시 양쪽 저장소에서 60초 이상 지난 기록과 빈 키를 정리하므로, 다시 요청되지 않는 ID·IP의 만료 기록도 다음 처리 시 정리된다.
 - Cloud Run용 `TRUSTED_PROXY_HOPS=1`은 재배포 때 추가할 설정으로 적혀 있다(`docs/worklog.md:153`). 배포 주소에서 IP별로 나뉘는지는 재지 않았고 로컬 시험(`tests/test_deploy_hardening.py`)만 있다(`EVAL_REPORT.md:746`).
-- 로그인 실패 제한은 프로세스 메모리 기준이라 재시작 시 사라지고 인스턴스 사이에서 공유되지 않는다. 배포는 `--max-instances 1`이다(`README.md:172`, 설명은 `README.md:176`). 인스턴스를 늘리려면 공유 저장소(Redis 또는 PostgreSQL 등) 전환이 먼저다. 신뢰 프록시 정책(`TRUSTED_PROXY_HOPS`)은 구현돼 있고 배포 주소 실측만 남았다.
+- 로그인 실패 제한은 프로세스 메모리 기준이라 재시작 시 사라지고 인스턴스 사이에서 공유되지 않는다. 배포는 `--max-instances 1`이다(명령은 `README.md`의 "Cloud Run 재배포", 설명은 `docs/specs/deploy.md`의 "운영 재배포"). 인스턴스를 늘리려면 공유 저장소(Redis 또는 PostgreSQL 등) 전환이 먼저다. 신뢰 프록시 정책(`TRUSTED_PROXY_HOPS`)은 구현돼 있고 배포 주소 실측만 남았다.
 - 로컬 데모용 시드는 `backend/services/demo_seed.py`, 계정 생성은 `backend/services/create_account.py`, 운영 사용자 저장소는 `backend/services/auth_store.py`(`PostgresAuthStore`)다. 인증 라우터 시험은 `tests/test_auth_router_runtime.py`의 `FakeAuthStore`가 실행 중 생성한 UUID·비밀번호를 사용한다.
 
 ### 의존성과 검증
@@ -97,7 +97,7 @@
 - `/auth/google/start`는 Google 키(환경 변수 3개 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)가 하나라도 없으면 JSON 503 대신 `/login?oauth_error=google_unavailable`로 303 이동한다. 콜백 오류도 같은 `oauth_error` 방식이다. 로그인 화면(`web/react-app/src/pages/LoginPage.jsx`)이 승인 대기·거절·실패·사용 불가 문구를 보여 준다.
 
 Google OAuth의 상태 구분: 같은 이메일에 `pending` 신청이 있으면 승인 대기 오류로 안내하고, `rejected` 신청이면 `google_signup_rejected`로 구분해 안내한다. 이미 인증·승인된 이메일형 계정에 연결할 때는 기존 `role`과 `is_active`를 바꾸지 않는다. 113·114가 없는 DB에서는 호환 경로를 유지하고 Google 로그인만 `google_unavailable`로 닫는다.
-- 배포에 Google 키를 넣고 운영 DB에 마이그레이션을 적용하는 일, GCP 콘솔 설정은 조장이 한다(`README.md`의 "Google 로그인 설정"). 실제 Google 계정으로 한 브라우저 왕복은 하지 않았다(미검증).
+- 배포에 Google 키를 넣고 운영 DB에 마이그레이션을 적용하는 일, GCP 콘솔 설정은 조장이 한다(`docs/specs/deploy.md`의 "Google 로그인 설정"). 실제 Google 계정으로 한 브라우저 왕복은 하지 않았다(미검증).
 - 콜백이 성공하면 `/`로 보낸다(`backend/auth.py` `google_callback`, 303 `Location: /`). 화면은 `/`에서 세션 확인(`/me`)이 끝나기 전에는 랜딩을 그리지 않고 확인 중 안내를 보인 뒤, 로그인돼 있으면 `/chat`(또는 `/myinfo`)으로 보낸다. 확인 전에 랜딩이 잠깐 보였다가 채팅으로 넘어가던 것을 고쳤다(2026-11-13, 경희님 화면 점검).
 
 ## AC (Given-When-Then)
