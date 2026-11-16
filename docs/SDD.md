@@ -421,7 +421,7 @@ flowchart TD
 
 SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 멈췄다고 알리고, 질문을 줄이거나 나누어 다시 물어보라고 안내한다(2026-11-13 보완, `MSG_LIMIT`).
 
-**질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(`MAX_RESEARCH=2`, `backend/graph/build.py:64`)이 호출 수를 묶는다. 최종 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
+**질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(코드 상한 2회 `MAX_RESEARCH=2`, `backend/graph/build.py:64`, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, `backend/graph/service_profile.py:56`. 운영에도 1회가 적용된다)이 호출 수를 묶는다. 최종 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
 
 리콜 웹훅 형식(수신 경로, 본문, 서명)은 11장 11-1에서 정한다.
 
