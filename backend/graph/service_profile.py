@@ -16,7 +16,7 @@
   `--facts-log`(진단 기록), `--warm`(서비스는 `SEARCH_WARMUP=1`의 시작 준비가 `SEARCH_HNSW=1`일 때 같은 색인 미리 읽기를 한다).
 - 측정 실행기가 그래프에 따로 넘긴 페이지 안 검색, 도입부 채우기, 앞 청크 읽기는 서비스 검색기(`backend.rag.retrieve.search`)로 같은 일을 하는 함수를 넘긴다(`service_searches`).
 - 사전 등록 62.74: 62.72 정리 범위를 조정해 일반 규칙(대상별 나누기 포함)을 되살렸다. 검색어 용어표 덧붙임과 제목 경로 추가·알림·절 이름 구는
-  질문 용어표·제목 경로 표는 특정 문항의 표현에 맞춘 항목이라 다시 넣지 않는다(이 표에 없다). 62.73 `GRAPH_SPLIT_FULL_K`는 되살린 나뉜 질문 첫 검색 넓힘(`SPLIT_K`)과 같은 검색을 넓히므로 서비스 값에서 뺐다(코드 기본 꺼짐).
+  질문 용어표·제목 경로 표는 특정 문항의 표현에 맞춘 항목이라 다시 넣지 않는다(이 표에 없다). 62.73 `GRAPH_SPLIT_FULL_K`는 되살린 나뉜 질문 첫 검색 넓힘(`SPLIT_K`)과 같은 검색을 넓히므로 서비스 값에서 뺐다(코드 기본 꺼짐). 효과 분리 측정용 스위치 6개(`DEFAULT_ON_ENV`)는 코드 기본도 켬이고 `off`를 `0`으로 바꾼다.
 """
 from __future__ import annotations
 
@@ -138,7 +138,19 @@ SERVICE_ENV: dict[str, str] = {
     "GRAPH_FLIP_STRUCTURE": "1",
     # 사전 등록 62.73 `GRAPH_SPLIT_FULL_K`는 넣지 않는다(사전 등록 62.74): 되살린 `SPLIT_K`(나뉜 질문 첫 검색 8자리, 달러 금액 질문 제외)가 같은 검색을 넓힌다.
     # 켜면 나뉜 질문의 첫 검색이 근거 목록 상한(MAX_CHUNKS=10)까지 요청한다
+    # 효과 분리 측정용 스위치(2026-11-16). 코드 기본도 켬이라 이 값은 지금 동작을 그대로 적은 것이다. 측정 실행기 인자에는 없다(서비스 경로만).
+    # 끄려면 환경 변수에 `0`이나 `off`를 준다(`off`는 `DEFAULT_ON_ENV`라서 빈 값이 아니라 `0`으로 바뀐다)
+    "GRAPH_INTRO_IN_CORE": "1",            # 62.51: 넓힌 첫 검색의 앞자리에 도입부 채우기 청크 포함
+    "GRAPH_CITE_HEAD_OWNER": "1",          # 62.52: 겹친 머리 인용 바로잡기(62.58, 62.70 M 포함)
+    "GRAPH_FIRST_PAGE_FILL": "1",          # 62.55: 나뉜 질문 첫 검색의 같은 페이지 보충 청크 1개
+    "GRAPH_CITE_EXPAND_NARROW": "1",       # 62.56: 인용 더하기의 같은 절 제외와 표 행 첫 칸 일치
+    "GRAPH_CITE_PHRASE_WHOLE_ROWS": "1",   # 62.57: 문장 공유 더하기의 표 행 줄 전체 일치
+    "SEARCH_FULL_TAIL": "1",               # 62.38: 나뉜 질문 k=8 첫 검색의 원 질문 끝자리 수(0이면 끝자리 없음)
 }
+
+# 코드 기본이 켬인 서비스 값. `off`를 빈 값(= 코드 기본 = 켬)으로 바꾸면 끌 수 없으므로 이 이름들은 `off`를 `0`으로 바꾼다(`apply_service_profile`)
+DEFAULT_ON_ENV = frozenset({"GRAPH_INTRO_IN_CORE", "GRAPH_CITE_HEAD_OWNER", "GRAPH_FIRST_PAGE_FILL", "GRAPH_CITE_EXPAND_NARROW",
+                            "GRAPH_CITE_PHRASE_WHOLE_ROWS", "SEARCH_FULL_TAIL"})
 
 
 # 응답 시간 p95 단축 후보. 운영 측정 전이라 서비스 값(`SERVICE_ENV`)에 넣지 않는다(62.16의 두 스위치와 62.14의 검색 hedge는 서비스 값으로 올렸다). 켜려면 환경 변수로 직접 주고(Cloud Run 리비전 환경 변수),
@@ -172,7 +184,7 @@ def profile_enabled(environ: MutableMapping[str, str] | None = None) -> bool:
 def apply_service_profile(environ: MutableMapping[str, str] | None = None) -> dict[str, str | None]:
     """환경 변수를 채운다. 돌려주는 값은 바꾼 변수 -> 원래 값(없었으면 None)이고 `restore_env`에 넘긴다.
 
-    값이 있으면 그대로 두고, `off`면 빈 값으로 바꾸고(묶음을 꺼도 같다), 비었거나 없으면 서비스 값을 넣는다(묶음을 켰을 때만)."""
+    값이 있으면 그대로 두고, `off`면 빈 값으로 바꾸고(묶음을 꺼도 같다. 코드 기본이 켬인 `DEFAULT_ON_ENV`는 `0`), 비었거나 없으면 서비스 값을 넣는다(묶음을 켰을 때만)."""
     env = os.environ if environ is None else environ
     enabled = profile_enabled(env)
     before: dict[str, str | None] = {}
@@ -180,7 +192,7 @@ def apply_service_profile(environ: MutableMapping[str, str] | None = None) -> di
         raw = env.get(name)
         current = (raw or "").strip()
         if current.lower() == OFF:
-            new = ""
+            new = "0" if name in DEFAULT_ON_ENV else ""
         elif not current and enabled:
             new = default
         else:
@@ -189,8 +201,9 @@ def apply_service_profile(environ: MutableMapping[str, str] | None = None) -> di
             before[name] = raw
             env[name] = new
     kept = sorted(n for n in profile_values(env) if n not in before and (env.get(n) or "").strip())
+    turned_off = {n for n in before if not env.get(n) or (n in DEFAULT_ON_ENV and env.get(n) == "0" and (before[n] or "").strip().lower() == OFF)}
     log.info("서비스 설정 %s: %s, 채움 %d개, 끔 %d개, 직접 준 값 %d개(%s)", PROFILE_NAME, "켬" if enabled else "끔",
-             sum(1 for n in before if env.get(n)), sum(1 for n in before if not env.get(n)), len(kept), ", ".join(kept))
+             len(before) - len(turned_off), len(turned_off), len(kept), ", ".join(kept))
     return before
 
 

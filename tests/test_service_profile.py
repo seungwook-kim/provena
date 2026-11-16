@@ -76,6 +76,9 @@ BLIND_6272 = {"GRAPH_NONE_VOTE_WAIT_S": "1.0", "GRAPH_SPEC_STOP_GROUND": "1"}
 BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
 # 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지, 값 뒤집기의 구조 판정
 SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1"}
+# 2026-11-16 효과 분리 측정용 스위치 6개(코드 기본도 켬, 서비스 값은 지금 동작을 적은 것. 측정 실행기 인자에는 없다)
+ABLATION_1116 = {"GRAPH_INTRO_IN_CORE": "1", "GRAPH_CITE_HEAD_OWNER": "1", "GRAPH_FIRST_PAGE_FILL": "1", "GRAPH_CITE_EXPAND_NARROW": "1",
+                 "GRAPH_CITE_PHRASE_WHOLE_ROWS": "1", "SEARCH_FULL_TAIL": "1"}
 # 표의 행이 특정 문항에 맞춘 내용이라 제거한 채 둔 스위치(사전 등록 62.72·62.74). 서비스 값, 후보 값, 측정 인자 어디에도 없어야 한다
 REMOVED_6274 = ("GRAPH_QUERY_TERMS", "GRAPH_HEADING_TERMS", "GRAPH_HEADING_HEADS", "GRAPH_HEADING_MARK")
 REMOVED_ARGS_6274 = ("--query-terms", "--heading-terms", "--heading-heads", "--heading-mark")
@@ -108,14 +111,15 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116, *ABLATION_1116)}
     assert have == want
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
     assert not set(BLIND_6273) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))   # 62.73: 사전 등록 62.74로 서비스 값에서 뺐다(코드 기본 꺼짐)
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in EARLY_SEARCH_6253} == EARLY_SEARCH_6253 and not set(EARLY_SEARCH_6253) & set(SP.CANDIDATE_ENV)   # 62.53: 서비스 기본 켬
     assert SP.SERVICE_ENV["GRAPH_SPECULATE_FIRST"] == "1"                 # 일찍 시작하는 검색은 예비 분해(SP)가 켜져 있어야 쓰인다
-    assert "GRAPH_CITE_HEAD_OWNER" not in SP.SERVICE_ENV                  # 62.52는 스위치 없이 기본 동작이다
+    assert {k: SP.SERVICE_ENV.get(k) for k in ABLATION_1116} == ABLATION_1116 and set(ABLATION_1116) == SP.DEFAULT_ON_ENV   # 62.52 등: 코드 기본도 켬, 서비스 값 켬
+    assert not set(ABLATION_1116) & set(SP.CANDIDATE_ENV)
     assert SP.SERVICE_ENV["SEARCH_HNSW"] == "1"  # 측정 환경 변수
     # openrouter 공급자는 같은 수준을 LLM_REASONING*로 읽는다
     assert (SP.SERVICE_ENV["LLM_REASONING"], SP.SERVICE_ENV["LLM_REASONING_BY_TASK"]) == (SP.SERVICE_ENV["LLM_EFFORT"], SP.SERVICE_ENV["LLM_EFFORT_BY_TASK"])
@@ -186,6 +190,40 @@ def test_fills_empty_and_missing_keeps_given_and_off_clears():
     assert "SEARCH_VIA_MCP" not in env                                           # MCP_TOKEN이 없으면 직접 호출
     SP.restore_env(before, env)
     assert env == original
+
+
+def test_default_on_switches_turn_off_with_off_or_zero(monkeypatch):
+    """효과 분리 측정용 스위치는 코드 기본이 켬이라 `off`를 빈 값으로 바꾸면 꺼지지 않는다. 서비스 설정은 `off`를 `0`으로 바꾸고, 읽는 쪽은 `0`을 끔으로 본다."""
+    import importlib
+
+    from backend.graph import answer_fixes as AF
+
+    S = importlib.import_module("backend.rag.retrieve.search")   # 패키지가 같은 이름의 함수 `search`를 내보낸다
+    env = {"GRAPH_INTRO_IN_CORE": "off", "GRAPH_CITE_HEAD_OWNER": "0", "SEARCH_FULL_TAIL": " OFF ", "GRAPH_CITE_PICK": "off"}
+    before = SP.apply_service_profile(env)
+    assert env["GRAPH_INTRO_IN_CORE"] == "0" and env["SEARCH_FULL_TAIL"] == "0"   # off -> 0(끔)
+    assert env["GRAPH_CITE_HEAD_OWNER"] == "0"                                    # 직접 준 0은 그대로
+    assert env["GRAPH_CITE_PICK"] == ""                                           # 코드 기본이 꺼짐인 스위치는 지금처럼 빈 값
+    assert env["GRAPH_FIRST_PAGE_FILL"] == "1" and env["GRAPH_CITE_EXPAND_NARROW"] == "1" and env["GRAPH_CITE_PHRASE_WHOLE_ROWS"] == "1"
+    assert S.full_tail(env) == 0 and S.full_tail({}) == 1 and S.full_tail({"SEARCH_FULL_TAIL": "1"}) == 1
+    SP.restore_env(before, env)
+    assert env == {"GRAPH_INTRO_IN_CORE": "off", "GRAPH_CITE_HEAD_OWNER": "0", "SEARCH_FULL_TAIL": " OFF ", "GRAPH_CITE_PICK": "off"}
+    readers = {"GRAPH_INTRO_IN_CORE": AF.intro_in_core_enabled, "GRAPH_CITE_HEAD_OWNER": AF.cite_head_owner_enabled, "GRAPH_FIRST_PAGE_FILL": AF.first_page_fill_enabled,
+               "GRAPH_CITE_EXPAND_NARROW": AF.cite_expand_narrow_enabled, "GRAPH_CITE_PHRASE_WHOLE_ROWS": AF.cite_phrase_whole_rows_enabled}
+    for name, read in readers.items():
+        monkeypatch.delenv(name, raising=False)
+        assert read() is True                          # 없으면 켬(코드 기본)
+        for value in ("", "1", "on"):
+            monkeypatch.setenv(name, value)
+            assert read() is True
+        for value in ("0", "off", "OFF", "false", "no"):
+            monkeypatch.setenv(name, value)
+            assert read() is False
+        monkeypatch.delenv(name, raising=False)
+    with pytest.raises(ValueError):
+        S.full_tail({"SEARCH_FULL_TAIL": "-1"})
+    with pytest.raises(ValueError):
+        S.full_tail({"SEARCH_FULL_TAIL": "x"})
 
 
 def test_profile_off_fills_nothing_but_still_clears_off():

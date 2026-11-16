@@ -797,8 +797,8 @@ class Searcher:
 
         merge = sub_merge_enabled() and len(texts) > 1
         # 나뉜 질문을 기본 자리 수보다 넓혀 찾으면(q.k > DEFAULT_K) 전체 질문(0번)의 후보 목록도 만들어 끝 FULL_TAIL자리를 준다(사전 등록 62.38).
-        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다
-        tail = FULL_TAIL if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
+        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다. `SEARCH_FULL_TAIL=0`이면 끝자리가 없다(`full_tail`)
+        tail = min(full_tail(), q.k - 1) if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
         idx = range(len(texts)) if merge or tail or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
@@ -1226,3 +1226,25 @@ def make_search(embedder: str, mode: str, reranker: str = "none", rerank_top: in
 
 def _no_embed(texts):
     raise RuntimeError("BM25만 방식에서 질문 임베딩을 부르면 안 된다")
+
+
+# ---------- 효과 분리 측정용 스위치(2026-11-16) ----------
+FULL_TAIL_ENV = "SEARCH_FULL_TAIL"  # 비었거나 없으면 FULL_TAIL(1, 지금 동작)
+
+
+def full_tail(environ=None) -> int:
+    """원 질문 목록이 받는 끝자리 수(`SEARCH_FULL_TAIL`, 코드 기본과 서비스 값 1 = `FULL_TAIL`, 사전 등록 62.38). 0(`off`·`false`·`no`도 0)이면 끝자리를 두지 않는다:
+    원 질문 후보 목록을 만들지 않고(원 질문 벡터 질의 없음) 하위 질문 목록만 번갈아 합친 k자리에 링크 확장을 한다(k가 기본 자리 수 이하인 검색과 같은 합치기).
+    음수나 정수가 아닌 값은 ValueError다. 쓰는 곳(`Searcher.search`)에서 k-1을 넘지 않게 자른다."""
+    raw = ((os.environ if environ is None else environ).get(FULL_TAIL_ENV) or "").strip().lower()
+    if not raw:
+        return FULL_TAIL
+    if raw in ("off", "false", "no"):
+        return 0
+    try:
+        n = int(raw)
+    except ValueError:
+        raise ValueError(f"{FULL_TAIL_ENV}는 0 이상의 정수다: {raw!r}") from None
+    if n < 0:
+        raise ValueError(f"{FULL_TAIL_ENV}는 0 이상의 정수다: {raw!r}")
+    return n

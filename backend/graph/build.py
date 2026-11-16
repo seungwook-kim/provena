@@ -200,11 +200,11 @@ def page_filled(state) -> int:
 
 def core_chunks(state) -> list[dict]:
     """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리와 도입부 채우기(R3)가 뒤에 더한 청크(`intro_chunk_ids`). 넓히지 않았거나 재검색 뒤면 문맥 전체다.
-    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51)."""
+    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51, 끄려면 `GRAPH_INTRO_IN_CORE=0`)."""
     chunks = state.get("chunks", [])
     if state.get("retries", 0) or split_k(state.get("question"), state.get("sub_queries")) <= SEARCH_K:
         return chunks
-    intro = set(state.get("intro_chunk_ids") or ())
+    intro = set(state.get("intro_chunk_ids") or ()) if AF.intro_in_core_enabled() else set()
     return chunks[:SEARCH_K] + [c for c in chunks[SEARCH_K:] if c.get("chunk_id") in intro]
 
 
@@ -1219,7 +1219,7 @@ def build_graph(
         if not first:
             return {"chunks": merged, **memo, **extra}
         fill_ahead = None
-        if page_search is not None and split_k(state["question"], subs) > SEARCH_K:  # 62.55: 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
+        if page_search is not None and AF.first_page_fill_enabled() and split_k(state["question"], subs) > SEARCH_K:  # 62.55(끄려면 `GRAPH_FIRST_PAGE_FILL=0`): 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
             fill_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pagefill")
             fill_ahead = fill_pool.submit(contextvars.copy_context().run, page_fill_chunk, state, merged, query)
             fill_pool.shutdown(wait=False)
@@ -2036,7 +2036,7 @@ def build_graph(
         context = state.get("chunks", [])  # G가 뺀 청크도 다시 쓰기 뒤와 같이 A1, A1b가 볼 수 있다(지금 동작과 같게 둔다)
         reader = read_prev_chunk if prev_chunk is not None else None
         # HO(사전 등록 62.52): 처음 답이 그대로 받쳐졌을 때만(구절이 그 답의 것이다). M(62.70)이 켜져 있으면 다시 쓴 답·문장을 뺀 답도 그 답의 재확인 구절로 한다
-        if claim_quotes and (cite_guard or not (info.get("revised") or info.get("redrafted"))):
+        if claim_quotes and AF.cite_head_owner_enabled() and (cite_guard or not (info.get("revised") or info.get("redrafted"))):  # `GRAPH_CITE_HEAD_OWNER=0`이면 건너뛴다(62.58, 62.70 M 포함)
             got = AF.head_owner_cites(body, more, context, claim_quotes, prev_reader=reader)  # 62.58: 원래 청크가 문맥에 없으면 앞 청크를 읽는다
             if got:
                 body, more, info["head_owner"] = got
