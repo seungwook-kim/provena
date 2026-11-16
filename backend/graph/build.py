@@ -40,7 +40,7 @@ from backend.graph.answer_store import AnswerStore
 from backend.graph.citations import check_citations
 from backend.graph.decision.execute import DecisionExecutor, decision_citation, format_decision_answer, make_execute_node
 from backend.graph.decision.params import DECISION_PARAMS_SYSTEM, params_from_obj, params_user
-from backend.graph.decompose import decompose_enabled, decompose_question, drop_company_prefix, gate_split
+from backend.graph.decompose import decompose_detail, decompose_enabled, decompose_question, drop_company_prefix, gate_split, keep_subject_union_enabled
 from backend.graph.mcp_retriever import default_retriever, default_section_reader, last_fallback_reason
 from backend.graph.parsing import parse_json_obj
 from backend.graph.service_profile import SharedChatModel
@@ -200,11 +200,11 @@ def page_filled(state) -> int:
 
 def core_chunks(state) -> list[dict]:
     """넓힌 첫 검색(나뉜 질문, `split_k` > `SEARCH_K`)의 문맥에서 앞 `SEARCH_K`자리와 도입부 채우기(R3)가 뒤에 더한 청크(`intro_chunk_ids`). 넓히지 않았거나 재검색 뒤면 문맥 전체다.
-    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51)."""
+    도입부 절 청크는 검색을 넓혀 받은 자리가 아니라 문맥에 이미 3개 이상 든 페이지의 머리 절이다. 넓히기 전(`SEARCH_K`자리)에도 답이 보던 자료라 앞자리 답에서 빼지 않는다(사전 등록 62.51, 끄려면 `GRAPH_INTRO_IN_CORE=0`)."""
     chunks = state.get("chunks", [])
     if state.get("retries", 0) or split_k(state.get("question"), state.get("sub_queries")) <= SEARCH_K:
         return chunks
-    intro = set(state.get("intro_chunk_ids") or ())
+    intro = set(state.get("intro_chunk_ids") or ()) if AF.intro_in_core_enabled() else set()
     return chunks[:SEARCH_K] + [c for c in chunks[SEARCH_K:] if c.get("chunk_id") in intro]
 
 
@@ -452,6 +452,8 @@ def build_graph(
 
     research_limit = resolve_max_research(max_research)
     run_parallel = env_flag("GRAPH_PARALLEL_INTAKE") if parallel_intake is None else bool(parallel_intake)
+    # `GRAPH_CLASSIFY_RACE`(기본 꺼짐): 같은 분류 호출 두 개를 처음부터 동시에 보내 먼저 성공한 결과로 경로를 정한다. 도메인 밖 두 번 확인은 남은 호출의 결과를 쓴다(판정 규칙은 그대로)
+    classify_race = env_flag("GRAPH_CLASSIFY_RACE")
     brief = env_flag("LLM_BRIEF_OUTPUT") if brief_output is None else bool(brief_output)
     judge_system = P.JUDGE_SYSTEM_BRIEF if brief else P.JUDGE_SYSTEM
     judge_query_on = env_flag("GRAPH_JUDGE_QUERY")
@@ -620,15 +622,23 @@ def build_graph(
         """검색 범위(절). 입력의 절, 사용자가 직접 정한 소속 순이다. 둘 다 없으면 전체 절이다."""
         return state.get("org") or (state.get("profile") or {}).get("affiliation") or None
 
-    def memo_search(state: AgentState, q: SearchQuery) -> tuple[list[dict], dict]:
-        """한 번의 실행 안에서 같은 검색(질의, 절, 기준일, k, 하위 질문)은 한 번만 한다. 하위 질문이 다르면 다른 검색이다."""
-        key = json.dumps([q.query, q.org, q.as_of, q.k, q.sub_queries], ensure_ascii=False)
+    def memo_search(state: AgentState, q: SearchQuery, alts: list[str] | None = None) -> tuple[list[dict], dict]:
+        """한 번의 실행 안에서 같은 검색(질의, 절, 기준일, k, 하위 질문)은 한 번만 한다. 하위 질문이 다르면 다른 검색이다.
+        alts: 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION`). 있으면 검색하는 동안만 힌트(`sub_alts.given`)로 두고 기억 열쇠에도 넣는다. 없으면 지금과 같다."""
+        key = json.dumps([q.query, q.org, q.as_of, q.k, q.sub_queries, *([alts] if alts else [])], ensure_ascii=False)
         cache = dict(state.get("search_cache") or {})
         stats = dict(state.get("search_stats") or {"calls": 0, "cache_hits": 0})
         if key in cache:
             stats["cache_hits"] += 1
             return cache[key], {"search_cache": cache, "search_stats": stats}
-        chunks = [redact_chunk(c.model_dump()) for c in retrieve(q)]  # 직접 호출과 MCP가 같은 본문을 받는다
+        if alts:
+            from backend.rag import sub_alts
+
+            with sub_alts.given(q.sub_queries or [], alts):
+                found = retrieve(q)
+        else:
+            found = retrieve(q)
+        chunks = [redact_chunk(c.model_dump()) for c in found]  # 직접 호출과 MCP가 같은 본문을 받는다
         cache[key] = chunks
         stats["calls"] += 1
         return chunks, {"search_cache": cache, "search_stats": stats}
@@ -733,11 +743,19 @@ def build_graph(
         두 후보가 같은 요청을 동시에 보내면 재생이 어느 후보에 어느 녹화 응답을 줄지가 스레드 경쟁으로 정해져, 동점일 때 고르는 첫 후보의 답이 실행마다 달랐다(K-24)."""
         return in_lane(n, fn) if replay_demo() else fn
 
+    def split_call(question: str) -> tuple:
+        """질문 분해(LLM 1회, 형식 오류면 1회 더). (하위 질문, 출처)이고, `GRAPH_KEEP_SUBJECT_UNION=1`이며 대상 구를 붙인 하위 질문이 있으면
+        끝에 원 하위 질문(`decompose.subject_alts`)을 더한 셋이다. 분해 호출과 하위 질문은 스위치와 상관없이 같다."""
+        if not keep_subject_union_enabled():
+            return decompose_question(ask, question)
+        subs, source, alts = decompose_detail(ask, question)
+        return (subs, source, alts) if alts else (subs, source)
+
     def start_split(state: AgentState) -> tuple[Any, ThreadPoolExecutor, float]:
         """분해 상한을 켰을 때 분해를 따로 된 일꾼에서 시작한다. 상한을 넘긴 분해를 기다리지 않고 나가려고 접수 일꾼과 나눈다."""
         own = ThreadPoolExecutor(max_workers=1, thread_name_prefix="decompose")
         started = time.monotonic()
-        return in_background(own, "search", lambda: decompose_question(ask, state["question"])), own, started
+        return in_background(own, "search", lambda: split_call(state["question"])), own, started
 
     def finish_split(handle: tuple[Any, ThreadPoolExecutor, float]) -> tuple[list[str], str]:
         """시작한 뒤 `decompose_cap`초까지 기다린다. 넘으면 하위 질문 없이(원 질문 하나로) 검색하고 늦게 온 결과는 버린다. 분해의 오류는 그대로 올린다."""
@@ -751,7 +769,7 @@ def build_graph(
             own.shutdown(wait=False, cancel_futures=True)
 
     def split_question(state: AgentState) -> tuple[list[str], str]:
-        return finish_split(start_split(state)) if decompose_cap else decompose_question(ask, state["question"])
+        return finish_split(start_split(state)) if decompose_cap else split_call(state["question"])
 
     def needs_rewrite_call(state: AgentState) -> bool:
         """재작성 LLM을 불러야 하는지. 재검색은 언제나 부른다. 분해가 켜진 첫 검색은 원 질문으로 찾으므로 재작성에서 쓰는 값은 기준 시점뿐이다(절은 입력과 프로필을 쓴다)."""
@@ -781,12 +799,64 @@ def build_graph(
             return {"route": "out_of_domain"}
         picked: dict = {}   # 결정표 경로로 가기로 한 질문에서 분류 단계가 미리 뽑은 값. `decision_params`가 같은 값을 다시 뽑지 않고 쓴다
 
+        # 키 없는 데모(녹화 재생)는 동시 분류를 쓰지 않는다: 같은 요청 두 개가 녹화 변형을 받는 차례가 스레드 경쟁으로 정해지지 않게 지금처럼 차례로 부른다
+        race = classify_race and not replay_demo()
+        loser: list = []   # 동시 분류에서 먼저 성공한 쪽을 쓴 뒤 남은 호출(Future). 도메인 밖 두 번 확인이 그 결과를 쓴다
+
         def once() -> str:
             obj, _ = ask_json(P.CLASSIFY_SYSTEM, P.classify_user(state["question"], state.get("profile", {})))
             return route_of(obj)
 
+        def raced() -> str:
+            """`GRAPH_CLASSIFY_RACE=1`: 같은 분류 호출 두 개를 동시에 보내 먼저 성공한 결과를 쓰고, 남은 호출은 `loser`에 둔다.
+            한 호출이 실패하면 다른 호출을 기다리고, 둘 다 실패하면 먼저 확인한 오류를 올린다. 비용 상한 초과는 바로 올린다.
+            두 호출 모두 배경 호출(`in_background`)이라 분류 노드의 기록 아래에 남고 비용 집계(`CostTracker`)에도 각각 잡힌다."""
+            pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="classify_race")
+            calls = [in_background(pool, "classify", once) for _ in range(2)]
+            pool.shutdown(wait=False)
+            errors: list[BaseException] = []
+            pending = set(calls)
+            while pending:
+                done, pending = wait_futures(pending, return_when=FIRST_COMPLETED)
+                for fut in sorted(done, key=calls.index):
+                    try:
+                        route = fut.result()
+                    except CostCapExceeded:
+                        raise
+                    except Exception as e:  # noqa: BLE001  한 호출의 실패는 다른 호출의 결과로 넘긴다
+                        log.warning("동시 분류 호출 하나 실패: %s", type(e).__name__)
+                        errors.append(e)
+                        continue
+                    loser.append(calls[1 - calls.index(fut)])
+                    return route
+            raise errors[0]
+
+        def confirm() -> str:
+            """도메인 밖 두 번째 확인. 동시 분류를 켰으면 남은 호출의 결과를 기다려 쓴다. 그 호출이 실패했거나 동시 분류가 꺼져 있으면 지금처럼 한 번 더 부른다."""
+            if not loser:
+                return once()
+            try:
+                return loser.pop().result()
+            except CostCapExceeded:
+                raise
+            except Exception as e:  # noqa: BLE001
+                log.warning("동시 분류의 남은 호출 실패, 확인 호출을 한 번 더 부른다: %s", type(e).__name__)
+                return once()
+
+        def settle_loser(route: str) -> None:
+            """정책 경로가 아니면(검색 없이 일찍 끝날 수 있는 경로) 남은 분류 호출이 끝날 때까지 기다려 답이 나간 뒤에 호출이 돌지 않게 한다. 결과와 오류는 버리고 비용 상한만 올린다.
+            정책 경로는 기다리지 않는다: 검색·판정이 도는 동안 끝나 비용 집계에 잡힌다(답 작성의 추론 답 경쟁과 같은 방식)."""
+            if not loser or takes_policy_path(route):
+                return
+            try:
+                loser.pop().result()
+            except CostCapExceeded:
+                raise
+            except Exception as e:  # noqa: BLE001
+                log.warning("동시 분류의 남은 호출 실패(버림): %s", type(e).__name__)
+
         def decide() -> str:
-            route = once()
+            route = raced() if race else once()
             if route == "decision" and not decision_ready(state["question"]):  # 결정표를 실행할 수 없는 질문을 거절로 끝내지 않고 핸드북에서 찾는다
                 return "rule"
             if route == "decision" and decision_repo is not None:
@@ -797,12 +867,14 @@ def build_graph(
             if route == "review" and review_graph is not None and asks_fact_not_review(state["question"] or ""):  # 사실을 묻는 질문을 승인 대기로 멈추지 않는다
                 return "rule"
             # 도메인 밖은 검색 없이 끝나 뒤 단계가 되돌릴 수 없다. 두 번 다 도메인 밖일 때만 따르고, 갈리면 일반 정책 경로로 보낸다
-            if route == "out_of_domain" and once() != "out_of_domain":
+            # (동시 분류를 켜면 두 번째 결과는 이미 같이 보낸 호출의 것이라 차례로 기다리지 않는다)
+            if route == "out_of_domain" and confirm() != "out_of_domain":
                 route = "rule"
             return route
 
         if not run_parallel:
             route = decide()
+            settle_loser(route)
             return {"route": route, **({"decision_query": picked} if route == "decision" else {})}
 
         # 모두 끝난 뒤에 나간다: 답이 나간 뒤에 호출이 돌아 비용과 기록에 늦게 잡히는 일이 없다
@@ -812,7 +884,7 @@ def build_graph(
         try:
             with ThreadPoolExecutor(max_workers=2, thread_name_prefix="intake") as pool:
                 rewriting = in_background(pool, "rewrite", lambda: rewrite_reply(state)) if needs_rewrite_call(state) else None
-                splitting = in_background(pool, "search", lambda: decompose_question(ask, state["question"])) if split_first_search() and capped is None else None
+                splitting = in_background(pool, "search", lambda: split_call(state["question"])) if split_first_search() and capped is None else None
                 route = decide()
                 if spec is not None:
                     spec["route"] = route
@@ -821,6 +893,7 @@ def build_graph(
             if spec is not None:
                 spec["routed"].set()
         if not takes_policy_path(route):  # 순차라면 부르지 않았을 호출이다. 결과와 오류를 모두 버린다
+            settle_loser(route)
             if capped is not None:
                 capped[1].shutdown(wait=False, cancel_futures=True)
             if spec is not None:  # SP: 예비 분해만 돌았다(판정 전에 경로를 본다). 끝날 때까지 기다려 늦은 호출을 남기지 않는다
@@ -1192,21 +1265,28 @@ def build_graph(
         if early is not None:  # 미리 받은 분해 결과를 꺼내고 자리를 지운다
             state = {**state, "search_cache": {k: v for k, v in state["search_cache"].items() if k != INTAKE_KEY}}
             cleared = {"search_cache": state["search_cache"]}
+        alts: list[str] | None = None   # 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION=1`이고 대상 구를 붙인 하위 질문이 있을 때만). 검색 입력에만 쓰고 상태와 LLM 입력에는 넣지 않는다
         if split:
-            subs, source = early["decompose"] if early is not None and "decompose" in early else split_question(state)
+            got = early["decompose"] if early is not None and "decompose" in early else split_question(state)
+            subs, source = got[0], got[1]
+            alts = got[2] if len(got) > 2 else None
             extra = {"sub_queries": subs, "decompose_source": source}
         query = drop_company_prefix([state["question"]])[0] if split else state["search_query"]
         if split and query_branches:  # `GRAPH_QUERY_BRANCHES`(기본 꺼짐): 대상이 없는 계정 주제는 대상마다 하위 질문을 만든다(query_plan.py)
             plan = QP.plan_first_search(state["question"], query, subs, branches=True)
+            if alts and plan.subs != subs:   # 대상마다 나눈 하위 질문은 원 하위 질문이 없다. 그대로 남은 하위 질문만 짝을 잇는다
+                pair = dict(zip(subs, alts))
+                alts = [pair.get(s, "") for s in plan.subs]
             query, subs = plan.query, plan.subs
             extra = {**extra, "sub_queries": subs, "query_targets": plan.targets}
+        alts = alts if alts and subs and len(alts) == len(subs) and any(alts) else None
         # 나뉜 질문의 첫 검색만 SPLIT_K(달러 금액이 든 질문은 SEARCH_K). 62.73(`GRAPH_SPLIT_FULL_K`, 서비스 설정 꺼짐)을 켜면 하위 질문이 있는 첫 검색은 근거 목록 상한(MAX_CHUNKS)까지 요청한다.
         # `subs`는 첫 검색에서 분해가 나눴을 때만 2개 이상이다(안 나눔, 분해 실패, 재검색, 미리 돌린 원 질문 검색은 비어 SEARCH_K 그대로). 검색 기억 열쇠에 k가 들어 있어 다른 k 결과와 섞이지 않는다
         k = (MAX_CHUNKS if split_full_k and subs else split_k(state["question"], subs)) if first else SEARCH_K
         q = SearchQuery(query=query, org=state.get("search_org"), as_of=state.get("as_of"), k=k, sub_queries=subs or None)
         _forget_search_trace()
         try:
-            found, memo = memo_search(state, q)
+            found, memo = memo_search(state, q, alts) if alts else memo_search(state, q)
         except EmbedUnavailable as e:  # 임베딩 API가 잠깐 안 되는 경우: 죽지 않고 정해진 거절로 끝낸다(다시 시도하면 될 수 있다)
             log.warning("검색 임베딩 API 일시 오류: %s", e)
             return {**extra, **cleared, "kind": "refuse", "answer": MSG_REFUSE_SEARCH_DOWN, "citations": [], "search_error": "unavailable"}
@@ -1219,7 +1299,7 @@ def build_graph(
         if not first:
             return {"chunks": merged, **memo, **extra}
         fill_ahead = None
-        if page_search is not None and split_k(state["question"], subs) > SEARCH_K:  # 62.55: 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
+        if page_search is not None and AF.first_page_fill_enabled() and split_k(state["question"], subs) > SEARCH_K:  # 62.55(끄려면 `GRAPH_FIRST_PAGE_FILL=0`): 나뉜 질문의 첫 검색만. 도입부 채우기와 같이 돌린다(둘 다 `merged`만 읽는다)
             fill_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pagefill")
             fill_ahead = fill_pool.submit(contextvars.copy_context().run, page_fill_chunk, state, merged, query)
             fill_pool.shutdown(wait=False)
@@ -2036,7 +2116,7 @@ def build_graph(
         context = state.get("chunks", [])  # G가 뺀 청크도 다시 쓰기 뒤와 같이 A1, A1b가 볼 수 있다(지금 동작과 같게 둔다)
         reader = read_prev_chunk if prev_chunk is not None else None
         # HO(사전 등록 62.52): 처음 답이 그대로 받쳐졌을 때만(구절이 그 답의 것이다). M(62.70)이 켜져 있으면 다시 쓴 답·문장을 뺀 답도 그 답의 재확인 구절로 한다
-        if claim_quotes and (cite_guard or not (info.get("revised") or info.get("redrafted"))):
+        if claim_quotes and AF.cite_head_owner_enabled() and (cite_guard or not (info.get("revised") or info.get("redrafted"))):  # `GRAPH_CITE_HEAD_OWNER=0`이면 건너뛴다(62.58, 62.70 M 포함)
             got = AF.head_owner_cites(body, more, context, claim_quotes, prev_reader=reader)  # 62.58: 원래 청크가 문맥에 없으면 앞 청크를 읽는다
             if got:
                 body, more, info["head_owner"] = got

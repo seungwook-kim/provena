@@ -1,0 +1,32 @@
+{"id": "VF-F01", "kind": "flip", "body": "SEV2 장애 최초 대응은 15분 이내에 한다. 위 15분은 예전 기준이고 지금은 45분 이내에 대응한다.", "answer": "최초 대응은 45분 이내입니다.", "note": "예전 기준, 지금은"}
+{"id": "VF-F02", "kind": "flip", "body": "SEV2 장애 최초 대응은 15분 이내에 한다. 위 15분은 더는 쓰지 않으며 45분으로 운영한다.", "answer": "최초 대응은 45분 이내입니다.", "note": "더는 쓰지 않는다"}
+{"id": "VF-F03", "kind": "flip", "body": "SEV2 incidents require a first response within 15 minutes. The 15 minutes above is stale; teams now have 45 minutes.", "answer": "최초 대응은 45분 이내입니다.", "note": "stale, now"}
+{"id": "VF-F04", "kind": "flip", "body": "Laptops are refreshed every 36 months. The 36 months above was revised to 12 months.", "answer": "노트북 교체 주기는 12개월입니다.", "note": "revised to"}
+{"id": "VF-F05", "kind": "flip", "body": "출장 숙박비 한도는 1박 20만 원이다. 상기 금액은 옛 기준이며 이제 한도는 80만 원이다.", "answer": "출장 숙박비 한도는 1박 80만 원입니다.", "note": "옛 기준, 이제"}
+{"id": "VF-F06", "kind": "flip", "body": "Expense reports are due within 30 days. The deadline above has since been extended to 90 days.", "answer": "경비 보고서는 90일 안에 냅니다.", "note": "has since been extended to"}
+{"id": "VF-F07", "kind": "flip", "body": "재택근무 지원금은 월 5만 원이다. 위 5만 원은 지난해 값이고 올해부터 월 50만 원을 지급한다.", "answer": "재택근무 지원금은 월 50만 원입니다.", "note": "지난해 값, 올해부터"}
+{"id": "VF-F08", "kind": "flip", "body": "Backups are kept for 30 days. Please treat the 30 days above as legacy; backups are kept for 2 years.", "answer": "백업은 2년 동안 보관합니다.", "note": "legacy"}
+{"id": "VF-F09", "kind": "flip", "body": "The approval limit is $5,000. The $5,000 above is retired, and the approval limit is $50,000.", "answer": "The approval limit is $50,000.", "note": "retired"}
+{"id": "VF-F10", "kind": "flip", "body": "Passwords rotate every 90 days. The figure above was updated: passwords rotate every 365 days.", "answer": "비밀번호는 365일마다 바꿉니다.", "note": "figure above was updated"}
+{"id": "VF-F11", "kind": "flip", "body": "연차는 15일이다. 앞의 15일 대신 25일을 부여한다.", "answer": "연차는 25일입니다.", "note": "대신"}
+{"id": "VF-F12", "kind": "flip", "body": "On-call handover takes 20 minutes. Going forward, the 20 minutes stated earlier becomes 2 hours.", "answer": "On-call handover takes 120 minutes.", "note": "going forward, becomes"}
+{"id": "VF-F13", "kind": "flip", "body": "환불은 10영업일 안에 처리한다. 본문의 10영업일은 개편 전 수치이고 60영업일이 적용된다.", "answer": "환불은 60영업일 안에 처리됩니다.", "note": "개편 전 수치"}
+{"id": "VF-F14", "kind": "flip", "body": "Refunds are issued within 10 business days. We no longer use the 10 business days above; refunds take 60 business days.", "answer": "환불은 60영업일 안에 처리됩니다.", "note": "no longer use"}
+{"id": "VF-F15", "kind": "flip", "body": "로그인 실패는 5회까지 허용한다. 위 5회는 바뀌었고 20회까지 허용한다.", "answer": "로그인 실패는 20회까지 허용됩니다.", "note": "바뀌었고"}
+{"id": "VF-F16", "kind": "flip", "body": "SEV2 장애 최초 대응은 15분 이내에 한다. 위 기준은 손봤으며 대응 시한은 45분이다.", "answer": "최초 대응은 45분 이내입니다.", "note": "위 기준은 손봤으며"}
+{"id": "VF-N01", "kind": "flip_text", "body": "승인자는 팀장이다. 위 승인자는 예전 기준이며 지금 승인자는 본부장이다.", "answer": "승인자는 본부장입니다.", "note": "숫자가 아닌 값"}
+{"id": "VF-N02", "kind": "flip_text", "body": "The approver is the team lead. The approver above is outdated; the approver is now the VP of Finance.", "answer": "The approver is the VP of Finance.", "note": "숫자가 아닌 값"}
+{"id": "VF-C01", "kind": "normal", "body": "계약은 1년이다. 위 기간 만료 30일 전까지 갱신한다.", "answer": "계약은 1년이며 만료 30일 전까지 갱신합니다.", "note": "가리킴 + 같은 종류의 다른 속성 값"}
+{"id": "VF-C02", "kind": "normal", "body": "SEV2 장애 최초 대응은 15분 이내에 한다. 위 15분에는 상황 파악 5분이 포함된다.", "answer": "15분에는 상황 파악 5분이 포함됩니다.", "note": "포함"}
+{"id": "VF-C03", "kind": "normal", "body": "Respond within 15 minutes. The 15 minutes above includes 5 minutes for triage.", "answer": "The 15 minutes include 5 minutes for triage.", "note": "includes"}
+{"id": "VF-C04", "kind": "normal", "body": "Refunds are issued within 10 business days. The 10 business days above start when the request is approved, and partial refunds take 3 business days.", "answer": "Partial refunds take 3 business days.", "note": "다른 속성"}
+{"id": "VF-C05", "kind": "normal", "body": "출장 숙박비 한도는 1박 20만 원이다. 위 금액에는 조식 1만 원이 포함된다.", "answer": "한도에는 조식 1만 원이 포함됩니다.", "note": "포함"}
+{"id": "VF-C06", "kind": "normal", "body": "Backups are kept for 30 days. After the 30 days above, archives are kept for 1 year.", "answer": "Archives are kept for 1 year after that.", "note": "뒤 기간"}
+{"id": "VF-C07", "kind": "normal", "body": "연차는 15일이다. 위 15일 중 5일은 회사가 정한 날에 쓴다.", "answer": "15일 중 5일은 회사가 정한 날에 씁니다.", "note": "부분"}
+{"id": "VF-C08", "kind": "normal", "body": "On-call handover takes 20 minutes. The handover above is followed by a 10-minute review.", "answer": "A 10-minute review follows the handover.", "note": "값 이름이 아닌 가리킴"}
+{"id": "VF-C09", "kind": "normal", "body": "The approval limit is $5,000. Above that limit, a second approver signs off up to $50,000.", "answer": "A second approver signs off up to $50,000.", "note": "단계"}
+{"id": "VF-C10", "kind": "normal", "body": "로그인 실패는 5회까지 허용한다. 위 5회를 넘기면 계정이 30분 잠긴다.", "answer": "5회를 넘기면 계정이 30분 잠깁니다.", "note": "조건"}
+{"id": "VF-C11", "kind": "normal", "body": "Passwords rotate every 90 days. The 90 days above is the maximum; teams may rotate every 30 days.", "answer": "Teams may rotate every 30 days.", "note": "상한과 허용"}
+{"id": "VF-C12", "kind": "normal", "body": "SEV2 장애 최초 대응은 15분 이내에 한다. 위 15분은 영업시간 기준이며 야간에는 30분 이내에 대응한다.", "answer": "야간에는 30분 이내에 대응합니다.", "note": "범위 나누기"}
+{"id": "VF-C13", "kind": "normal", "body": "Expense reports are due within 30 days. The deadline above applies to domestic trips; international trips have 60 days.", "answer": "International trips have 60 days.", "note": "범위 나누기"}
+{"id": "VF-C14", "kind": "normal", "body": "승인자는 팀장이다. 위 승인자가 부재하면 본부장이 대신 승인한다.", "answer": "팀장이 부재하면 본부장이 승인합니다.", "note": "숫자가 아닌 값, 조건"}

@@ -78,7 +78,7 @@ flowchart LR
 - **쓰기·실행 도구는 MCP에 내보내지 않는다.** 결정표 변환·승인, 리콜 확인은 API와 interrupt를 거쳐야 한다. `explain_decision`은 이미 사람이 승인한 표의 규칙을 계산해 돌려줄 뿐 표를 만들거나 승인하지 않는다. 승인 우회 도구 호출을 구조로 막는 장치다(인젝션 시험 계획).
 - 비공개(`internal.gitlab.com`)로만 연결된 칸·링크는 도구가 근거로 내보내지 않고 "비공개 문서"로 표시한다(9장).
 - 클라이언트는 `langchain[mcp]`(베타)를 쓴다. 서버는 `fastmcp` 4.x로 맞춘다. 옛 `langchain-mcp-adapters`는 보관(archived)되어 쓰지 않는다. 베타가 문제를 일으키면 공식 MCP Python SDK나 FastMCP 클라이언트를 직접 부른다.
-- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 당시 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음, `evals/results/mcp_prod_20261116/`). 그 뒤 운영 판 `provena-api-00075-5zk`(커밋 `eb7516ca`)와 현재 운영 판 `provena-api-00079-tmt`(커밋 `c565998d`)의 배포 확인에서도 `/mcp/`를 토큰 없이 부르면 401이었고 `MCP_TOKEN`이 설정되어 있었다.
+- 검색 노드는 설정값 `SEARCH_VIA_MCP`로 MCP 호출과 직접 함수 호출을 바꾼다. MCP 서버가 멈췄을 때 대신 쓰고, 두 경로의 결과가 같은지 시험할 때도 쓴다. 운영 반영(2026-11-16) 뒤 컨테이너 접근 로그에 검색 노드의 `POST /mcp/ 200` 기록이 있다(운영 설정은 2026-11-16에 최종 판 `provena-api-00065-q84`와 당시 운영 판 `provena-api-00068-drb`에서 확인했다: `MCP_TOKEN` 있음, 비교용으로 바꾼 설정(`USE_SKILLS`, `SEARCH_LINK_N`) 없음, 두 판의 환경 변수 27개 같음, `evals/results/mcp_prod_20261116/`). 그 뒤 운영 판 `provena-api-00075-5zk`(커밋 `eb7516ca`)와 직전 운영 판 `provena-api-00079-tmt`(커밋 `c565998d`, 현재 운영 판은 `docs/GATES.md` G1 칸)의 배포 확인에서도 `/mcp/`를 토큰 없이 부르면 401이었고 `MCP_TOKEN`이 설정되어 있었다.
 - 접근은 토큰 헤더로 제한한다. 토큰은 로컬은 `.env`, 운영은 Secret Manager 비밀값으로 둔다. MCP 도구 호출도 Langfuse 트레이스에 단계로 남긴다.
 - 서버를 띄우는 곳(FastAPI 앱에 붙일지, 따로 띄울지)은 11장에서 정한다.
 
@@ -356,7 +356,7 @@ flowchart TD
 | GET, PUT | `/changes/monitoring` | 조회는 로그인, 변경은 관리자·CSRF | 변경 감시 켜기·멈추기(`active`, `paused`). 멈추면 증분 수집이 아무것도 하지 않고 끝난다 |
 | GET | `/decision-tables` | 로그인 | 승인된 결정표 목록 |
 | POST | `/decision-tables/run` | 로그인 | 표를 모를 때 업무 종류로 승인된 표가 정확히 1개면 실행(LLM 없음) |
-| POST | `/decision-tables/convert` | 관리자, CSRF | 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 보낸다(201) |
+| POST | `/decision-tables/convert` | 관리자, CSRF | 권한표 한 업무 종류를 LLM 초안으로 바꿔 승인 대기까지 보낸다(201). `?draft_only=true`이면 같은 초안 단계와 셀 대조만 돌려주고(200) 승인 건·결정표·체크포인트를 쓰지 않는다. 승인된 표가 있어도 막지 않는다(셀 정확도 측정용) |
 | POST | `/decision-tables/{id}/run` | 로그인 | 결정표 실행 (LLM 없음). 요청 `{task_type, amount_usd?, band?}`(금액 칸 없는 구간 업무는 `band`로 고른다). 업무시스템의 "승인권자 확인" 호출 |
 | POST | `/webhooks/regulation-updated` | 서비스 키 | 수집 쪽에서 정책 변경 알림 (경로 이름은 계약 유지). 우리 서비스가 업무시스템으로 보내는 리콜 웹훅의 수신 경로 `/webhooks/recall`(11장 3-7)과는 다른 경로다. 키는 `X-Service-Key` 또는 `Authorization: Bearer`(환경변수 `SERVICE_API_KEY`, 비면 항상 401). 한 건 또는 1~100건 목록, 형식 오류 400, 받으면 202 `{accepted, event_ids}`이고 리콜은 응답 뒤 백그라운드로 돈다 |
 | POST | `/impact-preview` | 관리자 | 바뀐 섹션 목록·커밋·MR diff → 영향받을 답·결정표 칸·알림 대상 수(F-05). 드라이런이라 저장·알림·웹훅 없음. 입력은 `changes`(본문 포함 가능) 또는 `pages` 중 하나 |

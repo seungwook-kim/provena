@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2793,
+    "revision":  "provena-api-00153-ciq",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.014,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00153-ciq"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2653,
+                       "detail":  "evals/results/deploy_latency_provena-api-00153-ciq"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "11cc305f+GRAPH_CITE_EXPAND_NARROW=0"
+}

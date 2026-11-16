@@ -197,9 +197,15 @@ def test_judge_texts_rules():
     assert judge_texts("본문", "")[0] is True and judge_texts("", "본문")[0] is True
 
 
-def test_default_judge_is_rule_in_demo_mode(monkeypatch):
+def test_default_judge_is_replay_in_demo_mode(monkeypatch, tmp_path):
+    """키 없는 데모는 ReplayJudge: 녹화에 없는 판정 요청은 규칙 판정과 같은 결과다(녹화가 있는 경우는 test_demo_change.py)."""
     monkeypatch.delenv("LLM_API_KEY", raising=False)
-    assert default_judge().mode == "rule"
+    monkeypatch.setenv("DEMO_REPLAY_DIR", str(tmp_path))
+    judge = default_judge()
+    assert judge.mode == "replay"
+    row = {"answer_id": "a1", "question": "5천만원짜리 도입은 누가 승인하나요?", "answer": "디렉터가 승인합니다."}
+    from recall_test_support import AMOUNT_NEW, AMOUNT_OLD
+    assert judge.judge(row, changed(), AMOUNT_OLD, AMOUNT_NEW) == RuleJudge().judge(row, changed(), AMOUNT_OLD, AMOUNT_NEW)
     assert default_judge(ScriptedLLM({})).mode == "llm"
 
 

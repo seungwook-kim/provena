@@ -34,6 +34,14 @@ SYSTEM = (
     "예 2: 질문 \"휴가 신청은 어떻게 해?\" -> {\"split\": false, \"sub_questions\": []}."
 )
 SYSTEM_TAGGED = f"[[task:{TASK}]]\n{SYSTEM}"
+# `GRAPH_DECOMPOSE_KEEP_SUBJECT=1`(코드 기본 꺼짐, 서비스 설정 켬): 하위 질문이 원 질문의 대상·조건을 빠뜨리면 하위 질문 검색이 원 질문과 다른 대상을 찾는다.
+# 켜면 아래 규칙 한 줄을 프롬프트 끝에 더하고(`system_prompt`), 코드가 빠진 앞머리 대상 구를 하위 질문 앞에 붙인다(`keep_subject`). 예시는 핸드북과 무관한 일반 문장이다.
+# 인용 표시(근거 섹션, 출처, 판 날짜)만 묻는 하위 질문은 먼저 뺀다(`drop_citation_asks`). 규칙이 그 말에도 대상·조건을 붙여 판정이 별도 사실로 세기 때문이다
+KEEP_SUBJECT_RULE = (
+    "\n- 원 질문에 대상(누구·어디·무엇)이나 조건(기간·금액·역할·지역 등)이 있으면 모든 하위 질문에 그 대상과 조건을 그대로 넣는다. "
+    "하위 질문 하나만 따로 읽어도 원 질문과 같은 대상과 조건을 묻는 질문이어야 한다. "
+    "예 3: 질문 \"해외 주문의 배송은 며칠 걸리고 반품 수수료는 얼마야?\" -> {\"split\": true, \"sub_questions\": [\"해외 주문의 배송은 며칠 걸려?\", \"해외 주문의 반품 수수료는 얼마야?\"]}."
+)
 _COMPANY_PREFIX = re.compile(r"^GitLab(?:의|은|는|이|에서는|에서)?\s+", re.I)
 
 
@@ -43,6 +51,16 @@ _OFF_VALUES = {"0", "false", "no", "off"}
 def decompose_enabled() -> bool:
     """SEARCH_DECOMPOSE가 없거나 비어 있으면 켬(확정 조합). 0, false, no, off면 끔."""
     return (os.environ.get("SEARCH_DECOMPOSE") or "1").strip().lower() not in _OFF_VALUES
+
+
+def keep_subject_enabled() -> bool:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`가 1, true, yes, on이면 켬. 코드 기본은 꺼짐(측정 코드와 같은 프롬프트), 서비스 설정(`service_profile.SERVICE_ENV`)이 켠다."""
+    return (os.environ.get("GRAPH_DECOMPOSE_KEEP_SUBJECT") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def system_prompt(tag: str) -> str:
+    """표지(`[[task:...]]`)를 붙인 분해 프롬프트. 스위치를 켜면 대상·조건 유지 규칙을 끝에 더한다. 끄면 `SYSTEM_TAGGED`, `SYSTEM_GATE`와 글자가 같다."""
+    return f"[[task:{tag}]]\n{SYSTEM}{KEEP_SUBJECT_RULE if keep_subject_enabled() else ''}"
 
 
 def parse_split(text: str) -> dict | None:
@@ -92,21 +110,75 @@ _ENDINGS_BY_VERB = {  # 서술어 첫 글자(하다·되다·있다 계열의 �
 _PREDICATE_FORMS = frozenset(head + tail for head, tails in _ENDINGS_BY_VERB.items() for tail in tails)  # "합니다", "하려고", "있는데" 같은 서술어 조각은 내용어로 세지 않는다
 
 
+def _stem(word: str) -> str | None:
+    """낱말 하나의 내용어 줄기(`_content_stems`의 규칙). 내용어가 아니면 None."""
+    for p in _PARTICLES:
+        if word.endswith(p) and len(word) - len(p) >= _MIN_STEM:
+            word = word[: -len(p)]
+            break
+    if len(word) < 2 or word in _SKIP_WORDS or word in _PREDICATE_FORMS or word in _PARTICLES:  # 조사만 따로 떨어진 낱말("(연 3천 달러)으로")도 내용어가 아니다
+        return None
+    if "가" <= word[0] <= "힣":
+        word = word[:2]
+    return word.casefold()
+
+
 def _content_stems(sentence: str) -> list[str]:
     """문장의 내용어 줄기. 끝의 조사는 떼고 남는 줄기가 두 글자 이상일 때만 뗀다(두 글자 명사의 끝 글자를 조사로 보지 않는다). 한글 낱말은 앞 두 글자만 쓴다(어미가 붙어도 하위 질문의 같은 낱말과 맞게).
     한 글자 낱말, 대명사·접속어, 서술어 조각(`_PREDICATE_FORMS`: 낱말 전체가 하다·되다·있다 계열의 활용형일 때)은 뺀다. 첫 글자가 같다고 서술어로 보지 않는다("해외", "하드웨어", "합의")."""
-    out: list[str] = []
-    for word in _WORD.findall(sentence):
-        for p in _PARTICLES:
-            if word.endswith(p) and len(word) - len(p) >= _MIN_STEM:
-                word = word[: -len(p)]
-                break
-        if len(word) < 2 or word in _SKIP_WORDS or word in _PREDICATE_FORMS or word in _PARTICLES:  # 조사만 따로 떨어진 낱말("(연 3천 달러)으로")도 내용어가 아니다
-            continue
-        if "가" <= word[0] <= "힣":
-            word = word[:2]
-        out.append(word.casefold())
-    return out
+    return [s for s in (_stem(w) for w in _WORD.findall(sentence)) if s]
+
+
+_ASK_WORDS = {"언제", "어디", "어디서", "어디에", "어디에서", "누가", "누구", "무엇", "무엇을", "뭐", "뭘", "어떻게", "얼마", "얼마나", "몇", "왜", "어느", "어떤", "무슨"}  # 묻는 말은 대상 구가 아니다
+MAX_SUBJECT_CHARS = 60   # 앞머리 대상 구로 보는 최대 길이. 이보다 길면 붙이지 않는다
+
+
+def keep_subject(question: str, subs: list[str]) -> list[str]:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`의 코드 쪽 보정: 질문 문장(마지막 문장)의 앞머리 대상 구가 하위 질문에서 빠졌으면 그 구를 빠진 하위 질문 앞에 붙인다.
+    앞머리 대상 구는 질문 문장에서 어느 하위 질문에든 나오는 첫 내용어 앞까지의 낱말이다(예: "해외 주문의 배송은 ... 반품 수수료는 ..."에서 "해외 주문의").
+    그 구의 내용어가 어느 하위 질문에도 없을 때만 대상이 빠진 것으로 본다. 한 하위 질문에라도 남아 있으면 그 구가 한 사실에만 걸린 말일 수 있어(한국어 꾸밈 범위) 손대지 않고 프롬프트 규칙에 맡긴다. 맨 앞 회사 이름은 `drop_company_prefix`가 뺀 것이므로 구에 넣지 않는다.
+    나뉘지 않았거나, 구가 없거나 묻는 말뿐이거나, 구가 `MAX_SUBJECT_CHARS`자를 넘거나, 붙이면 길이 한도를 넘으면 하위 질문을 그대로 돌려준다. LLM을 부르지 않는다."""
+    if not subs:
+        return subs
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split((question or "").strip()) if s.strip()]
+    if not sentences:
+        return subs
+    last = _COMPANY_PREFIX.sub("", sentences[-1], count=1)
+    joined = " ".join(subs).casefold()
+    words = list(_WORD.finditer(last))
+    cut = next((i for i, m in enumerate(words) if (st := _stem(m.group(0))) and st in joined), None)
+    if not cut:   # 첫 낱말부터 하위 질문에 있거나(None 아님, 0), 어느 내용어도 하위 질문에 없다(None: 분해가 질문을 크게 바꿈, 판단하지 않는다)
+        return subs
+    head = [m for m in words[:cut] if m.group(0) not in _ASK_WORDS]
+    stems = [st for m in head if (st := _stem(m.group(0)))]
+    if not stems or any(st in joined for st in stems):
+        return subs
+    phrase = last[head[0].start():words[cut].start()].strip()
+    if not phrase or len(phrase) > MAX_SUBJECT_CHARS:
+        return subs
+    out = [s if any(st in s.casefold() for st in stems) else f"{phrase} {s}" for s in subs]
+    return out if all(len(s) <= MAX_SUB_CHARS for s in out) else subs
+
+
+# 인용 표시만 묻는 말: 답마다 코드가 근거 제목 경로, 판 날짜, 출처를 붙인다(`build.py`의 인용 표시, 답 작성·근거 판정 지침).
+# 그래서 "근거 섹션은 어디야?", "판 날짜는 언제야?"는 따로 찾을 사실이 아니라 본 사실의 인용으로 채워진다. 하위 질문 끝이 이 말에 묻는 말만 붙은 꼴일 때만 해당한다.
+# "근거는 뭐야?"(이유일 수 있다), "해지 조항은 뭐야?"(조항 내용), "릴리스 날짜는 언제야?"(정책 사실)는 해당하지 않는다
+_CITATION_ASK = re.compile(
+    r"(?:^|\s|의)(?:근거(?:가\s*되는)?\s*(?:섹션|조항|절|문서|규정)|출처(?:\s*(?:섹션|문서|링크))?|"
+    r"판\s*(?:\([^)]*\)\s*)?(?:날짜|번호|일자))"
+    r"\s*(?:은|는|이|가)\s*(?:무엇|뭐|어디|언제|몇)[가-힣]*\s*[?？]?$")
+
+
+def drop_citation_asks(subs: list[str]) -> list[str]:
+    """`GRAPH_DECOMPOSE_KEEP_SUBJECT`의 코드 쪽 보정: 인용 표시(근거 섹션, 출처, 판 날짜·번호)만 묻는 하위 질문은 뺀다.
+    이 말은 따로 찾을 사실이 아니다. 하위 질문으로 남으면 판정이 그 말을 별도 사실로 세고, 대상·조건을 붙인 꼴("... 10만 달러일 때 판 날짜는 언제야?")은 본 사실의 근거로 채워지지 않는 것처럼 보인다.
+    빼고 남은 하위 질문이 `MIN_SUB`개 미만이면 나누지 않은 것(빈 목록)이다. LLM을 부르지 않는다."""
+    if not subs:
+        return subs
+    kept = [s for s in subs if not _CITATION_ASK.search(s.strip())]
+    if len(kept) == len(subs):
+        return subs
+    return kept if len(kept) >= MIN_SUB else []
 
 
 def keep_premise(question: str, subs: list[str]) -> list[str]:
@@ -161,24 +233,52 @@ def gate_split(ask: Callable[[str, str], str], question: str) -> bool | None:
     if not question or not question.strip():
         return None
     try:
-        text = ask(SYSTEM_GATE, _for_prompt(question))
+        text = ask(system_prompt(GATE_TASK), _for_prompt(question))
     except Exception as e:  # noqa: BLE001  예비 분해가 실패하면 미리 돌리지 않을 뿐이다. 비용 상한은 그대로 올린다
         if type(e).__name__ == "CostCapExceeded":
             raise
         log.warning("예비 분해 호출 실패: %s", type(e).__name__)
         return None
     obj = parse_split(text)
-    return None if obj is None else bool(normalize(question, obj))
+    if obj is None:
+        return None
+    subs = normalize(question, obj)
+    return bool(drop_citation_asks(subs) if keep_subject_enabled() else subs)
 
 
-def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
-    """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
+def keep_subject_union_enabled() -> bool:
+    """`GRAPH_KEEP_SUBJECT_UNION`이 1이면 켬. 코드 기본은 꺼짐이고 끄면 검색 입력이 지금과 같다(`decompose_detail`의 원 하위 질문을 검색에 넘기지 않는다).
+    켜면 `keep_subject`가 대상 구를 붙인 하위 질문마다 붙이기 전 하위 질문으로도 찾아 두 후보 목록을 번갈아 합친다(`backend/rag/sub_alts.py` 힌트, `search.Searcher.search`)."""
+    return (os.environ.get("GRAPH_KEEP_SUBJECT_UNION") or "").strip() == "1"
+
+
+def subject_alts(base: list[str], kept: list[str], final: list[str]) -> list[str] | None:
+    """`keep_subject`가 고친 하위 질문의 고치기 전 문장(검색에 같이 넘길 원 하위 질문). 자리는 `final`과 같고, 고치지 않은 자리는 빈 글이다.
+    base: `keep_subject`에 넣은 하위 질문, kept: 그 결과, final: `keep_premise`까지 거친 최종 하위 질문. 전제 문장이 붙었으면 원 하위 질문에도 같은 전제를 붙인다.
+    한 자리도 고치지 않았으면 None이다. LLM을 부르지 않는다."""
+    if not final or len(base) != len(kept) or len(kept) != len(final):
+        return None
+    out = []
+    for b, k, f in zip(base, kept, final):
+        if b == k:
+            out.append("")
+            continue
+        prefix = f[: len(f) - len(k)] if f != k and f.endswith(k) else ""
+        alt = f"{prefix}{b}"
+        out.append(alt if alt != f and len(alt) <= MAX_SUB_CHARS else "")
+    return out if any(out) else None
+
+
+def decompose_detail(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str, list[str] | None]:
+    """`decompose_question`과 같은 호출, 같은 하위 질문과 출처에 원 하위 질문(`subject_alts`)을 더해 돌려준다. 분해 LLM 호출과 프롬프트는 그대로다."""
     if not question or not question.strip():
-        return [], "skipped"
+        return [], "skipped", None
     source = "invalid"
+    keep = keep_subject_enabled()
+    system = system_prompt(TASK)
     for _ in range(ATTEMPTS):
         try:
-            text = ask(SYSTEM_TAGGED, _for_prompt(question))
+            text = ask(system, _for_prompt(question))
         except Exception as e:  # noqa: BLE001  분해가 실패해도 검색은 원 질문 그대로 이어 간다. 비용 상한은 그대로 올린다
             if type(e).__name__ == "CostCapExceeded":
                 raise
@@ -187,6 +287,20 @@ def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[l
             continue
         obj = parse_split(text)
         if obj is not None:
-            return keep_premise(question, drop_company_prefix(normalize(question, obj))), "llm"
+            subs = drop_company_prefix(normalize(question, obj))
+            alts = None
+            if keep:
+                base = drop_citation_asks(subs)
+                subs = keep_subject(question, base)
+                final = keep_premise(question, subs)
+                alts = subject_alts(base, subs, final)
+                return final, "llm", alts
+            return keep_premise(question, subs), "llm", alts
         source = "invalid"
-    return [], source
+    return [], source, None
+
+
+def decompose_question(ask: Callable[[str, str], str], question: str) -> tuple[list[str], str]:
+    """`ask(system, user) -> 응답 문자열`로 질문을 나눈다. (하위 질문 목록, 출처)를 돌려준다. 출처: llm | invalid | error | skipped."""
+    subs, source, _ = decompose_detail(ask, question)
+    return subs, source

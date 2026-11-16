@@ -1,0 +1,1499 @@
+{
+ "sets": {
+  "v2": {
+   "n_relevant": 25,
+   "gold_rate_00047": 0.9422222222222223,
+   "gold_rate_00065": 0.9422222222222223,
+   "per_question": [
+    {
+     "id": 1,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3,
+      "cite_add": 3
+     },
+     "answer_path_devices": [
+      "cite_add",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 2,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 3,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 4,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 5,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 6,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 7,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 8,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {
+      "head_owner": 3
+     },
+     "answer_path_devices": [
+      "head_owner"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 9,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 10,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 11,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 12,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 13,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 14,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 15,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 31,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "best2_core": 1
+     },
+     "answer_path_devices": [
+      "best2_core",
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 32,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {
+      "early_search": 1
+     },
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 33,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {
+      "cite_add": 2
+     },
+     "answer_path_devices": [
+      "cite_add"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 34,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {
+      "adopt": 1
+     },
+     "answer_path_devices": [
+      "adopt"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 35,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 36,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "cite_add": 3
+     },
+     "answer_path_devices": [
+      "cite_add",
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "3/3+0",
+      "3/3+0",
+      "3/3+0"
+     ],
+     "c65": [
+      "3/3+0",
+      "3/3+0",
+      "3/3+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 37,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 38,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "partial": 2,
+      "retry_ground": 2,
+      "head_owner": 1,
+      "adopt": 1,
+      "redraft": 1
+     },
+     "answer_path_devices": [
+      "adopt",
+      "head_owner",
+      "intro_core",
+      "page_fill",
+      "partial",
+      "redraft"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "0/2+2",
+      "0/2+1",
+      "0/2+2"
+     ],
+     "c65": [
+      "0/2+1",
+      "0/2+2",
+      "0/2+1"
+     ],
+     "rate47": 0.0,
+     "rate65": 0.0,
+     "contrib": 0.0,
+     "off47": 5,
+     "off65": 4,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 39,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "best2_core": 1
+     },
+     "answer_path_devices": [
+      "best2_core",
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/3+1",
+      "2/3+0",
+      "1/3+1"
+     ],
+     "c65": [
+      "2/3+0",
+      "2/3+0",
+      "1/3+1"
+     ],
+     "rate47": 0.5555555555555555,
+     "rate65": 0.5555555555555555,
+     "contrib": 0.0,
+     "off47": 2,
+     "off65": 1,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 40,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    }
+   ],
+   "groups": {
+    "cite_add+page_fill": {
+     "ids": [
+      1
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "intro_core+page_fill": {
+     "ids": [
+      2,
+      5,
+      6,
+      10,
+      35,
+      37,
+      40
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "page_fill": {
+     "ids": [
+      3,
+      4,
+      9,
+      13
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "(답 경로 장치 발동 없음)": {
+     "ids": [
+      7,
+      11,
+      12,
+      14,
+      15,
+      32
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "head_owner": {
+     "ids": [
+      8
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "best2_core+intro_core+page_fill": {
+     "ids": [
+      31,
+      39
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      39
+     ]
+    },
+    "cite_add": {
+     "ids": [
+      33
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "adopt": {
+     "ids": [
+      34
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "cite_add+intro_core+page_fill": {
+     "ids": [
+      36
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "adopt+head_owner+intro_core+page_fill+partial+redraft": {
+     "ids": [
+      38
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      38
+     ]
+    }
+   }
+  },
+  "holdout": {
+   "n_relevant": 10,
+   "gold_rate_00047": 0.8333333333333334,
+   "gold_rate_00065": 0.9,
+   "per_question": [
+    {
+     "id": 101,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "head_owner": 3,
+      "cite_add": 3,
+      "adopt": 1,
+      "redraft": 1
+     },
+     "answer_path_devices": [
+      "adopt",
+      "cite_add",
+      "head_owner",
+      "intro_core",
+      "page_fill",
+      "redraft"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/2+2",
+      "1/2+2",
+      "거절(0/2)"
+     ],
+     "c65": [
+      "1/2+1",
+      "1/2+1",
+      "1/2+0"
+     ],
+     "rate47": 0.3333333333333333,
+     "rate65": 0.5,
+     "contrib": 0.01666666666666667,
+     "off47": 4,
+     "off65": 2,
+     "ref47": 1,
+     "ref65": 0
+    },
+    {
+     "id": 102,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 103,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 104,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "head_owner": 1
+     },
+     "answer_path_devices": [
+      "head_owner",
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "0/2+2",
+      "2/2+0",
+      "1/2+1"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 0.5,
+     "rate65": 1.0,
+     "contrib": 0.05,
+     "off47": 3,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 105,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "2/2+2",
+      "2/2+2",
+      "2/2+2"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 6,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 106,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "adopt": 1,
+      "redraft": 1
+     },
+     "answer_path_devices": [
+      "adopt",
+      "intro_core",
+      "page_fill",
+      "redraft"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 107,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+1",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 1,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 108,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3,
+      "intro_core": 2
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/2+1",
+      "1/2+1",
+      "1/2+1"
+     ],
+     "c65": [
+      "1/2+1",
+      "1/2+1",
+      "1/2+1"
+     ],
+     "rate47": 0.5,
+     "rate65": 0.5,
+     "contrib": 0.0,
+     "off47": 3,
+     "off65": 3,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 109,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3,
+      "intro_core": 1
+     },
+     "answer_path_devices": [
+      "intro_core",
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+1"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 1,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 110,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": false,
+     "c47": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "c65": [
+      "2/2+0",
+      "2/2+0",
+      "2/2+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    }
+   ],
+   "groups": {
+    "adopt+cite_add+head_owner+intro_core+page_fill+redraft": {
+     "ids": [
+      101
+     ],
+     "contrib": 0.01666666666666667,
+     "changed_ids": [
+      101
+     ]
+    },
+    "(답 경로 장치 발동 없음)": {
+     "ids": [
+      102,
+      103,
+      107
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      107
+     ]
+    },
+    "head_owner+intro_core+page_fill": {
+     "ids": [
+      104
+     ],
+     "contrib": 0.05,
+     "changed_ids": [
+      104
+     ]
+    },
+    "intro_core+page_fill": {
+     "ids": [
+      105,
+      108,
+      109
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      105,
+      109
+     ]
+    },
+    "adopt+intro_core+page_fill+redraft": {
+     "ids": [
+      106
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "page_fill": {
+     "ids": [
+      110
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    }
+   }
+  },
+  "cite_new": {
+   "n_relevant": 5,
+   "gold_rate_00047": 1.0,
+   "gold_rate_00065": 1.0,
+   "per_question": [
+    {
+     "id": 301,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {},
+     "answer_path_devices": [],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+1",
+      "1/1+1",
+      "1/1+1"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 3,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 302,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "intro_core": 3,
+      "page_fill": 3,
+      "adopt": 1,
+      "redraft": 1
+     },
+     "answer_path_devices": [
+      "adopt",
+      "intro_core",
+      "page_fill",
+      "redraft"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 303,
+     "dollar": false,
+     "split_runs_00065": 0,
+     "fired": {
+      "head_owner": 3
+     },
+     "answer_path_devices": [
+      "head_owner"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 304,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": false,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+1",
+      "1/1+1",
+      "1/1+1"
+     ],
+     "c65": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 3,
+     "off65": 0,
+     "ref47": 0,
+     "ref65": 0
+    },
+    {
+     "id": 305,
+     "dollar": false,
+     "split_runs_00065": 3,
+     "fired": {
+      "page_fill": 3
+     },
+     "answer_path_devices": [
+      "page_fill"
+     ],
+     "corpus_fix_touches_gold": true,
+     "corpus_fix_in_context": true,
+     "c47": [
+      "1/1+0",
+      "1/1+0",
+      "1/1+0"
+     ],
+     "c65": [
+      "1/1+1",
+      "1/1+1",
+      "1/1+0"
+     ],
+     "rate47": 1.0,
+     "rate65": 1.0,
+     "contrib": 0.0,
+     "off47": 0,
+     "off65": 2,
+     "ref47": 0,
+     "ref65": 0
+    }
+   ],
+   "groups": {
+    "(답 경로 장치 발동 없음)": {
+     "ids": [
+      301
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      301
+     ]
+    },
+    "adopt+intro_core+page_fill+redraft": {
+     "ids": [
+      302
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "head_owner": {
+     "ids": [
+      303
+     ],
+     "contrib": 0.0,
+     "changed_ids": []
+    },
+    "page_fill": {
+     "ids": [
+      304,
+      305
+     ],
+     "contrib": 0.0,
+     "changed_ids": [
+      304,
+      305
+     ]
+    }
+   }
+  }
+ },
+ "devices": [
+  [
+   "intro_core",
+   "62.51 넓힌 첫 검색 앞자리에 도입부 청크 포함",
+   true
+  ],
+  [
+   "page_fill",
+   "62.55 나뉜 질문 첫 검색의 같은 페이지 보충",
+   true
+  ],
+  [
+   "head_owner",
+   "62.52·62.58(+62.70 L·M) 겹친 머리 인용 바로잡기",
+   true
+  ],
+  [
+   "cite_add",
+   "62.56·62.57(+62.70 K) 인용 더하기·문장 공유 더하기의 범위",
+   true
+  ],
+  [
+   "best2_core",
+   "62.59 앞자리 인용끼리 판정 구절 청크 수로 후보 고르기",
+   true
+  ],
+  [
+   "adopt",
+   "62.68 근거 확인 실패 뒤 받쳐진 다른 후보 쓰기",
+   true
+  ],
+  [
+   "partial",
+   "62.63 일부 판정은 재검색 없이 일부 답 / 62.66 일부 답 문장 빼기",
+   true
+  ],
+  [
+   "redraft",
+   "62.67 다시 쓴 답의 일부 답 안내 조건(다시 쓰기 경로)",
+   true
+  ],
+  [
+   "retry_ground",
+   "62.49 재검색 뒤 근거 확인 미리 시작(재검색 행)",
+   false
+  ],
+  [
+   "early_search",
+   "62.53·62.64 원 질문 첫 검색 일찍 시작·결과 재사용",
+   false
+  ],
+  [
+   "none_capped",
+   "62.72 근거 없음 두 표 뒤 셋째 표 1.0초까지만",
+   false
+  ]
+ ]
+}

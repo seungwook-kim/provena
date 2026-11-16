@@ -23,6 +23,7 @@ from typing import Any
 
 from fastmcp import Client
 
+from backend.rag import sub_alts
 from backend.schemas.chunk import Chunk, SearchQuery
 
 DEFAULT_URL = "http://127.0.0.1:8000/mcp/"
@@ -31,6 +32,7 @@ SEARCH_TOOL = "search_handbook"
 SECTION_TOOL = "get_section"
 
 _last_note: contextvars.ContextVar[str | None] = contextvars.ContextVar("mcp_last_note", default=None)
+_last_usage: contextvars.ContextVar[dict | None] = contextvars.ContextVar("mcp_last_usage", default=None)
 
 
 class McpSearchError(RuntimeError):
@@ -74,11 +76,13 @@ async def load_tools(target: Any = None, token: str | None = None) -> list:
     return await MCPAdapter(make_client(target, token)).list_tools()
 
 
-def _args(q: SearchQuery) -> dict[str, Any]:
+def _args(q: SearchQuery, alts: list[str] | None = None) -> dict[str, Any]:
     args: dict[str, Any] = {"query": q.query, "k": q.k}
     if q.sub_queries:
         # 몰래 빼지 않고 그대로 보낸다(빼면 직접 search()와 결과가 달라진다). 검사(2~3개)는 서버가 invalid로 돌려준다.
         args["sub_queries"] = list(q.sub_queries)
+    if alts:   # 원 하위 질문(`GRAPH_KEEP_SUBJECT_UNION`을 켠 그래프가 검색하는 동안만 있는 힌트). 없으면 보내지 않아 도구 입력이 지금과 같다
+        args["sub_query_alts"] = alts
     if q.org is not None:
         args["org"] = q.org
     if q.as_of is not None:
@@ -102,7 +106,13 @@ def _read(content: dict[str, Any] | None) -> tuple[list[Chunk], str | None]:
 
 async def asearch_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> tuple[list[Chunk], str | None]:
     """(청크 목록, 서버 note). note에는 fallback_reason(번역 실패·no_key 등)이 올 수 있다."""
-    args = _args(q)
+    chunks, note, _usage = await _asearch(q, target, token, sub_alts.current(q.sub_queries))
+    return chunks, note
+
+
+async def _asearch(q: SearchQuery, target: Any = None, token: str | None = None, alts: list[str] | None = None) -> tuple[list[Chunk], str | None, dict | None]:
+    """(청크 목록, 서버 note, 서버가 센 임베딩 사용량 `usage`). 사용량은 비용 집계용이다(`graph/mcp_retriever.py`가 /chat 집계에 더한다)."""
+    args = _args(q, alts)
     client = make_client(target, token)
     try:
         async with client:
@@ -115,7 +125,9 @@ async def asearch_via_mcp(q: SearchQuery, target: Any = None, token: str | None 
         raise
     if res.is_error:   # 서버가 도구 실행 자체를 실패로 돌려줌(우리 서버는 상태로 답하므로 드묾)
         raise McpSearchError("error", "MCP 도구 실행 오류", retryable=False)
-    return _read(res.structured_content)
+    chunks, note = _read(res.structured_content)
+    usage = res.structured_content.get("usage")
+    return chunks, note, (usage if isinstance(usage, dict) else None)
 
 
 def _is_transport(e: BaseException) -> bool:
@@ -131,22 +143,31 @@ def _is_transport(e: BaseException) -> bool:
 
 def search_via_mcp(q: SearchQuery, target: Any = None, token: str | None = None) -> list[Chunk]:
     """search(q)와 같은 모양. 그래프 노드가 동기 함수라도, 이미 이벤트 루프 안이어도 부를 수 있다(그때는 새 스레드에서)."""
+    alts = sub_alts.current(q.sub_queries)   # 원 하위 질문 힌트는 부른 쪽 문맥에서 읽는다(아래 새 스레드에서는 보이지 않는다)
+
     def go():
-        return asyncio.run(asearch_via_mcp(q, target, token))
+        return asyncio.run(_asearch(q, target, token, alts))
+    _last_usage.set(None)
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        chunks, note = go()
+        chunks, note, usage = go()
     else:
         with ThreadPoolExecutor(max_workers=1) as ex:
-            chunks, note = ex.submit(go).result()
+            chunks, note, usage = ex.submit(go).result()
     _last_note.set(note)
+    _last_usage.set(usage)
     return chunks
 
 
 def last_mcp_note() -> str | None:
     """같은 스레드의 마지막 search_via_mcp가 받은 서버 note(fallback_reason 등). search.last_search_trace()의 짝."""
     return _last_note.get()
+
+
+def last_mcp_usage() -> dict | None:
+    """같은 스레드의 마지막 search_via_mcp가 받은 서버의 임베딩 사용량 `{"embed_tokens", "embed_calls"}`. 실패했거나 서버가 주지 않았으면 None."""
+    return _last_usage.get()
 
 
 async def aget_section_via_mcp(rule_seq: int, article: str | None, as_of: str | None = None, target: Any = None, token: str | None = None) -> dict | None:

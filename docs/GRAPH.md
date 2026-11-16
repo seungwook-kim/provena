@@ -314,7 +314,7 @@ flowchart TD
 | `GET /approvals` | 관리자 | 승인 대기 목록. 각 건의 interrupt 값을 가장 안쪽 그래프 상태에서 읽는다(`pending_interrupt`) | `decision/routes.py:457`, `convert.py:195` |
 | `GET /approvals/{approval_id}` | 관리자 | 승인 건 하나와 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`) | `decision/routes.py:472` |
 | `POST /approvals/{approval_id}` | 관리자와 CSRF | 결정표·쟁점표는 `{approve, comment}`, 팀 실패 알림은 `{action, comment}`를 받아 같은 `thread_id`로 `Command(resume=값)`을 넘긴다. `decided_by`는 로그인한 관리자로 채운다. 결정표는 변환 그래프, 쟁점표와 팀 실패 알림은 질문 그래프로 재개한다 | `decision/routes.py:485`, `_resume` `decision/routes.py:351` |
-| `POST /decision-tables/convert` | 관리자와 CSRF | 결정표 변환 그래프를 새 `thread_id`로 시작해 `human_approval`에서 멈춘 승인 건을 돌려준다 | `decision/routes.py:424` |
+| `POST /decision-tables/convert` | 관리자와 CSRF | 결정표 변환 그래프를 새 `thread_id`로 시작해 `human_approval`에서 멈춘 승인 건을 돌려준다. `?draft_only=true`이면 그래프를 시작하지 않고 초안 단계(`convert.make_draft`)와 셀 대조만 돌려 200으로 돌려준다(저장·체크포인트 없음) | `decision/routes.py:424` |
 
 ### 5-3. 중복·잘못된 결정 처리
 
@@ -342,11 +342,13 @@ flowchart TD
 
 ## 6. 경로를 바꾸는 설정 스위치
 
-"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다. `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:155`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
+"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다(코드 기본이 켬인 효과 분리 측정용 스위치 6개는 `off`가 `0`으로 바뀌어 꺼진다, `service_profile.py:152`, `service_profile.py:195`). `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:173`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
 
 | 스위치 | 읽는 곳 | 코드 기본값 | 서비스 값 | 바뀌는 경로 |
 |---|---|---|---|---|
 | `SEARCH_DECOMPOSE` | `backend/graph/decompose.py:45` | 켬 | 채우지 않음(켬) | 첫 `search`에서 질문을 하위 질문으로 나눈다(`sub_queries`). 하위 질문이 2개 이상이면 일부 판정이 재검색 없이 `write_answer`로 간다 |
+| `GRAPH_DECOMPOSE_KEEP_SUBJECT` | `backend/graph/decompose.py:56` | 끔 | 켬(`service_profile.py:135`). 운영 판 `provena-api-00172-rex`(직전 `provena-api-00150-jub`부터)는 Cloud Run 환경 변수 `off`로 끔(켠 판의 v2 정답 근거 인용률이 낮았다, `EVAL_REPORT.md` 11장, 결정 0126) | 분해 프롬프트에 원 질문의 대상·조건을 모든 하위 질문에 넣으라는 규칙 한 줄을 더하고(예비 분해도 같은 프롬프트), 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 하위 질문 앞에 붙인다(`keep_subject`). 인용 표시(근거 섹션, 출처, 판 날짜·번호)만 묻는 하위 질문은 따로 찾을 사실이 아니라서 먼저 빼고, 남은 하위 질문이 2개 미만이면 나누지 않는다(`drop_citation_asks`, `decompose.py:172`). 합치는 방식과 자리 수는 그대로다 |
+| `GRAPH_KEEP_SUBJECT_UNION` | `backend/graph/decompose.py:249` | 끔 | 켬(`service_profile.py:139`). 운영 판 `provena-api-00172-rex`(직전 `provena-api-00150-jub`부터)는 위 스위치를 꺼서 대상 구를 붙인 하위 질문이 없으므로 닿지 않는다 | 위 스위치의 코드가 대상 구를 붙인 하위 질문마다 붙이기 전 하위 질문(`subject_alts`)도 검색에 넘긴다. 검색 계약(`SearchQuery`, SDD 6장)은 그대로 두고 검색을 부르는 동안만 힌트로 둔다(`backend/rag/sub_alts.py`, MCP 경로는 `search_handbook`의 선택 입력 `sub_query_alts`). 검색은 두 문장을 같은 번역·임베딩 묶음과 벡터 질의로 찾고, 그 하위 질문 자리의 후보 목록을 두 목록을 번갈아 합친 k개로 바꾼다(`search.py:791`). 목록 수, 자리 수 k, 끝자리, 링크 확장, 근거 목록 상한은 그대로다. 분해 LLM 호출과 판정·답 작성 입력의 하위 질문은 바뀌지 않는다. 붙인 하위 질문 하나마다 벡터 질의 1번과 번역 1번(따로 된 일꾼, `translate.py`)이 늘고, 번역이 안 되면 그 원 하위 질문만 뺀다. 붙인 하위 질문이 없으면 검색 입력이 끈 것과 같다 |
 | `SEARCH_MAX_RESEARCH` | `build.py:371`(상한 `MAX_RESEARCH = 2`, `build.py:64`) | 2 | 1(`service_profile.py:56`) | `after_judge`의 `rewrite`(재검색) 횟수 상한. 0~2 밖이면 시작 오류 |
 | `GRAPH_SECTION_KEEPS_RESEARCH` | `build.py:458` | 끔 | 켬(`service_profile.py:64`) | 판정이 고른 섹션 읽기가 재검색 횟수를 쓰지 않는다 |
 | `GRAPH_STOP_STALLED_SEARCH` | `build.py:533` | 끔 | 켬(`service_profile.py:59`) | 재검색이 근거를 더하지 못했거나 근거 목록이 찼으면 `judge`가 판정을 다시 부르지 않고, `after_judge`가 `rewrite` 대신 `give_up`으로 보낸다 |
@@ -357,16 +359,24 @@ flowchart TD
 | `GRAPH_JUDGE_QUERY` | `build.py:457` | 끔 | 켬(`service_profile.py:62`) | 재검색 때 판정이 낸 검색어를 써서 `rewrite`가 LLM을 부르지 않는다 |
 | `GRAPH_SKIP_FIRST_REWRITE` | `build.py:532` | 끔 | 켬(`service_profile.py:58`) | 분해를 켜고 질문에 시점이 없으면 첫 `rewrite`의 LLM을 건너뛴다 |
 | `GRAPH_PARALLEL_INTAKE` | `build.py:454` | 끔 | 켬(`service_profile.py:54`) | `classify` 안에서 첫 재작성·분해를 동시에 부르고, 정책 경로가 아니면 결과를 버린다 |
+| `GRAPH_CLASSIFY_RACE` | `build.py:456`, 쓰는 곳 `build.py:803`(`raced`, `confirm`, `settle_loser`) | 끔 | 켬(`service_profile.py:156`). 운영 판 `provena-api-00172-rex`(커밋 `194dfd9a`, 2026-11-16 21:38 KST부터)에서 켬. 운영 측정의 근거와 대가는 결정 0127, `EVAL_REPORT.md` 11장 | `classify`가 같은 분류 호출 두 개를 처음부터 동시에 보내 먼저 성공한 결과로 경로를 정한다. 도메인 밖이면 남은 호출의 결과를 기다려 두 결과가 모두 도메인 밖일 때만 따른다(규칙은 그대로이고, 두 번째 호출을 차례로 부르지 않는다). 한 호출이 실패하면 다른 호출의 결과를 쓰고, 도메인 밖 확인에 쓸 남은 호출이 실패했으면 지금처럼 한 번 더 부른다. 정책 경로면 남은 호출을 기다리지 않고, 정책 경로가 아니면 노드가 끝나기 전에 남은 호출을 기다린다. 두 호출 모두 비용 집계와 호출 기록(`classify` 단계)에 남는다. 질문마다 분류 호출이 1번 는다(도메인 밖 질문은 그대로 2번). 키 없는 데모(녹화 재생)는 켜도 쓰지 않는다. 끄려면 `0`이나 `off` |
 | `GRAPH_SPECULATE_FIRST`, `GRAPH_SPECULATE_EARLY_SEARCH` | `answer_fixes.py:222`, `answer_fixes.py:228` | 끔 | 켬(`service_profile.py:85`, `service_profile.py:118`) | 분해가 "나누지 않음"이고 경로가 정책이면 미리 돌린 `rewrite`·`search`·`judge` 결과를 노드가 그대로 돌려준다. 아니면 버리고 노드를 직접 돌린다 |
 | `GRAPH_JUDGE_ANSWER` | `build.py:387` | 끔 | `parallel_all`(`service_profile.py:57`) | `judge`와 답 작성을 동시에 부르고, 충분 판정이면 `write_answer`가 그 답(`early_answer`)을 쓴다 |
 | `GRAPH_QUERY_BRANCHES` | `backend/graph/query_plan.py:24` | 끔 | 켬(`service_profile.py:69`) | 대상별로 절차가 갈리는 주제의 첫 검색을 대상별 하위 질문으로 나눈다(`query_targets`) |
+| `GRAPH_INTRO_IN_CORE` | `answer_fixes.py:1076`, 쓰는 곳 `build.py:207`(`core_chunks`) | 켬 | 켬(`service_profile.py:143`) | 사전 등록 62.51. 넓힌 첫 검색(나뉜 질문, 달러 금액 질문 제외)의 앞자리에 도입부 채우기(R3)가 더한 청크를 넣는다. `0`이면 앞자리는 앞 5자리뿐이고, 도입부 청크는 판정 입력에서 `[보충]`으로 표시되며 앞자리 답의 입력과 62.59의 앞자리 집합에서 빠진다. 검색, 문맥, `intro_chunk_ids` 기록은 그대로다 |
+| `GRAPH_CITE_HEAD_OWNER` | `answer_fixes.py:1082`, 쓰는 곳 `build.py:2039` | 켬 | 켬(`service_profile.py:144`) | 사전 등록 62.52. 근거 판정 뒤 겹친 머리 인용 바로잡기(`head_owner_cites`). `0`이면 이 단계를 통째로 건너뛰므로 같은 함수의 62.58(문맥 밖 앞 청크 읽기)과 62.70 M(다시 쓴 답의 바로잡기)도 꺼진다. 62.70 L(문장 공유 더하기의 앞 청크 바꾸기)과 LLM 입력은 그대로다 |
+| `GRAPH_FIRST_PAGE_FILL` | `answer_fixes.py:1088`, 쓰는 곳 `build.py:1222` | 켬(`page_search`가 있을 때) | 켬(`service_profile.py:145`) | 사전 등록 62.55. 나뉜 질문(달러 금액 질문 제외)의 첫 검색 뒤 문맥 페이지 안에서 원 질문과 가장 가까운 새 청크 1개를 문맥 끝에 보충한다. `0`이면 페이지 검색을 부르지 않고 보충 청크, `search_stats.page_fill`, 근거 목록 상한 +1이 없다. 일부 판정 뒤 페이지 재검색(`GRAPH_RESEARCH_SAME_PAGE`)은 그대로다 |
+| `GRAPH_CITE_EXPAND_NARROW` | `answer_fixes.py:1094`, 쓰는 곳 `answer_fixes.py:398`, `answer_fixes.py:405`, `answer_fixes.py:413` | 켬 | 켬(`service_profile.py:146`) | 사전 등록 62.56. 인용 더하기(A1, `GRAPH_CITE_EXPAND`)에서 (가) 인용 청크와 같은 페이지·같은 절 제목의 청크를 더하지 않고 (나) 표 행끼리는 첫 칸 값이 같을 때만 같은 값 줄로 본다. `0`이면 (가)(나) 둘 다 빠진 62.56 이전 규칙이다 |
+| `GRAPH_CITE_PHRASE_WHOLE_ROWS` | `answer_fixes.py:1100`, 쓰는 곳 `answer_fixes.py:494`, `answer_fixes.py:525` | 켬 | 켬(`service_profile.py:147`) | 사전 등록 62.57. 문장 공유 더하기(A1b, `GRAPH_CITE_PHRASE`)에서 표 행은 줄 전체가 상대 청크에 그대로 있을 때만 공유 글로 센다. `0`이면 62.57 이전처럼 본문 전체 단어열로 잰다(62.70 L의 공유 길이 비교도 같은 규칙). 같은 페이지·다른 팀 페이지 제외는 그대로다 |
+| `SEARCH_FULL_TAIL` | `backend/rag/retrieve/search.py:1235`(`full_tail`), 쓰는 곳 `search.py:801` | 1(`FULL_TAIL`) | 1(`service_profile.py:148`) | 사전 등록 62.38의 끝 1자리 규칙. 나뉜 질문의 k=8 첫 검색에서 원 질문 후보 목록이 받는 끝자리 수(k-1까지). `0`(또는 `off`)이면 원 질문 후보 목록을 만들지 않고(원 질문 벡터 질의 없음) 하위 질문 목록만 번갈아 합친 8자리에 링크 확장을 한다. k=5 검색, 나뉘지 않은 질문, 합동 검토 팀 검색은 닿지 않는다. 음수나 정수가 아닌 값은 검색 때 ValueError |
 | `GROUND_SKIP_BACKED` | `build.py:534` | 끔 | 채우지 않음(끔) | 값이 모두 인용 청크에 있으면 `ground`의 LLM 판정을 건너뛴다 |
 | `USE_SKILLS` | `backend/services/skills.py:21` | 켬 | 채우지 않음(켬) | 끄면 `ground`의 LLM 판정을 건너뛰고 Skill 본문을 붙이지 않는다 |
-| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:59` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
-| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:150-151`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다) |
+| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:63` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
+| `GRAPH_FLIP_STRUCTURE` | `backend/graph/untrusted.py:461` | 끔 | 켬(`service_profile.py:138`) | 검색 원문에서 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 숫자+단위 값을 내세우는 문장을, 주장하는 낱말이 없어도 입력에서 빼고 그 새 값이 든 답 문장을 출력 검사가 뺀다(조건문, 포함·범위·상한 같은 관계 문장은 제외) |
+| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:168-169`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
 | `CHAT_FOLLOWUP` | `backend/api/routes.py:188` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |
 | `RECALL_MIN_CONFIDENCE` | `recall/graph.py:36` | 0.5 | 채우지 않음 | 리콜 `notify`에서 이 값보다 확신도가 낮은 알림을 관리자 검토함으로 보낸다 |
 
-경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-135`에 있다.
+경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-149`에 있다.

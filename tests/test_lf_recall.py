@@ -194,6 +194,21 @@ def test_overall_is_the_pooled_mean_of_question_run_pairs_and_matches_per_run_me
     assert rep["coverage"]["fraction"] == 1.0
 
 
+def test_mrr_ndcg_hit_are_saved_per_row_per_run_and_pooled_with_the_official_values():
+    items = make_world()
+    # 문항1: 정답 Alpha가 2번째(rr 0.5), 문항2: 정답 Gamma가 1번째(rr 1.0) -> MRR 0.75
+    top1 = [ch("z/z.md", "Z", A(5)), ch("a/p.md", "Alpha", A(1))]
+    top2 = [ch("c/r.md", "Gamma", A(4))]
+    rep = L.build_report({1: [row(1, 1, "th1"), row(1, 2, "th2")]}, items, [obs("t1", "th1", T0, top1, "q1"), obs("t2", "th2", T0 + timedelta(seconds=9), top2, "q2")])
+    d = {x["id"]: x for x in rep["detail"]}
+    assert d[1]["rr"] == pytest.approx(0.5) and d[2]["rr"] == pytest.approx(1.0) and d[2]["hit@5"] == 1 and d[2]["ndcg@5"] == pytest.approx(1.0)
+    for block in (rep["summary"]["per_run"][1], rep["summary"]["all_runs"]):
+        mt = block["metrics"]
+        assert mt["rr"]["value"] == pytest.approx(0.75) and set(mt) == {"rr", "ndcg@5", "hit@5", "page_hit@5"}
+        assert 0 < mt["ndcg@5"]["value"] <= 1 and mt["hit@5"]["value"] == pytest.approx(1.0)
+    assert "MRR@5" in L.render(rep) and "nDCG@5" in L.render(rep)
+
+
 def test_gold_alternatives_with_pipe_count_once_and_match_either_page():
     items = load_items([item(1, "q1", ["a/p.md > Alpha | b/q.md > Alpha"])])
     rep = L.build_report({1: [row(1, 1, "th1")]}, items, [obs("t1", "th1", T0, [ch("b/q.md", "Alpha", A(1))], "q1")])

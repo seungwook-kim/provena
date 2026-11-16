@@ -39,6 +39,7 @@ from typing import Protocol
 
 import numpy as np
 
+from backend.rag import sub_alts
 from backend.rag.retrieve import hedge as hedge_mod
 from backend.rag.retrieve import ranges
 from backend.rag.retrieve.embed import EmbedNoKey
@@ -636,25 +637,31 @@ class Searcher:
                 if g != self._gen:
                     self._build_bm25()
 
-    def _translate_one(self, query: str, kind: str) -> tuple[str | None, str | None, str | None]:
-        """(번역문, 출처, 내린 이유). 하위 질문을 동시에 번역하려고 기록(tr)을 직접 고치지 않는다."""
+    def _translate_one(self, query: str, kind: str, side: bool = False) -> tuple[str | None, str | None, str | None]:
+        """(번역문, 출처, 내린 이유). 하위 질문을 동시에 번역하려고 기록(tr)을 직접 고치지 않는다.
+        side: 원 하위 질문(`sub_alts`)의 번역. 번역 일꾼을 따로 써서 본 질문들의 번역이 그 뒤에 줄 서지 않게 한다(`translate.on_side_pool`)."""
         if not self.cfg.translate:
             return None, None, "translate_off"
-        from backend.rag.retrieve.translate import valid_english
+        from backend.rag.retrieve.translate import on_side_pool, valid_english
         if valid_english(query):                                 # 그래프의 재작성 질의처럼 이미 영어면 LLM을 부르지 않는다
             return query, "as_is", None
-        res = self.translator(query, kind)
+        res = on_side_pool(self.translator, query, kind) if side else self.translator(query, kind)
         return res.text, res.source, (res.source if res.text is None else None)
 
-    def _translate_all(self, texts: list[str], kind: str, tr: SearchTrace) -> list[str | None]:
-        """전체 질문 + 하위 질문. 둘 이상이면 동시에 번역해 기다림을 한 번 분량으로(번역 한도 15초씩, translate.py)."""
+    def _translate_all(self, texts: list[str], kind: str, tr: SearchTrace, n_main: int | None = None) -> list[str | None]:
+        """전체 질문 + 하위 질문. 둘 이상이면 동시에 번역해 기다림을 한 번 분량으로(번역 한도 15초씩, translate.py).
+        n_main: 앞 n_main개만 본 질문이다. 뒤(원 하위 질문)의 번역 실패는 검색 방식을 내리지 않고 기록에도 남기지 않는다(그 자리만 빠진다)."""
+        n_main = len(texts) if n_main is None else n_main
         if len(texts) == 1:
             got = [self._translate_one(texts[0], kind)]
-        else:
+        elif n_main == len(texts):
             with ThreadPoolExecutor(max_workers=len(texts)) as ex:
                 got = list(ex.map(step_cost.bind(llm_trace.bind(lambda t: self._translate_one(t, kind))), texts))
+        else:
+            with ThreadPoolExecutor(max_workers=len(texts)) as ex:
+                got = list(ex.map(step_cost.bind(llm_trace.bind(lambda i: self._translate_one(texts[i], kind, side=i >= n_main))), range(len(texts))))
         tr.translation_source = got[0][1]
-        reasons = [r for _, _, r in got if r]
+        reasons = [r for _, _, r in got[:n_main] if r]
         if reasons:
             tr.fallback_reason = reasons[0]
         return [t for t, _, _ in got]
@@ -778,10 +785,29 @@ class Searcher:
             subs = [s for s in subs if s != q.query]
         texts = [q.query, *subs]                                # 0 = 전체 질문, 1.. = 하위 질문(full_is_sub면 0이 하위 질문도 겸한다)
         tr.n_sub = len(q.sub_queries or [])
+        # 원 하위 질문(`sub_alts` 힌트, 그래프 `GRAPH_KEEP_SUBJECT_UNION`): 대상 구를 붙인 하위 질문 자리마다 붙이기 전 문장을 texts 끝에 더한다.
+        # alt_of[하위 질문 자리] = 원 하위 질문 자리. 같은 번역·임베딩 묶음(요청 1번)과 벡터 질의로 찾고, 아래에서 그 하위 질문의 후보 목록과 번갈아 합친다
+        n_main = len(texts)
+        alt_of: dict[int, int] = {}
+        alts = sub_alts.current(q.sub_queries)
+        if alts:
+            alt_by_sub = {s: a for s, a in zip(q.sub_queries or [], alts) if a and a.strip() and a != s}
+            for i in range(1, n_main):
+                a = alt_by_sub.get(texts[i])
+                if a is not None and a not in texts:
+                    alt_of[i] = len(texts)
+                    texts.append(a)
 
         mode = cfg.mode
         kind = {"hybrid_ko_kw": "keywords", "bm25_kw": "keywords", "dense_en": "sentence"}.get(mode)
-        trans = self._translate_all(texts, kind, tr) if kind else [None] * len(texts)
+        trans = self._translate_all(texts, kind, tr, n_main) if kind else [None] * len(texts)
+        if alt_of and kind and mode != "dense_ko":   # 원 하위 질문의 번역이 안 되면 그 자리만 뺀다(검색 방식은 본 질문들의 번역으로만 정한다)
+            dropped = {i for i, a in alt_of.items() if trans[a] is None}
+            if dropped:
+                keep_alt = {i: a for i, a in alt_of.items() if i not in dropped}
+                order = list(range(n_main)) + sorted(keep_alt.values())
+                texts, trans = [texts[j] for j in order], [trans[j] for j in order]
+                alt_of = {i: n_main + rank for rank, i in enumerate(sorted(keep_alt, key=keep_alt.get))}
         if mode != "dense_ko" and any(t is None for t in trans):
             mode, tr.fallback = "dense_ko", "dense_ko"          # Spec EC-01·EC-02, QUERY_TRANSLATE=0
             log.info("검색 방식을 dense_ko로 내림: %s", tr.fallback_reason)
@@ -797,8 +823,8 @@ class Searcher:
 
         merge = sub_merge_enabled() and len(texts) > 1
         # 나뉜 질문을 기본 자리 수보다 넓혀 찾으면(q.k > DEFAULT_K) 전체 질문(0번)의 후보 목록도 만들어 끝 FULL_TAIL자리를 준다(사전 등록 62.38).
-        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다
-        tail = FULL_TAIL if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
+        # 기본 자리 수 이하는 하위 질문으로만 후보를 만든다(측정과 같음). SEARCH_SUB_MERGE면 전체 질문도 후보에 넣어 점수로 합친다. `SEARCH_FULL_TAIL=0`이면 끝자리가 없다(`full_tail`)
+        tail = min(full_tail(), q.k - 1) if len(texts) > 1 and not merge and not full_is_sub and q.k > DEFAULT_K else 0
         idx = range(len(texts)) if merge or tail or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
         rows: dict[Key, dict] = {}
         lists = []
@@ -831,7 +857,7 @@ class Searcher:
                 _db_ms.reset(token)
             return qv, out, smaps
 
-        try:
+        def run_stages():
             if cfg.hedge:   # 사전 등록 62.14: 시도마다 따로 된 기록에 모으고, 이긴 시도의 기록만 합친다(진 시도가 개수·시간을 부풀리지 않게)
                 def attempt_stage(attempt: int):
                     own = SearchTrace(cfg.embed_model, cfg.rerank_model, mode)
@@ -841,8 +867,19 @@ class Searcher:
                 tr.n_dense += own.n_dense
                 tr.n_bm25 += own.n_bm25
                 tr.hedged, tr.hedge_winner = sent, winner
-            else:
-                qvecs, done, score_maps = vector_stage(tr)
+                return qvecs, done, score_maps
+            return vector_stage(tr)
+
+        try:
+            try:
+                qvecs, done, score_maps = run_stages()
+            except EmbedNoKey:
+                if not alt_of:
+                    raise
+                # 원 하위 질문의 벡터를 만들 수 없다(키 없는 데모에서 녹화에 없는 문장). 원 하위 질문을 빼고 본 질문들로만 다시 찾는다(끈 것과 같은 검색)
+                texts, trans, alt_of = texts[:n_main], trans[:n_main], {}
+                idx = range(len(texts)) if merge or tail or full_is_sub else range(1, len(texts)) if len(texts) > 1 else range(1)
+                qvecs, done, score_maps = run_stages()
         except EmbedNoKey:                                       # 키 없는 데모: 죽지 않고 빈 결과(그래프는 근거 없음으로 거절)
             tr.fallback_reason, tr.ms["total"] = "no_key", _ms(t0)
             log.warning("임베딩 API 키가 없어 검색하지 않음(no_key)")
@@ -851,6 +888,11 @@ class Searcher:
         for got, r in done:
             lists.append(got)
             rows.update(r)
+        if alt_of:
+            # 하위 질문 자리의 목록을 (대상 구를 붙인 문장, 원 하위 질문) 두 목록을 번갈아 합친 k개로 바꾸고 원 하위 질문 목록은 뺀다.
+            # 목록 수와 목록마다의 길이 한도(k, `_ranked`와 같다)가 그대로라 아래 합치기, 끝자리, 링크 확장, k는 지금과 같은 자리 수를 쓴다
+            pos = {i: p for p, i in enumerate(idx)}
+            lists = [roundrobin([lists[pos[i]], lists[pos[alt_of[i]]]], q.k) if i in alt_of else lists[pos[i]] for i in idx if i < n_main]
         if merge:
             best: dict[Key, float] = {}
             for m in score_maps.values():
@@ -867,7 +909,7 @@ class Searcher:
             top = lists[0] if len(lists) == 1 else roundrobin(lists, q.k)
         if not tail:
             top = self._link_expand(top, rows, None if qvecs is None else qvecs[0], q, tr)
-        top = self._range_expand(top[: q.k], rows, qvecs, [*texts, *trans], q, tr)
+        top = self._range_expand(top[: q.k], rows, qvecs, [*texts[:n_main], *trans[:n_main]], q, tr)   # 원 하위 질문은 금액·표 이름 찾기에 넣지 않는다(본 질문들과 같은 입력)
         out = [to_chunk(rows[k]) for k in top[: q.k]]
         tr.n_returned, tr.ms["total"] = len(out), _ms(t0)
         _last.set(tr)
@@ -1226,3 +1268,25 @@ def make_search(embedder: str, mode: str, reranker: str = "none", rerank_top: in
 
 def _no_embed(texts):
     raise RuntimeError("BM25만 방식에서 질문 임베딩을 부르면 안 된다")
+
+
+# ---------- 효과 분리 측정용 스위치(2026-11-16) ----------
+FULL_TAIL_ENV = "SEARCH_FULL_TAIL"  # 비었거나 없으면 FULL_TAIL(1, 지금 동작)
+
+
+def full_tail(environ=None) -> int:
+    """원 질문 목록이 받는 끝자리 수(`SEARCH_FULL_TAIL`, 코드 기본과 서비스 값 1 = `FULL_TAIL`, 사전 등록 62.38). 0(`off`·`false`·`no`도 0)이면 끝자리를 두지 않는다:
+    원 질문 후보 목록을 만들지 않고(원 질문 벡터 질의 없음) 하위 질문 목록만 번갈아 합친 k자리에 링크 확장을 한다(k가 기본 자리 수 이하인 검색과 같은 합치기).
+    음수나 정수가 아닌 값은 ValueError다. 쓰는 곳(`Searcher.search`)에서 k-1을 넘지 않게 자른다."""
+    raw = ((os.environ if environ is None else environ).get(FULL_TAIL_ENV) or "").strip().lower()
+    if not raw:
+        return FULL_TAIL
+    if raw in ("off", "false", "no"):
+        return 0
+    try:
+        n = int(raw)
+    except ValueError:
+        raise ValueError(f"{FULL_TAIL_ENV}는 0 이상의 정수다: {raw!r}") from None
+    if n < 0:
+        raise ValueError(f"{FULL_TAIL_ENV}는 0 이상의 정수다: {raw!r}")
+    return n

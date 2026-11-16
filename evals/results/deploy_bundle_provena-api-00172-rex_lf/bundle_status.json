@@ -1,0 +1,13 @@
+﻿{
+    "spent_usd":  0.0127,
+    "revision":  "provena-api-00172-rex",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0127,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00172-rex"
+                   }
+               ],
+    "commit":  "194dfd9a"
+}

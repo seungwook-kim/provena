@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2534,
+    "revision":  "provena-api-00131-nip",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0164,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00131-nip"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2371,
+                       "detail":  "evals/results/deploy_latency_provena-api-00131-nip"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "42a4b9f9+GRAPH_DECOMPOSE_KEEP_SUBJECT=off"
+}

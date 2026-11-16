@@ -2418,7 +2418,29 @@
     "/decision-tables/convert": {
       "post": {
         "operationId": "start_convert_decision_tables_convert_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "draft_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Draft Only",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description": "draft_only=true: 초안과 셀 대조만, 저장·승인 없음"
+          },
           "201": {
             "content": {
               "application/json": {
@@ -2428,6 +2450,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Start Convert"

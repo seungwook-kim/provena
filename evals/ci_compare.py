@@ -15,7 +15,7 @@
    운영 측정에는 환각 위험 지표가 없어 그 지표는 이 비교에서 뺀다.
 5. `--current <결과 파일>`을 주면(CI는 줌) `evals/ci_current_eval.py`가 현재 코드로 돌린 0원(키 없는 데모 재생, 오프라인) 평가 결과를 기준 파일의 `current` 항목과 견준다.
    커밋된 옛 측정 파일은 코드가 바뀌어도 그대로라 현재 코드의 회귀를 못 잡으므로, 이 항목이 그 구멍을 맡는다. 파일을 주지 않으면 이 비교를 하지 않는다.
-   평가셋 v2 50건 녹화(`data/demo_replay/v2_recorded.json`)가 있으면 결과 파일에 `v2` 요약이 들어 있고, 기준 파일 `current.v2_metrics`와 같은 방식(인용 답·거절은 낮아지면, 녹화에 없는 요청·대체 답은 많아지면 실패)으로 견준다.
+   평가셋 v2 50건 녹화(`evals/ci_replay_v2/v2_recorded.json`)가 있으면 결과 파일에 `v2` 요약이 들어 있고, 기준 파일 `current.v2_metrics`와 같은 방식(인용 답·거절은 낮아지면, 녹화에 없는 요청·대체 답은 많아지면 실패)으로 견준다.
    녹화가 없으면 데모 질문 9개만 견준다.
 6. 비교 표를 표준출력과 `$GITHUB_STEP_SUMMARY`에 쓴다.
 
@@ -225,7 +225,7 @@ V2_LABELS = {"relevant_answered": "50건: 관련 질문 중 인용 답", "irrele
 
 
 def evaluate_current_v2(result: dict, baseline: dict) -> tuple[list[dict], list[str]]:
-    """평가셋 v2 50건을 현재 코드로 재생한 결과(`paths.<경로>.v2`)를 기준 파일의 `current.v2_metrics`와 견준다. 녹화(`data/demo_replay/v2_recorded.json`)가 없으면 둘 다 없어 건너뛴다.
+    """평가셋 v2 50건을 현재 코드로 재생한 결과(`paths.<경로>.v2`)를 기준 파일의 `current.v2_metrics`와 견준다. 녹화(`evals/ci_replay_v2/v2_recorded.json`)가 없으면 둘 다 없어 건너뛴다.
     결과에만 있고 기준이 없으면(녹화를 올렸는데 기준을 안 올림), 기준에만 있고 결과에 없으면(녹화 manifest가 사라지거나 평가셋과 어긋남) 실패한다."""
     rows, failures = [], []
     base = baseline["current"].get("v2_metrics")
@@ -237,7 +237,7 @@ def evaluate_current_v2(result: dict, baseline: dict) -> tuple[list[dict], list[
         arm, s = f"현재 코드 {commit} {label}", body.get("v2")
         if s is None:
             if base is not None and not problem:
-                failures.append(f"{arm} 50건 평가 결과가 없다(기준 파일에는 current.v2_metrics가 있다): data/demo_replay/v2_recorded.json 확인")
+                failures.append(f"{arm} 50건 평가 결과가 없다(기준 파일에는 current.v2_metrics가 있다): evals/ci_replay_v2/v2_recorded.json 확인")
             continue
         if base is None:
             failures.append(f"{arm} 기준 파일에 current.v2_metrics가 없다(50건 녹화를 올렸으면 기준도 같은 PR에서 올려야 한다)")

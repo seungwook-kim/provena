@@ -1,0 +1,55 @@
+﻿{
+    "spent_usd":  1.6255,
+    "revision":  "provena-api-00150-jub",
+    "stages":  [
+                   {
+                       "stage":  "preflight",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0136,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00150-jub"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.7282,
+                       "detail":  "evals/results/deploy_latency_provena-api-00150-jub"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "recalc",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "holdout",
+                       "state":  "done",
+                       "cost_usd":  0.2687,
+                       "detail":  "evals/results/deploy_latency_holdout_provena-api-00150-jub"
+                   },
+                   {
+                       "stage":  "holdout_v2",
+                       "state":  "done",
+                       "cost_usd":  0.4064,
+                       "detail":  "evals/results/deploy_latency_holdout_v2_provena-api-00150-jub"
+                   },
+                   {
+                       "stage":  "ragas",
+                       "state":  "done",
+                       "cost_usd":  0.2086,
+                       "detail":  "evals/results/ragas_deploy_provena-api-00150-jub"
+                   }
+               ],
+    "commit":  "11cc305f"
+}

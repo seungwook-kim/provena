@@ -103,27 +103,35 @@ def _text(msg: Any) -> str:
     return c if isinstance(c, str) else str(c)
 
 
+def make_draft(llm, cells: list[dict], category: str | None) -> tuple[list[dict] | None, str | None]:
+    """권한표 칸 -> LLM 초안 규칙. (규칙, None) 또는 (None, 오류 종류 ERR_NO_SOURCE | ERR_DRAFT).
+    변환 그래프의 `draft` 노드와 초안만 만드는 변환(`POST /decision-tables/convert?draft_only=true`)이 같은 프롬프트·모델·검사를 쓰도록 한 곳에 둔다."""
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    cats = {c.get("category") for c in cells}
+    if not cells or cats != {category}:
+        return None, ERR_NO_SOURCE
+    user = "<<<자료>>>\n" + _strip_marks(json.dumps(prompt_cells(cells), ensure_ascii=False)) + "\n<<<끝>>>"
+    try:
+        raw = _text(llm.invoke([SystemMessage(content=DRAFT_SYSTEM), HumanMessage(content=user)]))
+        rules = R.normalize_draft(parse_json_obj(raw), cells)   # 한 번만 읽는다. 재시도는 D4 이후에 판단 (EC-05)
+        if draft_leaks(rules, cells):
+            raise R.DecisionError("초안에 칸 속 지시에서 온 표식이 있음")
+    except R.DecisionError as e:
+        log.warning("결정표 초안을 읽지 못함: %s", e.message)
+        return None, ERR_DRAFT
+    return rules, None
+
+
 def build_convert_graph(llm, repo: DecisionRepo, checkpointer=None, store=None):
     """결정표 변환 그래프를 컴파일한다. 체크포인터가 없으면 interrupt를 쓸 수 없으니 반드시 넘긴다."""
     if checkpointer is None:
         raise ValueError("사람 승인(interrupt)에는 체크포인터가 필요하다")
 
     def draft(state: ConvertState) -> dict:
-        from langchain_core.messages import HumanMessage, SystemMessage
-
-        cells = state.get("source_cells") or []
-        cats = {c.get("category") for c in cells}
-        if not cells or cats != {state.get("category")}:
-            return {"outcome": "failed", "error": ERR_NO_SOURCE}
-        user = "<<<자료>>>\n" + _strip_marks(json.dumps(prompt_cells(cells), ensure_ascii=False)) + "\n<<<끝>>>"
-        try:
-            raw = _text(llm.invoke([SystemMessage(content=DRAFT_SYSTEM), HumanMessage(content=user)]))
-            rules = R.normalize_draft(parse_json_obj(raw), cells)   # 한 번만 읽는다. 재시도는 D4 이후에 판단 (EC-05)
-            if draft_leaks(rules, cells):
-                raise R.DecisionError("초안에 칸 속 지시에서 온 표식이 있음")
-        except R.DecisionError as e:
-            log.warning("결정표 초안을 읽지 못함: %s", e.message)
-            return {"outcome": "failed", "error": ERR_DRAFT}
+        rules, error = make_draft(llm, state.get("source_cells") or [], state.get("category"))
+        if error:
+            return {"outcome": "failed", "error": error}
         return {"draft_rules": rules}
 
     def compare(state: ConvertState) -> dict:

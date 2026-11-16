@@ -1,0 +1,37 @@
+﻿{
+    "spent_usd":  1.455,
+    "revision":  "provena-api-00148-qoq",
+    "stages":  [
+                   {
+                       "stage":  "preflight",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0142,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00148-qoq"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.7342,
+                       "detail":  "evals/results/deploy_latency_provena-api-00148-qoq"
+                   },
+                   {
+                       "stage":  "holdout",
+                       "state":  "done",
+                       "cost_usd":  0.2949,
+                       "detail":  "evals/results/deploy_latency_holdout_provena-api-00148-qoq"
+                   },
+                   {
+                       "stage":  "holdout_v2",
+                       "state":  "done",
+                       "cost_usd":  0.4117,
+                       "detail":  "evals/results/deploy_latency_holdout_v2_provena-api-00148-qoq"
+                   }
+               ],
+    "commit":  "11cc305f"
+}

@@ -395,14 +395,14 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4, anchor_o
     keys = set().union(*(value_keys(_body(c)) for c in cited))
     if not keys:
         return []
-    have = {c["chunk_id"] for c in cited}
+    have, narrow = {c["chunk_id"] for c in cited}, cite_expand_narrow_enabled()  # narrow: 62.56 (가)(나). 끄면(`GRAPH_CITE_EXPAND_NARROW=0`) 62.56 이전 규칙
     cited_lines = [_value_lines(_body(c), keys) for c in cited]
     cited_tokens = [_tokens(_body(c)) for c in cited]
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
             break
-        if c["chunk_id"] in have or _same_section(c, cited):  # 62.56(가): 같은 절의 다른 청크는 더하지 않는다
+        if c["chunk_id"] in have or (narrow and _same_section(c, cited)):  # 62.56(가): 같은 절의 다른 청크는 더하지 않는다
             continue
         anchor, score = -1, 0.0
         for k, t, ln in _value_lines(_own_body(c, cited), keys):
@@ -410,7 +410,7 @@ def pick_extra(cited: list[dict], context: list[dict], *, cap: int = 4, anchor_o
                 if anchor_ok is not None and not anchor_ok(cited[i]) and not (add_ok is not None and add_ok(c)):  # K: 판정 구절 청크 밖의 기준 인용에는 기대지 않는다(후보가 판정 구절 청크면 예외)
                     continue
                 for k2, t2, ln2 in rows:
-                    if is_table_row(ln) and is_table_row(ln2) and (row_first_cell(ln) != row_first_cell(ln2) or not row_first_cell(ln)):
+                    if narrow and is_table_row(ln) and is_table_row(ln2) and (row_first_cell(ln) != row_first_cell(ln2) or not row_first_cell(ln)):
                         continue  # 62.56(나): 표 행끼리는 첫 칸이 같을 때만 같은 값 줄로 본다
                     if t and k & k2 and len(t & t2) / len(t) > score:
                         anchor, score = i, len(t & t2) / len(t)
@@ -491,8 +491,8 @@ def _other_team_page(c: dict, anchor: dict) -> bool:
     return bool(_TEAM_TITLE.search(title)) and title != str(anchor.get("rule_title") or "")
 
 
-def _shared_run(c_body: str, x: dict) -> int:
-    return longest_shared_run(_words_whole_rows(c_body, _body(x), "\x00c"), _words_whole_rows(_body(x), c_body, "\x00x"))
+def _shared_run(c_body: str, x: dict, whole_rows: bool = True) -> int:  # whole_rows가 거짓이면(`GRAPH_CITE_PHRASE_WHOLE_ROWS=0`) 62.57 이전처럼 본문 전체 단어열로 잰다
+    return longest_shared_run(_words_whole_rows(c_body, _body(x), "\x00c"), _words_whole_rows(_body(x), c_body, "\x00x")) if whole_rows else longest_shared_run(_words(c_body), _words(_body(x)))
 
 
 def head_owner_of(c: dict, context: list[dict], prev_reader=None) -> tuple[dict, int] | None:
@@ -522,7 +522,7 @@ def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n
     `add_ok`(K 예외)가 참인 후보는 `anchor_ok`와 상관없이 기댈 수 있다."""
     if not cited or len(cited) >= cap:
         return []
-    have = {c["chunk_id"] for c in cited}
+    have, whole = {c["chunk_id"] for c in cited}, cite_phrase_whole_rows_enabled()  # whole: 62.57. 끄면(`GRAPH_CITE_PHRASE_WHOLE_ROWS=0`) 62.57 이전 규칙
     added: list[tuple[dict, int]] = []
     for c in context:
         if len(added) >= min(MAX_ADD, cap - len(cited)):
@@ -534,12 +534,12 @@ def pick_phrase_extra(cited: list[dict], context: list[dict], *, cap: int = 4, n
                 continue
             if anchor_ok is not None and not anchor_ok(x) and not (add_ok is not None and add_ok(c)):  # K: 판정 구절 청크 밖의 기준 인용에는 기대지 않는다(후보가 판정 구절 청크면 예외)
                 continue
-            if _shared_run(_body(c), x) >= n:
+            if _shared_run(_body(c), x, whole) >= n:
                 pick = c
                 if head_fix:  # L: 겹친 머리를 뗀 본문으로는 공유가 모자라면 앞 청크가 그 글의 원래 자리다
                     owner = head_owner_of(c, context, prev_reader)
                     # 앞 청크도 같은 글을 문턱 이상 공유할 때만 바꾼다(못 넘으면 원래 청크를 더한다)
-                    if owner is not None and _shared_run(_body(c)[owner[1]:], x) < n and _shared_run(_body(owner[0]), x) >= n:
+                    if owner is not None and _shared_run(_body(c)[owner[1]:], x, whole) < n and _shared_run(_body(owner[0]), x, whole) >= n:
                         pick = owner[0]
                         if log is not None:
                             log.append({"from": c["chunk_id"], "to": pick["chunk_id"]})
@@ -1061,3 +1061,43 @@ def head_owner_cites(body: str, cited: list[dict], context: list[dict], quotes: 
     new_body = _NUM.sub(lambda m: f"[{number[int(m.group(1))]}]" if int(m.group(1)) in number else m.group(0), body)
     new_body = re.sub(r"(\[\d+\])(?:\s*\1)+", r"\1", new_body)  # 합쳐져 되풀이된 같은 번호는 한 번만
     return new_body, out, [{"from": cited[i]["chunk_id"], "to": y["chunk_id"], **({"outside": True} if i in outside else {})} for i, y in sorted(swaps.items())]
+
+
+# ---------- 효과 분리 측정용 스위치(2026-11-16, 코드 기본 켬) ----------
+OFF_VALUES = frozenset({"0", "off", "false", "no"})
+
+
+def _flag_on(name: str) -> bool:
+    """코드 기본이 켬인 스위치(효과 분리 측정용, 2026-11-16). 비었거나 없으면 켬(지금 동작), `0`·`off`·`false`·`no`면 끔.
+    서비스 설정은 이 스위치들의 `off`를 빈 값이 아니라 `0`으로 바꾼다(`service_profile.DEFAULT_ON_ENV`)."""
+    return (os.environ.get(name) or "").strip().lower() not in OFF_VALUES
+
+
+def intro_in_core_enabled() -> bool:
+    """`GRAPH_INTRO_IN_CORE`(코드 기본 켬, 사전 등록 62.51): 넓힌 첫 검색의 앞자리(`build.core_chunks`)에 도입부 채우기(R3)가 더한 청크를 넣는다.
+    끄면 앞자리는 앞 `SEARCH_K`자리뿐이다(62.44 그대로). 도입부 청크는 넓힌 자리처럼 판정 입력에서 `[보충]`으로 표시되고 앞자리 답과 62.59의 앞자리 집합에서 빠진다."""
+    return _flag_on("GRAPH_INTRO_IN_CORE")
+
+
+def cite_head_owner_enabled() -> bool:
+    """`GRAPH_CITE_HEAD_OWNER`(코드 기본 켬, 사전 등록 62.52): 근거 판정 뒤 겹친 머리 인용 바로잡기(`head_owner_cites`)를 한다.
+    끄면 이 단계를 통째로 건너뛴다. 같은 함수의 62.58(문맥 밖 앞 청크 읽기)과 62.70 M(다시 쓴 답의 바로잡기)도 같이 꺼진다. 62.70 L(문장 공유 더하기의 앞 청크 바꾸기)은 그대로다."""
+    return _flag_on("GRAPH_CITE_HEAD_OWNER")
+
+
+def first_page_fill_enabled() -> bool:
+    """`GRAPH_FIRST_PAGE_FILL`(코드 기본 켬, 사전 등록 62.55): 나뉜 질문(달러 금액 질문 제외)의 첫 검색 뒤 문맥 페이지 안에서 원 질문과 가장 가까운 새 청크 1개를 문맥 끝에 보충한다.
+    끄면 페이지 검색을 부르지 않고 문맥에 보충 청크가 붙지 않는다(`search_stats.page_fill` 없음, 근거 목록 상한 +1 없음)."""
+    return _flag_on("GRAPH_FIRST_PAGE_FILL")
+
+
+def cite_expand_narrow_enabled() -> bool:
+    """`GRAPH_CITE_EXPAND_NARROW`(코드 기본 켬, 사전 등록 62.56): 인용 더하기(A1, `pick_extra`)에서 (가) 인용 청크와 같은 페이지·같은 절 제목의 청크는 더하지 않고,
+    (나) 표 행끼리는 첫 칸 값이 같을 때만 같은 값 줄로 본다. 끄면 (가)(나) 둘 다 빠진 62.56 이전 규칙이다. `GRAPH_CITE_EXPAND`가 꺼져 있으면 닿지 않는다."""
+    return _flag_on("GRAPH_CITE_EXPAND_NARROW")
+
+
+def cite_phrase_whole_rows_enabled() -> bool:
+    """`GRAPH_CITE_PHRASE_WHOLE_ROWS`(코드 기본 켬, 사전 등록 62.57): 문장 공유 더하기(A1b, `pick_phrase_extra`)에서 표 행은 줄 전체가 상대 청크에 그대로 있을 때만 공유 글로 센다.
+    끄면 62.57 이전처럼 본문 전체 단어열(표 행 포함)로 잰다. 62.70 L의 공유 길이 비교도 같은 규칙을 쓴다. `GRAPH_CITE_PHRASE`가 꺼져 있으면 닿지 않는다."""
+    return _flag_on("GRAPH_CITE_PHRASE_WHOLE_ROWS")

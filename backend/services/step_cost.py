@@ -5,6 +5,7 @@
   그래프 LLM 호출은 `cost.CostTracker`가 단계별로 쌓고(`CostTracker.by_step()`), 질문 번역 LLM 호출은 `translate._call`이 자기 `CostTracker` 합계를 이 요청 집계에 보탠다(`merge_steps`).
   번역은 요청의 `usage.cost_usd`(그래프 `CostTracker`)에 들어가지 않는 별도 호출이라 `cost_by_step`에만 나타난다. 두 값의 차이가 번역 몫이다.
 - 임베딩: `rag/retrieve/embed.py`가 Voyage 응답의 `usage.total_tokens`를 `record_embed`로 넘긴다. 호출이 없으면(캐시 적중 등) 0이다.
+  MCP 검색 경로(`SEARCH_VIA_MCP=1`)는 서버가 검색 한 번의 사용량을 응답 `usage`로 돌려주고 `record_embed_usage`로 이 요청에 더한다.
   단가는 `llm_prices.json`의 `embeddings`(없으면 `DEFAULT_EMBED_USD_PER_MTOK`)이고 무료 한도는 반영하지 않은 환산값이다.
 - 요청 경계는 contextvar다. `/chat`이 `begin()`으로 열고 `end()`로 닫는다. 다른 스레드로 넘길 때는 `bind(fn)`으로 집계 자리만 옮긴다
   (그래프 노드와 hedge, 하위 질문 병렬 검색은 `contextvars.copy_context()`를 써서 이미 따라온다).
@@ -143,6 +144,22 @@ def record_embed(tokens: int) -> None:
     m = _current.get()
     if m is not None:
         m.add_embed(tokens)
+
+
+def record_embed_usage(usage: Any) -> None:
+    """다른 요청 경계에서 센 임베딩 사용량 `{"embed_tokens": n, "embed_calls": m}`을 지금 요청에 더한다.
+    MCP 검색 경로(`SEARCH_VIA_MCP=1`): /chat이 같은 앱의 /mcp를 HTTP로 다시 부르면 서버 쪽 검색에는 이 요청의 집계가 없으므로,
+    서버가 검색 한 번의 사용량을 응답(`usage`)으로 돌려주고 그래프 쪽 검색기(`graph/mcp_retriever.py`)가 이 함수로 더한다. 요청 밖이거나 값이 이상하면 아무 일도 하지 않는다."""
+    m = _current.get()
+    if m is None or not isinstance(usage, dict):
+        return
+    try:
+        tokens, calls = max(int(usage.get("embed_tokens") or 0), 0), max(int(usage.get("embed_calls") or 0), 0)
+    except (TypeError, ValueError):
+        return
+    with m._lock:
+        m.embed_tokens += tokens
+        m.embed_calls += calls
 
 
 def record_time(node: str, start: float, end: float, background: bool = False) -> None:

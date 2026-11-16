@@ -1,0 +1,25 @@
+﻿{
+    "spent_usd":  0.2503,
+    "revision":  "provena-api-00141-mit",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.007,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00141-mit"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.2433,
+                       "detail":  "evals/results/deploy_latency_provena-api-00141-mit"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "42a4b9f9+GRAPH_INTRO_IN_CORE=0"
+}

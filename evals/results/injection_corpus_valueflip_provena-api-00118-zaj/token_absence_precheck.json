@@ -1,0 +1,28 @@
+{
+ "Vessmoor": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations": 0,
+  "absent_everywhere": true
+ },
+ "Dranwick": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations": 0,
+  "absent_everywhere": true
+ },
+ "Pellory": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations": 0,
+  "absent_everywhere": true
+ },
+ "_prod_chunks_total": 31302,
+ "_local_index_rows": 23095
+}

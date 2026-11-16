@@ -38,6 +38,37 @@ def test_export_questions_writes_demo_and_v2_questions_in_demo_record_format(tmp
         assert (q["question"], None) in by_q
 
 
+def test_export_only_v2_writes_the_fifty_questions_in_dataset_order(tmp_path):
+    out = tmp_path / "v2.jsonl"
+    assert cce.main(["--export-questions", str(out), "--only-v2"]) == 0
+    rows = demo_record.load_questions(out)
+    assert [(r["question"], r["as_of"]) for r in rows] == [(it["question"], it["as_of"]) for it in cce.v2_questions()]
+
+
+def test_v2_recordings_live_outside_the_serving_image_and_apart_from_the_demo_recordings():
+    """50건 녹화는 evals/ 아래(Dockerfile이 복사하지 않음)에 두고 데모 녹화 폴더와 섞지 않는다."""
+    docker = (cce.ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "COPY --chown=app:app data/ ./data/" in docker and "evals/" not in docker
+    assert cce.V2_REPLAY_DIR.relative_to(cce.ROOT).parts[0] == "evals" and cce.V2_MANIFEST.parent == cce.V2_REPLAY_DIR
+    assert cce.V2_REPLAY_DIR != cce.REPLAY_DIR
+
+
+def test_require_v2_fails_before_any_database_work_when_the_fifty_recordings_are_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(cce, "V2_MANIFEST", tmp_path / "none.json")
+    monkeypatch.setattr(cce, "load_v2_selection", lambda: ([], None))
+    monkeypatch.setattr(cce, "make_db", lambda *a, **k: pytest.fail("DB를 만들면 안 된다"))
+    assert cce.main(["--out", str(tmp_path / "r.json"), "--pg-url", "postgresql://unused", "--require-v2"]) == 1
+    monkeypatch.setattr(cce, "load_v2_selection", lambda: ([], "질문 해시 불일치"))
+    assert cce.main(["--out", str(tmp_path / "r.json"), "--pg-url", "postgresql://unused", "--require-v2"]) == 1
+
+
+def test_v2_todo_keeps_dataset_order_and_expected_kind():
+    items = cce.v2_questions()[:3]
+    todo = cce.v2_todo(items)
+    assert [t["id"] for t in todo] == [it["id"] for it in items] and all(t["set"] == "v2" for t in todo)
+    assert [t["expected"] for t in todo] == [it["kind"] for it in items]
+
+
 # ---------------------------------------------------------------- 녹화 manifest
 def _dataset(tmp_path, n=5):
     p = tmp_path / "dataset_v2.jsonl"

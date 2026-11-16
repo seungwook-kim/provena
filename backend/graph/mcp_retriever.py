@@ -4,6 +4,7 @@
 - `unavailable`, 연결 실패, 시간 초과: `EmbedUnavailable`로 바꾼다. 그래프의 "검색을 지금 쓸 수 없음" 거절로 간다.
 - `invalid`: 빈 결과로 바꾼다. 직접 `search()`는 모르는 절이면 빈 목록을 돌려주는데, 서버는 `invalid`로 답한다(재작성 LLM이 낸 절 이름이 코퍼스에 없을 때).
 - `fallback_reason`: 서버 쪽 검색 기록(contextvar)은 그래프에서 읽을 수 없어 서버 note에서 읽는다.
+- 임베딩 사용량: 서버 쪽 검색에는 /chat 요청 집계(`step_cost`)가 없어 서버가 응답 `usage`로 돌려준 값을 이 요청 집계에 더한다(`record_embed_usage`).
 """
 from __future__ import annotations
 
@@ -36,7 +37,8 @@ def last_fallback_reason() -> str | None:
 
 def make_mcp_retriever(target: Any = None, token: str | None = None) -> Callable[[SearchQuery], list[Chunk]]:
     """`SearchQuery -> list[Chunk]`. target은 주소 문자열이나 FastMCP 서버 객체(측정과 시험, 네트워크 없음)다."""
-    from extras.mcp_skill.mcp_client.client import McpSearchError, McpUnavailable, last_mcp_note, search_via_mcp
+    from extras.mcp_skill.mcp_client.client import McpSearchError, McpUnavailable, last_mcp_note, last_mcp_usage, search_via_mcp
+    from backend.services import step_cost
 
     def retrieve(q: SearchQuery) -> list[Chunk]:
         _fallback.set(None)
@@ -51,6 +53,7 @@ def make_mcp_retriever(target: Any = None, token: str | None = None) -> Callable
             raise
         found = _REASON.search(last_mcp_note() or "")
         _fallback.set(found.group(1) if found else None)
+        step_cost.record_embed_usage(last_mcp_usage())   # 서버가 센 이 검색의 임베딩 사용량을 /chat 요청 집계에 더한다(루프백이라 서버 쪽에는 집계가 없다)
         return out
 
     return retrieve
