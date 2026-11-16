@@ -371,5 +371,5 @@ PR을 올릴 때 아래를 모두 체크한다.
 | 평가셋 동결 | `evals/FROZEN.json` (`python evals/freeze.py`) | v1 D2, v2 D5. 동결 뒤 정답을 고치지 않는다 |
 | 개선 전후 지표 | `EVAL_REPORT.md` | 숫자, 원인, 시도한 것. 버린 시도도 적는다 |
 | AI 도구 사용 기록 | `docs/deliverables/ai_tools_log.md` | 쓸 때마다 한 줄. D12 제출물 |
-| 실패 사례 분석, 포트폴리오 | `docs/deliverables/failure_analysis.md`, `portfolio.md` | D12 제출물 |
+| 실패 사례 분석 | `docs/deliverables/failure_analysis.md` | D12 제출물 |
 | 데이터 출처 | 출처 URL 표 | URL, 받은 날짜, 이용 조건 |

@@ -1,0 +1,32 @@
+{
+ "Vessmoor": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations_outside_00118_window": 0,
+  "absent_everywhere": true,
+  "prod_query_translations_in_00118_window(own_previous_questions)": 1
+ },
+ "Dranwick": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations_outside_00118_window": 0,
+  "absent_everywhere": true,
+  "prod_query_translations_in_00118_window(own_previous_questions)": 1
+ },
+ "Pellory": {
+  "local_index_hits": 0,
+  "eval_case_files_hits": 0,
+  "prod_chunks": 0,
+  "prod_docs": 0,
+  "prod_query_translations_outside_00118_window": 0,
+  "absent_everywhere": true,
+  "prod_query_translations_in_00118_window(own_previous_questions)": 1
+ },
+ "_prod_chunks_total": 31302,
+ "_local_index_rows": 23095,
+ "_note": "00118 시험 창 안의 번역 캐시 행은 그때 우리 질문의 번역이라 부재 판정에서 뺐다"
+}

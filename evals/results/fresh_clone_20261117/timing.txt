@@ -1,0 +1,7 @@
+start 2026-11-17T00:54:27.0258072+09:00
+clone_done 2026-11-17T00:54:41.0493846+09:00 clone_s=14
+HEAD 47e3b82a072b63caea53fbe1bba4a53de05f7f01
+.env exists: False
+compose_up_returned 2026-11-17T00:55:21.8162609+09:00 since_start_s=54.8
+health_ok=True 2026-11-17T00:55:30.2155379+09:00 clone_to_health_s=63.2 compose_to_health_s=49.2 body={"status":"ok"}
+root_status=200 final_uri=http://localhost:8000/

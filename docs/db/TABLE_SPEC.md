@@ -99,7 +99,7 @@
 | `db/manual/chunks_hnsw_voyage4.sql` | `chunks` 부분 HNSW 색인 `chunks_emb_hnsw_half` |
 | `db/manual/109_purge_old.sql` | 이름이 바뀐 옛 표 3개를 `DROP TABLE IF EXISTS`로 지운다 |
 
-번호 107, 108은 이 브랜치에 없다. PR #113(미머지)이 이메일 가입 인증용으로 쓸 예정이라고 `db/109_realign.sql:2-3`에 적혀 있다.
+번호 107, 108은 이메일 가입 인증 커밋 `7b143cab`(2026-11-10)로 저장소에 들어왔다(위 표의 `db/107_email_signup_verification.sql`, `db/108_auth_privacy_hardening.sql`). `db/109_realign.sql:2-3`의 "PR #113(미머지)이 쓸 예정"은 109를 만들 당시의 주석이다. 운영 DB에 107·108·113·114를 적용한 실행 기록(일시·결과)은 저장소에 없다(`docs/specs/107-email-signup-verification.md`의 운영 확인 범위).
 
 ## 3. 재정렬 변경 요약
 

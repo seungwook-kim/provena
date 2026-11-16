@@ -12,7 +12,7 @@
 | not_found | 404 | 없는 자원(남의 thread도 없는 것처럼 404) |
 | validation_error | 422 | 요청 형식 오류 |
 | conflict | 409 | 상태 충돌 |
-| manual_sync_not_supported | 501 | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집 방식 미정, 정시 수집 workflow를 쓴다) |
+| manual_sync_not_supported | 501 | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집 방식 미정, 증분 수집은 매일 02:14 KST 정시 실행) |
 | approval_pending | 409 | 승인 대기 중인 thread에 새 질문 |
 | not_approved | 409 | 승인되지 않은 결정표 실행 (결정표 라우트가 아래 규칙으로 낸다, `backend/graph/decision/rules.py`) |
 | signup_unverified | 403 | 이메일 인증을 마치지 않은 가입 신청으로 로그인(`backend/auth.py`, 이어하기 안내) |

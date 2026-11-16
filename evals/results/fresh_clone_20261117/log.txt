@@ -1,0 +1,211 @@
+removed key-like env vars; remaining matches: 0
+ Image rehearsal_clone-api Building 
+ Image rehearsal_clone-loader Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.49kB 0.0s done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 5.91kB 0.0s done
+#2 DONE 0.2s
+
+#3 [loader internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 1.3s
+
+#4 [api internal] load metadata for docker.io/library/node:22-alpine
+#4 DONE 1.3s
+
+#5 [loader internal] load .dockerignore
+#5 transferring context: 439B done
+#5 DONE 0.0s
+
+#6 [loader stage-1  1/18] FROM docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+#6 resolve docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b 0.0s done
+#6 DONE 0.0s
+
+#7 [api web-build 1/6] FROM docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+#7 resolve docker.io/library/node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a 0.0s done
+#7 DONE 0.0s
+
+#8 [loader internal] load build context
+#8 transferring context: 66.17MB 5.0s
+#8 transferring context: 117.57MB 8.8s done
+#8 DONE 8.9s
+
+#8 [api internal] load build context
+#8 DONE 8.9s
+
+#9 [api web-build 2/6] WORKDIR /web
+#9 CACHED
+
+#10 [api web-build 4/6] RUN npm ci
+#10 CACHED
+
+#11 [api web-build 3/6] COPY web/react-app/package.json web/react-app/package-lock.json ./
+#11 CACHED
+
+#12 [api web-build 5/6] COPY web/react-app/ ./
+#12 CACHED
+
+#13 [api stage-1  2/18] RUN groupadd --system --gid 10001 app     && useradd --system --uid 10001 --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app     && mkdir -p /home/app/.provena && chown app:app /home/app/.provena
+#13 CACHED
+
+#14 [api stage-1  5/18] RUN pip install --no-cache-dir -r backend/requirements.txt
+#14 CACHED
+
+#15 [api stage-1  3/18] WORKDIR /app
+#15 CACHED
+
+#16 [api stage-1  4/18] COPY backend/requirements.txt backend/requirements-local-models.txt backend/
+#16 CACHED
+
+#17 [api web-build 6/6] RUN npm run build
+#17 CACHED
+
+#18 [api stage-1  6/18] RUN ( [ -z "" ] || { pip install --no-cache-dir -r backend/requirements-local-models.txt     && HF_HUB_OFFLINE=0 python -c "import os; from huggingface_hub import snapshot_download as get; [get(m, revision=r, ignore_patterns=['onnx/*', '*.onnx*', 'openvino/*'] + (['pytorch_model.bin'] if m in ('intfloat/multilingual-e5-large', 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1') else []))  for m, r in ((os.environ['SEARCH_EMBED_MODEL'], os.environ['SEARCH_EMBED_REVISION']),               (os.environ['SEARCH_RERANK_MODEL'], os.environ['SEARCH_RERANK_REVISION'])) if m]"; } )     && mkdir -p "/app/.hf" && chown -R app:app "/app/.hf"
+#18 CACHED
+
+#19 [api stage-1  7/18] COPY backend/ ./backend/
+#19 DONE 0.4s
+
+#19 [api stage-1  7/18] COPY backend/ ./backend/
+#19 DONE 0.4s
+
+#20 [api stage-1  8/18] COPY --chown=app:app data/ ./data/
+#20 DONE 0.5s
+
+#20 [loader stage-1  8/18] COPY --chown=app:app data/ ./data/
+#20 DONE 0.5s
+
+#21 [api stage-1  9/18] RUN python -m backend.rag.ingest.snapshot unpack
+#21 1.167 data/corpus: 1564쪽, corpus_id c108eaca740dd0bb (수집 때와 같음)
+#21 DONE 1.3s
+
+#21 [api stage-1  9/18] RUN python -m backend.rag.ingest.snapshot unpack
+#21 DONE 1.3s
+
+#22 [api stage-1 10/18] RUN python -m backend.rag.ingest.snapshot unpack-index
+#22 0.919 data/index: 청크 23095개, 벡터 voyage-4 (meta.json sha256과 같음)
+#22 DONE 1.3s
+
+#22 [api stage-1 10/18] RUN python -m backend.rag.ingest.snapshot unpack-index
+#22 DONE 1.3s
+
+#23 [api stage-1 11/18] COPY web/ ./web/
+#23 DONE 0.1s
+
+#24 [loader stage-1 12/18] COPY --from=web-build /web/dist/ ./web/react-app/dist/
+#24 DONE 0.1s
+
+#24 [api stage-1 12/18] COPY --from=web-build /web/dist/ ./web/react-app/dist/
+#24 DONE 0.1s
+
+#25 [api stage-1 13/18] RUN cp web/react-app/dist/index.html web/index.html
+#25 DONE 0.2s
+
+#25 [api stage-1 13/18] RUN cp web/react-app/dist/index.html web/index.html
+#25 DONE 0.2s
+
+#26 [api stage-1 14/18] RUN cp web/react-app/dist/index.html web/login.html
+#26 DONE 0.2s
+
+#26 [api stage-1 14/18] RUN cp web/react-app/dist/index.html web/login.html
+#26 DONE 0.2s
+
+#27 [loader stage-1 15/18] COPY db/ ./db/
+#27 DONE 0.0s
+
+#28 [api stage-1 16/18] COPY skills/ ./skills/
+#28 DONE 0.0s
+
+#29 [api stage-1 17/18] COPY extras/ ./extras/
+#29 DONE 0.0s
+
+#30 [loader stage-1 18/18] COPY mock_erp/ ./mock_erp/
+#30 DONE 0.0s
+
+#30 [api stage-1 18/18] COPY mock_erp/ ./mock_erp/
+#30 DONE 0.0s
+
+#31 [loader] exporting to image
+#31 exporting layers
+#31 exporting layers 3.4s done
+#31 exporting manifest sha256:0a1a7f03af4b35c7db0d99def5c29a2b3c5b64b2263d607dedb6b9084fdd02ea 0.0s done
+#31 exporting config sha256:d2a29aebcd1dd85eb2edf9afaf683966715ff4513ecaaf0211960d95063b131a 0.0s done
+#31 exporting attestation manifest sha256:6a3977fde8684040bdac71054d4b7e1faa308782ea6c3607b881ec04037819f4 0.0s done
+#31 exporting manifest list sha256:a293bccd02925eda5c4fa2bbffe512434d105606e9afcae9bbeb8f396f81af90 0.0s done
+#31 naming to docker.io/library/rehearsal_clone-loader:latest
+#31 naming to docker.io/library/rehearsal_clone-loader:latest done
+#31 unpacking to docker.io/library/rehearsal_clone-loader:latest
+#31 unpacking to docker.io/library/rehearsal_clone-loader:latest 1.9s done
+#31 DONE 5.5s
+
+#32 [api] exporting to image
+#32 exporting layers 3.5s done
+#32 exporting manifest sha256:9bcdaab9b3faab5b14dcaff4fcb6395039434c237a7113048fb41699c598cc5c 0.0s done
+#32 exporting config sha256:3ee8e8a19265a82bf3828fcf2f66a40ac7a0a04b7e2e560fd4eacfbea9b30abe 0.0s done
+#32 exporting attestation manifest sha256:554bdbf2225e6c40716992bd4f1933891d5edccdca374ebaeba509e9b8cf0b9a 0.0s done
+#32 exporting manifest list sha256:ac4a540dbe0c4029d5844a62fe9ba3d1667ec7f3585a9180474fdfe2e9a39b4d 0.0s done
+#32 naming to docker.io/library/rehearsal_clone-api:latest done
+#32 unpacking to docker.io/library/rehearsal_clone-api:latest 1.9s done
+#32 DONE 5.5s
+
+#33 [api] resolving provenance for metadata file
+#33 DONE 0.0s
+
+#34 [loader] resolving provenance for metadata file
+#34 DONE 0.0s
+ Image rehearsal_clone-loader Built 
+ Image rehearsal_clone-api Built 
+ Network rehearsal_clone_default Creating 
+ Volume rehearsal_clone_profilekey Creating 
+ Volume rehearsal_clone_pgdata Creating 
+ Volume rehearsal_clone_pgdata Creating 
+ Network rehearsal_clone_default Creating 
+ Volume rehearsal_clone_profilekey Creating 
+ Volume rehearsal_clone_pgdata Created 
+ Volume rehearsal_clone_pgdata Created 
+ Volume rehearsal_clone_profilekey Created 
+ Volume rehearsal_clone_profilekey Created 
+ Network rehearsal_clone_default Created 
+ Network rehearsal_clone_default Created 
+ Container rehearsal_clone-db-1 Creating 
+ Container rehearsal_clone-db-1 Created 
+ Container rehearsal_clone-loader-1 Creating 
+ Container rehearsal_clone-loader-1 Created 
+ Container rehearsal_clone-api-1 Creating 
+ Container rehearsal_clone-api-1 Created 
+ Container rehearsal_clone-db-1 Starting 
+ Container rehearsal_clone-db-1 Started 
+ Container rehearsal_clone-db-1 Waiting 
+ Container rehearsal_clone-db-1 Healthy 
+ Container rehearsal_clone-loader-1 Starting 
+ Container rehearsal_clone-loader-1 Started 
+ Container rehearsal_clone-loader-1 Waiting 
+ Container rehearsal_clone-db-1 Waiting 
+ Container rehearsal_clone-db-1 Healthy 
+ Container rehearsal_clone-loader-1 Exited 
+ Container rehearsal_clone-api-1 Starting 
+ Container rehearsal_clone-api-1 Started 
+NAME                    IMAGE                    COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+rehearsal_clone-api-1   rehearsal_clone-api      "uvicorn backend.mai…"   api       27 seconds ago   Up 11 seconds             0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+rehearsal_clone-db-1    pgvector/pgvector:pg16   "docker-entrypoint.s…"   db        30 seconds ago   Up 26 seconds (healthy)   5432/tcp
+ Container rehearsal_clone-api-1 Stopping 
+ Container rehearsal_clone-api-1 Stopped 
+ Container rehearsal_clone-api-1 Removing 
+ Container rehearsal_clone-api-1 Removed 
+ Container rehearsal_clone-loader-1 Stopping 
+ Container rehearsal_clone-loader-1 Stopped 
+ Container rehearsal_clone-loader-1 Removing 
+ Container rehearsal_clone-loader-1 Removed 
+ Container rehearsal_clone-db-1 Stopping 
+ Container rehearsal_clone-db-1 Stopped 
+ Container rehearsal_clone-db-1 Removing 
+ Container rehearsal_clone-db-1 Removed 
+ Volume rehearsal_clone_profilekey Removing 
+ Volume rehearsal_clone_pgdata Removing 
+ Network rehearsal_clone_default Removing 
+ Volume rehearsal_clone_pgdata Removed 
+ Volume rehearsal_clone_profilekey Removed 
+ Network rehearsal_clone_default Removed 

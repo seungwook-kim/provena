@@ -1,0 +1,15 @@
+{
+  "note": "래퍼 안의 gcloud logging 조회는 Windows PowerShell 5.1 인자 따옴표 문제로 실패(00118 때도 log_query_ok=false). 같은 필터를 pwsh 7에서 다시 조회한 값",
+  "chat_post_window_utc": [
+    "2026-11-16T16:34:20Z",
+    "2026-11-16T16:34:51Z"
+  ],
+  "chat_posts": 3,
+  "chat_statuses": "200,200,200",
+  "our_questions": 3,
+  "distinct_client_ips": 1,
+  "count_5xx_window_pm2min": 0,
+  "count_5xx_since_2026-11-16T16:20Z": 0,
+  "health_tag": 200,
+  "health_prod": 200
+}

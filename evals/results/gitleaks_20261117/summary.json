@@ -1,0 +1,32 @@
+{
+  "tool": "gitleaks 8.30.1",
+  "head": "3dbc36ca",
+  "run_kst": "2026-11-17 01:26~01:41",
+  "options": "--redact (비밀값은 보고서에 남지 않음), 저장소의 .gitleaks.toml 사용",
+  "git_full_history": {
+    "commits_scanned": 821,
+    "findings_with_gitleaksignore": 0,
+    "findings_without_gitleaksignore": 11,
+    "findings_without_ignore_all_registered": true,
+    "rerun_after_ignore_update": 0
+  },
+  "dir_working_tree": {
+    "before_ignore_update_total": 77,
+    "before_tracked_files": [
+      "evals/results/recall_webhook_20261116_0807/recall_webhook.json",
+      "evals/results/split_62_44_62_45_20261113/replay_split.py"
+    ],
+    "after_ignore_update_total": 75,
+    "after_tracked_files": [],
+    "after_untracked_by_top_dir": {
+      ".trail/": 2,
+      ".env": 4,
+      ".venv/": 61,
+      "data/corpus": 5,
+      "data/chunks": 1,
+      "data/parsed": 1,
+      "data/index": 1
+    },
+    "note": "dir 검사는 커밋하지 않는 로컬 파일(.env, .venv, .trail, 내려받은 원문 data/corpus·data/chunks 등)까지 읽는다. 저장소에 올라가는 파일(git ls-files)의 검출만 판정에 쓴다."
+  }
+}
