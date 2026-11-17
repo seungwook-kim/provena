@@ -32,5 +32,3 @@
 - `multiturn_live10.json`: LIVE-10, LIVE-10b 두 턴 원자료
 - `judged_b.json`, `judged_b.md`: 1차·2차 판정과 최종 판정
 - `errors_5xx.json`, `run_meta.json`: 5xx·요청 수 감사, 리비전·커밋·시간 창
-
-통과·부분 통과 사례의 입력·답 본문은 2026-11-17 팀 결정으로 가렸다(판정·수치는 그대로).

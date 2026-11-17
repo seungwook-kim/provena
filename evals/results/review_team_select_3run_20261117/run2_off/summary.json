@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "dataset": "dataset_review_v1_gold.jsonl",
+    "dataset_sha256": "9b235976eff5a29b4b89bba9f6eb7ab857e2e6e795be8bf553df885be8ab6b7e",
+    "frozen": "unfrozen",
+    "config": "off",
+    "run": 2,
+    "switch": "REVIEW_TEAM_SELECT=0",
+    "service_profile": "61.51(backend/graph/service_profile.py)",
+    "repeats": 1,
+    "store": "MemoryStore",
+    "search": {
+      "rows_source": "snapshot:data\\index",
+      "rows": 23095,
+      "links_with_targets": 2661,
+      "config": {
+        "embed_model": "voyage-4",
+        "mode": "dense_en",
+        "pool": 100,
+        "rerank_model": "none",
+        "rerank_top": 10,
+        "translate": true,
+        "link_n": 2,
+        "link_keep_per_sub": 2,
+        "range_n": 3,
+        "hedge": true,
+        "hedge_s": 1.5
+      }
+    },
+    "llm": {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5"
+    },
+    "max_cost_usd": 0.08,
+    "started": "2026-11-17 10:55:28",
+    "finished": "2026-11-17 10:56:43",
+    "stopped_by_budget": null,
+    "run_id": "eval-review-team-select-off-r2-20261117-105528"
+  },
+  "metrics": {
+    "n": 10,
+    "errors": 0,
+    "retrieval_errors": 0,
+    "gold_status": "계산함(확정 정답 기준: 조원 2명 확인(박진형, 강경희, 2026-11-13))",
+    "gold_pending_ids": [],
+    "gold_items": 8,
+    "gold_total": 37,
+    "gold_found": 15,
+    "missed_issue_rate": 0.5945945945945946,
+    "date_agree_rate": 1.0,
+    "unmatched_row_rate": 0.8527131782945736,
+    "issue_rows": 129,
+    "section_rate": 1.0,
+    "date_rate": 1.0,
+    "evidence_complete_rate": 1.0,
+    "unreviewed_team_slots": 0,
+    "pre_approval_saved": 0,
+    "clarify_expected": 2,
+    "clarify_asked": 2,
+    "clarify_rate": 1.0,
+    "clarify_confirmed": false,
+    "false_clarify_rate": 0.0,
+    "latency_mean_s": 7.4672,
+    "latency_p95_s": 9.882,
+    "cost_usd": 0.034031,
+    "cost_usd_mean": 0.0034031,
+    "llm_calls_mean": 4.2
+  }
+}

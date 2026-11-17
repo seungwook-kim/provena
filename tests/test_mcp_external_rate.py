@@ -148,6 +148,29 @@ def test_rate_env_parsing(monkeypatch, caplog):
         assert server._rate_env("MCP_EXTERNAL_RATE_PER_MIN", 30) == 30
 
 
+def test_default_limits_are_literal_30_per_min_500_per_day():
+    """기본 한도를 상수끼리 비교하지 않고 값(분당 30, 하루 500)으로 고정한다. 상수를 바꾸면 이 시험이 실패해야 한다."""
+    assert server.DEFAULT_EXTERNAL_RATE_PER_MIN == 30
+    assert server.DEFAULT_EXTERNAL_RATE_PER_DAY == 500
+
+
+def test_app_without_rate_env_uses_30_and_500(monkeypatch):
+    """한도 환경 변수가 없으면 외부 토큰 제한기가 분당 30, 하루 500으로 만들어진다(연결 코드가 기본 상수를 넘기는지)."""
+    seen: list[tuple[int, int]] = []
+    real = server.ExternalRateLimiter
+
+    class Spy(real):
+        def __init__(self, per_min, per_day, *a, **kw):
+            seen.append((per_min, per_day))
+            super().__init__(per_min, per_day, *a, **kw)
+
+    monkeypatch.delenv("MCP_EXTERNAL_RATE_PER_MIN", raising=False)
+    monkeypatch.delenv("MCP_EXTERNAL_RATE_PER_DAY", raising=False)
+    monkeypatch.setattr(server, "ExternalRateLimiter", Spy)
+    assert server.mcp_http_app(token="inside", external_token="outside") is not None
+    assert seen == [(30, 500)]
+
+
 def test_tool_call_counting():
     import json
     assert server._tool_calls(json.dumps(CALL).encode()) == 1

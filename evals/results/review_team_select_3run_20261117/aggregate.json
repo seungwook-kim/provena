@@ -1,0 +1,1255 @@
+{
+  "runs": [
+    {
+      "config": "on",
+      "run": 1,
+      "started": "2026-11-17 10:51:45",
+      "finished": "2026-11-17 10:52:50",
+      "found": 16,
+      "total": 37,
+      "miss_rate": 0.5675675675675675,
+      "cost_usd": 0.026737,
+      "cost_usd_mean": 0.00267371,
+      "latency_mean_s": 6.4853,
+      "latency_p95_s": 10.071,
+      "llm_calls_mean": 3.4,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.0,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 2,
+      "false_clarify_ids": [],
+      "missed_due_to_false_clarify": 0,
+      "stopped_by_budget": null
+    },
+    {
+      "config": "off",
+      "run": 1,
+      "started": "2026-11-17 10:52:56",
+      "finished": "2026-11-17 10:54:05",
+      "found": 13,
+      "total": 37,
+      "miss_rate": 0.6486486486486487,
+      "cost_usd": 0.0303,
+      "cost_usd_mean": 0.00303002,
+      "latency_mean_s": 6.9634,
+      "latency_p95_s": 9.865,
+      "llm_calls_mean": 3.8,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.125,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 0,
+      "false_clarify_ids": [
+        3
+      ],
+      "missed_due_to_false_clarify": 6,
+      "stopped_by_budget": null
+    },
+    {
+      "config": "on",
+      "run": 2,
+      "started": "2026-11-17 10:54:11",
+      "finished": "2026-11-17 10:55:21",
+      "found": 14,
+      "total": 37,
+      "miss_rate": 0.6216216216216216,
+      "cost_usd": 0.028728,
+      "cost_usd_mean": 0.00287282,
+      "latency_mean_s": 7.0321,
+      "latency_p95_s": 11.204,
+      "llm_calls_mean": 3.5,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.0,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 1,
+      "false_clarify_ids": [],
+      "missed_due_to_false_clarify": 0,
+      "stopped_by_budget": null
+    },
+    {
+      "config": "off",
+      "run": 2,
+      "started": "2026-11-17 10:55:28",
+      "finished": "2026-11-17 10:56:43",
+      "found": 15,
+      "total": 37,
+      "miss_rate": 0.5945945945945946,
+      "cost_usd": 0.034031,
+      "cost_usd_mean": 0.0034031,
+      "latency_mean_s": 7.4672,
+      "latency_p95_s": 9.882,
+      "llm_calls_mean": 4.2,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.0,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 0,
+      "false_clarify_ids": [],
+      "missed_due_to_false_clarify": 0,
+      "stopped_by_budget": null
+    },
+    {
+      "config": "on",
+      "run": 3,
+      "started": "2026-11-17 10:56:50",
+      "finished": "2026-11-17 10:58:00",
+      "found": 12,
+      "total": 37,
+      "miss_rate": 0.6756756756756757,
+      "cost_usd": 0.028278,
+      "cost_usd_mean": 0.0028277899999999997,
+      "latency_mean_s": 6.9742999999999995,
+      "latency_p95_s": 10.144,
+      "llm_calls_mean": 3.5,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.0,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 1,
+      "false_clarify_ids": [],
+      "missed_due_to_false_clarify": 0,
+      "stopped_by_budget": null
+    },
+    {
+      "config": "off",
+      "run": 3,
+      "started": "2026-11-17 10:58:07",
+      "finished": "2026-11-17 10:59:19",
+      "found": 11,
+      "total": 37,
+      "miss_rate": 0.7027027027027027,
+      "cost_usd": 0.030811,
+      "cost_usd_mean": 0.00308111,
+      "latency_mean_s": 7.2033000000000005,
+      "latency_p95_s": 10.817,
+      "llm_calls_mean": 3.8,
+      "errors": 0,
+      "clarify_asked": 2,
+      "false_clarify_rate": 0.125,
+      "pre_approval_saved": 0,
+      "unreviewed_team_slots": 0,
+      "missed_due_to_unselected": 0,
+      "false_clarify_ids": [
+        3
+      ],
+      "missed_due_to_false_clarify": 6,
+      "stopped_by_budget": null
+    }
+  ],
+  "summary": {
+    "on": {
+      "miss_rate": {
+        "mean": 0.6216216216216216,
+        "min": 0.5675675675675675,
+        "max": 0.6756756756756757,
+        "values": [
+          0.5675675675675675,
+          0.6216216216216216,
+          0.6756756756756757
+        ]
+      },
+      "found": {
+        "mean": 14.0,
+        "min": 12,
+        "max": 16,
+        "values": [
+          16,
+          14,
+          12
+        ]
+      },
+      "cost_usd": {
+        "mean": 0.027914333333333333,
+        "min": 0.026737,
+        "max": 0.028728,
+        "values": [
+          0.026737,
+          0.028728,
+          0.028278
+        ]
+      },
+      "cost_usd_mean": {
+        "mean": 0.0027914399999999996,
+        "min": 0.00267371,
+        "max": 0.00287282,
+        "values": [
+          0.00267371,
+          0.00287282,
+          0.0028277899999999997
+        ]
+      },
+      "latency_mean_s": {
+        "mean": 6.830566666666666,
+        "min": 6.4853,
+        "max": 7.0321,
+        "values": [
+          6.4853,
+          7.0321,
+          6.9742999999999995
+        ]
+      },
+      "latency_p95_s": {
+        "mean": 10.473,
+        "min": 10.071,
+        "max": 11.204,
+        "values": [
+          10.071,
+          11.204,
+          10.144
+        ]
+      },
+      "llm_calls_mean": {
+        "mean": 3.466666666666667,
+        "min": 3.4,
+        "max": 3.5,
+        "values": [
+          3.4,
+          3.5,
+          3.5
+        ]
+      },
+      "missed_due_to_unselected": {
+        "mean": 1.3333333333333333,
+        "min": 1,
+        "max": 2,
+        "values": [
+          2,
+          1,
+          1
+        ]
+      }
+    },
+    "off": {
+      "miss_rate": {
+        "mean": 0.6486486486486487,
+        "min": 0.5945945945945946,
+        "max": 0.7027027027027027,
+        "values": [
+          0.6486486486486487,
+          0.5945945945945946,
+          0.7027027027027027
+        ]
+      },
+      "found": {
+        "mean": 13.0,
+        "min": 11,
+        "max": 15,
+        "values": [
+          13,
+          15,
+          11
+        ]
+      },
+      "cost_usd": {
+        "mean": 0.031714,
+        "min": 0.0303,
+        "max": 0.034031,
+        "values": [
+          0.0303,
+          0.034031,
+          0.030811
+        ]
+      },
+      "cost_usd_mean": {
+        "mean": 0.00317141,
+        "min": 0.00303002,
+        "max": 0.0034031,
+        "values": [
+          0.00303002,
+          0.0034031,
+          0.00308111
+        ]
+      },
+      "latency_mean_s": {
+        "mean": 7.2113000000000005,
+        "min": 6.9634,
+        "max": 7.4672,
+        "values": [
+          6.9634,
+          7.4672,
+          7.2033000000000005
+        ]
+      },
+      "latency_p95_s": {
+        "mean": 10.188,
+        "min": 9.865,
+        "max": 10.817,
+        "values": [
+          9.865,
+          9.882,
+          10.817
+        ]
+      },
+      "llm_calls_mean": {
+        "mean": 3.9333333333333336,
+        "min": 3.8,
+        "max": 4.2,
+        "values": [
+          3.8,
+          4.2,
+          3.8
+        ]
+      },
+      "missed_due_to_unselected": {
+        "mean": 0.0,
+        "min": 0,
+        "max": 0,
+        "values": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  "miss_rate_on_minus_off": -0.027027027027027084,
+  "stop_rule_triggered": false,
+  "total_cost_usd": 0.17888500000000002,
+  "per_item": [
+    {
+      "id": 1,
+      "kind": "full",
+      "gold_teams": [
+        "security",
+        "infra",
+        "itops",
+        "finance"
+      ],
+      "total": 6,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0044302,
+          "latency_s": 8.991
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0042968,
+          "latency_s": 9.344
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0043262,
+          "latency_s": 10.144
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0042584,
+          "latency_s": 8.994
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0042601,
+          "latency_s": 8.106
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0044836,
+          "latency_s": 10.381
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "full",
+      "gold_teams": [
+        "security",
+        "infra",
+        "itops",
+        "finance"
+      ],
+      "total": 7,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0043757,
+          "latency_s": 8.4
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0051516,
+          "latency_s": 11.204
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0050115,
+          "latency_s": 10.083
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0047018,
+          "latency_s": 9.291
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.004997,
+          "latency_s": 9.874
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0050121,
+          "latency_s": 10.817
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "full",
+      "gold_teams": [
+        "security",
+        "itops",
+        "finance"
+      ],
+      "total": 6,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0044986,
+          "latency_s": 10.071
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0045329,
+          "latency_s": 8.169
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 2,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0044375,
+          "latency_s": 8.972
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "clarify",
+          "selected": [],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0003178,
+          "latency_s": 2.655
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 2,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0045089,
+          "latency_s": 9.882
+        },
+        {
+          "run": 3,
+          "status": "clarify",
+          "selected": [],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002698,
+          "latency_s": 2.557
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "full",
+      "gold_teams": [
+        "security",
+        "infra",
+        "itops",
+        "finance"
+      ],
+      "total": 7,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 4,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0043507,
+          "latency_s": 7.685
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0043387,
+          "latency_s": 7.897
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0041267,
+          "latency_s": 6.902
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0046725,
+          "latency_s": 9.338
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 3,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0041768,
+          "latency_s": 8.516
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 2,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0042138,
+          "latency_s": 8.942
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "partial",
+      "gold_teams": [
+        "finance"
+      ],
+      "total": 2,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0023154,
+          "latency_s": 7.404
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0021851,
+          "latency_s": 7.006
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0021747,
+          "latency_s": 7.555
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.003869,
+          "latency_s": 8.471
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0038686,
+          "latency_s": 8.826
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0044441,
+          "latency_s": 9.863
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "partial",
+      "gold_teams": [
+        "security",
+        "itops",
+        "finance"
+      ],
+      "total": 4,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 1,
+          "llm_calls": 4,
+          "cost": 0.0036386,
+          "latency_s": 8.271
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0045394,
+          "latency_s": 9.163
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 1,
+          "llm_calls": 4,
+          "cost": 0.0034295,
+          "latency_s": 7.76
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0043056,
+          "latency_s": 8.597
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0042839,
+          "latency_s": 9.497
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0045027,
+          "latency_s": 8.866
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "partial",
+      "gold_teams": [
+        "infra"
+      ],
+      "total": 3,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "infra",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0017991,
+          "latency_s": 5.973
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "infra",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0019108,
+          "latency_s": 6.325
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "infra",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0023977,
+          "latency_s": 8.887
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0039729,
+          "latency_s": 9.865
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0036848,
+          "latency_s": 8.472
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0036728,
+          "latency_s": 8.271
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "clarify",
+      "gold_teams": [],
+      "total": null,
+      "on": [
+        {
+          "run": 1,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002632,
+          "latency_s": 2.088
+        },
+        {
+          "run": 2,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002612,
+          "latency_s": 2.145
+        },
+        {
+          "run": 3,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002257,
+          "latency_s": 1.871
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002766,
+          "latency_s": 2.331
+        },
+        {
+          "run": 2,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002371,
+          "latency_s": 1.894
+        },
+        {
+          "run": 3,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002486,
+          "latency_s": 2.213
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "clarify",
+      "gold_teams": [],
+      "total": null,
+      "on": [
+        {
+          "run": 1,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002424,
+          "latency_s": 1.753
+        },
+        {
+          "run": 2,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002564,
+          "latency_s": 1.967
+        },
+        {
+          "run": 3,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002649,
+          "latency_s": 2.084
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002903,
+          "latency_s": 2.308
+        },
+        {
+          "run": 2,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002823,
+          "latency_s": 2.409
+        },
+        {
+          "run": 3,
+          "status": "clarify",
+          "selected": [],
+          "found": null,
+          "missed_unselected": 0,
+          "llm_calls": 1,
+          "cost": 0.0002213,
+          "latency_s": 1.799
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "low_issue",
+      "gold_teams": [
+        "security",
+        "finance"
+      ],
+      "total": 2,
+      "on": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 1,
+          "llm_calls": 2,
+          "cost": 0.0008232,
+          "latency_s": 4.217
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 1,
+          "llm_calls": 2,
+          "cost": 0.0012553,
+          "latency_s": 7.101
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "finance"
+          ],
+          "found": 0,
+          "missed_unselected": 0,
+          "llm_calls": 3,
+          "cost": 0.0018835,
+          "latency_s": 5.485
+        }
+      ],
+      "off": [
+        {
+          "run": 1,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0036353,
+          "latency_s": 7.784
+        },
+        {
+          "run": 2,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0037315,
+          "latency_s": 7.196
+        },
+        {
+          "run": 3,
+          "status": "pending_approval",
+          "selected": [
+            "security",
+            "infra",
+            "itops",
+            "finance"
+          ],
+          "found": 1,
+          "missed_unselected": 0,
+          "llm_calls": 5,
+          "cost": 0.0037423,
+          "latency_s": 8.324
+        }
+      ]
+    }
+  ]
+}

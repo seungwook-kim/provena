@@ -1,0 +1,297 @@
+{
+  "meta": {
+    "dataset": "dataset_v2.jsonl",
+    "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
+    "service_path": "service_search_pg_store: 서비스 Searcher를 운영 DB(PgStore)로 돌린 값이다. 측정 전용 검색기(exp_confirmed_v1) 값과 다르고, 그래프는 평가 실행기가 불렀으므로 API 요청 경로 값은 아니다",
+    "store": "PgStore",
+    "search": {
+      "rows_source": "PgStore",
+      "generation": 6,
+      "config": {
+        "embed_model": "voyage-4",
+        "mode": "dense_en",
+        "pool": 100,
+        "rerank_model": "none",
+        "rerank_top": 10,
+        "translate": true,
+        "link_n": 2,
+        "link_keep_per_sub": 2,
+        "range_n": 3,
+        "hedge": false,
+        "hedge_s": 1.5
+      },
+      "first_search": "그래프가 원 질문(한국어)과 하위 질문을 `Searcher.search`에 넘긴다",
+      "requery": "재작성 검색어(영어)를 분해 없이 넘긴다"
+    },
+    "llm": {
+      "provider": "claude_cli",
+      "model": "claude-haiku-5-5",
+      "anthropic_api_key": "unused"
+    },
+    "arms": [
+      "single",
+      "multi"
+    ],
+    "routers": {
+      "multi": "code"
+    },
+    "switches": {
+      "parallel_intake": true,
+      "brief_output": true,
+      "max_research": 1,
+      "judge_answer": "parallel_all",
+      "skip_first_rewrite": true,
+      "stop_stalled_search": true,
+      "ground_skip_backed": false,
+      "json_only": false
+    },
+    "model_switches": {
+      "LLM_REASONING": "",
+      "LLM_PROVIDER_SORT": "",
+      "LLM_DEADLINE_S": "8",
+      "LLM_HEDGE_S": "3.5",
+      "LLM_MAX_RETRIES": "2",
+      "LLM_TRACE_DETAIL": "",
+      "LLM_JSON_REMINDER": "1",
+      "LLM_REASONING_BY_TASK": "",
+      "GRAPH_SECTION_KEEPS_RESEARCH": "1",
+      "GRAPH_ANSWER_WAIT_S": "4.0",
+      "GRAPH_ANSWER_BUDGET_S": "6.5",
+      "LLM_STRUCTURED": "judge,answer,grounding",
+      "GRAPH_JUDGE_QUERY": "1",
+      "EMBED_KEEPALIVE": "1",
+      "SEARCH_PARALLEL_SUBS": "1",
+      "GRAPH_KEEP_PRODUCT_NAME": "",
+      "GRAPH_REQUERY_TERMS": "",
+      "GRAPH_QUERY_BRANCHES": "1",
+      "GRAPH_CITE_EXPAND": "1",
+      "GRAPH_CITE_MULTI": "",
+      "GRAPH_TEAM_LAST": "1",
+      "GRAPH_KEEP_CITES": "",
+      "GRAPH_SUB_RESEARCH": "",
+      "GRAPH_PAGE_RESEARCH": "",
+      "GRAPH_REQUERY_VOCAB": "",
+      "GRAPH_UNKNOWN_NAME": "1",
+      "GRAPH_DECOMPOSE_CAP_S": "",
+      "GRAPH_REFUSE_ON_NONE": "1",
+      "GRAPH_RESEARCH_SAME_PAGE": "1",
+      "GRAPH_CITE_PHRASE": "1",
+      "GRAPH_GROUNDING_QUOTE": "1",
+      "GRAPH_DROP_SCOPED_CITES": "1",
+      "GRAPH_INTRO_FILL": "1",
+      "GRAPH_SCOPE_NOTE_REFUSE": "1",
+      "GRAPH_CITE_PICK": "1",
+      "GRAPH_REQUERY_SKIP_SEEN": "1",
+      "GRAPH_CITE_CONSENSUS": "1",
+      "GRAPH_POINTER_REFUSE": "1",
+      "GRAPH_SPECULATE_FIRST": "1",
+      "GRAPH_UNCHANGED_REJUDGE": "1",
+      "GRAPH_PROMPTS_HEAD": "",
+      "GRAPH_JUDGE_VOTE": "1",
+      "GRAPH_JUDGE_QUOTE": "1",
+      "SEARCH_SUB_MERGE": "",
+      "GRAPH_FACTS_LOG": "",
+      "GRAPH_ANSWER_BEST2": "1",
+      "GRAPH_BEST2_SAMEDOC": "1",
+      "GRAPH_SPECULATE_GROUND": "1",
+      "SEARCH_HEDGE": "",
+      "SEARCH_HEDGE_S": "",
+      "GRAPH_SPECULATE_EARLY_SEARCH": ""
+    },
+    "via_mcp": true,
+    "warm": {
+      "queries": 150,
+      "seconds": 5.32
+    },
+    "connected": "결정표(승인된 표 없음)와 합동 검토(메모리, 승인함 없음) 연결",
+    "order": "문항마다 순서를 뒤집어 번갈아 돌림(짝수 번째 single 먼저, 홀수 번째 multi 먼저)",
+    "translation_cache": "PgStore는 번역을 DB에 저장한다",
+    "excluded": [],
+    "partial": false,
+    "repeat": 1,
+    "run_id": "eval-question-20261117-094712",
+    "finished": "2026-11-17 10:17:05"
+  },
+  "metrics": {
+    "single": {
+      "n": 50,
+      "errors": 0,
+      "cited_correct_rate": 0.96,
+      "wrong_citation_rate": 0.04,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "hallucination_risk_rate": 0.0,
+      "answer_check_refusals": 0,
+      "correct_refusal_rate_without_answer_check": 1.0,
+      "over_refusal_rate_without_answer_check": 0.0,
+      "citation_accuracy": 0.96,
+      "as_of_shown_rate": 1.0,
+      "latency_p95_s": 37.345,
+      "judge_score": null,
+      "cost_usd": 0.404053
+    },
+    "multi": {
+      "n": 50,
+      "errors": 0,
+      "cited_correct_rate": 0.9466666666666668,
+      "wrong_citation_rate": 0.08,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "hallucination_risk_rate": 0.0,
+      "answer_check_refusals": 0,
+      "correct_refusal_rate_without_answer_check": 1.0,
+      "over_refusal_rate_without_answer_check": 0.0,
+      "citation_accuracy": 0.94,
+      "as_of_shown_rate": 1.0,
+      "latency_p95_s": 37.449,
+      "judge_score": null,
+      "cost_usd": 0.404511
+    }
+  },
+  "totals": {
+    "single": {
+      "items": 50,
+      "llm_calls": 736,
+      "first_searches": 45,
+      "requery_searches": 0,
+      "latency_mean_s": 17.758
+    },
+    "multi": {
+      "items": 50,
+      "llm_calls": 741,
+      "first_searches": 44,
+      "requery_searches": 1,
+      "latency_mean_s": 17.986
+    }
+  },
+  "delta_multi_minus_single": {
+    "n": 0,
+    "errors": 0,
+    "cited_correct_rate": -0.013333,
+    "wrong_citation_rate": 0.04,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 0.0,
+    "hallucination_risk_rate": 0.0,
+    "answer_check_refusals": 0,
+    "correct_refusal_rate_without_answer_check": 0.0,
+    "over_refusal_rate_without_answer_check": 0.0,
+    "citation_accuracy": -0.02,
+    "as_of_shown_rate": 0.0,
+    "latency_p95_s": 0.104,
+    "cost_usd": 0.000458
+  },
+  "changed_items": [
+    {
+      "id": 2,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "1bcdf8557f4f92c2",
+            "7cd641d28bcdfeb5"
+          ],
+          "multi": [
+            "3069923da5795b3f",
+            "1bcdf8557f4f92c2",
+            "7cd641d28bcdfeb5"
+          ]
+        }
+      }
+    },
+    {
+      "id": 16,
+      "kind": "irrelevant",
+      "changed": {
+        "retries": {
+          "single": 1,
+          "multi": 0
+        }
+      }
+    },
+    {
+      "id": 33,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "68b56195b2b85fb9",
+            "ee6b973c265fabc1",
+            "1c6033e929e3640c"
+          ],
+          "multi": [
+            "68b56195b2b85fb9",
+            "1c6033e929e3640c"
+          ]
+        }
+      }
+    },
+    {
+      "id": 36,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "8d1287e09ae75d03",
+            "931a9097b6def468",
+            "e92ff33755911829"
+          ],
+          "multi": [
+            "8d1287e09ae75d03",
+            "e92ff33755911829",
+            "931a9097b6def468"
+          ]
+        }
+      }
+    },
+    {
+      "id": 39,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "b579ee5fefd307d2",
+            "cb99f52f7a78e20c",
+            "1349310bf3d9c2f7"
+          ],
+          "multi": [
+            "b579ee5fefd307d2",
+            "cb99f52f7a78e20c",
+            "ca1e641aabe65081",
+            "80a4700384a9740e"
+          ]
+        },
+        "gold_hit": {
+          "single": 3,
+          "multi": 2
+        }
+      }
+    },
+    {
+      "id": 40,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "74664b2724e87c96",
+            "8a59fedaa6acd8e3"
+          ],
+          "multi": [
+            "74664b2724e87c96"
+          ]
+        }
+      }
+    },
+    {
+      "id": 42,
+      "kind": "irrelevant",
+      "changed": {
+        "retries": {
+          "single": 0,
+          "multi": 2
+        }
+      }
+    }
+  ],
+  "changed_count": 7,
+  "note": "모델 응답은 같은 입력이어도 실행마다 달라질 수 있어 달라진 문항이 구조 때문이라고 단정하지 않는다. 차이가 1~4문항이면 이 목록을 EVAL_REPORT.md에 적는다(GATES G5). 개선이 없으면 없다고 적는다."
+}

@@ -1,0 +1,46 @@
+## 평가 점수 비교 (저장소에 커밋된 결과 파일, 키·네트워크 없음)
+
+평가셋 `dataset_v2.jsonl` 동결 해시 `810d01f1c27d`, 결과 폴더 `agent_v2_q_d6151_r1_bo2sda2_api` 등 3개의 3회 평균
+
+| 구성 | 지표 | 이번 값 | 기준 결과 | 통과선 | 판정 |
+|---|---|---|---|---|---|
+| single | 인용 정확도 | 1.0 | 1.0 | >= 0.85 | 통과 |
+| single | 정답 근거 인용률 | 0.996 | 0.996 | >= 0.85 | 통과 |
+| single | 비관련 질문 거절 | 1.0 | 1.0 | >= 0.9 | 통과 |
+| single | 오답 근거 | 0.0 | 0.0 | - | 통과 |
+| single | 과잉 거절 | 0.0 | 0.0 | - | 통과 |
+| single | 환각 위험 | 0.0 | 0.0 | - | 통과 |
+| single | 응답 시간 p95(초) | 9.806 | 9.806 | <= 10.0 | 통과 |
+| multi | 인용 정확도 | 0.992 | 0.992 | >= 0.85 | 통과 |
+| multi | 정답 근거 인용률 | 0.991 | 0.991 | >= 0.85 | 통과 |
+| multi | 비관련 질문 거절 | 1.0 | 1.0 | >= 0.9 | 통과 |
+| multi | 오답 근거 | 0.027 | 0.027 | - | 통과 |
+| multi | 과잉 거절 | 0.0 | 0.0 | - | 통과 |
+| multi | 환각 위험 | 0.0 | 0.0 | - | 통과 |
+| multi | 응답 시간 p95(초) | 9.695 | 9.695 | <= 10.0 | 통과 |
+| 운영 provena-api-00172-rex | 기준 파일은 provena-api-00047-wjn 측정, 가장 최근 측정은 provena-api-00172-rex(2026-11-16T22:17:29+09:00) | | | | |
+| 운영 provena-api-00172-rex | 인용 정확도 | 0.96 | 0.95 | >= 0.85 | 통과 |
+| 운영 provena-api-00172-rex | 정답 근거 인용률 | 0.947 | 0.942 | >= 0.85 | 통과 |
+| 운영 provena-api-00172-rex | 비관련 질문 거절 | 1.0 | 1.0 | >= 0.9 | 통과 |
+| 운영 provena-api-00172-rex | 오답 근거 | 0.04 | 0.067 | - | 통과 |
+| 운영 provena-api-00172-rex | 과잉 거절 | 0.0 | 0.0 | - | 통과 |
+| 운영 provena-api-00172-rex | 응답 시간 p95(초) | 8.264 | 8.51 | <= 10.0 | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 인용 답이 나온 질문 | 7 | 7 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 거절이 나온 질문 | 2 | 2 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 녹화에 없는 요청 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 발췌형 대체 답 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 인용 답이 나온 질문 | 7 | 7 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 거절이 나온 질문 | 2 | 2 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 녹화에 없는 요청 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 발췌형 대체 답 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 50건: 관련 질문 중 인용 답 | 24 | 24 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 50건: 비관련 질문 중 거절 | 24 | 24 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 50건: 녹화에 없는 요청 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_in_time | 50건: 발췌형 대체 답 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 50건: 관련 질문 중 인용 답 | 24 | 24 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 50건: 비관련 질문 중 거절 | 24 | 24 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 50건: 녹화에 없는 요청 | 0 | 0 | - | 통과 |
+| 현재 코드 1b38366e reasoning_answer_skipped | 50건: 발췌형 대체 답 | 0 | 0 | - | 통과 |
+
+결과: **통과**
+

@@ -1,0 +1,2251 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "fb3ba634a8d30bda",
+        "9959baf3c8f4f4dd",
+        "159e4f13dc80e656",
+        "34032311f59f0f48"
+      ],
+      "multi_cited": [
+        "fb3ba634a8d30bda",
+        "9959baf3c8f4f4dd",
+        "159e4f13dc80e656",
+        "34032311f59f0f48"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 2,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "1bcdf8557f4f92c2",
+        "7cd641d28bcdfeb5"
+      ],
+      "multi_cited": [
+        "3069923da5795b3f",
+        "1bcdf8557f4f92c2",
+        "7cd641d28bcdfeb5"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": false
+    },
+    {
+      "id": 3,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "d55fdad5821a802f",
+        "984967e06e6236f6"
+      ],
+      "multi_cited": [
+        "d55fdad5821a802f",
+        "984967e06e6236f6"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 4,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "c8367415ba48ad91",
+        "e5068fd933fbbb2d"
+      ],
+      "multi_cited": [
+        "c8367415ba48ad91",
+        "e5068fd933fbbb2d"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 5,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "c7816d5decaeecba"
+      ],
+      "multi_cited": [
+        "c7816d5decaeecba"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 6,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "377c9fd1edb06d26",
+        "f8ad5739e3666b41"
+      ],
+      "multi_cited": [
+        "377c9fd1edb06d26",
+        "f8ad5739e3666b41"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 7,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "78621d46c7424c88"
+      ],
+      "multi_cited": [
+        "78621d46c7424c88"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 8,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 15,
+      "single_cited": [
+        "a28e2bc1ab86d482"
+      ],
+      "multi_cited": [
+        "a28e2bc1ab86d482"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 9,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "1760f9bd2b094dd5"
+      ],
+      "multi_cited": [
+        "1760f9bd2b094dd5"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 10,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "b8f138d76e58138e"
+      ],
+      "multi_cited": [
+        "b8f138d76e58138e"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 11,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 15,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "1760f9bd2b094dd5"
+      ],
+      "multi_cited": [
+        "1760f9bd2b094dd5"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 12,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "9096a5b57bfdd026"
+      ],
+      "multi_cited": [
+        "9096a5b57bfdd026"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 13,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "0cbc62bd8d22eda8"
+      ],
+      "multi_cited": [
+        "0cbc62bd8d22eda8"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 14,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "297784a4d33c8839"
+      ],
+      "multi_cited": [
+        "297784a4d33c8839"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 15,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "fa4c75698c139086"
+      ],
+      "multi_cited": [
+        "fa4c75698c139086"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 16,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 9,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "end",
+          "closed_by": "out_of_domain",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 17,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "end",
+          "closed_by": "out_of_domain",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 18,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "end",
+          "closed_by": "out_of_domain",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 19,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "end",
+          "closed_by": "out_of_domain",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 20,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 21,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 22,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 15,
+      "multi_llm_calls": 14,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 23,
+      "relevant": false,
+      "single_result": "clarify",
+      "multi_result": "clarify",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 24,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 25,
+      "relevant": false,
+      "single_result": "clarify",
+      "multi_result": "clarify",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 4,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 26,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 27,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 28,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 29,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 30,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 31,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "466343fe561e453b",
+        "cc7e86c9948b205d"
+      ],
+      "multi_cited": [
+        "466343fe561e453b",
+        "cc7e86c9948b205d"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 32,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "c5001e2f7e7f5c52"
+      ],
+      "multi_cited": [
+        "c5001e2f7e7f5c52"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 33,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 15,
+      "single_cited": [
+        "68b56195b2b85fb9",
+        "ee6b973c265fabc1",
+        "1c6033e929e3640c"
+      ],
+      "multi_cited": [
+        "68b56195b2b85fb9",
+        "1c6033e929e3640c"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": false
+    },
+    {
+      "id": 34,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 17,
+      "multi_llm_calls": 17,
+      "single_cited": [
+        "81553ffe7ab8e2b8",
+        "c07479ec82f10149"
+      ],
+      "multi_cited": [
+        "81553ffe7ab8e2b8",
+        "c07479ec82f10149"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 35,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "133f8fdfd459e861",
+        "5fff43a9dd7762b5"
+      ],
+      "multi_cited": [
+        "133f8fdfd459e861",
+        "5fff43a9dd7762b5"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 36,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "8d1287e09ae75d03",
+        "931a9097b6def468",
+        "e92ff33755911829"
+      ],
+      "multi_cited": [
+        "8d1287e09ae75d03",
+        "e92ff33755911829",
+        "931a9097b6def468"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 37,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 21,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "e426f23ef1c805be",
+        "349e97b509c1da3a",
+        "1f56e00edc2f2e1f"
+      ],
+      "multi_cited": [
+        "e426f23ef1c805be",
+        "349e97b509c1da3a",
+        "1f56e00edc2f2e1f"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 38,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 0.0,
+      "multi_gold_rate": 0.0,
+      "single_cit_acc": 0.0,
+      "multi_cit_acc": 0.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "3386a22b1ae97ab2"
+      ],
+      "multi_cited": [
+        "3386a22b1ae97ab2"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 1,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 1,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 39,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 0.6666666666666666,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 0.5,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 23,
+      "single_cited": [
+        "b579ee5fefd307d2",
+        "cb99f52f7a78e20c",
+        "1349310bf3d9c2f7"
+      ],
+      "multi_cited": [
+        "b579ee5fefd307d2",
+        "cb99f52f7a78e20c",
+        "ca1e641aabe65081",
+        "80a4700384a9740e"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": false
+    },
+    {
+      "id": 40,
+      "relevant": true,
+      "single_result": "answer",
+      "multi_result": "answer",
+      "single_gold_rate": 1.0,
+      "multi_gold_rate": 1.0,
+      "single_cit_acc": 1.0,
+      "multi_cit_acc": 1.0,
+      "single_llm_calls": 23,
+      "multi_llm_calls": 21,
+      "single_cited": [
+        "74664b2724e87c96",
+        "8a59fedaa6acd8e3"
+      ],
+      "multi_cited": [
+        "74664b2724e87c96"
+      ],
+      "multi_agent_trace": [
+        "retriever",
+        "writer",
+        "verifier"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "writer",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "writer",
+          "to": "verifier",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "verifier",
+          "to": "end",
+          "retries": 0,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": false
+    },
+    {
+      "id": 41,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 9,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 42,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 4,
+      "multi_llm_calls": 23,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever",
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "retriever",
+          "retries": 1,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 2,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 43,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 9,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 44,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 45,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 9,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 46,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 47,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 48,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 49,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    },
+    {
+      "id": 50,
+      "relevant": false,
+      "single_result": "refuse",
+      "multi_result": "refuse",
+      "single_gold_rate": null,
+      "multi_gold_rate": null,
+      "single_cit_acc": null,
+      "multi_cit_acc": null,
+      "single_llm_calls": 11,
+      "multi_llm_calls": 11,
+      "single_cited": [],
+      "multi_cited": [],
+      "multi_agent_trace": [
+        "retriever"
+      ],
+      "multi_supervisor_log": [
+        {
+          "after": "intake",
+          "to": "retriever",
+          "retries": 0,
+          "router": "code"
+        },
+        {
+          "after": "retriever",
+          "to": "end",
+          "closed_by": "give_up",
+          "retries": 1,
+          "router": "code"
+        }
+      ],
+      "same_result_and_citations": true
+    }
+  ],
+  "paired_gold_rate": {
+    "multi_higher": 0,
+    "single_higher": 1,
+    "same": 24
+  },
+  "agent_trace_counts": {
+    "retriever>writer>verifier": 25,
+    "(없음)": 4,
+    "retriever": 20,
+    "retriever>retriever": 1
+  },
+  "same_count": 46,
+  "n": 50,
+  "metrics": {
+    "single": {
+      "n": 50,
+      "errors": 0,
+      "cited_correct_rate": 0.96,
+      "wrong_citation_rate": 0.04,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "hallucination_risk_rate": 0.0,
+      "answer_check_refusals": 0,
+      "correct_refusal_rate_without_answer_check": 1.0,
+      "over_refusal_rate_without_answer_check": 0.0,
+      "citation_accuracy": 0.96,
+      "as_of_shown_rate": 1.0,
+      "latency_p95_s": 37.345,
+      "judge_score": null,
+      "cost_usd": 0.404053
+    },
+    "multi": {
+      "n": 50,
+      "errors": 0,
+      "cited_correct_rate": 0.9466666666666668,
+      "wrong_citation_rate": 0.08,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "hallucination_risk_rate": 0.0,
+      "answer_check_refusals": 0,
+      "correct_refusal_rate_without_answer_check": 1.0,
+      "over_refusal_rate_without_answer_check": 0.0,
+      "citation_accuracy": 0.94,
+      "as_of_shown_rate": 1.0,
+      "latency_p95_s": 37.449,
+      "judge_score": null,
+      "cost_usd": 0.404511
+    }
+  },
+  "changed_items_runner": [
+    {
+      "id": 2,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "1bcdf8557f4f92c2",
+            "7cd641d28bcdfeb5"
+          ],
+          "multi": [
+            "3069923da5795b3f",
+            "1bcdf8557f4f92c2",
+            "7cd641d28bcdfeb5"
+          ]
+        }
+      }
+    },
+    {
+      "id": 16,
+      "kind": "irrelevant",
+      "changed": {
+        "retries": {
+          "single": 1,
+          "multi": 0
+        }
+      }
+    },
+    {
+      "id": 33,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "68b56195b2b85fb9",
+            "ee6b973c265fabc1",
+            "1c6033e929e3640c"
+          ],
+          "multi": [
+            "68b56195b2b85fb9",
+            "1c6033e929e3640c"
+          ]
+        }
+      }
+    },
+    {
+      "id": 36,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "8d1287e09ae75d03",
+            "931a9097b6def468",
+            "e92ff33755911829"
+          ],
+          "multi": [
+            "8d1287e09ae75d03",
+            "e92ff33755911829",
+            "931a9097b6def468"
+          ]
+        }
+      }
+    },
+    {
+      "id": 39,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "b579ee5fefd307d2",
+            "cb99f52f7a78e20c",
+            "1349310bf3d9c2f7"
+          ],
+          "multi": [
+            "b579ee5fefd307d2",
+            "cb99f52f7a78e20c",
+            "ca1e641aabe65081",
+            "80a4700384a9740e"
+          ]
+        },
+        "gold_hit": {
+          "single": 3,
+          "multi": 2
+        }
+      }
+    },
+    {
+      "id": 40,
+      "kind": "relevant",
+      "changed": {
+        "cited": {
+          "single": [
+            "74664b2724e87c96",
+            "8a59fedaa6acd8e3"
+          ],
+          "multi": [
+            "74664b2724e87c96"
+          ]
+        }
+      }
+    },
+    {
+      "id": 42,
+      "kind": "irrelevant",
+      "changed": {
+        "retries": {
+          "single": 0,
+          "multi": 2
+        }
+      }
+    }
+  ]
+}

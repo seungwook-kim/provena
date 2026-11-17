@@ -1,0 +1,11 @@
+[on r3] 문항 1: pending_approval 팀 ['security', 'infra', 'itops', 'finance'] 쟁점 19행 LLM 5회 10.144초 $0.00433
+[on r3] 문항 2: pending_approval 팀 ['security', 'infra', 'itops', 'finance'] 쟁점 20행 LLM 5회 10.083초 $0.00501
+[on r3] 문항 3: pending_approval 팀 ['security', 'infra', 'itops', 'finance'] 쟁점 18행 LLM 5회 8.972초 $0.00444
+[on r3] 문항 4: pending_approval 팀 ['security', 'infra', 'itops', 'finance'] 쟁점 18행 LLM 5회 6.902초 $0.00413
+[on r3] 문항 5: pending_approval 팀 ['itops', 'finance'] 쟁점 10행 LLM 3회 7.555초 $0.00217
+[on r3] 문항 6: pending_approval 팀 ['security', 'infra', 'finance'] 쟁점 15행 LLM 4회 7.76초 $0.00343
+[on r3] 문항 7: pending_approval 팀 ['infra', 'finance'] 쟁점 9행 LLM 3회 8.887초 $0.00240
+[on r3] 문항 8: clarify 팀 [] 쟁점 0행 LLM 1회 1.871초 $0.00023
+[on r3] 문항 9: clarify 팀 [] 쟁점 0행 LLM 1회 2.084초 $0.00026
+[on r3] 문항 10: pending_approval 팀 ['security', 'finance'] 쟁점 6행 LLM 3회 5.485초 $0.00188
+{"gold_total": 37, "gold_found": 12, "missed_issue_rate": 0.6756756756756757, "cost_usd": 0.028278, "cost_usd_mean": 0.0028277899999999997, "latency_mean_s": 6.9742999999999995, "latency_p95_s": 10.144, "errors": 0}
