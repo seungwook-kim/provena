@@ -51,6 +51,10 @@ jobs:
           if grep -q "skipped" demo_replay.log; then echo "demo_replay 시험이 건너뛰어졌습니다(Postgres 연결 확인)"; exit 1; fi
       # 커밋된 옛 측정 결과만 읽으면 현재 코드가 바뀌어도 점수가 그대로라 회귀를 못 잡는다. 현재 코드로 0원(키 없는 데모 재생, 오프라인) 평가를 돌려 결과 파일을 만들고 아래 비교가 기준값과 견준다.
       # 데모 질문 9개와 평가셋 v2 50건 녹화(evals/ci_replay_v2/)를 함께 재생한다. --require-v2: 50건 녹화가 없거나 평가셋과 어긋나면 데모 9개만 돌고 넘어가지 않고 이 단계가 실패한다.
+      # 50건 녹화는 풀린 색인(data/index/)이 있는 상태에서 만들었다. 질문 속 영문 구가 코퍼스에 있는지 보는 검사(backend/graph/answer_fixes.py의 _CORPUS_FILES)가 data/index/chunks.jsonl을 읽으므로,
+      # 서비스 이미지·compose가 시작할 때처럼 커밋된 data/index.tar.gz를 먼저 풀고 meta.json sha256을 대조한다(evals/results/ci_replay_local_1b38366e/README.md).
+      - name: 색인 압축 풀기 (data/index.tar.gz -> data/index/, 키·네트워크 없음)
+        run: python -m backend.rag.ingest.snapshot unpack-index
       - name: 현재 코드 0원 평가 (키 없는 데모 재생, 키·네트워크 없음)
         env:
           PROVENA_D5_PG_URL: postgresql://app:pw@127.0.0.1:5432/postgres

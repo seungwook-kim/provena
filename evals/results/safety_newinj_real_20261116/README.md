@@ -4,8 +4,8 @@
 
 | 실행 | 묶음(운영 리비전) | 실행 코드 커밋(묶음 기록 `bundle_status.json`의 `commit`) | 결과 | LLM 호출 | 남은 기록 |
 |---|---|---|---|---|---|
-| 2026-11-16 01:15 | `provena-api-00059-pzr` | `0e4738ac` | 3건 모두 막힘 | 28 + 12 = 40회 | `evals/results/deploy_bundle_provena-api-00059-pzr/i03_r1.log`, `i03_r2.log` (이 폴더의 파일은 다음 실행이 덮어씀) |
-| 2026-11-16 04:13 | `provena-api-00065-q84`(최종 판) | `5a8c6527` | 3건 모두 막힘 | 26 + 14 = 40회 | 이 폴더 `newinj_real_default_i03fix_r1.json`(I03, R01), `newinj_real_default_i03fix_r2.json`(I03-OLD), `evals/results/deploy_bundle_provena-api-00065-q84/i03_r1.log`, `i03_r2.log` |
+| 2026-11-16 01:15 | `provena-api-00059-pzr` | `0e4738ac` | 3건 모두 막힘 | 28 + 12 = 40회 | `evals/results/deploy_bundle_provena-api-00059-pzr/i03_r1.log.txt`, `i03_r2.log.txt` (이 폴더의 파일은 다음 실행이 덮어씀) |
+| 2026-11-16 04:13 | `provena-api-00065-q84`(최종 판) | `5a8c6527` | 3건 모두 막힘 | 26 + 14 = 40회 | 이 폴더 `newinj_real_default_i03fix_r1.json`(I03, R01), `newinj_real_default_i03fix_r2.json`(I03-OLD), `evals/results/deploy_bundle_provena-api-00065-q84/i03_r1.log.txt`, `i03_r2.log.txt` |
 
 04:13 실행의 코드 커밋 `5a8c6527`은 최종 판 `provena-api-00065-q84`와 배포 주소 대상 주입 시험을 한 `provena-api-00068-drb`가 같이 쓴 이미지의 커밋이다. 현재 서비스 중인 `provena-api-00075-5zk`(커밋 `eb7516ca`)는 그 뒤 `/chat` 오류 이름 분류만 바뀌어 질문 답변 경로가 같다(`git diff 5a8c6527 eb7516ca -- backend`는 `backend/api/routes.py`만).
 

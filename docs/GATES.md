@@ -39,7 +39,7 @@
 | # | 깨뜨린 곳 (파일, 함수나 상수와 그 한 줄) | 실패해야 하는 테스트 | 실제로 실패했는가 | 확인한 날 |
 |---|---|---|---|---|
 | 1 | `backend/graph/build.py`의 상수 `MAX_RESEARCH = 2`(재검색 상한)를 5로 | `test_refuse_after_two_researches`, `test_ac03_search_is_called_exactly_three_times` | 실패(5개) | 2026-11-05 |
-| 2 | `backend/graph/build.py`의 `search`에서 재검색 결과 합치기 `merge_chunks(state.get("chunks", []), found)`를 새 결과만 쓰도록 | `test_requery_keeps_first_search_chunks_so_their_citation_survives` | 실패(2개) | 2026-11-05. **재현 주의:** 이 대상 문자열은 동결 코드 `194dfd9a`에 그대로는 없다. 같은 합치기는 현재 `backend/graph/build.py`의 `search` 안 `merged = merge_chunks(state.get("chunks", []), found, limit=cap)`(1298행)이고, 2026-11-05 이후 이 줄로 다시 확인하지는 않았다 |
+| 2 | `backend/graph/build.py`의 `search`에서 재검색 결과 합치기 `merged = merge_chunks(state.get("chunks", []), found, limit=cap)`(커밋 `1b38366e` 기준 1298행)의 첫 인자를 빈 목록으로(새 결과만 쓰도록) | `test_requery_keeps_first_search_chunks_so_their_citation_survives` | 실패(1개, 변이 전 1 통과) | 2026-11-17(커밋 `1b38366e`, 출력 `evals/results/mutation_limits_20261117/mutation_2_current_line.txt`). 2026-11-05에는 그때의 줄 `merge_chunks(state.get("chunks", []), found)`로 실패 2개였다 |
 | 3 | `backend/graph/build.py`의 `give_up`에서 숫자 되묻기 차단 `not clarify_has_number(ask_back)` 조건 제거 | `test_clarify_with_a_number_becomes_a_refusal` | 실패(1개) | 2026-11-05 |
 | 4 | `backend/graph/build.py`의 `build_graph` 배선에서 도메인 밖 경로 `out_of_domain`을 `rewrite`로 연결 | `test_out_of_domain_refuses_without_rewrite_or_search` | 실패(1개) | 2026-11-05 |
 | 5 | `backend/graph/build.py`의 `verify`에서 인용 검사 `check_citations(...)`를 통과시키도록 | `test_citation_check_filters_fake_citation`, `test_only_fake_citations_refuses_and_not_saved` | 실패(6개) | 2026-11-05 |
@@ -71,6 +71,12 @@
 | 31 | `evals/retrieval/experiment_v1.py`의 `_Scores.score`에서 int8는 저장 값을 쓰지 않는 분기를 끔 | `tests/test_exp_int8_scores.py` | 실패(2개) | 2026-11-11 |
 | 32 | `backend/services/auth_store.py`의 `_review_locked`에서 승인 분기 `if action == "approve":`를 `if True:`로(거절도 계정 생성) | `tests/test_round_trip_app.py` | 실패(1개) | 2026-11-11 |
 | 33 | `backend/services/auth_store.py`의 `_review_locked`에서 승인 분기를 `if False:`로(승인해도 계정 없음) | `tests/test_round_trip_app.py` | 실패(1개) | 2026-11-11 |
+| 34 (L1) | `backend/services/llm.py`의 상수 `DEFAULT_LLM_MAX_TOKENS = 2500`(LLM 출력 상한)을 3000으로 | `tests/test_llm_max_tokens.py` | 실패(14개) | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
+| 35 (L2) | `backend/services/llm.py`의 `TASK_MAX_TOKENS`에서 `"single": 4000`을 5000으로 | `tests/test_llm_max_tokens.py` | 실패(2개) | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
+| 36 (L3) | `backend/api/daily_limit.py`의 상수 `DEFAULT_DAILY_QUESTION_LIMIT = 50`(사람당 하루 질문 한도)을 60으로 | `tests/test_daily_limit.py` | 실패(4개) | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
+| 37 (L4) | `extras/mcp_skill/mcp_server/server.py`의 상수 `DEFAULT_EXTERNAL_RATE_PER_MIN = 30`(외부 MCP 분당 한도)을 60으로 | `tests/test_mcp_external_rate.py`(`test_default_limits_are_literal_30_per_min_500_per_day`, `test_app_without_rate_env_uses_30_and_500`) | 실패(2개). 두 시험을 더하기 전 시험 파일로는 통과(12개)였다 | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
+| 38 (L5) | `extras/mcp_skill/mcp_server/server.py`의 상수 `DEFAULT_EXTERNAL_RATE_PER_DAY = 500`(외부 MCP 하루 한도)을 1000으로 | `tests/test_mcp_external_rate.py`(위 두 시험) | 실패(2개). 두 시험을 더하기 전 시험 파일로는 통과(12개)였다 | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
+| 39 (L6) | `extras/mcp_skill/mcp_server/server.py`의 `mcp_http_app`에서 하루 한도 인자 `DEFAULT_EXTERNAL_RATE_PER_DAY`를 0(제한 없음)으로 | `tests/test_mcp_external_rate.py`(`test_app_without_rate_env_uses_30_and_500`) | 실패(1개). 두 시험을 더하기 전 시험 파일로는 통과(12개)였다 | 2026-11-17(커밋 `1b38366e`, `evals/results/mutation_limits_20261117/`) |
 
 각 변이 뒤 파일은 원래대로 되돌렸고 SHA-256이 변이 전과 같음을 확인했다. 17건은 Claude Code 서브에이전트가 실행한 결과이고, 그중 1번과 16번은 김승욱 세션에서 임시 복사본에 같은 변이를 넣어 다시 실패를 확인했다. 확인한 시험 묶음은 `tests/test_question_graph.py`, `tests/test_graph_search_wiring.py`, `tests/test_exp_confirmed.py`, `tests/test_exp_service.py`이다.
 

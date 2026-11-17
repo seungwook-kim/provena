@@ -38,9 +38,9 @@ v2 값은 같은 50건의 실패 문항에서 출발해 고친 뒤의 값이라 
 
 | 역할 | 운영 서비스 | 측정 | 근거 |
 |---|---|---|---|
-| 답 작성, 질의 분석(`classify`), 질문 분해·재작성, 근거 충분 판정(`judge`), 근거 확인(`ground`), 질문 번역 | `claude-haiku-5-5`, Anthropic API 직접 호출 | 같음(배포 측정은 운영 서비스를 그대로 부른다. 4장 로컬 최종 측정도 Anthropic API 직접 호출) | `LLM_PROVIDER`, `backend/services/llm.py:70`(`DEFAULT_ANTHROPIC_MODEL`), `backend/graph/build.py:445`, `backend/rag/retrieve/translate.py:83` |
-| 팀 합동 검토(Supervisor, 팀 에이전트 4개) | 같은 모델 | 같음 | `backend/graph/departments/review.py:139` |
-| 결정표 변환 초안 | 같은 모델 | - | `backend/graph/decision/routes.py:550-552` |
+| 답 작성, 질의 분석(`classify`), 질문 분해·재작성, 근거 충분 판정(`judge`), 근거 확인(`ground`), 질문 번역 | `claude-haiku-5-5`, Anthropic API 직접 호출 | 같음(배포 측정은 운영 서비스를 그대로 부른다. 4장 로컬 최종 측정도 Anthropic API 직접 호출) | `LLM_PROVIDER`, `backend/services/llm.py:72`(`DEFAULT_ANTHROPIC_MODEL`), `backend/graph/build.py:445`, `backend/rag/retrieve/translate.py:108` |
+| 팀 합동 검토(Supervisor, 팀 에이전트 4개) | 같은 모델 | 같음 | `backend/graph/departments/review.py:167` |
+| 결정표 변환 초안 | 같은 모델 | - | `backend/graph/decision/routes.py:593-595` |
 | 답변 리콜의 결론 재판정 | 같은 모델(키 없는 데모는 녹화한 판정, 녹화에 없으면 규칙 판정) | - | `backend/graph/recall/judge.py` `default_judge` |
 | 추론 수준 | 분해·답 작성·근거 충분 판정만 `low`, 나머지 끔 | 같음 | `backend/graph/service_profile.py:50, 94-95` |
 | 임베딩(문서·질문) | `voyage-4`, Voyage AI API | 같음 | `EMBED_MODEL`, `backend/rag/retrieve/embed.py:53` |
