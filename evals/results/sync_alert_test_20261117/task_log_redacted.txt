@@ -1,0 +1,18 @@
+2026-11-17 09:34:36 시작 2026-11-17 09:34:36 +09:00 (UTC 2026-11-17 00:34:36) 모드=실행 trigger=manual 컴퓨터=<컴퓨터> PS=5.1.26100.9818
+2026-11-17 09:34:36 로그 <시험 로그 폴더>\sync_20261117_093436.log
+2026-11-17 09:34:36   [있음] 저장소 <저장소>
+2026-11-17 09:34:36   [있음] 파이썬 <저장소>\.venv\Scripts\python.exe
+2026-11-17 09:34:36   [있음] git
+2026-11-17 09:34:36   [있음] gcloud
+2026-11-17 09:34:36   [있음] 핸드북 캐시 <사용자 폴더>\.cache\provena\handbook
+2026-11-17 09:34:36 저장소 커밋 e53713d8 (seunguk)
+2026-11-17 09:34:38 gcloud 활성 계정 있음
+2026-11-17 09:34:39   운영 연결 DATABASE_URL <- <DB 비밀 이름>:latest
+2026-11-17 09:34:39   운영 연결 DATABASE_DIRECT_URL <- <DB 직접 연결 비밀 이름>:latest
+2026-11-17 09:34:39   운영 연결 VOYAGE_API_KEY <- <Voyage 비밀 이름>:2
+2026-11-17 09:34:39   운영 연결 GMAIL_APP_PASSWORD <- <Gmail 비밀 이름>:latest
+2026-11-17 09:34:39   EMBED_MODEL 운영 서비스에 없음 → 코드 기본값 voyage-4
+2026-11-17 09:34:41 준비 실패: 비밀값 provena-alert-test-nonexistent-db-20261117(latest)을 받지 못함: 종료 코드 1 ERROR: (gcloud.secrets.versions.access) NOT_FOUND: Secret [projects/<프로젝트 번호>/secrets/provena-alert-test-nonexistent-db-20261117] not found or has no versions. This command is authenticated as [가림] which is the active account specified by the [core/account] property.
+2026-11-17 09:34:41 실패 알림 메일을 보낸다: preparation(준비 실패, 동기화 전)
+2026-11-17 09:34:46 실패 알림 보냄: 메일(<알림 주소>) mail sent
+2026-11-17 09:34:46 끝 2026-11-17 09:34:41 +09:00 종료 코드 2 (걸린 시간 4.6초)
