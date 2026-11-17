@@ -1,0 +1,8 @@
+attempt1: default git clone failed checkout (Filename too long on Windows, scratch path length); retried with core.longpaths=true
+start 2026-11-17T10:15:12.7498552+09:00
+clone_done 2026-11-17T10:16:07.7486784+09:00 clone_s=55
+env_file_present: False
+compose_up_start 2026-11-17T10:17:57.8669557+09:00
+compose_up_returned 2026-11-17T10:18:55.3125458+09:00 since_compose_s=57.4
+health_ok=True 2026-11-17T10:19:01.2196569+09:00 compose_to_health_s=63.4 clone_start_to_health_s=228.5 body={"status":"ok"}
+root_status=200

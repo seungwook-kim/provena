@@ -1,0 +1,67 @@
+INFO:     172.26.0.1:35858 - "GET /health HTTP/1.1" 200 OK
+로컬 데모: AUTH_SECRET이 없어 이번 실행용 서명 키를 무작위로 만들었다(재시작하면 다시 로그인)
+INFO:     172.26.0.1:35868 - "GET / HTTP/1.1" 200 OK
+INFO:     172.26.0.1:53368 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.26.0.1:53380 - "GET /auth/csrf HTTP/1.1" 204 No Content
+INFO:     172.26.0.1:53384 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     172.26.0.1:53396 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42074 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42090 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42094 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42108 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42112 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42126 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42138 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:42154 - "POST /chat HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51462 - "GET / HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51462 - "GET /assets/index-ytvmD73j.js HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51468 - "GET /assets/index-C31q1mrJ.css HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51462 - "GET /me HTTP/1.1" 204 No Content
+INFO:     172.26.0.1:51468 - "GET /provena-mark.svg HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51462 - "GET /landing/hero.jpg HTTP/1.1" 200 OK
+INFO:     172.26.0.1:51462 - "GET /landing/hero.mp4 HTTP/1.1" 206 Partial Content
+INFO:     172.26.0.1:51468 - "GET /me HTTP/1.1" 204 No Content
+INFO:     172.26.0.1:46846 - "GET /me HTTP/1.1" 204 No Content
+PROFILE_ENC_KEYS 가 없어 로컬 데모 키를 만들어 파일에 두었다(재시작해도 같은 키): /home/app/.provena/local_demo_profile.key
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO backend.graph.service_profile: 서비스 설정 61.51: 켬, 채움 0개, 끔 0개, 직접 준 값 68개(ANSWER_SAVE_ONE_CONN, ANSWER_STORE_REUSE_CONN, CHAT_FINAL_FROM_STREAM, EMBED_KEEPALIVE, GRAPH_ADOPT_GROUNDED_CANDIDATE, GRAPH_ANSWER_BEST2, GRAPH_ANSWER_BUDGET_S, GRAPH_ANSWER_WAIT_S, GRAPH_BEST2_SAMEDOC, GRAPH_CITE_ADD_GUARD, GRAPH_CITE_CONSENSUS, GRAPH_CITE_EXPAND, GRAPH_CITE_EXPAND_NARROW, GRAPH_CITE_HEAD_OWNER, GRAPH_CITE_PHRASE, GRAPH_CITE_PHRASE_WHOLE_ROWS, GRAPH_CITE_PICK, GRAPH_CLASSIFY_RACE, GRAPH_DECOMPOSE_KEEP_SUBJECT, GRAPH_DROP_SCOPED_CITES, GRAPH_FIRST_PAGE_FILL, GRAPH_FLIP_STRUCTURE, GRAPH_GROUNDING_QUOTE, GRAPH_INTRO_FILL, GRAPH_INTRO_IN_CORE, GRAPH_JUDGE_ANSWER, GRAPH_JUDGE_QUERY, GRAPH_JUDGE_QUOTE, GRAPH_JUDGE_VOTE, GRAPH_KEEP_SUBJECT_UNION, GRAPH_NONE_VOTE_WAIT_S, GRAPH_PARALLEL_INTAKE, GRAPH_POINTER_REFUSE, GRAPH_QUERY_BRANCHES, GRAPH_REFUSE_ON_NONE, GRAPH_REQUERY_SKIP_SEEN, GRAPH_RESEARCH_SAME_PAGE, GRAPH_REVISE_AHEAD, GRAPH_SCOPE_NOTE_REFUSE, GRAPH_SECTION_KEEPS_RESEARCH, GRAPH_SKIP_FIRST_REWRITE, GRAPH_SPECULATE_EARLY_SEARCH, GRAPH_SPECULATE_FIRST, GRAPH_SPECULATE_GROUND, GRAPH_SPEC_STOP_GROUND, GRAPH_STOP_STALLED_SEARCH, GRAPH_TEAM_LAST, GRAPH_UNCHANGED_REJUDGE, GRAPH_UNKNOWN_NAME, LLM_BRIEF_OUTPUT, LLM_DEADLINE_BY_TASK, LLM_DEADLINE_S, LLM_DEADLINE_SKIP_TASKS, LLM_EFFORT, LLM_EFFORT_BY_TASK, LLM_HEDGE_S, LLM_JSON_REMINDER, LLM_MAX_RETRIES, LLM_PROMPT_CACHE, LLM_REASONING, LLM_REASONING_BY_TASK, LLM_STRUCTURED, SEARCH_FULL_TAIL, SEARCH_HEDGE, SEARCH_HEDGE_S, SEARCH_HNSW, SEARCH_MAX_RESEARCH, SEARCH_PARALLEL_SUBS)
+INFO backend.services.demo_seed: 로컬 데모 계정 2개를 시드했다(아이디: demo-user, demo-admin)
+WARNING backend.admin_api: 최고 관리자 설정(PROVENA_OWNER_LOGIN_ID)이 없어 사용자 관리를 닫았다
+INFO backend.rag.retrieve.search: BM25 색인 0행 0.1초 (generation 1)
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO backend.request: request id=2d7accc6be1944a293f1fb9d261db0d5 method=GET path=/health status=200 ms=32.6
+INFO backend.request: request id=35e1593fb37043eca4a35f7ba804cb66 method=GET path=/ status=200 ms=30.6
+INFO backend.main: 검색 준비 완료 stage=search_warmup elapsed_s=11.4
+INFO backend.request: request id=f593ad1930944aa78aa115ff3b88704f method=GET path=/health status=200 ms=0.7
+INFO backend.request: request id=f8809c2df75b4fb9b1291cd80050ed3c method=GET path=/auth/csrf status=204 ms=1.3
+INFO backend.request: request id=e5b310de581445748445f8edfaf387ff method=POST path=/auth/login status=200 ms=216.8
+WARNING backend.services.demo_replay: 데모 재생: 추론 답 녹화가 없어 빠른 답을 씁니다(녹화 157건, 폴더 /app/data/demo_replay). 이 메시지는 한 번만 냅니다.
+INFO backend.request: llm id=8cf2714c37fd4a39a315546e33a67487 route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=432.0
+INFO backend.request: request id=8cf2714c37fd4a39a315546e33a67487 method=POST path=/chat status=200 ms=452.5
+INFO backend.request: llm id=e1ace0e211404e7b956bae0b53a878e0 route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=394.2
+INFO backend.request: request id=e1ace0e211404e7b956bae0b53a878e0 method=POST path=/chat status=200 ms=400.1
+INFO backend.request: llm id=ee681ba04ae14af2b19292c232bdb76e route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=353.4
+INFO backend.request: request id=ee681ba04ae14af2b19292c232bdb76e method=POST path=/chat status=200 ms=359.9
+INFO backend.request: llm id=0a61987338e146c58136e86c3475c75f route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=411.0
+INFO backend.request: request id=0a61987338e146c58136e86c3475c75f method=POST path=/chat status=200 ms=417.4
+INFO backend.request: llm id=ed11732a553c4bedbb831a0cd357c099 route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=638.3
+INFO backend.request: request id=ed11732a553c4bedbb831a0cd357c099 method=POST path=/chat status=200 ms=645.4
+INFO backend.request: llm id=e8ad94bd0d8d46b584371521286fb6ec route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=629.8
+INFO backend.request: request id=e8ad94bd0d8d46b584371521286fb6ec method=POST path=/chat status=200 ms=637.6
+INFO backend.request: llm id=0d56a70b8cc54aa081bb550702a6e19f route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=638.5
+INFO backend.request: request id=0d56a70b8cc54aa081bb550702a6e19f method=POST path=/chat status=200 ms=645.4
+INFO backend.request: llm id=70aca3d54b4a45c7acbbcdcc90b00985 route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=499.4
+INFO backend.request: request id=70aca3d54b4a45c7acbbcdcc90b00985 method=POST path=/chat status=200 ms=506.3
+INFO backend.request: llm id=bb2300241a8f49bab7a4b56b63c06742 route=/chat model=claude-haiku-5-5 input_tokens=0 output_tokens=0 calls=0 cost_usd=0.000000 ms=21.9
+INFO backend.request: request id=bb2300241a8f49bab7a4b56b63c06742 method=POST path=/chat status=200 ms=28.2
+INFO backend.request: request id=cf72a1679098446cb354abb9c8d566e1 method=GET path=/ status=200 ms=2.4
+INFO backend.request: request id=225839c76bf74a60a99f3ac654a5b9d6 method=GET path=/assets/index-C31q1mrJ.css status=200 ms=5.5
+INFO backend.request: request id=2975aa64bda04d01b8f140df03239275 method=GET path=/assets/index-ytvmD73j.js status=200 ms=8.5
+INFO backend.request: request id=4bf47609837649b78f436abd98ba6472 method=GET path=/me status=204 ms=1.5
+INFO backend.request: request id=a07326e908f1451b8f6843e0a11072ad method=GET path=/provena-mark.svg status=200 ms=3.9
+INFO backend.request: request id=767981082cf04cd39a7f72917ac4ef3a method=GET path=/landing/hero.jpg status=200 ms=5.2
+INFO backend.request: request id=41455802fde34a89b313734ee3b57708 method=GET path=/landing/hero.mp4 status=206 ms=18.9
+INFO backend.request: request id=7d30d143351c40a28fa1e26350a3e6a7 method=GET path=/me status=204 ms=1.0
+INFO backend.request: request id=6d661702f2614e42919f3fe4c5019c9e method=GET path=/me status=204 ms=0.8
