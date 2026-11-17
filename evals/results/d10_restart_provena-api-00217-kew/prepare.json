@@ -1,0 +1,63 @@
+{
+ "purpose": "재시작 재개 확인 준비(2026-11-16). 식별자는 넣지 않는다.",
+ "revision_before_restart": "provena-api-00217-kew",
+ "commit_before_restart": "ddce99b79b29025386abd5c40a925aabeeb92958",
+ "created_at_utc": "2026-11-17T09:51:57+00:00",
+ "complete": true,
+ "baseline": {
+  "pending": 22,
+  "approved_tables": 5
+ },
+ "c_category_candidates": [
+  "Legal Contracts",
+  "Non Billable Expenses"
+ ],
+ "items": [
+  {
+   "label": "a",
+   "kind": "issue_table",
+   "decision": "approve",
+   "pending_rows": 20,
+   "category": null,
+   "created_at_utc": "2026-11-17T09:52:14+00:00"
+  },
+  {
+   "label": "b",
+   "kind": "issue_table",
+   "decision": "reject",
+   "pending_rows": 18,
+   "category": null,
+   "created_at_utc": "2026-11-17T09:52:34+00:00"
+  },
+  {
+   "label": "c",
+   "kind": "decision_table",
+   "decision": "reject",
+   "pending_rows": 6,
+   "category": "Legal Contracts",
+   "created_at_utc": "2026-11-17T09:52:37+00:00"
+  }
+ ],
+ "attempts": [
+  {
+   "kind": "chat",
+   "amount": "3만 달러",
+   "http": 200,
+   "result": "issue_table",
+   "cost_usd": null
+  },
+  {
+   "kind": "chat",
+   "amount": "5만 달러",
+   "http": 200,
+   "result": "issue_table",
+   "cost_usd": null
+  },
+  {
+   "kind": "convert",
+   "category": "Legal Contracts",
+   "http": 201
+  }
+ ],
+ "problems": []
+}

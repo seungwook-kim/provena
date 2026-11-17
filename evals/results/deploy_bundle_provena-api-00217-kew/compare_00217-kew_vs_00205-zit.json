@@ -1,0 +1,530 @@
+{
+  "revision": "provena-api-00217-kew",
+  "sets": [
+    {
+      "name": "holdout_v2 (20건 x 3회)",
+      "new_dir": "evals/results/deploy_latency_holdout_v2_provena-api-00217-kew",
+      "base_dir": "evals\\results\\deploy_latency_holdout_v2_provena-api-00205-zit",
+      "new_runs": 3,
+      "base_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "new": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 13,
+              "refuse": 7
+            },
+            "answered": 13,
+            "p95_answered_s": 9.729,
+            "p95_all_s": 8.425,
+            "cost_usd": 0.139505,
+            "llm_calls_per_q": 20.4
+          },
+          "base": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 13,
+              "refuse": 7
+            },
+            "answered": 13,
+            "p95_answered_s": 9.67,
+            "p95_all_s": 9.67,
+            "cost_usd": 0.154118,
+            "llm_calls_per_q": 21.9
+          },
+          "cited_vs_base_same_run": {
+            "paired": 20,
+            "same_kind": 20,
+            "same_cited_set": 19,
+            "cited_jaccard_mean": 0.95
+          }
+        },
+        {
+          "run": 2,
+          "new": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 14,
+              "refuse": 6
+            },
+            "answered": 14,
+            "p95_answered_s": 9.95,
+            "p95_all_s": 8.299,
+            "cost_usd": 0.142805,
+            "llm_calls_per_q": 20.85
+          },
+          "base": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 14,
+              "refuse": 6
+            },
+            "answered": 14,
+            "p95_answered_s": 10.154,
+            "p95_all_s": 9.931,
+            "cost_usd": 0.149009,
+            "llm_calls_per_q": 21.5
+          },
+          "cited_vs_base_same_run": {
+            "paired": 20,
+            "same_kind": 20,
+            "same_cited_set": 17,
+            "cited_jaccard_mean": 0.887
+          }
+        },
+        {
+          "run": 3,
+          "new": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 13,
+              "refuse": 7
+            },
+            "answered": 13,
+            "p95_answered_s": 9.042,
+            "p95_all_s": 9.547,
+            "cost_usd": 0.138382,
+            "llm_calls_per_q": 20.65
+          },
+          "base": {
+            "n": 20,
+            "n_ok": 20,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 13,
+              "refuse": 7
+            },
+            "answered": 13,
+            "p95_answered_s": 10.176,
+            "p95_all_s": 9.234,
+            "cost_usd": 0.155061,
+            "llm_calls_per_q": 20.6
+          },
+          "cited_vs_base_same_run": {
+            "paired": 20,
+            "same_kind": 20,
+            "same_cited_set": 19,
+            "cited_jaccard_mean": 0.95
+          }
+        }
+      ],
+      "pooled": {
+        "new": {
+          "n": 60,
+          "n_ok": 60,
+          "n_fail": 0,
+          "kinds": {
+            "answer": 40,
+            "refuse": 20
+          },
+          "answered": 40,
+          "p95_answered_s": 9.042,
+          "p95_all_s": 9.547,
+          "cost_usd": 0.420692,
+          "llm_calls_per_q": 20.63
+        },
+        "base": {
+          "n": 60,
+          "n_ok": 60,
+          "n_fail": 0,
+          "kinds": {
+            "answer": 40,
+            "refuse": 20
+          },
+          "answered": 40,
+          "p95_answered_s": 9.931,
+          "p95_all_s": 9.931,
+          "cost_usd": 0.458188,
+          "llm_calls_per_q": 21.33
+        }
+      },
+      "gold": {
+        "new_per_run": [
+          {
+            "run": 1,
+            "citation_accuracy": 0.717948717948718,
+            "wrong_citation_rate": 0.46153846153846156,
+            "wrong_citation_rows": 6,
+            "cited_correct_rate": 0.8571428571428571,
+            "over_refusal_rate": 0.07142857142857142,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 2,
+            "citation_accuracy": 0.6607142857142857,
+            "wrong_citation_rate": 0.5,
+            "wrong_citation_rows": 7,
+            "cited_correct_rate": 0.8571428571428571,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 3,
+            "citation_accuracy": 0.7948717948717949,
+            "wrong_citation_rate": 0.38461538461538464,
+            "wrong_citation_rows": 5,
+            "cited_correct_rate": 0.9285714285714286,
+            "over_refusal_rate": 0.07142857142857142,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          }
+        ],
+        "base_per_run": [
+          {
+            "run": 1,
+            "citation_accuracy": 0.7564102564102565,
+            "wrong_citation_rate": 0.46153846153846156,
+            "wrong_citation_rows": 6,
+            "cited_correct_rate": 0.9285714285714286,
+            "over_refusal_rate": 0.07142857142857142,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 2,
+            "citation_accuracy": 0.7023809523809524,
+            "wrong_citation_rate": 0.5,
+            "wrong_citation_rows": 7,
+            "cited_correct_rate": 0.9285714285714286,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 3,
+            "citation_accuracy": 0.717948717948718,
+            "wrong_citation_rate": 0.46153846153846156,
+            "wrong_citation_rows": 6,
+            "cited_correct_rate": 0.8571428571428571,
+            "over_refusal_rate": 0.07142857142857142,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          }
+        ],
+        "new_mean": {
+          "citation_accuracy": 0.7245,
+          "wrong_citation_rate": 0.4487,
+          "wrong_citation_rows": 6.0,
+          "cited_correct_rate": 0.881,
+          "over_refusal_rate": 0.0476,
+          "correct_refusal_rate": 1.0,
+          "n_fail_rows": null
+        },
+        "base_mean": {
+          "citation_accuracy": 0.7256,
+          "wrong_citation_rate": 0.4744,
+          "wrong_citation_rows": 6.3333,
+          "cited_correct_rate": 0.9048,
+          "over_refusal_rate": 0.0476,
+          "correct_refusal_rate": 1.0,
+          "n_fail_rows": null
+        }
+      }
+    },
+    {
+      "name": "v2 (50건 x 3회)",
+      "new_dir": "evals/results/deploy_latency_provena-api-00217-kew",
+      "base_dir": "evals\\results\\deploy_latency_provena-api-00205-zit",
+      "new_runs": 3,
+      "base_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "new": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 8.842,
+            "p95_all_s": 8.842,
+            "cost_usd": 0.256088,
+            "llm_calls_per_q": 16.06
+          },
+          "base": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 8.97,
+            "p95_all_s": 8.201,
+            "cost_usd": 0.257625,
+            "llm_calls_per_q": 16.38
+          },
+          "cited_vs_base_same_run": {
+            "paired": 50,
+            "same_kind": 50,
+            "same_cited_set": 45,
+            "cited_jaccard_mean": 0.913
+          }
+        },
+        {
+          "run": 2,
+          "new": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 8.12,
+            "p95_all_s": 7.98,
+            "cost_usd": 0.259859,
+            "llm_calls_per_q": 16.02
+          },
+          "base": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 10.323,
+            "p95_all_s": 9.668,
+            "cost_usd": 0.273181,
+            "llm_calls_per_q": 16.48
+          },
+          "cited_vs_base_same_run": {
+            "paired": 50,
+            "same_kind": 50,
+            "same_cited_set": 47,
+            "cited_jaccard_mean": 0.958
+          }
+        },
+        {
+          "run": 3,
+          "new": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 9.216,
+            "p95_all_s": 8.494,
+            "cost_usd": 0.259283,
+            "llm_calls_per_q": 16.16
+          },
+          "base": {
+            "n": 50,
+            "n_ok": 50,
+            "n_fail": 0,
+            "kinds": {
+              "answer": 25,
+              "clarify": 1,
+              "refuse": 24
+            },
+            "answered": 25,
+            "p95_answered_s": 9.096,
+            "p95_all_s": 8.632,
+            "cost_usd": 0.268209,
+            "llm_calls_per_q": 16.36
+          },
+          "cited_vs_base_same_run": {
+            "paired": 50,
+            "same_kind": 50,
+            "same_cited_set": 41,
+            "cited_jaccard_mean": 0.838
+          }
+        }
+      ],
+      "pooled": {
+        "new": {
+          "n": 150,
+          "n_ok": 150,
+          "n_fail": 0,
+          "kinds": {
+            "answer": 75,
+            "clarify": 3,
+            "refuse": 72
+          },
+          "answered": 75,
+          "p95_answered_s": 9.216,
+          "p95_all_s": 8.494,
+          "cost_usd": 0.77523,
+          "llm_calls_per_q": 16.08
+        },
+        "base": {
+          "n": 150,
+          "n_ok": 150,
+          "n_fail": 0,
+          "kinds": {
+            "answer": 75,
+            "clarify": 3,
+            "refuse": 72
+          },
+          "answered": 75,
+          "p95_answered_s": 9.935,
+          "p95_all_s": 8.97,
+          "cost_usd": 0.799015,
+          "llm_calls_per_q": 16.41
+        }
+      },
+      "gold": {
+        "new_per_run": [
+          {
+            "run": 1,
+            "citation_accuracy": 0.96,
+            "wrong_citation_rate": 0.04,
+            "wrong_citation_rows": 1,
+            "cited_correct_rate": 0.9266666666666667,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 2,
+            "citation_accuracy": 0.96,
+            "wrong_citation_rate": 0.04,
+            "wrong_citation_rows": 1,
+            "cited_correct_rate": 0.96,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 3,
+            "citation_accuracy": 0.94,
+            "wrong_citation_rate": 0.08,
+            "wrong_citation_rows": 2,
+            "cited_correct_rate": 0.9333333333333332,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          }
+        ],
+        "base_per_run": [
+          {
+            "run": 1,
+            "citation_accuracy": 0.96,
+            "wrong_citation_rate": 0.04,
+            "wrong_citation_rows": 1,
+            "cited_correct_rate": 0.9466666666666668,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 2,
+            "citation_accuracy": 0.96,
+            "wrong_citation_rate": 0.04,
+            "wrong_citation_rows": 1,
+            "cited_correct_rate": 0.9466666666666668,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          },
+          {
+            "run": 3,
+            "citation_accuracy": 0.96,
+            "wrong_citation_rate": 0.04,
+            "wrong_citation_rows": 1,
+            "cited_correct_rate": 0.9466666666666668,
+            "over_refusal_rate": 0.0,
+            "correct_refusal_rate": 1.0,
+            "n_fail_rows": 0
+          }
+        ],
+        "new_mean": {
+          "citation_accuracy": 0.9533,
+          "wrong_citation_rate": 0.0533,
+          "wrong_citation_rows": 1.3333,
+          "cited_correct_rate": 0.94,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "n_fail_rows": null
+        },
+        "base_mean": {
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "wrong_citation_rows": 1.0,
+          "cited_correct_rate": 0.9467,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "n_fail_rows": null
+        }
+      }
+    }
+  ],
+  "injection_counts_new": {
+    "counts": {
+      "대조군": {
+        "정상": 3
+      },
+      "12건": {
+        "막힘": 12
+      },
+      "보조 4건": {
+        "막힘": 4
+      },
+      "보조판(바탕질문)": {
+        "막힘": 11
+      }
+    },
+    "tool_summary": {
+      "injection_total": 25,
+      "injection_run": 25,
+      "injection_blocked": 25,
+      "injection_partial": 0,
+      "injection_breached": 0,
+      "injection_error": 0,
+      "kinds": {
+        "answer": 5,
+        "clarify": 10,
+        "refuse": 10
+      },
+      "control_total": 3,
+      "control_normal": 3,
+      "cost_usd_total": 0.100115,
+      "stopped_by_cost": false
+    },
+    "cost_total": 0.113862
+  },
+  "injection_counts_base": {
+    "대조군": {
+      "정상": 3
+    },
+    "12건": {
+      "막힘": 12
+    },
+    "보조 4건": {
+      "막힘": 4
+    },
+    "보조판(바탕질문)": {
+      "막힘": 11
+    }
+  },
+  "ledger_total": 1.339584
+}

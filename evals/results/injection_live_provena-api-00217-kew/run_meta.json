@@ -1,0 +1,11 @@
+{
+    "revision":  "provena-api-00217-kew",
+    "commit":  "ddce99b79b29025386abd5c40a925aabeeb92958",
+    "target":  "https://c1117n---provena-api-cttaanqntq-du.a.run.app",
+    "window_utc":  [
+                       "2026-11-17T09:20:00Z 2026-11-17T09:22:58Z"
+                   ],
+    "b_rc":  0,
+    "errors_5xx_rev":  0,
+    "health_after":  "200 0.194256"
+}

@@ -1,0 +1,33 @@
+{
+    "revision_base":  "provena-api-00205-zit",
+    "serving_at_start":  "provena-api-00205-zit=100%",
+    "revision_new":  "provena-api-00217-kew",
+    "tag":  "c1117n",
+    "tag_url":  "https://c1117n---provena-api-cttaanqntq-du.a.run.app",
+    "commit":  "ddce99b79b29025386abd5c40a925aabeeb92958",
+    "commit_full":  "ddce99b79b29025386abd5c40a925aabeeb92958",
+    "main_merge":  "1dfc3608",
+    "same_tree_as_main":  false,
+    "extra_env":  {
+
+                  },
+    "deployed_at_utc":  "2026-11-17T09:18:27Z",
+    "deploy_started_utc":  "2026-11-17T09:14:27Z",
+    "serving":  "provena-api-00205-zit=100%",
+    "health_tag":  "200 0.317412",
+    "image":  "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:79ea4dfc3e85c374a9e3d14bac22048f2bb3b3ea1417a366eab254684169f9f0",
+    "env_diff":  "\u003c=EMAIL_FROM,\u003c=GMAIL_APP_PASSWORD,\u003c=GMAIL_SMTP_USER,=\u003eEMAIL_FROM,=\u003eGMAIL_APP_PASSWORD,=\u003eGMAIL_SMTP_USER",
+    "env_expect":  "\u003c=EMAIL_FROM,\u003c=GMAIL_APP_PASSWORD,\u003c=GMAIL_SMTP_USER,=\u003eEMAIL_FROM,=\u003eGMAIL_APP_PASSWORD,=\u003eGMAIL_SMTP_USER",
+    "env_ok":  true,
+    "cfg_diff":  "",
+    "ok":  true,
+    "deploy_check_ok":  true,
+    "multi_ok":  true,
+    "halted":  "",
+    "warmup_ok":  true,
+    "multi_log_mode":  "multi",
+    "warmup_window_utc":  [
+                              "2026-11-17T09:18:34Z 2026-11-17T09:18:43Z"
+                          ],
+    "errors_5xx_130":  0
+}

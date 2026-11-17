@@ -1,0 +1,61 @@
+{
+ "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+ "revision": "provena-api-00217-kew",
+ "started_utc": "2026-11-17T09:57:59+00:00",
+ "account": "B(일반)",
+ "finished_utc": "2026-11-17T09:58:28+00:00",
+ "rows": [
+  {
+   "n": 1,
+   "at_utc": "2026-11-17T09:57:59+00:00",
+   "http": 200,
+   "status": "ok",
+   "error_code": null,
+   "kind": "answer",
+   "citations": 1,
+   "refuse_stage": null,
+   "refuse_reason": null,
+   "seconds": 9.24,
+   "cost_usd_graph": 0.01146314,
+   "cost_usd_total": 0.01146315
+  },
+  {
+   "n": 2,
+   "at_utc": "2026-11-17T09:58:11+00:00",
+   "http": 200,
+   "status": "ok",
+   "error_code": null,
+   "kind": "answer",
+   "citations": 1,
+   "refuse_stage": null,
+   "refuse_reason": null,
+   "seconds": 7.15,
+   "cost_usd_graph": 0.00377916,
+   "cost_usd_total": 0.00377916
+  },
+  {
+   "n": 3,
+   "at_utc": "2026-11-17T09:58:20+00:00",
+   "http": 200,
+   "status": "ok",
+   "error_code": null,
+   "kind": "answer",
+   "citations": 1,
+   "refuse_stage": null,
+   "refuse_reason": null,
+   "seconds": 6.37,
+   "cost_usd_graph": 0.00598466,
+   "cost_usd_total": 0.00598466
+  }
+ ],
+ "summary": {
+  "questions": 3,
+  "answer": 3,
+  "refuse": 0,
+  "clarify": 0,
+  "approval_paused": 0,
+  "errors": 0,
+  "leftover_pending": 0,
+  "cost_usd_total": 0.021227
+ }
+}

@@ -1,0 +1,8 @@
+describe 비교 provena-api-00205-zit(<=) vs provena-api-00217-kew(=>). 환경 변수는 이름과 값 해시만 비교했고 비밀은 참조 이름만 적는다.
+환경 변수 수: 33 -> 33
+환경 변수 차이: [<=EMAIL_FROM,<=GMAIL_APP_PASSWORD,<=GMAIL_SMTP_USER,=>EMAIL_FROM,=>GMAIL_APP_PASSWORD,=>GMAIL_SMTP_USER] (기대 [<=EMAIL_FROM,<=GMAIL_APP_PASSWORD,<=GMAIL_SMTP_USER,=>EMAIL_FROM,=>GMAIL_APP_PASSWORD,=>GMAIL_SMTP_USER])
+넣은 일반 값: DAILY_QUESTION_LIMIT=0,GMAIL_SMTP_USER=<가림>,EMAIL_FROM=<가림>
+넣은 비밀 참조: GMAIL_APP_PASSWORD<-provena-gmail-app-password-pp:latest
+실행 설정 차이: []
+이미지: 01eb2ac7 -> 79ea4dfc
+commit 라벨: e822fb1e -> ddce99b79b29025386abd5c40a925aabeeb92958

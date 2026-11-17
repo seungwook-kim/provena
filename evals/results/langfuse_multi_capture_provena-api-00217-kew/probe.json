@@ -1,0 +1,35 @@
+{
+ "base_url": "https://provena-api-cttaanqntq-du.a.run.app",
+ "revision": "provena-api-00217-kew",
+ "started_utc": "2026-11-17T09:56:15.196012+00:00",
+ "expect_failure": false,
+ "runs": [
+  {
+   "id": 7,
+   "at_utc": "2026-11-17T09:56:15.196042+00:00",
+   "http": 200,
+   "event": "approval_request",
+   "approval_kind": "issue_table",
+   "done_kind": null,
+   "error_code": null,
+   "cleanup": [
+    {
+     "kind": "issue_table",
+     "action": "reject",
+     "http": 200,
+     "status": "rejected"
+    }
+   ]
+  }
+ ],
+ "leftover": 0,
+ "finished_utc": "2026-11-17T09:56:31.899338+00:00",
+ "pending_after": 22,
+ "summary": {
+  "runs": 1,
+  "joint_review_paused": 1,
+  "team_review_failed": 0,
+  "leftover": 0,
+  "est_cost_usd": 0.006
+ }
+}

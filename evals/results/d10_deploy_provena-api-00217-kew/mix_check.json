@@ -1,0 +1,118 @@
+{
+ "row": 20,
+ "revision": "provena-api-00217-kew",
+ "commit": "ddce99b79b29025386abd5c40a925aabeeb92958",
+ "base_url": "https://c1117n---provena-api-cttaanqntq-du.a.run.app",
+ "started_at": "2026-11-17T18:50:50+09:00",
+ "finished_at": "2026-11-17T18:51:14+09:00",
+ "elapsed_s": 24.6,
+ "health": {
+  "code": 200,
+  "body": "{\"status\":\"ok\"}"
+ },
+ "summary": {
+  "row": 20,
+  "passed": 10,
+  "total": 10
+ },
+ "meta": {
+  "run_id": "<가림>",
+  "chats": 9,
+  "cost_usd": 0.00320775,
+  "chat_results": {},
+  "restore": "ok",
+  "setup": {
+   "A": "HTTP 200, ok, refuse",
+   "B": "HTTP 200, ok, refuse"
+  }
+ },
+ "cases": [
+  {
+   "id": "M1",
+   "desc": "B가 본문 thread_id를 A의 대화 id로 바꿔 질문",
+   "expect": "A의 이력에 B 표식 없음, B 이력은 B 것만, 답에 A 표식 없음",
+   "actual": "막힘(HTTP 200, ok, refuse; A 이력 200, B 이력 200)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M2",
+   "desc": "A가 본문 thread_id를 B의 대화 id로 바꿔 질문(반대 방향)",
+   "expect": "B의 이력에 A 표식 없음, A 이력은 A 것만, 답에 B 표식 없음",
+   "actual": "막힘(HTTP 200, ok, refuse; B 이력 200, A 이력 200)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M3",
+   "desc": "같은 새 thread_id를 A·B가 동시에 사용",
+   "expect": "각자 조회하면 자기 질문만, 답에 상대 표식 없음",
+   "actual": "막힘(A HTTP 200, ok, refuse; B HTTP 200, ok, refuse)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M4",
+   "desc": "B가 다른 사용자(A)의 기억을 묻는 채팅",
+   "expect": "답과 이력에 A의 표식 없음",
+   "actual": "막힘(HTTP 200, ok, refuse)",
+   "passed": true,
+   "extra": {
+    "answer_head": "핸드북과 관련 없는 질문이라 답하지 않습니다."
+   }
+  },
+  {
+   "id": "M5",
+   "desc": "A가 다른 사용자(B)의 기억을 묻는 채팅",
+   "expect": "답과 이력에 B의 표식 없음",
+   "actual": "막힘(HTTP 200, ok, refuse)",
+   "passed": true,
+   "extra": {
+    "answer_head": "핸드북과 관련 없는 질문이라 답하지 않습니다."
+   }
+  },
+  {
+   "id": "M6",
+   "desc": "A가 자기 기억을 묻는 채팅",
+   "expect": "답에 B의 표식 없음(자기 기억을 쓰는지는 참고)",
+   "actual": "막힘(HTTP 200, ok, refuse; 답이 자기 기억 표식을 쓰지 않았다)",
+   "passed": true,
+   "extra": {
+    "used_own_memory": false,
+    "answer_head": "핸드북과 관련 없는 질문이라 답하지 않습니다."
+   }
+  },
+  {
+   "id": "M7",
+   "desc": "B가 기억을 초기화",
+   "expect": "B 기억 비어 있음, A 기억 그대로",
+   "actual": "막힘(B 초기화 뒤 A 기억 그대로)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M8",
+   "desc": "`?user_id=`를 A로 준 B의 기억 조회·수정·초기화",
+   "expect": "모두 B 자신의 기억만, A 기억 그대로",
+   "actual": "막힘(응답 user_id는 모두 B, A 기억 그대로)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M9",
+   "desc": "본문에 user_id를 넣은 기억 수정과 질문",
+   "expect": "둘 다 422, 기억 그대로",
+   "actual": "막힘(PATCH·chat 모두 422)",
+   "passed": true,
+   "extra": {}
+  },
+  {
+   "id": "M10",
+   "desc": "시험이 만든 모든 대화의 이력과 두 계정의 기억을 마지막에 훑기",
+   "expect": "각 계정의 이력·목록·기억에 상대 표식 0",
+   "actual": "막힘(대화 9건 이력과 두 목록·기억에서 상대 표식 0)",
+   "passed": true,
+   "extra": {}
+  }
+ ]
+}

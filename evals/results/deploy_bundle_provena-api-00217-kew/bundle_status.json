@@ -1,0 +1,31 @@
+{
+    "spent_usd":  1.2027,
+    "revision":  "provena-api-00217-kew",
+    "stages":  [
+                   {
+                       "stage":  "holdout_v2",
+                       "state":  "done",
+                       "cost_usd":  0.4207,
+                       "detail":  "evals/results/deploy_latency_holdout_v2_provena-api-00217-kew"
+                   },
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0068,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00217-kew"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.7752,
+                       "detail":  "evals/results/deploy_latency_provena-api-00217-kew"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "ddce99b79b29025386abd5c40a925aabeeb92958"
+}
