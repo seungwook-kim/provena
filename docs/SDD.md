@@ -303,7 +303,7 @@ flowchart TD
 | 결정표 인자 뽑기 | 있음 | 업무 종류와 금액을 뽑는다(LLM 1회). 질문 종류 판정이 이미 뽑았으면 그 값을 쓴다 |
 | 결정표 실행 | 없음 | 관리자가 승인한 결정표만 실행한다 |
 | 결정표 답 작성 | 없음 | 실행 결과를 코드로 한국어 답과 인용 1개로 쓰고 그래프를 끝낸다. 실행하지 않았으면 이유를 알린다 |
-| Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다 |
+| Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다. 합동 검토 Supervisor의 팀 선택(`REVIEW_TEAM_SELECT`)은 서비스 설정에서 켠다(코드 기본 꺼짐, 키 없는 데모 끔, 사전 등록 62.82, 2026-11-17 팀장 결정): 같은 로컬 측정기에서 네 팀 전부 누락률 0.649(62.36, 3회)와 팀 선택 0.649(1회)가 같고 회당 비용이 0.00473에서 0.00273달러로 준다. 운영 기준 0.577은 다른 경로의 값이다(`docs/specs/team-review.md`) |
 | 사람 승인 | 없음 | interrupt로 멈추고 `resume()`으로 이어 간다 |
 
 **단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`backend/graph/build.py`의 `build_graph`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다(`backend/graph/multi.py`의 `build_multi_graph`, 단일 그래프의 노드를 다시 배선). 서비스 `/chat`은 단일 그래프를 쓰고 멀티는 측정·시험에서만 쓴다. 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
@@ -331,13 +331,13 @@ flowchart TD
 | POST | `/auth/logout` | 로그인 | |
 | GET | `/me` | 로그인 | 사용자 정보, 역할 `{user_id, role, login_id, profile_completed, is_owner}`(`login_id`는 화면 계정 메뉴 표시용). `profile_completed`(내 정보를 입력했는지)와 `is_owner`(최고 관리자인지)는 내 정보·사용자 관리 라우터가 붙을 때만 있다. 내 정보 저장소를 못 읽으면 503 (`backend/auth.py`) |
 | GET, PUT | `/me/profile` | 로그인 (PUT은 CSRF) | 내 정보(이름 `name`, 부서 `dept`, 전화 `phone`, 주소 `address`, 칸마다 암호화 저장). GET은 전화번호를 가린 `{name, dept, phone_masked, address, updated_at}`(아직 없으면 404), `?view=edit`일 때만 원래 `phone`. PUT은 네 칸 전부를 받아 검사하고(틀리면 422 `{message, fields}`, 입력값은 되풀이하지 않음) GET과 같은 모양으로 답한다. 남의 내 정보를 주는 경로는 없다 (`backend/profile_api.py`, `db/104_user_profiles.sql`) |
-| POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다 (`backend/api/routes.py`) |
+| POST | `/chat` | 로그인, CSRF | `{thread_id?, message, as_of?, org?}` → SSE로 `AgentEvent` 스트림(token, citation, approval_request, error, done). `thread_id`가 없으면 서버가 `t-` + 12자리로 만든다. 그래프와 체크포인트의 thread 이름은 `<user_id>:<thread_id>`다. 전달 형식, 이벤트 순서, 이벤트별 data 키(`/chat`이 더하는 키 포함), `done`의 `code`는 6장 표를 따른다. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`이다. 오늘(KST 자정 기준) 질문 수가 사용자별 하루 한도(`DAILY_QUESTION_LIMIT`, 기본 50, 0이면 없음)에 닿았으면 그래프·LLM을 부르기 전에 429 `daily_limit`이다(`backend/api/routes.py`, `backend/api/daily_limit.py`) |
 | GET | `/threads`, `/threads/{thread_id}` | 로그인 | 내 대화 목록 `{"threads": [{thread_id, title, status, created_at, updated_at}]}`(최근 순, `status`는 idle, running, pending_approval)과 상세(마지막 답 `last`, 대화 이력 `messages` 포함). `messages`는 질문 체크포인트에서 되살린 질문·답·근거다(오래된 순, 질문마다 `{role: "user", text, timestamp}`와 `{role: "assistant", text, state(done, no-evidence, approval), kind, answer_id, as_of, citations, timestamp}`, `citations`는 `/chat`의 citation과 같은 키에 `id`). 체크포인트를 못 읽으면 빈 목록이다. 남의 thread는 404 `not_found` (`db/111_threads.sql`, `backend/api/routes.py`의 `_messages`) |
 | GET, PATCH, DELETE | `/me/memory` | 로그인 (PATCH, DELETE는 CSRF) | 내 장기 기억 보기·고치기·지우기 (가이드 p.10). GET `{user_id, profile, allowed_fields}`, PATCH는 `affiliation`, `rank`, `service` 중 고칠 칸만(그 밖의 칸과 빈 본문은 422), DELETE는 `{user_id, profile: {}}`. 사용자 id는 로그인 쿠키에서만 얻는다 |
 | GET | `/approvals` | 관리자 | 승인 대기 목록 |
 | GET | `/approvals/{approval_id}` | 관리자 | 승인 건 하나의 상태와 그래프 재개 기록(`resume_count`, `duplicate_ignored_count`, `last_resumed_at`, `last_resume_result`). 끝난 건도 읽는다. 팀 실패 알림 건이면 처리 결과(`resolution`)를 더한다 (`backend/graph/decision/routes.py`의 `get_approval`) |
 | POST | `/approvals/{id}` | 관리자 | `Decision` → 그래프 재개 |
-| POST | `/admin/eval/review` | 관리자, CSRF, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 | **평가 전용**(결정 0104, 사전 등록 62.41). 같은 합동 검토 요청을 에이전트 하나가 검토하는 기준선을 운영에서 재는 통로. `{message, as_of?, search: "same" \| "undivided"}` → JSON 한 번 `{status, search, issue_rows, unreviewed, clarify_question, retrieved, llm_calls, usage, latency_ms, revision, request_id}`. 꺼져 있으면 권한 검사보다 먼저 404 `not_found`, 하루 호출 상한(`EVAL_REVIEW_SINGLE_MAX_PER_DAY`, 기본 200)을 넘으면 429 `rate_limited`, 요청당 비용 상한을 넘으면 429 `limit_exceeded`. 쟁점표·승인함·대화 목록에 아무것도 쓰지 않는다. 서비스 경로는 이 코드를 부르지 않는다 |
+| POST | `/admin/eval/review` | 관리자, CSRF, 환경 변수 `EVAL_REVIEW_SINGLE=1`일 때만 | **평가 전용**(결정 0104, 사전 등록 62.41). 같은 합동 검토 요청을 에이전트 하나가 검토하는 기준선을 운영에서 재는 통로. `{message, as_of?, search: "same" \| "undivided"}` → JSON 한 번 `{status, search, issue_rows, unreviewed, clarify_question, retrieved, llm_calls, usage, latency_ms, revision, request_id}`. 꺼져 있으면 권한 검사보다 먼저 404 `not_found`, 하루 호출 상한(`EVAL_REVIEW_SINGLE_MAX_PER_DAY`, 기본 200)을 넘으면 429 `rate_limited`, 요청당 비용 상한을 넘으면 429 `limit_exceeded`. 쟁점표·승인함·대화 목록에 아무것도 쓰지 않는다. 서비스 경로는 이 코드를 부르지 않는다. 단일 검토 호출만 출력 상한 4000토큰(`backend/services/llm.py` `TASK_MAX_TOKENS`, 사용자 경로는 `LLM_MAX_TOKENS` 기본 2500) |
 | GET | `/admin/users` | 최고 관리자 | 사용자 목록 `{"users": [{login_id, role, is_owner, created_at}]}`(`created_at` 오름차순). 최고 관리자는 role admin이고 `login_id`가 `PROVENA_OWNER_LOGIN_ID`와 같은 계정 1명. 설정값이 비었거나 계정과 맞지 않으면 모두 403 (`backend/admin_api.py`, docs/specs/admin-roles.md) |
 | POST | `/admin/users/{login_id}/promote` | 최고 관리자, CSRF | 일반 사용자를 관리자로. `{login_id, role: "admin", changed}`(이미 admin이면 `changed: false`, 기록 없음). 역할 변경과 기록(`db/105_admin_role_log.sql`)을 한 트랜잭션으로 쓴다. 없는 아이디 404, 최고 관리자 본인·비활성 계정 409 |
 | POST | `/admin/users/{login_id}/revoke` | 최고 관리자, CSRF | 관리자를 일반 사용자로. `{login_id, role: "user", changed}`. 오류는 promote와 같다 |
@@ -399,20 +399,22 @@ flowchart TD
 | 409 | `ambiguous_table` | 권한표에 있는 업무 종류인데 승인된 표가 0개이거나 2개 이상 (권한표에 없는 업무 종류는 404 `not_found`) |
 | 422 | `validation_error` | 본문·경로 검증 오류(`details`에 위치·사유), `/me/memory` PATCH의 빈 본문 |
 | 422 | `ambiguous_band` | 금액이 두 구간에 함께 듦 |
-| 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회) |
+| 429 | `rate_limited` | 로그인 시도 제한(ID별 60초 5회, IP별 60초 30회). `/mcp/` 외부 토큰(`MCP_EXTERNAL_TOKEN`)의 `tools/call` 수 제한(분당 30, 하루 500, KST 기준, `docs/specs/mcp.md` EC-17)도 같은 코드이며 본문은 MCP 앱의 401과 같은 꼴이다 |
+| 429 | `daily_limit` | `/chat` 사용자별 하루 질문 한도 초과(`DAILY_QUESTION_LIMIT`, 기본 50, KST 자정 기준). `Retry-After`(다음 KST 자정까지 초)와 `details`(`limit`, `used`, `resets_at`)가 붙는다 |
 | 500 | `internal_error` | 예상 못 한 오류, 인증 설정 오류 |
 | 501 | `manual_sync_not_supported` | `POST /admin/sync`에서 `dry_run=false`(실제 수동 수집은 두지 않음, 2026-11-12 조장 리뷰(#132)에서 확정, `backend/api/changes.py:172`. 정시 수집은 팀장 PC 작업 스케줄러 매일 02:14 KST, workflow 비활성) |
 | 502 | `draft_unreadable`, `no_source` | 결정표 변환 때 초안 또는 권한표 칸을 읽지 못함 |
 | 503 | `not_configured` | 저장소·그래프·인증 저장소를 쓸 수 없음(DB 미연결 등) |
 | 503 | `convert_failed`, `save_failed` | 결정표 변환 실패, 승인 결정 저장 실패 |
 
-**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장). 운영 확인(2026-11-16): 운영 판 `provena-api-00068-drb`의 트래픽 0% 판(`LLM_DEADLINE_S=0.01`, `LLM_MAX_RETRIES=0`)에서 시간 초과가 `timeout`이 아니라 `internal_error`로 나왔다(`evals/results/failure_paths_20261116/`). `langchain_anthropic`이 SDK 예외를 `AnthropicTimeoutError`, `AnthropicRateLimitError`로 감싸 던지는데 이 이름이 `backend/api/routes.py`의 `TIMEOUT_ERRORS`, `PROVIDER_LIMIT_ERRORS`에 없었기 때문이다. 두 이름을 더하고 시험(`tests/test_api_chat.py`의 `test_langchain_anthropic_wrapped_errors_keep_their_code`)을 추가한 커밋 `eb7516ca`를 운영 판 `provena-api-00075-5zk`로 배포했고, 이 판에서 `limit_exceeded`, `no_results`, `timeout`이 기대한 코드와 문구로 나왔다. `provider_limit`는 운영에서 안전하게 만들 수 없어 코드와 단위 시험으로만 확인했다(`evals/results/failure_paths_after_fix_20261116/`).
+**스트림 안의 오류.** `/chat`은 스트림이 시작되면 HTTP 200이므로, 그 뒤의 실패는 위 표가 아니라 SSE `error` 이벤트(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)로 전한다(6장). `limit_exceeded`는 HTTP 오류로는 나가지 않는다. 스트림이 시작되기 전의 실패(401, 403 `csrf_failed`, 409 `approval_pending`, 422, 429 `daily_limit`, 503 `not_configured`)는 위 표의 HTTP 오류로 온다. 검색 색인이 적재되지 않은 경우는 오류가 아니라 거절(`done`, `no_results`)로 끝난다(6장). 운영 확인(2026-11-16): 운영 판 `provena-api-00068-drb`의 트래픽 0% 판(`LLM_DEADLINE_S=0.01`, `LLM_MAX_RETRIES=0`)에서 시간 초과가 `timeout`이 아니라 `internal_error`로 나왔다(`evals/results/failure_paths_20261116/`). `langchain_anthropic`이 SDK 예외를 `AnthropicTimeoutError`, `AnthropicRateLimitError`로 감싸 던지는데 이 이름이 `backend/api/routes.py`의 `TIMEOUT_ERRORS`, `PROVIDER_LIMIT_ERRORS`에 없었기 때문이다. 두 이름을 더하고 시험(`tests/test_api_chat.py`의 `test_langchain_anthropic_wrapped_errors_keep_their_code`)을 추가한 커밋 `eb7516ca`를 운영 판 `provena-api-00075-5zk`로 배포했고, 이 판에서 `limit_exceeded`, `no_results`, `timeout`이 기대한 코드와 문구로 나왔다. `provider_limit`는 운영에서 안전하게 만들 수 없어 코드와 단위 시험으로만 확인했다(`evals/results/failure_paths_after_fix_20261116/`).
 
-**재시도.** 응답에 `Retry-After` 헤더는 없다. 코드의 안내 문구가 재시도를 말하는 경우는 아래와 같다.
+**재시도.** `Retry-After` 헤더는 로그인 시도 제한 429 `rate_limited`(남은 초, `backend/auth.py`), `/mcp/` 외부 토큰 호출 수 제한 429 `rate_limited`(분 창은 남은 초, 하루 창은 다음 KST 자정까지 초)와 429 `daily_limit`(다음 KST 자정까지 초)에 붙는다. 화면은 `daily_limit`일 때 초를 문구에 붙이지 않는다(`web/react-app/src/lib/api.js`). 코드의 안내 문구가 재시도를 말하는 경우는 아래와 같다.
 
 | 상황 | 안내 |
 |---|---|
 | 429 `rate_limited` | 잠시 후 다시 시도한다 |
+| 429 `daily_limit` | "오늘 질문 한도(50건)를 넘었습니다. 내일 다시 이용해 주세요."(건수는 설정값) |
 | SSE `error` `internal_error` | 잠시 후 다시 시도한다 |
 | SSE `error` `provider_limit` | 1~2분 뒤 다시 시도하고, 계속되면 관리자에게 LLM 키의 잔액과 사용 한도 확인을 요청한다 |
 | SSE `error` `timeout` | 질문을 더 짧게 줄이거나 나누어 잠시 뒤 다시 묻는다 |
@@ -420,6 +422,8 @@ flowchart TD
 | 503 `save_failed` | 같은 결정을 다시 보내면 이어서 처리한다 |
 
 SSE `error` `limit_exceeded`의 안내 문구는 비용 상한에 닿아 답을 멈췄다고 알리고, 질문을 줄이거나 나누어 다시 물어보라고 안내한다(2026-11-13 보완, `MSG_LIMIT`).
+
+**사용자별 하루 질문 한도와 호출 1건의 출력 상한(2026-11-17).** `/chat`은 사용자마다 KST 하루에 `DAILY_QUESTION_LIMIT`건(기본 50, 0이면 없음)까지 받는다. DB의 질문 기록(질문마다 남는 LangGraph 입력 체크포인트)을 세므로 인스턴스가 여러 개여도 같은 값을 보고, 그래프·LLM을 부르기 전에 막는다(`backend/api/daily_limit.py`). 관리자 전용 엔드포인트(결정표 변환, 영향 미리보기, 리콜 처리, 평가 전용 검토)는 질문이 아니라 관리 작업이라 세지 않는다. LLM 호출 1건의 출력 토큰은 `LLM_MAX_TOKENS`(기본 2500, 생각 토큰 포함)로 묶는다(`backend/services/llm.py`의 `llm_max_tokens`, 모든 제공자).
 
 **질문 1건의 LLM 호출 수.** 호출 수를 직접 세어 막는 상한은 없다. 질문 1건의 LLM 비용 상한(`LLM_COST_CAP_USD`, 기본 `DEFAULT_COST_CAP_USD=0.05`달러, `backend/services/cost.py`, 닿으면 다음 호출 전에 멈추고 `limit_exceeded`)과 재검색 상한(코드 상한 2회 `MAX_RESEARCH=2`, `backend/graph/build.py:64`, 서비스 설정 1회 `SEARCH_MAX_RESEARCH=1`, `backend/graph/service_profile.py:56`. 운영에도 1회가 적용된다)이 호출 수를 묶는다. 동결 전 측정 판 `provena-api-00065-q84` 측정에서 질문 1건의 LLM 호출 수 최대는 41회(새 인용 5건), v2 50건은 37회였고 요청 1건의 비용 최대는 0.0172달러였다(`EVAL_REPORT.md` 8장). 측정 행의 `path.retries`는 그래프 상태의 재검색 횟수(첫 검색 0, 판정이 재검색으로 보낼 때마다 1 증가)이고, LLM 호출 하나의 재시도 횟수(`backend/services/llm_trace.py`의 `retries`, 측정 전용)와 다르다.
 

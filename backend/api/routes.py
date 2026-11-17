@@ -1,6 +1,7 @@
 """채팅(SSE), 대화 목록, 장기 기억 라우터 (SDD 4-4, G4).
 
 - `POST /chat`: 로그인과 CSRF. `{thread_id?, message, as_of?, org?}` -> SSE로 `AgentEvent`(token, citation, approval_request, error, done).
+  오늘(KST) 질문 수가 `DAILY_QUESTION_LIMIT`(기본 50)에 닿은 사용자는 그래프를 돌리기 전에 429 `daily_limit`(`Retry-After`, `details.limit·used·resets_at`)이다(`backend/api/daily_limit.py`).
 - `GET /threads`, `GET /threads/{thread_id}`: 로그인. 내 대화 목록과 상세(마지막 답 `last`, 체크포인트에서 되살린 대화 이력 `messages`: 질문·답·근거). 남의 것은 404 `not_found`.
 - `GET /me/memory`: 로그인. `PATCH`, `DELETE /me/memory`: 로그인과 CSRF. 소속(affiliation)·직급(rank)·담당 서비스(service) 세 칸만 다룬다.
 
@@ -27,12 +28,13 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import logging
+import math
 import os
 import re
 import threading
 import time
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
 
@@ -40,6 +42,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
+from backend.api.daily_limit import DAILY_LIMIT_CODE, check_daily_limit, limit_message
 from backend.api.errors import ApiError
 from backend.api.middleware import current_request_id, log_llm_usage
 from backend.auth import AuthStore, AuthUser, TokenRevocationStore, create_current_user_dependency, require_csrf
@@ -397,10 +400,18 @@ def create_api_router(
 
     @router.post("/chat")
     def chat(req: ChatRequest, request: Request, user: AuthUser = Depends(current_user), _csrf: None = Depends(require_csrf)):
-        """`{thread_id?, message}` -> SSE로 `AgentEvent`. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`."""
-        _need(request, "question_graph")
+        """`{thread_id?, message}` -> SSE로 `AgentEvent`. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`.
+        오늘(KST) 질문 수가 `DAILY_QUESTION_LIMIT`(기본 50)에 닿았으면 그래프·LLM을 부르기 전에 429 `daily_limit`이다(`backend/api/daily_limit.py`)."""
+        graph = _need(request, "question_graph")
         threads = _need(request, "thread_store")
         user_id = str(user.user_id)
+        over = check_daily_limit(getattr(graph, "checkpointer", None) or getattr(request.app.state, "checkpointer", None), user_id)
+        if over is not None:
+            limit, used, resets_at = over
+            wait = max(1, math.ceil((resets_at - datetime.now(timezone.utc)).total_seconds()))
+            log.info("chat 하루 질문 한도 limit=%d used=%d", limit, used)
+            raise ApiError(429, DAILY_LIMIT_CODE, limit_message(limit), headers={"Retry-After": str(wait)},
+                           details={"limit": limit, "used": used, "resets_at": resets_at.isoformat()})
         thread_id = req.thread_id or "t-" + uuid.uuid4().hex[:12]
         if pending_approval(getattr(request.app.state, "decision_repo", None), internal_thread(user_id, thread_id)):
             raise ApiError(409, "approval_pending", MSG_PENDING)

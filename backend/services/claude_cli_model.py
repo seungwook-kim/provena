@@ -167,6 +167,8 @@ class ClaudeCliChatModel(BaseChatModel):
     # 역할(시스템 프롬프트의 `[[task:...]]`)별로 덮는 노력 수준. 근거 판정은 low에서 "내용은 받쳐짐"이라 쓰고도 실패로 내는 등
     # 판정이 흔들리고, 답 작성을 low로 두면 관련 질문 거짓 거절이 1/14에서 5~7/14로 늘었다(10/31 측정 4회). 답·판정만 medium. 형식: "grounding=medium,answer=low". 빈 값이면 기본
     effort_by_task: dict[str, str] = Field(default_factory=lambda: parse_effort_map(os.environ.get("CLAUDE_CLI_EFFORT_BY_TASK") or "answer=medium,grounding=medium"))
+    # 호출 한 번의 출력 토큰 상한(`LLM_MAX_TOKENS`, `llm._provider_model`이 넣는다). CLI에는 플래그가 없어 하위 프로세스 환경 `CLAUDE_CODE_MAX_OUTPUT_TOKENS`로 넘긴다. None이면 CLI 기본
+    max_output_tokens: Optional[int] = None
 
     @property
     def _llm_type(self) -> str:
@@ -183,9 +185,10 @@ class ClaudeCliChatModel(BaseChatModel):
             prompt = f"[Instructions]\n{system}\n\n[Message]\n{prompt}"
             system = DEFAULT_SYSTEM
         cmd = build_command(exe, self.model, system or DEFAULT_SYSTEM, effort)
+        env = {**os.environ, "CLAUDE_CODE_MAX_OUTPUT_TOKENS": str(self.max_output_tokens)} if self.max_output_tokens else None   # None이면 부모 환경 그대로
         with tempfile.TemporaryDirectory(prefix="claude_cli_") as cwd:  # 빈 임시 폴더: 프로젝트 CLAUDE.md·설정이 닿지 않게
             try:
-                proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=self.timeout_s, cwd=cwd)
+                proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=self.timeout_s, cwd=cwd, env=env)
             except subprocess.TimeoutExpired as e:
                 raise ClaudeCliError(f"claude CLI 시간 초과 ({self.timeout_s}초)") from e
         out = (proc.stdout or "").strip()
@@ -222,7 +225,9 @@ class ClaudeCliChatModel(BaseChatModel):
 
     def _generate(self, messages: list[BaseMessage], stop: Optional[list[str]] = None, run_manager: Any = None, **kwargs: Any) -> ChatResult:
         system, prompt = split_messages(messages)
-        data = self._call(system, prompt)
+        limit = kwargs.get("max_tokens")   # 호출 인자로 준 출력 상한(`llm.task_max_tokens`, 평가 전용 단일 검토자)이 있으면 이 호출에만 쓴다
+        model = self.model_copy(update={"max_output_tokens": int(limit)}) if limit else self
+        data = model._call(system, prompt)
         text = data["result"]
         for s in stop or []:  # CLI에 stop 옵션이 없어 사후 절단
             i = text.find(s)

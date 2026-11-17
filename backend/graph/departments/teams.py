@@ -48,6 +48,18 @@ SUPERVISOR_SYSTEM = (
     "JSON 한 개만 출력한다. 예: {\"missing\": [], \"tasks\": {\"security\": \"...\", \"infra\": \"...\", \"itops\": \"...\", \"finance\": \"...\"}}"
 )
 
+# 팀 선택 규칙(`REVIEW_TEAM_SELECT`, `backend/graph/departments/review.py`). 스위치를 켤 때만 Supervisor 프롬프트 끝에 더한다.
+# 끄면 Supervisor 프롬프트는 `SUPERVISOR_SYSTEM` 글자 그대로다(키 없는 데모 녹화의 요청 키가 바뀌지 않는다)
+TEAM_SELECT_RULE = (
+    "\n- teams: 이 요청에 규정상 검토 단계가 걸리는 팀 id 목록(security, infra, itops, finance 중). 무관한 것이 분명한 팀만 뺀다. 애매하면 넣는다.\n"
+    "  teams를 낼 때의 예: {\"missing\": [], \"teams\": [\"security\", \"finance\"], \"tasks\": {\"security\": \"...\", \"finance\": \"...\"}}"
+)
+
+
+def supervisor_system(select_teams: bool = False) -> str:
+    """Supervisor 시스템 프롬프트. 팀 선택을 끄면 `SUPERVISOR_SYSTEM`과 같다."""
+    return SUPERVISOR_SYSTEM + (TEAM_SELECT_RULE if select_teams else "")
+
 
 def supervisor_user(request: str, as_of: str | None) -> str:
     return f"기준일: {as_of or '미지정'}\n요청: {question_for_prompt(request)}"   # 요청 속 가짜 자료 구획·시스템 프롬프트 요구를 뺀 글(없으면 그대로, 사전 등록 62.48)

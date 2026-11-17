@@ -2358,7 +2358,7 @@
     },
     "/chat": {
       "post": {
-        "description": "`{thread_id?, message}` -> SSE로 `AgentEvent`. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`.",
+        "description": "`{thread_id?, message}` -> SSE로 `AgentEvent`. 승인 대기 중인 thread의 새 질문은 409 `approval_pending`.\n오늘(KST) 질문 수가 `DAILY_QUESTION_LIMIT`(기본 50)에 닿았으면 그래프·LLM을 부르기 전에 429 `daily_limit`이다(`backend/api/daily_limit.py`).",
         "operationId": "chat_chat_post",
         "requestBody": {
           "content": {

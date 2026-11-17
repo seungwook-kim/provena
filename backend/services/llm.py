@@ -12,6 +12,8 @@
 - `LLM_MODEL`: claude_cli는 기본 `claude-haiku-5-5`. anthropic은 기본 `claude-haiku-5-5`, openai는 필수, openrouter는 기본 `anthropic/claude-haiku-5.5`(OpenRouter 모델 id).
 - `LLM_MAX_RETRIES`: 제공자 SDK가 429(요청 한도)·5xx·연결 오류에서 다시 시도하는 최대 횟수(0 이상 정수). SDK는 `Retry-After` 헤더가 있으면 그만큼 기다린다. 비우면 SDK 기본값.
 - `LLM_TIMEOUT_S`: 요청 한 번의 시간 제한(초, 양수). 비우면 SDK 기본값.
+- `LLM_MAX_TOKENS`: 호출 한 번의 출력 토큰 상한(양의 정수, 기본 2500, 생각 토큰 포함). anthropic(기본·`TaskEffortAnthropic` 둘 다 `max_tokens`), openai·openrouter(`max_completion_tokens`),
+  claude_cli(하위 프로세스 환경 `CLAUDE_CODE_MAX_OUTPUT_TOKENS`)에 같은 값을 넘긴다. 응답 캐시 키에 `max_tokens`가 들어가 값을 바꾸면 캐시도 갈린다. 잘못된 값은 경고 뒤 기본값.
 - `LLM_FALLBACK_MODEL`: 기본 모델이 (재시도 뒤에도) 실패하면 같은 제공자·같은 키로 이 모델을 한 번 더 부른다. 비용 상한 초과(`CostCapExceeded`)와 설정 오류(ValueError)는 폴백하지 않는다. 비우면 폴백 없음.
 - `LLM_REASONING`: openrouter 요청에 `reasoning.effort`를 붙인다(none, minimal, low, medium, high). 비우면 보내지 않는다. 다른 제공자에는 쓰지 않는다.
 - `LLM_EFFORT`, `LLM_EFFORT_BY_TASK`: anthropic 요청의 `effort`(none, low, medium, high, xhigh, max, none은 생각 끔 `thinking: disabled`). 기본 수준과 단계별 덮기(`answer=medium,grounding=medium`)이며 단계는 시스템 프롬프트의 `[[task:...]]`로 읽는다. 둘 다 비우면 보내지 않는다(API 기본). 다른 제공자에는 쓰지 않는다.
@@ -176,6 +178,35 @@ def _env_number(name: str, cast: type) -> Any:
         log.warning("%s=%r는 범위 밖이라 무시합니다", name, raw)
         return None
     return v
+
+
+DEFAULT_LLM_MAX_TOKENS = 2500   # 호출 한 번의 출력 상한(생각 토큰 포함). 2026-11-17 팀장 결정
+
+
+def llm_max_tokens() -> int:
+    """`LLM_MAX_TOKENS`(양의 정수, 기본 2500). 모든 제공자의 호출 한 번에 출력 토큰 상한으로 넘긴다. 비었거나 잘못된 값은 경고를 남기고 기본값을 쓴다."""
+    raw = (os.environ.get("LLM_MAX_TOKENS") or "").strip()
+    if not raw:
+        return DEFAULT_LLM_MAX_TOKENS
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value <= 0:
+        log.warning("LLM_MAX_TOKENS=%r는 양의 정수가 아니라 기본값 %d을 씁니다", raw, DEFAULT_LLM_MAX_TOKENS)
+        return DEFAULT_LLM_MAX_TOKENS
+    return value
+
+
+# 단계별 출력 상한(호출 인자 `max_tokens`로 그 호출에만 준다). 사용자 경로(`/chat`, 질문 그래프, 합동 검토)는 넣지 않아 `LLM_MAX_TOKENS`(기본 2500) 그대로다.
+# single: 평가 전용 단일 검토자(관리자 전용 `/admin/eval/review`, 시스템 프롬프트 `[[task:single]]`). 네 관점 쟁점을 한 번에 내므로 출력이 길다
+# (관측 최대 2967토큰). 2026-11-17 팀장 결정
+TASK_MAX_TOKENS: dict[str, int] = {"single": 4000}
+
+
+def task_max_tokens(task: str) -> int:
+    """`task` 단계 호출 한 번의 출력 상한. `TASK_MAX_TOKENS`에 있으면 그 값과 `llm_max_tokens()` 중 큰 값, 없으면 `llm_max_tokens()`."""
+    return max(llm_max_tokens(), TASK_MAX_TOKENS.get(task, 0))
 
 
 def _client_options() -> dict[str, Any]:
@@ -593,6 +624,7 @@ def preload_provider_modules() -> list[str]:
 
 def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel:
     opts = _client_options()
+    max_tokens = llm_max_tokens()   # 출력 상한(`LLM_MAX_TOKENS`). ChatAnthropic은 `max_tokens`, ChatOpenAI는 같은 이름으로 받아 `max_completion_tokens`로 보낸다
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
@@ -601,24 +633,25 @@ def _provider_model(provider: str, model: str, key: str | None) -> BaseChatModel
         cache = prompt_cache_enabled()
         if default or by_task or http_client is not None or cache:  # 단계별 추론 수준(`LLM_EFFORT*`), 시간 스위치(`LLM_DEADLINE_S`·`LLM_HEDGE_S`), 프롬프트 캐시(`LLM_PROMPT_CACHE`)를 쓸 때만
             return _tuned_anthropic()(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, effort_default=default, effort_by_task=by_task,
-                                      http_client_override=http_client, prompt_cache=cache, **opts)
-        return ChatAnthropic(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, **opts)
+                                      http_client_override=http_client, prompt_cache=cache, max_tokens=max_tokens, **opts)
+        return ChatAnthropic(model=model or DEFAULT_ANTHROPIC_MODEL, api_key=key, max_tokens=max_tokens, **opts)
     if provider == "openai":
         if not model:
             raise ValueError("LLM_PROVIDER=openai이면 LLM_MODEL이 필요합니다")
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model, api_key=key, **opts)
+        return ChatOpenAI(model=model, api_key=key, max_tokens=max_tokens, **opts)
     if provider == "openrouter":
         from langchain_openai import ChatOpenAI
 
         base_url = (os.environ.get("LLM_BASE_URL") or "").strip() or OPENROUTER_BASE_URL
         extra = _openrouter_extra_body()
-        return ChatOpenAI(model=model or DEFAULT_OPENROUTER_MODEL, api_key=key, base_url=base_url, **opts, **({"extra_body": extra} if extra else {}), **_openrouter_client())
+        return ChatOpenAI(model=model or DEFAULT_OPENROUTER_MODEL, api_key=key, base_url=base_url, max_tokens=max_tokens, **opts,
+                          **({"extra_body": extra} if extra else {}), **_openrouter_client())
     if provider == "claude_cli":
         from backend.services.claude_cli_model import ClaudeCliChatModel
 
-        return ClaudeCliChatModel(model=model or DEFAULT_ANTHROPIC_MODEL)
+        return ClaudeCliChatModel(model=model or DEFAULT_ANTHROPIC_MODEL, max_output_tokens=max_tokens)
     raise ValueError(f"알 수 없는 LLM_PROVIDER: {provider!r} (anthropic, openai, openrouter 또는 claude_cli)")
 
 

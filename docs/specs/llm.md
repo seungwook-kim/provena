@@ -54,6 +54,8 @@
 | `LLM_API_KEY` | 없음 | 없으면 데모 모드 |
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | openrouter일 때만 |
 | `LLM_COST_CAP_USD` | `0.05` | 질문 하나의 비용 상한 |
+| `LLM_MAX_TOKENS` | `2500` | LLM 호출 1건의 출력 토큰 상한(생각 토큰 포함, 2026-11-17 팀장 결정). anthropic(기본 `ChatAnthropic`과 단계별 effort·캐시용 하위 클래스 둘 다 `max_tokens`), openai·openrouter(`max_completion_tokens`), claude_cli(`CLAUDE_CODE_MAX_OUTPUT_TOKENS`)에 같은 값을 넘긴다. 양의 정수가 아니면 경고 뒤 기본값. 응답 캐시 키에 들어간다. 예외는 코드의 단계별 값(`TASK_MAX_TOKENS`)뿐이다: 평가 전용 단일 검토자(`[[task:single]]`, 관리자 전용 `/admin/eval/review`)는 호출 인자로 4000(이 값보다 `LLM_MAX_TOKENS`가 크면 그 값)을 준다. 사용자 경로는 이 예외가 없다 |
+| `DAILY_QUESTION_LIMIT` | `50` | `/chat` 사용자별 하루(KST 자정 기준) 질문 한도. `0`·`off`면 없음. 넘으면 LLM을 부르기 전에 429 `daily_limit`(`backend/api/daily_limit.py`) |
 | `LLM_RECORD`, `DEMO_REPLAY_DIR` | 끔, `data/demo_replay` | 녹화 |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | 없음 | 키가 있으면 트레이스 설정을 읽음 |
 | `LANGFUSE_TRACING_ENABLED` | 비움(켜짐), `false`(끔) | Langfuse 연동 전체 스위치 |

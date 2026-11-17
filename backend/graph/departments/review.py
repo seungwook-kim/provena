@@ -43,9 +43,34 @@ from backend.graph.parsing import parse_json_obj
 from backend.prompts import question as P
 from backend.rag.retrieve.privacy import redact_chunk
 from backend.schemas import Chunk, SearchQuery
-from backend.services.llm import get_chat_model
+from backend.services.demo_replay import env_flag
+from backend.services.llm import get_chat_model, is_demo_mode
 
 log = logging.getLogger(__name__)
+
+TEAM_SELECT_ENV = "REVIEW_TEAM_SELECT"
+NOT_SELECTED = "not_selected"  # 쟁점표 `team_status`에서 Supervisor가 고르지 않은 팀(검토하지 못함과 다르다)
+
+
+def team_select_enabled() -> bool:
+    """`REVIEW_TEAM_SELECT`가 1, true, yes, on이면 Supervisor가 요청마다 돌릴 팀을 고른다. 코드 기본은 꺼짐이고 서비스 설정(`service_profile.SERVICE_ENV`)에서 켠다
+    (사전 등록 62.82, 2026-11-17 팀장 결정: 같은 로컬 측정기에서 네 팀 전부 0.649(62.36, 3회)와 팀 선택 0.649(1회)가 같고 회당 비용이 0.00473에서 0.00273달러로 준다,
+    `evals/results/review_team_select_20261117/`. 운영 기준 0.577은 다른 경로의 값이다).
+    키 없는 데모(재생·가짜 모델)에서는 끈다: 데모 녹화의 Supervisor 요청은 팀 선택 규칙이 없는 프롬프트로 만들어졌다.
+    꺼지면 Supervisor 프롬프트와 경로가 지금과 같다(늘 네 팀 전부)."""
+    return env_flag(TEAM_SELECT_ENV) and not is_demo_mode()
+
+
+def selected_from(obj: dict, enabled: bool) -> list[str]:
+    """Supervisor 응답의 `teams`에서 돌릴 팀 id(팀 정의 순서). 끄거나, 값이 없거나, 목록이 아니거나, 아는 팀 id가 하나도 없으면 네 팀 전부(지금 동작)."""
+    if not enabled:
+        return list(T.TEAM_IDS)
+    picked = obj.get("teams")
+    if not isinstance(picked, list):
+        return list(T.TEAM_IDS)
+    names = {x.strip().lower() for x in picked if isinstance(x, str)}
+    chosen = [t for t in T.TEAM_IDS if t in names]
+    return chosen or list(T.TEAM_IDS)
 
 JSON_ATTEMPTS = 2  # Supervisor: LLM 응답 형식이 깨지면 1회 다시 요청한다
 TEAM_ATTEMPTS = 3  # 팀 하나의 시도 상한(첫 시도 포함). 모델 호출도 팀마다 이 수를 넘지 않는다
@@ -70,6 +95,7 @@ class ReviewState(TypedDict, total=False):
     as_of: str | None
     # 중간 값
     tasks: dict  # 팀별로 볼 것 (Supervisor가 정한다)
+    selected_teams: list[str]  # 이번 요청에 돌릴 팀 id. 팀 선택을 끄면 늘 네 팀 전부
     team_results: Annotated[dict, _merge_dicts]  # 팀 id -> {label, status, rows, reason, private_excluded, dropped}
     failed_teams: list[dict]  # 재시도 상한까지 실패한 팀 [{team, reason, attempts}]
     team_action: str  # 그 팀들에 대한 사람의 결정: retry | mark_unreviewed
@@ -98,7 +124,7 @@ def _squash(s: str) -> str:
 
 def _fragments() -> list[str]:
     out: list[str] = []
-    for sp in (T.SUPERVISOR_SYSTEM, *(T.team_system(t, "") for t in T.TEAMS)):
+    for sp in (T.supervisor_system(True), *(T.team_system(t, "") for t in T.TEAMS)):
         for ln in sp.splitlines():
             ln = _squash(ln)
             if len(ln) >= 15 and ln not in out:
@@ -125,6 +151,7 @@ def build_review_graph(
     store: IssueTableStore | None = None,
     use_skills: bool | None = None,
     approvals: Any = None,
+    team_select: bool | None = None,
 ):
     """컴파일된 합동 검토 그래프를 만든다.
 
@@ -134,10 +161,20 @@ def build_review_graph(
     - store: 쟁점표 저장소. None이면 인메모리.
     - use_skills: None이면 환경변수 USE_SKILLS를 따른다.
     - approvals: 승인함 저장소(`DecisionRepo`). 서버는 반드시 넘긴다. None이면 승인함에 올리지 않는다(그래프만 도는 시험용).
+    - team_select: Supervisor가 요청마다 돌릴 팀을 고르는지. None이면 `team_select_enabled()`(환경 변수 `REVIEW_TEAM_SELECT`, 데모 모드면 끔)를 그래프를 만들 때 한 번 읽는다.
     """
     retrieve = retriever if retriever is not None else default_retriever
     llm = llm if llm is not None else get_chat_model()
     store = store if store is not None else InMemoryIssueTableStore()
+    select_on = team_select_enabled() if team_select is None else bool(team_select)
+    supervisor_system = T.supervisor_system(select_on)
+    labels = {t.team_id: t.label for t in T.TEAMS}
+
+    def summary_of(table: dict) -> str:
+        """승인함·화면 요약. 고르지 않은 팀이 있을 때만 그 팀을 덧붙인다(없으면 `IT.summarize`와 같다)."""
+        skipped = table.get("not_selected") or []
+        base = IT.summarize(table)
+        return base + (" / Supervisor가 고르지 않은 팀 " + ", ".join(s["team_label"] for s in skipped) if skipped else "")
 
     def ask_json(system: str, user: str, attempts: int = JSON_ATTEMPTS) -> dict | None:
         from langchain_core.messages import HumanMessage, SystemMessage
@@ -153,22 +190,24 @@ def build_review_graph(
         request = (state.get("question") or "").strip()
         base: dict = {
             "as_of": state.get("as_of") or today_kst().isoformat(), "kind": "", "answer": "", "clarify_question": None,
-            "review_status": "", "saved_table_id": None, "team_results": {}, "tasks": {},
+            "review_status": "", "saved_table_id": None, "team_results": {}, "tasks": {}, "selected_teams": list(T.TEAM_IDS),
         }
         if not request:
             msg = "검토할 업무 요청이 비어 있습니다. 도입하려는 도구와 금액 같은 내용을 적어 주세요."
             return {**base, "kind": "clarify", "answer": msg, "clarify_question": msg, "review_status": "clarify"}
-        obj = ask_json(T.SUPERVISOR_SYSTEM, T.supervisor_user(request, base["as_of"])) or {}
+        obj = ask_json(supervisor_system, T.supervisor_user(request, base["as_of"])) or {}
         missing = [IT._clean(m) for m in obj["missing"] if isinstance(m, str) and m.strip()] if isinstance(obj.get("missing"), list) else []
         if missing:  # EC-08: 검토에 필요한 값이 빠졌으면 되묻고 끝낸다
             msg = f"검토에 필요한 값이 요청에 없습니다: {', '.join(missing)}. 알려 주시면 검토합니다."
             return {**base, "kind": "clarify", "answer": msg, "clarify_question": msg, "review_status": "clarify"}
         given = obj.get("tasks") if isinstance(obj.get("tasks"), dict) else {}
         tasks = {t.team_id: (IT._clean(given.get(t.team_id)) or request) for t in T.TEAMS}  # 모델이 팀 몫을 안 냈으면 요청 그대로
-        return {**base, "tasks": tasks}
+        return {**base, "tasks": tasks, "selected_teams": selected_from(obj, select_on)}
 
     def after_supervisor(state: ReviewState):
-        return END if state.get("review_status") == "clarify" else [f"team_{t.team_id}" for t in T.TEAMS]
+        if state.get("review_status") == "clarify":
+            return END
+        return [f"team_{t}" for t in (state.get("selected_teams") or T.TEAM_IDS)]
 
     def not_reviewed(team: T.Team, reason: str, **extra) -> dict:
         return {"label": team.label, "status": "not_reviewed", "rows": [], "reason": reason, "private_excluded": 0, "dropped": 0, **extra}
@@ -276,9 +315,15 @@ def build_review_graph(
         return [f"team_{f['team']}" for f in state["failed_teams"]] if state.get("team_action") == "retry" else "merge"
 
     def merge(state: ReviewState) -> dict:
-        table = IT.merge_table(state["question"].strip(), state.get("as_of"), list(T.TEAM_IDS), state.get("team_results") or {})
+        selected = [t for t in T.TEAM_IDS if t in set(state.get("selected_teams") or T.TEAM_IDS)]
+        table = IT.merge_table(state["question"].strip(), state.get("as_of"), selected, state.get("team_results") or {})
+        skipped = [t for t in T.TEAM_IDS if t not in selected]
+        if skipped:  # 고르지 않은 팀은 "검토하지 못함"(unreviewed)이 아니라 상태 칸에만 남긴다. 표 해시(request·as_of·rows·unreviewed)에는 들어가지 않는다
+            table["team_status"] = {t: table["team_status"].get(t, NOT_SELECTED) for t in T.TEAM_IDS}
+            table["not_selected"] = [{"team": t, "team_label": labels[t]} for t in skipped]
         if not IT.has_content(table):  # EC-01, AC-05: 승인함에 올리지 않는다
-            return {"table": table, "kind": "answer", "answer": f"{MSG_NO_ISSUES} {T.LICENSE_NOTE}", "review_status": "no_issues"}
+            msg = MSG_NO_ISSUES if not skipped else f"쟁점 없음: Supervisor가 고른 팀({', '.join(labels[t] for t in selected)})이 이 요청에서 쟁점을 찾지 못했습니다."
+            return {"table": table, "kind": "answer", "answer": f"{msg} {T.LICENSE_NOTE}", "review_status": "no_issues"}
         return {"table": table, "review_status": "pending_approval"}
 
     def after_merge(state: ReviewState):
@@ -289,14 +334,14 @@ def build_review_graph(
         run_thread = config["configurable"].get("thread_id") or ""  # 재개에 쓰는 진짜 대화 번호
         approval_id = IT.approval_id_for(state.get("thread_id") or run_thread, table)
         if approvals is not None:
-            approval_id = approvals.queue_review_item(run_thread, approval_id, IT.summarize(table)).approval_id
+            approval_id = approvals.queue_review_item(run_thread, approval_id, summary_of(table)).approval_id
         return {"approval_id": approval_id, "decision": None}  # 같은 대화의 앞선 결정이 다음 표에 쓰이지 않게 지운다
 
     def approval(state: ReviewState) -> dict:
         # 이 노드는 재개할 때 처음부터 다시 돈다. interrupt 앞에는 읽기만 둔다.
         table = state["table"]
         payload = {
-            "approval_id": state["approval_id"], "kind": "issue_table", "summary": IT.summarize(table),
+            "approval_id": state["approval_id"], "kind": "issue_table", "summary": summary_of(table),
             "thread_id": state.get("thread_id") or "", "table": table,
         }
         while True:
@@ -325,7 +370,7 @@ def build_review_graph(
             if approvals is not None:
                 approvals.decide_review_item(state["approval_id"], True, decision["decided_by"], decision["comment"], table_id=table_id)
             return {"kind": "answer", "review_status": "approved", "saved_table_id": table_id, "issue_table": table,
-                    "answer": f"{MSG_SAVED} {IT.summarize(table)} {T.LICENSE_NOTE}"}
+                    "answer": f"{MSG_SAVED} {summary_of(table)} {T.LICENSE_NOTE}"}
         reason = decision["comment"] or "사유 없음"
         store.record_rejection(**common, reason=reason, decided_by=decision["decided_by"])
         if approvals is not None:

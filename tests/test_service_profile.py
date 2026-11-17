@@ -77,6 +77,8 @@ BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
 # 2026-11-16 서비스 경로만 켠 스위치(측정 실행기 인자에는 없다. 코드 기본은 꺼짐): 하위 질문에 원 질문의 대상·조건 유지, 값 뒤집기의 구조 판정,
 # 원 하위 질문 검색 합치기, 분류 호출 동시 요청
 SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1", "GRAPH_KEEP_SUBJECT_UNION": "1", "GRAPH_CLASSIFY_RACE": "1"}
+# 사전 등록 62.82(2026-11-17 팀장 결정): 합동 검토 팀 선택. 서비스 켬, 키 없는 데모 끔, 측정 실행기 인자에는 없다
+SERVICE_ONLY_1117 = {"REVIEW_TEAM_SELECT": "1"}
 # 2026-11-16 효과 분리 측정용 스위치 6개(코드 기본도 켬, 서비스 값은 지금 동작을 적은 것. 측정 실행기 인자에는 없다)
 ABLATION_1116 = {"GRAPH_INTRO_IN_CORE": "1", "GRAPH_CITE_HEAD_OWNER": "1", "GRAPH_FIRST_PAGE_FILL": "1", "GRAPH_CITE_EXPAND_NARROW": "1",
                  "GRAPH_CITE_PHRASE_WHOLE_ROWS": "1", "SEARCH_FULL_TAIL": "1"}
@@ -112,8 +114,9 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116, *ABLATION_1116)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116, *SERVICE_ONLY_1117, *ABLATION_1116)}
     assert have == want
+    assert {k: SP.SERVICE_ENV.get(k) for k in SERVICE_ONLY_1117} == SERVICE_ONLY_1117 and not set(SERVICE_ONLY_1117) & set(SP.CANDIDATE_ENV)   # 62.82: 서비스 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
     assert not set(BLIND_6273) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))   # 62.73: 사전 등록 62.74로 서비스 값에서 뺐다(코드 기본 꺼짐)
     assert {k: SP.SERVICE_ENV.get(k) for k in PROMPT_CACHE_6267} == PROMPT_CACHE_6267 and not set(PROMPT_CACHE_6267) & set(SP.CANDIDATE_ENV)   # 62.67: 서비스 기본 켬
@@ -128,6 +131,28 @@ def test_service_values_match_the_measured_arguments():
     assert (SP.SERVICE_ENV["LLM_REASONING"], SP.SERVICE_ENV["LLM_REASONING_BY_TASK"]) == (SP.SERVICE_ENV["LLM_EFFORT"], SP.SERVICE_ENV["LLM_EFFORT_BY_TASK"])
     _, args = measured_args()
     assert args.via_mcp and args.connected  # 서비스에서는 SEARCH_VIA_MCP(MCP_TOKEN이 있을 때)와 원래 연결된 결정표·합동 검토
+
+
+def test_production_override_keeps_the_keep_subject_switch_off(monkeypatch):
+    """결정 0126: 운영 판은 분해 시 대상·조건 유지(`GRAPH_DECOMPOSE_KEEP_SUBJECT`)를 환경 변수 `off`로 끈다. 서비스 코드 값은 켬 그대로다(키 없는 데모 녹화).
+    운영 덮어쓰기 값을 준 채 서비스 설정을 채우면 장치가 꺼지고, 분해 프롬프트에 유지 규칙이 붙지 않고, 원 하위 질문 검색 합치기가 닿는 입력도 없다."""
+    from backend.graph import decompose
+
+    assert SP.PRODUCTION_OVERRIDES == {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "off"}
+    assert SP.SERVICE_ENV["GRAPH_DECOMPOSE_KEEP_SUBJECT"] == "1"            # 서비스 코드 값은 바꾸지 않는다
+    assert "GRAPH_DECOMPOSE_KEEP_SUBJECT" not in SP.DEFAULT_ON_ENV           # 코드 기본 꺼짐: off는 빈 값(= 끔)으로 바뀐다
+    env: dict = dict(SP.PRODUCTION_OVERRIDES)
+    SP.apply_service_profile(env)
+    assert env["GRAPH_DECOMPOSE_KEEP_SUBJECT"] == ""
+    assert env["GRAPH_KEEP_SUBJECT_UNION"] == "1" and env["GRAPH_FLIP_STRUCTURE"] == "1" and env["GRAPH_CLASSIFY_RACE"] == "1"   # 나머지 셋은 운영도 서비스 값
+    monkeypatch.setenv("GRAPH_DECOMPOSE_KEEP_SUBJECT", env["GRAPH_DECOMPOSE_KEEP_SUBJECT"])
+    monkeypatch.setenv("GRAPH_KEEP_SUBJECT_UNION", env["GRAPH_KEEP_SUBJECT_UNION"])
+    assert decompose.keep_subject_enabled() is False
+    assert decompose.KEEP_SUBJECT_RULE not in decompose.system_prompt(decompose.TASK)
+    subs = ["해외 주문의 배송은 며칠 걸려?", "반품 수수료는 얼마야?"]
+    assert decompose.subject_alts(subs, subs, subs) is None                  # 고친 하위 질문이 없으면 합치기에 넘길 원 하위 질문도 없다
+    monkeypatch.setenv("GRAPH_DECOMPOSE_KEEP_SUBJECT", "1")                  # 대조: 서비스 코드 값(켬)이면 규칙이 붙는다
+    assert decompose.keep_subject_enabled() is True and decompose.KEEP_SUBJECT_RULE in decompose.system_prompt(decompose.TASK)
 
 
 def test_switches_left_removed_are_not_in_the_service_profile():

@@ -7,7 +7,7 @@
 - 공식 측정값은 그대로 측정 판 `provena-api-00172-rex`(동결 코드 `194dfd9a`)의 3회 측정이다(`EVAL_REPORT.md` 8장). 동결 SHA `47e3b82a`(실행 코드 `194dfd9a`)는 승격 전까지 00172-rex·00178-max가 서비스했다.
 - 00181-zub는 측정한 코드에 질문 속 한국어 출력 자리 지시 규칙(사전 등록 62.77), 기억 칸 값의 프롬프트 입력 정화, `/admin/sync` 501 안내 문구를 더한 판이다(backend 4개 파일 `api/changes.py`, `api/errors.py`, `graph/untrusted.py`, `prompts/question.py`). main HEAD `141d4bd9`의 실행 코드는 `9bc7d587`과 같다.
 - 설정은 00178-max와 이미지 digest(`23557e67` → `1a49f9e3`), `commit` 라벨, 빌드 주석만 다르다(`../deploy_check_provena-api-00181-zub/describe_diff.txt`).
-- 이 판에서 따로 확인한 것: 배포 점검 7/7(`../deploy_check_provena-api-00181-zub/`), 직접 인젝션 재시험 27건 모두 막힘(LIVE-12pb 포함, 대조군 3/3 정상, `../injection_live_provena-api-00181-zub/`), v2 50건 1회 정답 근거 인용률 0.933·인용 정확도 0.940(00172-rex 3회와 다른 문항은 39번 하나, `../deploy_latency_c1117b_provena-api-00181-zub/`), 같은 이미지의 임시 0% 판에서 실패 경로 3종(`../failure_paths_provena-api-00181-zub/`).
+- 이 판에서 따로 확인한 것: 배포 점검 7/7(`../deploy_check_provena-api-00181-zub/`), 직접 인젝션 시험 27건 모두 막힘(대조군 3/3 정상, `../injection_live_provena-api-00181-zub/`), v2 50건 1회 정답 근거 인용률 0.933·인용 정확도 0.940(00172-rex 3회와 다른 문항은 39번 하나, `../deploy_latency_c1117b_provena-api-00181-zub/`), 같은 이미지의 임시 0% 판에서 실패 경로 3종(`../failure_paths_provena-api-00181-zub/`).
 
 ## 승격 뒤 확인 (2026-11-17 09:16~09:23 KST)
 

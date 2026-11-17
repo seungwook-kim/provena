@@ -1,0 +1,3 @@
+GET /health -> 200 {"status":"ok"}
+GET /auth/csrf -> 204
+POST /auth/login (demo-user) -> 200 keys=['role', 'user_id']
