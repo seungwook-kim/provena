@@ -1,0 +1,3 @@
+NEWINJ-I03 막힘
+RETRACT-R01 막힘
+newinj_real_default_i03fix_r1 {'막힘': 2} LLM 호출 26회(데모·실제 모델만 셈)

@@ -18,8 +18,10 @@ python evals/ci_compare.py --current evals/results/ci_replay_local_20261117/ci_c
 
 | 단계 | 종료 코드 | 출력 파일 | 결과 |
 |---|---|---|---|
-| 현재 코드 0원 평가(`--require-v2`) | 0 | `ci_current_eval.log`, `ci_current_result.json`, `ci_current_eval.exitcode.txt` | 데모 질문 9개: 인용 답 7/7, 거절 2/2, 녹화에 없는 요청 0, 발췌형 대체 답 0. 평가셋 v2 50건: 관련 25건 중 인용 답 24, 비관련 25건 중 거절 24(되묻기 1), 녹화에 없는 요청 0, 발췌형 대체 답 0. 추론 답 경로와 빠른 답 경로 모두 같은 값 |
-| 평가 점수 비교 | 0 | `ci_compare.log`, `ci_compare.exitcode.txt` | 결과: 통과. 50건 재생 4개 지표(관련 질문 중 인용 답 24, 비관련 질문 중 거절 24, 녹화에 없는 요청 0, 발췌형 대체 답 0)가 두 경로 모두 기준값(`evals/ci_baseline.json`)과 같음. 운영 최근 측정 `provena-api-00172-rex` 비교도 모든 지표 통과 |
+| 현재 코드 0원 평가(`--require-v2`) | 0 | `ci_current_eval.log.txt`, `ci_current_result.json`, `ci_current_eval.exitcode.txt` | 데모 질문 9개: 인용 답 7/7, 거절 2/2, 녹화에 없는 요청 0, 발췌형 대체 답 0. 평가셋 v2 50건: 관련 25건 중 인용 답 24, 비관련 25건 중 거절 24(되묻기 1), 녹화에 없는 요청 0, 발췌형 대체 답 0. 추론 답 경로와 빠른 답 경로 모두 같은 값 |
+| 평가 점수 비교 | 0 | `ci_compare.log.txt`, `ci_compare.exitcode.txt` | 결과: 통과. 50건 재생 4개 지표(관련 질문 중 인용 답 24, 비관련 질문 중 거절 24, 녹화에 없는 요청 0, 발췌형 대체 답 0)가 두 경로 모두 기준값(`evals/ci_baseline.json`)과 같음. 운영 최근 측정 `provena-api-00172-rex` 비교도 모든 지표 통과 |
+
+로그 파일은 `.gitignore`의 `*.log` 규칙 때문에 같은 내용을 `.log.txt` 이름으로 복사해 커밋했다(내용 변경 없음, 개인 경로·키 없음 확인).
 
 ## 읽는 법
 

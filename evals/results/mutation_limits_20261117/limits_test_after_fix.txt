@@ -1,0 +1,6 @@
+L1 backend/services/llm.py: `DEFAULT_LLM_MAX_TOKENS = 2500` -> `DEFAULT_LLM_MAX_TOKENS = 3000` / 변이 전 [19 passed in 14.32s] / 변이 뒤 [14 failed, 5 passed in 15.34s] -> 잡음
+L2 backend/services/llm.py: `TASK_MAX_TOKENS: dict[str, int] = {"single": 4000}` -> `TASK_MAX_TOKENS: dict[str, int] = {"single": 5000}` / 변이 전 [19 passed in 17.34s] / 변이 뒤 [2 failed, 17 passed in 17.49s] -> 잡음
+L3 backend/api/daily_limit.py: `DEFAULT_DAILY_QUESTION_LIMIT = 50` -> `DEFAULT_DAILY_QUESTION_LIMIT = 60` / 변이 전 [15 passed in 5.63s] / 변이 뒤 [4 failed, 11 passed in 6.61s] -> 잡음
+L4 extras/mcp_skill/mcp_server/server.py: `DEFAULT_EXTERNAL_RATE_PER_MIN = 30` -> `DEFAULT_EXTERNAL_RATE_PER_MIN = 60` / 변이 전 [14 passed in 10.75s] / 변이 뒤 [2 failed, 12 passed in 11.84s] -> 잡음
+L5 extras/mcp_skill/mcp_server/server.py: `DEFAULT_EXTERNAL_RATE_PER_DAY = 500` -> `DEFAULT_EXTERNAL_RATE_PER_DAY = 1000` / 변이 전 [14 passed in 9.65s] / 변이 뒤 [2 failed, 12 passed in 11.04s] -> 잡음
+L6 extras/mcp_skill/mcp_server/server.py: `_rate_env("MCP_EXTERNAL_RATE_PER_DAY", DEFAULT_EXTERNAL_RATE_PER_DAY)` -> `_rate_env("MCP_EXTERNAL_RATE_PER_DAY", 0)` / 변이 전 [14 passed in 10.04s] / 변이 뒤 [1 failed, 13 passed in 11.05s] -> 잡음

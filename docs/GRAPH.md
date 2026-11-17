@@ -1,6 +1,6 @@
 # GRAPH: 그래프별 노드 책임과 입출력 상태
 
-이 문서는 `backend/graph/`의 LangGraph 그래프를 노드 단위로 적는다. 노드 이름, 간선, 분기 조건은 코드의 `add_node`, `add_edge`, `add_conditional_edges` 호출에서 옮겼고, 읽는 상태 키와 쓰는 상태 키는 노드 함수 본문(상태에서 읽는 키, 돌려주는 dict의 키)에서 옮겼다. 줄 번호는 커밋 `194dfd9a` 기준이다. 설계 개요는 [SDD.md](./SDD.md) 4-3, 요청 흐름과 설계 질문은 [ARCHITECTURE.md](./ARCHITECTURE.md), 그래프로 만든 이유는 [why_langgraph.md](./why_langgraph.md)에 있다.
+이 문서는 `backend/graph/`의 LangGraph 그래프를 노드 단위로 적는다. 노드 이름, 간선, 분기 조건은 코드의 `add_node`, `add_edge`, `add_conditional_edges` 호출에서 옮겼고, 읽는 상태 키와 쓰는 상태 키는 노드 함수 본문(상태에서 읽는 키, 돌려주는 dict의 키)에서 옮겼다. 줄 번호는 커밋 `1b38366e` 기준이다. 설계 개요는 [SDD.md](./SDD.md) 4-3, 요청 흐름과 설계 질문은 [ARCHITECTURE.md](./ARCHITECTURE.md), 그래프로 만든 이유는 [why_langgraph.md](./why_langgraph.md)에 있다.
 
 ## 1. 개요
 
@@ -9,7 +9,7 @@
 | 그래프 | 만드는 함수(진입점) | 상태 스키마 | 노드 수 | 서비스에서 쓰는 곳 |
 |---|---|---|---|---|
 | 그래프 1. 질문 그래프 | `backend/graph/build.py:395` `build_graph` | `AgentState`(`backend/graph/state.py:69`) | 16(항상 12, 결정표 저장소가 있을 때 3, 합동 검토 그래프가 있을 때 1) | `POST /chat`. 앱 시작 때 `backend/main.py:273` `build_question_graph`가 결정표 저장소와 합동 검토 그래프를 붙여 만든다 |
-| 그래프 2. 합동 검토 그래프 | `backend/graph/departments/review.py:120` `build_review_graph` | `ReviewState`(`review.py:65`) | 13 | 질문 그래프의 `review` 노드(하위 그래프). 질문 종류가 합동 검토일 때 |
+| 그래프 2. 합동 검토 그래프 | `backend/graph/departments/review.py:146` `build_review_graph` | `ReviewState`(`review.py:90`) | 13 | 질문 그래프의 `review` 노드(하위 그래프). 질문 종류가 합동 검토일 때 |
 | 그래프 3. 결정표 변환 그래프 | `backend/graph/decision/convert.py:126` `build_convert_graph` | `ConvertState`(`convert.py:79`) | 5 | `POST /decision-tables/convert`(관리자) |
 | 그래프 4. 리콜 그래프 | `backend/graph/recall/graph.py:75` `build_recall_graph` | `RecallState`(`recall/graph.py:56`) | 3 | 개정 웹훅 처리(`backend/graph/recall/service.py:96`) |
 | 그래프 5. 멀티 에이전트 질문 그래프 | `backend/graph/multi.py:299` `build_multi_graph` | `MultiState`(`multi.py:58`) | 6(항상 4, 연결 시 2) | 서비스 경로가 아니다. 평가 실행기(`evals/agent/exp_multi_v2.py`)와 안전 평가(`evals/safety/run_safety.py`)가 단일 그래프와 비교할 때 쓴다 |
@@ -25,7 +25,7 @@
 | 재시작 안전 여부 | `PostgresSaver`일 때만 참이다. 메모리 체크포인터는 시험과 로컬 개발용이다 | `checkpoint.py:44` `is_restart_safe` |
 | 같은 체크포인터를 쓰는 그래프 | 질문 그래프(합동 검토 하위 그래프 포함)와 결정표 변환 그래프. 합동 검토 하위 그래프는 체크포인터 없이 만들어 질문 그래프의 체크포인터로 멈추고 재개한다 | `backend/graph/decision/routes.py:617-621`, `backend/main.py:283-285` |
 | 체크포인터를 쓰지 않는 그래프 | 리콜 그래프(한 번 돌고 끝난다), 멀티 그래프(평가 실행기가 넘길 때만) | `recall/service.py:96` |
-| 질문 그래프 thread_id | `"{user_id}:{thread_id}"`. `user_id`는 로그인한 사용자 UUID, `thread_id`는 화면의 대화 번호다 | `backend/api/routes.py:149` `internal_thread`, `routes.py:307-309` |
+| 질문 그래프 thread_id | `"{user_id}:{thread_id}"`. `user_id`는 로그인한 사용자 UUID, `thread_id`는 화면의 대화 번호다 | `backend/api/routes.py:152` `internal_thread`, `routes.py:310-312` |
 | 결정표 변환 thread_id | `convert_` 뒤에 16자리 16진수(`new_id("convert")`) | `backend/graph/decision/repo.py:101`, `decision/routes.py:473` |
 | 평가용 단일 검토 thread_id | `eval-single:{request_id}` | `backend/api/eval_review.py:141` |
 
@@ -33,8 +33,8 @@
 
 | 그래프 | 노드 | interrupt 종류(`kind`) | 코드 위치 |
 |---|---|---|---|
-| 합동 검토 | `team_failure_gate` | `team_review_failed`(재시도 상한까지 실패한 팀이 있을 때) | `backend/graph/departments/review.py:257` |
-| 합동 검토 | `approval` | `issue_table`(쟁점표 승인) | `review.py:303` |
+| 합동 검토 | `team_failure_gate` | `team_review_failed`(재시도 상한까지 실패한 팀이 있을 때) | `backend/graph/departments/review.py:296` |
+| 합동 검토 | `approval` | `issue_table`(쟁점표 승인) | `review.py:348` |
 | 결정표 변환 | `human_approval` | `decision_table`(결정표 초안 승인) | `backend/graph/decision/convert.py:158` |
 
 질문 그래프 자체의 노드에는 `interrupt()`가 없다. 합동 검토가 질문 그래프의 `review` 노드 안에서 멈추면 질문 그래프 전체가 같은 `thread_id`에서 멈춘다. 리콜 그래프와 멀티 그래프의 자체 노드에도 `interrupt()`가 없다.
@@ -107,7 +107,9 @@ flowchart TD
 
 ### 그래프 2. 합동 검토 그래프 (`build_review_graph`)
 
-배선은 `backend/graph/departments/review.py:335-359`이다. 팀 에이전트 4개는 `backend/graph/departments/teams.py:26-29`의 `Team` 정의에서 `team_{team_id}` 이름으로 만든다. `after_supervisor`가 팀 노드 목록을 돌려주면 네 팀이 같은 단계에서 병렬로 돈다.
+배선은 `backend/graph/departments/review.py:380-404`이다. 팀 에이전트 4개는 `backend/graph/departments/teams.py:26-29`의 `Team` 정의에서 `team_{team_id}` 이름으로 만든다. `after_supervisor`가 팀 노드 목록을 돌려주면 네 팀이 같은 단계에서 병렬로 돈다.
+
+팀 선택 스위치 `REVIEW_TEAM_SELECT`(`review.py:55` `team_select_enabled`)는 코드 기본 꺼짐, 서비스 설정 켬(`service_profile.py:161`), 키 없는 데모 모드에서는 켜도 끔이다. 켜면 Supervisor가 요청마다 돌릴 팀을 고르고(`selected_teams`, `review.py:205`) `after_supervisor`(`review.py:210`)는 고른 팀 노드만 돌려준다. 고르지 않은 팀은 `merge`(`review.py:320-323`)가 쟁점표의 `team_status`에 `not_selected`로, `not_selected` 목록에 팀 이름으로 남기며 "검토하지 못함"으로 세지 않는다. 아래 그림과 표는 스위치를 끈 경우(네 팀 모두)를 그린 것이다.
 
 ```mermaid
 flowchart TD
@@ -134,23 +136,23 @@ flowchart TD
   R_finalize --> E0
 ```
 
-점선은 `after_team_action`(`review.py:275`)이 실패한 팀 노드(`team_{team}`) 목록을 돌려주는 경우이고, 그 팀 노드가 다시 `check_teams`로 간다. 그림에서는 팀 노드를 거치는 길을 줄여 그렸다.
+점선은 `after_team_action`(`review.py:314`)이 실패한 팀 노드(`team_{team}`) 목록을 돌려주는 경우이고, 그 팀 노드가 다시 `check_teams`로 간다. 그림에서는 팀 노드를 거치는 길을 줄여 그렸다.
 
 | 노드 | 책임 | 읽는 상태 키 | 쓰는 상태 키 | 다음 노드/분기 조건 | 외부 호출 | 실패 시 동작 | 코드 위치 |
 |---|---|---|---|---|---|---|---|
-| `supervisor` | 요청에 검토할 값이 빠졌으면 되묻고, 아니면 팀별로 볼 것을 나눈다 | `question`, `as_of` | `as_of`, `kind`, `answer`, `clarify_question`, `review_status`, `saved_table_id`, `team_results`(비움), `tasks` | `review_status = clarify`면 끝, 아니면 팀 노드 4개(`after_supervisor` `review.py:170`) | LLM 1회(형식이 깨지면 1회 더) | 요청이 비면 LLM 없이 되묻는다. 팀 몫을 내지 않으면 요청 그대로를 팀 몫으로 쓴다 | `review.py:152` |
-| `team_security` | 보안 팀 관점의 쟁점을 근거 인용과 함께 낸다 | `question`, `tasks`, `as_of` | `team_results`(합치기 규칙 `_merge_dicts`) | `check_teams` | 검색 1회(k=10, 팀 절 `org`), LLM 최대 3회(`TEAM_ATTEMPTS`), 팀 Skill | 응답을 읽지 못함, 쟁점이 모두 인용 검사 탈락, 일시 오류는 상한까지 다시 하고 그래도 안 되면 `gave_up`. 근거가 없으면 재시도 없이 "검토하지 못함" | `team_node` `review.py:216`, `review_team` `review.py:176` |
+| `supervisor` | 요청에 검토할 값이 빠졌으면 되묻고, 아니면 팀별로 볼 것을 나눈다 | `question`, `as_of` | `as_of`, `kind`, `answer`, `clarify_question`, `review_status`, `saved_table_id`, `team_results`(비움), `tasks` | `review_status = clarify`면 끝, 아니면 팀 노드 4개(`after_supervisor` `review.py:207`) | LLM 1회(형식이 깨지면 1회 더) | 요청이 비면 LLM 없이 되묻는다. 팀 몫을 내지 않으면 요청 그대로를 팀 몫으로 쓴다 | `review.py:189` |
+| `team_security` | 보안 팀 관점의 쟁점을 근거 인용과 함께 낸다 | `question`, `tasks`, `as_of` | `team_results`(합치기 규칙 `_merge_dicts`) | `check_teams` | 검색 1회(k=10, 팀 절 `org`), LLM 최대 3회(`TEAM_ATTEMPTS`), 팀 Skill | 응답을 읽지 못함, 쟁점이 모두 인용 검사 탈락, 일시 오류는 상한까지 다시 하고 그래도 안 되면 `gave_up`. 근거가 없으면 재시도 없이 "검토하지 못함" | `team_node` `review.py:255`, `review_team` `review.py:215` |
 | `team_infra` | 인프라·SRE 팀 관점의 쟁점을 낸다 | `team_security`와 같음 | 같음 | 같음 | 같음 | 같음 | 같음 |
 | `team_itops` | IT 운영 팀 관점의 쟁점을 낸다 | 같음 | 같음 | 같음 | 같음 | 같음 | 같음 |
 | `team_finance` | 재무 팀 관점의 쟁점을 낸다 | 같음 | 같음 | 같음 | 같음 | 같음 | 같음 |
-| `check_teams` | 재시도 상한까지 실패한 팀을 모은다 | `team_results` | `failed_teams`, `review_status`(실패가 있으면 `team_review_failed`) | 실패한 팀이 있으면 `queue_team_failure`, 없으면 `merge`(`after_check` `review.py:236`) | 없음 | 해당 없음 | `review.py:230` |
-| `queue_team_failure` | 팀 실패 알림을 승인함에 올린다 | `failed_teams`, `thread_id`, `question`, `as_of`, 실행 설정의 `thread_id` | `approval_id`, `decision`(비움) | `team_failure_gate` | DB 쓰기(`queue_review_item`, `kind=team_review_failed`) | 같은 입력으로 다시 돌아도 같은 승인 건 번호다 | `review.py:243` |
-| `team_failure_gate` | 사람에게 `retry` 또는 `mark_unreviewed`를 받는다(interrupt) | `failed_teams`, `approval_id`, `thread_id` | `decision`(`action`, `approve`, `comment`, `decided_by`) | `apply_team_action` | `interrupt()` | 틀린 재개 값은 상태를 바꾸지 않고 같은 요청을 `rejected_resume`(`bad_action`, `approver_missing`)과 함께 다시 올린다. 다른 승인 건 번호의 값은 받지 않는다 | `review.py:251`, interrupt `review.py:257` |
-| `apply_team_action` | 사람 결정을 승인함에 적는다 | `decision`, `approval_id` | `team_action`, `decision`(비움) | `retry`면 실패한 팀 노드, 아니면 `merge`(`after_team_action` `review.py:275`) | DB 쓰기(`decide_review_item`) | 같은 입력으로 다시 돌아도 결과가 같다. 저장 실패는 API가 503으로 알리고 같은 결정으로 이 노드만 다시 돈다 | `review.py:269` |
-| `merge` | 팀 결과를 쟁점표 한 장으로 합친다(코드) | `question`, `as_of`, `team_results` | `table`, `review_status`(`no_issues` 또는 `pending_approval`), 쟁점이 없으면 `kind`, `answer` | `no_issues`면 끝, 아니면 `queue_approval`(`after_merge` `review.py:284`) | 없음 | 해당 없음 | `review.py:278` |
-| `queue_approval` | 쟁점표를 승인함에 올린다 | `table`, `thread_id`, 실행 설정의 `thread_id` | `approval_id`, `decision`(비움) | `approval` | DB 쓰기(`queue_review_item`, `kind=issue_table`) | 승인 건 번호는 표 내용에서 정해져 다시 돌아도 같다 | `review.py:287` |
-| `approval` | 사람 승인·반려를 받는다(interrupt) | `table`, `approval_id`, `thread_id` | `decision`(`approve`, `comment`, `decided_by`) | `finalize` | `interrupt()` | 불리언 `True`만 승인이다. 승인자 없는 승인은 `approver_missing`으로 다시 묻는다. 다른 승인 건 번호의 값은 받지 않는다 | `review.py:295`, interrupt `review.py:303` |
-| `finalize` | 승인이면 쟁점표를 저장하고, 반려면 사유만 기록한 뒤 승인 건을 닫는다 | `table`, `decision`, `approval_id`, `thread_id`, `user_id` | `kind`, `answer`, `review_status`(`approved` 또는 `rejected`), `saved_table_id`, `issue_table` | 끝 | DB 쓰기(쟁점표 저장소 `save` 또는 `record_rejection`, 승인함 `decide_review_item`) | 저장을 먼저 하고 승인 건을 나중에 닫는다. 저장 실패는 API가 503으로 알리고 같은 결정으로 이 노드만 다시 돈다 | `review.py:319` |
+| `check_teams` | 재시도 상한까지 실패한 팀을 모은다 | `team_results` | `failed_teams`, `review_status`(실패가 있으면 `team_review_failed`) | 실패한 팀이 있으면 `queue_team_failure`, 없으면 `merge`(`after_check` `review.py:275`) | 없음 | 해당 없음 | `review.py:269` |
+| `queue_team_failure` | 팀 실패 알림을 승인함에 올린다 | `failed_teams`, `thread_id`, `question`, `as_of`, 실행 설정의 `thread_id` | `approval_id`, `decision`(비움) | `team_failure_gate` | DB 쓰기(`queue_review_item`, `kind=team_review_failed`) | 같은 입력으로 다시 돌아도 같은 승인 건 번호다 | `review.py:282` |
+| `team_failure_gate` | 사람에게 `retry` 또는 `mark_unreviewed`를 받는다(interrupt) | `failed_teams`, `approval_id`, `thread_id` | `decision`(`action`, `approve`, `comment`, `decided_by`) | `apply_team_action` | `interrupt()` | 틀린 재개 값은 상태를 바꾸지 않고 같은 요청을 `rejected_resume`(`bad_action`, `approver_missing`)과 함께 다시 올린다. 다른 승인 건 번호의 값은 받지 않는다 | `review.py:290`, interrupt `review.py:296` |
+| `apply_team_action` | 사람 결정을 승인함에 적는다 | `decision`, `approval_id` | `team_action`, `decision`(비움) | `retry`면 실패한 팀 노드, 아니면 `merge`(`after_team_action` `review.py:314`) | DB 쓰기(`decide_review_item`) | 같은 입력으로 다시 돌아도 결과가 같다. 저장 실패는 API가 503으로 알리고 같은 결정으로 이 노드만 다시 돈다 | `review.py:308` |
+| `merge` | 팀 결과를 쟁점표 한 장으로 합친다(코드) | `question`, `as_of`, `team_results` | `table`, `review_status`(`no_issues` 또는 `pending_approval`), 쟁점이 없으면 `kind`, `answer` | `no_issues`면 끝, 아니면 `queue_approval`(`after_merge` `review.py:329`) | 없음 | 해당 없음 | `review.py:317` |
+| `queue_approval` | 쟁점표를 승인함에 올린다 | `table`, `thread_id`, 실행 설정의 `thread_id` | `approval_id`, `decision`(비움) | `approval` | DB 쓰기(`queue_review_item`, `kind=issue_table`) | 승인 건 번호는 표 내용에서 정해져 다시 돌아도 같다 | `review.py:332` |
+| `approval` | 사람 승인·반려를 받는다(interrupt) | `table`, `approval_id`, `thread_id` | `decision`(`approve`, `comment`, `decided_by`) | `finalize` | `interrupt()` | 불리언 `True`만 승인이다. 승인자 없는 승인은 `approver_missing`으로 다시 묻는다. 다른 승인 건 번호의 값은 받지 않는다 | `review.py:340`, interrupt `review.py:348` |
+| `finalize` | 승인이면 쟁점표를 저장하고, 반려면 사유만 기록한 뒤 승인 건을 닫는다 | `table`, `decision`, `approval_id`, `thread_id`, `user_id` | `kind`, `answer`, `review_status`(`approved` 또는 `rejected`), `saved_table_id`, `issue_table` | 끝 | DB 쓰기(쟁점표 저장소 `save` 또는 `record_rejection`, 승인함 `decide_review_item`) | 저장을 먼저 하고 승인 건을 나중에 닫는다. 저장 실패는 API가 503으로 알리고 같은 결정으로 이 노드만 다시 돈다 | `review.py:364` |
 
 ### 그래프 3. 결정표 변환 그래프 (`build_convert_graph`)
 
@@ -290,7 +292,7 @@ flowchart TD
 
 | 스키마 | 칸(타입) | 합치기 규칙 | 쓰는 곳 |
 |---|---|---|---|
-| `ReviewState`(`review.py:65`) | 입력 `question`, `user_id`, `thread_id`, `as_of`. 중간 `tasks`(dict), `team_results`(dict), `failed_teams`(list), `team_action`(str), `table`(dict), `approval_id`(str), `decision`(dict \| None). 출력 `kind`, `answer`, `clarify_question`, `review_status`, `saved_table_id`, `issue_table` | `team_results`만 `_merge_dicts`(`review.py:61`, 팀 id별로 합친다. 네 팀이 같은 단계에서 동시에 쓰기 때문이다) | 2장 그래프 2 표 |
+| `ReviewState`(`review.py:90`) | 입력 `question`, `user_id`, `thread_id`, `as_of`. 중간 `tasks`(dict), `team_results`(dict), `failed_teams`(list), `team_action`(str), `table`(dict), `approval_id`(str), `decision`(dict \| None). 출력 `kind`, `answer`, `clarify_question`, `review_status`, `saved_table_id`, `issue_table` | `team_results`만 `_merge_dicts`(`review.py:86`, 팀 id별로 합친다. 네 팀이 같은 단계에서 동시에 쓰기 때문이다) | 2장 그래프 2 표 |
 | `ConvertState`(`convert.py:79`) | 입력 `category`, `rule_seq`, `version_id`, `source_cells`, `requested_by`. 중간 `draft_rules`, `comparison`, `table_id`, `approval_id`, `summary`, `decision`. 출력 `outcome`, `error`, `status` | 없음 | 2장 그래프 3 표 |
 | `RecallState`(`recall/graph.py:56`) | `changed`, `affected`, `old`, `new`, `judgements`, `judge_failures`, `notices` | 없음 | 2장 그래프 4 표 |
 | `MultiState`(`multi.py:58`) | `AgentState` 전체와 `next_agent`(str), `agent_trace`(list[str]), `supervisor_log`(list[dict]), `handoffs`(list[dict]) | `asked`만(`AgentState`에서 물려받음). 기록 칸은 노드가 목록을 새로 만들어 덮어쓴다 | 2장 그래프 5 표 |
@@ -301,11 +303,11 @@ flowchart TD
 
 | 항목 | 내용 | 코드 위치 |
 |---|---|---|
-| 멈추는 노드 | `team_failure_gate`, `approval`(합동 검토), `human_approval`(결정표 변환). interrupt가 있는 노드에는 읽기만 두고, 쓰기는 앞 노드(`queue_team_failure`, `queue_approval`)와 뒤 노드(`apply_team_action`, `finalize`)로 나눴다. 재개하면 멈춘 노드가 처음부터 다시 돌기 때문이다 | `review.py:251`, `review.py:295`, `convert.py:149` |
-| interrupt 값 | 쟁점표: `approval_id`, `kind`, `summary`, `thread_id`, `table`. 팀 실패: `approval_id`, `kind`, `summary`, `failed_teams`, `thread_id`. 결정표: `approval_id`, `kind`, `summary`, `table_id`, `category`, `draft`, `comparison` | `review.py:254`, `review.py:298`, `convert.py:153` |
+| 멈추는 노드 | `team_failure_gate`, `approval`(합동 검토), `human_approval`(결정표 변환). interrupt가 있는 노드에는 읽기만 두고, 쓰기는 앞 노드(`queue_team_failure`, `queue_approval`)와 뒤 노드(`apply_team_action`, `finalize`)로 나눴다. 재개하면 멈춘 노드가 처음부터 다시 돌기 때문이다 | `review.py:290`, `review.py:340`, `convert.py:149` |
+| interrupt 값 | 쟁점표: `approval_id`, `kind`, `summary`, `thread_id`, `table`. 팀 실패: `approval_id`, `kind`, `summary`, `failed_teams`, `thread_id`. 결정표: `approval_id`, `kind`, `summary`, `table_id`, `category`, `draft`, `comparison` | `review.py:293`, `review.py:343`, `convert.py:153` |
 | 체크포인트에 남는 것 | 노드를 지날 때마다 `thread_id`별 상태 칸 전체(질문, 근거 청크 dict, 판정, 팀 결과, 쟁점표 또는 초안과 대조표, interrupt 값)가 Postgres 체크포인트 표에 쓰인다 | `checkpoint.py:136` |
-| 승인함에 남는 것 | 멈추기 전 노드가 승인 건(`approval_id`, `kind`, 요약, `thread_id`)을 승인함 저장소에 올린다. 결정 뒤 노드가 결과를 적는다 | `review.py:248`, `review.py:292`, `convert.py:146` |
-| 채팅 화면 알림 | 질문 그래프가 멈추면 스트림이 `approval_request` 이벤트(`approval_id`, `kind`, `summary`)를 내고 `done` 없이 끝난다. 승인 대기 중인 대화의 새 질문은 409 `approval_pending`이다 | `backend/graph/stream.py:47`, `backend/api/routes.py:405-406` |
+| 승인함에 남는 것 | 멈추기 전 노드가 승인 건(`approval_id`, `kind`, 요약, `thread_id`)을 승인함 저장소에 올린다. 결정 뒤 노드가 결과를 적는다 | `review.py:287`, `review.py:337`, `convert.py:146` |
+| 채팅 화면 알림 | 질문 그래프가 멈추면 스트림이 `approval_request` 이벤트(`approval_id`, `kind`, `summary`)를 내고 `done` 없이 끝난다. 승인 대기 중인 대화의 새 질문은 409 `approval_pending`이다 | `backend/graph/stream.py:47`, `backend/api/routes.py:416-417` |
 
 ### 5-2. 재개 API
 
@@ -324,7 +326,7 @@ flowchart TD
 | 이미 끝난 건에 같은 결정 | 200, 상태 그대로. 재개 기록은 `duplicate_ignored` | `_repeat_decision` `decision/routes.py:413` |
 | 이미 끝난 건에 다른 결정 | 409 | `decision/routes.py:413`, `R.AlreadyDecided` `decision/routes.py:402` |
 | 결정을 받은 뒤 저장 실패 | 503 `save_failed`. 결정은 체크포인트의 `decision`에 남고 그래프는 저장 노드 앞에 멈춘다. 같은 결정을 다시 보내면 그 노드만 다시 돈다(`graph.invoke(None, config)`) | `stalled_state` `convert.py:213`, `decision/routes.py:395-404` |
-| 틀린 재개 값(형식, 다른 승인 건 번호, 승인자 없음, 사유 필수, 틀린 action) | 상태를 바꾸지 않고 같은 승인 요청이 `rejected_resume` 이유와 함께 다시 올라온다. API는 400과 그 이유를 돌려주고 재개 기록은 `rejected_value` | `convert.py:157-171`, `review.py:256-267`, `review.py:302-317`, `decision/routes.py:405-409` |
+| 틀린 재개 값(형식, 다른 승인 건 번호, 승인자 없음, 사유 필수, 틀린 action) | 상태를 바꾸지 않고 같은 승인 요청이 `rejected_resume` 이유와 함께 다시 올라온다. API는 400과 그 이유를 돌려주고 재개 기록은 `rejected_value` | `convert.py:157-171`, `review.py:295-306`, `review.py:347-362`, `decision/routes.py:405-409` |
 
 ### 5-4. 재시작 뒤 재개 증거
 
@@ -342,7 +344,7 @@ flowchart TD
 
 ## 6. 경로를 바꾸는 설정 스위치
 
-"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다(코드 기본이 켬인 효과 분리 측정용 스위치 6개는 `off`가 `0`으로 바뀌어 꺼진다, `service_profile.py:160`, `service_profile.py:203`). `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:181`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
+"코드 기본값"은 환경 변수가 비었을 때 코드가 쓰는 값이고, "서비스 값"은 앱이 뜰 때 비어 있는 환경 변수에 채우는 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 사전 등록 61.51)이다. 환경 변수에 값을 직접 주면 그 값이 이기고, `off`를 주면 그 설정을 끈다(코드 기본이 켬인 효과 분리 측정용 스위치 6개는 `off`가 `0`으로 바뀌어 꺼진다, `service_profile.py:171`, `service_profile.py:214`). `SERVICE_PROFILE=off`면 아무것도 채우지 않는다(`service_profile.py:192`). 운영 리비전의 환경 변수로 덮어쓴 값은 이 표에 없다.
 
 | 스위치 | 읽는 곳 | 코드 기본값 | 서비스 값 | 바뀌는 경로 |
 |---|---|---|---|---|
@@ -371,12 +373,12 @@ flowchart TD
 | `SEARCH_FULL_TAIL` | `backend/rag/retrieve/search.py:1277`(`full_tail`), 쓰는 곳 `search.py:827` | 1(`FULL_TAIL`) | 1(`service_profile.py:152`) | 사전 등록 62.38의 끝 1자리 규칙. 나뉜 질문의 k=8 첫 검색에서 원 질문 후보 목록이 받는 끝자리 수(k-1까지). `0`(또는 `off`)이면 원 질문 후보 목록을 만들지 않고(원 질문 벡터 질의 없음) 하위 질문 목록만 번갈아 합친 8자리에 링크 확장을 한다. k=5 검색, 나뉘지 않은 질문, 합동 검토 팀 검색은 닿지 않는다. 음수나 정수가 아닌 값은 검색 때 ValueError |
 | `GROUND_SKIP_BACKED` | `build.py:536` | 끔 | 채우지 않음(끔) | 값이 모두 인용 청크에 있으면 `ground`의 LLM 판정을 건너뛴다 |
 | `USE_SKILLS` | `backend/services/skills.py:21` | 켬 | 채우지 않음(켬) | 끄면 `ground`의 LLM 판정을 건너뛰고 Skill 본문을 붙이지 않는다 |
-| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:63` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
-| `GRAPH_FLIP_STRUCTURE` | `backend/graph/untrusted.py:461` | 끔 | 켬(`service_profile.py:142`) | 검색 원문에서 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 숫자+단위 값을 내세우는 문장을, 주장하는 낱말이 없어도 입력에서 빼고 그 새 값이 든 답 문장을 출력 검사가 뺀다(조건문, 포함·범위·상한 같은 관계 문장은 제외) |
-| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:176-177`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
-| `CHAT_FOLLOWUP` | `backend/api/routes.py:188` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
+| `GRAPH_SCRUB_OUTPUT` | `backend/graph/untrusted.py:66` | 켬 | 채우지 않음(켬) | `verify`, `give_up`, 재작성 검색어에서 원문 지시를 옮긴 문장을 빼고, 남는 문장이 없으면 거절 |
+| `GRAPH_FLIP_STRUCTURE` | `backend/graph/untrusted.py:468` | 끔 | 켬(`service_profile.py:142`) | 검색 원문에서 같은 섹션의 앞 값을 가리키는 말을 주어·주제로 두고 같은 종류의 새 숫자+단위 값을 내세우는 문장을, 주장하는 낱말이 없어도 입력에서 빼고 그 새 값이 든 답 문장을 출력 검사가 뺀다(조건문, 포함·범위·상한 같은 관계 문장은 제외) |
+| `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:187-188`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
+| `CHAT_FOLLOWUP` | `backend/api/routes.py:191` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |
 | `RECALL_MIN_CONFIDENCE` | `recall/graph.py:36` | 0.5 | 채우지 않음 | 리콜 `notify`에서 이 값보다 확신도가 낮은 알림을 관리자 검토함으로 보낸다 |
 
-경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-157`에 있다.
+경로는 바꾸지 않고 시간이나 고르는 답만 바꾸는 스위치(`GRAPH_ANSWER_WAIT_S` 4.0, `GRAPH_ANSWER_BUDGET_S` 6.5, `GRAPH_JUDGE_VOTE`, `GRAPH_ANSWER_BEST2`, `GRAPH_SPECULATE_GROUND`, `GRAPH_ADOPT_GROUNDED_CANDIDATE` 등)는 `service_profile.py:52-162`에 있다.

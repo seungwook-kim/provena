@@ -1,0 +1,17 @@
+# python -I -X utf8 tests/mutation_d5.py <번호> (번호마다 따로 실행), 커밋 1b38366e worktree, 2026-11-17 11:17 KST
+18 rc=0 :: 18 backend/graph/decision/execute.py: 변이 전 [52 passed in 134.75s (0:02:14)] / 변이 뒤 [3 failed, 49 passed in 139.47s (0:02:19)] -> 잡음
+19 rc=0 :: 19 backend/graph/multi.py: 변이 전 [659 passed in 86.85s (0:01:26)] / 변이 뒤 [118 failed, 541 passed in 91.50s (0:01:31)] -> 잡음
+20 rc=0 :: 20 backend/graph/multi.py: 변이 전 [659 passed in 80.30s (0:01:20)] / 변이 뒤 [20 failed, 639 passed in 100.65s (0:01:40)] -> 잡음
+21 rc=0 :: 21 backend/graph/grounding.py: 변이 전 [3 passed in 0.44s] / 변이 뒤 [1 failed, 2 passed in 1.16s] -> 잡음
+22 rc=0 :: 22 backend/graph/grounding.py: 변이 전 [172 passed in 18.67s] / 변이 뒤 [3 failed, 169 passed in 16.52s] -> 잡음
+23 rc=0 :: 23 backend/graph/grounding.py: 변이 전 [761 passed in 79.94s (0:01:19)] / 변이 뒤 [1 failed, 760 passed in 82.57s (0:01:22)] -> 잡음
+24 rc=0 :: 24 backend/graph/build.py: 변이 전 [6 passed in 3.38s] / 변이 뒤 [6 failed in 4.79s] -> 잡음
+25 rc=0 :: 25 backend/rag/retrieve/search.py: 변이 전 [6 passed in 1.11s] / 변이 뒤 [2 failed, 4 passed in 0.69s] -> 잡음
+26 rc=0 :: 26 backend/graph/recall/digest.py: 변이 전 [4 passed in 0.29s] / 변이 뒤 [1 failed, 3 passed in 0.37s] -> 잡음
+27 rc=0 :: 27 backend/graph/recall/digest.py: 변이 전 [4 passed in 0.18s] / 변이 뒤 [1 failed, 3 passed in 0.39s] -> 잡음
+28 rc=0 :: 28 backend/graph/recall/impact.py: 변이 전 [9 passed in 2.80s] / 변이 뒤 [1 failed, 8 passed in 3.85s] -> 잡음
+29 rc=0 :: 29 backend/graph/recall/impact.py: 변이 전 [9 passed in 3.14s] / 변이 뒤 [1 failed, 8 passed in 3.16s] -> 잡음
+30 rc=0 :: 30 backend/graph/recall/impact.py: 변이 전 [9 passed in 2.66s] / 변이 뒤 [2 failed, 7 passed in 3.01s] -> 잡음
+31 rc=0 :: 31 evals/retrieval/experiment_v1.py: 변이 전 [3 passed in 0.51s] / 변이 뒤 [2 failed, 1 passed in 0.60s] -> 잡음
+32 rc=0 :: 32 backend/services/auth_store.py: 변이 전 [2 passed in 9.24s] / 변이 뒤 [1 failed, 1 passed in 10.02s] -> 잡음
+33 rc=0 :: 33 backend/services/auth_store.py: 변이 전 [2 passed in 11.38s] / 변이 뒤 [1 failed, 1 passed in 10.49s] -> 잡음
