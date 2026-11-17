@@ -16,8 +16,9 @@
 | approval_pending | 409 | 승인 대기 중인 thread에 새 질문 |
 | not_approved | 409 | 승인되지 않은 결정표 실행 (결정표 라우트가 아래 규칙으로 낸다, `backend/graph/decision/rules.py`) |
 | signup_unverified | 403 | 이메일 인증을 마치지 않은 가입 신청으로 로그인(`backend/auth.py`, 이어하기 안내) |
-| rate_limited | 429 | 로그인 시도 제한 |
+| rate_limited | 429 | 로그인 시도 제한. `/mcp/`의 외부 토큰(`MCP_EXTERNAL_TOKEN`) 호출 수 제한도 같은 코드를 쓰며, 이때 본문은 MCP 앱의 401과 같은 꼴인 `{"error": "rate_limited", "error_description": ...}`이고 `Retry-After`가 붙는다(`extras/mcp_skill/mcp_server/server.py`) |
 | limit_exceeded | 429 | LLM 비용 상한 초과 (SSE `error` 이벤트의 data.code도 같은 값) |
+| daily_limit | 429 | 사용자별 하루 질문 한도 초과(`POST /chat`, `DAILY_QUESTION_LIMIT` 기본 50, KST 자정 기준, `backend/api/daily_limit.py`). `Retry-After`(다음 KST 자정까지 초)와 `details`(`limit`, `used`, `resets_at`)가 붙는다 |
 | not_configured | 503 | 서버 설정이나 저장소를 쓸 수 없음 |
 | internal_error | 500 | 예상 못 한 오류(내용은 로그에만) |
 | provider_limit | - | LLM 제공자의 요청 한도(429)·잔액 부족 (SSE `error` 이벤트의 data.code만, `backend/api/routes.py`의 `chat_error`) |

@@ -56,6 +56,8 @@
 | `error` | 오류 상태로 처리하고 `data.code`(`limit_exceeded`, `provider_limit`, `timeout`, `internal_error`)를 메시지에 담는다. 서버 안내 `data.message`와 "다시 시도" 버튼을 보이며, `message`가 없으면 코드별 기본 안내를 쓴다 |
 | `done` | 기본 상태는 `done`, `data.code === "no_results"`이면 `no-evidence`로 처리하고 `data.refuse_reason`(거절 사유 코드)을 메시지에 담는다. 사유가 근거 부족(`no_evidence`, `unsupported`, `citation_check`)일 때만 "질문을 더 구체적으로 쓰거나 다른 표현으로 다시 물어봐 주세요." 안내를 붙인다(H-34. 대화 이력의 거절 답도 `refuse_reason`으로 같게 판정, 사유가 없으면 붙이지 않음); attribution이 있으면 기존 citation과 중복 없이 출처에 반영; `data.understood_question`(문자열)이 있으면 그 답 위에 "이렇게 이해했습니다: …" 한 줄을 표시(D-14, 2026-11-15) |
 
+스트림이 시작되기 전의 HTTP 오류(409 `approval_pending`, 429 `daily_limit` 등)는 서버 본문의 `error.message`를 그대로 오류 말풍선(대화가 없으면 입력창 위 안내)에 보인다. 하루 질문 한도(429 `daily_limit`)는 "오늘 질문 한도(50건)를 넘었습니다. 내일 다시 이용해 주세요."이고, `Retry-After` 초는 붙이지 않는다(`web/react-app/src/lib/api.js`, 시험 `api.test.js`).
+
 위 표는 현재 프론트 구현의 처리 기준이다. 백엔드가 각 이벤트의 정확한 `data` 중첩 위치, attribution의 상세 타입, 승인 완료·거절 이벤트를 공식적으로 확정했는지는 확인해야 한다. 이벤트 `data` 구조는 `docs/SDD.md` 6장 표(`backend/api/routes.py`·`backend/graph/stream.py`)가 정본이다.
 
 ### Edge Cases

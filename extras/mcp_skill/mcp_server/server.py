@@ -12,15 +12,21 @@
 에이전트가 다음 행동을 고를 수 있게 status와 retryable을 따로 둔다(Spec How 1).
 
 연결: backend/main.py가 MCP_TOKEN이 있을 때만 `/mcp`에 mcp_http_app()을 붙인다. 인증은 Bearer 헤더 하나(정적 토큰).
+토큰은 둘로 나눈다: 내부 `MCP_TOKEN`(서비스 자신의 검색, 제한 없음)과 선택인 외부 `MCP_EXTERNAL_TOKEN`(분당·하루 호출 수 제한, 넘으면 429).
 로컬 확인(stdio, 인증 없음 — 내 PC에서만): python -m extras.mcp_skill.mcp_server.server
 """
 from __future__ import annotations
 
 import asyncio
 import hmac
+import json
 import logging
+import math
 import os
 import threading
+import time
+from collections import deque
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Literal
 
 from fastmcp import FastMCP
@@ -370,25 +376,169 @@ def build_server(search_fn=None, section_store=None, changes_store=None, auth: T
 
 # ---------- HTTP 연결 (backend/main.py) ----------
 
-class BearerTokenVerifier(TokenVerifier):
-    """정적 토큰 하나. 비교는 hmac.compare_digest(글자 수가 같을 때 시간 차로 토큰을 알아내지 못하게)."""
+INTERNAL_CLIENT = "provena-mcp"              # MCP_TOKEN: 서비스 자신(SEARCH_VIA_MCP)이 쓰는 내부 토큰, 호출 수 제한 없음
+EXTERNAL_CLIENT = "provena-mcp-external"     # MCP_EXTERNAL_TOKEN: 외부 MCP 클라이언트용 토큰, 분당·하루 호출 수 제한
+DEFAULT_EXTERNAL_RATE_PER_MIN = 30
+DEFAULT_EXTERNAL_RATE_PER_DAY = 500
+KST = timezone(timedelta(hours=9), "KST")
 
-    def __init__(self, token: str):
+
+class BearerTokenVerifier(TokenVerifier):
+    """정적 토큰 둘(내부 `MCP_TOKEN`, 선택인 외부 `MCP_EXTERNAL_TOKEN`). 비교는 hmac.compare_digest(글자 수가 같을 때 시간 차로
+    토큰을 알아내지 못하게). 외부 토큰이 있으면 두 토큰과 늘 비교해 어느 쪽이 맞았는지가 시간 차로 드러나지 않게 한다."""
+
+    def __init__(self, token: str, external_token: str | None = None):
         super().__init__()
         self._token = token.encode("utf-8")
+        self._external = (external_token or "").encode("utf-8")
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        if token and hmac.compare_digest(token.encode("utf-8"), self._token):
-            return AccessToken(token="", client_id="provena-mcp", scopes=[])
+        if not token:
+            return None
+        got = token.encode("utf-8")
+        internal = hmac.compare_digest(got, self._token)
+        external = hmac.compare_digest(got, self._external) if self._external else False
+        if internal:
+            return AccessToken(token="", client_id=INTERNAL_CLIENT, scopes=[])
+        if external:
+            return AccessToken(token="", client_id=EXTERNAL_CLIENT, scopes=[])
         return None
 
 
-def mcp_http_app(token: str | None = None, **deps):
-    """MCP_TOKEN(또는 token)이 있으면 Streamable HTTP 앱, 비어 있으면 None(EC-10). path="/" — main.py가 /mcp에 붙인다."""
+def _rate_env(name: str, default: int) -> int:
+    """0 이상의 정수. 0이면 그 창은 제한하지 않는다. 비었거나 틀린 값은 기본값(경고 로그)."""
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = -1
+    if value < 0:
+        log.warning("%s 값이 0 이상의 정수가 아니어서 기본값 %d을 씁니다", name, default)
+        return default
+    return value
+
+
+class ExternalRateLimiter:
+    """외부 토큰의 도구 호출 수 제한. 분당은 지난 60초 창, 하루는 KST 자정 기준이다.
+    세는 곳은 프로세스 메모리라 인스턴스마다 따로 세고 재시작하면 0부터 다시 센다(docs/specs/mcp.md 열린 항목 5:
+    이 값을 둘 싼 DB 표가 없어 메모리로 둔다. 운영은 최대 인스턴스 1개라 사실상 서비스 전체 값이다)."""
+
+    def __init__(self, per_min: int, per_day: int, clock: Callable[[], float] = time.time):
+        self.per_min, self.per_day, self._clock = per_min, per_day, clock
+        self._lock = threading.Lock()
+        self._minute: deque[float] = deque()
+        self._day: date | None = None
+        self._day_count = 0
+
+    def try_acquire(self, n: int = 1) -> tuple[str, int] | None:
+        """n번 호출을 셀 수 있으면 세고 None. 넘으면 세지 않고 (창 이름 "minute"|"day", 다시 시도할 수 있는 초)."""
+        now = self._clock()
+        with self._lock:
+            today = datetime.fromtimestamp(now, KST).date()
+            if today != self._day:
+                self._day, self._day_count = today, 0
+            while self._minute and self._minute[0] <= now - 60:
+                self._minute.popleft()
+            if self.per_day and self._day_count + n > self.per_day:
+                midnight = datetime.combine(today + timedelta(days=1), datetime.min.time(), KST)
+                return "day", max(1, math.ceil(midnight.timestamp() - now))
+            if self.per_min and len(self._minute) + n > self.per_min:
+                oldest = self._minute[0] if self._minute else now
+                return "minute", max(1, math.ceil(oldest + 60 - now))
+            self._minute.extend([now] * n)
+            self._day_count += n
+            return None
+
+
+def _tool_calls(body: bytes) -> int:
+    """JSON-RPC 본문 속 `tools/call` 수(묶음 요청이면 그 안의 수). 읽지 못하면 0 — 그런 요청은 MCP 서버가 오류로 돌려준다."""
+    try:
+        msg = json.loads(body or b"null")
+    except (ValueError, UnicodeDecodeError):
+        return 0
+    items = msg if isinstance(msg, list) else [msg]
+    return sum(1 for m in items if isinstance(m, dict) and m.get("method") == "tools/call")
+
+
+def _limit_message(window: str, limiter: ExternalRateLimiter, retry_after: int) -> str:
+    if window == "day":
+        return f"외부 MCP 호출 한도(하루 {limiter.per_day}회)를 넘었습니다. 내일(KST 0시 이후) 다시 이용해 주세요."
+    return f"외부 MCP 호출 한도(분당 {limiter.per_min}회)를 넘었습니다. {retry_after}초 뒤 다시 시도해 주세요."
+
+
+class ExternalRateLimitMiddleware:
+    """외부 토큰으로 온 POST의 `tools/call`만 센다(initialize·tools/list는 비용이 없어 세지 않는다). 내부 토큰과 그 밖의 요청은
+    그대로 넘긴다. 넘으면 429 + `Retry-After`. 본문 모양은 /mcp의 401(`{"error": "invalid_token", "error_description": ...}`)과 같은 꼴로
+    `{"error": "rate_limited", "error_description": ...}`이다(코드 이름은 backend/api/errors.py 표의 `rate_limited`)."""
+
+    def __init__(self, app, external_token: str, limiter: ExternalRateLimiter):
+        self.app = app
+        self._expected = f"Bearer {external_token}".encode("utf-8")
+        self.limiter = limiter
+
+    def _is_external(self, scope) -> bool:
+        for key, value in scope.get("headers") or ():
+            if key == b"authorization":
+                return hmac.compare_digest(value.strip(), self._expected)
+        return False
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http" or scope.get("method") != "POST" or not self._is_external(scope):
+            await self.app(scope, receive, send)
+            return
+        chunks, more = [], True
+        while more:
+            message = await receive()
+            if message["type"] != "http.request":          # 끊김(http.disconnect)은 그대로 넘긴다
+                await self.app(scope, _replay([], message, receive), send)
+                return
+            chunks.append(message.get("body", b""))
+            more = message.get("more_body", False)
+        body = b"".join(chunks)
+        calls = _tool_calls(body)
+        over = self.limiter.try_acquire(calls) if calls else None
+        if over is not None:
+            window, retry_after = over
+            log.info("외부 MCP 호출 한도 window=%s calls=%d", window, calls)
+            payload = json.dumps({"error": "rate_limited", "error_description": _limit_message(window, self.limiter, retry_after)},
+                                 ensure_ascii=False).encode("utf-8")
+            await send({"type": "http.response.start", "status": 429,
+                        "headers": [(b"content-type", b"application/json; charset=utf-8"),
+                                    (b"content-length", str(len(payload)).encode()),
+                                    (b"retry-after", str(retry_after).encode())]})
+            await send({"type": "http.response.body", "body": payload})
+            return
+        await self.app(scope, _replay([{"type": "http.request", "body": body, "more_body": False}], None, receive), send)
+
+
+def _replay(first: list[dict], tail: dict | None, receive):
+    """이미 읽은 본문을 한 번 다시 내주고, 그다음부터는 원래 receive를 쓴다."""
+    queue = list(first) + ([tail] if tail else [])
+
+    async def again():
+        return queue.pop(0) if queue else await receive()
+    return again
+
+
+def mcp_http_app(token: str | None = None, external_token: str | None = None, **deps):
+    """MCP_TOKEN(또는 token)이 있으면 Streamable HTTP 앱, 비어 있으면 None(EC-10). path="/" — main.py가 /mcp에 붙인다.
+    MCP_EXTERNAL_TOKEN(또는 external_token)이 있으면 그 토큰도 받고 호출 수를 제한한다(MCP_EXTERNAL_RATE_PER_MIN 기본 30,
+    MCP_EXTERNAL_RATE_PER_DAY 기본 500). 비어 있으면 외부 토큰이 없을 뿐 MCP_TOKEN은 전과 같다."""
     token = os.getenv("MCP_TOKEN", "") if token is None else token
     if not token.strip():
         return None
-    return build_server(auth=BearerTokenVerifier(token.strip()), **deps).http_app(path="/", stateless_http=True)
+    external = (os.getenv("MCP_EXTERNAL_TOKEN", "") if external_token is None else external_token).strip()
+    if external and hmac.compare_digest(external.encode("utf-8"), token.strip().encode("utf-8")):
+        log.warning("MCP_EXTERNAL_TOKEN이 MCP_TOKEN과 같아 외부 토큰을 쓰지 않습니다(같은 값이면 제한을 걸 수 없음)")
+        external = ""
+    app = build_server(auth=BearerTokenVerifier(token.strip(), external or None), **deps).http_app(path="/", stateless_http=True)
+    if external:
+        limiter = ExternalRateLimiter(_rate_env("MCP_EXTERNAL_RATE_PER_MIN", DEFAULT_EXTERNAL_RATE_PER_MIN),
+                                      _rate_env("MCP_EXTERNAL_RATE_PER_DAY", DEFAULT_EXTERNAL_RATE_PER_DAY))
+        app.add_middleware(ExternalRateLimitMiddleware, external_token=external, limiter=limiter)
+    return app
 
 
 if __name__ == "__main__":

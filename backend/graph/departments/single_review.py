@@ -201,11 +201,14 @@ def _single_call(llm, config, system: str, user: str, sections, public_of: dict,
     """모델을 최대 `TEAM_ATTEMPTS`번 부르고 `results`(팀 -> 결과)를 채운다. 되물을 값이 있으면 `clarify`를 돌려주고 `results["_missing"]`에 문장을 둔다."""
     from langchain_core.messages import HumanMessage, SystemMessage
 
+    from backend.services.llm import task_max_tokens
+
     failure = "모델 응답을 읽지 못했습니다."
     note = ""
+    limit = task_max_tokens("single")   # 이 호출만 출력 상한 4000(`TASK_MAX_TOKENS`). 사용자 경로는 `LLM_MAX_TOKENS`(기본 2500) 그대로
     for attempt in range(1, R.TEAM_ATTEMPTS + 1):
         try:
-            text = llm.invoke([SystemMessage(content=system), HumanMessage(content=user + note)], config=config)
+            text = llm.invoke([SystemMessage(content=system), HumanMessage(content=user + note)], config=config, max_tokens=limit)
         except Exception as e:  # noqa: BLE001
             if type(e).__name__ == "CostCapExceeded":
                 raise

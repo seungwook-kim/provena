@@ -24,6 +24,7 @@
   - `list_changed_sections`를 불러도 `changed_articles`가 바뀌지 않는다(호출 전후 표 지문이 같음).
   - 빈 결과·틀린 입력·DB 끊김을 각각 다른 `status`로 돌려준다.
   - `MCP_TOKEN`이 비어 있으면 `/mcp`가 열리지 않고, 토큰 없이 부르면 401.
+  - 토큰은 둘로 나눈다(2026-11-17): 서비스 자신의 검색(`SEARCH_VIA_MCP`)이 쓰는 내부 토큰 `MCP_TOKEN`은 호출 수 제한이 없고, 외부 MCP 클라이언트용 `MCP_EXTERNAL_TOKEN`(선택)으로 온 `tools/call`은 분당 `MCP_EXTERNAL_RATE_PER_MIN`(기본 30)·하루 `MCP_EXTERNAL_RATE_PER_DAY`(기본 500, KST 자정 기준)를 넘으면 429.
   - 외부 MCP 클라이언트 하나(Claude Code)에서 `search_handbook` 결과가 나온다(SDD 10장 "MCP 경로 결과 일치", 시연 영상용).
 - **Out of Scope**: 그래프 쪽 MCP 클라이언트와 `SEARCH_VIA_MCP` 스위치(김승욱, SDD 2-3절), 런타임 Skill과 Skill 유무 점수 비교(김승욱), 운영용 OAuth, MCP resource·prompt, 인젝션 시험(D7 인젝션 시험 문서에서)
 
@@ -52,7 +53,8 @@
 | EC-07 | 마지막 성공 실행이 `list_complete=false`(삭제 보류) | 결과는 그대로 주고 `list_complete=false`를 응답에 표시한다. 사라진 섹션이 목록에 아직 없을 수 있다 |
 | EC-08 | `as_of`가 가장 이른 판보다 앞 | `not_found`(그날 판 없음). 가장 가까운 판으로 바꾸지 않는다 |
 | EC-09 | 토큰 없음·틀림·URL 쿼리로 보냄 | 401. 쿼리 토큰은 받지 않는다 |
-| EC-10 | `MCP_TOKEN` 빈 값 | `/mcp`를 붙이지 않는다(정적 파일 쪽으로 넘어가 404·405). 앱의 나머지는 그대로 뜬다 |
+| EC-10 | `MCP_TOKEN` 빈 값 | `/mcp`를 붙이지 않는다(정적 파일 쪽으로 넘어가 404·405). 앱의 나머지는 그대로 뜬다. `MCP_EXTERNAL_TOKEN`만 있어도 열지 않는다 |
+| EC-17 | 외부 토큰(`MCP_EXTERNAL_TOKEN`)으로 온 `tools/call`이 분당·하루 한도를 넘음 | 429 + `Retry-After`(분 창은 남은 초, 하루 창은 다음 KST 자정까지 초), 본문 `{"error": "rate_limited", "error_description": <한국어 안내>}`(401 본문과 같은 꼴). 넘은 호출은 세지 않는다. `initialize`·`tools/list`는 세지 않고, 묶음 요청은 그 안의 `tools/call` 수만큼 센다. 내부 토큰 `MCP_TOKEN`은 세지 않는다. 외부 토큰이 비면 외부 토큰이 없을 뿐 `MCP_TOKEN`은 전과 같고, 두 값이 같으면 외부 토큰을 쓰지 않는다(경고 로그) |
 | EC-11 | 비공개 주소(`internal.gitlab.com`)가 본문에 있는 청크 | 파싱은 표 칸 글자가 모두 비공개 주소 링크면 그 칸 번호만 기록하고 글자는 바꾸지 않는다(`parse.private_cell`이 판정하고 `parse.table_rows`가 `private_cells`에 기록). 공개 핸드북 본문에도 그 링크가 남아 있다(스냅샷 23,095청크 중 7개). `rule_title`·`article`·`source_url`에는 0개(11/4 스냅샷 전수). 도구가 내보낼 때 `text`·`source_url`과 `get_section`의 섹션 이름 후보(`note`)에서 링크·주소를 `[비공개 문서]`로 바꾼다(SDD 2-3절·9장). 검색 순위·섹션 지문 검사는 바꾸기 전 글로 한다. 가리는 함수는 그래프와 같은 `backend/rag/retrieve/privacy.py`의 `redact`를 쓴다 |
 | EC-12 | 검색이 번역 실패 등으로 내려감 | `status=ok` + `note`에 `fallback_reason` |
 | EC-13 | 쪽 통째 삭제(새 판 없음) | `changed_articles.new_version_date`가 빈 칸이다(`diff.py`). `since`와 비교할 날짜는 그 줄을 적은 날(`created_at`, UTC)로 본다. 안 그러면 사라진 쪽이 목록에 영영 안 나온다 |
@@ -94,14 +96,18 @@
 **4. 연결과 인증** (`backend/main.py` 몇 줄 — 김승욱 폴더라 리뷰 필요)
 
 - `MCP_TOKEN`이 있을 때만 `app.mount("/mcp", mcp.http_app(path="/", stateless_http=True))`. MCP 앱의 lifespan을 앱 lifespan과 합친다.
-- 인증은 Bearer 헤더 하나(정적 토큰. 코퍼스가 공개 핸드북이고 도구가 읽기 전용이라 이번 범위는 이것으로 한다. 운영 OAuth는 Out of Scope). fastmcp `StaticTokenVerifier`는 사전 찾기로 비교해서, 같은 일을 하되 `hmac.compare_digest`로 비교하는 `BearerTokenVerifier`(10줄)를 `server.py`에 둔다.
+- 인증은 Bearer 헤더 하나(정적 토큰. 코퍼스가 공개 핸드북이고 도구가 읽기 전용이라 이번 범위는 이것으로 한다. 운영 OAuth는 Out of Scope). fastmcp `StaticTokenVerifier`는 사전 찾기로 비교해서, 같은 일을 하되 `hmac.compare_digest`로 비교하는 `BearerTokenVerifier`를 `server.py`에 둔다. 외부 토큰이 있으면 두 토큰과 늘 비교해 어느 쪽이 맞았는지가 시간 차로 드러나지 않게 한다.
+- 외부 토큰 호출 수 제한(`ExternalRateLimiter`, `ExternalRateLimitMiddleware`, `server.py`): MCP 앱 안쪽 미들웨어가 Authorization 헤더를 `hmac.compare_digest`로 외부 토큰과 비교하고, 맞으면 POST 본문의 JSON-RPC `tools/call` 수를 센다. 분당은 지난 60초 창, 하루는 KST 자정 기준이다. 세는 곳은 프로세스 메모리라 인스턴스마다 따로 세고 재시작하면 0부터 다시 센다. 하루 수를 둘 싼 DB 표가 없어(새 표는 마이그레이션이 필요) 메모리로 두었고, 운영은 최대 인스턴스 1개라 사실상 서비스 전체 값이다.
 - 같은 컨테이너 안 그래프가 부를 때 주소는 `http://127.0.0.1:8000/mcp/`. 다른 compose 서비스에서 부르면 서비스 이름(`http://api:8000/mcp/`).
 
 **환경 변수**
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `MCP_TOKEN` | (빈 값) | 비면 `/mcp`를 열지 않는다. `.env`에만 두고 `.env.example`에는 이름만 |
+| `MCP_TOKEN` | (빈 값) | 비면 `/mcp`를 열지 않는다. 서비스 내부 검색용, 호출 수 제한 없음. `.env`에만 두고 `.env.example`에는 이름만 |
+| `MCP_EXTERNAL_TOKEN` | (빈 값) | 외부 MCP 클라이언트용 토큰. 비면 외부 토큰이 없다. `MCP_TOKEN`과 다른 값이어야 한다. `.env`에만 |
+| `MCP_EXTERNAL_RATE_PER_MIN` | 30 | 외부 토큰의 지난 60초 `tools/call` 수 상한. 0이면 이 창은 제한 없음, 틀린 값은 기본값 |
+| `MCP_EXTERNAL_RATE_PER_DAY` | 500 | 외부 토큰의 KST 하루 `tools/call` 수 상한. 0이면 이 창은 제한 없음, 틀린 값은 기본값 |
 | `DATABASE_URL` | (기존) | 검색과 같은 DB |
 
 **파일**
@@ -126,7 +132,7 @@
 2. ~~순서~~ 정함(11/3): 함수와 서버를 한 PR로 같이 낸다(11/6 가산 판단을 기다리지 않음)
 3. `Section`을 계약 밖 모델로 둘지 (위 How 1)
 4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다. 2026-11-16 운영 반영 뒤 컨테이너 접근 로그로 MCP 호출을 확인했고, 같은 날 운영 Langfuse 트레이스에서 MCP 도구 `search_handbook` 관측이 보이는 것을 확인했다(`EVAL_REPORT.md` 7장 그림 5, 6, 판 `provena-api-00065-q84`)
-5. 배포 호출 제한(#45 리뷰): **정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
+5. 배포 호출 제한(#45 리뷰): **구현(2026-11-17, 운영 배포 전).** 토큰을 내부 `MCP_TOKEN`(서비스 자신, 제한 없음)과 외부 `MCP_EXTERNAL_TOKEN`(선택, 분당 30회·하루 500회, 넘으면 429)으로 나눴다(EC-17, AC-11, `tests/test_mcp_external_rate.py`). 운영에 쓰려면 외부 토큰 비밀값을 따로 만들어 `MCP_EXTERNAL_TOKEN`으로 연결해야 하고, 외부 클라이언트에는 그 값만 준다. 남은 한계: 분당·하루 수는 프로세스 메모리에서 세므로 인스턴스를 늘리면 인스턴스마다 따로 세고 재시작하면 0부터 다시 센다. 내부 토큰이 새면 제한 없이 부를 수 있는 것은 전과 같다(토큰을 바꿔 막는다). **이전 정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다. 확정: `/mcp`는 로그인 쿠키·CSRF 대상이 아니고 Bearer 토큰만 본다(`backend/main.py`의 `api_prefixes`에 `mcp`)
 
 7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
@@ -230,6 +236,11 @@
 - WHEN: 헤더 없이, 틀린 토큰으로, URL 쿼리(`?token=abc`)로 `/mcp`를 부른다 / 빈 앱의 `/mcp`를 부른다
 - THEN: 세 경우 모두 401 / MCP 응답이 아니다(정적 파일 쪽으로 넘어가 404·405)
 - 운영 확인(2026-11-16): 최종 운영 배포판 `provena-api-00065-q84`에서 토큰 없이 `/mcp/` 호출 401(`evals/results/mcp_prod_20261116/`)
+
+**AC-11 · 외부 토큰만 호출 수를 제한한다 (EC-17, `tests/test_mcp_external_rate.py`)**
+- GIVEN: `MCP_TOKEN=inside`, `MCP_EXTERNAL_TOKEN=outside`인 앱 / 외부 토큰이 빈 앱
+- WHEN: 틀린 토큰으로 부른다 / 내부 토큰으로 `tools/call`을 한도보다 많이 보낸다 / 외부 토큰으로 분당·하루 한도를 넘겨 보낸다 / 외부 토큰이 빈 앱에 `outside`로 부른다
+- THEN: 401 / 모두 200 / 한도까지 200, 그다음 429(`rate_limited`, `Retry-After`), `initialize`·`tools/list`와 내부 토큰은 그대로 200 / 401이고 `MCP_TOKEN`은 전과 같이 제한 없이 200
 
 **AC-09 · 비공개 주소를 내보내지 않는다**
 - GIVEN: 적재된 DB

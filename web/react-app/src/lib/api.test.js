@@ -189,4 +189,20 @@ describe('rate limit message', () => {
     const error = await apiJson('/anything').catch(caught => caught)
     expect(error.message).toBe('요청이 너무 많습니다.')
   })
+
+  // 하루 질문 한도(backend/api/daily_limit.py): 서버 문구를 그대로 보이고, 다음 자정까지의 초는 붙이지 않는다
+  it('shows the daily question limit message as is', async () => {
+    const message = '오늘 질문 한도(50건)를 넘었습니다. 내일 다시 이용해 주세요.'
+    document.cookie = 'provena_csrf=csrf-token'
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: message, error: { code: 'daily_limit', message } }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '43200' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const error = await streamChatMessage(null, '질문').catch(caught => caught)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(429)
+    expect(error.code).toBe('daily_limit')
+    expect(error.message).toBe(message)
+    expect(fetchMock.mock.calls.at(-1)[0]).toContain('/chat')
+  })
 })
