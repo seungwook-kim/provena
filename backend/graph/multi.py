@@ -42,6 +42,7 @@ from typing import Any, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables.config import ensure_config, var_child_runnable_config
+from langgraph.constants import CONF, CONFIG_KEY_CHECKPOINTER
 from langgraph.graph import END, START, StateGraph
 from langgraph.store.memory import InMemoryStore
 
@@ -325,7 +326,10 @@ def _agent_node(spec: AgentSpec, agent: Any) -> Callable[[dict], dict]:
             kind_node = _kind_node(spec.name, out, None)
         else:   # 단일 그래프의 노드로 된 에이전트: 결과는 `invoke`와 같고, 어느 노드가 결과 종류를 썼는지도 읽는다
             out = dict(view)
-            for mode, chunk in agent.stream(view, stream_mode=["updates", "values"]):
+            # 바깥 그래프의 체크포인터를 물려받았으면 에이전트 안의 단계 체크포인트는 끝날 때만 남긴다(`durability="exit"`). 단계마다 DB에 쓰던 왕복이 빠진다.
+            # 에이전트 안에는 interrupt가 없고(합동 검토는 위 갈래), 끊기면 에이전트를 처음부터 다시 돈다. 체크포인터가 없으면 넘기지 않는다(langgraph가 효과 없다고 경고한다)
+            opts = {"durability": "exit"} if ensure_config().get(CONF, {}).get(CONFIG_KEY_CHECKPOINTER) is not None else {}
+            for mode, chunk in agent.stream(view, stream_mode=["updates", "values"], **opts):
                 if mode == "values":
                     out = chunk
                 elif isinstance(chunk, dict):

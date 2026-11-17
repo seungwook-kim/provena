@@ -165,7 +165,7 @@
 
 **`get_agent_trace(thread_id)`** (`trace_tool.py`)
 - Langfuse trace_id가 아니라 대화 `thread_id`로 LangGraph 체크포인트를 읽는다(조장 지시). 체크포인터의 `list()`만 부르고 쓰지 않는다.
-- 체크포인트 모양(실측, 메모리 체크포인터로 실제 그래프를 돌려 확인): 바깥 그래프는 `checkpoint_ns=""`, 하위 그래프는 `"<노드>:<task id>"`(질문 그래프의 합동 검토 `review:…`, 멀티 그래프의 `retriever:…`·`writer:…`·`verifier:…`). 합동 검토 그래프를 단독으로 돌리면 검토 상태가 `""`에 있다. 하위 그래프 체크포인트 metadata `parents[""]`가 바깥 체크포인트 id다. metadata에는 `step`·`source`·`parents`만 있어 돈 노드는 앞뒤 체크포인트의 `versions_seen` 차이로 읽는다.
+- 체크포인트 모양(실측, 메모리 체크포인터로 실제 그래프를 돌려 확인): 바깥 그래프는 `checkpoint_ns=""`, 하위 그래프는 `"<노드>:<task id>"`(질문 그래프의 합동 검토 `review:…`). 멀티 그래프의 하위 에이전트(`retriever`·`writer`·`verifier`·`decision`)는 체크포인트를 끝날 때만 남기므로(`backend/graph/multi.py` `durability="exit"`) 하위 이름공간에 단계 체크포인트가 없고, 멀티 그래프 질문의 단계는 바깥 그래프의 `supervisor`와 에이전트 단위로만 보인다(에이전트 안의 `rewrite`·`search`·`judge` 등은 보이지 않는다). 합동 검토 그래프를 단독으로 돌리면 검토 상태가 `""`에 있다. 하위 그래프 체크포인트 metadata `parents[""]`가 바깥 체크포인트 id다. metadata에는 `step`·`source`·`parents`만 있어 돈 노드는 앞뒤 체크포인트의 `versions_seen` 차이로 읽는다.
 - 출력(마지막 실행 하나): 돈 노드 순서와 단계별 시각·걸린 시간(같은 그래프의 앞 체크포인트 `ts`와의 차이, 사람 승인을 기다린 단계는 `includes_human_wait`), `route`, 멀티 그래프의 `agent_trace`·`supervisor_log`(after·to·closed_by만), 합동 검토 `review_status`·팀별 상태와 시도 횟수·실패한 팀 id, 승인 대기 여부(`__interrupt__`가 있고 `__resume__`이 없음), `stopped_on_error`, 이 thread의 실행 수. `cost_usd`는 null(체크포인트에 비용 칸이 없고, `llm_trace.py`는 서비스 경로에서 켜지 않는다). 최신 체크포인트 200개까지 읽고 넘으면 `complete=false`.
 - 내보내지 않음: 질문·답, user_id, 검색 청크, 쟁점표 행, 사람 결정의 comment·decided_by, 팀 결과의 rows·reason, Supervisor 지시 글. 칸을 지우지 않고 고른 칸만 옮긴다(이름은 식별자 모양만, 상태는 코드가 정한 값만).
 - thread_id: 1~200자, 제어 문자 없음. 형식이 정해진 곳이 없어(SDD `/chat` `{thread_id, message}`) 길이만 막는다.
@@ -194,7 +194,7 @@
 **AC-T1 · 체크포인트 단계와 상태** (`tests/test_mcp_trace_tool.py`)
 - GIVEN: 가짜 모델로 돌린 질문 그래프+합동 검토 하위 그래프 / 합동 검토 단독(팀 실패) / 멀티 그래프, 메모리 체크포인터
 - WHEN: 그 thread_id로 `get_agent_trace`
-- THEN: 돈 노드 순서, 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
+- THEN: 돈 노드 순서(멀티 그래프는 `supervisor`와 에이전트 단위), 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
 
 **AC-G1 · 근거 판정 기록은 고른 칸만** (`tests/test_mcp_new_tools.py`)
 - GIVEN: 답 하나와 판정 기록(초안·뺀 문장·판정 이유 문장 포함)을 저장한 메모리 답 저장소
