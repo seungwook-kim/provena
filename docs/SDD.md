@@ -306,7 +306,7 @@ flowchart TD
 | Supervisor, 팀 에이전트 | Supervisor는 없음(코드 라우팅, 결정 0055. LLM 방식은 스위치로 비교, 결정 0063), 팀 에이전트는 있음 | 가이드 G4 최소형(Supervisor + 하위 에이전트 2개 이상)을 만족한다. 팀 에이전트마다 자기 팀 Skill(`security`, `infra`, `itops`, `finance`)을 쓴다. 합동 검토 Supervisor의 팀 선택(`REVIEW_TEAM_SELECT`)은 서비스 설정에서 켠다(main 코드 기준, 서비스 판 반영 전(배포 예정), 코드 기본 꺼짐, 키 없는 데모 끔, 사전 등록 62.82·62.83, 2026-11-17 팀장 결정): 같은 날 같은 로컬 측정기로 켬·끔 각 3회를 잰 정답 쟁점 누락률 평균은 켬 0.622(0.568~0.676), 끔 0.649(0.595~0.703)이고 문항당 비용은 0.00279 대 0.00317달러다(회별 범위가 차이보다 커서 차이는 단정하지 않음, `evals/results/review_team_select_3run_20261117/`). 운영 기준 0.577은 다른 경로의 값이다(`docs/specs/team-review.md`) |
 | 사람 승인 | 없음 | interrupt로 멈추고 `resume()`으로 이어 간다 |
 
-**단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`backend/graph/build.py`의 `build_graph`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다(`backend/graph/multi.py`의 `build_multi_graph`, 단일 그래프의 노드를 다시 배선). 서비스 `/chat`은 단일 그래프를 쓰고 멀티는 측정·시험에서만 쓴다. 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
+**단일 대 멀티 (가이드 p.7, p.17):** 위 그림의 정책 질문 경로는 두 가지로 만든다. 단일은 한 그래프가 검색 → 작성 → 검증을 순서대로 하고(`backend/graph/build.py`의 `build_graph`), 멀티는 Supervisor가 검색·작성·검증 하위 에이전트를 불러 같은 일을 나눠 한다(`backend/graph/multi.py`의 `build_multi_graph`, 단일 그래프의 노드를 다시 배선). 서비스 `/chat`은 스위치 `QUESTION_GRAPH_MODE`로 둘 중 하나를 고르며, 서비스 값은 멀티(`multi`, 코드 라우팅)이고 코드 기본은 단일(`single`)이다(2026-11-17 팀장 결정, `backend/main.py`의 `build_question_graph`). 멀티는 단일 그래프의 노드와 분기 함수를 그대로 꺼내 쓰므로 입력·출력 방어, 결정표, 합동 검토와 승인 재개, 체크포인트, 비용 상한, 하루 질문 한도, 단계별 비용 이름이 단일과 같다(대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`). 같은 평가셋(정책 질문 전체)으로 두 경로를 비교한다. 합동 검토는 그와 별도인 시연 경로다.
 
 **체크포인트와 재시작:** 체크포인터는 Postgres에 둔다. 사람 승인(interrupt)에서 멈춘 뒤 서버를 재시작해도 같은 `thread_id`로 승인 지점부터 재개되는지 시험한다(가이드 p.7, p.22).
 

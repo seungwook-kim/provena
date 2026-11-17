@@ -8,11 +8,11 @@
 
 | 그래프 | 만드는 함수(진입점) | 상태 스키마 | 노드 수 | 서비스에서 쓰는 곳 |
 |---|---|---|---|---|
-| 그래프 1. 질문 그래프 | `backend/graph/build.py:395` `build_graph` | `AgentState`(`backend/graph/state.py:69`) | 16(항상 12, 결정표 저장소가 있을 때 3, 합동 검토 그래프가 있을 때 1) | `POST /chat`. 앱 시작 때 `backend/main.py:273` `build_question_graph`가 결정표 저장소와 합동 검토 그래프를 붙여 만든다 |
+| 그래프 1. 질문 그래프 | `backend/graph/build.py:395` `build_graph` | `AgentState`(`backend/graph/state.py:69`) | 16(항상 12, 결정표 저장소가 있을 때 3, 합동 검토 그래프가 있을 때 1) | `QUESTION_GRAPH_MODE=single`(코드 기본)일 때 `POST /chat`. 서비스 값 `multi`에서는 그래프 5가 이 그래프를 같은 인자로 만들어 노드와 분기 함수를 꺼내 쓴다. 앱 시작 때 `backend/main.py` `build_question_graph`가 결정표 저장소와 합동 검토 그래프를 붙여 만든다 |
 | 그래프 2. 합동 검토 그래프 | `backend/graph/departments/review.py:146` `build_review_graph` | `ReviewState`(`review.py:90`) | 13 | 질문 그래프의 `review` 노드(하위 그래프). 질문 종류가 합동 검토일 때 |
 | 그래프 3. 결정표 변환 그래프 | `backend/graph/decision/convert.py:126` `build_convert_graph` | `ConvertState`(`convert.py:79`) | 5 | `POST /decision-tables/convert`(관리자) |
 | 그래프 4. 리콜 그래프 | `backend/graph/recall/graph.py:75` `build_recall_graph` | `RecallState`(`recall/graph.py:56`) | 3 | 개정 웹훅 처리(`backend/graph/recall/service.py:96`) |
-| 그래프 5. 멀티 에이전트 질문 그래프 | `backend/graph/multi.py:299` `build_multi_graph` | `MultiState`(`multi.py:58`) | 6(항상 4, 연결 시 2) | 서비스 경로가 아니다. 평가 실행기(`evals/agent/exp_multi_v2.py`)와 안전 평가(`evals/safety/run_safety.py`)가 단일 그래프와 비교할 때 쓴다 |
+| 그래프 5. 멀티 에이전트 질문 그래프 | `backend/graph/multi.py:299` `build_multi_graph` | `MultiState`(`multi.py:58`) | 6(항상 4, 연결 시 2) | `POST /chat`(서비스 값 `QUESTION_GRAPH_MODE=multi`, 2026-11-17 팀장 결정). `build_question_graph`가 그래프 1과 같은 인자(공유 모델, 체크포인터, 결정표 저장소, 합동 검토 그래프, 서비스 검색)로 만든다. 평가 실행기(`evals/agent/exp_multi_v2.py`)와 안전 평가(`evals/safety/run_safety.py`)도 단일 그래프와 비교할 때 쓴다 |
 
 그래프 5는 그래프 1의 노드와 분기 함수를 그대로 꺼내(`SingleParts`, `multi.py:127`) Supervisor와 하위 에이전트 안에 다시 배선한 것이다. 새 노드 함수는 `supervisor` 하나다.
 
@@ -24,7 +24,7 @@
 | 배포 체크포인터 | `PostgresSaver`와 `PostgresStore`(연결 풀 1~4, `autocommit`, 준비된 문장 끔). 표 `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `store`, `store_migrations`를 만들고 RLS를 켠다 | `checkpoint.py:89` `open_persistence`, `checkpoint.py:49` `enable_rls` |
 | 재시작 안전 여부 | `PostgresSaver`일 때만 참이다. 메모리 체크포인터는 시험과 로컬 개발용이다 | `checkpoint.py:44` `is_restart_safe` |
 | 같은 체크포인터를 쓰는 그래프 | 질문 그래프(합동 검토 하위 그래프 포함)와 결정표 변환 그래프. 합동 검토 하위 그래프는 체크포인터 없이 만들어 질문 그래프의 체크포인터로 멈추고 재개한다 | `backend/graph/decision/routes.py:617-621`, `backend/main.py:283-285` |
-| 체크포인터를 쓰지 않는 그래프 | 리콜 그래프(한 번 돌고 끝난다), 멀티 그래프(평가 실행기가 넘길 때만) | `recall/service.py:96` |
+| 체크포인터를 쓰지 않는 그래프 | 리콜 그래프(한 번 돌고 끝난다). 멀티 그래프는 서비스(`QUESTION_GRAPH_MODE=multi`)에서 질문 그래프 자리의 체크포인터를 받는다(평가 실행기는 넘길 때만). 안쪽 단일 그래프는 체크포인터 없이 만들고, 하위 에이전트는 바깥 체크포인터를 물려받아 하위 이름공간(`retriever:<task id>` 등)에 자기 단계를 남긴다. 하루 질문 한도와 대화 이력은 바깥 이름공간(`checkpoint_ns=""`)만 읽는다 | `recall/service.py:96`, `backend/graph/multi.py` `build_multi_graph` |
 | 질문 그래프 thread_id | `"{user_id}:{thread_id}"`. `user_id`는 로그인한 사용자 UUID, `thread_id`는 화면의 대화 번호다 | `backend/api/routes.py:152` `internal_thread`, `routes.py:310-312` |
 | 결정표 변환 thread_id | `convert_` 뒤에 16자리 16진수(`new_id("convert")`) | `backend/graph/decision/repo.py:101`, `decision/routes.py:473` |
 | 평가용 단일 검토 thread_id | `eval-single:{request_id}` | `backend/api/eval_review.py:141` |
@@ -197,7 +197,13 @@ flowchart TD
 
 ### 그래프 5. 멀티 에이전트 질문 그래프 (`build_multi_graph`)
 
-배선은 `backend/graph/multi.py:380-387`, 하위 에이전트 조립은 `multi.py:173-213`이다. 하위 에이전트는 각자 `AgentSpec`의 `reads`·`writes` 키만으로 만든 상태 스키마로 컴파일되어 그 밖의 키를 읽거나 쓰면 오류가 난다. 서비스(`/chat`)는 이 그래프를 쓰지 않는다.
+배선은 `backend/graph/multi.py:380-387`, 하위 에이전트 조립은 `multi.py:173-213`이다. 하위 에이전트는 각자 `AgentSpec`의 `reads`·`writes` 키만으로 만든 상태 스키마로 컴파일되어 그 밖의 키를 읽거나 쓰면 오류가 난다. 서비스(`/chat`)는 서비스 값 `QUESTION_GRAPH_MODE=multi`에서 이 그래프를 쓴다(코드 기본 `single`은 그래프 1).
+
+`/chat`에서 단일과 같게 보이도록 둔 것(2026-11-17, 대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`):
+
+- Supervisor가 직접 부르는 단일 노드(`load_memory`, `followup`, `classify`, `out_of_domain`, `give_up`)는 `run_single_node`가 설정의 노드 이름(`langgraph_node`)을 그 노드 이름으로 두고 부른다. 단계별 비용(`cost_by_step`)과 Langfuse 단계 이름이 단일과 같다.
+- 결과 종류(`kind`)를 거절·되묻기로 쓴 단일 노드 이름을 `kind_node`로 같이 돌려준다. `stream_events`가 이 값을 done의 `refuse_stage`로 쓴다(단일 그래프에는 이 칸이 없어 노드 이름을 그대로 쓴다).
+- 검색 에이전트가 판정 다수결 표 구성 기록(`judge_votes`)을 받고 돌려준다(done의 `path.judge_votes`).
 
 ```mermaid
 flowchart TD
@@ -378,6 +384,7 @@ flowchart TD
 | `SEARCH_VIA_MCP` | `backend/graph/mcp_retriever.py:29` | 끔 | `MCP_TOKEN`이 있을 때만 켬(`service_profile.py:187-188`) | `search`의 검색과 섹션 읽기를 MCP 서버로 부른다(결과는 직접 호출과 같다). 서버가 검색 한 번의 임베딩 사용량을 응답 `usage`로 돌려주고 그래프 쪽 검색기가 /chat 요청 집계에 더한다(`backend/services/step_cost.py` `record_embed_usage`) |
 | `CHAT_FOLLOWUP` | `backend/api/routes.py:191` | 켬 | 채우지 않음(켬) | 끄면 `/chat`이 `followup_off`를 참으로 넘겨 `load_memory` 뒤 `followup`을 지나지 않는다 |
 | `CHECKPOINTER` | `checkpoint.py:36` | `DATABASE_URL`이 있으면 `postgres` | 채우지 않음 | 체크포인터 종류. `memory`면 재시작 뒤 승인 대기가 사라진다 |
+| `QUESTION_GRAPH_MODE` | `backend/main.py` `question_graph_mode` | `single` | `multi` | `/chat`의 질문 그래프 구조. `multi`는 그래프 5(코드 라우팅), `single`은 그래프 1. 다른 값이면 앱이 뜨지 않는다. 되돌리려면 `single`이나 `off` |
 | `SUPERVISOR_ROUTER` | `multi.py:218` | `code` | 채우지 않음 | 멀티 그래프 전용. `llm`이면 허용 경로가 2개 이상일 때만 라우터 LLM을 부른다 |
 | `RECALL_MIN_CONFIDENCE` | `recall/graph.py:36` | 0.5 | 채우지 않음 | 리콜 `notify`에서 이 값보다 확신도가 낮은 알림을 관리자 검토함으로 보낸다 |
 

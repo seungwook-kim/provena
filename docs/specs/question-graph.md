@@ -350,3 +350,29 @@
 - GIVEN 평가·데모 질문 171건(v1 30, v2 50, 검증 v1 20, 검증 v2 20, GraphRAG 비교셋 12, 과잉 거절 확인 10, 새 인용 5, 합동 검토 10, 검토 확인 4, 데모 질문 9, 데모 합동 검토 시나리오 1). THEN `output_ko` 일치 0, 지시 문장 판정 0, `asks_internal` 0, 모델 입력 질문 변화 0.
 - 회사 규칙을 묻는 정상 질문("승인 받은 규칙 변경은 무엇인가요?", "고객 첫 응답 뒤에 티켓에 메모를 추가해야 하나요?" 등)은 바뀌지 않는다.
 - 한계: 운영 판 재측정 전이며 v2 지표는 이 변경으로 바뀌지 않는다고 본다(모델 입력이 바뀌는 평가 질문이 0건).
+
+## /chat 질문 그래프 구조 스위치: Supervisor 멀티 그래프 (2026-11-17, 팀장 결정)
+
+### Why
+- 서비스 `/chat`은 단일 그래프(`build_graph`)만 돌렸고, Supervisor 멀티 그래프(`backend/graph/multi.py`의 `build_multi_graph`, 검색·작성·검증 에이전트)는 측정 실행기와 안전 평가에서만 썼다. 가이드의 멀티 에이전트 구성을 서비스 경로에서 그대로 보이도록 `/chat`이 멀티 그래프를 돌린다.
+- 전환으로 방어나 기능이 빠지면 안 된다. 그래서 단일 `/chat` 경로가 하는 일을 항목별로 멀티와 대조하고, 빠진 것을 같은 노드와 함수로 채운 뒤 전환한다(대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`).
+
+### What
+- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 운영·로컬 데모·키 없는 데모 모두 멀티로 돈다. 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
+- `build_question_graph`는 단일에 넘기던 인자(공유 모델, 체크포인터, Store, 답 저장소, 결정표 저장소, 합동 검토 하위 그래프, 서비스 검색 함수)를 멀티에 그대로 넘긴다. 멀티는 같은 인자로 단일 그래프를 만들어 노드와 분기 함수를 꺼내 쓰므로 프롬프트, 검색, 판정과 다수결, 인용 검사와 후처리, 입력·출력 방어, 저장 코드가 하나뿐이다. 라우터는 `SUPERVISOR_ROUTER`(비면 코드 라우팅, LLM 호출을 더하지 않음).
+- 단일과 같게 맞춘 세 가지:
+  1. done의 `refuse_stage`: 멀티 상태 칸 `kind_node`(결과 종류를 거절·되묻기로 쓴 단일 노드 이름)를 `stream_events`가 읽어, 에이전트 이름(`supervisor`, `retriever`, `verifier`) 대신 단일과 같은 노드 이름을 낸다.
+  2. 단계별 비용(`cost_by_step`)과 Langfuse 단계 이름: Supervisor가 직접 부르는 `load_memory`, `followup`, `classify`, `out_of_domain`, `give_up`의 LLM 호출이 그 노드 이름으로 남는다(`multi.py` `run_single_node`).
+  3. 판정 표 구성 기록 `judge_votes`(done의 `path.judge_votes`): 검색 에이전트가 받고 돌려주는 칸에 더했다.
+- 합동 검토 승인 재개: 앱은 `app.state.review_graph`에 질문 그래프(멀티)를 두고 같은 thread에서 `Command(resume=...)`로 재개한다(단일과 같은 방식).
+- 남는 차이: 하위 에이전트가 하위 이름공간에 체크포인트를 더 남긴다(하루 질문 한도와 대화 이력은 바깥 이름공간만 읽어 결과가 같다), 멀티 전용 상태 칸(`next_agent`, `agent_trace`, `supervisor_log`, `handoffs`, `kind_node`)은 `/chat` 응답에 싣지 않는다, Langfuse 추적에 에이전트 계층이 한 단계 더 보인다.
+
+### AC (시험 `tests/test_chat_multi_switch.py`)
+- GIVEN 환경 변수가 없다. THEN `question_graph_mode()`는 `single`이고 서비스 그래프는 단일이다. GIVEN 서비스 설정을 채운다. THEN `multi`이고 서비스 그래프에 `supervisor`, `retriever`, `writer`, `verifier`, `decision`, `review` 노드가 있다. 틀린 값은 ValueError, `off`는 코드 기본으로 돌아간다.
+- GIVEN 같은 가짜 모델과 검색기. WHEN 답, 재검색 뒤 거절, 되묻기, 범위 밖, 가짜 인용 거절, 내부 설정 질문, 질문 속 출력 자리 지시 일곱 사례를 `/chat`으로 보낸다. THEN 멀티와 단일의 SSE 이벤트 종류·순서·내용(토큰, 인용, done의 kind·code·refuse_stage·refuse_reason·path·usage)이 같다(답 id와 단계 시간 기록 제외). 출력 자리 지시 사례에서 이어 붙인 문구가 든 문장은 두 경로 모두 빠진다.
+- GIVEN 같은 체크포인터로 그래프를 새로 만든다(재시작). THEN 같은 대화의 이어 묻기 기록과 `/threads/{id}` 이력이 이어지고, 이력은 단일과 같다.
+- GIVEN 합동 검토 요청. THEN `/chat`이 `approval_request`로 멈추고(단일과 같은 이벤트), 이력이 승인 대기를 보이며, 질문 그래프(멀티)로 재개하면 승인된 답으로 끝난다.
+- GIVEN 검색, 분류, 답 작성 중 비용 상한 예외. THEN 두 경로 모두 `error` 하나(`limit_exceeded`)로 끝난다. GIVEN 하루 한도 2. THEN 멀티에서도 셋째 질문이 429 `daily_limit`이다(질문 하나가 한 건).
+- GIVEN `run_config`의 콜백. THEN LLM 호출마다 노드 이름과 실행 표지(thread_id)가 단일과 같은 순서로 붙는다. GIVEN 판정 다수결을 켠다. THEN `judge_votes` 기록 수가 단일과 같다.
+- 키 없는 데모 녹화 재생(데모 질문 9개, v2 50건)이 멀티 경로에서 녹화에 없는 요청 0건으로 기준값과 같다(`evals/results/chat_multi_switch_20261117/README.md`).
+- 한계: 유료 재측정 전이다. 기대값과 멈춤 규칙은 `evals/results/chat_multi_switch_20261117/PREREGISTER.md`에 측정 전에 적었다.

@@ -787,6 +787,24 @@ def none_vote_wait_s() -> float | None:
     return value
 
 
+def split_vote_wait_s() -> float | None:
+    """`GRAPH_SPLIT_VOTE_WAIT_S`(초, 기본 빈 값): 판정 다수결에서 먼저 온 두 표가 충분과 일부로 갈리면 셋째 표를 이 초만큼만 더 기다리고,
+    그 안에 오지 않으면 두 표로 확정한다(`build.voted`, 기록 `how="split_capped"`). 두 표가 같은 수이므로 `merge_votes`의 규칙대로 먼저 온 표가 결론이다.
+    근거 없음 표가 섞인 갈림은 대상이 아니다(재검색·거절 경로를 바꾸지 않는다, 결정 0100). 빈 값이면 None이고 지금처럼 셋째 표를 끝까지 기다린다.
+    숫자가 아니거나 음수면 ValueError다. 근거(실행 기록, 0원): 00172-rex 검증 v2 3회에서 충분·일부로 갈린 판정 6건 중 셋째 표가 둘째 표보다 1.0초 넘게 늦은 것은 2건이고,
+    두 건 모두 셋째 표가 먼저 온 표와 같은 결론이었다(`evals/results/latency_holdout_v2_analysis_20261117/`)."""
+    raw = (os.environ.get("GRAPH_SPLIT_VOTE_WAIT_S") or "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(f"GRAPH_SPLIT_VOTE_WAIT_S는 0 이상의 초다: {raw!r}") from None
+    if value < 0:
+        raise ValueError(f"GRAPH_SPLIT_VOTE_WAIT_S는 0 이상의 초다: {raw!r}")
+    return value
+
+
 def spec_stop_ground_enabled() -> bool:
     """`GRAPH_SPEC_STOP_GROUND=1`(기본 꺼짐, 서비스 설정에서 켬): 미리 돌리기(`GRAPH_SPECULATE_FIRST`)를 분해 결과가 달라 버리기로 했으면,
     그 미리 돌리기가 쓴 답 후보의 근거 확인을 미리 부르지 않는다(`build.draft_reply`, 기록 `verdict="skipped_spec_dropped"`). 본 경로의 답은 그대로다.

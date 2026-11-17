@@ -79,6 +79,10 @@ BLIND_6273 = ("GRAPH_SPLIT_FULL_K",)
 SERVICE_ONLY_1116 = {"GRAPH_DECOMPOSE_KEEP_SUBJECT": "1", "GRAPH_FLIP_STRUCTURE": "1", "GRAPH_KEEP_SUBJECT_UNION": "1", "GRAPH_CLASSIFY_RACE": "1"}
 # 사전 등록 62.82(2026-11-17 팀장 결정): 합동 검토 팀 선택. 서비스 켬, 키 없는 데모 끔, 측정 실행기 인자에는 없다
 SERVICE_ONLY_1117 = {"REVIEW_TEAM_SELECT": "1"}
+# 2026-11-17 팀장 결정: /chat이 Supervisor 멀티 그래프를 쓴다(코드 기본 single, 측정 실행기 인자에는 없다)
+SERVICE_ONLY_MULTI = {"QUESTION_GRAPH_MODE": "multi"}
+# 2026-11-17 팀장 결정: 충분·일부로 갈린 두 표 뒤 셋째 표 대기 상한(코드 기본 빈 값, 측정 실행기 인자에는 없다)
+SPLIT_WAIT_1117 = {"GRAPH_SPLIT_VOTE_WAIT_S": "1.0"}
 # 2026-11-16 효과 분리 측정용 스위치 6개(코드 기본도 켬, 서비스 값은 지금 동작을 적은 것. 측정 실행기 인자에는 없다)
 ABLATION_1116 = {"GRAPH_INTRO_IN_CORE": "1", "GRAPH_CITE_HEAD_OWNER": "1", "GRAPH_FIRST_PAGE_FILL": "1", "GRAPH_CITE_EXPAND_NARROW": "1",
                  "GRAPH_CITE_PHRASE_WHOLE_ROWS": "1", "SEARCH_FULL_TAIL": "1"}
@@ -114,8 +118,10 @@ def test_search_hedge_service_values_turn_the_hedge_on_with_the_production_wait(
 
 def test_service_values_match_the_measured_arguments():
     want = expected_env()
-    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116, *SERVICE_ONLY_1117, *ABLATION_1116)}
+    have = {k: v for k, v in SP.SERVICE_ENV.items() if k not in ("SEARCH_HNSW", "LLM_REASONING", "LLM_REASONING_BY_TASK", "LLM_DEADLINE_SKIP_TASKS", *SPEED_6240, *GRAPH_OUTSIDE_6216, *SEARCH_HEDGE_6214, *EARLY_SEARCH_6253, *PROMPT_CACHE_6267, *ADOPT_GROUNDED_6268, *CITE_ADD_GUARD_6270, *BLIND_6272, *SERVICE_ONLY_1116, *SERVICE_ONLY_1117, *SERVICE_ONLY_MULTI, *SPLIT_WAIT_1117, *ABLATION_1116)}
     assert have == want
+    assert {k: SP.SERVICE_ENV.get(k) for k in SPLIT_WAIT_1117} == SPLIT_WAIT_1117 and not set(SPLIT_WAIT_1117) & set(SP.CANDIDATE_ENV)   # 갈린 두 표 대기 상한: 서비스 켬
+    assert {k: SP.SERVICE_ENV.get(k) for k in SERVICE_ONLY_MULTI} == SERVICE_ONLY_MULTI and not set(SERVICE_ONLY_MULTI) & set(SP.CANDIDATE_ENV)   # 서비스는 멀티 그래프
     assert {k: SP.SERVICE_ENV.get(k) for k in SERVICE_ONLY_1117} == SERVICE_ONLY_1117 and not set(SERVICE_ONLY_1117) & set(SP.CANDIDATE_ENV)   # 62.82: 서비스 켬
     assert {k: SP.SERVICE_ENV.get(k) for k in BLIND_6272} == BLIND_6272 and not set(BLIND_6272) & set(SP.CANDIDATE_ENV)   # 62.72: 서비스 기본 켬
     assert not set(BLIND_6273) & (set(SP.SERVICE_ENV) | set(SP.CANDIDATE_ENV))   # 62.73: 사전 등록 62.74로 서비스 값에서 뺐다(코드 기본 꺼짐)
@@ -186,6 +192,10 @@ def test_values_are_valid_for_the_readers(clean_env):
     assert llm._client_options() == {"max_retries": 2}
     assert llm.deadline_skip_tasks() == ("decision_draft", "supervisor", "team_*", "single")
     assert llm.deadline_by_task() == {"judge": 12.0}
+    from backend.main import question_graph_mode
+    assert question_graph_mode() == "multi"
+    from backend.graph import answer_fixes as AF
+    assert AF.split_vote_wait_s() == 1.0 and AF.none_vote_wait_s() == 1.0
 
 
 def test_deadline_skip_tasks_cover_only_long_calls_outside_the_question_graph():
@@ -341,6 +351,7 @@ def test_app_builds_the_service_graph_with_the_profile_and_restores_env(clean_en
     from fastapi.testclient import TestClient
 
     import backend.graph.build as B
+    import backend.graph.multi as M
 
     seen = {}
     real = B.build_graph
@@ -350,11 +361,13 @@ def test_app_builds_the_service_graph_with_the_profile_and_restores_env(clean_en
         return real(*a, **k)  # 서비스 값을 모두 켠 채로 그래프가 만들어지는지(설정 오류가 없는지)
 
     clean_env.setattr(B, "build_graph", spy)
+    clean_env.setattr(M, "build_graph", spy)   # 서비스 값은 멀티 그래프다. 멀티는 단일 그래프를 같은 인자로 만들어 노드를 꺼내 쓴다
     clean_env.setenv("GRAPH_JUDGE_VOTE", "off")  # 하나는 끈다
     app = _app(clean_env)
     with TestClient(app) as client:
         assert client.get("/health").status_code == 200
         assert app.state.question_graph is not None
+        assert "supervisor" in app.state.question_graph.nodes and app.state.review_graph is app.state.question_graph   # /chat과 승인 재개가 멀티 그래프다
         assert os.environ["GRAPH_ANSWER_BEST2"] == "1"
     assert seen["env"] == {**SP.SERVICE_ENV, "GRAPH_JUDGE_VOTE": ""}
     assert {"page_search", "intro_search", "prev_chunk"} <= set(seen) and "heading_search" not in seen and isinstance(seen["llm"], SP.SharedChatModel)

@@ -49,7 +49,7 @@ from backend.rag.retrieve.embed import EmbedUnavailable
 from backend.schemas import Chunk
 
 Q = "SEV2 장애 최초 대응은 몇 분 이내인가요?"
-MULTI_ONLY = {"next_agent", "agent_trace", "supervisor_log", "handoffs"}
+MULTI_ONLY = {"next_agent", "agent_trace", "supervisor_log", "handoffs", "kind_node"}   # kind_node: 거절·되묻기를 쓴 단일 노드 이름(`/chat`의 refuse_stage용)
 
 
 def run(g, **kw):
@@ -1180,7 +1180,7 @@ def test_router_call_is_in_the_llm_trace_under_its_own_node_name():
     (row,) = [c for c in calls if c["task"] == "supervisor_route"]
     assert row["node"] == "supervisor_route" and row["step"] == "supervisor_route/supervisor_route" and row["ok"] is True
     assert row["input_tokens"] == 10
-    assert [c["step"] for c in calls if c["task"] == "classify"] == ["supervisor/classify"]  # 다른 호출의 기록은 그대로다
+    assert [c["step"] for c in calls if c["task"] == "classify"] == ["classify/classify"]  # 다른 호출은 단일 그래프와 같은 노드 이름으로 기록된다(`multi.run_single_node`)
 
 
 # ---------- 문서 내용이 경로를 바꾸지 못한다 ----------

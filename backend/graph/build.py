@@ -266,16 +266,17 @@ def select_citations(valid: list[dict], answer: str, limit: int = MAX_CITATIONS)
 VOTE_LOG_KEY = "_vote_log"  # 판정 다수결이 합친 표에 잠깐 붙이는 표 구성 기록. `judge`가 꺼내고 판정 결과에는 남기지 않는다
 
 
-def vote_log(got: list[dict], settled: bool, errors: int, capped: bool = False, vote_s: list[float] | None = None) -> dict:
+def vote_log(got: list[dict], settled: bool, errors: int, capped: bool | str = False, vote_s: list[float] | None = None) -> dict:
     """판정 다수결 한 번의 표 구성(기록용). 표는 도착 순서이고 실패한 표는 `failed`다. 사실 문장, 구절 글, 이유 문장은 싣지 않는다.
     `how`: 셋째 표 전에 같은 결론 2표로 확정했으면 `two_agree`, 근거 없음 2표 뒤 셋째 표를 `GRAPH_NONE_VOTE_WAIT_S`초까지만 기다리고 확정했으면 `none_capped`,
+    충분·일부로 갈린 2표 뒤 셋째 표를 `GRAPH_SPLIT_VOTE_WAIT_S`초까지만 기다리고 확정했으면 `split_capped`(`capped="split"`),
     표를 다 받았으면 `majority`(2표 이상 같음) 또는 `split`(모두 다름). `early`: 부른 표를 다 받기 전에 확정했는지.
     `vote_s`(있을 때만): 표마다 부른 뒤 받기까지 걸린 초(도착 순서)."""
     votes = [{"sufficient": g.get("sufficient") is True, "partial": g.get("partial") is True} if g else {"failed": True} for g in got]
     keys = [(v.get("sufficient"), v.get("partial")) for v in votes if not v.get("failed")]
     top = max((keys.count(k) for k in keys), default=0)
     early = (settled or capped) and len(got) < AF.VOTES
-    how = "none_capped" if capped and early else "two_agree" if early else ("majority" if top >= 2 else "split")
+    how = ("split_capped" if capped == "split" else "none_capped") if capped and early else "two_agree" if early else ("majority" if top >= 2 else "split")
     return {"votes": votes, "errors": errors, "early": early, "how": how, **({"vote_s": list(vote_s)} if vote_s is not None else {})}
 
 
@@ -466,6 +467,7 @@ def build_graph(
     revise_ahead_on = AF.revise_ahead_enabled()  # RA(`GRAPH_REVISE_AHEAD`, 기본 꺼짐, SG 필요): 답 다시 쓰기와 동시에 문장 빼기 뒤 재확인을 미리 부른다
     judge_vote = AF.judge_vote_enabled()  # 판정 다수결(`GRAPH_JUDGE_VOTE`, 기본 꺼짐): 판정과 근거 확인을 병렬 3번 부르고 2표가 같으면 확정한다
     none_vote_wait = AF.none_vote_wait_s()  # `GRAPH_NONE_VOTE_WAIT_S`(기본 빈 값): 근거 없음 2표 뒤 셋째 표를 이 초까지만 기다린다(사전 등록 62.72)
+    split_vote_wait = AF.split_vote_wait_s()  # `GRAPH_SPLIT_VOTE_WAIT_S`(기본 빈 값): 충분·일부로 갈린 2표 뒤 셋째 표를 이 초까지만 기다린다
     if judge_quote:
         judge_system = P.judge_quoted(judge_system, query=judge_query_on)
     elif "judge" in structured:
@@ -562,16 +564,18 @@ def build_graph(
         got: list[dict] = []
         errors: list[BaseException] = []
         took: list[float] = []   # 기록만: 표마다 부른 뒤 받기까지 걸린 초(도착 순서)
-        settled = capped = False
+        settled = False
+        capped: bool | str = False   # 상한으로 확정했으면 어느 상한인지: "none"(근거 없음 2표), "split"(충분·일부로 갈린 2표)
+        wait_kind = ""
         started = time.monotonic()
-        deadline: float | None = None   # `GRAPH_NONE_VOTE_WAIT_S`: 근거 없음 2표를 받은 뒤 셋째 표를 기다리는 끝 시각
+        deadline: float | None = None   # `GRAPH_NONE_VOTE_WAIT_S`·`GRAPH_SPLIT_VOTE_WAIT_S`: 두 표를 받은 뒤 셋째 표를 기다리는 끝 시각
         try:
             pending = {in_background(pool, node, call) for _ in range(AF.VOTES)}
             while pending and not settled:
                 timeout = None if deadline is None else max(0.0, deadline - time.monotonic())
                 done, pending = wait_futures(pending, timeout=timeout, return_when=FIRST_COMPLETED)
-                if not done:   # 근거 없음 2표 뒤 상한 초 안에 셋째 표가 오지 않았다. 두 표로 확정한다
-                    capped = True
+                if not done:   # 두 표 뒤 상한 초 안에 셋째 표가 오지 않았다. 두 표로 확정한다(갈린 두 표는 `merge_votes`가 먼저 온 표를 쓴다)
+                    capped = wait_kind or True
                     break
                 for fut in done:
                     took.append(round(time.monotonic() - started, 3))
@@ -586,7 +590,9 @@ def build_graph(
                         settled = True
                         break
                 if not settled and deadline is None and none_vote_wait is not None and task == "judge" and two_none(got):
-                    deadline = time.monotonic() + none_vote_wait
+                    deadline, wait_kind = time.monotonic() + none_vote_wait, "none"
+                elif not settled and deadline is None and split_vote_wait is not None and task == "judge" and two_split(got):
+                    deadline, wait_kind = time.monotonic() + split_vote_wait, "split"
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
         if not any(got) and errors:
@@ -604,6 +610,12 @@ def build_graph(
         """받은 표(실패한 표 제외)가 정확히 2개이고 둘 다 "근거 없음"(충분도 일부도 아님)인지. `GRAPH_NONE_VOTE_WAIT_S`가 셋째 표 대기를 줄이는 조건이다."""
         good = [g for g in got if g]
         return len(good) == 2 and all(AF._vote_key("judge", g) == (False, False) for g in good)
+
+    def two_split(got: list[dict]) -> bool:
+        """받은 표(실패한 표 제외)가 정확히 2개이고 하나는 충분, 하나는 일부인지. `GRAPH_SPLIT_VOTE_WAIT_S`가 셋째 표 대기를 줄이는 조건이다.
+        근거 없음 표가 섞인 갈림은 대상이 아니다(셋째 표가 재검색·거절 여부를 정한다, 결정 0100)."""
+        good = [g for g in got if g]
+        return len(good) == 2 and {AF._vote_key("judge", g) for g in good} == {(True, False), (False, True)}
 
     def ask_judge(system: str, user: str) -> dict | None:
         def once() -> dict | None:

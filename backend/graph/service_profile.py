@@ -129,6 +129,9 @@ SERVICE_ENV: dict[str, str] = {
     # 버리기로 한 미리 돌리기의 답 후보는 근거 확인을 미리 부르지 않는다(GRAPH_SPECULATE_FIRST, GRAPH_SPECULATE_GROUND가 켜져 있어야 한다).
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
     "GRAPH_NONE_VOTE_WAIT_S": "1.0",       # 62.72
+    # 판정 첫 두 표가 충분과 일부로 갈리면 셋째 표를 이 초까지만 기다리고 두 표로 확정한다(GRAPH_JUDGE_VOTE가 켜져 있어야 한다, `answer_fixes.split_vote_wait_s`).
+    # 근거 없음 표가 섞인 갈림은 대상이 아니다. 2026-11-17 팀장 결정(응답 시간 단축). 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
+    "GRAPH_SPLIT_VOTE_WAIT_S": "1.0",
     "GRAPH_SPEC_STOP_GROUND": "1",         # 62.72
     # 하위 질문에 원 질문의 대상·조건 유지(`backend/graph/decompose.py` `keep_subject_enabled`): 분해 프롬프트에 규칙 한 줄을 더하고, 모든 하위 질문에서 빠진 앞머리 대상 구를 코드가 붙인다.
     # 측정 실행기 인자에는 없다(서비스 경로만). 운영에서 끄려면 환경 변수에 `off`를 준다
@@ -159,6 +162,10 @@ SERVICE_ENV: dict[str, str] = {
     # 0.649가 같고 회당 비용은 0.00473에서 0.00273달러로 줄며, 고르는 팀이 입력에 따라 달라진다. 운영 기준 0.577은 다른 경로의 값이라 비교하지 않는다.
     # 측정 실행기 인자에는 없다(서비스 경로만). 끄려면 환경 변수에 `0`이나 `off`를 준다(코드 기본이 꺼짐이라 `off`는 빈 값으로 바뀌어 꺼진다)
     "REVIEW_TEAM_SELECT": "1",
+    # 질문 그래프 구조(`backend/main.py` `question_graph_mode`): `/chat`이 Supervisor 멀티 그래프(`backend/graph/multi.py`, 코드 라우팅)를 쓴다. 2026-11-17 팀장 결정.
+    # 멀티는 단일 그래프의 노드와 분기 함수를 그대로 꺼내 쓰므로 위 스위치가 모두 같이 걸린다(evals/results/chat_multi_switch_20261117/PARITY.md).
+    # 코드 기본은 `single`(시험과 측정 실행기는 그대로). 측정 실행기 인자에는 없다(서비스 경로만). 되돌리려면 환경 변수에 `single`이나 `off`를 준다(`off`는 빈 값 = 코드 기본 single)
+    "QUESTION_GRAPH_MODE": "multi",
 }
 
 # 운영 판(Cloud Run 리비전 환경 변수)이 서비스 값을 덮어쓰는 값(결정 0126, `provena-api-00150-jub` 이후 운영 판 모두). 서비스 코드 값(`SERVICE_ENV`)은
