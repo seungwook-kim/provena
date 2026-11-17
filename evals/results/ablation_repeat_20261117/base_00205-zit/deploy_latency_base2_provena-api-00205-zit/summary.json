@@ -1,0 +1,665 @@
+{
+  "meta": {
+    "dataset": "dataset_v2.jsonl",
+    "dataset_path": "evals/dataset_v2.jsonl",
+    "dataset_sha256": "810d01f1c27dd5475f98fb771fcd821df377c360c4aa6e6c15f7b2f316524d9f",
+    "n_questions": 50,
+    "base_url": "https://c1117m---provena-api-cttaanqntq-du.a.run.app",
+    "revision": "provena-api-00205-zit",
+    "commit": "e822fb1e",
+    "timeout_s": 120.0,
+    "as_of": "dataset",
+    "health_s": 0.177,
+    "started_at": "2026-11-17T17:04:15+09:00",
+    "finished_at": "2026-11-17T17:13:02+09:00",
+    "runs_requested": 2,
+    "note": "클라이언트 측 시간(요청 전송부터 첫 token, done 이벤트까지). 로그인과 CSRF 준비 시간은 넣지 않았다."
+  },
+  "per_run": [
+    {
+      "run": 1,
+      "step_rows": 50,
+      "cost_by_step": {
+        "ground/grounding": {
+          "rows": 28,
+          "calls": 311,
+          "input_tokens": 1519642,
+          "output_tokens": 81368,
+          "cost_usd": 0.11154908,
+          "llm_s": 499.777,
+          "cost_usd_per_question": 0.00223098,
+          "calls_per_question": 6.22
+        },
+        "judge/judge": {
+          "rows": 42,
+          "calls": 137,
+          "input_tokens": 685391,
+          "output_tokens": 74993,
+          "cost_usd": 0.07382792,
+          "llm_s": 392.635,
+          "cost_usd_per_question": 0.00147656,
+          "calls_per_question": 2.74
+        },
+        "write_answer/answer": {
+          "rows": 34,
+          "calls": 75,
+          "input_tokens": 371189,
+          "output_tokens": 36720,
+          "cost_usd": 0.03750001,
+          "llm_s": 207.138,
+          "cost_usd_per_question": 0.00075,
+          "calls_per_question": 1.5
+        },
+        "write_answer/answer_fast": {
+          "rows": 41,
+          "calls": 92,
+          "input_tokens": 477507,
+          "output_tokens": 26321,
+          "cost_usd": 0.03656926,
+          "llm_s": 158.31,
+          "cost_usd_per_question": 0.00073139,
+          "calls_per_question": 1.84
+        },
+        "search/decompose": {
+          "rows": 50,
+          "calls": 50,
+          "input_tokens": 28622,
+          "output_tokens": 6389,
+          "cost_usd": 0.0060567,
+          "llm_s": 65.44,
+          "cost_usd_per_question": 0.00012113,
+          "calls_per_question": 1.0
+        },
+        "classify/classify": {
+          "rows": 50,
+          "calls": 100,
+          "input_tokens": 139916,
+          "output_tokens": 1952,
+          "cost_usd": 0.00378585,
+          "llm_s": 93.309,
+          "cost_usd_per_question": 7.572e-05,
+          "calls_per_question": 2.0
+        },
+        "search/decompose_gate": {
+          "rows": 50,
+          "calls": 50,
+          "input_tokens": 28722,
+          "output_tokens": 1779,
+          "cost_usd": 0.0037617,
+          "llm_s": 49.926,
+          "cost_usd_per_question": 7.523e-05,
+          "calls_per_question": 1.0
+        }
+      },
+      "embed_tokens_sum": 1982,
+      "embed_cost_usd_sum": 0.00011892,
+      "embed_rows": 50,
+      "refuse_stage_reason": {
+        "give_up/no_evidence": 17,
+        "out_of_domain/out_of_domain": 7,
+        "search/unknown_name": 1
+      },
+      "n": 50,
+      "n_ok": 50,
+      "n_fail": 0,
+      "first_token_s": {
+        "mean": 5.3,
+        "p50": 5.68,
+        "p95": 9.65,
+        "max": 10.229
+      },
+      "total_s": {
+        "mean": 5.308,
+        "p50": 5.681,
+        "p95": 9.651,
+        "max": 10.239
+      },
+      "kinds": {
+        "answer": 25,
+        "clarify": 1,
+        "refuse": 24
+      },
+      "citations_mean": 0.86,
+      "cost_usd_sum": 0.273051,
+      "cost_usd_per_question": 0.005461,
+      "cost_rows": 50,
+      "failures": []
+    },
+    {
+      "run": 2,
+      "step_rows": 50,
+      "cost_by_step": {
+        "ground/grounding": {
+          "rows": 28,
+          "calls": 296,
+          "input_tokens": 1442562,
+          "output_tokens": 77895,
+          "cost_usd": 0.09816486,
+          "llm_s": 474.913,
+          "cost_usd_per_question": 0.0019633,
+          "calls_per_question": 5.92
+        },
+        "judge/judge": {
+          "rows": 42,
+          "calls": 138,
+          "input_tokens": 689479,
+          "output_tokens": 72035,
+          "cost_usd": 0.0709382,
+          "llm_s": 382.819,
+          "cost_usd_per_question": 0.00141876,
+          "calls_per_question": 2.76
+        },
+        "write_answer/answer_fast": {
+          "rows": 41,
+          "calls": 92,
+          "input_tokens": 482548,
+          "output_tokens": 26135,
+          "cost_usd": 0.03465134,
+          "llm_s": 160.386,
+          "cost_usd_per_question": 0.00069303,
+          "calls_per_question": 1.84
+        },
+        "write_answer/answer": {
+          "rows": 34,
+          "calls": 72,
+          "input_tokens": 353779,
+          "output_tokens": 33997,
+          "cost_usd": 0.03333672,
+          "llm_s": 194.981,
+          "cost_usd_per_question": 0.00066673,
+          "calls_per_question": 1.44
+        },
+        "search/decompose": {
+          "rows": 50,
+          "calls": 50,
+          "input_tokens": 28622,
+          "output_tokens": 5648,
+          "cost_usd": 0.0056862,
+          "llm_s": 62.998,
+          "cost_usd_per_question": 0.00011372,
+          "calls_per_question": 1.0
+        },
+        "search/decompose_gate": {
+          "rows": 50,
+          "calls": 50,
+          "input_tokens": 28722,
+          "output_tokens": 1772,
+          "cost_usd": 0.0037582,
+          "llm_s": 48.052,
+          "cost_usd_per_question": 7.516e-05,
+          "calls_per_question": 1.0
+        },
+        "classify/classify": {
+          "rows": 50,
+          "calls": 100,
+          "input_tokens": 139916,
+          "output_tokens": 1953,
+          "cost_usd": 0.0034931,
+          "llm_s": 91.696,
+          "cost_usd_per_question": 6.986e-05,
+          "calls_per_question": 2.0
+        }
+      },
+      "embed_tokens_sum": 2034,
+      "embed_cost_usd_sum": 0.00012204,
+      "embed_rows": 50,
+      "refuse_stage_reason": {
+        "give_up/no_evidence": 17,
+        "out_of_domain/out_of_domain": 7,
+        "search/unknown_name": 1
+      },
+      "n": 50,
+      "n_ok": 50,
+      "n_fail": 0,
+      "first_token_s": {
+        "mean": 5.189,
+        "p50": 5.56,
+        "p95": 8.223,
+        "max": 8.72
+      },
+      "total_s": {
+        "mean": 5.198,
+        "p50": 5.566,
+        "p95": 8.23,
+        "max": 8.732
+      },
+      "kinds": {
+        "answer": 25,
+        "clarify": 1,
+        "refuse": 24
+      },
+      "citations_mean": 0.84,
+      "cost_usd_sum": 0.250029,
+      "cost_usd_per_question": 0.005001,
+      "cost_rows": 50,
+      "failures": []
+    }
+  ],
+  "all_runs": {
+    "step_rows": 100,
+    "cost_by_step": {
+      "ground/grounding": {
+        "rows": 56,
+        "calls": 607,
+        "input_tokens": 2962204,
+        "output_tokens": 159263,
+        "cost_usd": 0.20971394,
+        "llm_s": 974.69,
+        "cost_usd_per_question": 0.00209714,
+        "calls_per_question": 6.07
+      },
+      "judge/judge": {
+        "rows": 84,
+        "calls": 275,
+        "input_tokens": 1374870,
+        "output_tokens": 147028,
+        "cost_usd": 0.14476612,
+        "llm_s": 775.454,
+        "cost_usd_per_question": 0.00144766,
+        "calls_per_question": 2.75
+      },
+      "write_answer/answer_fast": {
+        "rows": 82,
+        "calls": 184,
+        "input_tokens": 960055,
+        "output_tokens": 52456,
+        "cost_usd": 0.0712206,
+        "llm_s": 318.696,
+        "cost_usd_per_question": 0.00071221,
+        "calls_per_question": 1.84
+      },
+      "write_answer/answer": {
+        "rows": 68,
+        "calls": 147,
+        "input_tokens": 724968,
+        "output_tokens": 70717,
+        "cost_usd": 0.07083673,
+        "llm_s": 402.119,
+        "cost_usd_per_question": 0.00070837,
+        "calls_per_question": 1.47
+      },
+      "search/decompose": {
+        "rows": 100,
+        "calls": 100,
+        "input_tokens": 57244,
+        "output_tokens": 12037,
+        "cost_usd": 0.0117429,
+        "llm_s": 128.438,
+        "cost_usd_per_question": 0.00011743,
+        "calls_per_question": 1.0
+      },
+      "search/decompose_gate": {
+        "rows": 100,
+        "calls": 100,
+        "input_tokens": 57444,
+        "output_tokens": 3551,
+        "cost_usd": 0.0075199,
+        "llm_s": 97.978,
+        "cost_usd_per_question": 7.52e-05,
+        "calls_per_question": 1.0
+      },
+      "classify/classify": {
+        "rows": 100,
+        "calls": 200,
+        "input_tokens": 279832,
+        "output_tokens": 3905,
+        "cost_usd": 0.00727895,
+        "llm_s": 185.005,
+        "cost_usd_per_question": 7.279e-05,
+        "calls_per_question": 2.0
+      }
+    },
+    "embed_tokens_sum": 4016,
+    "embed_cost_usd_sum": 0.00024096,
+    "embed_rows": 100,
+    "refuse_stage_reason": {
+      "give_up/no_evidence": 34,
+      "out_of_domain/out_of_domain": 14,
+      "search/unknown_name": 2
+    },
+    "n": 100,
+    "n_ok": 100,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 5.245,
+      "p50": 5.572,
+      "p95": 8.223,
+      "max": 10.229
+    },
+    "total_s": {
+      "mean": 5.253,
+      "p50": 5.578,
+      "p95": 8.23,
+      "max": 10.239
+    },
+    "kinds": {
+      "answer": 50,
+      "clarify": 2,
+      "refuse": 48
+    },
+    "citations_mean": 0.85,
+    "cost_usd_sum": 0.523079,
+    "cost_usd_per_question": 0.005231,
+    "cost_rows": 100,
+    "failures": []
+  },
+  "relevant_only": {
+    "step_rows": 50,
+    "cost_by_step": {
+      "ground/grounding": {
+        "rows": 50,
+        "calls": 562,
+        "input_tokens": 2745250,
+        "output_tokens": 148565,
+        "cost_usd": 0.19972949,
+        "llm_s": 904.684,
+        "cost_usd_per_question": 0.00399459,
+        "calls_per_question": 11.24
+      },
+      "judge/judge": {
+        "rows": 50,
+        "calls": 168,
+        "input_tokens": 875713,
+        "output_tokens": 93018,
+        "cost_usd": 0.09399582,
+        "llm_s": 475.662,
+        "cost_usd_per_question": 0.00187992,
+        "calls_per_question": 3.36
+      },
+      "write_answer/answer_fast": {
+        "rows": 50,
+        "calls": 116,
+        "input_tokens": 619132,
+        "output_tokens": 44141,
+        "cost_usd": 0.05228984,
+        "llm_s": 235.109,
+        "cost_usd_per_question": 0.0010458,
+        "calls_per_question": 2.32
+      },
+      "write_answer/answer": {
+        "rows": 40,
+        "calls": 88,
+        "input_tokens": 438742,
+        "output_tokens": 51784,
+        "cost_usd": 0.04849844,
+        "llm_s": 277.843,
+        "cost_usd_per_question": 0.00096997,
+        "calls_per_question": 1.76
+      },
+      "search/decompose": {
+        "rows": 50,
+        "calls": 50,
+        "input_tokens": 29118,
+        "output_tokens": 8719,
+        "cost_usd": 0.0072713,
+        "llm_s": 73.547,
+        "cost_usd_per_question": 0.00014543,
+        "calls_per_question": 1.0
+      },
+      "search/decompose_gate": {
+        "rows": 50,
+        "calls": 50,
+        "input_tokens": 29218,
+        "output_tokens": 2365,
+        "cost_usd": 0.0041043,
+        "llm_s": 48.838,
+        "cost_usd_per_question": 8.209e-05,
+        "calls_per_question": 1.0
+      },
+      "classify/classify": {
+        "rows": 50,
+        "calls": 100,
+        "input_tokens": 140904,
+        "output_tokens": 1893,
+        "cost_usd": 0.00385515,
+        "llm_s": 94.356,
+        "cost_usd_per_question": 7.71e-05,
+        "calls_per_question": 2.0
+      }
+    },
+    "embed_tokens_sum": 3015,
+    "embed_cost_usd_sum": 0.0001809,
+    "embed_rows": 50,
+    "refuse_stage_reason": {},
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 6.702,
+      "p50": 6.811,
+      "p95": 9.65,
+      "max": 10.229
+    },
+    "total_s": {
+      "mean": 6.712,
+      "p50": 6.817,
+      "p95": 9.651,
+      "max": 10.239
+    },
+    "kinds": {
+      "answer": 50
+    },
+    "citations_mean": 1.7,
+    "cost_usd_sum": 0.409744,
+    "cost_usd_per_question": 0.008195,
+    "cost_rows": 50,
+    "failures": []
+  },
+  "irrelevant_only": {
+    "step_rows": 50,
+    "cost_by_step": {
+      "judge/judge": {
+        "rows": 34,
+        "calls": 107,
+        "input_tokens": 499157,
+        "output_tokens": 54010,
+        "cost_usd": 0.0507703,
+        "llm_s": 299.792,
+        "cost_usd_per_question": 0.00101541,
+        "calls_per_question": 2.14
+      },
+      "write_answer/answer": {
+        "rows": 28,
+        "calls": 59,
+        "input_tokens": 286226,
+        "output_tokens": 18933,
+        "cost_usd": 0.02233829,
+        "llm_s": 124.276,
+        "cost_usd_per_question": 0.00044677,
+        "calls_per_question": 1.18
+      },
+      "write_answer/answer_fast": {
+        "rows": 32,
+        "calls": 68,
+        "input_tokens": 340923,
+        "output_tokens": 8315,
+        "cost_usd": 0.01893076,
+        "llm_s": 83.587,
+        "cost_usd_per_question": 0.00037862,
+        "calls_per_question": 1.36
+      },
+      "ground/grounding": {
+        "rows": 6,
+        "calls": 45,
+        "input_tokens": 216954,
+        "output_tokens": 10698,
+        "cost_usd": 0.00998445,
+        "llm_s": 70.006,
+        "cost_usd_per_question": 0.00019969,
+        "calls_per_question": 0.9
+      },
+      "search/decompose": {
+        "rows": 50,
+        "calls": 50,
+        "input_tokens": 28126,
+        "output_tokens": 3318,
+        "cost_usd": 0.0044716,
+        "llm_s": 54.891,
+        "cost_usd_per_question": 8.943e-05,
+        "calls_per_question": 1.0
+      },
+      "classify/classify": {
+        "rows": 50,
+        "calls": 100,
+        "input_tokens": 138928,
+        "output_tokens": 2012,
+        "cost_usd": 0.0034238,
+        "llm_s": 90.649,
+        "cost_usd_per_question": 6.848e-05,
+        "calls_per_question": 2.0
+      },
+      "search/decompose_gate": {
+        "rows": 50,
+        "calls": 50,
+        "input_tokens": 28226,
+        "output_tokens": 1186,
+        "cost_usd": 0.0034156,
+        "llm_s": 49.14,
+        "cost_usd_per_question": 6.831e-05,
+        "calls_per_question": 1.0
+      }
+    },
+    "embed_tokens_sum": 1001,
+    "embed_cost_usd_sum": 6.006e-05,
+    "embed_rows": 50,
+    "refuse_stage_reason": {
+      "give_up/no_evidence": 34,
+      "out_of_domain/out_of_domain": 14,
+      "search/unknown_name": 2
+    },
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "first_token_s": {
+      "mean": 3.787,
+      "p50": 3.679,
+      "p95": 6.779,
+      "max": 8.093
+    },
+    "total_s": {
+      "mean": 3.794,
+      "p50": 3.686,
+      "p95": 6.78,
+      "max": 8.096
+    },
+    "kinds": {
+      "clarify": 2,
+      "refuse": 48
+    },
+    "citations_mean": 0.0,
+    "cost_usd_sum": 0.113335,
+    "cost_usd_per_question": 0.002267,
+    "cost_rows": 50,
+    "failures": []
+  },
+  "by_dataset_kind": {
+    "relevant": {
+      "all_runs": {
+        "n": 50,
+        "n_ok": 50,
+        "total_s": {
+          "mean": 6.712,
+          "p50": 6.817,
+          "p95": 9.651,
+          "max": 10.239
+        },
+        "answered_total_s": {
+          "mean": 6.712,
+          "p50": 6.817,
+          "p95": 9.651,
+          "max": 10.239
+        }
+      },
+      "per_run": [
+        {
+          "run": 1,
+          "n": 25,
+          "n_ok": 25,
+          "total_s": {
+            "mean": 6.812,
+            "p50": 6.834,
+            "p95": 9.92,
+            "max": 10.239
+          },
+          "answered_total_s": {
+            "mean": 6.812,
+            "p50": 6.834,
+            "p95": 9.92,
+            "max": 10.239
+          }
+        },
+        {
+          "run": 2,
+          "n": 25,
+          "n_ok": 25,
+          "total_s": {
+            "mean": 6.612,
+            "p50": 6.817,
+            "p95": 8.3,
+            "max": 8.732
+          },
+          "answered_total_s": {
+            "mean": 6.612,
+            "p50": 6.817,
+            "p95": 8.3,
+            "max": 8.732
+          }
+        }
+      ]
+    },
+    "irrelevant": {
+      "all_runs": {
+        "n": 50,
+        "n_ok": 50,
+        "total_s": {
+          "mean": 3.794,
+          "p50": 3.686,
+          "p95": 6.78,
+          "max": 8.096
+        },
+        "answered_total_s": {
+          "mean": null,
+          "p50": null,
+          "p95": null,
+          "max": null
+        }
+      },
+      "per_run": [
+        {
+          "run": 1,
+          "n": 25,
+          "n_ok": 25,
+          "total_s": {
+            "mean": 3.803,
+            "p50": 3.687,
+            "p95": 6.78,
+            "max": 7.943
+          },
+          "answered_total_s": {
+            "mean": null,
+            "p50": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        {
+          "run": 2,
+          "n": 25,
+          "n_ok": 25,
+          "total_s": {
+            "mean": 3.784,
+            "p50": 3.686,
+            "p95": 6.151,
+            "max": 8.096
+          },
+          "answered_total_s": {
+            "mean": null,
+            "p50": null,
+            "p95": null,
+            "max": null
+          }
+        }
+      ]
+    }
+  }
+}
