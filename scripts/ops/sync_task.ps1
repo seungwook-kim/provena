@@ -2,7 +2,7 @@
 sync_task.ps1 — 증분 수집(handbook-sync)을 Windows 작업 스케줄러에서 운영 DB로 한 번 돌리는 감싸개.
 
 저장소 사본 안내: 팀장 PC 작업 스케줄러 작업 `provena-handbook-sync`(매일 02:14 KST, `-Trigger schedule`)가 실행하는
-원본(<사용자 폴더>\provena_sync\sync_task.ps1, 2026-11-16 01:49 KST 수정본)에서 GCP 프로젝트 id, Secret Manager 이름,
+원본(<사용자 폴더>\provena_sync\sync_task.ps1, 2026-11-17 관리자 전원 알림 반영본)에서 GCP 프로젝트 id, Secret Manager 이름,
 알림 받는 주소, 개인 경로를 환경 변수로 바꾼 사본이다. 동작(준비 확인, 비밀값 처리, 동기화 호출, 실패·보류 메일)은 원본과 같다.
 필요한 환경 변수(값은 저장소에 두지 않는다):
     PROVENA_GCP_PROJECT            GCP 프로젝트 id(필수)
@@ -33,15 +33,23 @@ sync_task.ps1 — 증분 수집(handbook-sync)을 Windows 작업 스케줄러에
     앱 비밀번호   <- Secret Manager $env:PROVENA_GMAIL_SECRET_NAME (latest), 보낼 때만 받는다
     로그인 계정   <- 운영 Cloud Run 환경 변수 GMAIL_SMTP_USER(비밀 아님), 보내는 주소 <- EMAIL_FROM(없으면 GMAIL_SMTP_USER)
     받는 주소     <- -AlertTo(기본 $env:PROVENA_SYNC_ALERT_TO), 없으면 GMAIL_SMTP_USER
+                     + 운영 서비스의 활성 관리자 계정 주소 전부(기본 켜짐, -NoAlertAdmins로 끔). 보낼 때마다 운영 DB에서
+                     읽기 전용 트랜잭션(SET TRANSACTION READ ONLY)으로 users(role='admin', is_active)를 읽는다.
+                     주소 = login_id(@ 포함), 구글 전용 계정이면 user_identities.email. 합친 뒤 대소문자 무시 중복 제거.
+                     DB 읽기가 실패하면 -AlertTo(없으면 보내는 계정)로만 보내고 로그에 경고를 남긴다.
     값은 메일을 보내는 자식 파이썬 프로세스의 환경에만 넣고(이 프로세스 환경에는 넣지 않음) 끝나면 버린다.
-    로그에는 받는 주소도 가려서(첫 글자***@도메인) 쓴다.
+    로그에는 받는 사람 "수"만 쓴다(주소는 로그·메일 본문에서 가리고 파일에 쓰지 않는다).
 - trigger: 작업 스케줄러 등록은 -Trigger schedule 로 부른다 → 슬롯 = 그날 UTC 날짜, sync_runs.trigger = schedule.
   손으로 돌릴 때 기본값은 manual → --slot manual-<UTC 시각> 이라 그날 정시 슬롯을 차지하지 않는다.
 - -DryRun: 동기화도 메일도 보내지 않는다. 로컬 도구, gcloud 로그인, 비밀값 "이름"의 존재(gcloud secrets describe, 값은 받지 않음),
   운영 Cloud Run의 비밀 연결 이름과 EMBED_MODEL·메일 설정, 파이썬 모듈 import만 확인한다.
-- -TestAlert: 동기화는 부르지 않고 시험 메일 한 통만 보낸다(실제 Gmail로 나간다).
+- -TestAlert: 동기화는 부르지 않고 시험 메일 한 통만 보낸다(실제 Gmail로 나간다). 관리자 전원에게 가므로
+  팀장에게만 보내려면 -TestAlert -NoAlertAdmins.
+- -AlertAdminsDryRun: 동기화도 메일도 하지 않고 받는 사람만 운영 DB에서 계산해 "수"를 로그에 쓴다.
+- -NoAlertAdmins: 관리자 주소를 더하지 않는다(-AlertTo 또는 보내는 계정만).
 
-종료 코드: 0 성공(noop·중복 슬롯 포함, TestAlert 발송 성공), 1 동기화 실패(schedule.py), 2 준비 실패(비밀값·도구, TestAlert 발송 실패), 124 시간 초과.
+종료 코드: 0 성공(noop·중복 슬롯 포함, TestAlert 발송 성공, AlertAdminsDryRun 조회 성공), 1 동기화 실패(schedule.py),
+2 준비 실패(비밀값·도구, TestAlert 발송 실패, AlertAdminsDryRun 조회 실패), 124 시간 초과.
 PowerShell 5.1 / 7 겸용. UTF-8(BOM)으로 저장.
 #>
 [CmdletBinding()]
@@ -49,6 +57,8 @@ param(
     [ValidateSet('schedule', 'manual')][string]$Trigger = 'manual',
     [switch]$DryRun,
     [switch]$TestAlert,
+    [switch]$AlertAdminsDryRun,
+    [switch]$NoAlertAdmins,
     [string]$Repo = $env:PROVENA_REPO,
     [string]$LogDir = (Join-Path $env:USERPROFILE 'provena_sync_logs'),
     [string]$TaskName = 'provena-handbook-sync',
@@ -118,6 +128,49 @@ except Exception as ex:
     print(("mail not sent: %s %s" % (type(ex).__name__, code)).strip())
     sys.exit(1)
 print("mail sent" + (" (test SMTP %s:%d)" % (host, port) if test_host else ""))
+'@
+
+# 관리자 주소를 읽는 자식 파이썬(-I). 접속 주소는 환경 변수로만 받는다. 읽기 전용 트랜잭션 하나, 세션 SET 없음, 쓰기 없음.
+# 표준 출력 마지막 줄 JSON {"admins": 활성 관리자 계정 수, "emails": [...]}는 부모가 받기만 하고 로그·파일에 쓰지 않는다.
+# 오류는 예외 종류 이름만 찍는다(메시지에 호스트가 섞일 수 있음).
+$script:AdminPy = @'
+import json, os, re, sys
+try:
+    import psycopg
+except Exception as ex:
+    print("admin lookup failed: import %s" % type(ex).__name__)
+    sys.exit(2)
+url = os.environ.get("PROVENA_ADMIN_DB_URL", "")
+if not url:
+    print("admin lookup failed: no url")
+    sys.exit(2)
+ok = re.compile(r'^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$')
+try:
+    with psycopg.connect(url, connect_timeout=10, prepare_threshold=None) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SET TRANSACTION READ ONLY")
+            cur.execute("SELECT to_regclass('public.user_identities') IS NOT NULL")
+            has_ident = bool(cur.fetchone()[0])
+            if has_ident:
+                cur.execute(
+                    "SELECT CASE WHEN position('@' in u.login_id) > 0 THEN u.login_id ELSE i.email END"
+                    " FROM users u LEFT JOIN user_identities i ON i.user_id = u.user_id AND i.provider = 'google'"
+                    " WHERE u.role = 'admin' AND u.is_active")
+            else:
+                cur.execute("SELECT u.login_id FROM users u WHERE u.role = 'admin' AND u.is_active")
+            rows = [r[0] for r in cur.fetchall()]
+        conn.rollback()
+except Exception as ex:
+    print("admin lookup failed: %s" % type(ex).__name__)
+    sys.exit(1)
+emails, seen = [], set()
+for v in rows:
+    v = (v or "").strip()
+    if "@" not in v or not ok.match(v) or v.lower() in seen:
+        continue
+    seen.add(v.lower())
+    emails.append(v)
+print(json.dumps({"admins": len(rows), "emails": emails}))
 '@
 
 function Protect-Text([string]$Text) {
@@ -256,6 +309,62 @@ function Get-MailConfig {
     return [pscustomobject]@{ User = $user; From = $from; To = $to }
 }
 
+function Get-AdminEmails {
+    # 운영 DB의 활성 관리자 주소. 접속 주소는 보낼 때 Secret Manager에서 받아 자식 파이썬 환경에만 넣고 버린다.
+    # 주소는 가림 목록에만 더하고 반환값으로만 넘긴다(로그·파일에 쓰지 않음).
+    $dbUrl = $null; $envs = $null
+    try {
+        if (-not $script:Gcloud) { throw 'gcloud 없음' }
+        if (-not $DbSecret) { throw 'PROVENA_DB_SECRET_NAME 없음' }
+        if (-not (Test-Path -LiteralPath $python)) { throw ('파이썬 없음: ' + $python) }
+        $dbUrl = Get-Secret $DbSecret $DbSecretVersion
+        $envs = @{ PROVENA_ADMIN_DB_URL = $dbUrl; PYTHONIOENCODING = 'utf-8' }
+        $r = Invoke-Captured -FilePath $python -Arguments '-I -' -TimeoutSec 60 -StdIn $script:AdminPy -ExtraEnv $envs
+        $last = @(($r.Out -split "`r?`n") | Where-Object { $_.Trim().StartsWith('{') }) | Select-Object -Last 1
+        if ($r.Code -ne 0 -or -not $last) {
+            $why = (($r.Out + "`n" + $r.Err).Trim() -split "`r?`n")[-1]
+            if ($why.Length -gt 200) { $why = $why.Substring(0, 200) }
+            throw ('관리자 조회 종료 코드 {0} {1}' -f $r.Code, $why)
+        }
+        $j = $last | ConvertFrom-Json
+        $emails = @($j.emails | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ -and $_.Contains('@') })
+        foreach ($e in $emails) { if ($e.Length -ge 4) { $script:Redact.Add($e) } }
+        return [pscustomobject]@{ Ok = $true; Admins = [int]$j.admins; Emails = $emails; Why = '' }
+    }
+    catch { return [pscustomobject]@{ Ok = $false; Admins = 0; Emails = @(); Why = $_.Exception.Message } }
+    finally { $dbUrl = $null; if ($envs) { $envs.Clear() }; $envs = $null }
+}
+
+function Resolve-AlertRecipients($Mc) {
+    # 받는 사람 = -AlertTo(없으면 보내는 계정) + 활성 관리자 주소(-NoAlertAdmins가 아니면), 대소문자 무시 중복 제거.
+    # 관리자 조회가 실패하면 -AlertTo(없으면 보내는 계정)만 쓰고 경고를 남긴다. 로그에는 수만 쓴다.
+    $list = New-Object System.Collections.Generic.List[string]
+    $seen = @{}
+    $add = { param($a) $a = ([string]$a).Trim(); if ($a -and $a.Contains('@') -and -not $seen.ContainsKey($a.ToLowerInvariant())) { $seen[$a.ToLowerInvariant()] = 1; $list.Add($a) } }
+    foreach ($a in @(([string]$Mc.To) -split '[,;]')) { & $add $a }
+    $baseCount = $list.Count
+    $state = 'off'; $admins = 0; $adminEmails = 0
+    if (-not $NoAlertAdmins) {
+        $ad = Get-AdminEmails
+        if ($ad.Ok) {
+            $state = 'ok'; $admins = $ad.Admins; $adminEmails = @($ad.Emails).Count
+            foreach ($e in @($ad.Emails)) { & $add $e }
+        }
+        else {
+            $state = 'failed'
+            Write-Log ('경고: 운영 DB에서 관리자 주소를 읽지 못해 -AlertTo(없으면 보내는 계정)로만 보낸다: {0}' -f $ad.Why)
+        }
+    }
+    if ($list.Count -eq 0) { & $add $Mc.User }
+    $note = switch ($state) {
+        'ok' { '관리자 계정 {0}개 중 주소 {1}개, 기본 받는 주소 {2}개, 중복 제거' -f $admins, $adminEmails, $baseCount }
+        'failed' { '관리자 조회 실패, 기본 받는 주소만' }
+        default { '관리자 확대 꺼짐(-NoAlertAdmins), 기본 받는 주소만' }
+    }
+    Write-Log ('받는 사람 {0}명 ({1})' -f $list.Count, $note)
+    return [pscustomobject]@{ To = ($list -join ', '); Count = $list.Count; AdminState = $state; Admins = $admins; AdminEmails = $adminEmails }
+}
+
 function New-AlertBody([datetime]$End, [int]$ExitCode, [string]$Kind, [string]$Detail) {
     $tail = @()
     if (Test-Path -LiteralPath $LogPath) { $tail = @(Get-Content -LiteralPath $LogPath -Tail 30 -Encoding UTF8) }
@@ -289,15 +398,16 @@ function Send-AlertMail([string]$Subject, [string]$Body, [string]$Label) {
         if (-not (Test-Path -LiteralPath $python)) { throw ('파이썬 없음: ' + $python) }
         $mc = Get-MailConfig
         if (-not $mc.User) { throw ('운영 서비스 {0}에서 GMAIL_SMTP_USER를 읽지 못함' -f $Service) }
-        if (-not $mc.To) { throw '받는 주소 없음' }
+        $rc = Resolve-AlertRecipients $mc
+        if ($rc.Count -eq 0) { throw '받는 주소 없음' }
         $pw = Get-Secret $GmailSecret 'latest'
         $mailEnv = @{
-            PROVENA_ALERT_USER = $mc.User; PROVENA_ALERT_PASS = $pw; PROVENA_ALERT_FROM = $mc.From; PROVENA_ALERT_TO = $mc.To
+            PROVENA_ALERT_USER = $mc.User; PROVENA_ALERT_PASS = $pw; PROVENA_ALERT_FROM = $mc.From; PROVENA_ALERT_TO = $rc.To
             PROVENA_ALERT_SUBJECT = $Subject; PROVENA_ALERT_BODY = $Body
         }
         $r = Invoke-Captured -FilePath $python -Arguments '-I -' -TimeoutSec 60 -StdIn $script:MailPy -ExtraEnv $mailEnv
         $last = (($r.Out + "`n" + $r.Err).Trim() -split "`r?`n")[-1]
-        if ($r.Code -eq 0) { Write-Log ('{0} 보냄: 메일({1}) {2}' -f $Label, (Format-MaskedEmail $mc.To), $last); return $true }
+        if ($r.Code -eq 0) { Write-Log ('{0} 보냄: 메일(받는 사람 {1}명) {2}' -f $Label, $rc.Count, $last); return $true }
         Write-Log ('{0} 메일 전송 실패: 종료 코드 {1} {2}' -f $Label, $r.Code, $last)
         return $false
     }
@@ -318,7 +428,8 @@ $failLine = ''
 $syncTimedOut = $false
 $python = Join-Path $Repo '.venv\Scripts\python.exe'
 $utcNow = $started.ToUniversalTime()
-$mode = if ($DryRun) { 'DryRun' } elseif ($TestAlert) { 'TestAlert' } else { '실행' }
+$mode = if ($DryRun) { 'DryRun' } elseif ($AlertAdminsDryRun) { 'AlertAdminsDryRun' } elseif ($TestAlert) { 'TestAlert' } else { '실행' }
+$mode += $(if ($NoAlertAdmins) { ' 관리자확대=꺼짐' } else { ' 관리자확대=켜짐' })
 try {
     Write-Log ('시작 {0} (UTC {1}) 모드={2} trigger={3} 컴퓨터={4} PS={5}' -f $started.ToString('yyyy-MM-dd HH:mm:ss zzz'),
         $utcNow.ToString('yyyy-MM-dd HH:mm:ss'), $mode, $Trigger, $env:COMPUTERNAME, $PSVersionTable.PSVersion)
@@ -376,10 +487,20 @@ try {
             Write-Log ('실패 알림: 메일({0}) 보내는 주소 {1}, smtp.gmail.com:587 STARTTLS' -f (Format-MaskedEmail $mc.To), (Format-MaskedEmail $mc.From))
         }
         else { Write-Log ('  [문제] 운영 서비스 {0}에 GMAIL_SMTP_USER 없음 → 실패 알림 메일을 보낼 수 없음' -f $Service); $okS = $false }
+        Write-Log ('  관리자 주소 더하기: {0}' -f $(if ($NoAlertAdmins) { '꺼짐' } else { '켜짐(보낼 때 운영 DB 조회, DryRun은 조회하지 않음 — 수는 -AlertAdminsDryRun)' }))
         $imp = Invoke-Captured -FilePath $python -Arguments "-c ""import backend.rag.ingest.schedule, psycopg, pgvector.psycopg, smtplib, ssl; print('import ok')""" -WorkDir $Repo -TimeoutSec 180
         Write-Log ('파이썬 import: 종료 코드 {0} {1}' -f $imp.Code, (($imp.Out + $imp.Err).Trim() -split "`n")[-1])
         $code = if ($okS -and $imp.Code -eq 0) { 0 } else { 2 }
         Write-Log ('DryRun 결과: {0} (동기화와 메일은 부르지 않았다)' -f $(if ($code -eq 0) { '준비됨' } else { '문제 있음' }))
+    }
+    elseif ($AlertAdminsDryRun) {
+        # 3A. 받는 사람만 계산한다(운영 DB 읽기 전용 조회). 동기화와 메일은 부르지 않는다. 로그에는 수만 쓴다.
+        Write-Log '받는 사람 확인: 동기화와 메일은 부르지 않는다'
+        $mc = Get-MailConfig
+        if (-not $mc.User) { Write-Log ('  [문제] 운영 서비스 {0}에 GMAIL_SMTP_USER 없음 → 실패 알림 메일을 보낼 수 없음' -f $Service) }
+        $rc = Resolve-AlertRecipients $mc
+        $code = if ($mc.User -and $rc.Count -gt 0 -and ($NoAlertAdmins -or $rc.AdminState -eq 'ok')) { 0 } else { 2 }
+        Write-Log ('AlertAdminsDryRun 결과: {0} (메일은 보내지 않았다)' -f $(if ($code -eq 0) { '조회됨' } else { '문제 있음' }))
     }
     elseif ($TestAlert) {
         # 3T. 시험 메일 한 통. 동기화는 부르지 않는다.
@@ -439,7 +560,7 @@ finally {
     Clear-Secrets
     $ended = Get-Date
 
-    if (-not $DryRun -and -not $TestAlert) { try {
+    if (-not $DryRun -and -not $TestAlert -and -not $AlertAdminsDryRun) { try {
         $day = $started.ToString('yyyy-MM-dd')
         if ($code -ne 0) {
             if ($syncTimedOut -or $code -eq 124) { $kind = 'timeout(시간 초과 {0}분)' -f $TimeoutMinutes; $detail = $failLine }
