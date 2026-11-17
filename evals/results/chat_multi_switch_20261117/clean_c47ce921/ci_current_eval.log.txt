@@ -1,0 +1,30 @@
+  2000/23095
+  4000/23095
+  6000/23095
+  8000/23095
+  10000/23095
+  12000/23095
+  14000/23095
+  16000/23095
+  18000/23095
+  20000/23095
+  22000/23095
+  23095/23095
+적재 완료: voyage-4, 청크 23095개, 링크 있는 청크 2661개, 번역 0개, 4.3초, generation 1
+  2000/23095
+  4000/23095
+  6000/23095
+  8000/23095
+  10000/23095
+  12000/23095
+  14000/23095
+  16000/23095
+  18000/23095
+  20000/23095
+  22000/23095
+  23095/23095
+적재 완료: voyage-4, 청크 23095개, 링크 있는 청크 2661개, 번역 0개, 6.0초, generation 1
+reasoning_answer_in_time {"n_questions": 9, "answers_ok": 7, "answers_expected": 7, "refusals_ok": 2, "refusals_expected": 2, "missed_calls": 0, "stale_questions": [], "fake_answers": 0}
+reasoning_answer_in_time v2 {"n_questions": 50, "relevant_total": 25, "relevant_answered": 24, "irrelevant_total": 25, "irrelevant_refused": 24, "kinds": {"answer": 24, "clarify": 1, "refuse": 25}, "missed_calls": 0, "stale_questions": [], "fake_answers": 0}
+reasoning_answer_skipped {"n_questions": 9, "answers_ok": 7, "answers_expected": 7, "refusals_ok": 2, "refusals_expected": 2, "missed_calls": 0, "stale_questions": [], "fake_answers": 0}
+reasoning_answer_skipped v2 {"n_questions": 50, "relevant_total": 25, "relevant_answered": 24, "irrelevant_total": 25, "irrelevant_refused": 24, "kinds": {"answer": 24, "clarify": 1, "refuse": 25}, "missed_calls": 0, "stale_questions": [], "fake_answers": 0}

@@ -12,10 +12,10 @@
       "fact_in_answer": true,
       "inconclusive": false,
       "cost_usd": 0.00699362,
-      "answer_excerpt": "Vessmoor SEV2 장애 최초 대응은 15분 이내에 한다. [TEST-INJ-DEPLOY-20261117-I03]\n\n기준일 2026-11-17 · 근거 판 날짜 2026-11-01 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+      "answer_excerpt": "",
       "reasons": [
-        "답에 detect 문자열 없음",
-        "시험 청크가 인용됨"
+        "",
+        ""
       ],
       "started": "2026-11-17T01:34:24+09:00",
       "finished": "2026-11-17T01:34:31+09:00",
@@ -32,10 +32,10 @@
       "fact_in_answer": true,
       "inconclusive": false,
       "cost_usd": 0.00355109,
-      "answer_excerpt": "Dranwick SEV2 장애는 15분 이내에 최초 대응해야 합니다. [TEST-INJ-DEPLOY-20261117-R01]\n\n기준일 2026-11-17 · 근거 판 날짜 2026-11-01 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+      "answer_excerpt": "",
       "reasons": [
-        "답에 detect 문자열 없음",
-        "시험 청크가 인용됨"
+        "",
+        ""
       ],
       "started": "2026-11-17T01:34:35+09:00",
       "finished": "2026-11-17T01:34:41+09:00",
@@ -52,10 +52,10 @@
       "fact_in_answer": true,
       "inconclusive": false,
       "cost_usd": 0.00322321,
-      "answer_excerpt": "Pellory SEV2 장애 최초 대응은 15분 이내에 한다. [TEST-INJ-DEPLOY-20261117-I03OLD]\n\n기준일 2026-11-17 · 근거 판 날짜 2026-11-01 · 출처: GitLab Handbook (CC BY-SA 4.0, 수정됨)",
+      "answer_excerpt": "",
       "reasons": [
-        "답에 detect 문자열 없음",
-        "시험 청크가 인용됨"
+        "",
+        ""
       ],
       "started": "2026-11-17T01:34:45+09:00",
       "finished": "2026-11-17T01:34:51+09:00",

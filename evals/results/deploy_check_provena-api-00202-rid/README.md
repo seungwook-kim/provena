@@ -56,8 +56,39 @@
 ## 비용과 운영 상태
 
 - 비용: 워밍업 0.013398달러, 공동 검토 멈춤 시험 추정 0.006달러. 배포 점검과 MCP 점검은 LLM을 부르지 않는다.
-- 2026-11-17 12:53 KST 기준 트래픽은 `provena-api-00181-zub` 100%이고, 태그 `c1117c`가 이 판을 가리킨다.
+- 2026-11-17 12:53 KST 기준 트래픽은 `provena-api-00181-zub` 100%이고, 태그 `c1117c`가 이 판을 가리킨다. 아래 v2 50건과 한도 확인 뒤 2026-11-17 15:33 KST에 이 판을 트래픽 100%로 올렸다(결정 0134).
 - 같은 판의 인젝션 재시험은 `evals/results/injection_live_provena-api-00202-rid/`에 있다.
+
+## v2 50건 1회 (2026-11-17 15:16:21~15:20:36 KST)
+
+태그 주소 `c1117c`(트래픽 0%)에 측정 계정으로 동결 v2 50건을 한 번씩 보냈다(`evals.latency.deploy_latency`, 문항마다 새 대화, 동시 요청 없음, 제한 120초). 채점은 `evals.latency.deploy_citation_gold`(코퍼스 스냅샷 `snap_9bc7d587`, 스냅샷에 없는 인용 0/43)이다.
+
+| 항목 | 값 |
+|---|---|
+| 성공/전체 | 50/50 |
+| 정답 근거 인용률 | 0.960 |
+| 인용 정확도 | 0.960 |
+| 오답 근거 | 0.040(1행) |
+| 과잉 거절 | 0.000 |
+| 올바른 거절 | 1.000 |
+| 전체 p50 / p95 | 5.241초 / 8.232초 |
+| 결과 종류 | answer 25, clarify 1, refuse 24 |
+| 비용 | 합 0.2589달러, 요청당 0.0052달러 |
+| 5xx | 0건(06:14:10~06:22:37 UTC, 서비스 전체). 같은 창의 `/chat` POST 51건 모두 `provena-api-00202-rid` |
+
+## 하루 질문 한도 429 확인 (2026-11-17 15:22:53~15:22:59 KST)
+
+같은 이미지(digest `a6f6a026`)에 환경 변수 `DAILY_QUESTION_LIMIT=1`만 바꾼 트래픽 0% 판 `provena-api-00203-pak`(태그 `c1117l`)을 띄워(`/health` 200, 그 밖의 설정 차이 없음) 측정 계정으로 `/chat`을 2번 보냈다. 이 계정은 그날 이미 한도를 넘게 질문했다.
+
+| 항목 | 값 |
+|---|---|
+| 응답 | 2건 모두 HTTP 429, `error.code` `daily_limit` |
+| `Retry-After` | 31023초, 31021초(다음 날 0시 KST까지) |
+| `resets_at` | 2026-11-18T00:00:00+09:00 |
+| 안내 문구 | "오늘 질문 한도(1건)를 넘었습니다. 내일 다시 이용해 주세요." |
+| 5xx | 0건(06:20:53~06:24:59 UTC). 같은 창의 `/chat` POST 2건 모두 `provena-api-00203-pak` |
+
+확인 뒤 서비스 템플릿은 한도 값을 바꾸지 않은 판(`provena-api-c17rst1117`, 환경 변수 차이 없음)으로 되돌렸다. 서비스 판 00202-rid의 `DAILY_QUESTION_LIMIT`는 남은 유료 측정 동안 0이고, 11/17 밤 50으로 바꿔 새 리비전으로 올린다.
 
 ## 파일
 
@@ -68,3 +99,5 @@
 - `joint_review_probe.json`: 공동 검토 멈춤 시험 원자료(12:53:08~12:53:27 KST)
 - `errors_5xx.json`: 배포부터 점검 끝까지의 5xx·`/chat` 요청 수 감사(앞뒤 2분 여유)
 - `warmup/`: 워밍업 1건의 `summary.json`, `summary.md`, `rows.jsonl`(대화 id는 가림)
+- `v2/`: v2 50건 1회의 `summary.json`, `summary.md`, `citation_gold.json`, `citation_gold.md`(스냅샷 경로는 `snap_9bc7d587/`로 줄임), `run1/rows.jsonl`(대화 id는 가림), `errors_5xx.json`
+- `limit/`: 429 확인의 `limit429.json`, 판 정보 `c1117l_revision.json`, `errors_5xx.json`

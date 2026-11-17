@@ -360,7 +360,7 @@
 - 전환으로 방어나 기능이 빠지면 안 된다. 그래서 단일 `/chat` 경로가 하는 일을 항목별로 멀티와 대조하고, 빠진 것을 같은 노드와 함수로 채운 뒤 전환한다(대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`).
 
 ### What
-- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 운영·로컬 데모·키 없는 데모 모두 멀티로 돈다. 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
+- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 이 코드의 로컬 데모·키 없는 데모는 멀티로 돈다. 운영은 멀티 판 승격 뒤 멀티다(서비스 판 `provena-api-00202-rid`는 전환 전 코드라 단일, 멀티 판 `provena-api-00205-zit`는 트래픽 0%로 측정 중). 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
 - `build_question_graph`는 단일에 넘기던 인자(공유 모델, 체크포인터, Store, 답 저장소, 결정표 저장소, 합동 검토 하위 그래프, 서비스 검색 함수)를 멀티에 그대로 넘긴다. 멀티는 같은 인자로 단일 그래프를 만들어 노드와 분기 함수를 꺼내 쓰므로 프롬프트, 검색, 판정과 다수결, 인용 검사와 후처리, 입력·출력 방어, 저장 코드가 하나뿐이다. 라우터는 `SUPERVISOR_ROUTER`(비면 코드 라우팅, LLM 호출을 더하지 않음).
 - 단일과 같게 맞춘 세 가지:
   1. done의 `refuse_stage`: 멀티 상태 칸 `kind_node`(결과 종류를 거절·되묻기로 쓴 단일 노드 이름)를 `stream_events`가 읽어, 에이전트 이름(`supervisor`, `retriever`, `verifier`) 대신 단일과 같은 노드 이름을 낸다.
@@ -378,3 +378,19 @@
 - GIVEN `run_config`의 콜백. THEN LLM 호출마다 노드 이름과 실행 표지(thread_id)가 단일과 같은 순서로 붙는다. GIVEN 판정 다수결을 켠다. THEN `judge_votes` 기록 수가 단일과 같다.
 - 키 없는 데모 녹화 재생(데모 질문 9개, v2 50건)이 멀티 경로에서 녹화에 없는 요청 0건으로 기준값과 같다(`evals/results/chat_multi_switch_20261117/README.md`).
 - 한계: 유료 재측정 전이다. 기대값과 멈춤 규칙은 `evals/results/chat_multi_switch_20261117/PREREGISTER.md`에 측정 전에 적었다.
+
+## 갈린 판정 두 표의 셋째 표 대기 상한 `GRAPH_SPLIT_VOTE_WAIT_S` (2026-11-17, 결정 0132)
+
+### Why
+- 체크포인트 4-1: 새 검증 20건의 답한 질문 p95가 3회 모두 10초를 넘었다. 저장된 기록의 0원 분석(`evals/results/latency_holdout_v2_analysis_20261117/`)에서 3회 모두 같은 한 문항만 10초를 넘었고, 그 시간 대부분이 근거 충분 판정 구간이었으며, 먼저 온 두 표가 충분과 일부로 갈린 뒤 셋째 표를 기다린 판정이 있었다.
+
+### What
+- 환경 변수 `GRAPH_SPLIT_VOTE_WAIT_S`(값 읽기 `backend/graph/answer_fixes.py` `split_vote_wait_s`, 코드 기본 빈 값 = 이전 동작, 서비스 값 `1.0`). 값이 있으면 근거 충분 판정 다수결(`backend/graph/build.py` `voted`)에서 먼저 온 두 표가 충분과 일부로 갈렸을 때(`two_split`) 셋째 표를 그 초까지만 기다린다. 오지 않으면 두 표로 정하고(같은 수일 때 먼저 온 표를 쓰는 기존 `merge_votes` 규칙), 판정 기록 `judge_votes`에 `how=split_capped`를 남긴다.
+- 대상이 아닌 것: 근거 없음 표가 섞인 갈림(셋째 표가 재검색·거절 여부를 정한다, 결정 0100), 같은 결론 두 표, 근거 없음 두 표(`GRAPH_NONE_VOTE_WAIT_S`), 상한 안에 온 셋째 표.
+- 기대(사전 등록 62.89, 측정 전): 같은 20건 기록에 상한을 대입하면 상한이 걸리는 판정 6건 중 2건, 결론이 바뀌는 판정 0건, 답한 질문 p95 3회 합 11.323초 → 9.941초 안팎. 상한 값을 같은 20건 기록으로 정했으므로 이 기대는 낙관적일 수 있고, 3회 모두 10초 아래는 기대하지 않는다.
+
+### AC (시험 `tests/test_split_vote_wait.py`)
+- GIVEN 값이 비었다. THEN 판정 다수결은 이전과 같이 셋째 표를 기다린다.
+- GIVEN 값 1.0과 충분·일부로 갈린 두 표, 셋째 표가 상한보다 늦다. THEN 두 표로 정하고 `judge_votes`에 `how=split_capped`가 남는다. GIVEN 셋째 표가 상한 안에 온다. THEN 세 표 다수결이다.
+- GIVEN 근거 없음 표가 섞인 갈림. THEN 상한을 쓰지 않는다.
+- 한계: 운영 측정은 멀티 판(서비스 설정에 이 값이 들어 있음)에서 멀티 전환과 함께 하므로 두 변경의 몫을 나누지 못한다. 측정값은 측정 중이다.

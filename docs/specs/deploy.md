@@ -62,6 +62,11 @@
 | 환경변수 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google 로그인. 하나라도 비면 `/auth/google/start`가 `/login?oauth_error=google_unavailable`로 돌려보낸다(아래 "Google 로그인 설정", `docs/specs/login.md`) |
 | 환경변수 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | 트레이스. 키 두 개가 있으면 켜진다 |
 | 환경변수 | `LLM_RESPONSE_CACHE`, `LLM_RESPONSE_CACHE_SIZE` | LLM 응답 캐시(G-08). 비우면 꺼진다. 운영과 최종 측정에서는 켜지 않는다(아래 "운영 재배포", `backend/services/services.md`) |
+| 환경변수 | `LLM_MAX_TOKENS` | LLM 호출 1건의 출력 상한(`backend/services/llm.py:188`, 기본 2500, 평가 전용 단일 검토 경로만 4000). 운영 판 `provena-api-00202-rid`에 `2500`으로 명시(결정 0129, 0134) |
+| 환경변수 | `DAILY_QUESTION_LIMIT` | 사람당 하루 질문 한도(`backend/api/daily_limit.py:38`, 기본 50, 0이면 끔, KST 0시 기준, DB의 질문 기록으로 셈, 넘으면 `/chat` 429 `daily_limit`). 운영 판 `provena-api-00202-rid`는 남은 유료 측정 동안 `0`, 11/17 밤 `50`으로 바꾼다(환경 변수를 바꾸면 새 리비전이 생긴다) |
+| 비밀값(Secret Manager) | `MCP_EXTERNAL_TOKEN` | 외부 연동용 MCP 토큰(`extras/mcp_skill/mcp_server/server.py:532`). 이 토큰만 분당 30·하루 500회로 제한하고 넘으면 429 `rate_limited`와 `Retry-After`, 내부 `MCP_TOKEN`은 제한 없음(결정 0129). 한계: 세는 곳은 인스턴스마다의 프로세스 메모리라 재시작하면 0부터 다시 세고, 인스턴스가 N개면 실제 상한은 N배다. 운영 실행 설정은 `--max-instances 1`(00202-rid 최대 인스턴스 1)이라 지금은 서비스 전체 값과 같다 |
+| 환경변수 | `QUESTION_GRAPH_MODE` | `/chat` 질문 그래프 구조(`backend/main.py:279`). `single`(코드 기본) 또는 `multi`(서비스 값, `backend/graph/service_profile.py`), 다른 값이면 서버가 시작하지 않는다. 되돌리기는 `single` 또는 `off`(결정 0131). 서비스 판 `provena-api-00202-rid`는 이 스위치 전 코드다 |
+| 환경변수 | `GRAPH_SPLIT_VOTE_WAIT_S` | 근거 충분 판정에서 충분·일부로 갈린 두 표 뒤 셋째 표를 기다리는 상한(초, `backend/graph/answer_fixes.py` `split_vote_wait_s`, 코드 기본 빈 값, 서비스 값 `1.0`). 결정 0132, `docs/specs/question-graph.md` 같은 이름의 절 |
 
 - 위 표는 코드에서 `os.getenv`·`os.environ`으로 읽는 이름 가운데 배포·기동에 직접 걸리는 것만 골랐다. 검색·LLM 세부 변수는 `docs/specs/search.md`, `docs/specs/llm.md` 표가 정본이다.
 

@@ -1,6 +1,6 @@
 # 사전 등록 메모: /chat 멀티 그래프 전환 뒤 유료 재측정 (2026-11-17, 측정 전 작성)
 
-이 메모는 `evals/PREREGISTER.md` 본문과 별도로, `/chat`을 Supervisor 멀티 그래프(`QUESTION_GRAPH_MODE=multi`)로 바꾼 운영 판을 재측정하기 전에 기대값과 멈춤 규칙을 적어 둔 것이다. 본문 번호는 본문을 고치는 쪽에서 붙인다.
+이 메모는 `evals/PREREGISTER.md` 본문과 별도로, `/chat`을 Supervisor 멀티 그래프(`QUESTION_GRAPH_MODE=multi`)로 바꾼 운영 판을 재측정하기 전에 기대값과 멈춤 규칙을 적어 둔 것이다. 본문 번호는 본문을 고치는 쪽에서 붙인다. 본표 번호는 62.90이다(`evals/PREREGISTER.md`, 같은 판에서 함께 재는 갈린 판정 대기 상한은 62.89).
 
 ## 무엇을 재나
 

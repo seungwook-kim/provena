@@ -1,0 +1,43 @@
+mutation 41: backend/graph/build.py:618
+old: return len(good) == 2 and {AF._vote_key("judge", g) for g in good} == {(True, False), (False, True)}
+new: return False
+test: tests/test_split_vote_wait.py
+before: rc=0 19 passed in 2.66s
+after: rc=1 2 failed, 17 passed in 5.63s
+
+.........FF........                                                      [100%]
+================================== FAILURES ===================================
+_____ test_split_votes_settle_when_the_third_is_later_than_the_cap[False] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002562F4B6430>
+multi = False
+
+    @pytest.mark.parametrize("multi", [False, True])
+    def test_split_votes_settle_when_the_third_is_later_than_the_cap(monkeypatch, multi):
+        monkeypatch.setenv("GRAPH_JUDGE_VOTE", "1")
+        monkeypatch.setenv("GRAPH_SPLIT_VOTE_WAIT_S", "0.1")
+        out, took = judged(multi, votes(OK, PART, OK, third_after=1.5))
+>       assert took < 1.2   # 셋째 표(1.5초 뒤)를 기다리지 않았다
+        ^^^^^^^^^^^^^^^^^
+E       assert 1.523123100050725 < 1.2
+
+tests\test_split_vote_wait.py:50: AssertionError
+_____ test_split_votes_settle_when_the_third_is_later_than_the_cap[True] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002562F518910>
+multi = True
+
+    @pytest.mark.parametrize("multi", [False, True])
+    def test_split_votes_settle_when_the_third_is_later_than_the_cap(monkeypatch, multi):
+        monkeypatch.setenv("GRAPH_JUDGE_VOTE", "1")
+        monkeypatch.setenv("GRAPH_SPLIT_VOTE_WAIT_S", "0.1")
+        out, took = judged(multi, votes(OK, PART, OK, third_after=1.5))
+>       assert took < 1.2   # 셋째 표(1.5초 뒤)를 기다리지 않았다
+        ^^^^^^^^^^^^^^^^^
+E       assert 1.5292028000112623 < 1.2
+
+tests\test_split_vote_wait.py:50: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_split_vote_wait.py::test_split_votes_settle_when_the_third_is_later_than_the_cap[False]
+FAILED tests/test_split_vote_wait.py::test_split_votes_settle_when_the_third_is_later_than_the_cap[True]
+2 failed, 17 passed in 5.63s
