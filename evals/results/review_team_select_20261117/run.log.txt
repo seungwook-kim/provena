@@ -1,0 +1,11 @@
+[team] 문항 1: pending_approval 팀 ['finance', 'infra', 'itops', 'security'] 쟁점 19행 LLM 5회 8.495초 $0.00411
+[team] 문항 2: pending_approval 팀 ['finance', 'infra', 'itops', 'security'] 쟁점 20행 LLM 5회 8.925초 $0.00447
+[team] 문항 3: pending_approval 팀 ['finance', 'infra', 'itops', 'security'] 쟁점 17행 LLM 5회 8.272초 $0.00423
+[team] 문항 4: pending_approval 팀 ['finance', 'infra', 'itops', 'security'] 쟁점 19행 LLM 5회 8.41초 $0.00433
+[team] 문항 5: pending_approval 팀 ['finance', 'itops', 'security'] 쟁점 14행 LLM 4회 7.687초 $0.00327
+[team] 문항 6: pending_approval 팀 ['finance', 'infra', 'security'] 쟁점 15행 LLM 4회 8.403초 $0.00358
+[team] 문항 7: pending_approval 팀 ['finance', 'infra'] 쟁점 7행 LLM 3회 6.697초 $0.00193
+[team] 문항 8: clarify 팀 [] 쟁점 0행 LLM 1회 1.771초 $0.00023
+[team] 문항 9: clarify 팀 [] 쟁점 0행 LLM 1회 1.87초 $0.00025
+[team] 문항 10: pending_approval 팀 ['finance'] 쟁점 3행 LLM 2회 5.074초 $0.00092
+{"gold_status": "계산함(확정 정답 기준: 조원 2명 확인(박진형, 강경희, 2026-11-13))", "gold_total": 37, "gold_found": 13, "missed_issue_rate": 0.6486486486486487, "cost_usd": 0.027313, "cost_usd_mean": 0.00273128, "errors": 0}

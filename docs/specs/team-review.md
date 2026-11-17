@@ -92,7 +92,7 @@ POST /approvals/{id}        (관리자)
 - 신뢰 경계: 쟁점표 저장은 승인(interrupt)을 거쳐야만 되고, 검색된 원문은 지시가 아닌 자료로만 다룬다. 인용은 코드로 원문과 대조한다.
 - 단일·멀티 비교 평가는 정책 질문 경로(F-01)로 하고, 합동 검토는 별도 시연 경로다.
 - 팀 선택 스위치 `REVIEW_TEAM_SELECT`(`backend/graph/departments/review.py` `team_select_enabled`): 코드 기본은 꺼짐이고 서비스 설정(`backend/graph/service_profile.py` `SERVICE_ENV`)에서 켠다. 키 없는 데모(녹화 재생)에서는 켜도 끈다(녹화된 Supervisor 요청에 팀 선택 규칙이 없다). 운영에서 끄려면 환경 변수에 `off`를 준다.
-  근거(사전 등록 62.82, 2026-11-17 팀장 결정): 같은 로컬 측정기(`evals/agent/exp_review_v1.py`, 확정 정답 10문항)에서 네 팀 전부의 정답 쟁점 누락률 0.649(62.36, 3회)와 팀 선택의 누락률 0.649(1회, `evals/results/review_team_select_20261117/`)가 같고, 회당 비용은 0.00473달러에서 0.00273달러로 줄며, 고르는 팀이 입력에 따라 달라진다(팀을 돌린 8문항에서 1~4팀). 운영 기준 0.577(`evals/results/review_deploy_provena-api-00049-nph/`)은 운영 DB 검색과 배포 경로로 잰 다른 경로의 값이라 이 비교에 쓰지 않았다. 고르지 않은 팀에서 생긴 누락 2개는 지켜볼 위험으로 남긴다.
+  근거(사전 등록 62.82·62.83, 2026-11-17 팀장 결정): 같은 날 같은 로컬 측정기(`evals/agent/exp_review_v1.py`, 확정 정답 10문항)로 켬·끔을 각 3회 잰 결과 정답 쟁점 누락률 평균은 켬 0.622(0.568~0.676), 끔 0.649(0.595~0.703)이고 문항당 비용은 켬 0.00279달러, 끔 0.00317달러다(`evals/results/review_team_select_3run_20261117/`). 회별 범위(약 0.11)가 평균 차이(0.027)보다 커서 누락률 차이는 단정하지 않고, 사전 등록한 멈춤 규칙(켬이 0.05를 넘게 나쁨)에는 해당하지 않았다. 결정 당시 근거는 켬 1회 0.649(`evals/results/review_team_select_20261117/`)와 62.36 네 팀 전부 0.649(3회)였고, 고르는 팀이 입력에 따라 달라진다(팀을 돌린 8문항에서 1~4팀). 운영 기준 0.577(`evals/results/review_deploy_provena-api-00049-nph/`)은 운영 DB 검색과 배포 경로로 잰 다른 경로의 값이라 이 비교에 쓰지 않았다. 고르지 않은 팀에서 생긴 누락 2개는 지켜볼 위험으로 남긴다.
 - 평가 전용 단일 검토자(`backend/graph/departments/single_review.py`, `POST /admin/eval/review`)는 네 관점 쟁점을 한 번에 내므로 그 호출에만 출력 상한 4000토큰을 준다(`backend/services/llm.py` `TASK_MAX_TOKENS`). Supervisor와 팀 에이전트 등 사용자 경로는 `LLM_MAX_TOKENS`(기본 2500) 그대로다.
 
 ## AC (Given-When-Then)
