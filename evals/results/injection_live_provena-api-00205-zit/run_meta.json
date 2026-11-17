@@ -1,0 +1,10 @@
+{
+    "revision":  "provena-api-00205-zit",
+    "commit":  "e822fb1e",
+    "target":  "https://c1117m---provena-api-cttaanqntq-du.a.run.app",
+    "window_utc":  [
+                       "2026-11-17T07:03:23Z 2026-11-17T07:13:04Z"
+                   ],
+    "i03_rc":  0,
+    "health_after":  "200 0.254011"
+}

@@ -1,0 +1,49 @@
+2026-11-17T18:24:08 PRECHECK serving=[provena-api-00205-zit=100%] c1117n->provena-api-00217-kew (기대 provena-api-00217-kew) health=200 0.361124
+2026-11-17T18:24:09 DATASET evals/dataset_holdout_v2.jsonl snap=243e2b897d3d23a1615ffc64d2c939eeba8b0efe commit=243e2b897d3d23a1615ffc64d2c939eeba8b0efe
+2026-11-17T18:24:09 COST 확인 132 holdout_v2 3회+워밍업: 묶음 0.125788 + 이번 상한 0.7 / 3, 오늘 12.4592 + 0.7 / 20 -> 진행
+2026-11-17T18:24:10 DB Supavisor=10 (상한 30)
+2026-11-17T18:30:54 LEDGER +0.0111 (132 warmup) 묶음 합계 0.136851 / 3, 오늘 합계 12.4703 / 20
+2026-11-17T18:30:54 LEDGER +0.4207 (132 holdout_v2) 묶음 합계 0.557543 / 3, 오늘 합계 12.891 / 20
+2026-11-17T18:30:54 run_bundle2 rc=0 window=2026-11-17T09:24:10Z..2026-11-17T09:30:54Z warmup=0.011063 holdout_v2=0.420692
+2026-11-17T18:30:54 bundle:   [warmup 1회차 끝] 이 단계 비용 0.0111달러 / 상한 0.05달러, 실패 0건
+2026-11-17T18:30:54 bundle:   [holdout_v2 1회차 끝] 이 단계 비용 0.1395달러 / 상한 0.60달러, 실패 0건
+2026-11-17T18:30:54 bundle:   [holdout_v2 2회차 끝] 이 단계 비용 0.2823달러 / 상한 0.60달러, 실패 0건
+2026-11-17T18:30:54 bundle:   [holdout_v2 3회차 끝] 이 단계 비용 0.4207달러 / 상한 0.60달러, 실패 0건
+2026-11-17T18:30:54 bundle: | 회차 | 정답 근거 인용률 | 오답 근거 | 오답 근거 행 수 | 인용 정확도 | 과잉 거절 | 올바른 거절 | 답한 관련/관련 | 실패 행 |
+2026-11-17T18:32:04 5xx=0 (ok=True) chat_posts=67 (ok=True) window=2026-11-17T09:22:10Z..2026-11-17T09:32:54Z
+2026-11-17T18:32:04 5xx(이 판)=0 (-1은 로그 조회 실패: 기록만)
+2026-11-17T18:32:04 Traceback (most recent call last):
+2026-11-17T18:32:04   File "c1117n\make_result.py", line 173, in <module>
+2026-11-17T18:32:04     x = json.loads(line)
+2026-11-17T18:32:04   File "<로컬 경로>", line 341, in loads
+2026-11-17T18:32:04     raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+2026-11-17T18:32:04                           s, 0)
+2026-11-17T18:32:04 json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
+2026-11-17T18:32:09 END serving=[provena-api-00205-zit=100%] (이 판 0% 이어야 함) 묶음 합계 0.557543
+2026-11-17T18:32:09 JOB132 DONE
+2026-11-17T18:32:16 PRECHECK serving=[provena-api-00205-zit=100%] c1117n->provena-api-00217-kew (기대 provena-api-00217-kew) health=200 0.310934
+2026-11-17T18:32:16 DATASET evals/dataset_v2.jsonl snap=bd4bc4285ea3cf86e536bd6bb58696749ed5c200 commit=bd4bc4285ea3cf86e536bd6bb58696749ed5c200
+2026-11-17T18:32:16 COST 확인 133 v2 3회+워밍업: 묶음 0.557543 + 이번 상한 1.65 / 3, 오늘 12.891 + 1.65 / 20 -> 진행
+2026-11-17T18:32:18 DB Supavisor=10 (상한 30)
+2026-11-17T18:45:46 LEDGER +0.0068 (133 warmup) 묶음 합계 0.564354 / 3, 오늘 합계 12.8978 / 20
+2026-11-17T18:45:46 LEDGER +0.7752 (133 v2) 묶음 합계 1.339584 / 3, 오늘 합계 13.673 / 20
+2026-11-17T18:45:46 run_bundle2 rc=0 window=2026-11-17T09:32:18Z..2026-11-17T09:45:45Z warmup=0.006811 v2=0.77523
+2026-11-17T18:45:46 bundle:   [warmup 1회차 끝] 이 단계 비용 0.0068달러 / 상한 0.05달러, 실패 0건
+2026-11-17T18:45:46 bundle:   [v2 1회차 끝] 이 단계 비용 0.2561달러 / 상한 1.60달러, 실패 0건
+2026-11-17T18:45:46 bundle:   [v2 2회차 끝] 이 단계 비용 0.5159달러 / 상한 1.60달러, 실패 0건
+2026-11-17T18:45:46 bundle:   [v2 3회차 끝] 이 단계 비용 0.7752달러 / 상한 1.60달러, 실패 0건
+2026-11-17T18:45:46 bundle: | 회차 | 정답 근거 인용률 | 오답 근거 | 오답 근거 행 수 | 인용 정확도 | 과잉 거절 | 올바른 거절 | 답한 관련/관련 | 실패 행 |
+2026-11-17T18:45:46 bundle: | 회차 | 정답 근거 인용률 | 오답 근거 | 오답 근거 행 수 | 인용 정확도 | 과잉 거절 | 올바른 거절 | 답한 관련/관련 | 실패 행 |
+2026-11-17T18:46:56 5xx=0 (ok=True) chat_posts=156 (ok=True) window=2026-11-17T09:30:18Z..2026-11-17T09:47:45Z
+2026-11-17T18:46:56 5xx(이 판)=0 (-1은 로그 조회 실패: 기록만)
+2026-11-17T18:46:57 RESULT holdout_v2 (20건 x 3회) runs=3 p95_answered new=9.042 base=9.931 p95_all new=9.547 base=9.931 fail new=0 kinds new={'answer': 40, 'refuse': 20} cost new=0.420692
+2026-11-17T18:46:57 RESULT holdout_v2 (20건 x 3회) run1 p95_answered new=9.729 base=9.67 p95_all new=8.425 base=9.67
+2026-11-17T18:46:57 RESULT holdout_v2 (20건 x 3회) run2 p95_answered new=9.95 base=10.154 p95_all new=8.299 base=9.931
+2026-11-17T18:46:57 RESULT holdout_v2 (20건 x 3회) run3 p95_answered new=9.042 base=10.176 p95_all new=9.547 base=9.234
+2026-11-17T18:46:57 RESULT v2 (50건 x 3회) runs=3 p95_answered new=9.216 base=9.935 p95_all new=8.494 base=8.97 fail new=0 kinds new={'answer': 75, 'clarify': 3, 'refuse': 72} cost new=0.77523
+2026-11-17T18:46:57 RESULT v2 (50건 x 3회) run1 p95_answered new=8.842 base=8.97 p95_all new=8.842 base=8.201
+2026-11-17T18:46:57 RESULT v2 (50건 x 3회) run2 p95_answered new=8.12 base=10.323 p95_all new=7.98 base=9.668
+2026-11-17T18:46:57 RESULT v2 (50건 x 3회) run3 p95_answered new=9.216 base=9.096 p95_all new=8.494 base=8.632
+2026-11-17T18:46:57 RESULT_MD c1117n\RESULT.md
+2026-11-17T18:47:01 END serving=[provena-api-00205-zit=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,c1117m->provena-api-00205-zit,c1117n->provena-api-00217-kew,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] (이 판 0% 이어야 함) 묶음 합계 1.339584, 오늘 합계 13.673
+2026-11-17T18:47:01 JOB133 DONE (RESULT.md 작성됨, 승격은 메인 세션)

@@ -1,0 +1,62 @@
+Preparing worktree (detached HEAD c47ce921)
+Updating files:  58% (1839/3125)
+Updating files:  59% (1844/3125)
+Updating files:  60% (1875/3125)
+Updating files:  61% (1907/3125)
+Updating files:  62% (1938/3125)
+Updating files:  63% (1969/3125)
+Updating files:  64% (2000/3125)
+Updating files:  65% (2032/3125)
+Updating files:  66% (2063/3125)
+Updating files:  67% (2094/3125)
+Updating files:  68% (2125/3125)
+Updating files:  69% (2157/3125)
+Updating files:  70% (2188/3125)
+Updating files:  71% (2219/3125)
+Updating files:  72% (2250/3125)
+Updating files:  73% (2282/3125)
+Updating files:  74% (2313/3125)
+Updating files:  75% (2344/3125)
+Updating files:  76% (2375/3125)
+Updating files:  77% (2407/3125)
+Updating files:  78% (2438/3125)
+Updating files:  79% (2469/3125)
+Updating files:  80% (2500/3125)
+Updating files:  81% (2532/3125)
+Updating files:  82% (2563/3125)
+Updating files:  83% (2594/3125)
+Updating files:  84% (2625/3125)
+Updating files:  85% (2657/3125)
+Updating files:  86% (2688/3125)
+Updating files:  87% (2719/3125)
+Updating files:  88% (2750/3125)
+Updating files:  89% (2782/3125)
+Updating files:  90% (2813/3125)
+Updating files:  91% (2844/3125)
+Updating files:  92% (2875/3125)
+Updating files:  93% (2907/3125)
+Updating files:  94% (2938/3125)
+Updating files:  95% (2969/3125)
+Updating files:  96% (3000/3125)
+Updating files:  97% (3032/3125)
+Updating files:  98% (3063/3125)
+Updating files:  99% (3094/3125)
+Updating files: 100% (3125/3125)
+Updating files: 100% (3125/3125), done.
+HEAD is now at c47ce921 evals: 0% 판 00202-rid 배포 점검(7/7, MCP 401·429, 합동 검토)과 인젝션 재시험 49건 결과(개수만)
+c47ce921255b3a91546d44f5b62ca24ac777066d
+status_lines=0
+2fefdf5b94a3db7400b5dabf3312c271e2baf49323f279d231e10b4a86f770ac
+2026-11-17T15:42:47 START unpack_index
+2026-11-17T15:42:48 END unpack_index rc=0 secs=1
+2026-11-17T15:42:48 START ci_current_eval
+2026-11-17T15:44:34 END ci_current_eval rc=0 secs=106
+2026-11-17T15:44:34 START ci_compare
+2026-11-17T15:44:34 END ci_compare rc=0 secs=1
+2026-11-17T15:44:34 START demo_replay
+2026-11-17T15:47:25 END demo_replay rc=0 secs=171
+2026-11-17T15:47:25 START pytest_full
+2026-11-17T16:10:57 END pytest_full rc=1 secs=1412
+2026-11-17T16:10:57 START mutation
+2026-11-17T16:11:28 END mutation rc=0 secs=31
+2026-11-17T16:11:30 ALLDONE

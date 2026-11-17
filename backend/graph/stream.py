@@ -49,7 +49,8 @@ def stream_events(graph, graph_input: Any, *, thread_id: str, config: dict | Non
                 if isinstance(delta, dict):
                     final.update(delta)
                     if "kind" in delta:
-                        refuse_node = node if delta["kind"] in ("refuse", "clarify") else ""
+                        # 멀티 그래프(`backend/graph/multi.py`)는 에이전트 노드가 안에서 `kind`를 쓴 단일 그래프의 노드 이름을 `kind_node`로 같이 낸다. 단일 그래프에는 이 칸이 없다
+                        refuse_node = (delta.get("kind_node") or node) if delta["kind"] in ("refuse", "clarify") else ""
     except Exception as e:  # noqa: BLE001 - 어떤 실패든 화면에는 error 이벤트로 전한다
         yield AgentEvent(type="error", thread_id=thread_id, data={"code": type(e).__name__, "message": str(e)})
         return

@@ -1,0 +1,536 @@
+{
+  "baseline": {
+    "runs": [
+      {
+        "run": 1,
+        "n": 50,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.946667,
+        "citation_accuracy": 0.946667,
+        "wrong_citation_rate": 0.08,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 24,
+        "n_relevant": 25,
+        "p95_s": 9.054,
+        "p50_s": 5.196,
+        "cost_usd_sum": 0.257765,
+        "cost_usd_per_question": 0.005155,
+        "grounding_llm_calls": 287,
+        "window": [
+          "2026-11-17T10:34:44+09:00",
+          "2026-11-17T10:39:02+09:00"
+        ],
+        "source": "ablation_repeat_20261117/deploy_latency_base_provena-api-00181-zub"
+      },
+      {
+        "run": 1,
+        "n": 50,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.946667,
+        "citation_accuracy": 0.96,
+        "wrong_citation_rate": 0.04,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 24,
+        "n_relevant": 25,
+        "p95_s": 8.873,
+        "p50_s": 5.142,
+        "cost_usd_sum": 0.255806,
+        "cost_usd_per_question": 0.005116,
+        "grounding_llm_calls": 308,
+        "window": [
+          "2026-11-17T10:12:44+09:00",
+          "2026-11-17T10:17:07+09:00"
+        ],
+        "source": "deploy_latency_skill3_on_provena-api-00181-zub"
+      },
+      {
+        "run": 2,
+        "n": 50,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.953333,
+        "citation_accuracy": 0.98,
+        "wrong_citation_rate": 0.04,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 25,
+        "n_relevant": 25,
+        "p95_s": 8.026,
+        "p50_s": 5.278,
+        "cost_usd_sum": 0.28169,
+        "cost_usd_per_question": 0.005634,
+        "grounding_llm_calls": 327,
+        "window": [
+          "2026-11-17T10:25:01+09:00",
+          "2026-11-17T10:28:59+09:00"
+        ],
+        "source": "deploy_latency_skill3_on_provena-api-00181-zub"
+      }
+    ],
+    "mean": {
+      "citation_accuracy": 0.962222,
+      "cited_correct_rate": 0.948889,
+      "wrong_citation_rate": 0.053333,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "p95_s": 8.651,
+      "cost_usd_per_question": 0.005302
+    },
+    "n_runs": 3
+  },
+  "slots": [
+    {
+      "slot": "se",
+      "env": "GRAPH_SPECULATE_EARLY_SEARCH=off",
+      "name": "원 질문 미리 검색",
+      "ref": "62.53",
+      "folder": "deploy_latency_ablate3_se_provena-api-ab3se1117",
+      "n_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.208,
+          "p50_s": 5.853,
+          "cost_usd_sum": 0.253489,
+          "cost_usd_per_question": 0.00507,
+          "grounding_llm_calls": 277,
+          "window": [
+            "2026-11-17T10:45:23+09:00",
+            "2026-11-17T10:49:43+09:00"
+          ]
+        },
+        {
+          "run": 2,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.946667,
+          "wrong_citation_rate": 0.08,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.019,
+          "p50_s": 6.017,
+          "cost_usd_sum": 0.240257,
+          "cost_usd_per_question": 0.004805,
+          "grounding_llm_calls": 282,
+          "window": [
+            "2026-11-17T10:49:50+09:00",
+            "2026-11-17T10:54:32+09:00"
+          ]
+        },
+        {
+          "run": 3,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.966667,
+          "citation_accuracy": 1.0,
+          "wrong_citation_rate": 0.0,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 25,
+          "n_relevant": 25,
+          "p95_s": 8.434,
+          "p50_s": 5.643,
+          "cost_usd_sum": 0.251901,
+          "cost_usd_per_question": 0.005038,
+          "grounding_llm_calls": 272,
+          "window": [
+            "2026-11-17T10:54:40+09:00",
+            "2026-11-17T10:58:55+09:00"
+          ]
+        }
+      ],
+      "mean": {
+        "citation_accuracy": 0.968889,
+        "cited_correct_rate": 0.953334,
+        "wrong_citation_rate": 0.04,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "p95_s": 8.220333,
+        "cost_usd_per_question": 0.004971
+      },
+      "diff_vs_base": {
+        "citation_accuracy": 0.006667,
+        "cited_correct_rate": 0.004445,
+        "wrong_citation_rate": -0.013333,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 0.0,
+        "p95_s": -0.430667,
+        "cost_usd_per_question": -0.000331
+      },
+      "verdict": "한 문항 안팎, 확정하지 못함",
+      "items_gold_rate_lower": 0,
+      "items_gold_rate_higher": 1,
+      "items_changed": [
+        {
+          "id": 39,
+          "slot": 0.666667,
+          "base": 0.555556
+        }
+      ],
+      "cost_usd_total": 0.745647
+    },
+    {
+      "slot": "ag",
+      "env": "GRAPH_ADOPT_GROUNDED_CANDIDATE=off",
+      "name": "근거 있는 후보 채택",
+      "ref": "62.68",
+      "folder": "deploy_latency_ablate3_ag_provena-api-ab3ag1117",
+      "n_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.933333,
+          "citation_accuracy": 0.94,
+          "wrong_citation_rate": 0.08,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 10.555,
+          "p50_s": 5.324,
+          "cost_usd_sum": 0.249182,
+          "cost_usd_per_question": 0.004984,
+          "grounding_llm_calls": 297,
+          "window": [
+            "2026-11-17T11:05:26+09:00",
+            "2026-11-17T11:10:21+09:00"
+          ]
+        },
+        {
+          "run": 2,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.926667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.33,
+          "p50_s": 5.332,
+          "cost_usd_sum": 0.249392,
+          "cost_usd_per_question": 0.004988,
+          "grounding_llm_calls": 281,
+          "window": [
+            "2026-11-17T11:10:31+09:00",
+            "2026-11-17T11:14:37+09:00"
+          ]
+        },
+        {
+          "run": 3,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.926667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 9.669,
+          "p50_s": 5.296,
+          "cost_usd_sum": 0.256142,
+          "cost_usd_per_question": 0.005123,
+          "grounding_llm_calls": 307,
+          "window": [
+            "2026-11-17T11:14:49+09:00",
+            "2026-11-17T11:19:33+09:00"
+          ]
+        }
+      ],
+      "mean": {
+        "citation_accuracy": 0.953333,
+        "cited_correct_rate": 0.928889,
+        "wrong_citation_rate": 0.053333,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "p95_s": 9.518,
+        "cost_usd_per_question": 0.005032
+      },
+      "diff_vs_base": {
+        "citation_accuracy": -0.008889,
+        "cited_correct_rate": -0.02,
+        "wrong_citation_rate": 0.0,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 0.0,
+        "p95_s": 0.867,
+        "cost_usd_per_question": -0.00027
+      },
+      "verdict": "한 문항 안팎, 확정하지 못함",
+      "items_gold_rate_lower": 3,
+      "items_gold_rate_higher": 0,
+      "items_changed": [
+        {
+          "id": 1,
+          "slot": 0.833333,
+          "base": 1.0
+        },
+        {
+          "id": 3,
+          "slot": 0.833333,
+          "base": 1.0
+        },
+        {
+          "id": 38,
+          "slot": 0.0,
+          "base": 0.166667
+        }
+      ],
+      "cost_usd_total": 0.754716
+    },
+    {
+      "slot": "ks",
+      "env": "GRAPH_DECOMPOSE_KEEP_SUBJECT=1",
+      "name": "대상·조건 유지(반대로 켠 판)",
+      "ref": "",
+      "folder": "deploy_latency_ablate3_ks_provena-api-ab3ks1117",
+      "n_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.942,
+          "p50_s": 5.328,
+          "cost_usd_sum": 0.267633,
+          "cost_usd_per_question": 0.005353,
+          "grounding_llm_calls": 333,
+          "window": [
+            "2026-11-17T11:22:08+09:00",
+            "2026-11-17T11:26:17+09:00"
+          ]
+        },
+        {
+          "run": 2,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.933333,
+          "citation_accuracy": 0.94,
+          "wrong_citation_rate": 0.08,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 20.877,
+          "p50_s": 5.428,
+          "cost_usd_sum": 0.249819,
+          "cost_usd_per_question": 0.004996,
+          "grounding_llm_calls": 295,
+          "window": [
+            "2026-11-17T11:26:29+09:00",
+            "2026-11-17T11:31:34+09:00"
+          ]
+        },
+        {
+          "run": 3,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.933333,
+          "citation_accuracy": 0.94,
+          "wrong_citation_rate": 0.08,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.905,
+          "p50_s": 5.422,
+          "cost_usd_sum": 0.255478,
+          "cost_usd_per_question": 0.00511,
+          "grounding_llm_calls": 273,
+          "window": [
+            "2026-11-17T11:31:45+09:00",
+            "2026-11-17T11:36:11+09:00"
+          ]
+        }
+      ],
+      "mean": {
+        "citation_accuracy": 0.946667,
+        "cited_correct_rate": 0.937778,
+        "wrong_citation_rate": 0.066667,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "p95_s": 12.908,
+        "cost_usd_per_question": 0.005153
+      },
+      "diff_vs_base": {
+        "citation_accuracy": -0.015555,
+        "cited_correct_rate": -0.011111,
+        "wrong_citation_rate": 0.013334,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 0.0,
+        "p95_s": 4.257,
+        "cost_usd_per_question": -0.000149
+      },
+      "verdict": "한 문항 안팎, 확정하지 못함",
+      "items_gold_rate_lower": 2,
+      "items_gold_rate_higher": 0,
+      "items_changed": [
+        {
+          "id": 38,
+          "slot": 0.0,
+          "base": 0.166667
+        },
+        {
+          "id": 39,
+          "slot": 0.444444,
+          "base": 0.555556
+        }
+      ],
+      "cost_usd_total": 0.77293
+    },
+    {
+      "slot": "fs",
+      "env": "GRAPH_FLIP_STRUCTURE=off",
+      "name": "값 뒤집기 구조 판정",
+      "ref": "",
+      "folder": "deploy_latency_ablate3_fs_provena-api-ab3fs1117",
+      "n_runs": 3,
+      "per_run": [
+        {
+          "run": 1,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 9.181,
+          "p50_s": 5.094,
+          "cost_usd_sum": 0.264233,
+          "cost_usd_per_question": 0.005285,
+          "grounding_llm_calls": 285,
+          "window": [
+            "2026-11-17T11:42:54+09:00",
+            "2026-11-17T11:47:26+09:00"
+          ]
+        },
+        {
+          "run": 2,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 8.554,
+          "p50_s": 5.492,
+          "cost_usd_sum": 0.245589,
+          "cost_usd_per_question": 0.004912,
+          "grounding_llm_calls": 292,
+          "window": [
+            "2026-11-17T11:47:34+09:00",
+            "2026-11-17T11:51:37+09:00"
+          ]
+        },
+        {
+          "run": 3,
+          "n": 50,
+          "n_fail_rows": 0,
+          "cited_correct_rate": 0.946667,
+          "citation_accuracy": 0.96,
+          "wrong_citation_rate": 0.04,
+          "over_refusal_rate": 0.0,
+          "correct_refusal_rate": 1.0,
+          "gold_cited_questions": 24,
+          "n_relevant": 25,
+          "p95_s": 10.957,
+          "p50_s": 5.269,
+          "cost_usd_sum": 0.264782,
+          "cost_usd_per_question": 0.005296,
+          "grounding_llm_calls": 335,
+          "window": [
+            "2026-11-17T11:51:46+09:00",
+            "2026-11-17T11:56:18+09:00"
+          ]
+        }
+      ],
+      "mean": {
+        "citation_accuracy": 0.96,
+        "cited_correct_rate": 0.946667,
+        "wrong_citation_rate": 0.04,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "p95_s": 9.564,
+        "cost_usd_per_question": 0.005164
+      },
+      "diff_vs_base": {
+        "citation_accuracy": -0.002222,
+        "cited_correct_rate": -0.002222,
+        "wrong_citation_rate": -0.013333,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 0.0,
+        "p95_s": 0.913,
+        "cost_usd_per_question": -0.000138
+      },
+      "verdict": "한 문항 안팎, 확정하지 못함",
+      "items_gold_rate_lower": 1,
+      "items_gold_rate_higher": 1,
+      "items_changed": [
+        {
+          "id": 38,
+          "slot": 0.0,
+          "base": 0.166667
+        },
+        {
+          "id": 39,
+          "slot": 0.666667,
+          "base": 0.555556
+        }
+      ],
+      "cost_usd_total": 0.774604
+    },
+    {
+      "slot": "ic",
+      "env": "GRAPH_INTRO_IN_CORE=0",
+      "name": "도입부 청크 앞자리",
+      "missing": true
+    },
+    {
+      "slot": "ho",
+      "env": "GRAPH_CITE_HEAD_OWNER=0",
+      "name": "겹친 머리 인용 바로잡기",
+      "missing": true
+    },
+    {
+      "slot": "fp",
+      "env": "GRAPH_FIRST_PAGE_FILL=0",
+      "name": "첫 검색 같은 페이지 보충",
+      "missing": true
+    },
+    {
+      "slot": "ft",
+      "env": "SEARCH_FULL_TAIL=0",
+      "name": "끝 1자리 규칙",
+      "missing": true
+    }
+  ]
+}

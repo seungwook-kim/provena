@@ -1,0 +1,14 @@
+﻿{
+    "revision":  "provena-api-00203-pak",
+    "tag":  "c1117l",
+    "tag_url":  "https://c1117l---provena-api-cttaanqntq-du.a.run.app",
+    "image":  "asia-northeast3-docker.pkg.dev/provena-team/cloud-run-source-deploy/provena-api@sha256:a6f6a0264a67ae2a0d56b9b65413a68d86574af09712a3408dd2b7a6fc0deae4",
+    "env_diff_from_c1117c":  "=\u003eDAILY_QUESTION_LIMIT,\u003c=DAILY_QUESTION_LIMIT",
+    "daily_question_limit":  "1",
+    "cfg_diff":  "",
+    "health":  "200 0.157144",
+    "window_utc":  [
+                       "2026-11-17T06:22:53Z 2026-11-17T06:22:59Z"
+                   ],
+    "ok":  true
+}

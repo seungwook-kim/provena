@@ -132,7 +132,7 @@
 2. ~~순서~~ 정함(11/3): 함수와 서버를 한 PR로 같이 낸다(11/6 가산 판단을 기다리지 않음)
 3. `Section`을 계약 밖 모델로 둘지 (위 How 1)
 4. MCP 도구 호출이 Langfuse 트레이스에 단계로 보이는지(SDD 2-3절): 그래프 쪽 LangChain 콜백으로 잡히면 서버는 기록을 더하지 않고, 안 잡히면 서버에 span을 더한다. 2026-11-16 운영 반영 뒤 컨테이너 접근 로그로 MCP 호출을 확인했고, 같은 날 운영 Langfuse 트레이스에서 MCP 도구 `search_handbook` 관측이 보이는 것을 확인했다(`EVAL_REPORT.md` 7장 그림 5, 6, 판 `provena-api-00065-q84`)
-5. 배포 호출 제한(#45 리뷰): **구현(2026-11-17, 운영 배포 전).** 토큰을 내부 `MCP_TOKEN`(서비스 자신, 제한 없음)과 외부 `MCP_EXTERNAL_TOKEN`(선택, 분당 30회·하루 500회, 넘으면 429)으로 나눴다(EC-17, AC-11, `tests/test_mcp_external_rate.py`). 운영에 쓰려면 외부 토큰 비밀값을 따로 만들어 `MCP_EXTERNAL_TOKEN`으로 연결해야 하고, 외부 클라이언트에는 그 값만 준다. 남은 한계: 분당·하루 수는 프로세스 메모리에서 세므로 인스턴스를 늘리면 인스턴스마다 따로 세고 재시작하면 0부터 다시 센다. 내부 토큰이 새면 제한 없이 부를 수 있는 것은 전과 같다(토큰을 바꿔 막는다). **이전 정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
+5. 배포 호출 제한(#45 리뷰): **구현(2026-11-17, 15:33 KST부터 서비스 판 `provena-api-00202-rid`에 반영).** 토큰을 내부 `MCP_TOKEN`(서비스 자신, 제한 없음)과 외부 `MCP_EXTERNAL_TOKEN`(선택, 분당 30회·하루 500회, 넘으면 429)으로 나눴다(EC-17, AC-11, `tests/test_mcp_external_rate.py`). 운영에 쓰려면 외부 토큰 비밀값을 따로 만들어 `MCP_EXTERNAL_TOKEN`으로 연결해야 하고, 외부 클라이언트에는 그 값만 준다. 남은 한계: 분당·하루 수는 프로세스 메모리에서 세므로 인스턴스를 늘리면 인스턴스마다 따로 세고 재시작하면 0부터 다시 센다. 내부 토큰이 새면 제한 없이 부를 수 있는 것은 전과 같다(토큰을 바꿔 막는다). **이전 정리(2026-11-16).** 운영에 `MCP_TOKEN`을 Secret Manager 비밀값으로 연결해 `/mcp/`를 열었다(토큰 없이 401). 접근은 `MCP_TOKEN` Bearer 토큰으로만 막고, 서비스는 최대 인스턴스 1개(max-instances 1)로 돈다. 클라이언트별 호출 수 제한은 따로 구현하지 않았다(코드에 `/mcp` 호출 수 상한이 없다). `search_handbook`은 호출마다 번역 LLM·Voyage 임베딩 비용이 들 수 있어 토큰이 새면 비용이 늘 수 있다는 점은 한계로 남는다(토큰을 바꿔 막는다). 처음 적은 내용: 지금 `/mcp`는 정적 토큰 하나이고 호출 제한이 없다. 배포에 `MCP_TOKEN`을 넣기 전에 정한다 — 후보: 토큰당 분당 호출 수 상한(앱 미들웨어), 번역 비용 상한(`LLM_COST_CAP_USD`)과 같은 장부 사용
 6. 로그인 미들웨어와 `/mcp`(#45 리뷰): 로그인(`backend/auth.py`)을 `main.py`에 연결할 때 `/mcp`는 사람용 쿠키·CSRF 대상이 아니라 기계용 Bearer 토큰 경로다. 미들웨어가 `/mcp`를 건너뛰고 MCP 서버의 `BearerTokenVerifier`만 쓰는 안을 기본으로 하고, 연결 PR에서 확정한다. 확정: `/mcp`는 로그인 쿠키·CSRF 대상이 아니고 Bearer 토큰만 본다(`backend/main.py`의 `api_prefixes`에 `mcp`)
 
 7. **닫음(2026-11-05, #51 리뷰 요청)**: `search_handbook`에 `sub_queries: list[str] | None`(2~3개, 각 1~1000자, 빈 목록 = 나누지 않음)을 더했고 클라이언트는 그대로 보낸다(`tests/test_mcp_server.py`·`test_mcp_client.py`). 그래프 연결은 김승욱(D5 PR 뒤). 아래는 처음 적은 문제: `search_handbook`에 `sub_queries` 칸이 없다(2026-11-05 클라이언트 작성 중 발견). 그래프는 질문 분해 결과를 `SearchQuery.sub_queries`로 `search()`에 넘기는데(PR #48), MCP로 부르면 이 칸을 보낼 곳이 없다. 클라이언트는 몰래 빼지 않고 `invalid`로 거절한다(빼면 직접 `search()`와 결과가 달라진다). `SEARCH_VIA_MCP`로 그래프를 연결하기 전에 서버 도구에 `sub_queries: list[str] | None`(2~3개, `search.check_query` 검사)을 더한다 — 서버 PR, 김승욱 확인
@@ -165,7 +165,7 @@
 
 **`get_agent_trace(thread_id)`** (`trace_tool.py`)
 - Langfuse trace_id가 아니라 대화 `thread_id`로 LangGraph 체크포인트를 읽는다(조장 지시). 체크포인터의 `list()`만 부르고 쓰지 않는다.
-- 체크포인트 모양(실측, 메모리 체크포인터로 실제 그래프를 돌려 확인): 바깥 그래프는 `checkpoint_ns=""`, 하위 그래프는 `"<노드>:<task id>"`(질문 그래프의 합동 검토 `review:…`, 멀티 그래프의 `retriever:…`·`writer:…`·`verifier:…`). 합동 검토 그래프를 단독으로 돌리면 검토 상태가 `""`에 있다. 하위 그래프 체크포인트 metadata `parents[""]`가 바깥 체크포인트 id다. metadata에는 `step`·`source`·`parents`만 있어 돈 노드는 앞뒤 체크포인트의 `versions_seen` 차이로 읽는다.
+- 체크포인트 모양(실측, 메모리 체크포인터로 실제 그래프를 돌려 확인): 바깥 그래프는 `checkpoint_ns=""`, 하위 그래프는 `"<노드>:<task id>"`(질문 그래프의 합동 검토 `review:…`). 멀티 그래프의 하위 에이전트(`retriever`·`writer`·`verifier`·`decision`)는 체크포인트를 끝날 때만 남기므로(`backend/graph/multi.py` `durability="exit"`) 하위 이름공간에 단계 체크포인트가 없고, 멀티 그래프 질문의 단계는 바깥 그래프의 `supervisor`와 에이전트 단위로만 보인다(에이전트 안의 `rewrite`·`search`·`judge` 등은 보이지 않는다). 합동 검토 그래프를 단독으로 돌리면 검토 상태가 `""`에 있다. 하위 그래프 체크포인트 metadata `parents[""]`가 바깥 체크포인트 id다. metadata에는 `step`·`source`·`parents`만 있어 돈 노드는 앞뒤 체크포인트의 `versions_seen` 차이로 읽는다.
 - 출력(마지막 실행 하나): 돈 노드 순서와 단계별 시각·걸린 시간(같은 그래프의 앞 체크포인트 `ts`와의 차이, 사람 승인을 기다린 단계는 `includes_human_wait`), `route`, 멀티 그래프의 `agent_trace`·`supervisor_log`(after·to·closed_by만), 합동 검토 `review_status`·팀별 상태와 시도 횟수·실패한 팀 id, 승인 대기 여부(`__interrupt__`가 있고 `__resume__`이 없음), `stopped_on_error`, 이 thread의 실행 수. `cost_usd`는 null(체크포인트에 비용 칸이 없고, `llm_trace.py`는 서비스 경로에서 켜지 않는다). 최신 체크포인트 200개까지 읽고 넘으면 `complete=false`.
 - 내보내지 않음: 질문·답, user_id, 검색 청크, 쟁점표 행, 사람 결정의 comment·decided_by, 팀 결과의 rows·reason, Supervisor 지시 글. 칸을 지우지 않고 고른 칸만 옮긴다(이름은 식별자 모양만, 상태는 코드가 정한 값만).
 - thread_id: 1~200자, 제어 문자 없음. 형식이 정해진 곳이 없어(SDD `/chat` `{thread_id, message}`) 길이만 막는다.
@@ -194,7 +194,7 @@
 **AC-T1 · 체크포인트 단계와 상태** (`tests/test_mcp_trace_tool.py`)
 - GIVEN: 가짜 모델로 돌린 질문 그래프+합동 검토 하위 그래프 / 합동 검토 단독(팀 실패) / 멀티 그래프, 메모리 체크포인터
 - WHEN: 그 thread_id로 `get_agent_trace`
-- THEN: 돈 노드 순서, 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
+- THEN: 돈 노드 순서(멀티 그래프는 `supervisor`와 에이전트 단위), 팀별 상태·시도 횟수, 승인 대기, Supervisor 결정이 맞고, `cost_usd`는 null, 출력에 user_id·질문·쟁점 글·사람 결정 사유가 없다. 체크포인터에 쓰지 않는다
 
 **AC-G1 · 근거 판정 기록은 고른 칸만** (`tests/test_mcp_new_tools.py`)
 - GIVEN: 답 하나와 판정 기록(초안·뺀 문장·판정 이유 문장 포함)을 저장한 메모리 답 저장소

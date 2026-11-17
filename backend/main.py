@@ -270,19 +270,39 @@ def ping_database() -> None:
         log.warning("DB 정지 방지 호출 실패: %s", type(exc).__name__)
 
 
+QUESTION_GRAPH_MODES = ("single", "multi")
+
+
+def question_graph_mode() -> str:
+    """`QUESTION_GRAPH_MODE`: `single`(단일 그래프 `build_graph`) 또는 `multi`(Supervisor 멀티 그래프 `build_multi_graph`). 비었거나 없으면 코드 기본 `single`이다.
+    서비스 값(`backend/graph/service_profile.py`의 `SERVICE_ENV`)은 `multi`이고, 앱이 뜰 때 환경 변수로 채운다. 그 밖의 값은 ValueError(앱이 뜨지 않는다)."""
+    raw = (os.getenv("QUESTION_GRAPH_MODE") or "").strip().lower()
+    if not raw:
+        return "single"
+    if raw not in QUESTION_GRAPH_MODES:
+        raise ValueError(f"QUESTION_GRAPH_MODE는 {' 또는 '.join(QUESTION_GRAPH_MODES)}이다: {raw!r}")
+    return raw
+
+
 def build_question_graph(state: Any) -> Any:
     """질문 그래프. 체크포인터·Store·결정표 저장소·쟁점표 저장소는 `open_decision_runtime()`이 연 것을 나눠 쓴다.
 
     합동 검토는 체크포인터 없이 이 그래프의 하위 그래프로 붙인다(승인함 재개도 이 그래프로 한다, routes.py 안내문).
-    모델은 처음 부를 때 만든다(키 없이도 서버가 뜬다). 답 저장소는 `RECALL_STORE=postgres`면 Postgres, 아니면 메모리 구현이다."""
+    모델은 처음 부를 때 만든다(키 없이도 서버가 뜬다). 답 저장소는 `RECALL_STORE=postgres`면 Postgres, 아니면 메모리 구현이다.
+    `QUESTION_GRAPH_MODE=multi`(서비스 값)면 같은 인자로 Supervisor 멀티 그래프를 만든다. 멀티는 단일 그래프의 노드와 분기 함수를 그대로 꺼내 쓰므로
+    방어, 결정표, 합동 검토, 체크포인트, 비용 상한이 같다(evals/results/chat_multi_switch_20261117/PARITY.md). 라우터는 `SUPERVISOR_ROUTER`(비면 코드 라우팅)."""
     from backend.graph.build import build_graph
     from backend.graph.departments.review import build_review_graph
+    from backend.graph.multi import build_multi_graph
     from backend.graph.service_profile import SharedChatModel, service_searches
 
+    mode = question_graph_mode()
     llm = SharedChatModel()
     review = build_review_graph(None, None, llm=llm, store=state.issue_store, approvals=state.decision_repo)
-    return build_graph(None, state.checkpointer, llm=llm, store=state.store, answer_store=state.answer_store,
-                       decision_repo=state.decision_repo, review_graph=review, **service_searches())   # 서비스 설정 61.51(backend/graph/service_profile.py)
+    build = build_multi_graph if mode == "multi" else build_graph
+    log.info("질문 그래프 stage=question_graph mode=%s", mode)
+    return build(None, state.checkpointer, llm=llm, store=state.store, answer_store=state.answer_store,
+                 decision_repo=state.decision_repo, review_graph=review, **service_searches())   # 서비스 설정 61.51(backend/graph/service_profile.py)
 
 
 @contextmanager

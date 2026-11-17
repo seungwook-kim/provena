@@ -335,6 +335,8 @@
 
 ## 사전 등록 62.77: 질문 속 한국어 출력 자리 지시와 프롬프트 요구 말투 보강 (2026-11-17)
 
+
+> 2026-11-17 갱신: 질문 쪽 `output_ko`는 `output_request`(말투·자리·문구 세 특징을 함께 보는 질문 전용 규칙)로 대체했다. 되묻기 인용과 답 끝·앞 문구 자르기를 포함한 현행 명세는 `docs/specs/output-request-guard.md`에 있다.
 ### Why
 - 질문 속 지시 판정(`backend/graph/untrusted.py` `strip_instructions`)의 출력 자리 규칙은 영어(`output_en`)만 있었다. 한국어 짝이 없으면 한국어로 쓴 출력 자리 지시를 지시 문장으로 알아보지 못하고, 출력 검사(`scrub_answer`)의 표식 후보(질문의 따옴표 문자열을 이어 붙인 값)도 비어 검사가 동작하지 않는다.
 - 내부 설정을 묻는 질문은 분류 모델이 범위 밖으로 막지만, 코드 검사(`backend/prompts/question.py` `asks_internal`)에도 같은 말투를 넣어 두 층으로 막는다.
@@ -350,3 +352,45 @@
 - GIVEN 평가·데모 질문 171건(v1 30, v2 50, 검증 v1 20, 검증 v2 20, GraphRAG 비교셋 12, 과잉 거절 확인 10, 새 인용 5, 합동 검토 10, 검토 확인 4, 데모 질문 9, 데모 합동 검토 시나리오 1). THEN `output_ko` 일치 0, 지시 문장 판정 0, `asks_internal` 0, 모델 입력 질문 변화 0.
 - 회사 규칙을 묻는 정상 질문("승인 받은 규칙 변경은 무엇인가요?", "고객 첫 응답 뒤에 티켓에 메모를 추가해야 하나요?" 등)은 바뀌지 않는다.
 - 한계: 운영 판 재측정 전이며 v2 지표는 이 변경으로 바뀌지 않는다고 본다(모델 입력이 바뀌는 평가 질문이 0건).
+
+## /chat 질문 그래프 구조 스위치: Supervisor 멀티 그래프 (2026-11-17, 팀장 결정)
+
+### Why
+- 서비스 `/chat`은 단일 그래프(`build_graph`)만 돌렸고, Supervisor 멀티 그래프(`backend/graph/multi.py`의 `build_multi_graph`, 검색·작성·검증 에이전트)는 측정 실행기와 안전 평가에서만 썼다. 가이드의 멀티 에이전트 구성을 서비스 경로에서 그대로 보이도록 `/chat`이 멀티 그래프를 돌린다.
+- 전환으로 방어나 기능이 빠지면 안 된다. 그래서 단일 `/chat` 경로가 하는 일을 항목별로 멀티와 대조하고, 빠진 것을 같은 노드와 함수로 채운 뒤 전환한다(대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`).
+
+### What
+- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 이 코드의 로컬 데모·키 없는 데모는 멀티로 돈다. 운영은 2026-11-17 16:58 KST부터 멀티 판 `provena-api-00205-zit`(운영 환경 변수 `QUESTION_GRAPH_MODE=multi`), 18:50 KST부터 `provena-api-00217-kew`, 18:59 KST 무렵부터 같은 이미지·코드에 하루 질문 한도만 켠 `provena-api-00149-cm2`로 멀티다(그 전 서비스 판 `provena-api-00202-rid`는 전환 전 코드라 단일). 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
+- `build_question_graph`는 단일에 넘기던 인자(공유 모델, 체크포인터, Store, 답 저장소, 결정표 저장소, 합동 검토 하위 그래프, 서비스 검색 함수)를 멀티에 그대로 넘긴다. 멀티는 같은 인자로 단일 그래프를 만들어 노드와 분기 함수를 꺼내 쓰므로 프롬프트, 검색, 판정과 다수결, 인용 검사와 후처리, 입력·출력 방어, 저장 코드가 하나뿐이다. 라우터는 `SUPERVISOR_ROUTER`(비면 코드 라우팅, LLM 호출을 더하지 않음).
+- 단일과 같게 맞춘 세 가지:
+  1. done의 `refuse_stage`: 멀티 상태 칸 `kind_node`(결과 종류를 거절·되묻기로 쓴 단일 노드 이름)를 `stream_events`가 읽어, 에이전트 이름(`supervisor`, `retriever`, `verifier`) 대신 단일과 같은 노드 이름을 낸다.
+  2. 단계별 비용(`cost_by_step`)과 Langfuse 단계 이름: Supervisor가 직접 부르는 `load_memory`, `followup`, `classify`, `out_of_domain`, `give_up`의 LLM 호출이 그 노드 이름으로 남는다(`multi.py` `run_single_node`).
+  3. 판정 표 구성 기록 `judge_votes`(done의 `path.judge_votes`): 검색 에이전트가 받고 돌려주는 칸에 더했다.
+- 합동 검토 승인 재개: 앱은 `app.state.review_graph`에 질문 그래프(멀티)를 두고 같은 thread에서 `Command(resume=...)`로 재개한다(단일과 같은 방식).
+- 남는 차이: 하위 에이전트가 하위 이름공간에 체크포인트를 더 남긴다(하루 질문 한도와 대화 이력은 바깥 이름공간만 읽어 결과가 같다), 멀티 전용 상태 칸(`next_agent`, `agent_trace`, `supervisor_log`, `handoffs`, `kind_node`)은 `/chat` 응답에 싣지 않는다, Langfuse 추적에 에이전트 계층이 한 단계 더 보인다.
+
+### AC (시험 `tests/test_chat_multi_switch.py`)
+- GIVEN 환경 변수가 없다. THEN `question_graph_mode()`는 `single`이고 서비스 그래프는 단일이다. GIVEN 서비스 설정을 채운다. THEN `multi`이고 서비스 그래프에 `supervisor`, `retriever`, `writer`, `verifier`, `decision`, `review` 노드가 있다. 틀린 값은 ValueError, `off`는 코드 기본으로 돌아간다.
+- GIVEN 같은 가짜 모델과 검색기. WHEN 답, 재검색 뒤 거절, 되묻기, 범위 밖, 가짜 인용 거절, 내부 설정 질문, 질문 속 출력 자리 지시 일곱 사례를 `/chat`으로 보낸다. THEN 멀티와 단일의 SSE 이벤트 종류·순서·내용(토큰, 인용, done의 kind·code·refuse_stage·refuse_reason·path·usage)이 같다(답 id와 단계 시간 기록 제외). 출력 자리 지시 사례에서 이어 붙인 문구가 든 문장은 두 경로 모두 빠진다.
+- GIVEN 같은 체크포인터로 그래프를 새로 만든다(재시작). THEN 같은 대화의 이어 묻기 기록과 `/threads/{id}` 이력이 이어지고, 이력은 단일과 같다.
+- GIVEN 합동 검토 요청. THEN `/chat`이 `approval_request`로 멈추고(단일과 같은 이벤트), 이력이 승인 대기를 보이며, 질문 그래프(멀티)로 재개하면 승인된 답으로 끝난다.
+- GIVEN 검색, 분류, 답 작성 중 비용 상한 예외. THEN 두 경로 모두 `error` 하나(`limit_exceeded`)로 끝난다. GIVEN 하루 한도 2. THEN 멀티에서도 셋째 질문이 429 `daily_limit`이다(질문 하나가 한 건).
+- GIVEN `run_config`의 콜백. THEN LLM 호출마다 노드 이름과 실행 표지(thread_id)가 단일과 같은 순서로 붙는다. GIVEN 판정 다수결을 켠다. THEN `judge_votes` 기록 수가 단일과 같다.
+- 키 없는 데모 녹화 재생(데모 질문 9개, v2 50건)이 멀티 경로에서 녹화에 없는 요청 0건으로 기준값과 같다(`evals/results/chat_multi_switch_20261117/README.md`).
+- 한계: 유료 재측정 전이다. 기대값과 멈춤 규칙은 `evals/results/chat_multi_switch_20261117/PREREGISTER.md`에 측정 전에 적었다.
+
+## 갈린 판정 두 표의 셋째 표 대기 상한 `GRAPH_SPLIT_VOTE_WAIT_S` (2026-11-17, 결정 0132)
+
+### Why
+- 체크포인트 4-1: 새 검증 20건의 답한 질문 p95가 3회 모두 10초를 넘었다. 저장된 기록의 0원 분석(`evals/results/latency_holdout_v2_analysis_20261117/`)에서 3회 모두 같은 한 문항만 10초를 넘었고, 그 시간 대부분이 근거 충분 판정 구간이었으며, 먼저 온 두 표가 충분과 일부로 갈린 뒤 셋째 표를 기다린 판정이 있었다. 후속: 멀티 그래프 하위 에이전트가 끝날 때만 체크포인트를 남기게 한 판 `provena-api-00217-kew`(커밋 `ddce99b7`, 사전 등록 62.93, 결정 0137)에서 새 검증 20건 답한 질문 p95는 회차별 9.729초, 9.950초, 9.042초로 세 회차 모두 10초 아래라 이 3회에서 4-1은 해결되었다. 이 수정은 새 검증 20건의 느린 행을 살펴본 뒤 고른 것이므로 이 평가셋의 응답 시간은 낙관적일 수 있다.
+
+### What
+- 환경 변수 `GRAPH_SPLIT_VOTE_WAIT_S`(값 읽기 `backend/graph/answer_fixes.py` `split_vote_wait_s`, 코드 기본 빈 값 = 이전 동작, 서비스 값 `1.0`). 값이 있으면 근거 충분 판정 다수결(`backend/graph/build.py` `voted`)에서 먼저 온 두 표가 충분과 일부로 갈렸을 때(`two_split`) 셋째 표를 그 초까지만 기다린다. 오지 않으면 두 표로 정하고(같은 수일 때 먼저 온 표를 쓰는 기존 `merge_votes` 규칙), 판정 기록 `judge_votes`에 `how=split_capped`를 남긴다.
+- 대상이 아닌 것: 근거 없음 표가 섞인 갈림(셋째 표가 재검색·거절 여부를 정한다, 결정 0100), 같은 결론 두 표, 근거 없음 두 표(`GRAPH_NONE_VOTE_WAIT_S`), 상한 안에 온 셋째 표.
+- 기대(사전 등록 62.89, 측정 전): 같은 20건 기록에 상한을 대입하면 상한이 걸리는 판정 6건 중 2건, 결론이 바뀌는 판정 0건, 답한 질문 p95 3회 합 11.323초 → 9.941초 안팎. 상한 값을 같은 20건 기록으로 정했으므로 이 기대는 낙관적일 수 있고, 3회 모두 10초 아래는 기대하지 않는다.
+
+### AC (시험 `tests/test_split_vote_wait.py`)
+- GIVEN 값이 비었다. THEN 판정 다수결은 이전과 같이 셋째 표를 기다린다.
+- GIVEN 값 1.0과 충분·일부로 갈린 두 표, 셋째 표가 상한보다 늦다. THEN 두 표로 정하고 `judge_votes`에 `how=split_capped`가 남는다. GIVEN 셋째 표가 상한 안에 온다. THEN 세 표 다수결이다.
+- GIVEN 근거 없음 표가 섞인 갈림. THEN 상한을 쓰지 않는다.
+- 한계: 운영 측정은 멀티 판(서비스 설정에 이 값이 들어 있음)에서 멀티 전환과 함께 했으므로 두 변경의 몫을 나누지 못한다. 측정값(멀티 판 `provena-api-00205-zit`, 2026-11-17 16:14~16:35 KST, 사전 등록 62.89): 상한이 걸린 판정은 새 검증 20건 3회 합 2건(1회차 1, 2회차 1), v2 50건 3회 0건이다. 새 검증 20건 답한 질문 p95는 회차별 9.670초, 10.154초, 10.176초, 3회 합 9.931초로 2회차와 3회차는 10초를 넘는다. 상한이 걸린 판정은 셋째 표가 없어 결론이 바뀌었는지는 확인하지 못한다. 같은 상한이 들어 있는 `provena-api-00217-kew`(2026-11-17 18:24~18:46 KST)에서는 상한이 걸린 판정이 새 검증 20건 3회 합 1건, v2 50건 3회 합 1건이었다.

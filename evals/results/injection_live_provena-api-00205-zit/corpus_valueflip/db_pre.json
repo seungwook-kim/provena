@@ -1,0 +1,19 @@
+{
+ "counts": {
+  "docs": 1520,
+  "versions": 1863,
+  "chunks": 31457
+ },
+ "test_rows": {
+  "docs": 0,
+  "versions": 0,
+  "chunks": 0
+ },
+ "index_meta": [
+  "voyage-4",
+  "1024",
+  "ready",
+  "6"
+ ],
+ "test_rows_zero": true
+}

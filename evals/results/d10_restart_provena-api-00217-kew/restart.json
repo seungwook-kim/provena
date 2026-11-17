@@ -1,0 +1,20 @@
+{
+ "mode": "tag0",
+ "revision_before": "provena-api-00217-kew",
+ "revision_after": "provena-api-r00217rst",
+ "commit": "ddce99b79b29025386abd5c40a925aabeeb92958",
+ "restarted_at_utc": "2026-11-17T09:54:34Z",
+ "base_url_after": "https://r00217rst---provena-api-cttaanqntq-du.a.run.app",
+ "same_image": true,
+ "same_env": true,
+ "same_labels": true,
+ "same_scale": true,
+ "daily_question_limit": "0",
+ "old_instances_short": null,
+ "new_instances_short": null,
+ "shutdown_at_utc": null,
+ "startup_after_prepare": null,
+ "traffic_after": "provena-api-00217-kew=100%",
+ "ok": true,
+ "note": "health=200. 운영 트래픽은 provena-api-00217-kew=100% 그대로. 끝나면 태그를 떼고 이 리비전을 지운다."
+}

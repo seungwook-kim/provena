@@ -1,0 +1,14 @@
+{
+  "window_utc": [
+    "2026-11-17T07:17:41Z",
+    "2026-11-17T07:38:30Z"
+  ],
+  "log_query_ok_5xx": true,
+  "count_5xx": 0,
+  "log_query_ok_chat": true,
+  "chat_posts": 172,
+  "chat_posts_by_revision": {
+    "provena-api-00205-zit": 172
+  },
+  "items_5xx": []
+}

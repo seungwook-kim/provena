@@ -1,0 +1,9 @@
+{
+  "revision": "provena-api-00205-zit",
+  "log_query_ok": true,
+  "graph_lines": 1,
+  "mode": "multi",
+  "profile_lines": 1,
+  "given_has_QUESTION_GRAPH_MODE": true,
+  "given_has_GRAPH_SPLIT_VOTE_WAIT_S": true
+}

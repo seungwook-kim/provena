@@ -1,0 +1,10 @@
+﻿{
+    "revision":  "provena-api-00202-rid",
+    "commit":  "1dfc3608",
+    "target":  "https://c1117c---provena-api-cttaanqntq-du.a.run.app",
+    "window_utc":  [
+                       "2026-11-17T05:55:44Z 2026-11-17T06:02:33Z"
+                   ],
+    "i03_rc":  0,
+    "health_after":  "200 0.101254"
+}

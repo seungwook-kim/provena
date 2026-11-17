@@ -1,0 +1,25 @@
+{
+ "mode": "cleanup-only",
+ "date": "20261117",
+ "cleanup": {
+  "deleted": {
+   "chunks": 0,
+   "versions": 0,
+   "docs": 0
+  },
+  "leftover": {
+   "docs": 0,
+   "versions": 0,
+   "chunks": 0
+  },
+  "counts_before": null,
+  "counts_after": {
+   "docs": 1520,
+   "versions": 1863,
+   "chunks": 31457
+  },
+  "counts_match": true,
+  "ok": true
+ },
+ "error": null
+}

@@ -1,0 +1,50 @@
+mutation 40: backend/main.py:302
+old: build = build_multi_graph if mode == "multi" else build_graph
+new: build = build_graph
+test: tests/test_chat_multi_switch.py
+before: rc=0 30 passed in 6.73s
+after: rc=1 1 failed, 29 passed in 4.85s
+
+......F.......................                                           [100%]
+================================== FAILURES ===================================
+____ test_service_graph_follows_the_switch_with_the_same_arguments[multi] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001A2ABF21150>
+mode = 'multi'
+
+    @pytest.mark.parametrize("mode", ["", "single", "multi"])
+    def test_service_graph_follows_the_switch_with_the_same_arguments(monkeypatch, mode):
+        """서비스 그래프(`build_question_graph`)는 스위치에 따라 단일이나 멀티를 만들고, 안쪽 단일 그래프에 같은 인자(공유 모델, 체크포인터 없음은 멀티만, 결정표, 합동 검토, 서비스 검색)를 넘긴다.
+        모델은 두 구조 모두 같은 `SharedChatModel`이라 출력 상한(`LLM_MAX_TOKENS`), 프롬프트 캐시, 시간 상한이 같은 곳에서 걸린다."""
+        import backend.graph.build as B
+    
+        monkeypatch.setenv("QUESTION_GRAPH_MODE", mode)
+        seen: list[dict] = []
+        real = B.build_graph
+    
+        def spy(*a, **k):
+            seen.append({"args": a, **k})
+            return real(*a, **k)
+    
+        monkeypatch.setattr(B, "build_graph", spy)
+        monkeypatch.setattr(M, "build_graph", spy)
+        st = _state()
+        g = build_question_graph(st)
+        (kw,) = seen
+        assert isinstance(kw["llm"], SP.SharedChatModel) and kw["decision_repo"] is st.decision_repo and kw["review_graph"] is not None
+        assert {"page_search", "intro_search", "prev_chunk"} <= set(kw) and kw["store"] is st.store and kw["answer_store"] is st.answer_store
+        if mode == "multi":
+>           assert set(g.nodes) >= {"supervisor", "retriever", "writer", "verifier", "decision", "review"}
+E           AssertionError: assert {'__start__',...ollowup', ...} >= {'decision', ...er', 'writer'}
+E             
+E             Extra items in the right set:
+E             'decision'
+E             'supervisor'
+E             'verifier'
+E             'writer'
+E             'retriever'
+
+tests\test_chat_multi_switch.py:137: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_chat_multi_switch.py::test_service_graph_follows_the_switch_with_the_same_arguments[multi]
+1 failed, 29 passed in 4.85s

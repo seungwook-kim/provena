@@ -25,7 +25,11 @@
   `llm` 라우터(`build_multi_graph(router="llm")`, 환경 변수 `SUPERVISOR_ROUTER`)는 허용 경로가 2개 이상일 때만 그래프와 같은 모델을 1회 부른다. 입력은 코드가 계산한 값과 허용 경로뿐이고
   (`route_facts`), 문서 본문, 답, 질문 원문, 판정 사유 문장은 넣지 않는다. 응답이 허용 경로 밖이거나 읽을 수 없으면 코드 라우팅 결과로 돌아간다.
 - 결과 상태 칸(`kind`, `answer`, `citations`, `retries`, `search_stats` ...)은 단일과 같고 평가 실행기(`evals/agent/run_eval.py`)가 그대로 읽는다.
-  멀티에만 있는 칸: `agent_trace`(부른 에이전트 순서), `supervisor_log`(결정 기록. 항목마다 `router`, 대체했으면 `fallback`), `handoffs`(에이전트마다 받은 칸과 돌려준 칸).
+  멀티에만 있는 칸: `agent_trace`(부른 에이전트 순서), `supervisor_log`(결정 기록. 항목마다 `router`, 대체했으면 `fallback`), `handoffs`(에이전트마다 받은 칸과 돌려준 칸),
+  `kind_node`(거절·되묻기를 쓴 단일 그래프의 노드 이름. `/chat` done의 `refuse_stage`가 단일과 같아진다).
+- 서비스(`/chat`)는 `QUESTION_GRAPH_MODE=multi`일 때 이 그래프를 쓴다(`backend/main.py`의 `build_question_graph`, 서비스 값 `backend/graph/service_profile.py`).
+  Supervisor가 직접 부르는 노드도 LLM 기록에는 단일과 같은 노드 이름(`classify` 등)으로 남는다(`run_single_node`). 단일과의 같고 다른 점은
+  `evals/results/chat_multi_switch_20261117/PARITY.md`에 있다.
 """
 from __future__ import annotations
 
@@ -37,7 +41,8 @@ from dataclasses import dataclass
 from typing import Any, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.runnables.config import ensure_config
+from langchain_core.runnables.config import ensure_config, var_child_runnable_config
+from langgraph.constants import CONF, CONFIG_KEY_CHECKPOINTER
 from langgraph.graph import END, START, StateGraph
 from langgraph.store.memory import InMemoryStore
 
@@ -62,6 +67,10 @@ class MultiState(AgentState, total=False):
     agent_trace: list[str]  # 부른 하위 에이전트 순서. 재검색이면 retriever가 되풀이된다
     supervisor_log: list[dict]  # supervisor가 결정할 때마다 한 줄: 어디서 돌아왔고 어디로 보냈는지
     handoffs: list[dict]  # 에이전트마다 받은 칸과 돌려준 칸의 이름
+    kind_node: str  # 결과 종류(`kind`)를 거절·되묻기로 마지막에 쓴 단일 그래프의 노드 이름. 답이면 빈 값. `/chat` done의 `refuse_stage`가 단일과 같은 이름을 쓰게 한다(`backend/graph/stream.py`)
+
+
+REFUSE_KINDS = ("refuse", "clarify")
 
 
 @dataclass(frozen=True)
@@ -81,11 +90,13 @@ RETRIEVER = AgentSpec(
     ("rewrite", "search", "judge"),
     reads=frozenset({"question", "profile", "org", "as_of", "as_of_given", "retries", "judge_reason", "search_query", "search_org", "chunks",
                      "search_cache", "search_stats", "skills_used", "judged_chunks", "judge_missing", "judge_query", "sub_queries", "next_section", "section_reads", "started_at",
-                     "query_targets", "sub_research", "sub_research_phase", "judge_partial", "judge_checks_log"}),  # judge_partial: 가(`GRAPH_RESEARCH_SAME_PAGE`)가 재검색 방식을 고른다. query_targets: `GRAPH_QUERY_BRANCHES=1`일 때만 생기는 칸. 꺼져 있으면 상태에 없어 넘어가지 않는다
+                     "query_targets", "sub_research", "sub_research_phase", "judge_partial", "judge_checks_log",
+                     "judge_votes"}),  # judge_partial: 가(`GRAPH_RESEARCH_SAME_PAGE`)가 재검색 방식을 고른다. query_targets: `GRAPH_QUERY_BRANCHES=1`일 때만 생기는 칸. 꺼져 있으면 상태에 없어 넘어가지 않는다. judge_votes: 판정 다수결의 표 구성 기록(앞 판정 기록에 덧붙인다)
     writes=frozenset({"search_query", "search_org", "skills_used", "as_of", "sub_queries", "decompose_source", "kind", "answer", "citations",
                       "search_error", "chunks", "search_cache", "search_stats", "judge_reason", "judge_partial", "retries", "clarify_question",
                       "early_answer", "judged_chunks", "search_stalled", "judge_missing", "judge_query", "judge_scope", "next_section", "section_reads",
-                      "query_targets", "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids", "intro_chunk_ids", "judge_quotes"}),
+                      "query_targets", "sub_research", "sub_research_phase", "judge_none", "judge_checks_log", "judge_quote_ids", "intro_chunk_ids", "judge_quotes",
+                      "judge_votes"}),   # judge_votes: 기록만(`/chat` done의 `path.judge_votes`). 단일과 같은 값을 남긴다
 )
 WRITER = AgentSpec(
     "writer",
@@ -285,13 +296,49 @@ def ask_router(llm: Any, view: dict, allowed: tuple[str, ...], *, max_research: 
     return (picked, "") if isinstance(picked, str) and picked in allowed else (None, "not_allowed")
 
 
+def run_single_node(parts: SingleParts, name: str, view: dict) -> dict:
+    """Supervisor가 단일 그래프의 노드(`load_memory`, `followup`, `classify`, `out_of_domain`, `give_up`)를 직접 부른다.
+    LLM 기록(`llm_trace`, 요청 비용의 단계별 합 `cost_by_step`, Langfuse)은 `langgraph_node`를 노드 이름으로 읽으므로, 이름을 `supervisor`가 아니라 단일과 같은 노드 이름으로 둔다.
+    콜백(비용 상한, Langfuse)과 체크포인트 설정은 지금 실행의 설정을 그대로 물려받는다."""
+    cfg = ensure_config()
+    cfg = {**cfg, "metadata": {**cfg.get("metadata", {}), "langgraph_node": name}}
+    # 그래프 노드 실행체는 따로 추적 실행을 만들지 않아 설정 문맥을 바꾸지 않는다. 노드 안의 LLM 호출은 설정을 문맥에서 읽으므로 여기서 문맥을 바꾼다(노드가 띄우는 스레드도 이 문맥을 복사한다)
+    token = var_child_runnable_config.set(cfg)
+    try:
+        return parts.node(name).invoke(dict(view), cfg) or {}
+    finally:
+        var_child_runnable_config.reset(token)
+
+
+def _kind_node(node: str, delta: Any, current: str | None) -> str | None:
+    """`delta`가 `kind`를 쓰면 그 노드 이름(거절·되묻기) 또는 빈 값(답). 쓰지 않으면 `current` 그대로."""
+    if isinstance(delta, dict) and "kind" in delta:
+        return node if delta["kind"] in REFUSE_KINDS else ""
+    return current
+
+
 def _agent_node(spec: AgentSpec, agent: Any) -> Callable[[dict], dict]:
     def run(state: dict) -> dict:
         view = {k: state[k] for k in spec.reads if k in state}
-        out = agent.invoke(view)
+        kind_node: str | None = None
+        if spec.name == REVIEW.name:   # 합동 검토는 단일에서도 노드 하나(`review`)다. 사람 승인에서 멈췄다가 재개한다
+            out = agent.invoke(view)
+            kind_node = _kind_node(spec.name, out, None)
+        else:   # 단일 그래프의 노드로 된 에이전트: 결과는 `invoke`와 같고, 어느 노드가 결과 종류를 썼는지도 읽는다
+            out = dict(view)
+            # 바깥 그래프의 체크포인터를 물려받았으면 에이전트 안의 단계 체크포인트는 끝날 때만 남긴다(`durability="exit"`). 단계마다 DB에 쓰던 왕복이 빠진다.
+            # 에이전트 안에는 interrupt가 없고(합동 검토는 위 갈래), 끊기면 에이전트를 처음부터 다시 돈다. 체크포인터가 없으면 넘기지 않는다(langgraph가 효과 없다고 경고한다)
+            opts = {"durability": "exit"} if ensure_config().get(CONF, {}).get(CONFIG_KEY_CHECKPOINTER) is not None else {}
+            for mode, chunk in agent.stream(view, stream_mode=["updates", "values"], **opts):
+                if mode == "values":
+                    out = chunk
+                elif isinstance(chunk, dict):
+                    for node, delta in chunk.items():
+                        kind_node = _kind_node(node, delta, kind_node)
         back = {k: out[k] for k in spec.writes if k in out}
         handoff = {"agent": spec.name, "received": sorted(view), "returned": sorted(back)}
-        return {**back, "agent_trace": [*state.get("agent_trace", []), spec.name], "handoffs": [*state.get("handoffs", []), handoff]}
+        extra = {"kind_node": kind_node} if kind_node is not None and "kind" in back else {}
+        return {**back, **extra, "agent_trace": [*state.get("agent_trace", []), spec.name], "handoffs": [*state.get("handoffs", []), handoff]}
 
     return run
 
@@ -351,16 +398,24 @@ def build_multi_graph(
         if state.get("next_agent") == "end" or len(log) != len(state.get("agent_trace") or []):
             log = []
 
+        kind_node: str | None = None
+
         def apply(delta: dict) -> None:
             upd.update(delta)
             view.update(delta)
 
+        def call(name: str) -> None:
+            nonlocal kind_node
+            delta = run_single_node(parts, name, view)
+            kind_node = _kind_node(name, delta, kind_node)
+            apply(delta)
+
         if not log:  # 첫 방문: 기억 불러오기와 질의 분석(단일의 load_memory, classify)
             apply({"agent_trace": [], "handoffs": []})  # 에이전트를 한 번도 부르지 않고 끝나도 기록 칸은 있다
-            apply(parts.node("load_memory").invoke(dict(view)))
+            call("load_memory")
             if parts.route("load_memory", view) == "followup":  # 이어 묻기(D-14): 단일과 같은 분기, 같은 노드. 같은 대화에 앞 질문이 있을 때만 지난다
-                apply(parts.node("followup").invoke(dict(view)))
-            apply(parts.node("classify").invoke(dict(view)))
+                call("followup")
+            call("classify")
         trace = view.get("agent_trace") or []
         last = trace[-1] if trace else None
         allowed, code_path = route_options(parts, view, max_research=research_limit)
@@ -373,8 +428,10 @@ def build_multi_graph(
                 path, note = picked, {"router": "llm", "code_choice": code_path}
         nxt, closer = PATHS[path]
         if closer:  # 에이전트를 부르지 않고 Supervisor가 직접 닫는다(거절과 되묻기는 코드다)
-            apply(parts.node(closer).invoke(dict(view)))
+            call(closer)
         log.append({"after": last or "intake", "to": nxt, **({"closed_by": closer} if closer else {}), "retries": view.get("retries", 0), **note})
+        if kind_node is not None and "kind" in upd:
+            upd["kind_node"] = kind_node
         return {**upd, "next_agent": nxt, "supervisor_log": log}
 
     g = StateGraph(MultiState)

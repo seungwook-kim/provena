@@ -143,7 +143,7 @@ def test_only_the_last_run_of_a_thread_is_shown():
     assert res["runs_in_thread"] == 2 and nodes(res).count("supervisor") == 1 and res["review"]["review_status"] == "pending_approval"
 
 
-# ---------- 멀티 에이전트 그래프(하위 에이전트 ns "retriever:..." 등) ----------
+# ---------- 멀티 에이전트 그래프(Supervisor와 에이전트 단위 단계) ----------
 
 def test_multi_graph_supervisor_decisions_and_agents():
     saver = InMemorySaver()
@@ -154,8 +154,9 @@ def test_multi_graph_supervisor_decisions_and_agents():
     assert res["agent_trace"] == ["retriever", "writer", "verifier"]
     assert [(e["after"], e["to"]) for e in res["supervisor_log"]] == [("intake", "retriever"), ("retriever", "writer"),
                                                                        ("writer", "verifier"), ("verifier", "end")]
-    assert nodes(res, "retriever") == ["rewrite", "search", "judge"] and nodes(res, "writer") == ["write_answer"]
-    assert nodes(res, "verifier") == ["verify", "ground", "save"] and res["review"] is None
+    # 하위 에이전트는 체크포인트를 끝날 때만 남긴다(`durability="exit"`). 그래서 단계는 바깥 그래프의 에이전트 단위로만 보이고 에이전트 안의 노드 단계는 없다
+    assert nodes(res, "main") == ["supervisor", "retriever", "supervisor", "writer", "supervisor", "verifier", "supervisor"]
+    assert {s["graph"] for s in res["steps"]} == {"main"} and res["review"] is None
     out = g.get_state(cfg("m1")).values
     text = json.dumps(r, ensure_ascii=False)
     assert out["answer"] not in text and "SEV2" not in text and USER not in text

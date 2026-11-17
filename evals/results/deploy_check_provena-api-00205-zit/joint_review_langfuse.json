@@ -1,0 +1,96 @@
+{
+ "window_utc": [
+  "2026-11-17T07:36:36Z",
+  "2026-11-17T07:37:30Z"
+ ],
+ "query_ok": true,
+ "n_observations": 47,
+ "span_names": {
+  "search_handbook": 10,
+  "RunnableCallable": 3,
+  "supervisor": 2,
+  "approval": 1,
+  "queue_approval": 1,
+  "after_merge": 1,
+  "merge": 1,
+  "after_check": 1,
+  "check_teams": 1,
+  "team_security": 1,
+  "team_itops": 1,
+  "team_infra": 1,
+  "team_finance": 1,
+  "after_supervisor": 1,
+  "LangGraph": 1,
+  "review": 1,
+  "question": 1
+ },
+ "traces_total": 6,
+ "traces_multi": 1,
+ "traces_single": 0,
+ "traces_other": 5,
+ "review": {
+  "supervisor_calls": 1,
+  "supervisor_with_team_select_rule": 1,
+  "output_has_teams_key": 1,
+  "rule_traces": 1,
+  "rule_traces_multi": 1,
+  "supervisor_traces_multi": 1
+ },
+ "capture_observations": 42,
+ "per_trace": [
+  {
+   "multi": true,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 1,
+   "top_classify_spans": 0,
+   "n_obs": 42,
+   "trace": "c01edca3"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "1bb0a9a4"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "4cedbab3"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "9ecc4c2f"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "c6ab9a50"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "abd9e0a2"
+  }
+ ]
+}

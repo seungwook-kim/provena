@@ -1,0 +1,62 @@
+{
+ "base_url": "https://c1117l---provena-api-cttaanqntq-du.a.run.app",
+ "started_utc": "2026-11-17T06:22:53+00:00",
+ "requests": [
+  {
+   "n": 1,
+   "http": 429,
+   "elapsed_s": 2.27,
+   "retry_after": "31023",
+   "content_type": "application/json",
+   "error_code": "daily_limit",
+   "message": "오늘 질문 한도(1건)를 넘었습니다. 내일 다시 이용해 주세요.",
+   "limit": 1,
+   "used": 1382,
+   "resets_at": "2026-11-18T00:00:00+09:00",
+   "body_keys": [
+    "detail",
+    "error"
+   ],
+   "error_keys": [
+    "code",
+    "details",
+    "message",
+    "request_id"
+   ],
+   "retry_after_int": 31023
+  },
+  {
+   "n": 2,
+   "http": 429,
+   "elapsed_s": 0.522,
+   "retry_after": "31021",
+   "content_type": "application/json",
+   "error_code": "daily_limit",
+   "message": "오늘 질문 한도(1건)를 넘었습니다. 내일 다시 이용해 주세요.",
+   "limit": 1,
+   "used": 1382,
+   "resets_at": "2026-11-18T00:00:00+09:00",
+   "body_keys": [
+    "detail",
+    "error"
+   ],
+   "error_keys": [
+    "code",
+    "details",
+    "message",
+    "request_id"
+   ],
+   "retry_after_int": 31021
+  }
+ ],
+ "finished_utc": "2026-11-17T06:22:59+00:00",
+ "summary": {
+  "all_429": true,
+  "all_daily_limit": true,
+  "retry_after_positive": true,
+  "limit_values": [
+   1
+  ],
+  "used_at_least_limit": true
+ }
+}

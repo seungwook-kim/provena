@@ -1,0 +1,109 @@
+{
+ "window_utc": [
+  "2026-11-17T09:56:07Z",
+  "2026-11-17T09:57:02Z"
+ ],
+ "query_ok": true,
+ "n_observations": 37,
+ "span_names": {
+  "search_handbook": 6,
+  "RunnableCallable": 3,
+  "supervisor": 2,
+  "approval": 1,
+  "queue_approval": 1,
+  "after_merge": 1,
+  "merge": 1,
+  "after_check": 1,
+  "check_teams": 1,
+  "team_infra": 1,
+  "team_finance": 1,
+  "after_supervisor": 1,
+  "LangGraph": 1,
+  "review": 1,
+  "question": 1
+ },
+ "traces_total": 4,
+ "traces_multi": 1,
+ "traces_single": 0,
+ "traces_other": 3,
+ "review": {
+  "supervisor_calls": 1,
+  "supervisor_with_team_select_rule": 1,
+  "output_has_teams_key": 1,
+  "rule_traces": 1,
+  "rule_traces_multi": 1,
+  "supervisor_traces_multi": 1,
+  "selected_teams": [
+   {
+    "trace": "<가림>",
+    "model": "claude-haiku-5-5",
+    "teams_selected": [
+     "infra",
+     "finance"
+    ],
+    "rule_sentence_in_system_prompt": true,
+    "start": "2026-11-17T09:56:18.445Z"
+   }
+  ],
+  "node_tree": {
+   "<가림>": [
+    "question",
+    "  supervisor",
+    "    search_handbook",
+    "  review",
+    "    LangGraph",
+    "      supervisor",
+    "        after_supervisor",
+    "      team_finance",
+    "      team_infra",
+    "        search_handbook",
+    "        search_handbook",
+    "      check_teams",
+    "        after_check",
+    "      merge",
+    "        after_merge",
+    "      queue_approval",
+    "      approval"
+   ]
+  }
+ },
+ "capture_observations": 34,
+ "per_trace": [
+  {
+   "multi": true,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 1,
+   "top_classify_spans": 0,
+   "n_obs": 34,
+   "trace": "<가림>"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "<가림>"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "<가림>"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "<가림>"
+  }
+ ]
+}

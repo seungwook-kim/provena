@@ -1,0 +1,13 @@
+2026-11-17T15:42:00 배포 기록이 없거나 ok·multi_ok·deploy_check_ok 중 하나가 아님: 중단
+2026-11-17T16:36:41 PRECHECK serving=[provena-api-00202-rid=100%] (097 시작 때 [provena-api-00181-zub=100%]) c1117m->provena-api-00205-zit (기대 provena-api-00205-zit) health=200 0.296307
+2026-11-17T16:36:41 COST 확인 100 합동 검토 1건: 지금까지 2.153033 + 이번 상한 0.05 / 전체 상한 4.5 -> 진행
+2026-11-17T16:36:41 DB Supavisor=12 (상한 30)
+2026-11-17T16:37:00 g4: {"id": 1, "http": 200, "event": "approval_request", "approval_kind": "issue_table", "done_kind": null, "error_code": null} cleanup [('reject', 200)]
+2026-11-17T16:37:00 g4: SUMMARY {"runs": 1, "joint_review_paused": 1, "team_review_failed": 0, "leftover": 0, "est_cost_usd": 0.006}
+2026-11-17T16:37:00 LEDGER +0.006 (100 g4) 합계 2.159033 / 상한 4.5
+2026-11-17T16:37:00 g4 rc=0 window=2026-11-17T07:36:41Z..2026-11-17T07:37:00Z
+2026-11-17T16:38:04 langfuse: LFCHECK {"window_utc": ["2026-11-17T07:36:36Z", "2026-11-17T07:37:30Z"], "query_ok": true, "n_observations": 47, "traces_total": 6, "traces_multi": 1, "traces_single": 0, "traces_other": 5, "review": {"supervisor_calls": 1, "supervisor_with_team_select_rule": 1, "output_has_teams_key": 1, "rule_traces": 1, "rule_traces_multi": 1, "supervisor_traces_multi": 1}, "capture_observations": 42}
+2026-11-17T16:38:04 G4 LF supervisor_calls=1 with_team_select_rule=1 rule_traces=1 rule_traces_multi=1 traces_multi=1 traces_single=0 capture_obs=42
+2026-11-17T16:38:04 G4 결과: 팀 선택 규칙=True 멀티 그래프 trace=True (Langfuse rc=0)
+2026-11-17T16:38:06 END serving=[provena-api-00202-rid=100%] (허용 값이어야 함, 이 판 0%) 장부 합계 2.159033
+2026-11-17T16:38:06 JOB100 DONE

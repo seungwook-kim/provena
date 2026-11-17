@@ -27,15 +27,16 @@
     }
   },
   "operating": {
-    "source": "운영 배포판 최신 측정. evals/results/deploy_latency_provena-api-*/ 중 평가셋 해시가 동결 해시와 같고 측정 종료 시각이 가장 늦은 폴더를 CI 비교가 자동으로 읽는다. 아래 값은 provena-api-00047-wjn(커밋 4c8d8bc, 2026-11-13 01시)의 v2 50건 3회 평균이다(정답 근거 대조 citation_gold.json의 회차 평균, p95는 회차별 전체 질문 p95의 평균). 위 arms 값은 평가 실행기로 잰 이전 최종 측정이라 운영 배포 경로 값과 같지 않고, 운영 값이 더 낮다. 환각 위험은 운영 측정에 없어 넣지 않았다. 더 좋은 운영 측정이 커밋되면 이 값을 올린다.",
-    "revision": "provena-api-00047-wjn",
+    "source": "운영 배포판 최신 측정. evals/results/deploy_latency_provena-api-*/ 중 평가셋 해시가 동결 해시와 같고 측정 종료 시각이 가장 늦은 폴더를 CI 비교가 자동으로 읽는다. 아래 값은 공식 서비스 측정 판 provena-api-00217-kew(커밋 ddce99b7, 2026-11-17 18:24~18:46 KST)의 v2 50건 3회 평균이다(정답 근거 대조 citation_gold.json의 회차 평균, p95는 회차별 전체 질문 p95의 평균, evals/results/deploy_latency_provena-api-00217-kew/). 위 arms 값은 평가 실행기로 잰 이전 최종 측정이라 운영 배포 경로 값과 같지 않고, 운영 값이 더 낮다. 환각 위험은 운영 측정에 없어 넣지 않았다. 2026-11-17부터 이 기준은 공식 서비스 판의 측정을 따른다(결정 0137).",
+    "previous": "2026-11-17 전 기준: provena-api-00047-wjn(커밋 4c8d8bc, 2026-11-13 01시) v2 50건 3회 평균, 정답 근거 인용률 0.942, 인용 정확도 0.95, 비관련 질문 거절 1.0, 과잉 거절 0.0, 오답 근거 0.067, p95 8.51초. 00217-kew의 정답 근거 인용률 0.940은 이 값보다 0.002 낮고, 00217-kew 3회 범위 0.927~0.960 안이다(한 문항보다 작은 차이).",
+    "revision": "provena-api-00217-kew",
     "metrics": {
-      "cited_correct_rate": 0.942,
-      "citation_accuracy": 0.95,
+      "cited_correct_rate": 0.94,
+      "citation_accuracy": 0.953,
       "correct_refusal_rate": 1.0,
       "over_refusal_rate": 0.0,
-      "wrong_citation_rate": 0.067,
-      "latency_p95_s": 8.51
+      "wrong_citation_rate": 0.053,
+      "latency_p95_s": 8.439
     }
   },
   "current": {

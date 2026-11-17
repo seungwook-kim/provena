@@ -4,7 +4,7 @@
 
 체크포인트 ③ 요청("현재 구성(/chat은 단일 그래프)과 멀티 구성의 차이를 같은 문항으로 한 번 재서 원시 결과")에 따라 그래프 구조 하나만 바꿔 동결 v2 50건을 1회씩 쟀다. 사전 등록 초안은 이 폴더의 `PREREGISTER_rows.md`(초안 번호 62.80, 측정 전 2026-11-17 09:40 작성)이다.
 
-- 운영 판에서 바꿀 수 없는 이유: 서비스(`/chat`)에는 멀티를 고르는 환경 변수나 요청 칸이 없다. `backend/main.py`의 `build_question_graph`는 `build_graph`(단일)만 부르고, `build_multi_graph`는 측정 실행기만 부른다. 그래서 운영 판 `provena-api-00181-zub`의 이미지와 같은 커밋 `9bc7d587`의 코드(스냅숏)를 측정 실행기로 로컬에서 돌렸다.
+- 운영 판에서 바꿀 수 없는 이유(커밋 `9bc7d587` 기준. 뒤 커밋 `7a52ef87`부터는 `/chat`이 스위치 `QUESTION_GRAPH_MODE`로 단일과 멀티를 고른다): 서비스(`/chat`)에는 멀티를 고르는 환경 변수나 요청 칸이 없다. `backend/main.py`의 `build_question_graph`는 `build_graph`(단일)만 부르고, `build_multi_graph`는 측정 실행기만 부른다. 그래서 운영 판 `provena-api-00181-zub`의 이미지와 같은 커밋 `9bc7d587`의 코드(스냅숏)를 측정 실행기로 로컬에서 돌렸다.
 - 갈래: 단일 그래프(`build_graph`) 대 Supervisor 멀티 그래프(`build_multi_graph`, 코드 라우팅). 같은 검색기, 같은 모델 객체, 같은 인자를 두 갈래에 넘기고 문항마다 순서를 바꿔 번갈아 돌렸다(짝수 번째 단일 먼저, 홀수 번째 멀티 먼저).
 - 설정: 서비스가 앱 시작 때 채우는 서비스 설정 61.51(`backend/graph/service_profile.py`의 `SERVICE_ENV`, 68개 변수)을 같은 함수(`apply_service_profile`)로 채운 뒤, 61.51 측정 인자(`MEASURED_ARGS`)를 그대로 주었다. 검색은 운영 DB 색인(`--store pg`)을 읽기만 했다. 질문 번역 저장(`PgStore.put_translation`, INSERT)은 측정 쪽에서 막았다(막힌 호출 3회, 그 3개 검색어는 번역을 새로 받아 쓰고 저장하지 않았다).
 - 모델: 로컬 Claude CLI의 `claude-haiku-5-5`(운영과 같은 모델, API 키는 쓰지 않음). 운영은 Anthropic API를 부르므로 응답 시간은 운영과 비교하지 않는다(CLI 시작 시간이 섞인다).

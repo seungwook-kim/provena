@@ -1,0 +1,38 @@
+2026-11-17T18:14:21 COST 확인 130 워밍업: 묶음 0 + 이번 상한 0.05 / 3, 오늘 12.3334 + 0.05 / 20 -> 진행
+2026-11-17T18:14:23 START serving=[provena-api-00205-zit=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,c1117m->provena-api-00205-zit,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] template=provena-api-ab4rst1117 commit=ddce99b79b29025386abd5c40a925aabeeb92958 base=provena-api-00205-zit
+2026-11-17T18:14:25 TEMPLATE 실행 설정 vs provena-api-00205-zit: 차이=[]
+2026-11-17T18:14:25 ENV copy from provena-api-00205-zit plain=16+3 secrets=13+1 expect_diff=[<=EMAIL_FROM,<=GMAIL_APP_PASSWORD,<=GMAIL_SMTP_USER,=>EMAIL_FROM,=>GMAIL_APP_PASSWORD,=>GMAIL_SMTP_USER] extra_env=[]
+2026-11-17T18:14:25 COMMIT ddce99b79b29025386abd5c40a925aabeeb92958 tree=c4af79286a5265902eacd2416ac83f841a9c4a05 origin/main=1dfc3608 same_tree_as_main=False has_question_graph_mode=True
+2026-11-17T18:14:27 DEPLOY ddce99b79b29025386abd5c40a925aabeeb92958 tag=c1117n (no traffic)
+2026-11-17T18:18:23 deploy:     + FullyQualifiedErrorId : NativeCommandError
+2026-11-17T18:18:23 deploy: Validating configuration...done
+2026-11-17T18:18:23 deploy: ...done
+2026-11-17T18:18:23 deploy: ...done
+2026-11-17T18:18:23 deploy: Setting IAM Policy...done
+2026-11-17T18:18:23 deploy: Creating Revision...
+2026-11-17T18:18:23 deploy: ...done
+2026-11-17T18:18:23 deploy: Done.
+2026-11-17T18:18:23 deploy: Service [provena-api] revision [provena-api-00217-kew] has been deployed and is serving 0 percent of traffic.
+2026-11-17T18:18:23 deploy: The revision can be reached directly at https://c1117n---provena-api-cttaanqntq-du.a.run.app
+2026-11-17T18:18:26 describe: describe 비교 provena-api-00205-zit(<=) vs provena-api-00217-kew(=>). 환경 변수는 이름과 값 해시만 비교했고 비밀은 참조 이름만 적는다.
+2026-11-17T18:18:26 describe: 환경 변수 수: 33 -> 33
+2026-11-17T18:18:26 describe: 환경 변수 차이: [<=EMAIL_FROM,<=GMAIL_APP_PASSWORD,<=GMAIL_SMTP_USER,=>EMAIL_FROM,=>GMAIL_APP_PASSWORD,=>GMAIL_SMTP_USER] (기대 [<=EMAIL_FROM,<=GMAIL_APP_PASSWORD,<=GMAIL_SMTP_USER,=>EMAIL_FROM,=>GMAIL_APP_PASSWORD,=>GMAIL_SMTP_USER])
+2026-11-17T18:18:26 describe: 넣은 일반 값: DAILY_QUESTION_LIMIT=0,GMAIL_SMTP_USER=<가림>,EMAIL_FROM=<가림>
+2026-11-17T18:18:26 describe: 넣은 비밀 참조: GMAIL_APP_PASSWORD<-provena-gmail-app-password-pp:latest
+2026-11-17T18:18:26 describe: 실행 설정 차이: []
+2026-11-17T18:18:26 describe: 이미지: 01eb2ac7 -> 79ea4dfc
+2026-11-17T18:18:26 describe: commit 라벨: e822fb1e -> ddce99b79b29025386abd5c40a925aabeeb92958
+2026-11-17T18:18:27 RECORD 저장 c1117n\deploy_record_c1117n.json 다시 읽기 확인=True (revision_new=provena-api-00217-kew ok=True deploy_check_ok=False multi_ok=False halted=[])
+2026-11-17T18:18:27 DEPLOYED new=provena-api-00217-kew serving=[provena-api-00205-zit=100%] health=200 0.317412 env_ok=True cfg_diff=[] ok=True
+2026-11-17T18:18:27 DB Supavisor=6 (상한 30)
+2026-11-17T18:18:34 deploy_check rc=0 ok=True L0=통과 U1=통과 X1=통과 X2=통과 R1=통과 E1=통과 H1=통과
+2026-11-17T18:18:43 warmup rc=0 ok=1 fail=0 total_s=7.837 cost=0.011925 status=ok err= result=answer citations=4 llm_calls=22
+2026-11-17T18:18:44 LEDGER +0.0119 (130 warmup) 묶음 합계 0.011925 / 3, 오늘 합계 12.3454 / 20
+2026-11-17T18:18:49 LOGMODE mode=multi graph_lines=1 profile_lines=1 given_QGM=True given_SPLIT=True ok=True
+2026-11-17T18:18:49 MULTI log_mode=[multi] -> multi_ok=True
+2026-11-17T18:18:50 thread_check thread=<가림> threads_rows=1 checkpoints_rows=9 status=idle created_at=2026-11-17 09:18:36.439782+00:00 SAVED=1
+2026-11-17T18:19:54 5xx=0 (ok=True) chat_posts=2 (ok=True) window=2026-11-17T09:16:27Z..2026-11-17T09:20:50Z
+2026-11-17T18:19:54 5xx(이 판, 점검 창)=0 (-1은 로그 조회 실패: 기록만)
+2026-11-17T18:19:54 RECORD 저장 c1117n\deploy_record_c1117n.json 다시 읽기 확인=True (revision_new=provena-api-00217-kew ok=True deploy_check_ok=True multi_ok=True halted=[])
+2026-11-17T18:19:56 END serving=[provena-api-00205-zit=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,c1117m->provena-api-00205-zit,c1117n->provena-api-00217-kew,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] deploy_check_ok=True warmup_ok=True multi_ok=True (운영 트래픽은 바뀌면 안 됨)
+2026-11-17T18:19:56 JOB130 DONE

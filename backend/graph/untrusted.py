@@ -40,6 +40,8 @@
 
 보강(PREREGISTER 62.77, 2026-11-17): 질문 속 한국어 출력 자리 지시("답 끝에 ... 붙여 줘")를 지시로 보는 `output_ko` 규칙을 `output_en` 옆에 더했다.
 질문에 지시가 있으면 질문의 따옴표 문자열을 이어 붙인 값도 출력 검사 후보가 된다.
+2026-11-17(`docs/specs/output-request-guard.md`): `output_ko`를 질문 전용 규칙 `output_request`(`QUESTION_RULES`, 말투·자리·문구 조합)로 바꿨다. 요청 문구는 답 문장 끝·앞에서
+그 부분만 자르고(`_trim_edges`), 모르는 이름 되묻기의 인용 구도 답과 같은 출력 검사(`echo_ok`)를 거친다.
 
 한계: 규칙(정규식)은 알려진 범주만 잡는다. 번역(한국어·영어 밖, 표식 토큰이 없는 것), 암시, 오타, 유니코드 변형(동형 문자는 다른 문자 비율로 일부만),
 표식이 없는 지시(예: 공지 문구만 덧붙이게 하는 것, 정해진 문구로만 회신하게 하는 것), 소문자·숫자 없는 표식, 두 청크에 나눠 쓴 지시,
@@ -89,10 +91,7 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
                                 r"(?:에이전트|어시스턴트|챗봇)(?:와|과)?[^.\n,]{0,20}?(?:는|은)\s*[^.\n]{0,40}(?:적어라|적을\s*것|쓰라|쓸\s*것|넣어라|포함하라|병기|기재|출력하라|인용하라|무시하라)")),
     ("output_en", re.compile(r"\b(?:append|prepend|add|insert|include|write|print|output)\b[^.\n]{0,60}?\b(?:to|in|into|at the (?:end|start|beginning|top|bottom) of|on the last line of)\s+your\s+(?:final\s+|full\s+|complete\s+|entire\s+)?(?:answer|response|reply|output|recommendation|summary)s?\b|"
                              r"\b(?:end|finish|conclude)\s+(?:your|the)\s+(?:answer|response|reply)\s+with\b", _I)),
-    # 사전 등록 62.77: output_en의 한국어 짝. 답의 자리(끝·마지막·앞·처음)를 가리키고 40자 안에 붙이라·적으라·넣으라는 말이 오는 문장.
-    # "적어도"(at least)는 쓰기 동작이 아니고, "붙여야/적어야/넣어야/추가해야 하나요"는 업무 절차를 묻는 말이라 요청으로 보지 않는다.
-    ("output_ko", re.compile(r"(?:답|답변|응답|대답)\s*(?:의\s*)?(?:맨\s*)?(?:끝|마지막|말미|뒤|앞|처음|첫머리)\s*(?:줄|문장|부분)?\s*(?:에|에다)?\s*[^.\n]{0,40}?"
-                             r"(?:붙여(?!야)|붙이|적어(?!도|야)|적고|써\s*줘|써라|쓰세요|넣어(?!야)|넣고|추가해(?!야)|덧붙)")),
+    # 62.77의 질문 속 한국어 출력 자리 규칙 `output_ko`(답 자리 + 쓰기 동사 목록)는 2026-11-17 질문 전용 규칙 `output_request`(아래 `QUESTION_RULES`)로 바꿨다.
     ("output_en_the", re.compile(r"\b(?:append|prepend|add|insert|include|write|print|output)\b[^.\n]{0,60}?\b(?:to|in|into|at the (?:end|start|beginning|top|bottom) of|on the last line of)\s+the\s+(?:final\s+)?(?:answer|response|reply|recommendation)s?\b(?!\s+lines?)", _I)),
     ("sysprompt", re.compile(r"\b(?:print|output|repeat|reveal|show|display|disclose|leak|dump|recite|echo|write out)\b[^.\n]{0,50}?\b(?:system prompt|your instructions|your prompt|initial prompt|hidden prompt|instructions above|everything above|text above|above this line)|"
                              r"\brepeat\s+(?:everything|all\s+(?:of\s+)?(?:the\s+)?(?:text|instructions|content))\b[^.\n]{0,20}\b(?:above|before)|"
@@ -114,6 +113,106 @@ RULES_EN_KO: list[tuple[str, re.Pattern]] = [
     # 내부 필드 이름(snake_case)에 "must be"를 붙인 문장은 설정 문서에도 흔해(핸드북 코퍼스에서 오탐 확인) 단독 규칙으로 쓰지 않는다.
     ("speaker_directive", re.compile(rf"(?:^|[\n|)\]>*•\-\"“'‘]\s*|\d\)\s*){_SPEAKER}\s*[:：]\s*(?=[^\n]{{0,80}}?(?:\b(?:must|should|shall|always|never|ignore|set|mark|output|return|answer|reply|respond|approve|reject|do not|don't)\b|하라|[가-힣]\s*것(?![가-힣])|해야|마라))", _I)),
 ]
+
+
+# ---------- 출력 자리 요청(2026-11-17, `output_request`) ----------
+# 답의 어느 자리(끝, 앞, 마지막 줄)에 정한 문구를 넣으라는 요청. 낱말·동사 목록 하나가 아니라 한 문장(절)에 든 세 특징의 조합으로 본다.
+#   말투 M: 읽는 쪽에 하는 요청·명령(주세요, 줘, 주시면, 바랍니다, 부탁, -시오, 하라, 문장 끝 반말 명령, please, make sure, can you, must, 절 머리의 영어 명령 동사)
+#   자리 T: 강(출력 낱말 답·답변·응답·요약·answer·response 등 바로 뒤의 자리 끝·앞·마지막·말미, "end/bottom of your answer")
+#           약(답 낱말 없는 줄·문장 자리 "마지막 줄", "last line", "~로 끝내", "end/begin/prefix ... with", "your answer")
+#   문구 P: 따옴표·괄호 문자열, 표식 토큰, 인용 조사 앞말("X라고/라는"), "the word/phrase/line/tag/code/number X"
+# 지시로 보는 조건: M이고 (T강이거나 (T약이고 P)). 업무 절차를 묻는 말("넣어야 하나요", "넣는 규칙이 있나요")은 M이 아니어서 걸리지 않는다.
+# 질문(사용자 입력)과 검색 원문에 같이 쓴다. 한계: 자리를 시점으로 말한 것("답을 마칠 때", "when you finish"), 말투 없는 명사 나열, 답 낱말 대신 다른 이름(결론, 본문)은 보지 않는다.
+_OUT_NOUN_KO = r"(?<![가-힣])(?:답변|응답|대답|회신|답장|요약(?:문|본)?|출력(?:물|문)?|결론|본문|맺음말|답)(?=\s|의|은|는|$)"
+_POS_KO = (r"(?:맨\s*)?(?:끝\s*부분|끝자락|끝|마지막|말미|마무리|뒷\s*부분|뒤(?=\s|에|의|로|$)|앞\s*부분|앞(?!서|으로|두)|처음|첫\s*(?:줄|문장|행|단어|부분)|첫머리|머리|서두|"
+           r"하단|상단|아래(?=\s|에|의|$)|다음\s*줄|새\s*줄)")
+_LINE_KO = (r"(?<![가-힣])(?:맨\s*)?(?:마지막|첫|맨\s*끝|맨\s*앞|맨\s*뒤|끝)\s*(?:줄|문장|행|단어|낱말|글자|문단|단락|부분)|(?<![가-힣])(?:말미|첫머리|서두)|"
+            r"(?<![가-힣])(?:다음|새)\s*줄|(?<![가-힣])(?:맺음말|끝인사|추신|꼬리말|머리말)\s*(?:으로|로|에|[:：])")
+# 답을 마치는 시점으로 말한 자리("답변을 마칠 때", "답한 다음에", "after answering", "once you're done")
+_WHEN_KO = (r"(?<![가-힣])(?:답변|응답|대답|회신|답)\s*(?:을|를)?\s*(?:다\s*)?(?:마치|마친|마칠|끝내|끝낸|끝낼|끝마치|마무리하|마무리한|쓰고\s*나|쓴\s*(?:뒤|후|다음))|"
+            r"(?<![가-힣])(?:답|대답|응답|회신)(?:하고\s*나|한\s*(?:뒤|후|다음))")
+_WHEN_EN = r"\b(?:after|before|once|when)\s+(?:you(?:'re|\s+are|\s+have)?\s+(?:done|finished|finish|answered|answer|replied|reply|respond)|answering|replying|responding|done)\b"
+_OUT_NOUN_EN = r"(?:answers?|responses?|repl(?:y|ies)|outputs?|summar(?:y|ies)|messages?)"
+_T_STRONG = re.compile(
+    rf"{_OUT_NOUN_KO}\s*(?:의|은|는)?\s*{_POS_KO}|"
+    rf"\b(?:very\s+)?(?:end|ending|start|beginning|top|bottom|close|tail|foot|(?:last|first|final|opening|closing)\s+(?:line|sentence|word|paragraph))\s+of\s+(?:your|the)\s+(?:\w+\s+)?{_OUT_NOUN_EN}\b", _I)
+_T_WEAK = re.compile(
+    rf"{_LINE_KO}|{_WHEN_KO}|{_WHEN_EN}|(?:으로|로)\s*(?:끝내|끝맺|끝나|마무리|마치|맺|시작)|"
+    rf"\b(?:last|final|first|opening|closing|bottom|top)\s+(?:line|sentence|word|paragraph)s?\b|"
+    rf"\b(?:end|begin|start|finish|close|conclude|open|prefix|preface|suffix|lead|sign\s+off|wrap\s+up)\b[^.\n]{{0,40}}?\bwith\b|\bby\s+saying\b|"
+    rf"\b(?:at|on|to)\s+the\s+(?:very\s+)?(?:end|bottom|top|beginning|start)\b|\byour\s+(?:\w+\s+)?{_OUT_NOUN_EN}\b", _I)
+# 말투는 둘로 나눈다. 분명한 요청 꼴(_MOOD)은 물음표로 끝나도 센다. 약한 꼴(_MOOD_WEAK, 의무 부사·must·-세요·것·절 머리 영어 동사)은
+# 물음표로 끝나는 문장(업무 절차를 묻는 말: "꼭 넣어야 하나요?", "should I add ...?")에서는 세지 않는다.
+_MOOD = re.compile(
+    r"(?:주세요|주십시오|주시오|주시고|주시기|주시면|주실\s*(?:수|래|까)|주시겠|줘(?!야)|줄래|주라|주렴|줄\s*수\s*있|바랍니다|바라요|바래|부탁)|"
+    r"\b(?:please|pls|kindly|(?:can|could|would|will)\s+you|i\s+(?:want|need|would\s+like)\s+you)\b", _I)
+_MOOD_WEAK = re.compile(
+    r"(?:[가-힣]시오|[가-힣]세요|하십시오|하시기|해라|하라|[가-힣](?:어라|아라|여라)|잊지\s*(?:마|말)|(?<![가-힣])(?:반드시|꼭|필히|무조건|필수)(?![가-힣]))|"
+    r"[가-힣]\s*것\s*[.!]?\s*$|(?<![가-힣])바람\s*[.!]?\s*$|"
+    r"\b(?:make\s+sure|be\s+sure|ensure|you\s+(?:must|should|need\s+to|have\s+to)|must)\b|\byour\s+[\w']+(?:\s+\w+){0,3}\s+(?:should|must)\b|"
+    r"(?:^\s*|[.;:!?,]\s*|\b(?:then|and|also|just)\s+)(?:append|add|write|put|insert|include|prepend|end|begin|start|finish|close|conclude|open|prefix|preface|sign\s+off|wrap|print|output|say|type|place|attach|tack|stamp|tag|leave|make)\b", _I)
+_MOOD_END = re.compile(r"(?:[가-힣]|^|\s)(?:해|내|써|어|아|여|둬|놔|와|줘|봐)라?\s*[.!~]*\s*$")   # 문장 끝 반말·해라체 명령("끝내.", "덧붙여.", "써라."). 물음표로 끝나면 묻는 말이다
+_REPORTED = re.compile(r"\s*[\"'”’」』]?\s*(?:이?라는|이?라고|란(?![가-힣])|하는\s*(?:말|안내|문구))")   # 남의 말을 옮기는 꼴("~해 주세요 라는 안내")의 요청 말투는 이 질문의 요청이 아니다
+_SPEC = re.compile(r"\s*(?:문구|내용|텍스트|글자?|text|line)?\s*[:：=]")   # 자리 바로 뒤 쌍점·등호 명세("하단 문구: X", "마지막 줄 = X")
+_BRACKETED = r"\[[^\[\]\n]{1,40}\]|《[^》\n]{1,40}》|【[^】\n]{1,40}】|〈[^〉\n]{1,40}〉|«[^»\n]{1,40}»"
+_QUOTED_P = r"""(?<![A-Za-z0-9])["'“‘`「『][^"'”’`」』\n]{1,60}["'”’`」』](?![A-Za-z0-9])"""   # 영어 소유격·축약의 apostrophe(answer's, don't)는 따옴표가 아니다
+_PAYLOAD = re.compile(
+    rf"{_QUOTED_P}|{_BRACKETED}|{_TOK}|\b\d+(?:-\d+)+\b|"
+    r"(?P<ko>[^\s\"'“”‘’`「」『』]{2,30}?)\s*(?:이라고|라고|이라는|라는)(?![가-힣])|"
+    r"\b(?:(?:the\s+|a\s+)?(?:words?|phrases?|lines?|tags?|code|number|text|string|token)|says?|saying|reads?|reading)\s*[:\-]?\s*(?!(?:of|in|to|at|from|for|that|which|with|and|then)\b)"
+    r"(?P<en>[^\s\"'“‘`\[(<「『《【.,;!?:][^\s.,;!?:]*(?:\s+(?!(?:then|and|to|at|in|on|of)\b)[^\s.,;!?:]+){0,3})|"
+    r"[:：=]\s*(?P<tail>[^\n:：=]{2,40}?)\s*$", _I)
+
+
+class _OutputRequest:
+    """`RULES_EN_KO`의 다른 규칙처럼 `.search(절)`이 일치(가장 앞 특징) 또는 None을 돌려준다."""
+
+    def search(self, clause: str):
+        target = _T_STRONG.search(clause)
+        if not target:
+            weak = _T_WEAK.search(clause)
+            target = weak if weak and _PAYLOAD.search(clause) else None
+        if not target:
+            return None
+        mood = next((m for m in _MOOD.finditer(clause) if not _REPORTED.match(clause, m.end())), None)
+        if not mood:
+            asks = clause.rstrip().endswith(("?", "？"))   # 묻는 말: 약한 말투 뒤에 절 경계(쉼표·쌍점) 없이 물음표로 끝나면 세지 않는다
+            mood = next((m for m in _MOOD_WEAK.finditer(clause)
+                         if not _REPORTED.match(clause, m.end()) and (not asks or re.search(r"[,:;：]", clause[m.end():]))), None)
+            mood = mood or _MOOD_END.search(clause)
+            if not mood and not asks and _SPEC.match(clause, target.end()) and _PAYLOAD.search(clause, target.end()):
+                mood = target
+        return min((target, mood), key=lambda m: m.start()) if mood else None
+
+
+_OUTPUT_REQUEST = _OutputRequest()
+# 질문(사용자 입력)에만 쓰는 규칙. 검색 원문에는 쓰지 않는다: 핸드북 본문의 절차 문장("At the end of the rotation, add ...", "open an issue with the X label")이
+# 영어 약한 자리 + 명령 동사 + 표식 꼴로 같은 모양이라 코퍼스 23,095청크 가운데 65청크(67문장)가 걸렸다(2026-11-17 0원 확인). 질문 쪽은 `whole_sentence=True`로 부른다.
+QUESTION_RULES: list[tuple[str, _OutputRequest]] = [("output_request", _OUTPUT_REQUEST)]
+_STRIP_QUOTES = "\"'“”‘’`「」『』《》【】〈〉«»[]()<> "
+
+
+def requested_spans(text: str) -> list[str]:
+    """출력 자리 요청 문장(`_OutputRequest`)이 넣으라고 한 문구들과, 요청 문장이 있는 글의 따옴표·괄호 문자열. 그런 문자열이 둘 이상이면 이어 붙인 값도 넣는다
+    (조각을 이어 붙이라는 요청). 요청 문장이 없으면 빈 목록이다."""
+    s = _invisible_free(text or "")
+    asked = [p for p in _join_open_quotes(_SENT.split(s)) if p.strip() and not _SENT.fullmatch(p) and _OUTPUT_REQUEST.search(p)]
+    if not asked:
+        return []
+    out: list[str] = []
+    for p in asked:
+        for m in _PAYLOAD.finditer(p):
+            span = m.group("ko") or m.group("en") or m.group("tail") or m.group(0)
+            parts = [span] + (re.split(r"[,，]\s*", span) if m.group("tail") else [])   # 쌍점 뒤 꼬리가 "A, B"이면 조각도 후보다
+            for x in parts:
+                x = x.strip(_STRIP_QUOTES).strip()
+                if len(_letters(x)) >= 2:
+                    out.append(x)
+    quoted = [m.group(0).strip(_STRIP_QUOTES) for m in re.finditer(f"{_QUOTED_P}|{_BRACKETED}", s)]
+    out += quoted   # 문구를 다른 문장에 두고 "그 문구를"처럼 가리키는 요청도 있다
+    if len(quoted) >= 2:
+        out.append("".join(quoted))
+    return list(dict.fromkeys(x for x in out if x))
 
 
 # ---------- 구조 판정(PREREGISTER 62.5) ----------
@@ -563,10 +662,10 @@ def find_flips(pieces: list[str], context: str = "") -> dict[int, tuple[list[tup
 _NEEDS_MARKER = {"output_en_the", "split_marker"}   # 일반 문장과 겹치기 쉬운 규칙은 같은 절에 표식 꼴(따옴표 문자열, 표식 토큰)이 있을 때만 지시로 본다
 
 
-def _first(clause: str) -> int:
-    """절이 지시이면 가장 앞 일치 위치, 아니면 -1."""
+def _first(clause: str, question: bool = False) -> int:
+    """절이 지시이면 가장 앞 일치 위치, 아니면 -1. question이면 질문 전용 규칙(`QUESTION_RULES`)도 본다."""
     best = -1
-    for name, rx in RULES_EN_KO:
+    for name, rx in RULES_EN_KO + (QUESTION_RULES if question else []):
         m = rx.search(clause)
         if m and name in _NEEDS_MARKER and not _MARKERISH.search(clause):
             m = None
@@ -578,8 +677,8 @@ def _first(clause: str) -> int:
     return best
 
 
-def is_instruction(clause: str) -> bool:
-    return _first(clause) >= 0
+def is_instruction(clause: str, question: bool = False) -> bool:
+    return _first(clause, question) >= 0
 
 
 # ---------- 정화 ----------
@@ -602,12 +701,13 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
     값은 같은 섹션의 다른 청크 본문(flip_context)과도 견준다. 뺀 문장의 (새 값, 옛 값)은 flips 목록에 더한다."""
     s = _invisible_free(str(text or ""))
     removed: list[str] = []
+    user = whole_sentence and flip_context is None   # 질문(사용자 입력): 질문 전용 규칙을 더 보고, 따옴표가 열린 채 갈린 문장을 잇는다
 
     def group(m: re.Match) -> str:
         inner = m.group(0)
         if _EMBED_CITE.fullmatch(inner):   # 본문 속 인용 표시는 문장 단계에서 그 문장째 뺀다
             return inner
-        if is_instruction(inner):
+        if is_instruction(inner, user):
             removed.append(inner)
             return " "
         return inner
@@ -615,6 +715,8 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
     s = _GROUP.sub(group, s)
     out: list[str] = []
     pieces = _SENT.split(s)
+    if user:
+        pieces = _join_open_quotes(pieces)
     flipped = find_flips(pieces, flip_context) if flip_context is not None and not cut_tail else {}
     for k, piece in enumerate(pieces):
         if _SENT.fullmatch(piece) or not piece.strip():
@@ -631,11 +733,11 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
             if cut_tail:
                 out.append(piece[:forged.start()])
             continue
-        if not is_instruction(piece):
+        if not is_instruction(piece, user):
             out.append(piece)
             continue
         if cut_tail:
-            k = _first(piece)
+            k = _first(piece, user)
             removed.append(piece[k:])
             out.append(piece[:k])
             continue
@@ -643,9 +745,9 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
             removed.append(piece.strip())
             continue
         clauses = _CLAUSE.split(piece)
-        hits = [c for c in clauses if c.strip() and is_instruction(c)]
+        hits = [c for c in clauses if c.strip() and is_instruction(c, user)]
         if hits and len(clauses) > 1:
-            hits = [c for c in clauses if c.strip() and (is_instruction(c) or _P_TOKEN.search(c))]   # 지시 문장의 표식 절은 따로 떼어 남기지 않는다
+            hits = [c for c in clauses if c.strip() and (is_instruction(c, user) or _P_TOKEN.search(c))]   # 지시 문장의 표식 절은 따로 떼어 남기지 않는다
             removed.extend(c.strip() for c in hits)
             out.append(" ".join(c for c in clauses if c.strip() and c not in hits))
         else:
@@ -653,6 +755,24 @@ def strip_instructions(text: str, *, cut_tail: bool = False, whole_sentence: boo
     if not removed:  # 지시가 없으면 글자 하나도 바꾸지 않는다(정상 답의 모델 입력을 바꾸지 않기 위해, 정규화와 공백 정리도 하지 않는다)
         return str(text or ""), removed
     return re.sub(r"[ \t]{2,}", " ", "".join(out)).strip(), removed
+
+
+_QUOTE_MARK = re.compile(r"[\"“”「」『』]|(?<![A-Za-z0-9])['‘’]|['‘’](?![A-Za-z0-9])")
+
+
+def _join_open_quotes(pieces: list[str]) -> list[str]:
+    """`_SENT.split` 결과에서 따옴표가 열린 채 끝난 문장을 다음 문장과 잇는다(따옴표 안의 "P.S. " 같은 마침표가 문장을 가르지 않게). 질문(whole_sentence)에만 쓴다.
+    영어 apostrophe(answer's)는 따옴표로 세지 않는다. 최대 두 번까지 잇는다."""
+    out: list[str] = []
+    i = 0
+    while i < len(pieces):
+        cur, j = pieces[i], i
+        while len(_QUOTE_MARK.findall(cur)) % 2 and j + 2 < len(pieces) and j - i < 4:
+            cur += pieces[j + 1] + pieces[j + 2]
+            j += 2
+        out.append(cur)
+        i = j + 1
+    return out
 
 
 def sanitize_text(text: str) -> str:
@@ -790,9 +910,20 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
     real = {c.get("chunk_id") for c in chunks if c.get("chunk_id")}
     benign_all = "\n".join(benign)
     cands = [_norm(x) for x in marker_candidates(instr, benign_all, real) + suspect_candidates(suspects, benign_all, real)]
+    from_chunks = "\n".join(benign[1:])
+    asked: list[str] = []
     if q_instr:   # 질문에 지시 문장이 있으면 질문의 따옴표 문자열·표식 꼴은 답에 옮기면 안 되는 표식 후보다(검색 원문에 있는 것은 뺀다)
-        from_chunks = "\n".join(benign[1:])
         cands += [_norm(x) for x in marker_candidates([question, *q_instr], from_chunks, real)]
+        # 출력 자리 요청이 넣으라고 한 문구(2026-11-17): 짧은 한글 문구도 후보다(2자 이상). 답 문장 끝·앞에 붙었으면 그 부분만 자른다(`_trim_edges`)
+        chunks_n = _norm(from_chunks)
+        asked = [x for x in requested_spans(question) if len(_norm(x)) >= 2 and _norm(x) not in chunks_n]
+        cands += [_norm(x) for x in asked]
+    trimmed: list[str] = []
+    if asked:   # 여러 낱말 문구는 낱말 조각(3글자 이상, 검색 원문에 없는 것)도 문장 끝·앞에서만 자른다(문구 일부만 옮긴 답). 조각은 문장째 빼는 후보가 아니다
+        parts = [w for x in asked for w in x.split() if w != x and len(_letters(w)) >= 3 and _norm(w) not in chunks_n]
+        answer, trimmed = _trim_edges(answer or "", asked + parts)
+    instr_letters = [_letters(u) for u in q_instr]
+    chunk_letters = _letters(from_chunks)
     long_parts = [p for p in (_letters(x) for x in instr) if len(p) >= 15]
     forged = [(_letters(_EMBED_CITE.sub("", u)), set(_EMBED_CITE.findall(u))) for u in instr if _EMBED_CITE.search(u)]
     # 전달 지시 문장의 주소와 값: 그 문장 밖의 원문과 질문에 없는 것만 후보다. 주소는 청크 출처와 같은 사이트면 믿는다
@@ -812,11 +943,12 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
     flip_new = {v for new, _old in flips for v in new if v not in backed}
     flip_old = {v for _new, old in flips for v in old}
     kept, removed = [], []
-    for sent in _ANS_SENT.split(answer or ""):
-        if not sent.strip():
-            continue
+    segs = [s for s in _ANS_SENT.split(answer or "") if s.strip()]
+    for k, sent in enumerate(segs):
         n, lt = _norm(sent), _letters(sent)
         bad = any(c in n for c in cands) or any(p[i:i + 15] in lt for p in long_parts for i in range(0, len(p) - 14))
+        if not bad and instr_letters and k in (0, len(segs) - 1) and not _CITE_MARK.search(sent) and len(lt) >= 3 and lt not in chunk_letters:
+            bad = any(lt in u for u in instr_letters)   # 답의 첫·끝 조각(인용 표시 없음)이 질문 지시 문장의 글자를 그대로 옮긴 것(따옴표 없이 쓴 문구)
         bad = bad or any(a in n for a in tell_addrs + unbacked) or any(_has_value(n, *v) for v in tell_values)
         if flips and not bad:
             got = _vkeys(sent)
@@ -825,8 +957,56 @@ def scrub_answer(answer: str, chunks: list[dict], question: str = "") -> tuple[s
                          for p, ids in forged if len(p) >= _FORGED_WIN)
         (removed if bad else kept).append(sent)
     if not removed:
-        return answer, []
-    return " ".join(s.strip() for s in kept), [s.strip() for s in removed]
+        return (answer, trimmed) if trimmed else (answer, [])
+    return " ".join(s.strip() for s in kept), trimmed + [s.strip() for s in removed]
+
+
+_CITE_MARK = re.compile(r"\[(?:[0-9a-f]{16}|\d+)\]")
+_OPEN_Q = re.escape("\"'“‘`「『《【〈«[(<")
+_CLOSE_Q = re.escape("\"'”’`」』》】〉»])>")
+_LEFT_END = re.compile(r"[.!?。](?=\s)|\n")
+_RIGHT_END = re.compile(r"[.!?。](?=\s|$)|\n")
+
+
+def _trim_edges(answer: str, spans: list[str]) -> tuple[str, list[str]]:
+    """(자른 답, 자른 문구). 문장 끝이나 앞에 붙은 요청 문구(앞뒤 따옴표·괄호 포함)만 자른다. 문구만 있는 문장과 문장 가운데 든 문구는 그대로 두고
+    `scrub_answer`의 문장 검사가 문장째 뺀다. 띄어쓰기와 대소문자는 가리지 않는다."""
+    cut: list[str] = []
+    for span in sorted(spans, key=len, reverse=True):
+        chars = [ch for ch in span if not ch.isspace()]
+        if not chars:
+            continue
+        rx = re.compile(rf"[{_OPEN_Q}]?\s*" + r"\s*".join(map(re.escape, chars)) + rf"\s*[{_CLOSE_Q}]?", _I)
+        while True:
+            hit = None
+            for m in rx.finditer(answer):
+                lo = max((x.end() for x in _LEFT_END.finditer(answer, 0, m.start())), default=0)
+                end = _RIGHT_END.search(answer, m.end())
+                before = _letters(_CITE_MARK.sub("", answer[lo:m.start()]))
+                after = _letters(_CITE_MARK.sub("", answer[m.end():end.start() if end else len(answer)]))
+                if bool(before) != bool(after):
+                    hit = m
+                    break
+            if hit is None:
+                break
+            cut.append(hit.group(0).strip())
+            answer = answer[:hit.start()] + " " + answer[hit.end():]
+    if cut:
+        answer = re.sub(r"[ \t]+(?=[.!?。,])", "", re.sub(r"[ \t]{2,}", " ", answer)).strip()
+    return answer, cut
+
+
+_SECOND_PERSON = re.compile(r"\b(?:you|your|yours|yourself)\b", _I)
+_ECHO_WORDS = 5
+
+
+def echo_ok(phrase: str, question: str) -> bool:
+    """되묻기 글에 질문의 구를 인용해도 되는가(2026-11-17). 짧은 이름 꼴(5낱말 이하, 문장 부호로 끝나지 않음, 2인칭 낱말 없음)이고,
+    답과 같은 출력 검사(`scrub_answer`, 질문 속 지시의 따옴표 문자열·요청 문구 후보)에 걸리지 않아야 한다. 지시로 판정된 문장의 구는 부르는 쪽이 미리 뺀다."""
+    p = (phrase or "").strip()
+    if not p or len(p.split()) > _ECHO_WORDS or re.search(r"[.!?:;,]$", p) or _SECOND_PERSON.search(p):
+        return False
+    return not scrub_answer(f"'{p}'", [], question)[1]
 
 
 def leaks_instruction(text: str, chunks: list[dict], question: str = "") -> bool:

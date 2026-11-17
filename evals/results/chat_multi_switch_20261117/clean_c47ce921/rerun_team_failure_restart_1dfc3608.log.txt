@@ -1,0 +1,69 @@
+F.                                                                       [100%]
+================================== FAILURES ===================================
+_ test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone] _
+
+pg_url = 'postgresql://provena_d5_owner:pw@127.0.0.1:55438/provena_d5_db'
+shape = 'alone'
+
+    @SHAPES
+    def test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams(pg_url, shape):
+        tid = f"tf-{uuid.uuid4().hex[:8]}"
+        a = w("review_start", pg_url, tid, shape)
+        # 서버(`routes._parse_team_action`)는 재개 값에 승인 건 번호를 항상 붙인다. 하위 그래프에서 앞 건의 값이 다음 멈춤에 흘러 들어가는 것을 이 번호가 막는다
+        w("review_resume", pg_url, tid, shape, json.dumps({"approval_id": a["pending"]["approval_id"], "action": "retry", "decided_by": "admin-1"}),
+          env={"PV_TF_DIE": "infra"}, rc=7)                                                          # 결정을 적은 뒤 다시 도는 중에 프로세스가 죽는다
+        r = w("review_read", pg_url, tid, shape)
+>       assert r["pending"] is None and rows(r) == [("team_review_failed", "approved", "retry")]       # 결정은 남았고 아직 대기 건이 없다
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert ({'approval_id': '06d94d84-2aca-56a6-8ed7-2c37d44a1ca7', 'kind': 'team_review_failed', 'summary': '팀 검토 실패: 인프라·SRE. 다시 돌릴지, 검토하지 못함으로 남길지 정해 주세요.', 'failed_teams': [{'team': 'infra', 'reason': '모델 응답을 읽지 못했습니다.', 'attempts': 3}], ...} is None)
+
+tests\test_team_failure_restart.py:151: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_team_failure_restart.py::test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone]
+1 failed, 1 passed, 10 deselected in 21.31s
+F.                                                                       [100%]
+================================== FAILURES ===================================
+_ test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone] _
+
+pg_url = 'postgresql://provena_d5_owner:pw@127.0.0.1:55438/provena_d5_db'
+shape = 'alone'
+
+    @SHAPES
+    def test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams(pg_url, shape):
+        tid = f"tf-{uuid.uuid4().hex[:8]}"
+        a = w("review_start", pg_url, tid, shape)
+        # 서버(`routes._parse_team_action`)는 재개 값에 승인 건 번호를 항상 붙인다. 하위 그래프에서 앞 건의 값이 다음 멈춤에 흘러 들어가는 것을 이 번호가 막는다
+        w("review_resume", pg_url, tid, shape, json.dumps({"approval_id": a["pending"]["approval_id"], "action": "retry", "decided_by": "admin-1"}),
+          env={"PV_TF_DIE": "infra"}, rc=7)                                                          # 결정을 적은 뒤 다시 도는 중에 프로세스가 죽는다
+        r = w("review_read", pg_url, tid, shape)
+>       assert r["pending"] is None and rows(r) == [("team_review_failed", "approved", "retry")]       # 결정은 남았고 아직 대기 건이 없다
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert ({'approval_id': '288edc05-bbb2-583a-815d-9eb31e928566', 'kind': 'team_review_failed', 'summary': '팀 검토 실패: 인프라·SRE. 다시 돌릴지, 검토하지 못함으로 남길지 정해 주세요.', 'failed_teams': [{'team': 'infra', 'reason': '모델 응답을 읽지 못했습니다.', 'attempts': 3}], ...} is None)
+
+tests\test_team_failure_restart.py:151: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_team_failure_restart.py::test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone]
+1 failed, 1 passed, 10 deselected in 22.31s
+F.                                                                       [100%]
+================================== FAILURES ===================================
+_ test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone] _
+
+pg_url = 'postgresql://provena_d5_owner:pw@127.0.0.1:55438/provena_d5_db'
+shape = 'alone'
+
+    @SHAPES
+    def test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams(pg_url, shape):
+        tid = f"tf-{uuid.uuid4().hex[:8]}"
+        a = w("review_start", pg_url, tid, shape)
+        # 서버(`routes._parse_team_action`)는 재개 값에 승인 건 번호를 항상 붙인다. 하위 그래프에서 앞 건의 값이 다음 멈춤에 흘러 들어가는 것을 이 번호가 막는다
+        w("review_resume", pg_url, tid, shape, json.dumps({"approval_id": a["pending"]["approval_id"], "action": "retry", "decided_by": "admin-1"}),
+          env={"PV_TF_DIE": "infra"}, rc=7)                                                          # 결정을 적은 뒤 다시 도는 중에 프로세스가 죽는다
+        r = w("review_read", pg_url, tid, shape)
+>       assert r["pending"] is None and rows(r) == [("team_review_failed", "approved", "retry")]       # 결정은 남았고 아직 대기 건이 없다
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert ({'approval_id': '6149caec-be64-5ce1-980a-d6a681602f51', 'kind': 'team_review_failed', 'summary': '팀 검토 실패: 인프라·SRE. 다시 돌릴지, 검토하지 못함으로 남길지 정해 주세요.', 'failed_teams': [{'team': 'infra', 'reason': '모델 응답을 읽지 못했습니다.', 'attempts': 3}], ...} is None)
+
+tests\test_team_failure_restart.py:151: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_team_failure_restart.py::test_process_killed_while_retrying_continues_without_new_notice_or_rerunning_passed_teams[alone]
+1 failed, 1 passed, 10 deselected in 26.23s

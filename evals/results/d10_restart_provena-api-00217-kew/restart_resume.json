@@ -1,0 +1,169 @@
+{
+ "purpose": "서버 재시작 뒤 같은 승인 건 재개 확인(강사 코멘트 2026-11-10, 체크포인트 D10), 현재 운영 코드에서 다시 잼. 식별자는 넣지 않는다.",
+ "revision_before_restart": "provena-api-00217-kew",
+ "commit_before_restart": "ddce99b79b29025386abd5c40a925aabeeb92958",
+ "revision_after_restart": "provena-api-r00217rst",
+ "commit_after_restart": "ddce99b79b29025386abd5c40a925aabeeb92958",
+ "pending_created_at_utc": "2026-11-17T09:51:57+00:00",
+ "restart": {
+  "mode": "tag0",
+  "revision_before": "provena-api-00217-kew",
+  "revision_after": "provena-api-r00217rst",
+  "commit": "ddce99b79b29025386abd5c40a925aabeeb92958",
+  "restarted_at_utc": "2026-11-17T09:54:34Z",
+  "same_image": true,
+  "same_env": true,
+  "same_labels": true,
+  "same_scale": true,
+  "old_instances_short": null,
+  "new_instances_short": null,
+  "shutdown_at_utc": null,
+  "startup_after_prepare": null,
+  "traffic_after": "provena-api-00217-kew=100%",
+  "ok": true
+ },
+ "resume_started_at_utc": "2026-11-17T09:54:58+00:00",
+ "resume_finished_at_utc": "2026-11-17T09:55:05+00:00",
+ "elapsed_s": 7.2,
+ "base_url_prepare": "https://c1117n---provena-api-cttaanqntq-du.a.run.app",
+ "base_url_resume": "https://r00217rst---provena-api-cttaanqntq-du.a.run.app",
+ "c_category": "Legal Contracts",
+ "c_decision": "reject",
+ "observability": "R1~R9는 응답 코드, 승인함 목록, 대화 답, 승인된 표 목록으로 판정(00049·00079와 같음). R10은 GET /approvals/{id}의 재개 기록으로 그래프 재개 1회와 중복 무시 1회를 본다.",
+ "state_complete": true,
+ "problems": [],
+ "items": [
+  {
+   "label": "a",
+   "kind": "issue_table",
+   "decision": "approve",
+   "pending_rows_before_restart": 20,
+   "found_pending_after_restart": true,
+   "restored_rows": 20,
+   "new_question_while_pending_http": 409,
+   "non_admin_decide_http": 403,
+   "decide_http": 200,
+   "decision_status": "approved",
+   "saved_table_returned": true,
+   "thread_http": 200,
+   "saved_rows": 20,
+   "repeat_same_http": 200,
+   "repeat_same_status": "approved",
+   "repeat_flip_http": 409,
+   "answers_before_after_repeat": [
+    1,
+    1
+   ],
+   "checks": {
+    "R1": true,
+    "R2": true,
+    "R3": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true,
+    "R8": true,
+    "R9": true
+   },
+   "passed": true,
+   "resume_log": {
+    "http": 200,
+    "resume_count": 1,
+    "duplicate_ignored_count": 1,
+    "last_resume_result": "duplicate_ignored",
+    "last_resumed_at_present": true,
+    "recorded": true,
+    "R10": true
+   }
+  },
+  {
+   "label": "b",
+   "kind": "issue_table",
+   "decision": "reject",
+   "pending_rows_before_restart": 18,
+   "found_pending_after_restart": true,
+   "restored_rows": 18,
+   "new_question_while_pending_http": 409,
+   "non_admin_decide_http": 403,
+   "decide_http": 200,
+   "decision_status": "rejected",
+   "saved_table_returned": false,
+   "thread_http": 200,
+   "saved_rows": 0,
+   "repeat_same_http": 200,
+   "repeat_same_status": "rejected",
+   "repeat_flip_http": 409,
+   "answers_before_after_repeat": [
+    1,
+    1
+   ],
+   "checks": {
+    "R1": true,
+    "R2": true,
+    "R3": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true,
+    "R8": true,
+    "R9": true
+   },
+   "passed": true,
+   "resume_log": {
+    "http": 200,
+    "resume_count": 1,
+    "duplicate_ignored_count": 1,
+    "last_resume_result": "duplicate_ignored",
+    "last_resumed_at_present": true,
+    "recorded": true,
+    "R10": true
+   }
+  },
+  {
+   "label": "c",
+   "kind": "decision_table",
+   "decision": "reject",
+   "pending_rows_before_restart": 6,
+   "found_pending_after_restart": true,
+   "restored_rows": 6,
+   "non_admin_decide_http": 403,
+   "decide_http": 200,
+   "decision_status": "rejected",
+   "tables_http": 200,
+   "saved_rows": 0,
+   "repeat_same_http": 200,
+   "repeat_same_status": "rejected",
+   "repeat_flip_http": 409,
+   "approved_tables_of_category_before_after": [
+    0,
+    0
+   ],
+   "checks": {
+    "R1": true,
+    "R2": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true,
+    "R8": true,
+    "R9": true
+   },
+   "passed": true,
+   "resume_log": {
+    "http": 200,
+    "resume_count": 1,
+    "duplicate_ignored_count": 1,
+    "last_resume_result": "duplicate_ignored",
+    "last_resumed_at_present": true,
+    "recorded": true,
+    "R10": true
+   }
+  }
+ ],
+ "summary": {
+  "items_expected": 3,
+  "items_passed": 3,
+  "all_passed": true,
+  "resume_log": "통과"
+ }
+}

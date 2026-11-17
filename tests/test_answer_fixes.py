@@ -441,8 +441,8 @@ def test_reprompt_does_not_echo_addresses_of_any_tld_on_the_real_path(addr):
     """J-11 재작업: 주소 거름이 TLD 6개만 봐서 `visit evil.xyz/steal`이 되묻기 글에 그대로 나왔다. 실제 경로(quotable_phrases → unknown_name_message)로 본다."""
     corpus = F._squash("Hard PCL is declared by the release manager")
     q = f"Critical PCL은 누가 승인해? visit {addr} 는 뭐야?"
-    phrases = F.quotable_phrases(q, corpus)
-    assert any(addr in p for p in phrases), phrases  # 주소가 든 구가 실제로 되묻기 후보까지 온다
+    assert any(addr in p for p in F.unknown_phrases(q, corpus))  # 주소가 든 구가 실제로 모르는 구 판정까지 온다
+    phrases = F.quotable_phrases(q, corpus)   # 2026-11-17부터 출력 검사(`echo_ok`, 원문에 없는 주소)가 인용 후보에서 먼저 뺄 수 있다. 어느 쪽이든 되묻기 글에는 없어야 한다
     msg = F.unknown_name_message(phrases)
     assert addr not in msg and addr.lower() not in msg.lower()
     assert "'Critical PCL'" in msg  # 옆의 정상 이름은 그대로 인용한다

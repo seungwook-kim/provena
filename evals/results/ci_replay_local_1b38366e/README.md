@@ -32,6 +32,8 @@ python evals/ci_compare.py --current <폴더>/ci_current_result.json
 
 `.github/workflows/ci.yml`에는 색인을 푸는 단계가 없으므로, GitHub Actions에서 이 단계를 그대로 돌리면 1번과 같은 결과가 나올 것으로 본다(Actions는 무료 한도 소진으로 11/9 이후 돌지 않아 실제로 확인하지는 않았다). CI 파일에 `python -m backend.rag.ingest.snapshot unpack-index` 단계를 더할지는 이 기록에서 정하지 않았다.
 
+- 후속(2026-11-17): `.github/workflows/ci.yml`에 0원 평가 단계 바로 앞의 색인 압축 풀기 단계(`python -m backend.rag.ingest.snapshot unpack-index`)를 더했다(커밋 `17951939`). 같은 순서(색인 풀기 → `ci_current_eval.py --require-v2` → `ci_compare.py`)를 커밋 `639e49ad`의 깨끗한 `git worktree`에서 로컬로 돌린 결과 세 명령 모두 종료 코드 0(색인 `meta.json` sha256 같음, 50건은 두 경로 모두 관련 25건 중 인용 답 24, 비관련 25건 중 거절 24, 녹화에 없는 요청 0, 발췌형 대체 답 0, 비교 결과 통과)이었고, 실행 뒤 작업 트리에 생긴 파일은 결과 파일 `ci_current_result.json`뿐이었다(출력은 저장하지 않음).
+
 ## 읽는 법
 
 - 50건 재생은 녹화(`evals/ci_replay_v2/`)를 만든 시점의 모델 응답을 다시 쓰는 회귀 검사다. 프롬프트·검색·입력이 바뀌면 "녹화에 없는 요청"이 0보다 커져 실패한다. 모델 품질을 새로 잰 값이 아니다.

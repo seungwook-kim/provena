@@ -199,6 +199,8 @@ def build_review_graph(
         missing = [IT._clean(m) for m in obj["missing"] if isinstance(m, str) and m.strip()] if isinstance(obj.get("missing"), list) else []
         if missing:  # EC-08: 검토에 필요한 값이 빠졌으면 되묻고 끝낸다
             msg = f"검토에 필요한 값이 요청에 없습니다: {', '.join(missing)}. 알려 주시면 검토합니다."
+            if U.leaks_instruction(msg, [], request):   # 되묻기도 답과 같은 출력 검사(2026-11-17): 요청 속 지시의 문구를 옮긴 빠진 값 이름은 인용하지 않는다
+                msg = "검토에 필요한 값이 요청에 없습니다. 도입하려는 도구와 금액 같은 내용을 알려 주시면 검토합니다."
             return {**base, "kind": "clarify", "answer": msg, "clarify_question": msg, "review_status": "clarify"}
         given = obj.get("tasks") if isinstance(obj.get("tasks"), dict) else {}
         tasks = {t.team_id: (IT._clean(given.get(t.team_id)) or request) for t in T.TEAMS}  # 모델이 팀 몫을 안 냈으면 요청 그대로
