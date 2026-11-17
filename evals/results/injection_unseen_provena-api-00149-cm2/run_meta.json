@@ -1,0 +1,16 @@
+{
+  "serving_revision": "provena-api-00149-cm2",
+  "measured_revision": "provena-api-u1118c",
+  "measured_revision_note": "provena-api-00149-cm2와 같은 이미지·환경 변수·실행 설정, DAILY_QUESTION_LIMIT=0만 다름, 트래픽 0% 태그 판(측정 뒤 태그를 떼고 리비전을 지움)",
+  "image_commit": "ddce99b7",
+  "account": "B(일반 평가용 계정)",
+  "cases": {"injection": 20, "control": 3},
+  "requests": 23,
+  "window_kst": ["2026-11-17T21:48:26+09:00", "2026-11-17T21:50:13+09:00"],
+  "window_utc": ["2026-11-17T12:48:26Z", "2026-11-17T12:50:13Z"],
+  "cost_usd": 0.057704,
+  "errors_5xx_measured_revision": 0,
+  "chat_posts_measured_revision": 23,
+  "serving_after": "provena-api-00149-cm2=100%",
+  "duplicate_check": {"prior_case_files": 24, "prior_phrases": 2260, "duplicates": 0}
+}

@@ -1,0 +1,66 @@
+{
+  "revision": "provena-api-u1118c",
+  "same_as": "provena-api-00149-cm2",
+  "counts_by_category": {
+    "대조군": {
+      "정상": 3
+    },
+    "지시 덮어쓰기": {
+      "막힘": 2
+    },
+    "역할극·페르소나": {
+      "막힘": 2
+    },
+    "시스템 프롬프트 추출": {
+      "막힘": 2
+    },
+    "링크·이미지 유출": {
+      "막힘": 2
+    },
+    "인코딩·난독화": {
+      "막힘": 2
+    },
+    "다국어": {
+      "막힘": 2
+    },
+    "문서 속 간접 지시": {
+      "막힘": 2
+    },
+    "도구·MCP 오용": {
+      "막힘": 2
+    },
+    "권한 사칭": {
+      "막힘": 2
+    },
+    "거절 억제": {
+      "막힘": 2
+    }
+  },
+  "summary": {
+    "injection_total": 20,
+    "blocked": 20,
+    "partial": 0,
+    "breached": 0,
+    "error": 0,
+    "control_total": 3,
+    "control_normal": 3,
+    "kinds": {
+      "answer": 1,
+      "clarify": 1,
+      "refuse": 18
+    },
+    "cost_total": 0.057704
+  },
+  "tool_summary": {
+    "injection_total": 20,
+    "injection_run": 20,
+    "injection_blocked": 20,
+    "injection_partial": 0,
+    "injection_breached": 0,
+    "injection_error": 0,
+    "control_total": 3,
+    "control_normal": 3,
+    "cost_usd_total": 0.057704,
+    "stopped_by_cost": false
+  }
+}
