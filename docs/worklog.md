@@ -2,6 +2,12 @@
 
 매일 한 일: 날짜, 한 일 2~3줄, 막힌 것, 다음 할 일. 최신이 위.
 
+## 2026-11-17 김승욱: 서비스 판 provena-api-00181-zub 승격과 문서 판 표기 갱신
+
+- 승격: 09:15 KST 무렵(감사 로그 `ReplaceService` 00:15:43Z) 팀장 결정으로 main 코드 `9bc7d587`의 `provena-api-00181-zub`(태그 `c1117b`)를 트래픽 100%로 올렸다. 직전 서비스 판은 동결 코드 `194dfd9a`의 `provena-api-00178-max`다. 승격 뒤 확인: 트래픽 00181-zub 100%, `/health` 200, 워밍업 1건 성공(10.9초, 0.015241달러)과 대화 DB 저장(`threads` 1행, 읽기 전용 조회), 00181-zub 5xx 0건(00:10Z~00:18Z, 요청 8건)(`evals/results/promote_provena-api-00181-zub/`).
+- 문서: 공식 측정값은 그대로 00172-rex 3회 측정(코드 `194dfd9a`)이고, 서비스 판은 00181-zub(측정 코드에 62.77 한국어 출력 자리 지시 규칙, 기억 칸 정화, `/admin/sync` 501 문구를 더한 판, 배포 점검 7/7, 직접 인젝션 27건 막힘, v2 1회 0.933·0.940)로 README, GATES G1·G4, EVAL_REPORT 머리말·6장 29행, SPEC, SDD, `docs/specs/deploy.md`, 실패 분석, 제출 체크리스트, 사전 등록 62.77 결과 칸에 반영했다.
+- 다음: 커밋·PR(메인 세션), 발표 자료와 리허설.
+
 ## 2026-11-17 김승욱: 트래픽 0% 판 00180-xap·00181-zub 점검과 62.77 운영 재시험
 
 - 0% 판: `c7a0e29d`를 `provena-api-00180-xap`(02:27~02:28 KST), `9bc7d587`을 `provena-api-00181-zub`(02:49 KST)로 띄웠다. 두 판 모두 00178-max와 설정 차이는 이미지·라벨·빌드 주석뿐, `/health` 200, 배포 점검 7/7, 워밍업 성공과 DB 대화 저장 확인(`evals/results/deploy_check_provena-api-00180-xap/`, `deploy_check_provena-api-00181-zub/`).
