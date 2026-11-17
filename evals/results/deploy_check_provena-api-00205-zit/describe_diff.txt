@@ -1,0 +1,9 @@
+2026-11-17 describe 비교 provena-api-00181-zub(<=, 097 시작 때 운영 판) vs provena-api-00205-zit(=>). 환경 변수는 이름과 값 해시만 비교했고 비밀은 참조 이름만 적는다.
+환경 변수 수: 28 -> 33
+환경 변수 차이: [=>DAILY_QUESTION_LIMIT,=>GRAPH_SPLIT_VOTE_WAIT_S,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN,=>QUESTION_GRAPH_MODE] (기대 [=>DAILY_QUESTION_LIMIT,=>GRAPH_SPLIT_VOTE_WAIT_S,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN,=>QUESTION_GRAPH_MODE])
+넣은 일반 값: LLM_MAX_TOKENS=2500,DAILY_QUESTION_LIMIT=0,QUESTION_GRAPH_MODE=multi,GRAPH_SPLIT_VOTE_WAIT_S=1.0
+넣은 비밀 참조: MCP_EXTERNAL_TOKEN<-provena-mcp-external-token:latest
+실행 설정 차이(서비스 계정·동시성·시간 제한·자원·포트·시작 검사·최대/최소 인스턴스·CPU 설정·세션 고정): []
+이미지: 1a49f9e3 -> 01eb2ac7
+commit 라벨: 9bc7d587 -> e822fb1e
+최대 인스턴스: 1, 동시성: 80, 시간 제한: 300초

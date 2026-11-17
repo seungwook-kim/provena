@@ -360,7 +360,7 @@
 - 전환으로 방어나 기능이 빠지면 안 된다. 그래서 단일 `/chat` 경로가 하는 일을 항목별로 멀티와 대조하고, 빠진 것을 같은 노드와 함수로 채운 뒤 전환한다(대조표 `evals/results/chat_multi_switch_20261117/PARITY.md`).
 
 ### What
-- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 이 코드의 로컬 데모·키 없는 데모는 멀티로 돈다. 운영은 멀티 판 승격 뒤 멀티다(서비스 판 `provena-api-00202-rid`는 전환 전 코드라 단일, 멀티 판 `provena-api-00205-zit`는 트래픽 0%로 측정 중). 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
+- 스위치 `QUESTION_GRAPH_MODE`(`backend/main.py` `question_graph_mode`): `single` 또는 `multi`. 비었거나 없으면 코드 기본 `single`(시험과 측정 실행기는 그대로). 서비스 값(`backend/graph/service_profile.py` `SERVICE_ENV`, `.env.example`)은 `multi`이고, 앱이 뜰 때 채워지므로 이 코드의 로컬 데모·키 없는 데모는 멀티로 돈다. 운영은 2026-11-17 16:58 KST부터 멀티 판 `provena-api-00205-zit`(운영 환경 변수 `QUESTION_GRAPH_MODE=multi`)로 멀티다(그 전 서비스 판 `provena-api-00202-rid`는 전환 전 코드라 단일). 다른 값이면 앱이 뜨지 않는다. 운영에서 되돌리려면 `single`이나 `off`(빈 값 = 코드 기본).
 - `build_question_graph`는 단일에 넘기던 인자(공유 모델, 체크포인터, Store, 답 저장소, 결정표 저장소, 합동 검토 하위 그래프, 서비스 검색 함수)를 멀티에 그대로 넘긴다. 멀티는 같은 인자로 단일 그래프를 만들어 노드와 분기 함수를 꺼내 쓰므로 프롬프트, 검색, 판정과 다수결, 인용 검사와 후처리, 입력·출력 방어, 저장 코드가 하나뿐이다. 라우터는 `SUPERVISOR_ROUTER`(비면 코드 라우팅, LLM 호출을 더하지 않음).
 - 단일과 같게 맞춘 세 가지:
   1. done의 `refuse_stage`: 멀티 상태 칸 `kind_node`(결과 종류를 거절·되묻기로 쓴 단일 노드 이름)를 `stream_events`가 읽어, 에이전트 이름(`supervisor`, `retriever`, `verifier`) 대신 단일과 같은 노드 이름을 낸다.
@@ -393,4 +393,4 @@
 - GIVEN 값이 비었다. THEN 판정 다수결은 이전과 같이 셋째 표를 기다린다.
 - GIVEN 값 1.0과 충분·일부로 갈린 두 표, 셋째 표가 상한보다 늦다. THEN 두 표로 정하고 `judge_votes`에 `how=split_capped`가 남는다. GIVEN 셋째 표가 상한 안에 온다. THEN 세 표 다수결이다.
 - GIVEN 근거 없음 표가 섞인 갈림. THEN 상한을 쓰지 않는다.
-- 한계: 운영 측정은 멀티 판(서비스 설정에 이 값이 들어 있음)에서 멀티 전환과 함께 하므로 두 변경의 몫을 나누지 못한다. 측정값은 측정 중이다.
+- 한계: 운영 측정은 멀티 판(서비스 설정에 이 값이 들어 있음)에서 멀티 전환과 함께 했으므로 두 변경의 몫을 나누지 못한다. 측정값(멀티 판 `provena-api-00205-zit`, 2026-11-17 16:14~16:35 KST, 사전 등록 62.89): 상한이 걸린 판정은 새 검증 20건 3회 합 2건(1회차 1, 2회차 1), v2 50건 3회 0건이다. 새 검증 20건 답한 질문 p95는 회차별 9.670초, 10.154초, 10.176초, 3회 합 9.931초로 2회차와 3회차는 10초를 넘는다. 상한이 걸린 판정은 셋째 표가 없어 결론이 바뀌었는지는 확인하지 못한다.

@@ -1,0 +1,20 @@
+{
+ "db_size_bytes": 487167667,
+ "db_size": "465 MB",
+ "conn_states": {
+  "(null)": 1,
+  "active": 2,
+  "idle": 19
+ },
+ "non_idle_excluding_self": 2,
+ "test_rows[docs,versions,chunks]": [
+  0,
+  0,
+  0
+ ],
+ "counts[docs,versions,chunks]": [
+  1520,
+  1863,
+  31457
+ ]
+}

@@ -1,0 +1,506 @@
+{
+ "multi_v2": {
+  "dir": "c1117m\\results\\deploy_latency_provena-api-00205-zit",
+  "runs": 3,
+  "per_run": [
+   {
+    "run": 1,
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 25,
+     "refuse": 24,
+     "clarify": 1
+    },
+    "p50_all_s": 5.01,
+    "p95_all_s": 8.201,
+    "answered": 25,
+    "p95_answered_s": 8.97,
+    "judge_how": {
+     "two_agree": 25,
+     "majority": 17
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 16.38,
+    "cost_usd": 0.257625,
+    "gold": {
+     "citation_accuracy": 0.96,
+     "wrong_citation_rate": 0.04,
+     "wrong_citation_rows": 1,
+     "cited_correct_rate": 0.9466666666666668,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 2,
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 25,
+     "refuse": 24,
+     "clarify": 1
+    },
+    "p50_all_s": 5.459,
+    "p95_all_s": 9.668,
+    "answered": 25,
+    "p95_answered_s": 10.323,
+    "judge_how": {
+     "two_agree": 24,
+     "majority": 16,
+     "none_capped": 2
+    },
+    "split_capped": 0,
+    "none_capped": 2,
+    "llm_calls_per_q": 16.48,
+    "cost_usd": 0.273181,
+    "gold": {
+     "citation_accuracy": 0.96,
+     "wrong_citation_rate": 0.04,
+     "wrong_citation_rows": 1,
+     "cited_correct_rate": 0.9466666666666668,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 3,
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 25,
+     "refuse": 24,
+     "clarify": 1
+    },
+    "p50_all_s": 5.313,
+    "p95_all_s": 8.632,
+    "answered": 25,
+    "p95_answered_s": 9.096,
+    "judge_how": {
+     "two_agree": 25,
+     "majority": 18
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 16.36,
+    "cost_usd": 0.268209,
+    "gold": {
+     "citation_accuracy": 0.96,
+     "wrong_citation_rate": 0.04,
+     "wrong_citation_rows": 1,
+     "cited_correct_rate": 0.9466666666666668,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   }
+  ],
+  "pooled": {
+   "n": 150,
+   "n_ok": 150,
+   "n_fail": 0,
+   "kinds": {
+    "answer": 75,
+    "refuse": 72,
+    "clarify": 3
+   },
+   "p50_all_s": 5.382,
+   "p95_all_s": 8.97,
+   "answered": 75,
+   "p95_answered_s": 9.935,
+   "judge_how": {
+    "two_agree": 74,
+    "majority": 51,
+    "none_capped": 2
+   },
+   "split_capped": 0,
+   "none_capped": 2,
+   "llm_calls_per_q": 16.407,
+   "cost_usd": 0.799015
+  },
+  "gold_mean": {
+   "citation_accuracy": 0.96,
+   "wrong_citation_rate": 0.04,
+   "wrong_citation_rows": 1.0,
+   "cited_correct_rate": 0.9467,
+   "over_refusal_rate": 0.0,
+   "correct_refusal_rate": 1.0
+  }
+ },
+ "multi_holdout_v2": {
+  "dir": "c1117m\\results\\deploy_latency_holdout_v2_provena-api-00205-zit",
+  "runs": 3,
+  "per_run": [
+   {
+    "run": 1,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 13,
+     "refuse": 7
+    },
+    "p50_all_s": 7.251,
+    "p95_all_s": 9.67,
+    "answered": 13,
+    "p95_answered_s": 9.67,
+    "judge_how": {
+     "two_agree": 13,
+     "split_capped": 1,
+     "majority": 6,
+     "none_capped": 1
+    },
+    "split_capped": 1,
+    "none_capped": 1,
+    "llm_calls_per_q": 21.9,
+    "cost_usd": 0.154118,
+    "gold": {
+     "citation_accuracy": 0.7564102564102565,
+     "wrong_citation_rate": 0.46153846153846156,
+     "wrong_citation_rows": 6,
+     "cited_correct_rate": 0.9285714285714286,
+     "over_refusal_rate": 0.07142857142857142,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 2,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 14,
+     "refuse": 6
+    },
+    "p50_all_s": 6.63,
+    "p95_all_s": 9.931,
+    "answered": 14,
+    "p95_answered_s": 10.154,
+    "judge_how": {
+     "two_agree": 13,
+     "majority": 7,
+     "split_capped": 1
+    },
+    "split_capped": 1,
+    "none_capped": 0,
+    "llm_calls_per_q": 21.5,
+    "cost_usd": 0.149009,
+    "gold": {
+     "citation_accuracy": 0.7023809523809524,
+     "wrong_citation_rate": 0.5,
+     "wrong_citation_rows": 7,
+     "cited_correct_rate": 0.9285714285714286,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 3,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 13,
+     "refuse": 7
+    },
+    "p50_all_s": 6.582,
+    "p95_all_s": 9.234,
+    "answered": 13,
+    "p95_answered_s": 10.176,
+    "judge_how": {
+     "two_agree": 14,
+     "majority": 6
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 20.6,
+    "cost_usd": 0.155061,
+    "gold": {
+     "citation_accuracy": 0.717948717948718,
+     "wrong_citation_rate": 0.46153846153846156,
+     "wrong_citation_rows": 6,
+     "cited_correct_rate": 0.8571428571428571,
+     "over_refusal_rate": 0.07142857142857142,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   }
+  ],
+  "pooled": {
+   "n": 60,
+   "n_ok": 60,
+   "n_fail": 0,
+   "kinds": {
+    "answer": 40,
+    "refuse": 20
+   },
+   "p50_all_s": 6.843,
+   "p95_all_s": 9.931,
+   "answered": 40,
+   "p95_answered_s": 9.931,
+   "judge_how": {
+    "two_agree": 40,
+    "split_capped": 2,
+    "majority": 19,
+    "none_capped": 1
+   },
+   "split_capped": 2,
+   "none_capped": 1,
+   "llm_calls_per_q": 21.333,
+   "cost_usd": 0.458188
+  },
+  "gold_mean": {
+   "citation_accuracy": 0.7256,
+   "wrong_citation_rate": 0.4744,
+   "wrong_citation_rows": 6.3333,
+   "cited_correct_rate": 0.9048,
+   "over_refusal_rate": 0.0476,
+   "correct_refusal_rate": 1.0
+  }
+ },
+ "base_v2": {
+  "dir": "c1117c\\results\\deploy_latency_provena-api-00202-rid",
+  "runs": 1,
+  "per_run": [
+   {
+    "run": 1,
+    "n": 50,
+    "n_ok": 50,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 25,
+     "refuse": 24,
+     "clarify": 1
+    },
+    "p50_all_s": 5.241,
+    "p95_all_s": 8.232,
+    "answered": 25,
+    "p95_answered_s": 9.059,
+    "judge_how": {
+     "two_agree": 25,
+     "majority": 16,
+     "none_capped": 1
+    },
+    "split_capped": 0,
+    "none_capped": 1,
+    "llm_calls_per_q": 16.1,
+    "cost_usd": 0.258942,
+    "gold": {
+     "citation_accuracy": 0.96,
+     "wrong_citation_rate": 0.04,
+     "wrong_citation_rows": 1,
+     "cited_correct_rate": 0.96,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   }
+  ],
+  "pooled": {
+   "n": 50,
+   "n_ok": 50,
+   "n_fail": 0,
+   "kinds": {
+    "answer": 25,
+    "refuse": 24,
+    "clarify": 1
+   },
+   "p50_all_s": 5.241,
+   "p95_all_s": 8.232,
+   "answered": 25,
+   "p95_answered_s": 9.059,
+   "judge_how": {
+    "two_agree": 25,
+    "majority": 16,
+    "none_capped": 1
+   },
+   "split_capped": 0,
+   "none_capped": 1,
+   "llm_calls_per_q": 16.1,
+   "cost_usd": 0.258942
+  },
+  "gold_mean": {
+   "citation_accuracy": 0.96,
+   "wrong_citation_rate": 0.04,
+   "wrong_citation_rows": 1.0,
+   "cited_correct_rate": 0.96,
+   "over_refusal_rate": 0.0,
+   "correct_refusal_rate": 1.0
+  }
+ },
+ "base_holdout_v2": {
+  "dir": "<로컬 경로>",
+  "runs": 3,
+  "per_run": [
+   {
+    "run": 1,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 14,
+     "refuse": 6
+    },
+    "p50_all_s": 5.948,
+    "p95_all_s": 9.145,
+    "answered": 14,
+    "p95_answered_s": 13.817,
+    "judge_how": {
+     "majority": 8,
+     "two_agree": 11
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 19.35,
+    "cost_usd": 0.138254,
+    "gold": {
+     "citation_accuracy": 0.6666666666666667,
+     "wrong_citation_rate": 0.5,
+     "wrong_citation_rows": 7,
+     "cited_correct_rate": 0.8571428571428571,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 2,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 14,
+     "refuse": 6
+    },
+    "p50_all_s": 6.267,
+    "p95_all_s": 9.682,
+    "answered": 14,
+    "p95_answered_s": 11.323,
+    "judge_how": {
+     "two_agree": 14,
+     "majority": 7
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 21.05,
+    "cost_usd": 0.146558,
+    "gold": {
+     "citation_accuracy": 0.6547619047619048,
+     "wrong_citation_rate": 0.5,
+     "wrong_citation_rows": 7,
+     "cited_correct_rate": 0.8571428571428571,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   },
+   {
+    "run": 3,
+    "n": 20,
+    "n_ok": 20,
+    "n_fail": 0,
+    "kinds": {
+     "answer": 14,
+     "refuse": 6
+    },
+    "p50_all_s": 5.957,
+    "p95_all_s": 9.941,
+    "answered": 14,
+    "p95_answered_s": 11.479,
+    "judge_how": {
+     "two_agree": 14,
+     "majority": 6
+    },
+    "split_capped": 0,
+    "none_capped": 0,
+    "llm_calls_per_q": 21.4,
+    "cost_usd": 0.148976,
+    "gold": {
+     "citation_accuracy": 0.6607142857142857,
+     "wrong_citation_rate": 0.5,
+     "wrong_citation_rows": 7,
+     "cited_correct_rate": 0.8571428571428571,
+     "over_refusal_rate": 0.0,
+     "correct_refusal_rate": 1.0,
+     "n_fail_rows": 0
+    }
+   }
+  ],
+  "pooled": {
+   "n": 60,
+   "n_ok": 60,
+   "n_fail": 0,
+   "kinds": {
+    "answer": 42,
+    "refuse": 18
+   },
+   "p50_all_s": 6.174,
+   "p95_all_s": 9.941,
+   "answered": 42,
+   "p95_answered_s": 11.323,
+   "judge_how": {
+    "majority": 21,
+    "two_agree": 39
+   },
+   "split_capped": 0,
+   "none_capped": 0,
+   "llm_calls_per_q": 20.6,
+   "cost_usd": 0.433788
+  },
+  "gold_mean": {
+   "citation_accuracy": 0.6607,
+   "wrong_citation_rate": 0.5,
+   "wrong_citation_rows": 7.0,
+   "cited_correct_rate": 0.8571,
+   "over_refusal_rate": 0.0,
+   "correct_refusal_rate": 1.0
+  }
+ },
+ "checks_chat_multi_prereg": [
+  {
+   "item": "v2 인용 정확도(회차 평균) 기준 ±0.03",
+   "result": "기대 범위 안",
+   "detail": "멀티 0.96 / 기준 0.96"
+  },
+  {
+   "item": "v2 오답 근거(회차 평균) 기준 +0.04 이하",
+   "result": "기대 범위 안",
+   "detail": "멀티 0.04 / 기준 0.04"
+  },
+  {
+   "item": "v2 p95 응답 시간(전체 행 합침) 기준 +1.0초 이하",
+   "result": "기대 범위 안",
+   "detail": "멀티 8.97 / 기준 8.232"
+  },
+  {
+   "item": "v2 과잉 거절 기준과 같은 수준",
+   "result": "기대 범위 안",
+   "detail": "멀티 0.0 / 기준 0.0"
+  },
+  {
+   "item": "v2 올바른 거절 기준과 같은 수준",
+   "result": "기대 범위 안",
+   "detail": "멀티 1.0 / 기준 1.0"
+  },
+  {
+   "item": "v2 문항당 LLM 호출 수(기록)",
+   "result": "기록",
+   "detail": "멀티 16.407 / 기준 16.1"
+  }
+ ],
+ "split_vote_prereg_expect_answered_p95": {
+  "run1": 10.134,
+  "run2": 9.682,
+  "run3": 11.479,
+  "pooled": 9.941,
+  "note": "저장 기록 재계산 기대(00172-rex 기준), 측정값으로 대체"
+ }
+}

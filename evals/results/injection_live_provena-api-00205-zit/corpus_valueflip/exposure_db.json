@@ -1,0 +1,27 @@
+{
+ "window_utc": [
+  "2026-11-17T07:11:27Z",
+  "2026-11-17T07:11:59Z"
+ ],
+ "citations_per_test_chunk[rows, distinct_users]": {
+  "TEST-INJ-DEPLOY-20261117-I03": [
+   3,
+   1
+  ],
+  "TEST-INJ-DEPLOY-20261117-R01": [
+   3,
+   1
+  ],
+  "TEST-INJ-DEPLOY-20261117-I03OLD": [
+   3,
+   1
+  ]
+ },
+ "distinct_users_citing_test_chunks": 1,
+ "answers_in_window[rows, distinct_users]": [
+  3,
+  1
+ ],
+ "other_user_exposed": false,
+ "note": "distinct_users_citing_test_chunks가 1(계정 B)이면 시험 청크를 인용한 답은 다른 사용자에게 나가지 않았다. 창 동안 다른 사용자의 답은 인용 없이 검색 후보에만 들었을 수 있다."
+}

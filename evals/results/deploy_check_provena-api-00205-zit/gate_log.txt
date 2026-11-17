@@ -1,0 +1,51 @@
+2026-11-17T15:24:12 COST 확인 097 워밍업: 지금까지 0 + 이번 상한 0.05 / 전체 상한 4.5 -> 진행
+2026-11-17T15:24:14 START serving=[provena-api-00181-zub=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] template=provena-api-c17rst1117 commit=e822fb1e
+2026-11-17T15:24:17 TEMPLATE vs provena-api-00181-zub: env_diff=[=>DAILY_QUESTION_LIMIT,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN] cfg_diff=[] image_same=False match=False
+2026-11-17T15:24:17 TEMPLATE vs provena-api-00202-rid: env_diff=[] cfg_diff=[] image_same=True match=True
+2026-11-17T15:24:17 ENV copy from provena-api-00181-zub plain=15+4 secrets=13+1 expect_diff=[=>DAILY_QUESTION_LIMIT,=>GRAPH_SPLIT_VOTE_WAIT_S,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN,=>QUESTION_GRAPH_MODE] names_plain=[LANGFUSE_HOST,LLM_PROVIDER,RECALL_STORE,TRUSTED_PROXY_HOPS,PROVENA_OWNER_LOGIN_ID,LANGFUSE_CONTENT_CAPTURE_ENABLED,SEARCH_HEDGE,SEARCH_HEDGE_S,ANSWER_SAVE_ONE_CONN,EMAIL_PROVIDER,GMAIL_SMTP_USER,EMAIL_FROM,GOOGLE_CLIENT_ID,GOOGLE_REDIRECT_URI,GRAPH_DECOMPOSE_KEEP_SUBJECT,LLM_MAX_TOKENS,DAILY_QUESTION_LIMIT,QUESTION_GRAPH_MODE,GRAPH_SPLIT_VOTE_WAIT_S] names_secret=[AUTH_SECRET,VOYAGE_API_KEY,DATABASE_URL,DATABASE_DIRECT_URL,LANGFUSE_PUBLIC_KEY,LANGFUSE_SECRET_KEY,LLM_API_KEY,SERVICE_API_KEY,RECALL_WEBHOOK_SECRET,PROFILE_ENC_KEYS,GOOGLE_CLIENT_SECRET,GMAIL_APP_PASSWORD,MCP_TOKEN,MCP_EXTERNAL_TOKEN]
+2026-11-17T15:24:17 COMMIT e822fb1e27102b809b83a2448c6ebf5e6e9009f0 tree=f46b8d64a84402c92decc895f168e8a9383f8a8c origin/main=1dfc3608 same_tree_as_main=False has_question_graph_mode=True
+2026-11-17T15:24:20 DEPLOY e822fb1e tag=c1117m (no traffic)
+2026-11-17T15:29:31 deploy:     + FullyQualifiedErrorId : NativeCommandError
+2026-11-17T15:29:31 deploy: Validating configuration...done
+2026-11-17T15:29:31 deploy: ...done
+2026-11-17T15:29:31 deploy: ...done
+2026-11-17T15:29:31 deploy: Setting IAM Policy...done
+2026-11-17T15:29:31 deploy: Creating Revision...
+2026-11-17T15:29:31 deploy: ...done
+2026-11-17T15:29:31 deploy: Done.
+2026-11-17T15:29:31 deploy: Service [provena-api] revision [provena-api-00205-zit] has been deployed and is serving 0 percent of traffic.
+2026-11-17T15:29:31 deploy: The revision can be reached directly at https://c1117m---provena-api-cttaanqntq-du.a.run.app
+2026-11-17T15:29:34 describe: 2026-11-17 describe 비교 provena-api-00181-zub(<=, 097 시작 때 운영 판) vs provena-api-00205-zit(=>). 환경 변수는 이름과 값 해시만 비교했고 비밀은 참조 이름만 적는다.
+2026-11-17T15:29:35 describe: 환경 변수 수: 28 -> 33
+2026-11-17T15:29:35 describe: 환경 변수 차이: [=>DAILY_QUESTION_LIMIT,=>GRAPH_SPLIT_VOTE_WAIT_S,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN,=>QUESTION_GRAPH_MODE] (기대 [=>DAILY_QUESTION_LIMIT,=>GRAPH_SPLIT_VOTE_WAIT_S,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN,=>QUESTION_GRAPH_MODE])
+2026-11-17T15:29:35 describe: 넣은 일반 값: LLM_MAX_TOKENS=2500,DAILY_QUESTION_LIMIT=0,QUESTION_GRAPH_MODE=multi,GRAPH_SPLIT_VOTE_WAIT_S=1.0
+2026-11-17T15:29:35 describe: 넣은 비밀 참조: MCP_EXTERNAL_TOKEN<-provena-mcp-external-token:latest
+2026-11-17T15:29:35 describe: 실행 설정 차이(서비스 계정·동시성·시간 제한·자원·포트·시작 검사·최대/최소 인스턴스·CPU 설정·세션 고정): []
+2026-11-17T15:29:35 describe: 이미지: 1a49f9e3 -> 01eb2ac7
+2026-11-17T15:29:35 describe: commit 라벨: 9bc7d587 -> e822fb1e
+2026-11-17T15:29:35 describe: 최대 인스턴스: 1, 동시성: 80, 시간 제한: 300초
+2026-11-17T15:29:35 DEPLOYED new=provena-api-00205-zit serving=[provena-api-00181-zub=100%] health=200 0.231043 env_ok=True cfg_diff=[] ok=True
+2026-11-17T15:29:35 DB Supavisor=24 (상한 20)
+2026-11-17T15:30:36 DB Supavisor=24 (상한 20)
+2026-11-17T15:31:36 DB Supavisor=24 (상한 20)
+2026-11-17T15:32:37 DB Supavisor=24 (상한 20)
+2026-11-17T15:33:37 DB Supavisor=24 (상한 20)
+2026-11-17T15:34:38 DB Supavisor=25 (상한 20)
+2026-11-17T15:35:39 DB Supavisor=25 (상한 20)
+2026-11-17T15:36:39 DB Supavisor=23 (상한 20)
+2026-11-17T15:37:40 DB Supavisor=23 (상한 20)
+2026-11-17T15:38:40 DB Supavisor=22 (상한 20)
+2026-11-17T15:39:41 DB Supavisor=22 (상한 20)
+2026-11-17T15:40:41 DB Supavisor=20 (상한 20)
+2026-11-17T15:40:47 deploy_check rc=0 ok=True L0=통과 U1=통과 X1=통과 X2=통과 R1=통과 E1=통과 H1=통과
+2026-11-17T15:40:59 warmup rc=0 ok=1 fail=0 total_s=9.639 cost=0.015235 status=ok err= result=answer citations=4 llm_calls=23 judge_how=[two_agree]
+2026-11-17T15:40:59 LEDGER +0.0152 (097 warmup) 합계 0.015235 / 상한 4.5
+2026-11-17T15:41:04 LOGMODE mode=multi graph_lines=1 profile_lines=1 given_QGM=True given_SPLIT=True ok=True
+2026-11-17T15:41:51 langfuse: LFCHECK {"window_utc": ["2026-11-17T06:40:42Z", "2026-11-17T06:41:29Z"], "query_ok": true, "n_observations": 78, "traces_total": 3, "traces_multi": 1, "traces_single": 0, "traces_other": 2}
+2026-11-17T15:41:51 MULTI log_mode=[multi] given_QUESTION_GRAPH_MODE=True langfuse_traces_multi=1 langfuse_traces_single=0 -> multi_ok=True
+2026-11-17T15:41:52 thread_check thread=<가림> threads_rows=1 checkpoints_rows=22 status=idle created_at=2026-11-17 06:40:49.788746+00:00 SAVED=1
+2026-11-17T15:41:54 END serving=[provena-api-00202-rid=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,c1117m->provena-api-00205-zit,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] deploy_check_ok=True warmup_ok=True multi_ok=True (운영 트래픽은 바뀌면 안 됨)
+2026-11-17T15:41:54 JOB097 DONE
+2026-11-17T15:41:55 COST 확인 097 워밍업: 지금까지 0.015235 + 이번 상한 0.05 / 전체 상한 4.5 -> 진행
+2026-11-17T15:41:57 START serving=[provena-api-00202-rid=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,c1117l->provena-api-00203-pak,c1117m->provena-api-00205-zit,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] template=provena-api-00205-zit commit=e822fb1e
+2026-11-17T15:41:57 태그  이미 있음: 중단

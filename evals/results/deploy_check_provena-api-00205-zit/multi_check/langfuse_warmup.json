@@ -1,0 +1,61 @@
+{
+ "window_utc": [
+  "2026-11-17T06:40:42Z",
+  "2026-11-17T06:41:29Z"
+ ],
+ "query_ok": true,
+ "n_observations": 78,
+ "span_names": {
+  "RunnableCallable": 7,
+  "supervisor": 4,
+  "search_handbook": 4,
+  "LangGraph": 3,
+  "save": 1,
+  "after_ground": 1,
+  "ground": 1,
+  "after_verify": 1,
+  "verify": 1,
+  "verifier": 1,
+  "write_answer": 1,
+  "writer": 1,
+  "after_judge": 1,
+  "judge": 1,
+  "search": 1,
+  "rewrite": 1,
+  "retriever": 1,
+  "question": 1
+ },
+ "traces_total": 3,
+ "traces_multi": 1,
+ "traces_single": 0,
+ "traces_other": 2,
+ "per_trace": [
+  {
+   "multi": true,
+   "single": false,
+   "agent_spans": 3,
+   "top_supervisor_spans": 4,
+   "top_classify_spans": 0,
+   "n_obs": 76,
+   "trace": "1f846ed9"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "7b9903cb"
+  },
+  {
+   "multi": false,
+   "single": false,
+   "agent_spans": 0,
+   "top_supervisor_spans": 0,
+   "top_classify_spans": 0,
+   "n_obs": 1,
+   "trace": "a0e651b9"
+  }
+ ]
+}

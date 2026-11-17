@@ -1,0 +1,31 @@
+{
+    "spent_usd":  1.2647,
+    "revision":  "provena-api-00205-zit",
+    "stages":  [
+                   {
+                       "stage":  "warmup",
+                       "state":  "done",
+                       "cost_usd":  0.0075,
+                       "detail":  "evals/results/deploy_warmup_provena-api-00205-zit"
+                   },
+                   {
+                       "stage":  "v2",
+                       "state":  "done",
+                       "cost_usd":  0.799,
+                       "detail":  "evals/results/deploy_latency_provena-api-00205-zit"
+                   },
+                   {
+                       "stage":  "holdout_v2",
+                       "state":  "done",
+                       "cost_usd":  0.4582,
+                       "detail":  "evals/results/deploy_latency_holdout_v2_provena-api-00205-zit"
+                   },
+                   {
+                       "stage":  "gold",
+                       "state":  "done",
+                       "cost_usd":  0,
+                       "detail":  ""
+                   }
+               ],
+    "commit":  "e822fb1e"
+}

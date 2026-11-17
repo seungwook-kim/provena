@@ -1,0 +1,15 @@
+{
+  "revision_before": "provena-api-00181-zub",
+  "serving_at_start": "provena-api-00181-zub=100%",
+  "revision_new": "provena-api-00205-zit",
+  "tag": "c1117m",
+  "tag_url": "https://c1117m---provena-api-cttaanqntq-du.a.run.app",
+  "commit": "e822fb1e",
+  "ok": true,
+  "deploy_check_ok": true,
+  "warmup_ok": true,
+  "multi_ok": true,
+  "multi_log_mode": "multi",
+  "multi_langfuse_traces": 1,
+  "rebuilt_from_log": "done\\097_c1117m_deploy.log 15:29:35 DEPLOYED ok=True, 15:41:54 END deploy_check_ok=True warmup_ok=True multi_ok=True"
+}
