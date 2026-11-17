@@ -335,6 +335,8 @@
 
 ## 사전 등록 62.77: 질문 속 한국어 출력 자리 지시와 프롬프트 요구 말투 보강 (2026-11-17)
 
+
+> 2026-11-17 갱신: 질문 쪽 `output_ko`는 `output_request`(말투·자리·문구 세 특징을 함께 보는 질문 전용 규칙)로 대체했다. 되묻기 인용과 답 끝·앞 문구 자르기를 포함한 현행 명세는 `docs/specs/output-request-guard.md`에 있다.
 ### Why
 - 질문 속 지시 판정(`backend/graph/untrusted.py` `strip_instructions`)의 출력 자리 규칙은 영어(`output_en`)만 있었다. 한국어 짝이 없으면 한국어로 쓴 출력 자리 지시를 지시 문장으로 알아보지 못하고, 출력 검사(`scrub_answer`)의 표식 후보(질문의 따옴표 문자열을 이어 붙인 값)도 비어 검사가 동작하지 않는다.
 - 내부 설정을 묻는 질문은 분류 모델이 범위 밖으로 막지만, 코드 검사(`backend/prompts/question.py` `asks_internal`)에도 같은 말투를 넣어 두 층으로 막는다.

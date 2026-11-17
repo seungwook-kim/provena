@@ -40,7 +40,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from backend.graph import grounding as G
-from backend.graph.untrusted import drop_suspect_tokens, strip_instructions
+from backend.graph.untrusted import drop_suspect_tokens, echo_ok, strip_instructions
 
 
 def _flag(name: str) -> bool:
@@ -731,8 +731,10 @@ def unknown_phrases(question: str, corpus: str) -> list[str]:
 def quotable_phrases(question: str, corpus: str) -> list[str]:
     """되묻기 문장에 따옴표로 인용해도 되는 모르는 영문 구. 질문을 입력 정화와 같은 지시 문장 판정(`untrusted.strip_instructions`)으로 나눠
     지시로 판정된 절이 든 문장(쉼표·접속 조각으로 이어진 뒷절 포함)과 묶음 괄호를 통째로 뺀 글에서만 뽑고, 의심 문장(표식 꼴 토큰 가까이에
-    출력 자리나 목적 이름표)의 토큰도 뺀다. 지시도 의심 문장도 없으면 글자 하나도 바뀌지 않으므로 `unknown_phrases`와 같은 목록이다."""
-    return unknown_phrases(drop_suspect_tokens(strip_instructions(question or "", whole_sentence=True)[0]), corpus)
+    출력 자리나 목적 이름표)의 토큰도 뺀다. 남은 구도 짧은 이름 꼴이고 답과 같은 출력 검사를 통과해야 한다(`untrusted.echo_ok`, 2026-11-17:
+    지시 문장 밖에 둔 따옴표 조각, 긴 영문 문장 조각을 되풀이하지 않는다). 지시도 의심 문장도 없고 구가 짧은 이름 꼴이면 `unknown_phrases`와 같은 목록이다."""
+    found = unknown_phrases(drop_suspect_tokens(strip_instructions(question or "", whole_sentence=True)[0]), corpus)
+    return [p for p in found if echo_ok(p, question or "")]
 
 
 _ECHO_MAX = 40  # 되묻기에 되풀이할 영문 구의 최대 길이. 이보다 길면 이름이 아니라 붙여 넣은 문장이다
