@@ -1,0 +1,10 @@
+{
+  "window_utc": [
+    "2026-11-17T06:01:00Z 2026-11-17T06:01:29Z"
+  ],
+  "log_query_ok": false,
+  "chat_posts": 0,
+  "our_questions": 3,
+  "distinct_client_ips": 0,
+  "note": "chat_posts에서 our_questions를 뺀 수가 시험 창 동안 다른 사용자가 보낸 질문 수의 상한이다(그 질문의 org가 없으면 시험 청크가 검색 후보에 들 수 있었다)."
+}

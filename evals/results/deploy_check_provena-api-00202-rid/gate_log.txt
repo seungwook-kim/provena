@@ -1,0 +1,60 @@
+﻿2026-11-17T12:10:27 START serving=[provena-api-00181-zub=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] template=provena-api-ab3rst1117
+2026-11-17T12:10:29 TEMPLATE image_is_00181=True env_diff_from_00181=[] cfg_diff_from_00181=[] (참고: 환경 변수·비밀은 00181 판에서 그대로 복사해 명시적으로 넣으므로 템플릿 값을 물려받지 않는다)
+2026-11-17T12:10:29 ENV copy from provena-api-00181-zub plain=15+2 secrets=13+1 names_plain=[LANGFUSE_HOST,LLM_PROVIDER,RECALL_STORE,TRUSTED_PROXY_HOPS,PROVENA_OWNER_LOGIN_ID,LANGFUSE_CONTENT_CAPTURE_ENABLED,SEARCH_HEDGE,SEARCH_HEDGE_S,ANSWER_SAVE_ONE_CONN,EMAIL_PROVIDER,GMAIL_SMTP_USER,EMAIL_FROM,GOOGLE_CLIENT_ID,GOOGLE_REDIRECT_URI,GRAPH_DECOMPOSE_KEEP_SUBJECT,LLM_MAX_TOKENS,DAILY_QUESTION_LIMIT] names_secret=[AUTH_SECRET,VOYAGE_API_KEY,DATABASE_URL,DATABASE_DIRECT_URL,LANGFUSE_PUBLIC_KEY,LANGFUSE_SECRET_KEY,LLM_API_KEY,SERVICE_API_KEY,RECALL_WEBHOOK_SECRET,PROFILE_ENC_KEYS,GOOGLE_CLIENT_SECRET,GMAIL_APP_PASSWORD,MCP_TOKEN,MCP_EXTERNAL_TOKEN]
+2026-11-17T12:10:29 COMMIT 1dfc360820de7cf5fb17ea0dbb052741a0276113 tree=6a2e77a098076e8bef4525050d73feae930546ee origin/main=1dfc3608 same_tree_as_main=True
+2026-11-17T12:10:32 DEPLOY 1dfc3608 tag=c1117c (no traffic)
+2026-11-17T12:15:25 deploy:     + FullyQualifiedErrorId : NativeCommandError
+2026-11-17T12:15:25 deploy: Validating configuration...done
+2026-11-17T12:15:25 deploy: ...done
+2026-11-17T12:15:25 deploy: ...done
+2026-11-17T12:15:25 deploy: Setting IAM Policy...done
+2026-11-17T12:15:25 deploy: Creating Revision...
+2026-11-17T12:15:25 deploy: ...done
+2026-11-17T12:15:25 deploy: Done.
+2026-11-17T12:15:25 deploy: Service [provena-api] revision [provena-api-00202-rid] has been deployed and is serving 0 percent of traffic.
+2026-11-17T12:15:25 deploy: The revision can be reached directly at https://c1117c---provena-api-cttaanqntq-du.a.run.app
+2026-11-17T12:15:28 describe: 2026-11-17 describe 비교 provena-api-00181-zub(<=) vs provena-api-00202-rid(=>). 환경 변수는 이름과 값 해시만 비교했고 비밀은 참조 이름만 적는다.
+2026-11-17T12:15:28 describe: 환경 변수 수: 28 -> 31
+2026-11-17T12:15:28 describe: 환경 변수 차이: [=>DAILY_QUESTION_LIMIT,=>LLM_MAX_TOKENS,=>MCP_EXTERNAL_TOKEN]
+2026-11-17T12:15:28 describe: 더한 일반 값: LLM_MAX_TOKENS=2500,DAILY_QUESTION_LIMIT=0
+2026-11-17T12:15:28 describe: 더한 비밀 참조: MCP_EXTERNAL_TOKEN<-provena-mcp-external-token:latest
+2026-11-17T12:15:28 describe: 실행 설정 차이(서비스 계정·동시성·시간 제한·자원·포트·시작 검사·최대/최소 인스턴스·CPU 설정·세션 고정): []
+2026-11-17T12:15:28 describe: 이미지: 1a49f9e3 -> a6f6a026
+2026-11-17T12:15:29 describe: commit 라벨: 9bc7d587 -> 1dfc3608
+2026-11-17T12:15:29 describe: 최대 인스턴스: 1, 동시성: 80, 시간 제한: 300초
+2026-11-17T12:15:29 DEPLOYED new=provena-api-00202-rid serving=[provena-api-00181-zub=100%] health=200 0.303613 env_ok=True cfg_diff=[] ok=True
+2026-11-17T12:15:30 DB Supavisor=16 (상한 9)
+2026-11-17T12:16:30 DB Supavisor=16 (상한 9)
+2026-11-17T12:17:31 DB Supavisor=16 (상한 9)
+2026-11-17T12:18:31 DB Supavisor=16 (상한 9)
+2026-11-17T12:19:32 DB Supavisor=16 (상한 9)
+2026-11-17T12:20:32 DB Supavisor=15 (상한 9)
+2026-11-17T12:21:33 DB Supavisor=15 (상한 9)
+2026-11-17T12:22:33 DB Supavisor=15 (상한 9)
+2026-11-17T12:23:34 DB Supavisor=15 (상한 9)
+2026-11-17T12:24:34 DB Supavisor=14 (상한 9)
+2026-11-17T12:25:35 DB Supavisor=14 (상한 9)
+2026-11-17T12:26:35 DB Supavisor=12 (상한 9)
+2026-11-17T12:27:36 DB Supavisor=12 (상한 9)
+2026-11-17T12:28:36 DB Supavisor=12 (상한 9)
+2026-11-17T12:29:37 DB Supavisor=12 (상한 9)
+2026-11-17T12:30:37 DB Supavisor=12 (상한 9)
+2026-11-17T12:31:38 DB Supavisor=12 (상한 9)
+2026-11-17T12:32:38 DB Supavisor=12 (상한 9)
+2026-11-17T12:33:39 DB Supavisor=12 (상한 9)
+2026-11-17T12:34:40 DB Supavisor=12 (상한 9)
+2026-11-17T12:35:40 DB 연결 수가 내려가지 않음: 점검 중단
+2026-11-17T12:46:48 PRECHECK serving=[provena-api-00181-zub=100%] c1117c->provena-api-00202-rid (기대 provena-api-00202-rid) health=200 19.818708
+2026-11-17T12:46:49 DB Supavisor=11 (상한 9)
+2026-11-17T12:47:49 DB Supavisor=11 (상한 9)
+2026-11-17T12:48:50 DB Supavisor=11 (상한 9)
+2026-11-17T12:49:50 DB Supavisor=11 (상한 9)
+2026-11-17T12:50:51 DB Supavisor=11 (상한 9)
+2026-11-17T12:51:51 DB Supavisor=10 (상한 9)
+2026-11-17T12:52:45 PRECHECK serving=[provena-api-00181-zub=100%] c1117c->provena-api-00202-rid (기대 provena-api-00202-rid) health=200 0.210043
+2026-11-17T12:52:46 DB Supavisor=10 (상한 12)
+2026-11-17T12:52:54 deploy_check rc=0 L0=통과 U1=통과 X1=통과 X2=통과 R1=통과 E1=통과 H1=통과
+2026-11-17T12:53:02 warmup rc=0 ok=1 fail=0 ttft_s= total_s=6.488 cost=0.013398 status=ok http= err= result=answer citations=4
+2026-11-17T12:53:03 thread_check thread=<가림> threads_rows=1 checkpoints_rows=11 status=idle created_at=2026-11-17 03:52:56.445947+00:00 SAVED=1
+2026-11-17T12:53:05 END serving=[provena-api-00181-zub=100%] tags=[c1117->provena-api-00180-xap,c1117b->provena-api-00181-zub,c1117c->provena-api-00202-rid,fix1117->provena-api-00178-max,lf1116->provena-api-00166-mob,p1116->provena-api-00172-rex] (운영 트래픽은 바뀌면 안 됨)
+2026-11-17T12:53:05 JOB091 DONE
