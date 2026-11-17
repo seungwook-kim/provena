@@ -1,0 +1,1253 @@
+{
+ "meta": {
+  "results": "evals/results/deploy_latency_graphrag3_on_provena-api-00181-zub",
+  "dataset": "questions.jsonl",
+  "dataset_path": "evals/graphrag_v1/questions.jsonl",
+  "dataset_sha256": "41dde5d8eafe19a19435df5c403541a8dbdf7c1c32f0c98c184dd2a45f0ef4aa",
+  "dataset_sha_match": true,
+  "corpus": {
+   "source": "snap_9bc7d587/data/index/chunks.jsonl",
+   "n_chunks": 23095,
+   "meta_n_chunks": 23095,
+   "chunks_sha256": "19d9a8f82f0b94d6409c864b59d510c51c7a253ef6f7bb28775c646801fe3227",
+   "chunks_fingerprint": "9c5b56c959250db26fff8caf10f617654c22f0d5b4e4dcf24ac0edb6f81a1b36",
+   "n_version_ids": 633,
+   "dataset_corpus_versions": [],
+   "deployed_corpus_id": null,
+   "same_as_deployed": null,
+   "note": "배포본이 이 스냅샷과 같은 코퍼스인지는 이 파일만으로 알 수 없다. same_as_deployed가 None이면 비교할 값을 받지 못한 것이다. unresolved_citations(스냅샷에 없는 청크 id)와 version_date_mismatch(인용 이벤트와 스냅샷의 판 날짜가 다름)가 0이면 인용이 모두 이 스냅샷의 청크와 맞는다."
+  }
+ },
+ "summary": {
+  "per_run": [
+   {
+    "run": 1,
+    "n": 12,
+    "n_relevant": 12,
+    "n_irrelevant": 0,
+    "n_answered_relevant": 12,
+    "n_fail_rows": 0,
+    "cited_correct_rate": 0.3875,
+    "wrong_citation_rate": 0.6666666666666666,
+    "wrong_citation_rows": 8,
+    "citation_accuracy": 0.5555555555555556,
+    "citation_accuracy_pooled": 0.5384615384615384,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": null,
+    "answered_irrelevant": 0,
+    "gold_cited_questions": 10,
+    "cited_total": 26,
+    "cited_off_gold_total": 12,
+    "cited_all_rows": 26,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 9,
+    "rows_without_chunk_ids": 0
+   },
+   {
+    "run": 2,
+    "n": 12,
+    "n_relevant": 12,
+    "n_irrelevant": 0,
+    "n_answered_relevant": 12,
+    "n_fail_rows": 0,
+    "cited_correct_rate": 0.4083333333333334,
+    "wrong_citation_rate": 0.6666666666666666,
+    "wrong_citation_rows": 8,
+    "citation_accuracy": 0.5972222222222222,
+    "citation_accuracy_pooled": 0.5555555555555556,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": null,
+    "answered_irrelevant": 0,
+    "gold_cited_questions": 11,
+    "cited_total": 27,
+    "cited_off_gold_total": 12,
+    "cited_all_rows": 27,
+    "unresolved_citations": 1,
+    "version_date_mismatch": 7,
+    "rows_without_chunk_ids": 0
+   },
+   {
+    "run": 3,
+    "n": 12,
+    "n_relevant": 12,
+    "n_irrelevant": 0,
+    "n_answered_relevant": 11,
+    "n_fail_rows": 0,
+    "cited_correct_rate": 0.4083333333333334,
+    "wrong_citation_rate": 0.6363636363636364,
+    "wrong_citation_rows": 7,
+    "citation_accuracy": 0.6515151515151515,
+    "citation_accuracy_pooled": 0.6153846153846154,
+    "over_refusal_rate": 0.08333333333333333,
+    "correct_refusal_rate": null,
+    "answered_irrelevant": 0,
+    "gold_cited_questions": 10,
+    "cited_total": 26,
+    "cited_off_gold_total": 10,
+    "cited_all_rows": 26,
+    "unresolved_citations": 0,
+    "version_date_mismatch": 6,
+    "rows_without_chunk_ids": 0
+   }
+  ],
+  "mean_over_runs": {
+   "cited_correct_rate": {
+    "mean": 0.4014,
+    "min": 0.3875,
+    "max": 0.4083
+   },
+   "wrong_citation_rate": {
+    "mean": 0.6566,
+    "min": 0.6364,
+    "max": 0.6667
+   },
+   "citation_accuracy": {
+    "mean": 0.6014,
+    "min": 0.5556,
+    "max": 0.6515
+   },
+   "over_refusal_rate": {
+    "mean": 0.0278,
+    "min": 0.0,
+    "max": 0.0833
+   },
+   "correct_refusal_rate": {
+    "mean": null,
+    "min": null,
+    "max": null
+   },
+   "wrong_citation_rows": {
+    "mean": 7.6667,
+    "min": 7,
+    "max": 8
+   },
+   "citation_accuracy_pooled": {
+    "mean": 0.5698,
+    "min": 0.5385,
+    "max": 0.6154
+   }
+  },
+  "pooled_rows": {
+   "n": 36,
+   "n_relevant": 36,
+   "n_irrelevant": 0,
+   "n_answered_relevant": 35,
+   "n_fail_rows": 0,
+   "cited_correct_rate": 0.40138888888888885,
+   "wrong_citation_rate": 0.6571428571428571,
+   "wrong_citation_rows": 23,
+   "citation_accuracy": 0.6,
+   "citation_accuracy_pooled": 0.569620253164557,
+   "over_refusal_rate": 0.027777777777777776,
+   "correct_refusal_rate": null,
+   "answered_irrelevant": 0,
+   "gold_cited_questions": 31,
+   "cited_total": 79,
+   "cited_off_gold_total": 34,
+   "cited_all_rows": 79,
+   "unresolved_citations": 1,
+   "version_date_mismatch": 22,
+   "rows_without_chunk_ids": 0
+  }
+ },
+ "rows": [
+  {
+   "run": 1,
+   "id": 201,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea52056e01f3df16",
+    "b73182eb09a94f55",
+    "25b2e43cbd36711a",
+    "8c381ff60408dda9"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ea52056e01f3df16",
+    "8c381ff60408dda9"
+   ],
+   "n_citation_events": 4,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 202,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "e9bc4c54004f421b",
+    "2559d79aa2d09abc",
+    "62e50c3087bf511f"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "e9bc4c54004f421b",
+    "62e50c3087bf511f"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 203,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea9a84ed975c0a1c",
+    "71222466b9b3190c"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ea9a84ed975c0a1c"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 204,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5b27e36df70b5e35",
+    "990b352cacbd3a7b"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    false
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 205,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "87a82fa802ace6de",
+    "3179a8f30bbec0ce"
+   ],
+   "cited_on_gold": 0,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 0,
+   "gold_cited": false,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 206,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    false,
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 207,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "258819922c474062",
+    "ab0dc85b6ea79c85",
+    "a4cc80dc17fcc437"
+   ],
+   "cited_on_gold": 3,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true,
+    true
+   ],
+   "gold_total": 3,
+   "gold_hit": 3,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 208,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "f7f7f1397fcc771a"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 209,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ddb977d69e4ec906",
+    "0031d0d1ea6713bc",
+    "aa60b103361ca197"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ddb977d69e4ec906"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 210,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "4e7996c2adea5d43"
+   ],
+   "cited_on_gold": 0,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 0,
+   "gold_cited": false,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "4e7996c2adea5d43"
+   ],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 211,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "d5acd89b8df6295d",
+    "7cda49c379bad836"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 1,
+   "id": 212,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5ae7a47c2f37528f"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 201,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea52056e01f3df16",
+    "b73182eb09a94f55",
+    "25b2e43cbd36711a"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    true,
+    false
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ea52056e01f3df16"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 202,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "e9bc4c54004f421b",
+    "62e50c3087bf511f",
+    "2559d79aa2d09abc"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    false,
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "e9bc4c54004f421b",
+    "62e50c3087bf511f"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 203,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea9a84ed975c0a1c",
+    "b0ee00ed595fb6ef"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [
+    "b0ee00ed595fb6ef"
+   ],
+   "version_date_mismatch": [
+    "ea9a84ed975c0a1c"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 204,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5b27e36df70b5e35",
+    "990b352cacbd3a7b"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    false
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 205,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "836b1193dfebd477",
+    "0d8a2f5779f810e1",
+    "87a82fa802ace6de"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    true,
+    false,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 206,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    false,
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 207,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "258819922c474062",
+    "ab0dc85b6ea79c85",
+    "a4cc80dc17fcc437"
+   ],
+   "cited_on_gold": 3,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true,
+    true
+   ],
+   "gold_total": 3,
+   "gold_hit": 3,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 208,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "f7f7f1397fcc771a"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 209,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ed9aaf36c48adea4",
+    "0031d0d1ea6713bc",
+    "aa60b103361ca197"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 210,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "6b0336f97b8c208f",
+    "4e7996c2adea5d43"
+   ],
+   "cited_on_gold": 0,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 0,
+   "gold_cited": false,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "4e7996c2adea5d43"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 211,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "d5acd89b8df6295d",
+    "7cda49c379bad836"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 2,
+   "id": 212,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5ae7a47c2f37528f"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 201,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea52056e01f3df16",
+    "b73182eb09a94f55",
+    "25b2e43cbd36711a"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    true,
+    false
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ea52056e01f3df16"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 202,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "997cff26dcb8bc80",
+    "2559d79aa2d09abc",
+    "62e50c3087bf511f"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "62e50c3087bf511f"
+   ],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 203,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "ea9a84ed975c0a1c",
+    "71222466b9b3190c"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    true,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "ea9a84ed975c0a1c"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 204,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5736ce7d88aac787",
+    "5b27e36df70b5e35",
+    "990b352cacbd3a7b"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    true,
+    false
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 205,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "930dedeb39e4786d",
+    "5ff402025123df29",
+    "87a82fa802ace6de",
+    "3179a8f30bbec0ce"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 4,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 206,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 1,
+   "cited_gold_flags": [
+    false,
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "36f89e936105db67",
+    "5f56f3bfdf93aca9"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 207,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "258819922c474062",
+    "ab0dc85b6ea79c85",
+    "a4cc80dc17fcc437"
+   ],
+   "cited_on_gold": 3,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true,
+    true
+   ],
+   "gold_total": 3,
+   "gold_hit": 3,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 3,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 208,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "f7f7f1397fcc771a"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 5,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 209,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "refuse",
+   "answered": false,
+   "has_chunk_ids": true,
+   "cited": [],
+   "cited_on_gold": 0,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [],
+   "gold_total": 4,
+   "gold_hit": 0,
+   "gold_cited": false,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 0,
+   "refuse_stage": "ground",
+   "refuse_reason": "unsupported"
+  },
+  {
+   "run": 3,
+   "id": 210,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "6b0336f97b8c208f",
+    "4e7996c2adea5d43"
+   ],
+   "cited_on_gold": 0,
+   "cited_off_gold": 2,
+   "cited_gold_flags": [
+    false,
+    false
+   ],
+   "gold_total": 4,
+   "gold_hit": 0,
+   "gold_cited": false,
+   "wrong_citation": true,
+   "unresolved": [],
+   "version_date_mismatch": [
+    "4e7996c2adea5d43"
+   ],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 211,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "d5acd89b8df6295d",
+    "7cda49c379bad836"
+   ],
+   "cited_on_gold": 2,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true,
+    true
+   ],
+   "gold_total": 2,
+   "gold_hit": 2,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 2,
+   "refuse_stage": null,
+   "refuse_reason": null
+  },
+  {
+   "run": 3,
+   "id": 212,
+   "kind": "relevant",
+   "expect_refusal": false,
+   "status": "ok",
+   "result": "answer",
+   "answered": true,
+   "has_chunk_ids": true,
+   "cited": [
+    "5ae7a47c2f37528f"
+   ],
+   "cited_on_gold": 1,
+   "cited_off_gold": 0,
+   "cited_gold_flags": [
+    true
+   ],
+   "gold_total": 4,
+   "gold_hit": 1,
+   "gold_cited": true,
+   "wrong_citation": false,
+   "unresolved": [],
+   "version_date_mismatch": [],
+   "n_citation_events": 1,
+   "refuse_stage": null,
+   "refuse_reason": null
+  }
+ ],
+ "gold_unlocatable": {},
+ "problems": []
+}

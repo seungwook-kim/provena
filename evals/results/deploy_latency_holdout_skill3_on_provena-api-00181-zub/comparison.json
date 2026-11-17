@@ -1,0 +1,473 @@
+{
+  "on": {
+    "folder": "deploy_latency_holdout_skill3_on_provena-api-00181-zub",
+    "runs": [
+      1,
+      2,
+      3
+    ],
+    "per_run": [
+      {
+        "run": 1,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.916667,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 8.051,
+        "p50_s": 4.376,
+        "cost_usd_sum": 0.101721,
+        "cost_usd_per_question": 0.005086,
+        "grounding_llm_calls": 123,
+        "window": [
+          "2026-11-17T10:03:39+09:00",
+          "2026-11-17T10:05:09+09:00"
+        ]
+      },
+      {
+        "run": 2,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.916667,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 7.896,
+        "p50_s": 4.454,
+        "cost_usd_sum": 0.111325,
+        "cost_usd_per_question": 0.005566,
+        "grounding_llm_calls": 157,
+        "window": [
+          "2026-11-17T10:08:06+09:00",
+          "2026-11-17T10:09:31+09:00"
+        ]
+      },
+      {
+        "run": 3,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.916667,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 9.942,
+        "p50_s": 4.2,
+        "cost_usd_sum": 0.10708,
+        "cost_usd_per_question": 0.005354,
+        "grounding_llm_calls": 142,
+        "window": [
+          "2026-11-17T10:09:42+09:00",
+          "2026-11-17T10:11:09+09:00"
+        ]
+      }
+    ],
+    "mean": {
+      "cited_correct_rate": 0.9,
+      "citation_accuracy": 0.916667,
+      "wrong_citation_rate": 0.2,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "gold_cited_questions": 10.0,
+      "p95_s": 8.629667,
+      "cost_usd_per_question": 0.005335,
+      "grounding_llm_calls": 140.666667
+    },
+    "cost_usd_total": 0.320126
+  },
+  "off": {
+    "folder": "deploy_latency_holdout_skill3_off_provena-api-sk3off1117",
+    "runs": [
+      1,
+      2,
+      3
+    ],
+    "per_run": [
+      {
+        "run": 1,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.883333,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 6.933,
+        "p50_s": 4.145,
+        "cost_usd_sum": 0.047203,
+        "cost_usd_per_question": 0.00236,
+        "grounding_llm_calls": 0,
+        "window": [
+          "2026-11-17T10:05:19+09:00",
+          "2026-11-17T10:06:35+09:00"
+        ]
+      },
+      {
+        "run": 2,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.883333,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 6.643,
+        "p50_s": 3.394,
+        "cost_usd_sum": 0.044031,
+        "cost_usd_per_question": 0.002202,
+        "grounding_llm_calls": 0,
+        "window": [
+          "2026-11-17T10:06:43+09:00",
+          "2026-11-17T10:07:57+09:00"
+        ]
+      },
+      {
+        "run": 3,
+        "n": 20,
+        "n_fail_rows": 0,
+        "cited_correct_rate": 0.9,
+        "citation_accuracy": 0.883333,
+        "wrong_citation_rate": 0.2,
+        "over_refusal_rate": 0.0,
+        "correct_refusal_rate": 1.0,
+        "gold_cited_questions": 10,
+        "n_relevant": 10,
+        "p95_s": 6.745,
+        "p50_s": 4.13,
+        "cost_usd_sum": 0.050604,
+        "cost_usd_per_question": 0.00253,
+        "grounding_llm_calls": 0,
+        "window": [
+          "2026-11-17T10:11:17+09:00",
+          "2026-11-17T10:12:35+09:00"
+        ]
+      }
+    ],
+    "mean": {
+      "cited_correct_rate": 0.9,
+      "citation_accuracy": 0.883333,
+      "wrong_citation_rate": 0.2,
+      "over_refusal_rate": 0.0,
+      "correct_refusal_rate": 1.0,
+      "gold_cited_questions": 10.0,
+      "p95_s": 6.773667,
+      "cost_usd_per_question": 0.002364,
+      "grounding_llm_calls": 0.0
+    },
+    "cost_usd_total": 0.141838
+  },
+  "diff_on_minus_off": {
+    "cited_correct_rate": 0.0,
+    "citation_accuracy": 0.033334,
+    "wrong_citation_rate": 0.0,
+    "over_refusal_rate": 0.0,
+    "correct_refusal_rate": 0.0,
+    "gold_cited_questions": 0.0,
+    "p95_s": 1.856,
+    "cost_usd_per_question": 0.002971,
+    "grounding_llm_calls": 140.666667
+  },
+  "paired_gold_rate": {
+    "on_higher": 0,
+    "off_higher": 0,
+    "same": 10,
+    "sign_test_p_two_sided": null
+  },
+  "paired_citation_accuracy": {
+    "on_higher": 1,
+    "off_higher": 0,
+    "same": 9,
+    "sign_test_p_two_sided": 1.0
+  },
+  "items": [
+    {
+      "id": 101,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 0.5,
+      "off_gold": 0.5,
+      "on_acc": 0.666667,
+      "off_acc": 0.333333,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.333334
+    },
+    {
+      "id": 102,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 103,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 104,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 105,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 106,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 107,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 108,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 0.5,
+      "off_gold": 0.5,
+      "on_acc": 0.5,
+      "off_acc": 0.5,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 109,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 110,
+      "kind": "relevant",
+      "relevant": true,
+      "n_on": 3,
+      "n_off": 3,
+      "on_gold": 1.0,
+      "off_gold": 1.0,
+      "on_acc": 1.0,
+      "off_acc": 1.0,
+      "on_answered": 3,
+      "off_answered": 3,
+      "on_gold_cited": 3,
+      "off_gold_cited": 3,
+      "gold_diff": 0.0,
+      "gold_verdict": "같음",
+      "acc_diff": 0.0
+    },
+    {
+      "id": 111,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 112,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 113,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 114,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 115,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 116,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 117,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 118,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 119,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    },
+    {
+      "id": 120,
+      "kind": "irrelevant",
+      "relevant": false,
+      "n_on": 3,
+      "n_off": 3,
+      "on_correct_refusal": 3,
+      "off_correct_refusal": 3
+    }
+  ],
+  "check": {
+    "on_gold_from_items": 0.9,
+    "on_gold_from_runs": 0.9,
+    "off_gold_from_items": 0.9,
+    "off_gold_from_runs": 0.9
+  }
+}
