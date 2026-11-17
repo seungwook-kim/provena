@@ -23,5 +23,21 @@
   "question_mark_notes": 310,
   "policy_path": 24,
   "non_policy": 286
+ },
+ "human_check": {
+  "date": "2026-11-17",
+  "checker": "박진형",
+  "rows": [
+   12,
+   14,
+   15,
+   20,
+   22,
+   44
+  ],
+  "scope": "정책·절차 질문으로 분류된 6행(정책 경로 5, 무작위 1)",
+  "agree_with_model": 6,
+  "disagree": 0,
+  "not_checked_rows": 48
  }
 }

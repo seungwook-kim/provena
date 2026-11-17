@@ -1,0 +1,269 @@
+[
+  {
+    "id": 1,
+    "kind": "full",
+    "gold_teams": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 3,
+    "total": 6,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      3,
+      3,
+      3
+    ],
+    "local6236_found_3runs": [
+      2,
+      2,
+      2
+    ],
+    "cost": 0.0041058,
+    "llm_calls": 5
+  },
+  {
+    "id": 2,
+    "kind": "full",
+    "gold_teams": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 4,
+    "total": 7,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      4,
+      4,
+      4
+    ],
+    "local6236_found_3runs": [
+      3,
+      2,
+      2
+    ],
+    "cost": 0.004475,
+    "llm_calls": 5
+  },
+  {
+    "id": 3,
+    "kind": "full",
+    "gold_teams": [
+      "security",
+      "itops",
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 2,
+    "total": 6,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      0,
+      3,
+      2
+    ],
+    "local6236_found_3runs": [
+      3,
+      3,
+      2
+    ],
+    "cost": 0.0042264,
+    "llm_calls": 5
+  },
+  {
+    "id": 4,
+    "kind": "full",
+    "gold_teams": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "infra",
+      "itops",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 3,
+    "total": 7,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      4,
+      2,
+      3
+    ],
+    "local6236_found_3runs": [
+      3,
+      3,
+      3
+    ],
+    "cost": 0.0043278,
+    "llm_calls": 5
+  },
+  {
+    "id": 5,
+    "kind": "partial",
+    "gold_teams": [
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "itops",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 0,
+    "total": 2,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      0,
+      0,
+      0
+    ],
+    "local6236_found_3runs": [
+      1,
+      1,
+      1
+    ],
+    "cost": 0.003267,
+    "llm_calls": 4
+  },
+  {
+    "id": 6,
+    "kind": "partial",
+    "gold_teams": [
+      "security",
+      "itops",
+      "finance"
+    ],
+    "selected": [
+      "security",
+      "infra",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 0,
+    "total": 4,
+    "missed_unselected": 1,
+    "base00049_found_3runs": [
+      2,
+      2,
+      2
+    ],
+    "local6236_found_3runs": [
+      2,
+      2,
+      2
+    ],
+    "cost": 0.0035803,
+    "llm_calls": 4
+  },
+  {
+    "id": 7,
+    "kind": "partial",
+    "gold_teams": [
+      "infra"
+    ],
+    "selected": [
+      "infra",
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 1,
+    "total": 3,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [
+      1,
+      1,
+      1
+    ],
+    "local6236_found_3runs": [
+      0,
+      0,
+      0
+    ],
+    "cost": 0.0019286,
+    "llm_calls": 3
+  },
+  {
+    "id": 8,
+    "kind": "clarify",
+    "gold_teams": [],
+    "selected": [],
+    "status": "clarify",
+    "found": null,
+    "total": null,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [],
+    "local6236_found_3runs": [],
+    "cost": 0.0002307,
+    "llm_calls": 1
+  },
+  {
+    "id": 9,
+    "kind": "clarify",
+    "gold_teams": [],
+    "selected": [],
+    "status": "clarify",
+    "found": null,
+    "total": null,
+    "missed_unselected": 0,
+    "base00049_found_3runs": [],
+    "local6236_found_3runs": [],
+    "cost": 0.0002484,
+    "llm_calls": 1
+  },
+  {
+    "id": 10,
+    "kind": "low_issue",
+    "gold_teams": [
+      "security",
+      "finance"
+    ],
+    "selected": [
+      "finance"
+    ],
+    "status": "pending_approval",
+    "found": 0,
+    "total": 2,
+    "missed_unselected": 1,
+    "base00049_found_3runs": [
+      1,
+      1,
+      1
+    ],
+    "local6236_found_3runs": [
+      0,
+      0,
+      0
+    ],
+    "cost": 0.0009228,
+    "llm_calls": 2
+  }
+]
